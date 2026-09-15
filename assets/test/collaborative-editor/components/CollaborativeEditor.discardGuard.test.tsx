@@ -1,12 +1,3 @@
-/**
- * Unsaved-changes guard wiring tests
- *
- * The hook tests cover `useDiscardGuard` in isolation. These render the real
- * breadcrumbs with the real `useVersionSelect`, because the first version of
- * this feature shipped a guard that worked in isolation and never rendered:
- * the dialog sat inside a `useMemo` whose dependencies did not include the
- * prompt, so picking a version with unsaved edits did nothing at all.
- */
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -24,8 +15,6 @@ const urlState = createMockURLState();
 
 let hasChanges = false;
 let isSynced = true;
-// The guard forgets it ever synced only when the document is replaced, which it
-// reads off the provider's identity.
 let provider: object | null = { id: 'provider-1' };
 const saveWorkflow = vi.fn<() => Promise<unknown>>();
 
@@ -53,8 +42,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   },
 }));
 
-// BreadcrumbContent lives in CollaborativeEditor.tsx, whose module graph
-// reaches Monaco. Stub the heavy siblings so importing it stays cheap.
 vi.mock('@monaco-editor/react', () => ({
   default: () => <div data-testid="monaco-editor" />,
 }));
@@ -70,10 +57,6 @@ vi.mock('../../../js/collaborative-editor/components/WorkflowEditor', () => ({
   WorkflowEditor: () => <div data-testid="workflow-editor" />,
 }));
 
-// Header is heavy, but its Breadcrumbs are the thing BreadcrumbContent has a
-// contract with: they treat their last child as the workflow title. So the stub
-// keeps the real Breadcrumbs, and a stray extra child shows up as a mangled
-// crumb list rather than passing silently.
 vi.mock('../../../js/collaborative-editor/components/Header', () => ({
   Header: ({ children }: { children: React.ReactNode[] }) => (
     <div data-testid="header">
@@ -82,7 +65,6 @@ vi.mock('../../../js/collaborative-editor/components/Header', () => ({
   ),
 }));
 
-// A real trigger for the real hook, so the wiring between them is under test.
 vi.mock('../../../js/collaborative-editor/components/VersionDropdown', () => ({
   VersionDropdown: ({
     onVersionSelect,
@@ -108,7 +90,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useVersionsLoading: () => false,
   useVersionsLoaded: () => true,
   useVersions: () => [],
-  // Live, so the editor offers the releases dropdown these tests drive.
   useSessionWorkflow: () => ({ state: 'live' }),
   useContentLocked: () => false,
   useExperimentalFeatures: () => true,
@@ -152,9 +133,6 @@ describe('unsaved-changes guard, wired up', () => {
   test('the dialog does not take the workflow title slot in the breadcrumbs', () => {
     renderBreadcrumbs();
 
-    // Breadcrumbs render their last child as the title and the rest as crumbs.
-    // Put the dialog in that array and the project, Workflows and the workflow
-    // name collapse into one crumb with no chevron between them.
     expect(screen.getByText('Test Workflow')).toBeInTheDocument();
     expect(screen.getByText('Workflows')).toBeInTheDocument();
     expect(screen.getByText('Workflows').closest('li')).not.toContainElement(
@@ -247,8 +225,6 @@ describe('unsaved-changes guard, wired up', () => {
       expect(saveWorkflow).toHaveBeenCalled();
     });
 
-    // Nothing unmounts the dialog: the version switch rewrites the URL rather
-    // than navigating, so it has to clear its own in-flight state.
     await user.click(screen.getByTestId('pick-version-3'));
 
     const cancel = await screen.findByRole('button', { name: 'Cancel' });
@@ -264,8 +240,6 @@ describe('unsaved-changes guard, wired up', () => {
     const user = userEvent.setup();
     const { rerender } = renderBreadcrumbs();
 
-    // First sync happened; then the websocket drops without the document being
-    // replaced, which is when unsaved work is most at risk.
     isSynced = false;
     rerender(
       <KeyboardProvider>
@@ -290,8 +264,6 @@ describe('unsaved-changes guard, wired up', () => {
     const user = userEvent.setup();
     const { rerender } = renderBreadcrumbs();
 
-    // A new provider means a new document. Its store is still empty, so it
-    // differs from the saved workflow through no fault of the person.
     provider = { id: 'provider-2' };
     isSynced = false;
     rerender(
@@ -320,8 +292,6 @@ describe('unsaved-changes guard, wired up', () => {
 
     await user.click(screen.getByTestId('pick-version-3'));
 
-    // An unsynced store is empty and so differs from the saved workflow, which
-    // is not a change anyone made.
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalled();
     expect(
       screen.queryByTestId('discard-changes-dialog')

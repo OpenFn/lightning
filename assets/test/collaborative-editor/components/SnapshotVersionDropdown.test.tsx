@@ -1,12 +1,3 @@
-/**
- * Tests for the version picker a user without experimental features gets.
- *
- * It lists every saved snapshot, numbered by its own `lock_version`, and pins
- * one with `?v=`. The releases picker beside it lists the publish trail and
- * numbers by release, and the two build different collaboration rooms, so which
- * picker is on screen decides what a version number means for the whole
- * session.
- */
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -75,7 +66,6 @@ describe('SnapshotVersionDropdown', () => {
   });
 
   test('names the pinned save by its lock_version', () => {
-    // Pinned to an older save, so the chip stops claiming to be latest.
     window.history.pushState({}, '', '/?v=5');
 
     renderPicker(5, 7);
@@ -84,10 +74,6 @@ describe('SnapshotVersionDropdown', () => {
   });
 
   test('asks once for a workflow with no saves, rather than forever', async () => {
-    // A workflow that has never been saved answers with an empty list, and the
-    // menu stays open on that answer. Keying the ask on the list being empty
-    // rather than on having asked re-fires the effect every time the loading
-    // flag settles, which asks again, which sets it loading again.
     const user = userEvent.setup();
     const { rerender } = render(
       <SnapshotVersionDropdown
@@ -100,8 +86,6 @@ describe('SnapshotVersionDropdown', () => {
     await user.click(screen.getByRole('button'));
     expect(requestVersions).toHaveBeenCalledTimes(1);
 
-    // The request runs and comes back empty: loading goes up, then down, with
-    // the list still empty and the menu still open.
     mockUseVersionsLoading.mockReturnValue(true);
     rerender(
       <SnapshotVersionDropdown
@@ -124,6 +108,105 @@ describe('SnapshotVersionDropdown', () => {
     expect(requestVersions).toHaveBeenCalledTimes(1);
   });
 
+  test('asks again when a save clears the list under an open menu', async () => {
+    const user = userEvent.setup();
+    mockUseVersionsLoaded.mockReturnValue(true);
+    mockUseVersions.mockReturnValue([snapshot(7, true)]);
+
+    const { rerender } = render(
+      <SnapshotVersionDropdown
+        currentVersion={7}
+        latestVersion={7}
+        onVersionSelect={onVersionSelect}
+      />
+    );
+
+    await user.click(screen.getByRole('button'));
+
+    expect(requestVersions).not.toHaveBeenCalled();
+
+    mockUseVersionsLoaded.mockReturnValue(false);
+    mockUseVersions.mockReturnValue([]);
+    rerender(
+      <SnapshotVersionDropdown
+        currentVersion={7}
+        latestVersion={7}
+        onVersionSelect={onVersionSelect}
+      />
+    );
+
+    expect(requestVersions).toHaveBeenCalledTimes(1);
+  });
+
+  test('still retries when the menu is reopened mid-flight', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <SnapshotVersionDropdown
+        currentVersion={7}
+        latestVersion={7}
+        onVersionSelect={onVersionSelect}
+      />
+    );
+
+    await user.click(screen.getByRole('button'));
+    expect(requestVersions).toHaveBeenCalledTimes(1);
+
+    mockUseVersionsLoading.mockReturnValue(true);
+    rerender(
+      <SnapshotVersionDropdown
+        currentVersion={7}
+        latestVersion={7}
+        onVersionSelect={onVersionSelect}
+      />
+    );
+    await user.click(screen.getByRole('button'));
+    await user.click(screen.getByRole('button'));
+
+    mockUseVersionsLoading.mockReturnValue(false);
+    mockUseVersionsLoaded.mockReturnValue(true);
+    mockUseVersionsError.mockReturnValue('Failed to load versions');
+    rerender(
+      <SnapshotVersionDropdown
+        currentVersion={7}
+        latestVersion={7}
+        onVersionSelect={onVersionSelect}
+      />
+    );
+
+    expect(requestVersions).toHaveBeenCalledTimes(2);
+  });
+
+  test('asks again next time it opens after a failed request', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <SnapshotVersionDropdown
+        currentVersion={7}
+        latestVersion={7}
+        onVersionSelect={onVersionSelect}
+      />
+    );
+
+    await user.click(screen.getByRole('button'));
+    expect(requestVersions).toHaveBeenCalledTimes(1);
+
+    mockUseVersionsLoaded.mockReturnValue(true);
+    mockUseVersionsError.mockReturnValue('Failed to load versions');
+    rerender(
+      <SnapshotVersionDropdown
+        currentVersion={7}
+        latestVersion={7}
+        onVersionSelect={onVersionSelect}
+      />
+    );
+
+    expect(requestVersions).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button'));
+    await user.click(screen.getByRole('button'));
+
+    expect(requestVersions).toHaveBeenCalledTimes(2);
+  });
+
   test('lists the saves and pins the one clicked by its lock_version', async () => {
     const user = userEvent.setup();
     mockUseVersions.mockReturnValue([
@@ -137,8 +220,6 @@ describe('SnapshotVersionDropdown', () => {
     await user.click(screen.getByRole('button'));
 
     const rows = screen.getAllByRole('menuitem');
-    // The newest row plus a "latest" row that unpins rather than pinning to
-    // itself.
     expect(rows).toHaveLength(4);
 
     const five = rows.find(row => row.textContent?.includes('v5'));

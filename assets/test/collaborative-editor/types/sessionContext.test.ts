@@ -364,8 +364,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      // The lifecycle lock and the experimental-features flag both default in,
-      // so the parsed object carries them even when the node sent neither.
       expect(result.data).toEqual({
         ...validResponse,
         content_locked: false,
@@ -375,9 +373,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
   });
 
   test('survives a payload with no sandbox permissions', () => {
-    // An older node during a rolling deploy sends neither sandbox permission.
-    // Both are optional so the parse still succeeds: one missing answer must
-    // not cost the client every permission it has.
     const parsed = PermissionsSchema.safeParse({
       can_edit_workflow: true,
       can_run_workflow: true,
@@ -392,10 +387,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
   });
 
   test('reads the lifecycle lock, and defaults it to unlocked when absent', () => {
-    // A live workflow is locked for everyone. The field is separate from
-    // `permissions` because it says nothing about the person, and it defaults
-    // to false so an older node that does not send it still parses: that node
-    // folds the lock into can_edit_workflow, so the view stays read-only.
     const base = {
       user: null,
       project: null,

@@ -17,10 +17,6 @@ interface AlertDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'danger' | 'primary';
-  /**
-   * Optional extra content rendered below the description (e.g. a
-   * "don't show again" checkbox). Left-aligned so form controls read naturally.
-   */
   children?: React.ReactNode;
 }
 
@@ -57,10 +53,6 @@ export function AlertDialog({
       ? 'bg-red-600 hover:bg-red-500 focus-visible:outline-red-600'
       : 'bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600';
 
-  // High-priority Escape handler to prevent closing the parent IDE/inspector.
-  // Priority 100 (MODAL) ensures this runs before the IDE handler (priority 50);
-  // Headless UI's own Escape handling never fires while those intercept it. Only
-  // cancels (onClose) the dialog, so it never triggers the confirm action.
   useKeyboardShortcut(
     'Escape',
     () => {

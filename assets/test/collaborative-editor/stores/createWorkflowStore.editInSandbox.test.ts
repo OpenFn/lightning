@@ -1,9 +1,3 @@
-/**
- * WorkflowStore - what edit_in_sandbox puts on the wire.
- *
- * A reviewed body travels by value so the person's edits are what land; a saved
- * dataclip travels by id and is copied server-side.
- */
 
 import type { Channel } from 'phoenix';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';

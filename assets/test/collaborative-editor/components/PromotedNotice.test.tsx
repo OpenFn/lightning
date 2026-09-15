@@ -1,10 +1,3 @@
-/**
- * PromotedNotice
- *
- * The server marks the editor it lands you on with `?archived=1` instead of
- * setting a flash, so the message arrives in the editor's own language. Whoever
- * promoted carries a second, local marker so their message names the promote.
- */
 import { render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -42,8 +35,6 @@ describe('PromotedNotice', () => {
   });
 
   test('tells a bystander their sandbox was archived', () => {
-    // They never promoted, so they hold no local marker. The server's marker is
-    // the whole reason they know why the page moved.
     land('?archived=1');
 
     render(<PromotedNotice />);
@@ -77,8 +68,6 @@ describe('PromotedNotice', () => {
   });
 
   test('drops a stale promote marker on an ordinary visit', () => {
-    // Otherwise an archive that never happened would announce itself the next
-    // time this tab opened an editor.
     markPromoted();
 
     render(<PromotedNotice />);

@@ -15,11 +15,7 @@ import type { Dataclip } from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { getCsrfToken } from '../lib/csrf';
 import { notifications } from '../lib/notifications';
-import {
-  AS_RUN_PARAM,
-  RELEASE_PARAM,
-  SNAPSHOT_PARAM,
-} from '../lib/pinnedView';
+import { AS_RUN_PARAM, RELEASE_PARAM, SNAPSHOT_PARAM } from '../lib/pinnedView';
 import type { Workflow } from '../types/workflow';
 import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
@@ -77,13 +73,6 @@ export interface UseRunRetryOptions {
   customBody: string;
   canRunWorkflow: boolean;
   workflowRunTooltipMessage: string;
-  /**
-   * Whether a loaded run may be retried, which differs from `canRunWorkflow` on
-   * one condition: reading an older version. A fresh run has no content to run
-   * there and stays blocked; a retry carries the version its own run executed,
-   * so it goes ahead. Callers get this from `useCanRun({ forRetry: true })`.
-   * Defaults to `canRunWorkflow`, which is the same answer everywhere else.
-   */
   canRetryWorkflow?: boolean;
   retryTooltipMessage?: string;
   saveWorkflow: (
@@ -102,7 +91,6 @@ export interface UseRunRetryReturn {
   isRetryable: boolean;
   runIsProcessing: boolean;
   canRun: boolean;
-  /** Whether the loaded run may be retried. See `canRun` for a fresh run. */
   canRetry: boolean;
 }
 
@@ -186,7 +174,6 @@ export function useRunRetry({
   const runIsProcessing = currentRun ? isProcessing(currentRun.state) : false;
 
   // Effect to reset isSubmitting when the pending run is connected via WebSocket
-  // This prevents the "flash" where the button briefly shows "Retry" between
   // API success and WebSocket connection
   useEffect(() => {
     if (pendingRunId && currentRun?.id === pendingRunId) {
@@ -252,9 +239,6 @@ export function useRunRetry({
     (selectedTab === 'custom' && isValidCustomBody && !isCustomBodyTooLarge);
 
   const canRun = !edgeId && canRunWorkflow && hasValidInput;
-  // A retry runs the input its own run used, so what is selected in the panel
-  // does not decide it. That is an improvement and it is still a change, so
-  // without the flag it keeps main's answer: the panel's selection gates both.
   const canRetry =
     !edgeId && canRetryWorkflow && (experimentalFeatures || hasValidInput);
 
@@ -280,7 +264,6 @@ export function useRunRetry({
     setIsSubmitting(true);
     try {
       // Save workflow first; user action is run, not save; run outcome
-      // toast covers it. A live workflow cannot be saved, so nothing is.
       const saved = await saveBeforeRun();
 
       const params: dataclipApi.ManualRunParams = {
@@ -382,7 +365,6 @@ export function useRunRetry({
     setIsSubmitting(true);
     try {
       // Save workflow first; user action is run, not save; run outcome
-      // toast covers it. A live workflow cannot be saved, so nothing is.
       const saved = await saveBeforeRun();
 
       // Call retry endpoint
@@ -421,16 +403,6 @@ export function useRunRetry({
         void getLimits('new_run');
       }
 
-      // A retry runs the content that is live, so it leaves every pinned view
-      // behind and lands on its own new run. Without this you stayed reading
-      // v1 while following a run that executed something else, and the version
-      // badge went on saying v1 however many times you retried.
-      //
-      // One call rather than one per parameter, so a retry costs one history
-      // entry rather than several and Back takes you where you expect.
-      // Leaving the pinned view behind is part of what this work added. Without
-      // the flag a retry is only ever started from the document already open,
-      // so it touches the one parameter it has always touched.
       updateSearchParams(
         experimentalFeatures
           ? {

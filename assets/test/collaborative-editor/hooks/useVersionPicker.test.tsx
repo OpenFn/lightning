@@ -1,11 +1,3 @@
-/**
- * useVersionPicker
- *
- * Decides which version list the editor shows. Publishing means production, so
- * the publish trail only appears where a workflow can publish: live, outside a
- * sandbox, for someone who opted into the lifecycle. Everywhere else browses
- * saves, which is the list the editor has always had.
- */
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -49,9 +41,6 @@ describe('useVersionPicker', () => {
   });
 
   test('a sandbox shows its saves even when the workflow is live there', () => {
-    // Turning a workflow on inside a sandbox records a release, but nothing in
-    // a sandbox reaches production, so calling that a publish would mean
-    // something it does not.
     project = { is_sandbox: true };
 
     expect(picker()).toBe('snapshots');
@@ -70,8 +59,6 @@ describe('useVersionPicker', () => {
   });
 
   test('a context that has not loaded yet shows saves', () => {
-    // The safe answer while nothing is known: the list the editor has always
-    // had, rather than a publish trail that may not apply.
     project = null;
     workflow = null;
 

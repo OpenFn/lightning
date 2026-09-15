@@ -103,19 +103,6 @@ import { wrapStoreWithDevTools } from './devtools';
 
 const logger = _logger.ns('SessionContextStore').seal();
 
-/**
- * Whether this person may change the workflow's content right now.
- *
- * Both halves are needed and neither implies the other: the role says whether
- * they may edit at all, and the lifecycle lock says whether the content may
- * change. Answering it in one place keeps the callers from each remembering to
- * ask twice, which is how a live workflow's local document ended up accepting
- * writes the server then refused.
- *
- * This is not the same question as "is the editor read-only" — that also covers
- * reading the past and an unsaved new workflow, and lives in
- * `useWorkflowReadOnly`.
- */
 export const selectCanEditContent = (state: SessionContextState): boolean =>
   (state.permissions?.can_edit_workflow ?? false) && !state.contentLocked;
 
@@ -124,11 +111,6 @@ export const selectCanEditContent = (state: SessionContextState): boolean =>
  */
 export const createSessionContextStore = (
   isNewWorkflow: boolean = false,
-  // Seeded from the page rather than waited for over the channel. The editor
-  // decides what to show from this flag, and learning it a round trip late
-  // meant drawing the header one way and correcting it a moment later. The
-  // context still carries it and overwrites this on arrival, so there is one
-  // source of truth and this is only its opening value.
   experimentalFeaturesEnabled: boolean = false
 ): SessionContextStore => {
   // Single Immer-managed state object (referentially stable)
@@ -322,10 +304,11 @@ export const createSessionContextStore = (
     state = produce(state, draft => {
       const previousLockVersion = draft.latestSnapshotLockVersion;
 
-      // Clear releases if lock version changed (not on initial set)
       if (previousLockVersion !== null && previousLockVersion !== lockVersion) {
         draft.releases = [];
         draft.releasesLoaded = false;
+        draft.versions = [];
+        draft.versionsLoaded = false;
       }
 
       draft.latestSnapshotLockVersion = lockVersion;
@@ -362,10 +345,6 @@ export const createSessionContextStore = (
     notify('setSuppressEnableTriggerWarning');
   };
 
-  /**
-   * Persist the "don't show the enable-trigger warning again" preference to the
-   * backend and optimistically flip the local flag so it sticks this session.
-   */
   const markEnableTriggerWarningSuppressed = async (): Promise<void> => {
     if (!_channelProvider?.channel) {
       logger.warn(
@@ -374,8 +353,6 @@ export const createSessionContextStore = (
       return;
     }
 
-    // Optimistically update so the warning is skipped immediately, even before
-    // the server acknowledges.
     setSuppressEnableTriggerWarning(true);
 
     try {
@@ -389,9 +366,6 @@ export const createSessionContextStore = (
     }
   };
 
-  /**
-   * Request workflow releases from server via channel
-   */
   const requestReleases = async (): Promise<void> => {
     // Early return if already loading or no channel
     if (state.releasesLoading || !_channelProvider?.channel) {
@@ -415,7 +389,6 @@ export const createSessionContextStore = (
         {}
       );
 
-      // Validate releases array with Zod
       const result = z.array(ReleaseSchema).safeParse(response.releases);
 
       if (result.success) {
@@ -451,13 +424,6 @@ export const createSessionContextStore = (
     }
   };
 
-  /**
-   * Request the workflow's saved snapshots, numbered by lock_version.
-   *
-   * A different question from `requestReleases`, with differently shaped rows,
-   * which is why it is a different event. This is the list for a user without
-   * experimental features.
-   */
   const requestVersions = async (): Promise<void> => {
     if (state.versionsLoading || !_channelProvider?.channel) {
       if (!_channelProvider?.channel) {
@@ -523,9 +489,6 @@ export const createSessionContextStore = (
     notify('clearVersions');
   };
 
-  /**
-   * Clear releases cache
-   */
   const clearReleases = () => {
     state = produce(state, draft => {
       draft.releases = [];
@@ -558,15 +521,6 @@ export const createSessionContextStore = (
       handleSessionContextUpdated(message);
     };
 
-    // Sent only to the sockets that did not act, so it always means someone
-    // else moved the workflow. Their editor changes under them, which is worth
-    // a word rather than leaving them to notice on save.
-    //
-    // Not to a user without experimental features, though. A colleague with the
-    // flag can publish a shared workflow, and both of these sentences name
-    // actions that user has no buttons for. Their editor does go read-only, and
-    // the read-only tooltip is what explains that; announcing a lifecycle they
-    // do not have would be the feature leaking out of the flag.
     const lifecycleChangedHandler = (message: unknown) => {
       if (!state.experimentalFeaturesEnabled) return;
 
@@ -576,9 +530,6 @@ export const createSessionContextStore = (
         'state' in message &&
         (message as { state: unknown }).state;
 
-      // A sandbox has no lifecycle to announce. The same transition is what its
-      // Turn on button sends, and there nothing was published and nothing goes
-      // read-only, so the live wording would be wrong twice over.
       const inSandbox = state.project?.is_sandbox === true;
 
       if (nextState === 'live') {

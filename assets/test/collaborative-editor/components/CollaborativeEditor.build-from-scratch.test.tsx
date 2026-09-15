@@ -57,8 +57,6 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
-  // #/monaco configures the loader at import time, so anything that reaches it
-  // needs this present even when the editor itself is stubbed.
   loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
@@ -184,13 +182,8 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useSessionContext: () => ({
     workflow: { jobs: [], triggers: [], edges: [], name: 'wf', positions: {} },
   }),
-  // The header reads this for the lifecycle badge and the Go live / Switch to
-  // draft buttons. These tests are about the build-from-scratch import flow, so
-  // leave it absent and keep the lifecycle controls out of the tree.
   useSessionWorkflow: () => undefined,
   useExperimentalFeatures: () => true,
-  // The header gates Edit in sandbox on can_provision_sandbox. Grant the full
-  // set so the import flow under test is not blocked by permissions.
   usePermissions: () => ({
     can_edit_workflow: true,
     can_run_workflow: true,

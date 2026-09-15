@@ -396,8 +396,6 @@ defmodule Lightning.Projects.SandboxesTest do
       assert s_triggers != []
       assert Enum.all?(s_triggers, &match?(false, &1.enabled))
 
-      # Cloned workflows must start as drafts so their :state stays coherent with
-      # their disabled triggers.
       assert Enum.all?(s_wfs, &(&1.state == :draft))
 
       # `custom_path` is namespaced per project, so a sandbox carries the
@@ -515,8 +513,6 @@ defmodule Lightning.Projects.SandboxesTest do
           dataclip_ids: [original.id]
         })
 
-      # Without the request, a job reading state.request sees a different input
-      # in the sandbox than the one that ran in production.
       assert [%{"headers" => %{"x-thing" => "1"}}] =
                from(d in Dataclip,
                  where: d.project_id == ^sandbox.id,
@@ -528,8 +524,6 @@ defmodule Lightning.Projects.SandboxesTest do
     test "leaves a request off a type that must not carry one" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 
-      # A row like this cannot be written through the app today, but legacy data
-      # can look like it, and the changeset refuses a request on this type.
       {1, _} =
         Repo.insert_all(Dataclip, [
           %{
@@ -582,7 +576,6 @@ defmodule Lightning.Projects.SandboxesTest do
                )
                |> Repo.all()
 
-      # The parent keeps whatever it had; nothing moved.
       assert from(d in Dataclip, where: d.project_id == ^parent.id)
              |> Repo.aggregate(:count) > 0
     end
@@ -617,8 +610,6 @@ defmodule Lightning.Projects.SandboxesTest do
     test "refuses a reviewed body carrying a NUL byte" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 
-      # Valid JSON, an object, under the limit, and Postgres will not take it.
-      # Left to the insert this raises and kills the channel.
       assert {:error, :starting_dataclip_invalid_json} =
                Sandboxes.provision(parent, actor, %{
                  name: "sb-nul",
@@ -1292,6 +1283,39 @@ defmodule Lightning.Projects.SandboxesTest do
                parent,
                "gamma"
              )
+    end
+
+    test "a promote of one workflow leaves the others' open documents alone", %{
+      actor: actor,
+      parent: parent,
+      parent_alpha: parent_alpha,
+      parent_beta: parent_beta,
+      sandbox: sandbox
+    } do
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      alpha_id = parent_alpha.id
+      beta_id = parent_beta.id
+
+      Lightning.Collaboration.WorkflowReconciler.subscribe(alpha_id)
+      Lightning.Collaboration.WorkflowReconciler.subscribe(beta_id)
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [sandbox_alpha.id],
+                 record_release: :promote
+               })
+
+      assert_receive %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{
+                       workflow_id: ^alpha_id
+                     },
+                     500
+
+      refute_receive %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{
+                       workflow_id: ^beta_id
+                     },
+                     200
     end
 
     test "ignores a selected id that belongs to another project", %{
@@ -2338,10 +2362,6 @@ defmodule Lightning.Projects.SandboxesTest do
       {:ok, updated} =
         Sandboxes.update_sandbox(sb, actor, %{name: "updated", env: "main"})
 
-      # The environment decides which of a credential's value sets this project
-      # reads. A sandbox holds a reference to every credential its parent holds,
-      # so an owner who could name it after the parent's would read the parent's
-      # production values.
       assert updated.name == "updated"
       assert updated.env == original_env
     end

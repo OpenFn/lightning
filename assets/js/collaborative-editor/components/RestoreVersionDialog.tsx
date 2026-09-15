@@ -1,3 +1,5 @@
+/** Confirms a restore, naming what it will take offline. */
+
 import {
   Dialog,
   DialogBackdrop,
@@ -31,7 +33,6 @@ export interface RestoreCost {
 interface RestoreVersionDialogProps {
   isOpen: boolean;
   versionNumber: number | null;
-  /** Null while the answer is still coming back. */
   cost: RestoreCost | null;
   onConfirm: () => Promise<boolean>;
   onCancel: () => void;
@@ -45,15 +46,6 @@ function describeTrigger(trigger: LosingTrigger | ReturningTrigger) {
     : 'a webhook trigger';
 }
 
-/**
- * Asked before an earlier version's content replaces what is live.
- *
- * Restoring is not a mistake to be warned about, it is a deliberate rollback,
- * so this says what it costs rather than trying to talk anyone out of it. The
- * costs worth naming are the ones nobody should discover afterwards: a trigger
- * added since that version disappears, and the URL built from it stops
- * answering.
- */
 export function RestoreVersionDialog({
   isOpen,
   versionNumber,
@@ -63,8 +55,6 @@ export function RestoreVersionDialog({
 }: RestoreVersionDialogProps) {
   const [isRestoring, setIsRestoring] = useState(false);
 
-  // Nothing unmounts this between opens, so it has to clear its own in-flight
-  // state or the next open is a dead button.
   useEffect(() => {
     if (!isOpen) setIsRestoring(false);
   }, [isOpen]);

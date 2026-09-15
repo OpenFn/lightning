@@ -608,13 +608,10 @@ defmodule Lightning.WorkOrders do
   Recent work orders whose runs executed against the snapshot published as
   `version_number`, newest first.
 
-  Like `get_workorders_with_runs/2` this is the bounded recent-history feed: it
-  caps at the same #{@history_limit} work orders, it is not the full history
-  page. Each returned work order carries only the runs that map to the release's
-  snapshot `lock_version`, so a work order retried across several versions shows
-  only the runs belonging to this one.
-
-  Returns `[]` when the workflow has no release published as `version_number`.
+  Bounded like `get_workorders_with_runs/2`, not the full history page. Each
+  work order carries only the runs matching this release, so one retried across
+  several versions shows only the runs belonging to this one. `[]` when no such
+  release exists.
   """
   @spec get_workorders_for_version(Ecto.UUID.t(), integer()) :: [WorkOrder.t()]
   def get_workorders_for_version(workflow_id, version_number) do
@@ -672,8 +669,6 @@ defmodule Lightning.WorkOrders do
     unversioned_history(workflow_id, released_lock_versions)
   end
 
-  # No releases exist yet, so every run is unversioned: this is the standard
-  # bounded recent-history feed.
   defp unversioned_history(workflow_id, []) do
     collect_history(
       from(wo in WorkOrder,
@@ -702,10 +697,6 @@ defmodule Lightning.WorkOrders do
     )
   end
 
-  # Two-step, mirroring get_workorders_with_runs/2: pick the bounded set of work
-  # order ids from the filtered scope, then reload them with only the matching
-  # runs preloaded. Keeps the recent-history cap while filtering runs per work
-  # order.
   defp collect_history(wo_scope, runs_query) do
     wo_ids =
       from(wo in wo_scope,

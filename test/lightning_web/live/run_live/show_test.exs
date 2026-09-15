@@ -360,9 +360,6 @@ defmodule LightningWeb.RunLive.ShowTest do
            conn: conn,
            project: project
          } do
-      # No experimental features here, so this is the link the editor has always
-      # sent: the snapshot's own lock_version in `?v=`, which is the parameter
-      # the snapshot picker reads.
       # Create workflow with initial snapshot
       workflow =
         insert(:simple_workflow, project: project, lock_version: 1)
@@ -388,10 +385,6 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       # Find the workflow link - should include version param
       # Note: & is HTML-escaped as &amp; in rendered output
-      # Matched a parameter at a time, and anchored on the separator: the link
-      # builds its query string from a map, so the order is whatever the encoder
-      # iterates rather than source order, and a bare `run=` would also match
-      # inside `as_run=`.
       assert html =~ ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?/
       assert html =~ ~r/[?;]run=#{run_id}/
       assert html =~ ~r/[?;]v=#{snapshot.lock_version}/
@@ -403,9 +396,6 @@ defmodule LightningWeb.RunLive.ShowTest do
       project: project,
       user: user
     } do
-      # `?as_run=` is resolved through the run's own snapshot, so it reaches
-      # content that was never released. It names a release-era concept, so it
-      # is only sent to someone who opted in.
       Lightning.Accounts.update_user_preference(
         user,
         "experimental_features",

@@ -1,14 +1,3 @@
-/**
- * useViewAsExecuted Hook Tests
- *
- * Verifies the hook produces the distinct `?as_run=<run_id>` param that
- * SessionProvider turns into the `:run:<run_id>` room, loading the workflow
- * read-only as that run executed. It must clear any version pin and set `run`
- * for step highlighting, using the SPA URL update (no page reload).
- *
- * Pinning a run destroys the document, so it is also guarded: with unsaved
- * edits the hook asks first and offers to save.
- */
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';

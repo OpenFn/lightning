@@ -26,9 +26,6 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
 
-      # Both arrive with the page rather than over the channel. Without them the
-      # editor draws what a flag-off draft looks like and corrects itself a
-      # moment later, which on a live workflow means Save appearing and going.
       assert live_workflow.state == :live
       assert html =~ "data-workflow-state=\"live\""
       assert html =~ "data-experimental-features=\"true\""

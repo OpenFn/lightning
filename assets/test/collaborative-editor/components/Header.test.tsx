@@ -72,7 +72,6 @@ interface WrapperOptions {
   repoName?: string;
   branchName?: string;
   triggerSync?: boolean;
-  /** Whether this user has opted into experimental features. */
   experimentalFeatures?: boolean;
 }
 
@@ -1244,9 +1243,6 @@ describe('Header - Keyboard Shortcuts', () => {
   });
 
   test('save button stays put and disabled when the user cannot edit', async () => {
-    // Without experimental features there is no lifecycle badge and no Switch
-    // to draft alongside to explain a bare header, so Save stays where it is,
-    // greyed out, carrying the reason. That is what ships today.
     const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
     });
@@ -1269,9 +1265,6 @@ describe('Header - Keyboard Shortcuts', () => {
   });
 
   test('save button stays, disabled, on a read-only view with the flag on', async () => {
-    // It used to be hidden, on the grounds that the lifecycle actions explain
-    // the view. They are themselves hidden on a version view, so that left a
-    // header with nothing in it. It stays and carries its own reason.
     const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
       experimentalFeatures: true,

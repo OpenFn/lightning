@@ -1,4 +1,3 @@
-// Header sandbox-affordance tests: gating, lifecycle badge, and the go-live / switch-to-draft / edit-in-sandbox actions.
 
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,10 +6,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { BreadcrumbText } from '../../../js/collaborative-editor/components/Breadcrumbs';
 import { Header } from '../../../js/collaborative-editor/components/Header';
 import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors';
-
-// ---------------------------------------------------------------------------
-// Hook + child-component mocks
-// ---------------------------------------------------------------------------
 
 let lifecycleState: 'draft' | 'live' | undefined = 'live';
 let experimentalFeatures = true;
@@ -57,10 +52,7 @@ let activeRun: {
 let latestSnapshotId: string | null = null;
 let workflowTriggers: { id: string }[] = [];
 let activeRunSummary: { id: string; snapshot_id: string | null } | undefined;
-// The lifecycle lock, which decides whether a run saves on its way out.
 let contentLocked = false;
-// The session context has landed. The header withholds what depends on it
-// until it has, so a test about that has to be able to turn it off.
 let sessionContextLoaded = true;
 let sessionContextError: string | null = null;
 let releases: {
@@ -74,10 +66,7 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 
 vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
   useActiveRun: () => activeRun,
-  // The header asks which snapshot the loaded run executed, to decide whether
-  // it can come along into a draft.
   useRunSummary: () => activeRunSummary,
-  // Going live drops the run from the store as well as the URL.
   useFollowRun: () => ({ run: activeRun, clearRun }),
 }));
 
@@ -104,8 +93,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useLatestSnapshotId: () => latestSnapshotId,
   useReleases: () => releases,
   useSessionWorkflow: () => ({ state: lifecycleState }),
-  // Defaults on, because most of these tests are about the experimental
-  // experience. The gating tests turn it off.
   useExperimentalFeatures: () => experimentalFeatures,
 }));
 
@@ -126,9 +113,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowEnabled: () => ({ enabled: workflowEnabled, setEnabled }),
   useCanRun: () => ({ canRun: true }),
-  // Saving follows the read-only state in the app, so the stub follows it here
-  // too. Leaving it permanently true would let a test assert a Save button that
-  // could not exist.
   useCanSave: () => ({
     canSave: !readOnly.isReadOnly,
     tooltipMessage: readOnly.reason ?? '',
@@ -171,7 +155,6 @@ vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   },
 }));
 
-// Stub the hard-navigation Header performs after a successful promote.
 function stubNavigation() {
   const originalLocation = window.location;
   const hrefSetter = vi.fn();
@@ -195,10 +178,6 @@ function stubNavigation() {
   };
 }
 
-// Header reads StoreContext via useContext with optional chaining, so leaving
-// it unprovided (undefined) is handled gracefully and avoids extra wiring.
-
-// Child components rendered by Header that are irrelevant to the gating logic.
 vi.mock(
   '../../../js/collaborative-editor/components/ActiveCollaborators',
   () => ({
@@ -216,8 +195,6 @@ vi.mock('../../../js/collaborative-editor/components/GitHubSyncModal', () => ({
   GitHubSyncModal: () => <div data-testid="github-sync-modal" />,
 }));
 vi.mock('../../../js/collaborative-editor/components/NewRunButton', () => ({
-  // Carries the label and the disabled state through, because whether this
-  // reads Run or Retry, and whether it is usable, is the thing under test.
   NewRunButton: ({ text, disabled }: { text?: string; disabled?: boolean }) => (
     <button type="button" data-testid="new-run-button" disabled={disabled}>
       {text}
@@ -234,10 +211,6 @@ vi.mock(
       isOpen ? <div data-testid="edit-in-sandbox-picker" /> : null,
   })
 );
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 const renderHeader = (
   props: Partial<React.ComponentProps<typeof Header>> = {}
@@ -280,8 +253,6 @@ describe('Header - Edit in sandbox button gating', () => {
     renderHeader({ isSandbox: false });
     const button = screen.getByTestId('edit-in-sandbox-button');
     expect(button).toBeEnabled();
-    // The Tooltip renders bare children when content is null, so nothing here
-    // is a Radix trigger when provisioning is allowed.
     expect(button).not.toHaveAttribute('data-state');
     expect(button.parentElement).not.toHaveAttribute('data-state');
   });
@@ -292,8 +263,6 @@ describe('Header - Edit in sandbox button gating', () => {
 
     const button = screen.getByTestId('edit-in-sandbox-button');
     expect(button).toBeDisabled();
-    // A disabled button dispatches no pointer events, so the Radix trigger has
-    // to be the wrapper around it rather than the button itself.
     expect(button.parentElement).toHaveAttribute('data-state');
   });
 
@@ -368,9 +337,6 @@ describe('Header - lifecycle actions', () => {
   });
 
   test('keeps the on/off switch for a user without experimental features', () => {
-    // Their only way to turn a workflow on or off. With the flag on, the
-    // lifecycle badge and Go live / Switch to draft answer the same question,
-    // so the switch would be a second, contradicting control.
     experimentalFeatures = false;
     workflowEnabled = true;
 
@@ -392,13 +358,6 @@ describe('Header - lifecycle actions', () => {
   });
 
   test('shows none of it to a user without experimental features', () => {
-    // The point of the flag: a user who has not turned it on gets the header
-    // they had before. Everything the sandboxes-and-releases work added is
-    // guarded by the lifecycle state or by being inside a sandbox, so the flag
-    // reads both as absent rather than each button testing it separately.
-    //
-    // The workflow really is live in the database here, which is the case that
-    // matters: a colleague with the flag on can publish a shared workflow.
     experimentalFeatures = false;
     lifecycleState = 'live';
 
@@ -437,8 +396,6 @@ describe('Header - lifecycle actions', () => {
   });
 
   test('hides the Live badge when viewing a pinned older version', () => {
-    // The workflow is live, but we are pinned to a release (?v=), so the
-    // current "Live" state does not describe what's on screen.
     lifecycleState = 'live';
     urlParams = { v: '2' };
 
@@ -450,9 +407,6 @@ describe('Header - lifecycle actions', () => {
   });
 
   test('refuses the lifecycle and sandbox actions on a pinned older version', () => {
-    // They all act on the current workflow, so pressing one here would reach
-    // past what is on screen. They stay put and say so: hiding them left a
-    // header with nothing in it and nothing to explain the view.
     lifecycleState = 'live';
     urlParams = { v: '2' };
 
@@ -463,8 +417,6 @@ describe('Header - lifecycle actions', () => {
   });
 
   test('refuses Go live on a pinned older version of a draft workflow', () => {
-    // It acts on the current workflow, not the version being read, so it stays
-    // on screen and says so rather than vanishing.
     lifecycleState = 'draft';
     urlParams = { v: '2' };
 
@@ -479,9 +431,6 @@ describe('Header - lifecycle actions', () => {
 
     renderHeader();
 
-    // Reading a failed run is where the fix starts, and these are the only two
-    // ways to edit a live workflow. Hiding them left the journey with no exit,
-    // since leaving the run first loses the run and its input with it.
     expect(screen.getByTestId('switch-to-draft-button')).toBeInTheDocument();
     expect(screen.getByTestId('edit-in-sandbox-button')).toBeInTheDocument();
   });
@@ -492,9 +441,6 @@ describe('Header - lifecycle actions', () => {
 
     renderHeader();
 
-    // No run here to carry into a fix, so this stays a reading view. The
-    // controls stay put and say why, because a header with nothing in it
-    // explains nothing.
     expect(screen.getByTestId('switch-to-draft-button')).toBeDisabled();
   });
 
@@ -520,11 +466,9 @@ describe('Header - lifecycle actions', () => {
   });
 
   test('suppresses the redundant Read-only badge on a live workflow but keeps it on a draft', () => {
-    // Live already implies read-only, so the "Read-only" pill is hidden.
     renderHeader();
     expect(screen.queryByTestId('read-only-warning')).not.toBeInTheDocument();
 
-    // A draft has no Live badge, so the "Read-only" pill is still rendered.
     lifecycleState = 'draft';
     renderHeader();
     const warnings = screen.getAllByTestId('read-only-warning');
@@ -546,9 +490,6 @@ describe('Header - lifecycle actions', () => {
       })
     );
 
-    // Clearing only the parameter was not enough: the canvas restores the run
-    // from the store, and going live writes a version that run did not execute,
-    // so it reopens read-only as it executed.
     await waitFor(() => {
       expect(clearRun).toHaveBeenCalled();
     });
@@ -561,9 +502,6 @@ describe('Header - lifecycle actions', () => {
 
     await user.click(screen.getByTestId('go-live-button'));
 
-    // Turning the triggers on and starting to process real data is the most
-    // consequential thing here, and it was the only one that fired straight
-    // from the click.
     expect(goLive).not.toHaveBeenCalled();
 
     await user.click(
@@ -583,7 +521,6 @@ describe('Header - lifecycle actions', () => {
 
     await user.click(screen.getByTestId('switch-to-draft-button'));
 
-    // The confirmation dialog opens; the action only fires once confirmed.
     const dialog = screen.getByRole('dialog');
     expect(
       within(dialog).getByText(/takes the workflow out of production/i)
@@ -608,8 +545,6 @@ describe('Header - lifecycle actions', () => {
       state: 'failed',
       steps: [{ id: 'step-1', input_dataclip_id: 'dc-7' }],
     };
-    // This run executed the content that is live, so it still describes what
-    // the draft opens on.
     latestSnapshotId = 'snapshot-live';
     activeRunSummary = { id: 'run-1', snapshot_id: 'snapshot-live' };
 
@@ -622,10 +557,6 @@ describe('Header - lifecycle actions', () => {
       })
     );
 
-    // Switching to draft unlocks the content, it does not change it, so the run
-    // still describes what is on screen. Dropping it threw away the logs and
-    // the failing step at the moment the fix starts. Every pinned parameter
-    // goes, because only the latest version can be edited.
     await waitFor(() => {
       expect(updateSearchParams).toHaveBeenCalledWith({
         release: null,
@@ -660,9 +591,6 @@ describe('Header - lifecycle actions', () => {
       })
     );
 
-    // It lands on the latest version, which is the only editable one, and the
-    // version banner says the run took place on something else. Dropping it
-    // instead took away the logs the fix is being written against.
     await waitFor(() => {
       expect(updateSearchParams).toHaveBeenCalledWith({
         release: null,
@@ -735,8 +663,6 @@ describe('Header - lifecycle actions', () => {
 
       await user.click(screen.getByTestId('toggle-sandbox-button'));
 
-      // Same transition, so it respects the activation limit and records a
-      // release exactly as the parent's Go live does.
       await waitFor(() => {
         expect(goLive).toHaveBeenCalledTimes(1);
       });
@@ -759,7 +685,6 @@ describe('Header - lifecycle actions', () => {
 
       await user.click(screen.getByTestId('toggle-sandbox-button'));
 
-      // Nothing in production is affected, so there is nothing to confirm.
       await waitFor(() => {
         expect(switchToDraft).toHaveBeenCalledTimes(1);
       });
@@ -796,8 +721,6 @@ describe('Header - lifecycle actions', () => {
     });
 
     test('is refused on a pinned version of a sandbox', () => {
-      // It turns the sandbox on, which is about the workflow now, not the
-      // version being read. It stays on screen and says so.
       lifecycleState = 'draft';
       urlParams = { v: '2' };
 
@@ -813,10 +736,8 @@ describe('Header - lifecycle actions', () => {
     const promoteButton = screen.getByTestId('promote-sandbox-button');
     expect(promoteButton).toBeEnabled();
     expect(promoteButton).toHaveTextContent('Promote');
-    // No longer wrapped in the "Coming soon" Tooltip, so no Radix trigger marker.
     expect(promoteButton).not.toHaveAttribute('data-state');
 
-    // The main-project lifecycle actions are not offered inside a sandbox.
     expect(screen.queryByTestId('go-live-button')).not.toBeInTheDocument();
     expect(
       screen.queryByTestId('switch-to-draft-button')
@@ -826,7 +747,6 @@ describe('Header - lifecycle actions', () => {
     ).not.toBeInTheDocument();
   });
 
-  // Walk the dialog through phase one: open it and confirm the save-and-merge.
   const confirmPromote = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByTestId('promote-sandbox-button'));
     await user.click(
@@ -849,7 +769,6 @@ describe('Header - lifecycle actions', () => {
     expect(
       within(dialog).getByText(/current changes in this sandbox are saved/i)
     ).toBeInTheDocument();
-    // Neither the save nor the promote fires until the user confirms.
     expect(saveWorkflow).not.toHaveBeenCalled();
     expect(promote).not.toHaveBeenCalled();
   });
@@ -985,15 +904,11 @@ describe('Header - lifecycle actions', () => {
       await waitFor(() => {
         expect(promote).toHaveBeenCalledTimes(1);
       });
-      // The current editor state is saved (silently) before the merge, and the
-      // save happens first.
       expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'none' });
       expect(saveWorkflow.mock.invocationCallOrder[0]).toBeLessThan(
         promote.mock.invocationCallOrder[0]
       );
 
-      // Promote merges only: the dialog advances to its success step rather than
-      // hard-navigating away.
       const dialog = screen.getByRole('dialog');
       await waitFor(() => {
         expect(
@@ -1001,7 +916,6 @@ describe('Header - lifecycle actions', () => {
         ).toBeInTheDocument();
       });
       expect(nav.hrefSetter).not.toHaveBeenCalled();
-      // No inline toast yet; the user chooses keep-or-archive first.
       expect(notifySuccess).not.toHaveBeenCalled();
     } finally {
       nav.restore();
@@ -1034,10 +948,8 @@ describe('Header - lifecycle actions', () => {
       await waitFor(() => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       });
-      // Staying in the sandbox: no archive push and no navigation.
       expect(archiveSandbox).not.toHaveBeenCalled();
       expect(nav.hrefSetter).not.toHaveBeenCalled();
-      // The success toast is shown inline since we don't reload.
       expect(notifySuccess).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Workflow promoted' })
       );
@@ -1073,15 +985,9 @@ describe('Header - lifecycle actions', () => {
       await waitFor(() => {
         expect(archiveSandbox).toHaveBeenCalledTimes(1);
       });
-      // Archiving schedules the sandbox for deletion, and the LiveView teardown
-      // hook redirects every socket on it to the parent's copy of this
-      // workflow. Navigating from here as well only raced that redirect.
       expect(nav.hrefSetter).not.toHaveBeenCalled();
       expect(notifySuccess).not.toHaveBeenCalled();
 
-      // The reload would destroy a toast raised here, and the flash the server
-      // sends on arrival speaks only of the archive. The promote is handed
-      // across instead, for the parent's editor to confirm.
       expect(window.sessionStorage.getItem('openfn:promoted')).toBe('1');
     } finally {
       nav.restore();
@@ -1090,8 +996,6 @@ describe('Header - lifecycle actions', () => {
   });
 
   test('a refused archive claims no promote across the reload', async () => {
-    // Nothing navigates, so the marker would sit there and announce a promote
-    // to the next page this tab happens to load.
     const user = userEvent.setup();
     promote.mockResolvedValue({
       parent_project_id: 'parent-1',
@@ -1142,7 +1046,6 @@ describe('Header - lifecycle actions', () => {
       expect(within(dialog).getByText('Changes promoted')).toBeInTheDocument();
     });
 
-    // No Archive/Keep pair; only a plain close, plus the admin hint.
     expect(
       within(dialog).queryByRole('button', { name: 'Archive sandbox' })
     ).not.toBeInTheDocument();
@@ -1159,7 +1062,6 @@ describe('Header - lifecycle actions', () => {
 
   test('the confirm button shows a loading state while the merge is in flight', async () => {
     const user = userEvent.setup();
-    // Never-resolving promise keeps the merge pending so the loading label stays.
     promote.mockReturnValue(new Promise(() => {}));
 
     renderHeader({ isSandbox: true });
@@ -1173,7 +1075,6 @@ describe('Header - lifecycle actions', () => {
     await waitFor(() => {
       expect(confirmButton).toBeDisabled();
     });
-    // Still on phase one; the success step hasn't appeared.
     expect(
       within(dialog).queryByText('Changes promoted')
     ).not.toBeInTheDocument();
@@ -1192,7 +1093,6 @@ describe('Header - lifecycle actions', () => {
         expect.objectContaining({ title: 'Could not save before promoting' })
       );
     });
-    // The merge never runs, and the dialog stays on its confirm step.
     expect(promote).not.toHaveBeenCalled();
     const dialog = screen.getByRole('dialog');
     expect(
@@ -1220,7 +1120,6 @@ describe('Header - lifecycle actions', () => {
         expect.objectContaining({ title: 'Could not promote' })
       );
     });
-    // The save succeeded first; only the merge failed. Still on phase one.
     expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'none' });
     const dialog = screen.getByRole('dialog');
     expect(
@@ -1261,7 +1160,6 @@ describe('Header - lifecycle actions', () => {
           expect.objectContaining({ title: 'Could not archive sandbox' })
         );
       });
-      // No navigation; the success step stays so the user can retry or keep.
       expect(nav.hrefSetter).not.toHaveBeenCalled();
       expect(
         within(dialog).getByRole('button', { name: 'Archive sandbox' })
@@ -1308,9 +1206,6 @@ describe('Header - read-only reason variations', () => {
   });
 
   test('shows the Create button for a new workflow held read-only as unsaved_new', () => {
-    // A new workflow with canvas content is read-only with reason
-    // 'unsaved_new'. That is exactly when the header primary action must be
-    // shown so the user can create the workflow.
     lifecycleState = undefined;
     isNewWorkflow = true;
     readOnly = { isReadOnly: true, reason: 'unsaved_new' };
@@ -1323,9 +1218,6 @@ describe('Header - read-only reason variations', () => {
   });
 
   test('drops Save on a live workflow even while reading an older version', () => {
-    // There is no Save on a live workflow, whichever version is on screen.
-    // Reading an older one does not make it saveable, and the Read-only cue is
-    // what explains that view.
     lifecycleState = 'live';
     urlParams = { v: '2' };
     readOnly = { isReadOnly: true, reason: 'pinned_version' };
@@ -1337,8 +1229,6 @@ describe('Header - read-only reason variations', () => {
   });
 
   test('refuses Promote while reading a run as it executed', () => {
-    // Promote saves before it merges, and every view of the past refuses that
-    // save, so it failed after the confirmation with nothing warning first.
     lifecycleState = 'draft';
     urlParams = { as_run: 'run-1', run: 'run-1' };
 
@@ -1348,9 +1238,6 @@ describe('Header - read-only reason variations', () => {
   });
 
   test('knows a live workflow before the session context arrives', () => {
-    // The page renders the state with the editor. Waiting for the context
-    // meant drawing a draft's header first, so on a live workflow Save
-    // appeared and then vanished a moment later.
     urlParams = {};
     lifecycleState = undefined;
     readOnly = { isReadOnly: true, reason: 'live' };
@@ -1361,9 +1248,6 @@ describe('Header - read-only reason variations', () => {
   });
 
   test('offers Run before the document has synced its triggers', () => {
-    // The page knows the first trigger and renders it with the editor.
-    // Waiting for the document meant the rest of the header painted first and
-    // Run arrived after it, which reads as a flash.
     workflowTriggers = [];
 
     renderHeader({ isSandbox: false, initialFirstTriggerId: 'trigger-1' });
@@ -1373,8 +1257,6 @@ describe('Header - read-only reason variations', () => {
 
   test('drops Save on a live workflow, where it could never work', () => {
     urlParams = {};
-    // The Live badge and Switch to draft sit beside it and explain the state,
-    // so a permanently dead button adds nothing.
     readOnly = { isReadOnly: true, reason: 'live' };
 
     renderHeader({ isSandbox: false });
@@ -1383,8 +1265,6 @@ describe('Header - read-only reason variations', () => {
   });
 
   test('keeps Save, disabled, on a live workflow without the flag', () => {
-    // Nothing on screen explains the state without the flag, so the button
-    // stays and carries the reason, as it does on main.
     experimentalFeatures = false;
     readOnly = { isReadOnly: true, reason: 'live' };
 
@@ -1394,9 +1274,6 @@ describe('Header - read-only reason variations', () => {
   });
 
   test('keeps the Read-only cue on a pinned old version of a live workflow', () => {
-    // On a pinned old version of a currently-live workflow, "Live" (the
-    // current state) doesn't explain why the view is read-only, so the
-    // Read-only cue must still show.
     readOnly = { isReadOnly: true, reason: 'pinned_version' };
 
     renderHeader({ isSandbox: false });
@@ -1405,8 +1282,6 @@ describe('Header - read-only reason variations', () => {
   });
 
   test('suppresses the redundant Read-only cue on the current live version', () => {
-    // The Live badge already implies read-only for the current live version,
-    // so the redundant Read-only cue stays hidden.
     readOnly = { isReadOnly: true, reason: 'live' };
 
     renderHeader({ isSandbox: false });
@@ -1436,7 +1311,6 @@ describe('Header - long workflow name', () => {
   });
 
   test('truncates a long workflow name so the save action stays visible', () => {
-    // A draft, because that is where Save exists to be crowded out.
     lifecycleState = 'draft';
     const longName = 'Really-long-workflow-name-'.repeat(6);
 
@@ -1446,12 +1320,10 @@ describe('Header - long workflow name', () => {
       </Header>
     );
 
-    // The name renders with an ellipsis cap rather than pushing the layout.
     const nameEl = screen.getByText(longName);
     expect(nameEl).toHaveClass('truncate');
     expect(nameEl.className).toContain('max-w-');
 
-    // The primary action remains rendered alongside the long name.
     expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
   });
 });
@@ -1463,7 +1335,6 @@ describe('Header - retry from a run view', () => {
     lifecycleState = 'live';
     isNewWorkflow = false;
     limits = {};
-    // Reading a run as it executed, which is read-only.
     readOnly = { isReadOnly: true, reason: 'as_run' };
     urlParams = { run: 'run-1', as_run: 'run-1' };
     activeRun = { id: 'run-1', state: 'failed', steps: [{ id: 'step-1' }] };
@@ -1486,8 +1357,6 @@ describe('Header - retry from a run view', () => {
   });
 
   test('offers it for a run of the live content too', () => {
-    // No as_run: this run executed what is live, so it overlays on the live
-    // document.
     urlParams = { run: 'run-1' };
     readOnly = { isReadOnly: true, reason: 'live' };
 
@@ -1501,8 +1370,6 @@ describe('Header - retry from a run view', () => {
   test('offers the retry even though the view is read-only', () => {
     renderHeader({ isSandbox: false });
 
-    // Retrying is an execution, not an edit. Blocking it with the read-only
-    // lock took away the only way to clear a failed work order from here.
     const runButton = screen.getByTestId('new-run-button');
     expect(runButton).toHaveTextContent('Retry');
     expect(runButton).toBeEnabled();
@@ -1513,7 +1380,6 @@ describe('Header - retry from a run view', () => {
 
     renderHeader({ isSandbox: false });
 
-    // The control is still there to start a fresh run; it just is not a retry.
     expect(screen.getByTestId('new-run-button')).toHaveTextContent('Run');
     expect(screen.getByTestId('new-run-button')).not.toHaveTextContent(
       'Retry'
@@ -1530,7 +1396,6 @@ describe('Header - retry from a run view', () => {
 
     renderHeader({ isSandbox: false });
 
-    // The control is still there to start a fresh run; it just is not a retry.
     expect(screen.getByTestId('new-run-button')).toHaveTextContent('Run');
     expect(screen.getByTestId('new-run-button')).not.toHaveTextContent(
       'Retry'

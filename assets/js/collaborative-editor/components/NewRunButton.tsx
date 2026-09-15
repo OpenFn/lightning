@@ -16,12 +16,7 @@ interface NewRunButtonProps {
   tooltipSide?: 'top' | 'bottom';
   text?: string;
   variant?: 'primary' | 'secondary';
-  /** Whether clicking retries a loaded run rather than starting a fresh one. */
   forRetry?: boolean;
-  /**
-   * Shown instead of the keyboard shortcut when the button is usable. For
-   * saying something about the click that the label cannot carry.
-   */
   enabledTooltip?: React.ReactNode;
 }
 
@@ -50,10 +45,6 @@ export function NewRunButton({
   enabledTooltip,
 }: NewRunButtonProps) {
   const { canRun, tooltipMessage } = useCanRun({ forRetry });
-  // The dropdown starts a fresh run, which is a different question from the one
-  // the main button asks when it is retrying. Sharing the retry's answer left
-  // "Run with custom input" open on a version being read, where a fresh run is
-  // refused, so it opened a panel whose own button was dead.
   const { canRun: canRunFresh, tooltipMessage: freshTooltipMessage } =
     useCanRun();
 
@@ -61,16 +52,11 @@ export function NewRunButton({
   const isDisabled = disabledProp || !canRun || isRunning;
   const isFreshRunDisabled = disabledProp || !canRunFresh || isRunning;
 
-  // Matches RunRetryButton, which is the same control in the IDE and the run
-  // panel. Leaving the label as Run while the spinner turned made the two
-  // disagree on the same screen.
   const label = isRunning ? 'Processing' : text;
 
-  const tooltip = canRun ? (
-    (enabledTooltip ?? <ShortcutKeys keys={['mod', 'enter']} />)
-  ) : (
-    tooltipMessage
-  );
+  const tooltip = canRun
+    ? (enabledTooltip ?? <ShortcutKeys keys={['mod', 'enter']} />)
+    : tooltipMessage;
 
   const icon = isRunning ? (
     <span className="hero-arrow-path h-4 w-4 animate-spin" />

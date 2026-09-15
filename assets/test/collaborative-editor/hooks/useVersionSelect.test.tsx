@@ -1,17 +1,3 @@
-/**
- * useVersionSelect Hook Tests
- *
- * Switching version updates the pin parameter. With experimental features on it
- * also clears the selected run (?run), so a run selected on one version never
- * leaks into another. Without them it writes the snapshot parameter the editor
- * writes today, clears the two pins it could not have made itself, and leaves
- * the open run alone.
- *
- * Which parameter it writes depends on the picker the user has: `?release=` for
- * the publish trail with experimental features on, `?v=` for a snapshot's own
- * lock_version without. The two numbers mean different content, so writing one
- * into the other's parameter would open the wrong document.
- */
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
@@ -28,8 +14,6 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
 }));
 
-// The switch is guarded, so the hook needs to know whether there is anything to
-// lose and how to save it.
 let hasChanges = false;
 const saveWorkflow = vi.fn<() => Promise<unknown>>();
 
@@ -45,17 +29,12 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ saveWorkflow }),
 }));
 
-// Which picker is on screen decides which parameter a switch writes. The hook
-// under test only asks; what decides the answer is useVersionPicker's own test.
 let picker: 'releases' | 'snapshots' = 'releases';
 
 vi.mock('../../../js/collaborative-editor/hooks/useVersionPicker', () => ({
   useVersionPicker: () => picker,
 }));
 
-// Whether the prompt exists at all. It is an addition, so a user who did not
-// opt in never meets it; everyone who did meets it wherever they can edit,
-// which is every picker and not only the releases one.
 let experimentalFeatures = true;
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
@@ -81,8 +60,6 @@ describe('useVersionSelect', () => {
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
       release: '3',
-      // Both numbering schemes are cleared, so a bookmark carrying the other one
-      // cannot survive the switch and pin the view straight back.
       v: null,
       run: null,
       as_run: null,
@@ -91,15 +68,6 @@ describe('useVersionSelect', () => {
   });
 
   test('pins a snapshot with ?v, and touches nothing else, on the snapshots picker', () => {
-    // Without the flag the picker lists saves, numbered by lock_version, and
-    // those go in `?v=`. Writing them into `?release=` would ask the server for
-    // release 3 and get whichever content that published, which is a different
-    // snapshot.
-    //
-    // It clears no other parameter either. The open run survives the switch,
-    // which is what the mismatch banner's offer depends on: it takes you to the
-    // version the run ran against, and the run has to still be there when you
-    // arrive.
     picker = 'snapshots';
     urlState.setParam('run', 'the-run-being-looked-at');
 
@@ -114,10 +82,6 @@ describe('useVersionSelect', () => {
   });
 
   test('clears a pin it could not have made itself', () => {
-    // A flag-off user cannot produce ?as_run= or ?release=, but a link from
-    // someone who can carries them in, and the room name resolves those before
-    // the snapshot. Leaving them would let this picker change the URL and
-    // nothing else.
     picker = 'snapshots';
     urlState.setParam('as_run', 'a-run-from-a-shared-link');
 
@@ -158,9 +122,6 @@ describe('useVersionSelect', () => {
   });
 
   test('switches straight away without experimental features', () => {
-    // The prompt is part of what this work added. Today the editor discards
-    // silently, so a user who did not opt in must not meet a dialog they have
-    // never seen.
     experimentalFeatures = false;
     picker = 'snapshots';
     hasChanges = true;
@@ -178,9 +139,6 @@ describe('useVersionSelect', () => {
   });
 
   test('asks on the snapshots picker too, which is where the edits are', () => {
-    // A draft and a sandbox both use that picker, and both are editable. The
-    // releases picker only appears on a live workflow, which is read-only, so
-    // gating the prompt on it meant asking only where nothing could be lost.
     picker = 'snapshots';
     hasChanges = true;
 
@@ -222,8 +180,6 @@ describe('useVersionSelect', () => {
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
       release: '3',
-      // Both numbering schemes are cleared, so a bookmark carrying the other one
-      // cannot survive the switch and pin the view straight back.
       v: null,
       run: null,
       as_run: null,
@@ -247,8 +203,6 @@ describe('useVersionSelect', () => {
     expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
       release: '3',
-      // Both numbering schemes are cleared, so a bookmark carrying the other one
-      // cannot survive the switch and pin the view straight back.
       v: null,
       run: null,
       as_run: null,
@@ -271,8 +225,6 @@ describe('useVersionSelect', () => {
       expect(switched).toBe(false);
     });
 
-    // Losing the edits because the save failed is the whole thing we are
-    // trying to prevent.
     expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalled();
   });
 });

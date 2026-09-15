@@ -264,10 +264,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 <.td>
                   <%= cond do %>
                     <% @lifecycle and not Project.sandbox?(@project) -> %>
-                      <%!-- Reading only. Publishing belongs in the editor,
-                            where the version trail and Edit in sandbox are, and
-                            where going live asks first. A switch here put
-                            production one click away with nothing to confirm. --%>
                       <.lifecycle_badge state={workflow.state} />
                     <% true -> %>
                       <.input
@@ -589,9 +585,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     """
   end
 
-  # What the column is for depends on where you are. On an ordinary project it
-  # reports the lifecycle and nothing more. In a sandbox it is a switch, because
-  # turning a sandbox on and off is the whole point of having one.
   defp lifecycle_column_heading(false, _project), do: "Enabled"
 
   defp lifecycle_column_heading(true, project) do

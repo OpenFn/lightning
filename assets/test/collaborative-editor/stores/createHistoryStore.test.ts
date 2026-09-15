@@ -24,15 +24,8 @@ import type {
   MockPhoenixChannelProvider,
 } from '../mocks/phoenixChannel';
 
-/**
- * A socket that hands out run channels the test can drive: each one records
- * whether it was left, and holds its `fetch:run` reply open until the test
- * answers it. That pause is the whole point — the bug lives in the window
- * between opening a run channel and its first reply arriving.
- */
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
-// A run detail the store's schema accepts, so a successful fetch really lands.
 const runDetail = {
   id: '11111111-1111-4111-8111-111111111111',
   work_order_id: '22222222-2222-4222-8222-222222222222',
@@ -1042,10 +1035,6 @@ describe('createHistoryStore', () => {
     });
 
     test('a second look at the same run does not open a second channel', async () => {
-      // The idempotency guard used to read `activeRunChannel`, which is only
-      // set once a fetch has come back. While the first attempt was still in
-      // flight that field was null, so a second call for the same run sailed
-      // past the guard and opened another channel.
       const runChannels = openRunChannels(store);
 
       store._viewRun('run-1');
@@ -1057,20 +1046,13 @@ describe('createHistoryStore', () => {
     });
 
     test('an abandoned request cannot fail a run that has since loaded', async () => {
-      // The bug, end to end. Two attempts at the same run: the first is
-      // abandoned with its request unanswered, the second succeeds. When the
-      // first finally times out it must not report failure, because the run id
-      // it used to compare against is still the current one.
       const runChannels = openRunChannels(store);
 
       store._viewRun(runDetail.id);
       const first = runChannels.opened[0]!;
 
-      // Let the first attempt get as far as asking. This is the window the bug
-      // lives in: joined, request sent, no answer yet.
       await settle();
 
-      // Something drops the view and returns to it: a re-render, a URL bounce.
       store._closeRunViewer();
       store._viewRun(runDetail.id);
 
@@ -1084,7 +1066,6 @@ describe('createHistoryStore', () => {
       await waitForCondition(() => store.getSnapshot().activeRun !== null);
       expect(store.getSnapshot().activeRun?.id).toBe(runDetail.id);
 
-      // Now the abandoned one gives up.
       first.failFetch(new Error('Request timed out'));
       await settle();
 

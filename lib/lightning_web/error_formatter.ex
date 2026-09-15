@@ -23,8 +23,6 @@ defmodule LightningWeb.ErrorFormatter do
     })
   end
 
-  # No settings link: the project environment is not editable, so pointing the
-  # person at that screen would send them somewhere they can do nothing.
   def format(:environment_not_configured, _context) do
     dgettext("errors", "environment_not_configured")
   end

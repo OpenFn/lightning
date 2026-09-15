@@ -28,8 +28,6 @@ describe('useSaveBeforeRun', () => {
   });
 
   test('skips the save on a live workflow', async () => {
-    // The server refuses it, and refusing it aborted the run. Running is not
-    // editing, so the run goes ahead without the save.
     contentLocked = true;
     pinnedView = false;
     const saveWorkflow = vi.fn().mockResolvedValue({});
@@ -41,9 +39,6 @@ describe('useSaveBeforeRun', () => {
   });
 
   test('skips the save while reading an older version, locked or not', async () => {
-    // A view of a draft, or of anything in a sandbox, is not content-locked but
-    // is still refused a save. Gating on the lock alone let these through and
-    // the retry they were on their way to died with the read-only error.
     contentLocked = false;
     pinnedView = true;
     const saveWorkflow = vi.fn().mockResolvedValue({});

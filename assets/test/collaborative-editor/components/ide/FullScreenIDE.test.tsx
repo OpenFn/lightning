@@ -31,8 +31,6 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
-  // #/monaco configures the loader at import time, so anything that reaches it
-  // needs this present even when the editor itself is stubbed.
   loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
@@ -249,8 +247,6 @@ const mockWorkflow: Workflow = {
 const mockYText = new Y.Text();
 mockYText.insert(0, 'fn(state => state)');
 
-// Mutable read-only state so individual tests can flip the workflow to
-// read-only (e.g. live on main) and assert that run-creation affordances hide.
 const mockReadOnlyState = { isReadOnly: false, tooltipMessage: '' };
 let mockExperimentalFeatures = true;
 let mockVersionMismatch: { runVersion: number; currentVersion: number } | null =
@@ -405,7 +401,6 @@ vi.mock(
 
 // Mock version select hook
 vi.mock('../../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
-  // The hook returns the handler and the prompt the discard dialog needs.
   useVersionSelect: () => ({
     handleVersionSelect: vi.fn(),
     prompt: {
@@ -495,7 +490,6 @@ describe('FullScreenIDE', () => {
     Object.keys(mockParams).forEach(key => delete mockParams[key]);
     mockParams.job = 'job-1';
 
-    // Default to an editable workflow; read-only tests opt in explicitly.
     mockReadOnlyState.isReadOnly = false;
     mockReadOnlyState.tooltipMessage = '';
   });
@@ -518,9 +512,6 @@ describe('FullScreenIDE', () => {
 
       renderFullScreenIDE({ onClose });
 
-      // Both stay. Running is not editing, so the read-only lock no longer
-      // decides whether a run may be started; the run hook does, and it says
-      // so in the tooltip when the answer is no.
       await waitFor(() => {
         expect(screen.getByText('History')).toBeInTheDocument();
       });
@@ -811,8 +802,6 @@ describe('FullScreenIDE', () => {
 
   describe('what the experimental flag changes', () => {
     test('keeps New Run put and disabled on a read-only view, without the flag', async () => {
-      // Their read-only state has no lifecycle badge explaining it, so the
-      // control stays and carries the reason, as it does today.
       mockExperimentalFeatures = false;
       mockReadOnlyState.isReadOnly = true;
       mockReadOnlyState.tooltipMessage = 'This workflow is read-only';
@@ -834,17 +823,12 @@ describe('FullScreenIDE', () => {
         expect(screen.getAllByTestId('panel-group').length).toBeGreaterThan(0);
       });
 
-      // The flag does not change this. A live workflow is the case that matters
-      // most: whoever is responsible for it has to be able to put a test input
-      // through the thing that is in production.
       expect(
         screen.getByRole('button', { name: /^run$/i })
       ).toBeInTheDocument();
     });
 
     test('warns when the run on screen executed different content', async () => {
-      // The flag-off answer to a run of older content: the run is painted onto
-      // the document already open, and this says the two differ.
       mockExperimentalFeatures = false;
       mockParams.panel = 'editor';
       mockParams.run = 'run-1';

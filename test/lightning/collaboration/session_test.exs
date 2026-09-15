@@ -920,8 +920,6 @@ defmodule Lightning.SessionTest do
       assert draft.state == :draft
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
 
-      # Going live records a single go-live release authored by the actor;
-      # switching back to draft records none.
       assert [
                %Lightning.Workflows.WorkflowRelease{
                  version_number: 1,
@@ -953,8 +951,6 @@ defmodule Lightning.SessionTest do
       doc = Session.get_doc(session)
       workflow_map = Yex.Doc.get_map(doc, "workflow")
 
-      # concurrency < 1 fails validate_number, whose message interpolates
-      # "%{number}", exercising the error-formatting path.
       Yex.Doc.transaction(doc, "test_update", fn ->
         Yex.Map.set(workflow_map, "concurrency", 0)
       end)

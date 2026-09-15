@@ -171,12 +171,6 @@ defmodule Lightning.Collaboration.WorkflowResolver do
     end
   end
 
-  # The row this had to load to check ownership also carries the lifecycle
-  # state, which a snapshot does not record. A version view is old content of
-  # the same workflow, so its state is whatever the row says now: without this
-  # a pinned view of a live workflow reports itself as a draft, and everything
-  # that asks whether the content is locked gets the wrong answer.
-  #
   # A `nil` project (internal point-in-time use) is intentionally unchecked, as
   # in `check_ownership/2`; a supplied project must own the workflow.
   defp current_state(workflow_id, nil) do
@@ -215,15 +209,12 @@ defmodule Lightning.Collaboration.WorkflowResolver do
 
           trigger
           |> to_plain_map()
+          |> Map.delete(:webhook_auth_methods)
           |> Map.put(:has_auth_method, length(auth_methods) > 0)
         end)
     }
   end
 
-  # A snapshot's job carries association keys it never loads, its credential
-  # among them. Handing those to the JSON encoder that renders the session
-  # context raises on the unloaded value and takes the channel with it, so drop
-  # them here rather than at each place that reads this workflow.
   defp to_plain_map(struct) do
     struct
     |> Map.from_struct()

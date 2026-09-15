@@ -776,9 +776,6 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "a plain import leaves open editors alone" do
-      # What a deploy did before this work. Rebuilding someone's document under
-      # them mid-edit is visible, and it reaches every collaborator in the room
-      # whether or not they asked for any of this, so it is opt-in.
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user, role: :owner}])
       workflow = insert(:workflow, project: project)
@@ -873,8 +870,6 @@ defmodule Lightning.Projects.ProvisionerTest do
     test "explicit state in attrs wins", %{user: user} do
       %{body: %{"workflows" => [workflow]} = body} = valid_document()
 
-      # Trigger is enabled but state is explicitly :draft, so it stays :draft
-      # rather than being inferred :live.
       body =
         Map.put(body, "workflows", [Map.put(workflow, "state", "draft")])
 
@@ -891,8 +886,6 @@ defmodule Lightning.Projects.ProvisionerTest do
       {:ok, project} =
         Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
 
-      # First import (enabled trigger) inferred :live.
-      # Re-import the same document with the state key omitted.
       {:ok, %{workflows: [reimported]}} =
         Provisioner.import_document(project, user, body)
 
@@ -904,8 +897,6 @@ defmodule Lightning.Projects.ProvisionerTest do
          %{user: user} do
       %{body: body} = valid_document()
 
-      # Seed a :draft workflow that carries an enabled trigger (an in-app
-      # enabled trigger on a draft), by importing with an explicit :draft state.
       draft_body =
         update_in(body, ["workflows"], fn [workflow] ->
           [Map.put(workflow, "state", "draft")]
@@ -918,8 +909,6 @@ defmodule Lightning.Projects.ProvisionerTest do
           draft_body
         )
 
-      # Re-import with the state key omitted: the existing DB state must be kept.
-      # We must NOT infer :live from the enabled trigger on a round-trip.
       {:ok, %{workflows: [reimported]}} =
         Provisioner.import_document(project, user, body)
 

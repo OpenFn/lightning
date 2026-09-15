@@ -32,9 +32,6 @@ export function useVersionMismatch(
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
-  // `?v=` numbers by the snapshot's own lock_version, which is what this
-  // compares against. `?release=` numbers by the publish trail and is a
-  // different question, which is why the two have different parameters.
   const { snapshot, asRun } = usePinnedView();
   const currVersion = snapshot === null ? null : Number(snapshot);
 

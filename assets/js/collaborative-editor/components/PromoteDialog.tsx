@@ -1,3 +1,5 @@
+/** Confirms a promote back into the parent project, then offers to archive. */
+
 import {
   Dialog,
   DialogBackdrop,
@@ -12,30 +14,10 @@ import { Button } from './Button';
 
 interface PromoteDialogProps {
   isOpen: boolean;
-  /**
-   * Whether this user may archive the sandbox. Gates the phase-two Archive
-   * button: when false the success step only offers a close action and a note
-   * that an admin can archive.
-   */
   canArchiveSandbox: boolean;
-  /**
-   * Phase one. Save the current editor state, then merge it into the parent.
-   * Resolves `true` to advance to the success step, `false` to stay on the
-   * confirm step (the caller has already surfaced the error).
-   */
   onConfirmPromote: () => Promise<boolean>;
-  /**
-   * Phase two. Archive the sandbox. Resolves `true` on success (the caller
-   * navigates away, so this dialog is torn down), `false` to stay on the success
-   * step so the user can retry or keep the sandbox.
-   */
   onArchive: () => Promise<boolean>;
-  /**
-   * Phase two dismissal. Close and stay in the sandbox (no navigation), letting
-   * the user switch to another workflow and promote it too.
-   */
   onKeep: () => void;
-  /** Phase one dismissal. Close without saving or promoting. */
   onCancel: () => void;
   onCheckDivergence: () => Promise<{
     diverged: boolean;
@@ -45,18 +27,6 @@ interface PromoteDialogProps {
 
 type Phase = 'confirm' | 'success';
 
-/**
- * PromoteDialog - the two-phase "merge, then optionally archive" flow.
- *
- * Phase one confirms the save-and-merge into the parent project. On success the
- * dialog transforms in place into a success step (phase two) that offers an
- * optional archive, mirroring GitHub's "merge, then delete the branch". Because
- * this is multi-phase and carries its own in-flight states, it is a dedicated
- * component rather than the generic AlertDialog.
- *
- * Navigation lives in the caller: keeping the sandbox stays put (caller shows a
- * toast), archiving hard-navigates into the parent project.
- */
 export function PromoteDialog({
   isOpen,
   canArchiveSandbox,
@@ -78,8 +48,6 @@ export function PromoteDialog({
 
   const isBusy = isPromoting || isArchiving;
 
-  // Reset during render rather than in an effect: an effect lands a frame late,
-  // and that frame shows the previous run's warning over an enabled button.
   if (isOpen !== wasOpen) {
     setWasOpen(isOpen);
 
@@ -120,8 +88,6 @@ export function PromoteDialog({
     };
   }, [isOpen, onCheckDivergence]);
 
-  // Dismissing means different things per phase: cancel on confirm, keep on
-  // success. Never dismiss mid-flight so a save/merge/archive can't be orphaned.
   const handleDismiss = () => {
     if (isBusy) return;
     if (phase === 'success') {
@@ -131,8 +97,6 @@ export function PromoteDialog({
     }
   };
 
-  // High-priority Escape handler, matching AlertDialog, so the dialog closes
-  // before the IDE/inspector Escape handlers can fire.
   useKeyboardShortcut(
     'Escape',
     () => {
@@ -154,8 +118,6 @@ export function PromoteDialog({
   const handleArchive = async () => {
     setIsArchiving(true);
     const ok = await onArchive();
-    // On success the caller hard-navigates, tearing this down; only reset the
-    // in-flight flag when it failed so the buttons become interactive again.
     if (!ok) {
       setIsArchiving(false);
     }

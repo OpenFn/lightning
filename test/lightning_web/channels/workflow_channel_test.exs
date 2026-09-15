@@ -40,6 +40,25 @@ defmodule LightningWeb.WorkflowChannelTest do
     %{socket: socket, user: user, project: project, workflow: workflow}
   end
 
+  describe "joining a room with an unrecognised suffix" do
+    test "is refused rather than treated as the live room", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      assert {:error, %{reason: reason}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:x",
+                 %{"project_id" => project.id, "action" => "edit"}
+               )
+
+      assert reason =~ "invalid room suffix"
+    end
+  end
+
   describe "go_live and switch_to_draft" do
     setup :with_experimental_user
 
@@ -58,9 +77,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
     test "going live from a version being read is refused when the plan is at its limit",
          %{user: user, project: project, workflow: workflow} do
-      # A trigger that is off, so going live is a real activation and the
-      # limiter is asked. A workflow with none, or with one already answering,
-      # asks it nothing.
       insert(:trigger, type: :webhook, workflow: workflow, enabled: false)
 
       {:ok, saved} =
@@ -78,8 +94,6 @@ defmodule LightningWeb.WorkflowChannelTest do
           %{project_id: project.id, action: "edit"}
         )
 
-      # This path acts on the row rather than going through a save, so it asks
-      # the limiter itself. Every other route that puts a workflow live does.
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
@@ -95,7 +109,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       ref = push(pinned_socket, "go_live", %{})
 
-      # The plan's own wording, not "an internal error occurred".
       assert_reply ref, :error, %{
         type: "limit_error",
         errors: %{base: ["Your plan is at its limit."]}
@@ -105,7 +118,7 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
 
     test "a transition from a version being read reaches the workflow's own room",
-         %{socket: socket, user: user, project: project, workflow: workflow} do
+         %{user: user, project: project, workflow: workflow} do
       {:ok, saved} =
         workflow
         |> Lightning.Repo.preload([:jobs, :edges, :triggers])
@@ -121,15 +134,9 @@ defmodule LightningWeb.WorkflowChannelTest do
           %{project_id: project.id, action: "edit"}
         )
 
-      # `socket` is joined to the workflow's own room. Announcing on the
-      # reader's topic instead meant whoever was editing never learned the
-      # workflow had gone live, and carried on editing production.
       ref = push(pinned_socket, "go_live", %{})
       assert_reply ref, :ok, %{}
 
-      # Asserted on lifecycle_changed, not the context push: only a socket on
-      # the workflow's own room emits it, so the pinned socket's own push
-      # cannot satisfy this. Both sockets live in the test process.
       assert_push "lifecycle_changed", %{state: :live}
     end
 
@@ -138,8 +145,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       project: project,
       workflow: workflow
     } do
-      # Live without going through go_live, which would reconcile a trigger the
-      # already-open document never had. The lock is what this test is about.
       {:ok, saved} =
         workflow
         |> Lightning.Repo.preload([:jobs, :edges, :triggers])
@@ -158,9 +163,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert pinned_socket.assigns.content_locked
 
-      # Switching to draft from a run's own view asks for the context straight
-      # afterwards. A stale "still locked" made the client decide the run no
-      # longer belonged on the document it was moving to, and clear it.
       ref = push(pinned_socket, "switch_to_draft", %{})
       assert_reply ref, :ok, %{}
 
@@ -172,10 +174,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       project: project,
       workflow: workflow
     } do
-      # The kind the resolver returns is not the question; the room is. Joining
-      # a pinned topic with a different action returned :existing and handed
-      # back a writable session on a pinned document, which is a save of old
-      # content over the workflow.
       assert {:error, %{reason: reason}} =
                LightningWeb.UserSocket
                |> socket("user_#{user.id}", %{current_user: user})
@@ -195,8 +193,6 @@ defmodule LightningWeb.WorkflowChannelTest do
            project: project,
            workflow: workflow
          } do
-      # A snapshot to pin to, then a job added after it. That job is what a save
-      # from the pinned view would delete.
       {:ok, original} =
         workflow
         |> Lightning.Repo.preload([:jobs, :edges, :triggers])
@@ -228,7 +224,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       job_count = length(original.jobs) + 1
       assert length(grown.jobs) == job_count
 
-      # Read the workflow as it was before that job existed.
       {:ok, _, pinned_socket} =
         LightningWeb.UserSocket
         |> socket("user_#{user.id}", %{current_user: user})
@@ -241,10 +236,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert pinned_socket.assigns.workflow.lock_version ==
                original.lock_version
 
-      # The transition acts on the workflow, not on this socket's document. It
-      # goes through, and the job added after the pinned snapshot survives:
-      # saving that document over the workflow would have deleted it and
-      # recorded the result as a new version, silently.
       ref = push(pinned_socket, "go_live", %{})
       assert_reply ref, :ok, %{workflow: live_workflow}
       assert live_workflow.state == :live
@@ -253,8 +244,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, %{workflow: draft_workflow}
       assert draft_workflow.state == :draft
 
-      # A save is a different question, and from a view it is refused: there is
-      # no reading of the past that should write itself back over the workflow.
+      assert {:ok, _} = Jason.encode(live_workflow)
+      assert {:ok, _} = Jason.encode(draft_workflow)
+
       ref = push(pinned_socket, "save_workflow", %{})
       assert_reply ref, :error, %{type: "read_only_view"}
 
@@ -263,15 +255,11 @@ defmodule LightningWeb.WorkflowChannelTest do
         |> Lightning.Workflows.get_workflow!()
         |> Lightning.Repo.preload(:jobs)
 
-      # The two transitions each saved, so the lock version moved on. What must
-      # not have moved is the content.
       assert length(reloaded.jobs) == job_count
       assert reloaded.lock_version > grown.lock_version
       assert reloaded.state == :draft
       assert Enum.any?(reloaded.jobs, &(&1.id == added_job_id))
 
-      # The live socket is unaffected: the gate is about the document, not the
-      # person or the workflow.
       ref = push(socket, "go_live", %{})
       assert_reply ref, :ok, %{workflow: live_workflow}
       assert live_workflow.state == :live
@@ -291,8 +279,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       session_pid = colleague.assigns.session_pid
 
-      # Positive control: this socket's frames reach the document before the
-      # lifecycle moves.
       probe =
         build_name_mutation(session_pid, :sync_update, "Edited while draft")
 
@@ -304,19 +290,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, _reply
       await_channel_processed(colleague)
 
-      # The lock was resolved at join, so only the socket that acted learned
-      # about it. The colleague's gate stayed open: their frames kept reaching
-      # the document while the save they eventually pressed was refused against
-      # the row, with nothing on screen to say why. The gate lives in the other
-      # channel's own state, which is the only honest place to read it.
-      #
-      # The role is untouched by the transition. Reading the gate off
-      # can_edit_workflow alone would now let these frames through.
       assert %{assigns: %{can_edit_workflow: true, content_locked: true}} =
                channel_socket(colleague)
 
-      # Negative control, which is the part that matters: the same frame that
-      # landed a moment ago must not land now.
       blocked =
         build_name_mutation(session_pid, :sync_update, "Edited while live")
 
@@ -339,29 +315,18 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(author, "go_live", %{})
       assert_reply ref, :ok, _reply
 
-      # Sent only to the sockets that did not act, so it needs no actor to
-      # compare against. Their editor is about to turn read-only under them.
       assert_push "lifecycle_changed", %{state: :live}
     end
 
     test "intercepts the save broadcast, or the gate above never closes in production" do
-      # Phoenix hands a broadcast the channel does not intercept straight to the
-      # transport, so handle_out never runs. A channel test has no transport and
-      # runs it either way, which makes the test above pass with or without the
-      # intercept. This is the only honest way to pin the line.
       assert "workflow_saved" in LightningWeb.WorkflowChannel.__intercepts__()
     end
 
     test "go_live pushes a session context carrying the new lifecycle lock",
          %{socket: socket} do
-      # The lock is resolved at join, so without a refresh the client keeps
-      # Save/Run until a reload.
       ref = push(socket, "go_live", %{})
       assert_reply ref, :ok, _
 
-      # Going live locks the content and leaves the role alone. An editor is
-      # still an editor, which is what lets the client say "this workflow is
-      # live, here is the way out" rather than "you lack permission".
       assert_push "session_context_updated", %{
         content_locked: true,
         permissions: %{can_edit_workflow: true}
@@ -387,8 +352,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
 
-      # A draft, so nothing is locked. The role is the only reason this person
-      # cannot edit, and it is reported as such rather than as a lock.
       refute socket.assigns.can_edit_workflow
       refute socket.assigns.content_locked
     end
@@ -442,17 +405,6 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "a live workflow, for someone without experimental features" do
-    # The lifecycle lock cannot apply to them, and this is the reason.
-    #
-    # `state` is a new column, and its migration backfills `live` for every
-    # workflow that has an enabled trigger, which is every workflow anyone is
-    # actually running. Applying the lock to everyone would make all of those
-    # read-only the moment this deploys, for people who never asked for a
-    # lifecycle and have no button to release it. So without the flag there is
-    # no lock, and the editor behaves exactly as it does today.
-    # Live first, then join. `content_locked` is resolved at join and the yjs
-    # gate reads that assign, so a socket joined while the workflow was still a
-    # draft carries a stale `false` and would pass whatever the gate decides.
     setup %{project: project, user: user} do
       workflow = insert(:workflow, project: project)
       {:ok, live} = Lightning.Workflows.go_live(workflow, user)
@@ -512,7 +464,6 @@ defmodule LightningWeb.WorkflowChannelTest do
     setup :with_experimental_user
 
     setup %{socket: socket} do
-      # Take the workflow live so content edits should be refused server-side.
       ref = push(socket, "go_live", %{})
       assert_reply ref, :ok, %{workflow: %{state: :live}}
       :ok
@@ -528,7 +479,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert message =~ "live"
-      # The gate runs before any write, so the live workflow is untouched.
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
     end
 
@@ -567,7 +517,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :error, %{reason: reason}
       assert reason =~ "live"
 
-      # The gate runs before any write, so no association is created.
       assert Lightning.WebhookAuthMethods.list_for_trigger(trigger) == []
     end
 
@@ -604,7 +553,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       owner =
         insert(:user, first_name: "Ada", last_name: "Lovelace")
 
-      # Older sandbox with a matching workflow clone, owned by Ada.
       older =
         insert(:project,
           parent: project,
@@ -615,11 +563,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       older_workflow =
         insert(:workflow, project: older, name: workflow.name)
 
-      # Newer owner-less sandbox, also with a matching workflow clone.
       newer = insert(:project, parent: project, color: "#222222")
       newer_workflow = insert(:workflow, project: newer, name: workflow.name)
 
-      # Bump newer's inserted_at so it sorts first.
       Lightning.Repo.update!(
         Ecto.Changeset.change(newer, inserted_at: ~U[2030-01-01 00:00:00Z])
       )
@@ -637,7 +583,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert second.id == older.id
       assert second.workflow_id == older_workflow.id
 
-      # The owner-less newer sandbox has no owner to attribute.
       assert first.owner == nil
 
       assert %{
@@ -656,7 +601,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       joinable = insert(:project, parent: project)
       insert(:workflow, project: joinable, name: workflow.name)
 
-      # Sandbox without a clone of this workflow: nothing to join, so omitted.
       non_joinable = insert(:project, parent: project)
       insert(:workflow, project: non_joinable, name: "something-else")
 
@@ -751,7 +695,6 @@ defmodule LightningWeb.WorkflowChannelTest do
         Lightning.Extensions.ProjectHook
       )
 
-      # Give the workflow a real trigger so the clone carries one too.
       trigger =
         insert(:trigger, workflow: workflow, type: :webhook, enabled: true)
 
@@ -764,8 +707,6 @@ defmodule LightningWeb.WorkflowChannelTest do
         condition_type: :always
       )
 
-      # A second, unrelated workflow in the same project: its clone must stay
-      # a draft with disabled triggers.
       other_workflow = insert(:workflow, project: project, name: "other-wf")
       insert(:trigger, workflow: other_workflow, type: :webhook, enabled: true)
 
@@ -777,10 +718,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       user: user,
       workflow: workflow
     } do
-      # A run's own view is an ordinary place to branch from, and the document
-      # it holds carries the name the snapshot was saved under. Reading the name
-      # off that sent the clone looking for a workflow that no longer answers to
-      # it, so the sandbox arrived without the workflow being branched.
       {:ok, saved} =
         workflow
         |> Lightning.Repo.preload([:jobs, :edges, :triggers])
@@ -849,8 +786,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => saved.id})
       assert_reply ref, :ok, %{project_id: sandbox_id, dataclip_id: copied_id}
 
-      # The copy is a new row, and the sandbox opens with it selected just as
-      # the reviewed path does.
       assert is_binary(copied_id)
       refute copied_id == saved.id
 
@@ -877,7 +812,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => foreign.id})
       assert_reply ref, :error, %{type: "validation_error"}
 
-      # Refused outright, so no sandbox exists to have copied it into.
       assert [] =
                Lightning.Invocation.Dataclip
                |> Lightning.Repo.all()
@@ -909,8 +843,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert_reply ref, :ok, %{dataclip_id: dataclip_id}
 
-      # Retention wipes unnamed dataclips, and the picker only offers named ones,
-      # so an unnamed one would vanish and never be selectable.
       dataclip = Lightning.Repo.get!(Lightning.Invocation.Dataclip, dataclip_id)
       assert dataclip.name == "Reviewed input"
     end
@@ -962,7 +894,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       sandbox = Lightning.Projects.get_project!(sandbox_id)
       assert sandbox.parent_id == project.id
 
-      # Edited clone is NOT auto-enabled: it comes in as a disabled draft.
       cloned =
         Lightning.Workflows.get_workflow!(cloned_id, include: [:triggers])
 
@@ -970,7 +901,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert cloned.state == :draft
       refute Enum.any?(cloned.triggers, & &1.enabled)
 
-      # The other clone stays a draft with disabled triggers.
       other_clone =
         Lightning.Workflows.Workflow
         |> Lightning.Repo.get_by(
@@ -982,7 +912,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert other_clone.state == :draft
       refute Enum.any?(other_clone.triggers, & &1.enabled)
 
-      # Parent workflow is untouched.
       parent_workflow =
         Lightning.Workflows.get_workflow!(workflow.id, include: [:triggers])
 
@@ -1057,7 +986,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
 
-      # Alpha is the workflow we edit in the sandbox and promote back.
       alpha = insert(:workflow, project: parent, name: "alpha")
       alpha_trigger = insert(:trigger, workflow: alpha, type: :webhook)
 
@@ -1071,8 +999,6 @@ defmodule LightningWeb.WorkflowChannelTest do
         condition_type: :always
       )
 
-      # Beta is a sibling that must pass through the merge untouched. It is made
-      # live with an enabled trigger so we can assert that state is preserved.
       beta = insert(:workflow, project: parent, name: "beta")
       beta_trigger = insert(:trigger, workflow: beta, type: :webhook)
 
@@ -1123,7 +1049,6 @@ defmodule LightningWeb.WorkflowChannelTest do
            parent: parent,
            parent_alpha: parent_alpha
          } do
-      # A distinctive edit in the sandbox that must land on the parent.
       edit_single_job_body!(sandbox_alpha.id, "console.log('promoted');")
 
       ref = push(socket, "promote", %{})
@@ -1135,12 +1060,10 @@ defmodule LightningWeb.WorkflowChannelTest do
                      workflow_id: workflow_id
                    } = reply
 
-      # Promote merges only; archiving is a separate "archive_sandbox" step.
       refute Map.has_key?(reply, :archived)
       assert parent_project_id == parent.id
       assert workflow_id == parent_alpha.id
 
-      # The sandbox edit landed on the parent's alpha workflow.
       parent_alpha_jobs =
         Lightning.Workflows.get_workflow(parent_alpha.id, include: [:jobs]).jobs
 
@@ -1149,7 +1072,6 @@ defmodule LightningWeb.WorkflowChannelTest do
                &(&1.body == "console.log('promoted');")
              )
 
-      # The sandbox stays alive: promote no longer archives it.
       assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
     end
 
@@ -1161,8 +1083,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       reloaded_beta =
         Lightning.Workflows.get_workflow(parent_beta.id, include: [:triggers])
 
-      # Beta was never in the merge selection: its live/enabled trigger state and
-      # its content are untouched.
       assert reloaded_beta.state == :live
       assert Enum.all?(reloaded_beta.triggers, & &1.enabled)
       assert reloaded_beta.lock_version == parent_beta.lock_version
@@ -1175,8 +1095,6 @@ defmodule LightningWeb.WorkflowChannelTest do
            sandbox_alpha: sandbox_alpha,
            parent_alpha: parent_alpha
          } do
-      # An editor on the parent can merge, but is not owner/admin on the
-      # sandbox (nor its root). Promote merges regardless and never archives.
       editor = insert(:user)
       insert(:project_user, project: parent, user: editor, role: :editor)
       insert(:project_user, project: sandbox, user: editor, role: :editor)
@@ -1203,10 +1121,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       refute Map.has_key?(reply, :archived)
       assert parent_project_id == parent.id
 
-      # Sandbox stays active: promote never archives.
       assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
 
-      # Parent still received the merge.
       parent_alpha_jobs =
         Lightning.Workflows.get_workflow(parent_alpha.id, include: [:jobs]).jobs
 
@@ -1242,10 +1158,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       sandbox_socket: socket,
       sandbox_alpha: sandbox_alpha
     } do
-      # Corrupt the sandbox job name so the parent import rejects it, forcing a
-      # :merge_failed from the merge without touching the merge internals. Names
-      # may hold special characters, so length is what is left to break: the
-      # import validates at 100 and the column takes more.
       [job] =
         Lightning.Workflows.get_workflow(sandbox_alpha.id, include: [:jobs]).jobs
 
@@ -1260,8 +1172,6 @@ defmodule LightningWeb.WorkflowChannelTest do
     test "replies with an error instead of crashing when not in a sandbox", %{
       socket: socket
     } do
-      # The default socket is joined to a root-project workflow, which has no
-      # parent to promote into.
       ref = push(socket, "promote", %{})
       assert_reply ref, :error, %{type: "invalid_state"}
     end
@@ -1294,8 +1204,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       {:ok, _} =
         Lightning.WorkflowVersions.record_version(alpha, "aaa111aaa111", "app")
 
-      # Beta is a sibling carried into the sandbox by the fork, so it can be
-      # made to diverge independently of alpha.
       beta = insert(:workflow, project: parent, name: "beta")
       beta_trigger = insert(:trigger, workflow: beta, type: :webhook)
       beta_job = insert(:job, workflow: beta, name: "B1")
@@ -1524,13 +1432,10 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, %{parent_project_id: parent_project_id}
       assert parent_project_id == parent.id
 
-      # The sandbox was soft-deleted (scheduled for deletion).
       assert Lightning.Repo.reload!(sandbox).scheduled_deletion != nil
     end
 
     test "refuses to archive a project that is not a sandbox", %{socket: socket} do
-      # The default socket is joined to a root-project workflow, which has no
-      # parent and so is not a sandbox.
       ref = push(socket, "archive_sandbox", %{})
       assert_reply ref, :error, %{type: "invalid_state"}
     end
@@ -1539,8 +1444,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       sandbox: sandbox,
       sandbox_alpha: sandbox_alpha
     } do
-      # An editor can edit and even promote, but archiving requires
-      # :delete_sandbox (owner/admin), which an editor lacks.
       editor = insert(:user)
       insert(:project_user, project: sandbox, user: editor, role: :editor)
 
@@ -1549,7 +1452,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "archive_sandbox", %{})
       assert_reply ref, :error, %{type: "unauthorized"}
 
-      # The sandbox stays alive.
       assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
     end
   end
@@ -1910,7 +1812,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   describe "yjs frame authorization" do
     setup %{project: project, workflow: workflow} do
-      # A genuine read-only member of the project, joined to the same room.
       viewer = insert(:user)
       insert(:project_user, project: project, user: viewer, role: :viewer)
 
@@ -1930,14 +1831,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       project: project,
       workflow: workflow
     } do
-      # Not about the person: this editor may edit the workflow. It is about the
-      # document, which is a past state of it. The lifecycle lock asks a
-      # different question and answers "editable" whenever the workflow itself
-      # is a draft, so without this an old version's document was writable.
       editor = insert(:user)
       insert(:project_user, project: project, user: editor, role: :editor)
 
-      # A snapshot to pin to. The fixture workflow has none until it is saved.
       {:ok, saved} =
         workflow
         |> Lightning.Repo.preload([:jobs, :edges, :triggers])
@@ -2104,8 +2000,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       change_role(project, other_project_user, :viewer)
 
-      # The broadcast is delivered before this push, so once the channel has
-      # replied it has necessarily already handled the membership event.
       ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
       assert_reply ref, :ok, %{workflow: _}
       assert Process.alive?(socket.channel_pid)
@@ -2221,8 +2115,6 @@ defmodule LightningWeb.WorkflowChannelTest do
         capture_log(fn ->
           revoke_support_access(project)
 
-          # The broadcast is delivered before this push, so once the channel has
-          # replied it has necessarily already handled the event.
           ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
           assert_reply ref, :ok, %{workflow: _}
         end)
@@ -2257,9 +2149,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   describe "project and workflow deletion teardown" do
     setup do
-      # The module-level setup stubs `Lightning.broadcast/2` to a no-op so
-      # `save_workflow` does not fan out. The teardown *is* the broadcast, so
-      # put the real implementation back for these tests.
       Mox.stub(LightningMock, :broadcast, &Lightning.API.broadcast/2)
 
       Mox.stub(
@@ -2271,10 +2160,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       :ok
     end
 
-    # `save_workflow` already refuses once the project is wound down, but Yjs
-    # frames are gated on the join-time `can_edit_workflow`, so without this the
-    # participant keeps mutating the shared document — and every other
-    # participant keeps seeing those mutations — for the life of the socket.
     test "stops the channel when the project is scheduled for deletion", %{
       project: project,
       workflow: workflow
@@ -2285,8 +2170,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       socket = join_as(editor, project, workflow)
       session_pid = socket.assigns.session_pid
 
-      # Positive control: this participant's frames do reach the shared document
-      # right up to the moment the project is wound down.
       chunk = build_name_mutation(session_pid, :sync_update, "Edited While Live")
       push(socket, "yjs", {:binary, chunk})
       await_channel_processed(socket)
@@ -2300,9 +2183,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
     end
 
-    # A support user holds the project itself rather than a membership row, so
-    # they take the other route into `Scope` — and they are exactly who a
-    # wind-down is meant to offboard.
     test "stops a support-access channel when the project is scheduled for deletion" do
       project =
         insert(:project,
@@ -2345,8 +2225,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Process.alive?(socket.channel_pid)
     end
 
-    # A save on the soft-deleted row would write the Y.Doc back over it, so the
-    # deleted workflow's content would reappear.
     test "stops the channel when its own workflow is deleted", %{
       project: project,
       workflow: workflow
@@ -2387,9 +2265,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Process.alive?(socket.channel_pid)
     end
 
-    # Deletions ride the project's topic precisely so that saves — which are
-    # frequent — do not reach this channel at all. Guard against a future
-    # subscription putting them back.
     test "leaves the channel joined and quiet when a workflow is saved", %{
       project: project,
       workflow: workflow,
@@ -2438,7 +2313,6 @@ defmodule LightningWeb.WorkflowChannelTest do
           published_by_id: user.id
         })
 
-      # The workflow moves on after the release, and goes live.
       {:ok, _} =
         workflow
         |> Ecto.Changeset.change(name: "As it is now", state: :live)
@@ -2458,26 +2332,14 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(pinned_socket, "get_context", %{})
       assert_reply ref, :ok, response
 
-      # The client compares its document against this. The document is the
-      # snapshot, so handing it the current workflow makes every pinned view
-      # look unsaved the moment it opens.
       assert response.workflow.name == "As it was"
       assert response.latest_snapshot_lock_version == workflow.lock_version
 
-      # A snapshot carries no lifecycle state, so the baseline built from one
-      # would report :draft. The client reads state off this to decide which
-      # lifecycle actions to offer, so it has to be the workflow's real one.
       assert response.workflow.state == :live
 
-      # The client compares this against each run's snapshot to tell a run of the
-      # live content from a run of anything else.
       assert response.latest_snapshot_id ==
                Lightning.Workflows.Snapshot.current_id_for(workflow.id)
 
-      # The reply reaches the client as JSON, which a test's assert_reply never
-      # exercises. A snapshot's job carries association keys it never loads, and
-      # encoding one of those raised and took the channel down, so the client
-      # sat waiting for a reply that never came.
       assert is_binary(Jason.encode!(response))
     end
   end
@@ -2549,10 +2411,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "restore_version", %{"version_number" => 1})
       assert_reply ref, :ok, _reply
 
-      # The broadcast excludes the sender, so without this push the restoring
-      # client's idea of the latest version stays behind: the version chip
-      # would read as an old version straight after a rollback, and the
-      # dropdown would still offer Restore on the version now live.
       assert_push "session_context_updated", %{
         latest_snapshot_lock_version: lock_version
       }
@@ -2594,8 +2452,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # Added after the join, so it is absent from socket.assigns.workflow. A
-      # restore computed against that stale struct would leave it behind.
       {:ok, with_cron} =
         workflow
         |> Lightning.Repo.preload([:triggers, :jobs, :edges])
@@ -2649,8 +2505,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert_reply ref, :ok, %{losing_triggers: losing, version_number: 1}
 
-      # The URL built from this trigger stops answering, so the confirmation has
-      # to be able to say which one.
       assert Enum.any?(losing, &(&1.id == added.id))
     end
 
@@ -2673,8 +2527,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert_reply ref, :ok, %{returning_triggers: returning}
 
-      # It comes back off and without its auth methods, which a snapshot never
-      # recorded, so the confirmation has to say so.
       assert Enum.any?(returning, &(&1.id == original.id))
     end
 
@@ -2683,9 +2535,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # Someone else saves between the join and the restore, so the socket's
-      # lock_version is behind. Unrescued this killed the channel and the client
-      # waited out its timeout for a reply that never came.
       Mimic.copy(Lightning.Workflows)
 
       Mimic.stub(Lightning.Workflows, :restore_version, fn _wf, _rel, _actor ->
@@ -2712,9 +2561,6 @@ defmodule LightningWeb.WorkflowChannelTest do
   describe "release-pinned join (?release=version_number)" do
     test "loads the snapshot belonging to the release with that version_number",
          %{project: project, workflow: workflow, user: user} do
-      # A published snapshot whose lock_version deliberately differs from the
-      # release's version_number, so a pass genuinely proves resolution keys on
-      # version_number and not on lock_version.
       snapshot =
         insert(:snapshot,
           workflow: workflow,
@@ -2742,8 +2588,6 @@ defmodule LightningWeb.WorkflowChannelTest do
           %{project_id: project.id, action: "edit"}
         )
 
-      # The pinned view carries the release's snapshot content, addressed by
-      # version_number (1) but resolved to lock_version 7.
       loaded = pinned_socket.assigns.workflow
       assert loaded.lock_version == snapshot.lock_version
       assert loaded.name == snapshot.name
@@ -2757,9 +2601,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # No release with version_number 99 (hand-typed, or an old lock_version
-      # that was never published) resolves to the same not-found as a missing
-      # snapshot.
       assert {:error, %{reason: "snapshot version 99 not found"}} =
                LightningWeb.UserSocket
                |> socket("user_#{user.id}", %{current_user: user})
@@ -2788,9 +2629,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   describe "release and snapshot rooms are separate namespaces" do
     setup %{workflow: workflow, user: user} do
-      # A snapshot sitting at lock_version 3, and a release numbered 3 whose
-      # content sits at lock_version 7. Two different pieces of content that a
-      # single `:v3` room could not tell apart.
       at_lock_version_3 =
         insert(:snapshot,
           workflow: workflow,
@@ -2855,7 +2693,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       release_view = join.("release3")
       snapshot_view = join.("v3")
 
-      # The publish trail numbers by release; a save numbers by lock_version.
       assert release_view.lock_version == 7
       assert release_view.name == "the publish at lock_version 7"
 
@@ -2868,11 +2705,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # This is the reason the suffixes differ. A document is identified by its
-      # name alone, and `Lightning.Collaborate.start/2` hands a document that is
-      # already running to the next joiner exactly as it stands, discarding the
-      # workflow it was passed. Under one name the second view would be served
-      # the first one's content.
       for suffix <- ["release3", "v3"] do
         {:ok, _, _socket} =
           LightningWeb.UserSocket
@@ -2906,8 +2738,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # A draft/test snapshot that was never released, so this genuinely proves
-      # as-executed works off the run's own snapshot, not the release table.
       snapshot = insert(:snapshot, workflow: workflow, lock_version: 4)
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       {_wo, run} = history_workorder_with_run(workflow, trigger, snapshot)
@@ -2930,7 +2760,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Enum.map(loaded.jobs, & &1.name) |> Enum.sort() ==
                Enum.map(snapshot.jobs, & &1.name) |> Enum.sort()
 
-      # Resolved via the same read-only version-view path as ?release=.
       assert executed_socket.assigns.workflow_kind == :version
     end
 
@@ -2980,8 +2809,6 @@ defmodule LightningWeb.WorkflowChannelTest do
            workflow: workflow,
            user: user
          } do
-      # The release's snapshot lock_version deliberately differs from its
-      # version_number, proving the release contract is untouched by the run path.
       snapshot = insert(:snapshot, workflow: workflow, lock_version: 8)
       {:ok, release} = publish_release(workflow, snapshot, user)
 
@@ -3243,10 +3070,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Permissions data
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == true
-      # Owner role can provision a sandbox.
       assert permissions_data.can_provision_sandbox == true
 
-      # A root project is not a sandbox, so it can't be archived even by an owner.
       assert permissions_data.can_archive_sandbox == false
 
       # Latest snapshot lock version
@@ -3255,9 +3080,6 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
 
     test "says whether the project is a sandbox", %{socket: socket} do
-      # The editor uses it to decide which version list to show: nothing in a
-      # sandbox reaches production, so a sandbox browses its saves rather than a
-      # publish trail.
       ref = push(socket, "get_context", %{})
       assert_reply ref, :ok, %{project: %{is_sandbox: false}}
     end
@@ -3329,7 +3151,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == false
-      # Viewer role cannot provision a sandbox either.
       assert permissions_data.can_provision_sandbox == false
     end
 
@@ -3352,7 +3173,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
 
-      # Owner of the sandbox can archive it.
       {:ok, _, owner_socket} =
         LightningWeb.UserSocket
         |> socket("user_#{owner.id}", %{current_user: owner})
@@ -3366,7 +3186,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, %{permissions: owner_permissions}
       assert owner_permissions.can_archive_sandbox == true
 
-      # An editor on the sandbox cannot archive it.
       editor = insert(:user)
       insert(:project_user, project: sandbox, user: editor, role: :editor)
 
@@ -3389,8 +3208,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # Create initial snapshot (lock_version 0) and publish it as a release so
-      # it is pinnable by version_number.
       {:ok, snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
 
       {:ok, release_v1} =
@@ -3420,8 +3237,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       {:ok, updated_workflow_v2} =
         Lightning.Workflows.save_workflow(v2_changeset, user)
 
-      # Join pinning the release (version_number 1), which resolves to the old
-      # snapshot (lock_version 0). version_number != lock_version here.
       assert release_v1.version_number == 1
       assert snapshot_v0.lock_version == 0
 
@@ -3485,7 +3300,6 @@ defmodule LightningWeb.WorkflowChannelTest do
            user: user,
            project: project
          } do
-      # Companion to the request_releases regression below: get_context reads
       # the same workflow_kind assign, so a channel left frozen at :new after
       # its first save starves the header of the latest version too.
       workflow_id = Ecto.UUID.generate()
@@ -5034,9 +4848,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "request_history", %{})
       assert_reply ref, :ok, %{history: [work_order_payload]}
 
-      # Identity, so the client can tell a run of the live content from a run of
-      # something else without comparing lock versions, which are a proxy and
-      # not unique per workflow.
       assert [%{snapshot_id: snapshot_id}] = work_order_payload.runs
       assert snapshot_id == run.snapshot_id
     end
@@ -5114,8 +4925,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert version_number == release.version_number
 
-      # An unreleased (draft/test) snapshot carries its lock_version but no
-      # version_number, so the client renders "Draft".
       assert %{version: 6, version_number: nil} =
                Enum.find(runs, &(&1.id == draft_run.id))
     end
@@ -6665,9 +6474,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert is_binary(published_by) and published_by =~ "anna"
 
-      # The client ticks the row holding the content on screen, so each version
-      # names its own content rather than leaving the client to infer it from a
-      # number.
       assert Enum.all?(releases, &(&1.snapshot_id == snapshot.id))
     end
 
@@ -6676,7 +6482,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # An ordinary save captures a snapshot but records no release.
       workflow_changeset =
         workflow
         |> Lightning.Repo.preload([:jobs, :edges, :triggers])
@@ -6710,7 +6515,6 @@ defmodule LightningWeb.WorkflowChannelTest do
         ensure_doc_supervisor_stopped(workflow_id)
       end)
 
-      # A genuinely-new struct is seeded with lock_version 0. The empty-releases
       # short-circuit keys on workflow_kind, not on lock_version.
       assert socket.assigns.workflow.lock_version == 0
 
@@ -6729,7 +6533,6 @@ defmodule LightningWeb.WorkflowChannelTest do
          } do
       # A from-scratch workflow joins with action="new" (kind :new) and never
       # rejoins after its first save, so the channel must self-promote out of
-      # :new on save. Before the fix, request_releases on the same socket kept
       # short-circuiting to [] until a full page refresh.
       workflow_id = Ecto.UUID.generate()
 
@@ -6747,7 +6550,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       end)
 
       # Sanity check: the channel starts out believing this is a brand-new
-      # workflow, which is exactly the state that used to wedge request_releases.
       assert socket.assigns.workflow_kind == :new
 
       # Seed a minimal, valid, saveable workflow into the Y.Doc: a name plus a
@@ -6769,12 +6571,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       save_ref = push(socket, "save_workflow", %{})
       assert_reply save_ref, :ok, %{lock_version: _lv}
 
-      # A save is not a published version, so the list is still empty here.
       releases_ref = push(socket, "request_releases", %{})
       assert_reply releases_ref, :ok, %{releases: []}
 
-      # Going live publishes v1. Same socket, no rejoin: the channel must have
-      # self-promoted out of :new on save, or this keeps short-circuiting to [].
       live_ref = push(socket, "go_live", %{})
       assert_reply live_ref, :ok, _
 
@@ -6789,7 +6588,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       user: user,
       project: project
     } do
-      # Snapshot v0 with a release, so there is genuine published history.
       {:ok, snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
 
       {:ok, release} =
@@ -6800,9 +6598,6 @@ defmodule LightningWeb.WorkflowChannelTest do
           published_by_id: user.id
         })
 
-      # Join pinning the release (version_number 1). The resolver hydrates a
-      # :built struct with lock_version == 0, BUT this is a version-view, not a
-      # genuinely-new workflow, so request_releases must NOT short-circuit to [].
       topic_with_version =
         "workflow:collaborate:#{workflow.id}:release#{release.version_number}"
 
@@ -6854,8 +6649,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # Two ordinary saves. A save captures a snapshot but records no release,
-      # so this workflow has content history and no publish trail at all.
       for name <- ["First save", "Second save"] do
         {:ok, _saved} =
           workflow
@@ -6868,7 +6661,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "request_versions", %{})
       assert_reply ref, :ok, %{versions: versions}
 
-      # The current one first, the rest newest-first by lock_version.
       assert [%{is_latest: true, lock_version: latest} | rest] = versions
       assert latest == Lightning.Repo.reload(workflow).lock_version
       assert rest != []
@@ -6878,9 +6670,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Enum.map(versions, & &1.lock_version) ==
                versions |> Enum.map(& &1.lock_version) |> Enum.sort(:desc)
 
-      # The same workflow, asked the other question, answers nothing: it has
-      # published no versions. One event returning either list depending on what
-      # the server believed would make these two answers indistinguishable.
       releases_ref = push(socket, "request_releases", %{})
       assert_reply releases_ref, :ok, %{releases: []}
     end
@@ -6899,8 +6688,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       current = Lightning.Repo.reload(workflow).lock_version
       pinned = insert(:snapshot, workflow: workflow, lock_version: current + 5)
 
-      # A snapshot-pinned socket carries the pinned lock_version as its own, so
-      # comparing against the socket's workflow would crown the pinned snapshot.
       {:ok, _, pinned_socket} =
         LightningWeb.UserSocket
         |> socket("user_#{user.id}", %{current_user: user})
@@ -7231,8 +7018,6 @@ defmodule LightningWeb.WorkflowChannelTest do
     :sys.get_state(socket.channel_pid)
   end
 
-  # The write gate is an assign on the channel process, so a second
-  # participant's gate can only be read from that process's own state.
   defp channel_socket(socket) do
     :sys.get_state(socket.channel_pid)
   end
@@ -7243,11 +7028,6 @@ defmodule LightningWeb.WorkflowChannelTest do
     |> submit_membership()
   end
 
-  # A user who has opted into experimental features, with their own socket.
-  #
-  # The lifecycle lock only applies to such a user, and it is resolved at join
-  # (`content_locked`) and read off the user struct the socket captured
-  # (`ensure_editable_state`), so the preference has to be on before joining.
   defp with_experimental_user(_context) do
     user = insert(:user, preferences: %{"experimental_features" => true})
     project = insert(:project, project_users: [%{user: user, role: :owner}])

@@ -92,11 +92,6 @@ export interface MockPushConfig {
  * // Timeout response
  * const push = createMockPush({ shouldTimeout: true });
  */
-/**
- * The shape `MockPhoenixChannel.push` has. These helpers are only ever assigned
- * to that, never to a real phoenix `Channel`, and typing them as the latter made
- * every assignment a type error the suite carried around.
- */
 export type MockChannelPush = (
   event: string,
   payload: unknown,

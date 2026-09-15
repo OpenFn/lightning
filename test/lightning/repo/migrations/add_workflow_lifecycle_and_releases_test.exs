@@ -8,8 +8,6 @@ defmodule Lightning.Repo.Migrations.AddWorkflowLifecycleAndReleasesTest do
 
   import Lightning.Factories
 
-  # Migrations under priv/repo/migrations are not on the compile path for
-  # `mix test`, so load the module before referencing its SQL helpers.
   Code.require_file(
     "priv/repo/migrations/20260912180000_add_workflow_lifecycle_and_releases.exs"
   )
@@ -65,7 +63,6 @@ defmodule Lightning.Repo.Migrations.AddWorkflowLifecycleAndReleasesTest do
 
   test "skips a live workflow with no snapshot at its current lock_version" do
     live = insert(:workflow, state: :live, lock_version: 2)
-    # Snapshot exists but at a stale lock_version, so it is not the current one.
     insert(:snapshot, workflow: live, lock_version: 1)
 
     Repo.query!(Backfill.insert_sql())

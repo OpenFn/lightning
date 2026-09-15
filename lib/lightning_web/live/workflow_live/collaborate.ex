@@ -82,9 +82,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        show_webhook_auth_modal: false,
        webhook_auth_method: nil,
        ai_assistant_enabled: AiAssistant.enabled?(),
-       # Rendered into the page rather than waited for over the channel. The
-       # editor decides what to show from this flag, and learning it a round
-       # trip late meant drawing the wrong header first and correcting it.
        experimental_features_enabled:
          Lightning.Accounts.experimental_features_enabled?(
            socket.assigns.current_user
@@ -435,8 +432,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   end
 
   defp workflow_assigns(:edit, %{"id" => workflow_id}, _project) do
-    # Triggers come along so the editor's Run control knows what it would run
-    # from before the collaborative document has synced.
     workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
 
     %{

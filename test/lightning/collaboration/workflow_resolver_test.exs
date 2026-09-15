@@ -184,10 +184,6 @@ defmodule Lightning.Collaboration.WorkflowResolverTest do
 
     test "carries the workflow's current lifecycle state, not the snapshot's",
          %{workflow: workflow, snapshot: snapshot, project: project} do
-      # A snapshot records content, never lifecycle, so a version view built
-      # from one had no state and defaulted to draft. A pinned view of a live
-      # workflow then told the client its content was editable while the server
-      # refused every write.
       {:ok, _live} =
         workflow
         |> Lightning.Repo.preload(:triggers)
@@ -318,5 +314,21 @@ defmodule Lightning.Collaboration.WorkflowResolverTest do
       assert {:error, :invalid_action} =
                WorkflowResolver.resolve(Ecto.UUID.generate(), :delete)
     end
+  end
+
+  test "pinned version encodes and keeps the auth method's secrets out" do
+    workflow = insert(:simple_workflow)
+    trigger = hd(workflow.triggers)
+    insert(:webhook_auth_method, project: workflow.project, triggers: [trigger])
+    {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+    {:ok, resolved, _kind} =
+      WorkflowResolver.resolve_version(workflow.id, snapshot.lock_version, [])
+
+    t = hd(resolved.triggers)
+    assert t.has_auth_method
+    refute Map.has_key?(t, :webhook_auth_methods)
+    assert {:ok, json} = Jason.encode(t)
+    refute json =~ "password"
   end
 end

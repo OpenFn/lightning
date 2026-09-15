@@ -93,11 +93,6 @@ function createWrapper(): React.ComponentType<{ children: React.ReactNode }> {
 
   const mockStoreValue: StoreContextValue = {
     workflowStore: {} as any,
-    // Not a bare stub: the run controls read the lifecycle lock off this store
-    // to decide whether saving before a run is even allowed.
-    // Flag on: leaving a pinned view behind on retry is part of what this work
-    // added, and these tests assert that behaviour. The helper's selector reads
-    // its own default state, so the flag has to go in through the selector.
     sessionContextStore: createMockSessionContextStore({
       withSelector: <T,>(selector: (state: SessionContextState) => T) =>
         () =>
@@ -934,9 +929,6 @@ describe('useRunRetry - canvas flow (no onRunSubmitted)', () => {
       await result.current.handleRetry();
     });
 
-    // Canvas flow: update URL params, not redirect. A retry runs the content
-    // that is live, so it drops every pinned view on the way to its own new
-    // run, in one update rather than one call per parameter.
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
       release: null,
       v: null,

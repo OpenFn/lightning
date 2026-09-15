@@ -116,7 +116,6 @@ test.describe('Run/Retry Keyboard Shortcuts @collaborative @critical', () => {
     });
 
     await test.step('Verify button shows retry mode', async () => {
-      // Button should now show "Retry"
       await expect(page.locator('button:has-text("Retry")')).toBeVisible({
         timeout: 10000,
       });

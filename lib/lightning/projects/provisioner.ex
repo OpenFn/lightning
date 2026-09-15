@@ -101,8 +101,6 @@ defmodule Lightning.Projects.Provisioner do
                build_import_changeset(project, user_or_repo_connection, data),
              edges_to_cleanup <-
                edges_referencing_deleted_jobs(project_changeset),
-             # Before the insert, or a workflow being dropped in this same
-             # document still holds the name the incoming one wants.
              :ok <- release_paths_of_soft_deleted_workflows(project_changeset),
              {:ok, %{workflows: workflows} = project} <-
                Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
@@ -131,10 +129,6 @@ defmodule Lightning.Projects.Provisioner do
                ) do
           Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
-          # A provisioning document can soft-delete a workflow, which is the same
-          # disappearance as a delete driven from the UI and has to reach the same
-          # sessions. On the project's topic, not this one — see
-          # `Lightning.Projects.Events`.
           workflows
           |> Enum.filter(& &1.deleted_at)
           |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
@@ -517,11 +511,6 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  # Records a promote release in the same transaction as the snapshot, but only
-  # for the workflows a promote actually targeted (`release.workflow_ids`) — the
-  # provisioner is a generic pipeline, so ordinary imports/deploys/merges pass no
-  # release and record nothing, and sibling parent workflows carried along by a
-  # promote are excluded here.
   defp maybe_record_promote_release(multi, _workflow, _snapshot_op, _actor, nil),
     do: multi
 
@@ -837,15 +826,6 @@ defmodule Lightning.Projects.Provisioner do
     |> Workflow.validate()
   end
 
-  # Decide the workflow `:state` on import:
-  #
-  #   1. Explicit `state` in the attrs wins.
-  #   2. An already-persisted workflow (`__meta__.state == :loaded`) keeps its
-  #      current DB state untouched. We deliberately do NOT infer here: a
-  #      round-trip must not silently flip a draft with an in-app-enabled
-  #      trigger to live.
-  #   3. A brand-new workflow (`:built`, no explicit state) is inferred from its
-  #      triggers: `:live` if any trigger is enabled, otherwise `:draft`.
   defp maybe_infer_workflow_state(changeset, attrs) do
     cond do
       state_present_in_attrs?(attrs) ->

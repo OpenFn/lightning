@@ -202,9 +202,6 @@ export function SaveButton({
 }
 SaveButton.displayName = 'SaveButton';
 
-// Turn a refused lifecycle transition into something actionable. The activation
-// limit, a permission change and a deleted workflow all reply with real text;
-// only a genuinely unexpected failure earns "try again".
 function describeLifecycleError(error: unknown): string {
   if (isChannelRequestError(error)) {
     return formatChannelErrorMessage({
@@ -231,18 +228,7 @@ export function Header({
   projectId?: string;
   workflowId?: string;
   isSandbox?: boolean;
-  /**
-   * The workflow's lifecycle state as the page was rendered, used until the
-   * session context arrives. Without it the header draws what a draft looks
-   * like and corrects itself a moment later, which on a live workflow means
-   * Save appearing and vanishing.
-   */
   initialWorkflowState?: string;
-  /**
-   * The workflow's first trigger as the page was rendered, used until the
-   * collaborative document syncs. Without it the Run button arrives a moment
-   * after the rest of the header, which reads as a flash.
-   */
   initialFirstTriggerId?: string;
   isRunPanelOpen?: boolean;
   isIDEOpen?: boolean;
@@ -262,9 +248,6 @@ export function Header({
   const { canSave, tooltipMessage } = useCanSave();
   const { enabled, setEnabled } = useWorkflowEnabled();
   const triggers = useWorkflowState(state => state.triggers);
-  // Two answers, because the pinned-version block applies to a fresh run and
-  // not to a retry. `canRun` gates starting something new; `canRunOrRetry`
-  // gates the control that does whichever the loaded run calls for.
   const { canRun } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
@@ -276,19 +259,9 @@ export function Header({
   const storeContext = useContext(StoreContext);
   const getLimits = storeContext?.sessionContextStore.getLimits;
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // The run just started, held until it actually arrives. Dropping the
-  // submitting state when the request returns left a gap before the new run
-  // reached the history, and the button flipped back from Processing to Run and
-  // then to Processing again. The IDE already waits like this.
   const [pendingRunId, setPendingRunId] = useState<string | null>(null);
   const sessionWorkflow = useSessionWorkflow();
 
-  // The whole sandboxes-and-releases experience hangs off this one flag. Every
-  // action it added is already guarded by the lifecycle state or by being inside
-  // a sandbox, so reading both as absent when the flag is off leaves the header
-  // exactly the shape it had before any of this existed. One gate, rather than a
-  // condition bolted onto each button, so a new action cannot be added and
-  // forget to check.
   const experimentalFeatures = useExperimentalFeatures();
   const lifecycleState = experimentalFeatures
     ? (sessionWorkflow?.state ?? initialWorkflowState)
@@ -300,21 +273,12 @@ export function Header({
   const isNewWorkflow = useIsNewWorkflow();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
-  // Going live turns the triggers on and starts processing real data. Every
-  // other irreversible action here confirms first; this was the one that did
-  // not, and it is the one that reaches production.
   const [showGoLiveDialog, setShowGoLiveDialog] = useState(false);
   const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
   const activeRun = useActiveRun();
   const { clearRun } = useFollowRun(null);
 
-  // Two effects, not one, the way the IDE does it. The arrival has to watch the
-  // run, and the timeout must not: folded together and keyed on the run, the
-  // clock restarted whenever some other run became active; keyed on the pending
-  // id alone, the arrival was read from the render before the run existed and
-  // never fired, so the button sat on Processing for the full thirty seconds
-  // after a run had already finished.
   useEffect(() => {
     if (pendingRunId && activeRun?.id === pendingRunId) {
       setPendingRunId(null);
@@ -322,7 +286,6 @@ export function Header({
     }
   }, [activeRun?.id, pendingRunId]);
 
-  // If the run never reaches us, the button must not stay stuck.
   useEffect(() => {
     if (!pendingRunId) return;
 
@@ -352,7 +315,6 @@ export function Header({
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id ?? initialFirstTriggerId;
 
-  // Which view of the past, if any, the URL is asking for.
   const {
     isPinnedVersion,
     isViewingAsExecuted,
@@ -360,9 +322,6 @@ export function Header({
     version: pinnedVersion,
   } = usePinnedView();
 
-  // Asks for a transition, then moves the URL to match. The channel resolves
-  // the live document itself, so it does not matter which document this socket
-  // is reading: no waiting for a room change, and nothing to get out of order.
   const requestTransition = useCallback(
     (
       target: 'draft' | 'live',
@@ -377,9 +336,6 @@ export function Header({
           return null;
         })
         .catch((error: unknown) => {
-          // The refusals these buttons can hit all carry actionable text: the
-          // activation limit, a permission change, a deleted workflow. "Try
-          // again" would be wrong for every one of them.
           notifications.alert({
             title: errorTitle,
             description: describeLifecycleError(error),
@@ -392,41 +348,20 @@ export function Header({
     [goLive, switchToDraft, updateSearchParams]
   );
 
-  // The Live badge describes the workflow's current state, which would be a lie
-  // on these views, so it is suppressed and the version badge carries the
-  // context instead.
-  // Only the badge and the flag-off switch read this now. The lifecycle and
-  // sandbox actions carry their own reasons, and Switch to draft is deliberately
-  // offered while reading a run, which is where fixing one starts.
   const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
 
-  // These act on the current workflow rather than on what is being read, so a
-  // pinned version refuses them and says why. They used to be hidden, which
-  // left a header with nothing in it and nothing to explain the view.
-  //
-  // A run view is deliberately not included. Reading a failed run is where
-  // fixing one starts, and these are the way out of it: Switch to draft and
-  // Edit in sandbox both carry the run's input into the fix. A pinned version
-  // has no run to carry, so there is nothing to preserve by allowing them.
   const versionViewReason = isPinnedVersion
     ? 'You are reading an older version. This acts on the current workflow.'
     : null;
 
-  // Promote is the exception: it saves first, and every view of the past
-  // refuses that save, so a run's own view stops it too.
   const promoteViewReason = isPinnedView
     ? 'You are reading the past. Promote acts on the current workflow.'
     : null;
 
-  // The sandbox switch is refused on any view of the past, and a run's own view
-  // left it disabled describing what it does rather than why it cannot be used.
   const sandboxToggleViewReason = isPinnedView
     ? 'You are reading the past. This acts on the current workflow.'
     : null;
 
-  // A retry runs the content that is live now, whatever is on screen. The
-  // button does not say so, because retrying always means that, but the
-  // confirmation names the version so the record of what just ran is clear.
   const latestSnapshotId = useLatestSnapshotId();
 
   const releases = useReleases();
@@ -447,20 +382,9 @@ export function Header({
 
   const { canRun: canRunOrRetry } = useCanRun({ forRetry: isRetryable });
 
-  // The lifecycle lock as the header sees it.
-  //
-  // Nothing is held back while the flag is still unknown. Doing that took the
-  // button away from people who never opted in, and this work does not touch
-  // them. A flag-on user briefly sees Save on a live workflow before the
-  // context lands; that is the cost of the flag arriving over the channel, and
-  // it is not worth changing what everyone else sees to hide it.
   const isLiveLocked =
     experimentalFeatures && lifecycleState === 'live' && !inSandbox;
 
-  // A retry runs the latest version, never the one on screen, so while an older
-  // version is being read the button has to say so before the click rather than
-  // in the toast afterwards. It is deliberately silent otherwise: on the latest
-  // version there is nothing surprising to warn about.
   const retryTooltip =
     isRetryable && isPinnedVersion
       ? `Runs this input on the latest version${
@@ -505,12 +429,6 @@ export function Header({
     updateSearchParams,
   ]);
 
-  // The one retry path, from wherever a run is loaded: the run's own view, a
-  // version being read, or the live workflow. It runs the content that is live
-  // rather than whatever is on screen, which is why the toast names the version
-  // it ran. The save underneath is a no-op unless there is something to save
-  // and saving is allowed. It lands on the new run, since the canvas that was
-  // being read is no longer the subject.
   const handleRetryClick = useCallback(async () => {
     const firstStep = activeRun?.steps?.[0];
     if (!followedRunId || !firstStep || !projectId) return;
@@ -552,12 +470,6 @@ export function Header({
       });
 
       if (getLimits) void getLimits('new_run');
-      // Every pinned view goes, not just the run's own: a retry runs the
-      // content that is live, so staying on `?v=` left the badge naming a
-      // version the new run did not execute.
-      //
-      // Same rule as the run panel's retry, flag and all. Two controls doing
-      // the same thing should not leave the URL in two different states.
       updateSearchParams(
         experimentalFeatures
           ? {
@@ -599,18 +511,8 @@ export function Header({
     }
   }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
 
-  // Phase one of the promote flow. Promote always reflects the current editor
-  // state, so we save first (silently) and only merge once that succeeds; a
-  // failed save aborts without promoting. Promote now MERGES ONLY: it does not
-  // archive the sandbox, so on success we do NOT navigate. Instead we stash the
-  // parent + workflow ids and resolve true, letting the dialog advance to its
-  // success step where archiving is offered as an optional second action.
-  // Failures (save or merge) are surfaced inline and resolve false so the dialog
-  // stays on its confirm step.
   const handleConfirmPromote = useCallback(async (): Promise<boolean> => {
     try {
-      // The dialog owns every outcome here, so the save underneath it must not
-      // toast on its own.
       await saveWorkflow({ notify: 'none' });
     } catch (error) {
       const description = isChannelRequestError(error)
@@ -652,25 +554,12 @@ export function Header({
     }
   }, [promote, saveWorkflow]);
 
-  // Phase two, archive path. Retires the sandbox and lets the server carry the
-  // socket into the parent, which is a different Y.Doc session. No toast is
-  // raised here: the reload would destroy it. The promote is confirmed across
-  // the navigation instead (see promoteHandoff), because the flash the server
-  // sends speaks only of the archive. Errors, which don't navigate, are
-  // surfaced inline and resolve false so the dialog stays on its success step.
   const handleArchiveSandbox = useCallback(async (): Promise<boolean> => {
-    // Marked before the call, because the server's redirect can land before
-    // this promise resolves. Cleared again if the archive refuses, so a sandbox
-    // we are still sitting in never claims to have been retired.
     markPromoted();
 
     try {
       await archiveSandbox();
 
-      // Navigation is the server's: archiving schedules the sandbox for
-      // deletion, and the LiveView's teardown hook redirects every socket on it
-      // to the parent, landing on the parent's copy of this workflow. Racing it
-      // from here only produced a second navigation to the same place.
       return true;
     } catch (error) {
       clearPromoted();
@@ -692,9 +581,6 @@ export function Header({
     }
   }, [archiveSandbox]);
 
-  // Phase two, keep path. Close the dialog and stay in the sandbox (no
-  // navigation) so the user can switch to another workflow and promote it too.
-  // The toast is shown inline here since we are not reloading.
   const handleKeepSandbox = useCallback(() => {
     setShowPromoteDialog(false);
     notifications.success({
@@ -947,9 +833,6 @@ export function Header({
                     <Button
                       data-testid="promote-sandbox-button"
                       className="inline-flex items-center gap-1"
-                      // Promote saves before it merges, and a view of the past
-                      // is refused that save. A run's own view is as refused as
-                      // a pinned version, so both are covered.
                       disabled={isPinnedView}
                       onClick={() => {
                         setShowPromoteDialog(true);
@@ -992,20 +875,20 @@ export function Header({
               {projectId &&
                 workflowId &&
                 (firstTriggerId || (isRetryable && experimentalFeatures)) && (
-                <NewRunButton
-                  onClick={() => {
-                    void (isRetryable ? handleRetryClick() : handleRunClick());
-                  }}
-                  onRunWithCustomInputClick={handleRunWithCustomInputClick}
-                  disabled={isRunPanelOpen || isIDEOpen}
-                  forRetry={isRetryable}
-                  isRunning={isSubmitting || runIsProcessing}
-                  // Just "Retry". It always runs the latest, so saying so in
-                  // the label tells people something they already assume.
-                  text={isRetryable ? 'Retry' : 'Run'}
-                  enabledTooltip={retryTooltip}
-                />
-              )}
+                  <NewRunButton
+                    onClick={() => {
+                      void (isRetryable
+                        ? handleRetryClick()
+                        : handleRunClick());
+                    }}
+                    onRunWithCustomInputClick={handleRunWithCustomInputClick}
+                    disabled={isRunPanelOpen || isIDEOpen}
+                    forRetry={isRetryable}
+                    isRunning={isSubmitting || runIsProcessing}
+                    text={isRetryable ? 'Retry' : 'Run'}
+                    enabledTooltip={retryTooltip}
+                  />
+                )}
               {/* A live workflow outside a sandbox can never be saved, and the
                   Live badge and Switch to draft beside it already say why, so
                   the button goes rather than sitting there dead. Everywhere
@@ -1043,13 +926,6 @@ export function Header({
             }}
             onConfirm={() => {
               setShowGoLiveDialog(false);
-              // The run goes too, from the store as well as the URL. Going
-              // live writes a new version, so a run selected beforehand no
-              // longer matches what is live, and the canvas would answer that
-              // by opening it as it executed: you confirm Go live and land
-              // read-only in a view of an old run rather than looking at what
-              // you just published. Clearing only the parameter was not
-              // enough, because the canvas restores it from the store.
               clearRun();
               requestTransition(
                 'live',
@@ -1076,17 +952,6 @@ export function Header({
             }}
             onConfirm={() => {
               setShowSwitchToDraftDialog(false);
-              // Coming from a failed run, both the run and its input come
-              // along. Switching to draft does not change the content, it
-              // unlocks it, so the run being read still describes what is on
-              // screen: dropping it threw away the logs and the failing step at
-              // the moment the fix starts, which is the one thing the person
-              // came for. The input comes too, so the run panel opens ready to
-              // put the same data through again.
-              //
-              // Every pinned parameter goes, because only the latest version
-              // can be edited and that is also what production was running.
-              // Wanting the older content back is Restore, a different action.
 
               const runInput = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
 

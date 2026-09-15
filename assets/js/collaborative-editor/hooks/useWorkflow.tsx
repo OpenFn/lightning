@@ -75,11 +75,6 @@ const SAVE_WORKFLOW_ERROR_TOAST_ID = 'save-workflow-error';
 
 export type SaveNotifyLevel = 'all' | 'error-only' | 'none';
 
-/**
- * What we say when the lifecycle is the only thing in the way. Shared, because
- * the same sentence answers "why can't I save", "why is this read-only" and
- * "why can't I delete this step", and three copies of it would drift.
- */
 export const CONTENT_LOCKED_MESSAGE =
   'This workflow is live. Switch to draft or edit in a sandbox to make changes.';
 
@@ -367,12 +362,6 @@ export const useNodeSelection = () => {
   };
 };
 
-/**
- * Whether the workflow is on, and how to turn it on or off.
- *
- * Reads the triggers, not the lifecycle column: a user without experimental
- * features has no lifecycle, and this switch is what they have instead.
- */
 export const useWorkflowEnabled = () => {
   return useWorkflowSelector(
     (state, store) => ({
@@ -597,9 +586,6 @@ export const useWorkflowActions = () => {
       return wrappedSaveWorkflow;
     })(),
 
-    // Lifecycle transitions. After the server flips the state and reconciles
-    // the document, re-fetch the session context so the new state and edit
-    // permissions (a live workflow is read-only on main) are reflected.
     goLive: async () => {
       const response = await store.goLive();
       await sessionContextStore.requestSessionContext();
@@ -727,23 +713,13 @@ export const useWorkflowActions = () => {
       return wrappedSaveAndSyncWorkflow();
     },
 
-    // Sandbox editing. listSandboxes is a query (fetch candidates) and
-    // editInSandbox is a command (provision + clone). Navigation lives in the
-    // calling component, consistent with the legacy-editor switch.
     listSandboxes: store.listSandboxes,
     editInSandbox: store.editInSandbox,
 
-    // Promote a sandbox back into its parent project's live workflow. A command;
-    // the calling component owns the post-promote navigation into the parent.
-    // Promote merges only; archiving the sandbox is the separate archiveSandbox
-    // command below, offered as an optional second step after a successful merge.
     promote: store.promote,
     checkPromote: store.checkPromote,
     archiveSandbox: store.archiveSandbox,
 
-    // Put an earlier version's content back without taking the workflow
-    // offline. checkRestore asks what that will destroy, so the confirmation
-    // can say so before anyone agrees.
     restoreVersion: store.restoreVersion,
     checkRestore: store.checkRestore,
 
@@ -882,8 +858,6 @@ const useWorkflowConditions = () => {
   const isConnected = isSynced;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
 
-  // A pinned release, a pinned snapshot, or a run's own view. All three read
-  // the past, so all three block save and run.
   const { isPinnedView } = usePinnedView();
 
   return {
@@ -937,10 +911,6 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canSave = false;
     tooltipMessage = 'Workflow has been deleted';
-    // Same order as useWorkflowReadOnly, and for the same reason: what is on
-    // screen decides before the lifecycle does. Pointing at "switch to draft"
-    // while reading an older version sends someone at a button that is itself
-    // disabled, and would not make the version on screen editable anyway.
   } else if (isPinnedView) {
     canSave = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
@@ -968,24 +938,13 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  * Checks:
  * 1. User permissions (can_edit_workflow or can_run_workflow)
  * 2. Connection state (isSynced)
- * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view),
- *    unless the control retries a loaded run, which carries its own content
+ * 3. Reading the past, unless the control retries a loaded run
  * 4. Workflow deletion state (deleted_at)
  * 5. Run limits (from session context)
- * 6. Deliberately NOT the read-only lock. Running is not editing: whoever is
- *    responsible for a live workflow has to be able to put a test input through
- *    what is in production. The checks above are the ones that really stop a
- *    run. Viewing existing runs and run history is unaffected either way,
- *    because those paths do not consult useCanRun.
+ *
+ * Deliberately not the read-only lock: running is not editing.
  */
 export interface CanRunOptions {
-  /**
-   * Whether the control being gated retries a loaded run rather than starting a
-   * fresh one. The two differ on one condition only: reading an older version.
-   * A fresh run has no content to run there, so it stays blocked; a retry
-   * carries its own, so blocking it takes away the only reason to be on the
-   * screen.
-   */
   forRetry?: boolean;
 }
 
@@ -1005,18 +964,14 @@ export const useCanRun = (
   const limits = useLimits();
   const runLimits = limits.runs ?? { allowed: true, message: null };
 
-  // Deliberately not derived from the read-only lock. Running is not editing:
-  // the person responsible for a live workflow has to be able to put a test
-  // input through the thing that is in production, and that is the first thing
-  // anyone does after publishing. The reasons below are the ones that really
-  // stop a run, and they are the same set the lock had before the lifecycle
-  // existed, so nothing changes for a workflow that is not live.
   const isNewWorkflow = useIsNewWorkflow();
   const experimentalFeatures = useExperimentalFeatures();
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
   const isUnsavedNewWorkflow =
-    isNewWorkflow && (jobs.length > 0 || triggers.length > 0);
+    experimentalFeatures &&
+    isNewWorkflow &&
+    (jobs.length > 0 || triggers.length > 0);
 
   // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
   const hasPermission = hasEditPermission || hasRunPermission;
@@ -1034,8 +989,6 @@ export const useCanRun = (
   } else if (isDeleted) {
     canRun = false;
     tooltipMessage = 'Workflow has been deleted';
-    // The retry exemption is part of what this work added, so it waits for the
-    // flag. Without it a pinned view refuses every run, as it does on main.
   } else if (isPinnedView && !(forRetry && experimentalFeatures)) {
     canRun = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
@@ -1091,8 +1044,6 @@ export const useWorkflowReadOnly = (): {
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
 
-  // The lifecycle lock, told to us as its own fact rather than inferred from a
-  // permission. The server owns the rule (live, and not inside a sandbox).
   const contentLocked = useContentLocked();
 
   const { isPinnedVersion, isViewingAsExecuted } = usePinnedView();
@@ -1121,9 +1072,6 @@ export const useWorkflowReadOnly = (): {
       reason: 'deleted',
     };
   }
-  // A viewer is a viewer whatever the lifecycle is doing, so the role is
-  // answered first. Pointing someone at "switch to draft or edit in a sandbox"
-  // when they could not edit a draft either would send them nowhere.
   if (!hasPermission) {
     return {
       isReadOnly: true,
@@ -1131,16 +1079,6 @@ export const useWorkflowReadOnly = (): {
       reason: 'no_permission',
     };
   }
-  // What is on screen decides before the lifecycle does. A pinned version or a
-  // run's own view is read-only because of the view, whatever state the
-  // workflow is in, and saying "this workflow is live, switch it to draft"
-  // there answers a question nobody asked: switching to draft would not make
-  // the version on screen editable.
-  //
-  // The order matters beyond wording. The header suppresses its Read-only cue
-  // for exactly these two reasons, because the lifecycle badge covers the
-  // lifecycle case, so letting `live` win here left a pinned view of a live
-  // workflow with nothing on screen saying it could not be edited.
   if (isViewingAsExecuted) {
     return {
       isReadOnly: true,
@@ -1155,7 +1093,6 @@ export const useWorkflowReadOnly = (): {
       reason: 'pinned_version',
     };
   }
-  // An editor stopped only by the lifecycle, who therefore has somewhere to go.
   if (contentLocked) {
     return {
       isReadOnly: true,

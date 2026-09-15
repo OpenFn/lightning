@@ -101,8 +101,6 @@ defmodule LightningWeb.WorkflowLive.Index do
     {:ok,
      socket
      |> assign(
-       # Whether this list speaks the lifecycle's language. Without the flag it
-       # is the list from before there was one: a switch called Enabled.
        lifecycle:
          Lightning.Accounts.experimental_features_enabled?(current_user),
        can_delete_workflow: can_delete_workflow,
@@ -249,8 +247,6 @@ defmodule LightningWeb.WorkflowLive.Index do
            |> put_flash(:info, "Workflow updated")
            |> push_patch(to: redirect)}
 
-        # The limiter writes the sentence it wants the user to read, and it is
-        # the one refusal here that retrying cannot fix.
         {:error, %Message{text: text}} when is_binary(text) ->
           {:noreply,
            socket
@@ -320,11 +316,6 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   defp transition_workflow_state(workflow, enable?, actor)
        when enable? in [true, "true"] do
-    # Only an enable that actually turns a trigger on counts against the limit.
-    # Flipping a workflow that is already on asks the limiter nothing, which is
-    # how this read before a lifecycle transition replaced the plain save: the
-    # limiter was reached through the changeset, and a changeset with no trigger
-    # change short-circuits.
     activating? =
       Enum.any?(workflow.triggers, fn trigger -> !trigger.enabled end)
 

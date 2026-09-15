@@ -2164,8 +2164,6 @@ defmodule Lightning.Projects do
     end)
   end
 
-  # Maps each sandbox id to the id of its clone of `workflow_name`. Skips the
-  # query entirely when there are no sandboxes to look up.
   defp joinable_workflow_ids([], _workflow_name), do: %{}
 
   defp joinable_workflow_ids(sandboxes, workflow_name) do
@@ -2374,10 +2372,6 @@ defmodule Lightning.Projects do
            }}
 
         nil ->
-          # The clone of `workflow_name` is expected to exist after a
-          # successful provision; its absence is an invariant violation. Delete
-          # the just-created sandbox so it cannot linger and consume the
-          # parent's sandbox quota.
           Logger.error(
             "Cloned workflow #{inspect(workflow_name)} not found in " <>
               "provisioned sandbox ##{sandbox.id}; deleting the orphaned sandbox."
@@ -2401,23 +2395,15 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Promotes a workflow edited inside a sandbox back to the sandbox's parent
-  project by merging only that workflow.
+  Promotes a workflow edited inside a sandbox back to its parent project.
 
-  The merge reuses `Sandboxes.merge/4` scoped to the single source workflow via
-  `selected_workflow_ids`, so sibling workflows on the parent pass through
-  untouched (including their live/enabled trigger state). Authorization is the
-  caller's responsibility, mirroring `Sandboxes.merge/4`.
+  Reuses `Sandboxes.merge/4` scoped to the single workflow, so siblings on the
+  parent pass through untouched. Authorization is the caller's, as it is there.
+  Archiving the sandbox is separate, so several workflows can be promoted from
+  one sandbox before it is retired.
 
-  Promoting does not archive the sandbox: archiving is a separate, explicit
-  action so a user can promote several related workflows from the same sandbox
-  before retiring it. See `Lightning.Projects.Sandboxes.schedule_sandbox_deletion/2`.
-
-  ## Returns
-  * `{:ok, %{parent_project_id: id, workflow_id: id | nil}}`
-  * `{:error, :not_a_sandbox}` - the workflow's project has no parent
-  * `{:error, reason}` - the merge failed (`:merge_failed` or a usage-limit
-    `Lightning.Extensions.Message`)
+  Returns `{:ok, %{parent_project_id: id, workflow_id: id | nil}}`,
+  `{:error, :not_a_sandbox}`, or the merge's own error.
   """
   @spec promote_workflow(Workflow.t(), User.t()) ::
           {:ok,
@@ -2441,9 +2427,6 @@ defmodule Lightning.Projects do
                  selected_workflow_ids: [sandbox_workflow.id],
                  record_release: :promote
                }) do
-          # Reloaded because the caller's struct is captured at channel join and
-          # the client saves before promoting, so a rename in the same session
-          # would look this up under the old name.
           parent_workflow_id =
             with %Workflow{name: name} <- Repo.reload(sandbox_workflow),
                  %Workflow{id: id} <-

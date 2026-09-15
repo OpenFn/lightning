@@ -1,3 +1,5 @@
+/** Confirms an action that would throw away uncommitted canvas edits. */
+
 import {
   Dialog,
   DialogBackdrop,
@@ -12,22 +14,12 @@ import { Button } from './Button';
 
 interface DiscardChangesDialogProps {
   isOpen: boolean;
-  /** Save, then continue only if the save succeeded. Resolves false on failure. */
   onSaveAndContinue: () => Promise<boolean>;
-  /** Continue and let the unsaved edits go. */
   onDiscardAndContinue: () => void;
   onCancel: () => void;
-  /** What the person is about to do, if it is not switching version. */
   description?: string;
 }
 
-/**
- * Asked before something throws away unsaved edits.
- *
- * Three ways out rather than two: saving is usually what the person wanted, and
- * making them cancel, save, then repeat the action is a poor exchange for an
- * interruption we caused.
- */
 export function DiscardChangesDialog({
   isOpen,
   onSaveAndContinue,
@@ -37,9 +29,6 @@ export function DiscardChangesDialog({
 }: DiscardChangesDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
 
-  // Two of the three callers proceed by rewriting the URL rather than
-  // navigating, and the dialog stays mounted through that, so it has to clear
-  // its own in-flight state or the next open is all disabled buttons.
   useEffect(() => {
     if (!isOpen) setIsSaving(false);
   }, [isOpen]);

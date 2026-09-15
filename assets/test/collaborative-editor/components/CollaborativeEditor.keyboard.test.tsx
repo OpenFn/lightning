@@ -29,8 +29,6 @@ import {
 } from '../__helpers__/urlStateMocks';
 
 // Mock Socket
-// The discard guard asks these before anything destroys the document; neither
-// has a provider in this test.
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
   useSession: () => ({ isSynced: true, settled: true }),
 }));
@@ -76,8 +74,6 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
-  // #/monaco configures the loader at import time, so anything that reaches it
-  // needs this present even when the editor itself is stubbed.
   loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 

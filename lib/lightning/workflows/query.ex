@@ -74,18 +74,12 @@ defmodule Lightning.Workflows.Query do
   end
 
   @doc """
-  Returns snapshots that are no longer being used by any workflow, work order, run, step, or release.
+  Snapshots no longer referenced by a workflow, work order, run, step or
+  release.
 
-  A snapshot is considered unused if:
-  - It's not the current version of any workflow (lock_version doesn't match workflow's lock_version)
-  - It's not referenced by any work order
-  - It's not referenced by any run
-  - It's not referenced by any step
-  - It's not referenced by any workflow release
-
-  Releases hold their snapshot with an `on_delete: :restrict` foreign key, so a
-  released snapshot that is otherwise unused would fail the retention purge
-  rather than be skipped by it.
+  Releases hold their snapshot with `on_delete: :restrict`, so a released
+  snapshot that is otherwise unused would fail the retention purge rather than
+  be skipped by it.
   """
   @spec unused_snapshots() :: Ecto.Queryable.t()
   def unused_snapshots do

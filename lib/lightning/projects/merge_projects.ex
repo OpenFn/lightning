@@ -725,9 +725,6 @@ defmodule Lightning.Projects.MergeProjects do
     {new_mapping, merged_from_source ++ deleted_targets}
   end
 
-  # A workflow being carried across untouched keeps its custom_path as-is: it is
-  # not being merged onto anything, so there is no target to conflict with and
-  # nothing to validate against. Only the two merge paths screen the path.
   defp build_trigger_attrs(trigger, id) do
     trigger
     |> Map.take(@trigger_fields)

@@ -44,8 +44,6 @@ describe('createSessionContextStore - Event Handling & Performance', () => {
         }
       )._test.emit;
 
-      // The lifecycle is part of the experimental experience, so the store has
-      // to know whether this user has it before it will say anything about it.
       emit(
         'session_context',
         createSessionContext({
@@ -62,9 +60,6 @@ describe('createSessionContextStore - Event Handling & Performance', () => {
 
       emit('lifecycle_changed', { state: 'live' });
 
-      // The server sends this only to the sockets that did not act, so the
-      // editor turning read-only under someone is announced rather than left
-      // for them to discover when their save is refused.
       expect(info).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'This workflow just went live' })
       );
@@ -74,10 +69,6 @@ describe('createSessionContextStore - Event Handling & Performance', () => {
     });
 
     test('says nothing to a user without experimental features', () => {
-      // A colleague with the flag can publish a shared workflow. Both of these
-      // sentences name actions this user has no buttons for, so announcing them
-      // would be the feature leaking out of the flag. Their editor still goes
-      // read-only; the read-only tooltip is what explains that.
       const info = vi.spyOn(notifications, 'info').mockReturnValue(1);
       const { cleanup, emit } = connect(false);
 

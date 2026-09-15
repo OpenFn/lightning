@@ -1,16 +1,4 @@
-/**
- * The version picker for a user without experimental features.
- *
- * Lists every saved snapshot, numbered by its own `lock_version`, and pins one
- * with `?v=`. This is the editor's older contract, kept whole rather than
- * folded into `VersionDropdown` as a second mode: that component lists the
- * publish trail, numbers by release, and offers Restore per row, and one
- * component answering both would have to be read twice to be understood once.
- *
- * The two share nothing but their shape on screen. `?v=` and `?release=` build
- * different collaboration rooms on purpose (see `lib/pinnedView.ts`), so the
- * picker a user sees decides which numbering the whole session uses.
- */
+/** The saves picker: every save, numbered by its own lock_version. */
 
 import { useEffect, useRef, useState } from 'react';
 
@@ -48,10 +36,8 @@ export function SnapshotVersionDropdown({
 
   const { isPinnedSnapshot } = usePinnedView();
 
-  // Show placeholder while loading version information
   const isLoadingVersion = currentVersion === null || latestVersion === null;
 
-  // Viewing latest only when we have both numbers AND nothing is pinned
   const isLatestVersion =
     !isLoadingVersion && currentVersion === latestVersion && !isPinnedSnapshot;
 
@@ -67,7 +53,6 @@ export function SnapshotVersionDropdown({
       ? 'bg-primary-100 text-primary-800 hover:bg-primary-200'
       : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
 
-  // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -86,7 +71,6 @@ export function SnapshotVersionDropdown({
 
     if (!isOpen) return undefined;
 
-    // Use capture phase to catch events before they're stopped by React Flow
     document.addEventListener('mousedown', handleClickOutside, true);
     document.addEventListener('keydown', handleEscape);
 
@@ -96,15 +80,27 @@ export function SnapshotVersionDropdown({
     };
   }, [isOpen]);
 
-  // Fetch versions when the dropdown opens, once. Keyed on whether the request
-  // has finished rather than on the list being empty: a workflow with no
-  // snapshots answers with an empty list, and reading that as "not fetched yet"
-  // asks again on every render for as long as the menu is open.
+  const wasOpen = useRef(false);
+
   useEffect(() => {
-    if (isOpen && !isLoaded && !isLoading) {
-      void requestVersions();
+    const justOpened = isOpen && !wasOpen.current;
+
+    if (!isOpen) {
+      wasOpen.current = false;
+      return;
     }
-  }, [isOpen, isLoaded, isLoading, requestVersions]);
+
+    if (isLoading) return;
+
+    wasOpen.current = true;
+
+    if (!isLoaded) {
+      void requestVersions();
+      return;
+    }
+
+    if (justOpened && versionsError) void requestVersions();
+  }, [isOpen, isLoaded, isLoading, versionsError, requestVersions]);
 
   useEffect(() => {
     if (versionsError) {

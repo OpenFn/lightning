@@ -44,10 +44,6 @@ export function JobInspector({
   const permissions = usePermissions();
   const { isReadOnly } = useWorkflowReadOnly();
 
-  // Deleting a step is an edit, so a read-only view refuses it; running is not,
-  // and NewRunButton asks the run hook itself. Both stay on screen and carry
-  // their reason, because a panel with its actions removed explains nothing
-  // about why they went.
   const validation = useJobDeleteValidation(job.id);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);

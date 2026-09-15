@@ -29,8 +29,6 @@ const urlState = createMockURLState();
 const closeRunPanel = vi.fn();
 const closeRunViewer = vi.fn();
 
-// The discard guard asks these before anything destroys the document; neither
-// has a provider in this test.
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
   useSession: () => ({ isSynced: true, settled: true }),
 }));
@@ -84,7 +82,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
   useLatestSnapshotLockVersion: () => 1,
   useIsNewWorkflow: () => false,
-  // The breadcrumbs offer Restore per version, which only editors get.
   usePermissions: () => ({ can_edit_workflow: true }),
 }));
 
@@ -122,9 +119,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
 }));
 
 function renderBreadcrumbs() {
-  // The breadcrumbs carry the unsaved-changes dialog and the restore
-  // confirmation, which register MODAL-priority Escape handlers, and in the app
-  // they render inside the editor's KeyboardProvider.
   return render(
     <KeyboardProvider>
       <BreadcrumbContent

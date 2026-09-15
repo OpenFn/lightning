@@ -45,10 +45,7 @@ import { useMetadata } from '../../hooks/useMetadata';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
-import {
-  useContentLocked,
-  useProject,
-} from '../../hooks/useSessionContext';
+import { useContentLocked, useProject } from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useVersionSelect } from '../../hooks/useVersionSelect';
 import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
@@ -432,7 +429,6 @@ export function FullScreenIDE({
   // Run/Retry functionality for IDE Header
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
-  // The same question asked for a retry, which an older version does not block.
   const { canRun: canRetrySnapshot, tooltipMessage: retryTooltipMessage } =
     useCanRun({ forRetry: true });
   const runContext = jobIdFromURL
@@ -580,7 +576,6 @@ export function FullScreenIDE({
     }
   }, [jobIdFromURL, currentRun, runIdFromURL, updateSearchParams]);
 
-  // Request history (top-20, all versions) when entering history state.
   useEffect(() => {
     if (rightPanelSubState === 'history') {
       void requestHistory();
@@ -741,22 +736,12 @@ export function FullScreenIDE({
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
 
-  // The run being read executed content other than what is on screen. Set
-  // wherever a run is overlaid on content it did not execute: without the flag,
-  // and in a draft or a sandbox with it, where a run stays overlaid so the
-  // content can still be edited.
   const activeRun = useActiveRun();
   const versionMismatch = useVersionMismatch(activeRun?.id ?? null);
-  // The prompt half is rendered below. Dropping it left the banner's offer
-  // dead: with the flag on, switching version from a draft with unsaved edits
-  // asks first, and nothing here was showing the question.
   const { handleVersionSelect, prompt: versionPrompt } = useVersionSelect();
   const { viewAsExecuted, prompt: runPinPrompt } = useViewAsExecuted();
   const contentLocked = useContentLocked();
 
-  // The same rule as the canvas, and for the same reason: the banner's number
-  // is the snapshot's own, and where the picker numbers by the publish trail
-  // that number addresses nothing. There the run's own view is the destination.
   const handleGoToVersion = useCallback(() => {
     if (!versionMismatch) return;
 
@@ -939,10 +924,6 @@ export function FullScreenIDE({
                 stays on a read-only workflow: running is not editing, and the
                 run hook refuses the ones that genuinely cannot run. */}
             {(panelState === undefined || panelState === 'history') && (
-              // This opens the create-run panel; it does not start a run. The
-              // run hook's answer folds in whether the input chosen inside that
-              // panel is usable, which is not a question yet, and gating on it
-              // left the button dead with the shortcut tooltip and no reason.
               <NewRunButton onClick={handleNavigateToCreateRun} />
             )}
 

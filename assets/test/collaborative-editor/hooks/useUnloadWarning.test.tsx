@@ -1,11 +1,3 @@
-/**
- * useUnloadWarning Hook Tests
- *
- * Closing the tab or following a link out of the editor is the one case our own
- * dialog cannot cover, so the browser's warning stands in. It must stay quiet
- * when there is nothing to lose, when the document has not synced yet, and for
- * a departure the person has already agreed to.
- */
 
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
@@ -18,8 +10,6 @@ import {
 
 let hasChanges = false;
 let isSynced = true;
-// The latch forgets it ever synced only when the document is replaced, which it
-// reads off the provider's identity.
 let provider: object | null = { id: 'provider-1' };
 
 let experimentalFeatures = true;
@@ -45,7 +35,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
   useSession: () => ({ provider, isSynced, settled: true }),
 }));
 
-/** Fires a real beforeunload and reports whether anything asked to stay. */
 function leavePage() {
   const event = new Event('beforeunload', { cancelable: true });
   window.dispatchEvent(event);
@@ -69,8 +58,6 @@ describe('useUnloadWarning', () => {
   });
 
   test('says nothing to a user without experimental features', () => {
-    // The warning is part of what this work added. Today closing the tab asks
-    // nothing, and a user who did not opt in should get today's editor.
     experimentalFeatures = false;
     hasChanges = true;
 
@@ -90,8 +77,6 @@ describe('useUnloadWarning', () => {
     isSynced = false;
     renderHook(() => useUnloadWarning());
 
-    // An unsynced store is empty and so differs from the saved workflow, which
-    // is not a change anyone made.
     expect(leavePage()).toBe(false);
   });
 
@@ -108,8 +93,6 @@ describe('useUnloadWarning', () => {
     hasChanges = true;
     const { rerender } = renderHook(() => useUnloadWarning());
 
-    // The websocket drops without the document being replaced, which is exactly
-    // when unsaved work is most at risk.
     isSynced = false;
     rerender();
 
@@ -121,7 +104,6 @@ describe('useUnloadWarning', () => {
     renderHook(() => useUnloadWarning());
 
     suppressUnloadWarning();
-    // Back from the browser's cache, or an abandoned navigation.
     window.dispatchEvent(new Event('pageshow'));
 
     expect(leavePage()).toBe(true);

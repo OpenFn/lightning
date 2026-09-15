@@ -45,13 +45,10 @@ function createWithSelectorMock(getSnapshot: () => any) {
 // Mock useURLState using centralized helper
 const urlState = createMockURLState();
 
-// The discard guard asks these before anything destroys the document; neither
-// has a provider in this test.
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => ({
   ...(await vi.importActual<
     typeof import('../../../../js/collaborative-editor/hooks/useWorkflow')
   >('../../../../js/collaborative-editor/hooks/useWorkflow')),
-  // Only the discard guard reaches for this, and it has no LiveView here.
   useWorkflowActions: () => ({ saveWorkflow: vi.fn() }),
 }));
 

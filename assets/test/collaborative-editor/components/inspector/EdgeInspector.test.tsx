@@ -133,9 +133,6 @@ describe('EdgeInspector - Footer Button States', () => {
       ],
     });
 
-    // Set workflow lock_version and deleted_at to match session context.
-    // deleted_at must be an explicit null (as the server always sends it),
-    // otherwise the workflow reads as "deleted" and forces read-only.
     const workflowMap = ydoc.getMap('workflow');
     workflowMap.set('lock_version', 1);
     workflowMap.set('deleted_at', null);
@@ -174,10 +171,6 @@ describe('EdgeInspector - Footer Button States', () => {
   });
 
   test('footer stays put and disabled in read-only mode', () => {
-    // beforeEach already sets read-only permissions, and no experimental
-    // features. Without them there is no lifecycle badge alongside to say why
-    // the view is read-only, so these controls are the only place the reason
-    // appears: they stay, disabled, carrying it in their tooltips.
     const edge = workflowStore.getSnapshot().edges[0];
     const mockOnClose = vi.fn();
 
@@ -228,8 +221,6 @@ describe('EdgeInspector - Footer Button States', () => {
       ),
     });
 
-    // The flag changes nothing here. The footer stays and both controls go
-    // grey, carrying the reason, rather than collapsing to nothing.
     expect(screen.getByTestId('inspector-footer')).toBeInTheDocument();
     expect(screen.getByLabelText(/enabled/i)).toBeDisabled();
     expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
@@ -307,7 +298,6 @@ describe('EdgeInspector - Footer Button States', () => {
       ],
     });
 
-    // Set lock_version and deleted_at (explicit null, as the server sends it)
     const workflowMap = ydocWithTriggerEdge.getMap('workflow');
     workflowMap.set('lock_version', 1);
     workflowMap.set('deleted_at', null);

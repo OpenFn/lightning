@@ -143,9 +143,6 @@ describe('JobInspector - Footer Button States', () => {
       },
     });
 
-    // Set workflow lock_version and deleted_at to match session context.
-    // deleted_at must be an explicit null (as the server always sends it),
-    // otherwise the workflow reads as "deleted" and forces read-only.
     const workflowMap = ydoc.getMap('workflow');
     workflowMap.set('lock_version', 1);
     workflowMap.set('deleted_at', null);
@@ -224,8 +221,6 @@ describe('JobInspector - Footer Button States', () => {
       }
     );
 
-    // Code stays usable, Run and Delete stay and go grey. Nothing is removed,
-    // so the panel still says what it offers and why it cannot be used.
     expect(screen.getByTestId('inspector-footer')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /code/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
@@ -233,8 +228,6 @@ describe('JobInspector - Footer Button States', () => {
   });
 
   test('Run and Delete stay put and disabled without the flag', () => {
-    // No experimental features, so no badge in the header saying why this is
-    // read-only. These controls are where the reason lives, so they stay.
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
@@ -372,8 +365,6 @@ describe('JobInspector - Footer Button States', () => {
       }
     );
 
-    // The flag changes nothing here. A panel with its actions taken away
-    // explains nothing about why they went, so they stay and carry the reason.
     expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
@@ -677,8 +668,6 @@ describe('JobInspector - Footer Button States', () => {
       }
     );
 
-    // Delete stays on a read-only workflow and goes grey, even for a leaf node
-    // that would otherwise be deletable.
     expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 });

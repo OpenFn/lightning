@@ -34,7 +34,6 @@ defmodule Lightning.Workflows.WorkflowRelease do
     field :version_number, :integer
     field :kind, Ecto.Enum, values: @kinds
 
-    # Set only by a :restore, naming the version it put back.
     field :restored_from_version_number, :integer
 
     belongs_to :workflow, Workflow

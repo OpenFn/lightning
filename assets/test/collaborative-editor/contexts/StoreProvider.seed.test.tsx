@@ -1,11 +1,3 @@
-/**
- * The experimental flag reaches the store before any channel does.
- *
- * The page renders the flag, SessionProvider carries it, and StoreProvider
- * seeds the session-context store with it. Every link is cheap; the one that
- * had no test is this one, and a break here is invisible until someone reloads
- * a live workflow and watches the Save button appear and then go.
- */
 
 import { render } from '@testing-library/react';
 import type React from 'react';

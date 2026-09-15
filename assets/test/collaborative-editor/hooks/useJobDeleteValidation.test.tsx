@@ -125,9 +125,6 @@ describe('useJobDeleteValidation - Permission Validation', () => {
   });
 
   test('blocks deletion on a live workflow, even for an editor', () => {
-    // Deleting a step changes the content, and a live workflow's content is
-    // frozen. The role says yes here, so reading the role alone would offer a
-    // delete the server refuses.
     setPermissions(channelMock, true, true);
 
     const { result } = renderHook(() => useJobDeleteValidation('job-a'), {

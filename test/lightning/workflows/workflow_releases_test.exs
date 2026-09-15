@@ -31,7 +31,6 @@ defmodule Lightning.Workflows.WorkflowReleasesTest do
       assert {:ok, %WorkflowRelease{version_number: 2}} =
                WorkflowReleases.insert_release(Repo, base)
 
-      # A different workflow keeps its own sequence.
       other = insert(:workflow)
       other_snapshot = insert(:snapshot, workflow: other)
 
@@ -113,8 +112,6 @@ defmodule Lightning.Workflows.WorkflowReleasesTest do
   describe "get_by_version_number/2" do
     test "returns the release for that version_number with its snapshot preloaded" do
       workflow = insert(:workflow)
-      # lock_version deliberately differs from the version_number the lookup keys
-      # on.
       snapshot = insert(:snapshot, workflow: workflow, lock_version: 7)
       user = insert(:user)
 
@@ -135,7 +132,6 @@ defmodule Lightning.Workflows.WorkflowReleasesTest do
       assert id == release.id
       assert snapshot_id == snapshot.id
 
-      # Accepts a workflow id as well as a struct.
       assert %WorkflowRelease{id: ^id} =
                WorkflowReleases.get_by_version_number(workflow.id, 1)
     end

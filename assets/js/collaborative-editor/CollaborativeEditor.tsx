@@ -1,6 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+
+import { SNAPSHOT_PARAM } from './lib/pinnedView';
 
 import { PickerButton } from '../picker/PickerButton';
 import { SocketProvider } from '../react/contexts/SocketProvider';
@@ -69,14 +71,8 @@ export interface CollaborativeEditorDataProps {
   'data-project-env'?: string;
   'data-is-new-workflow'?: string;
   'data-ai-assistant-enabled'?: string;
-  // Whether this user has experimental features on, rendered into the page so
-  // the first paint already knows rather than waiting for the session context.
   'data-experimental-features'?: string;
-  // The workflow's lifecycle state at render time, so the header knows before
-  // the session context arrives.
   'data-workflow-state'?: string;
-  // The workflow's first trigger, so the Run control can render before the
-  // collaborative document has synced.
   'data-first-trigger-id'?: string;
   // Initial run data from server to avoid client-side race conditions
   'data-initial-run-data'?: string; // JSON-encoded RunStepsData
@@ -104,13 +100,7 @@ interface BreadcrumbContentProps {
   projectIsSandboxFallback?: string;
   projectColorFallback?: string | null;
   projectEnvFallback?: string;
-  /**
-   * The workflow's lifecycle state as the page was rendered. Used until the
-   * session context arrives, so the header does not draw itself one way and
-   * correct itself a moment later.
-   */
   workflowStateFallback?: string;
-  /** The workflow's first trigger as the page was rendered. */
   firstTriggerIdFallback?: string;
   aiAssistantEnabled: boolean;
 }
@@ -143,14 +133,9 @@ export function BreadcrumbContent({
   const canEditWorkflow = usePermissions()?.can_edit_workflow ?? false;
   const { restoreVersion, checkRestore } = useWorkflowActions();
 
-  // Held here rather than in the dropdown, which closes as soon as Restore is
-  // clicked and would take the dialog with it.
   const [restoring, setRestoring] = useState<number | null>(null);
   const [cost, setCost] = useState<RestoreCost | null>(null);
 
-  // Which version the open dialog is about, readable synchronously when a
-  // check replies. A check for a version the user has since cancelled can land
-  // after a later one, and would otherwise replace a real warning with silence.
   const askingAboutRef = useRef<number | null>(null);
 
   const handleVersionRestore = useCallback(
@@ -159,8 +144,6 @@ export function BreadcrumbContent({
       setRestoring(versionNumber);
       setCost(null);
 
-      // Advisory. A failure here must not block the restore, so an unanswered
-      // check reads as nothing to lose.
       void checkRestore(versionNumber)
         .then(({ losing_triggers, returning_triggers, version_number }) => {
           if (askingAboutRef.current === version_number) {
@@ -245,6 +228,14 @@ export function BreadcrumbContent({
   const versionPicker = useVersionPicker();
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
 
+  const pinnedSnapshot = params[SNAPSHOT_PARAM];
+
+  useEffect(() => {
+    if (versionPicker === 'releases' && pinnedSnapshot) {
+      updateSearchParams({ [SNAPSHOT_PARAM]: null }, { replace: true });
+    }
+  }, [versionPicker, pinnedSnapshot, updateSearchParams]);
+
   const breadcrumbElements = useMemo(() => {
     return [
       // Project name as picker trigger
@@ -316,9 +307,6 @@ export function BreadcrumbContent({
     handleVersionSelect,
     handleVersionRestore,
     canEditWorkflow,
-    // Which picker is on screen decides which parameter a version switch
-    // writes, so a stale answer here writes `?release=N` where `?v=N` was
-    // meant, or the reverse: different content under the same number.
     versionPicker,
   ]);
 

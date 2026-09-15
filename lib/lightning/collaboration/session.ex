@@ -457,22 +457,6 @@ defmodule Lightning.Collaboration.Session do
     {:ok, SharedDoc.get_doc(pid)}
   end
 
-  # Shared persistence pipeline for plain saves and lifecycle transitions.
-  # `mode` is `:save` (persist the Y.Doc as-is) or `{:set_state, state}` (also
-  # flip the lifecycle state and trigger enablement in the same transaction).
-  # Going live and switching to draft reuse this path so they stay atomic and
-  # self-consistent with the collaborative document (one save, one Y.Doc merge).
-  # The one gate on writing. A session is either the workflow or a view of one
-  # of its past states: a pinned release, a pinned snapshot, or the workflow as
-  # a run executed it. A view's document holds old content, and every save
-  # resolves the *current* row as its target and casts the document over it, so
-  # a save from a view deletes whatever was added since, overwrites whatever was
-  # edited, and records the result as a new version with nothing to say it
-  # happened.
-  #
-  # Refusing here covers every caller at once, including ones added later: save,
-  # save-and-sync, reset, promote, go live and switch to draft all arrive at
-  # this function. Checking it per handler is how it got missed.
   defp do_save_workflow(%{view_only?: true} = state, user, mode) do
     Logger.warning(
       "Refusing to save workflow #{state.workflow.id} from a read-only view " <>
@@ -516,11 +500,6 @@ defmodule Lightning.Collaboration.Session do
         Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
         {:reply, {:error, :internal_error}, state}
 
-      # coveralls-ignore-start
-      # Defensive branches: :wrong_project is unreachable in practice (the
-      # persisted row always shares the seed's project_id) and only guards a
-      # WithClauseError; :deserialization_failed is a catch-all rescue. Neither
-      # is meaningfully triggerable from a unit test.
       {:error, :wrong_project} ->
         Logger.error(
           "Cannot save workflow #{state.workflow.id}: resolved to wrong project"
@@ -534,8 +513,6 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :deserialization_failed}, state}
-
-      # coveralls-ignore-stop
 
       {:error, _, %Lightning.Extensions.Message{} = message} ->
         {:reply, {:error, message}, state}
@@ -572,15 +549,12 @@ defmodule Lightning.Collaboration.Session do
           """
         end)
 
-        # Write validation errors to Y.Doc
         write_validation_errors_to_ydoc(state, changeset)
 
         {:reply, {:error, changeset}, state}
     end
   end
 
-  # Going live records a go-live release alongside the snapshot; a plain save or
-  # a switch-to-draft records none.
   defp release_save_opts({:set_state, :live}), do: [record_release: :go_live]
   defp release_save_opts(_mode), do: []
 

@@ -589,25 +589,11 @@ export const createHistoryStore = (
 
   let _channelProvider: PhoenixChannelProvider | null = null;
 
-  // Which attempt at viewing a run is the current one, and the channel it
-  // opened before it finished.
-  //
-  // These exist because `activeRunChannel` is only set once a fetch has come
-  // back, so it cannot answer "is an attempt already running?". Two calls for
-  // the same run both passed the idempotency guard, both opened a channel, and
-  // the abandoned one's request stayed pending. When it eventually timed out it
-  // wrote "Failed to load run" over the view the second attempt had already
-  // loaded, because the run id it compared against was still the current one.
-  //
-  // Identity is the attempt, not the run: the same run can be opened twice.
   let _runAttempt = 0;
   let _pendingRunChannel: Channel | null = null;
 
-  // Ends whatever attempt is in flight: its channel goes, and the bumped token
-  // makes any reply already on its way land as stale.
   const _abandonPendingRun = () => {
     if (_pendingRunChannel) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
       (_pendingRunChannel as any).leave();
       _pendingRunChannel = null;
     }
@@ -678,8 +664,6 @@ export const createHistoryStore = (
    * Optionally includes a specific run_id to ensure that run's work order
    * is included even if it's older than the top 20
    */
-  // `versionNumber` is a release version number, or "draft" for runs that
-  // executed against an unreleased snapshot.
   const requestHistory = async (
     runId?: string,
     versionNumber?: string
@@ -911,8 +895,6 @@ export const createHistoryStore = (
    * CRITICAL: Includes race condition prevention guards
    */
   const _viewRun = (runId: string): void => {
-    // GUARD 1: Idempotency, whether the previous call finished or is still
-    // running. Asking for a run that is already loading is not a new request.
     if (
       state.activeRunId === runId &&
       (state.activeRunChannel || _pendingRunChannel)
@@ -926,7 +908,6 @@ export const createHistoryStore = (
       _switchingFromRun();
     }
 
-    // GUARD 3: any attempt still in flight is superseded by this one.
     _abandonPendingRun();
 
     if (!_channelProvider?.socket) {
@@ -935,8 +916,6 @@ export const createHistoryStore = (
       return;
     }
 
-    // This attempt's identity. Every callback below checks it, rather than the
-    // run id, so a superseded attempt at the same run is still recognised.
     const attempt = _runAttempt;
 
     state = produce(state, draft => {
@@ -973,7 +952,6 @@ export const createHistoryStore = (
     const channelJoin = (channel as any).join();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     channelJoin.receive('ok', () => {
-      // Ignore a response this attempt is no longer the owner of.
       if (attempt !== _runAttempt) {
         logger.debug('Ignoring stale run response', {
           runId,
@@ -988,7 +966,6 @@ export const createHistoryStore = (
       // Fetch initial run data
       void channelRequest<{ run: unknown }>(channel, 'fetch:run', {})
         .then(response => {
-          // Double-check this attempt is still the current one
           if (attempt === _runAttempt) {
             handleRunReceived(response.run);
 
@@ -1007,8 +984,6 @@ export const createHistoryStore = (
           return undefined;
         })
         .catch(error => {
-          // Only report a failure this attempt still owns. A superseded one
-          // whose request times out later must not overwrite a loaded view.
           if (attempt === _runAttempt) {
             _pendingRunChannel = null;
             logger.error('Failed to fetch run', error);
@@ -1021,7 +996,6 @@ export const createHistoryStore = (
     });
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     channelJoin.receive('error', (error: any) => {
-      // Only report a failure this attempt still owns.
       if (attempt === _runAttempt) {
         _pendingRunChannel = null;
         logger.error('Failed to join run channel', error);

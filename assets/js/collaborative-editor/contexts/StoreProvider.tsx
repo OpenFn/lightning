@@ -131,7 +131,6 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     }
 
     // Create the SessionContextStore first so the WorkflowStore can read the
-    // current user's edit permission and the workflow's lifecycle lock lazily.
     const sessionContextStore = createSessionContextStore(
       isNewWorkflow,
       experimentalFeatures

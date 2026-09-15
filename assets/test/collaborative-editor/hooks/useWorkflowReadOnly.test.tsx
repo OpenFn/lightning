@@ -55,10 +55,6 @@ interface WrapperOptions {
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
   workflowState?: 'draft' | 'live';
-  /**
-   * The lifecycle lock, as the server sends it. Left undefined to stand in for
-   * an older node that does not send it at all.
-   */
   contentLocked?: boolean;
 }
 
@@ -302,9 +298,6 @@ describe('useWorkflowReadOnly - Permissions', () => {
 
   test('reports a live-specific reason and message when a live workflow is locked for an editor', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      // An editor: the role says yes, and only the lifecycle says no. So the
-      // message names the lifecycle and the two ways out of it, both of which
-      // this person can take.
       permissions: {
         can_edit_workflow: true,
         can_run_workflow: true,
@@ -330,9 +323,6 @@ describe('useWorkflowReadOnly - Permissions', () => {
   });
 
   test('stays read-only against a node that sends no lifecycle lock', async () => {
-    // A rolling deploy: the old node folds the lock into can_edit_workflow and
-    // sends no content_locked at all, which the schema defaults to false. The
-    // view must still come out read-only. Only the wording is less specific.
     const [wrapper, { emitSessionContext }] = createWrapper({
       permissions: {
         can_edit_workflow: false,
@@ -356,9 +346,6 @@ describe('useWorkflowReadOnly - Permissions', () => {
 
   test('reports no_permission (not live) for a plain viewer on a live workflow', async () => {
     const [wrapper, { emitSessionContext }] = createWrapper({
-      // A viewer, on a workflow that is also locked. The role is answered
-      // first: someone who could not edit a draft either has nowhere to be sent
-      // by "switch to draft or edit in a sandbox".
       permissions: {
         can_edit_workflow: false,
         can_run_workflow: false,
@@ -473,7 +460,6 @@ describe('useWorkflowReadOnly - Version Pinning', () => {
   });
 
   test('returns read-only with an as-executed reason when ?as_run is present', async () => {
-    // "View as executed" loads the workflow exactly as a run ran it.
     urlState.setParam('as_run', 'run-123');
 
     const [wrapper, { emitSessionContext }] = createWrapper({
@@ -934,11 +920,6 @@ describe('useWorkflowReadOnly - what is on screen decides first', () => {
   });
 
   test('a pinned version of a live workflow blames the view, not the lifecycle', async () => {
-    // Switching to draft would not make the version on screen editable, so
-    // saying "this workflow is live, switch it to draft" answers a question
-    // nobody asked. The header also suppresses its read-only cue for the
-    // lifecycle reason, because the badge covers that, so letting the lifecycle
-    // win left this screen with nothing explaining itself at all.
     urlState.setParams({ v: '1' });
 
     const [wrapper, { mockChannel }] = createWrapper({

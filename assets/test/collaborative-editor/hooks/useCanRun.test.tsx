@@ -1,12 +1,3 @@
-/**
- * useCanRun — what stops a run, and what does not.
- *
- * The interesting case is a version being read. A fresh run has no content to
- * run there and stays refused; a retry carries the version its own run
- * executed, so it goes ahead. That exemption is part of the sandboxes work, so
- * it waits for the experimental flag: without it, a pinned view refuses every
- * run exactly as it does on main.
- */
 
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
@@ -19,6 +10,7 @@ import { useCanRun } from '../../../js/collaborative-editor/hooks/useWorkflow';
 
 let experimentalFeatures = true;
 let isPinnedView = true;
+let isNewWorkflow = false;
 
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
   useSession: () => ({ isSynced: true }),
@@ -26,7 +18,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useExperimentalFeatures: () => experimentalFeatures,
-  useIsNewWorkflow: () => false,
+  useIsNewWorkflow: () => isNewWorkflow,
   useLimits: () => ({}),
   usePermissions: () => ({
     can_edit_workflow: true,
@@ -42,9 +34,11 @@ vi.mock('../../../js/collaborative-editor/lib/pinnedView', () => ({
   usePinnedView: () => ({ isPinnedView }),
 }));
 
-// The workflow store supplies only the jobs and triggers behind the
-// unsaved-new-workflow check, which is not what these tests are about.
-const workflowState = { jobs: [], triggers: [], workflow: null };
+let workflowState: {
+  jobs: unknown[];
+  triggers: unknown[];
+  workflow: null;
+} = { jobs: [], triggers: [], workflow: null };
 
 const stores = {
   workflowStore: {
@@ -62,6 +56,8 @@ describe('useCanRun on a version being read', () => {
   beforeEach(() => {
     experimentalFeatures = true;
     isPinnedView = true;
+    isNewWorkflow = false;
+    workflowState = { jobs: [], triggers: [], workflow: null };
   });
 
   test('refuses a fresh run, and says why', () => {
@@ -82,8 +78,6 @@ describe('useCanRun on a version being read', () => {
   });
 
   test('refuses a retry too without experimental features', () => {
-    // Main refuses every run on a pinned view. A user who did not opt in must
-    // not find a control they have never had.
     experimentalFeatures = false;
 
     const { result } = renderHook(() => useCanRun({ forRetry: true }), {
@@ -109,5 +103,31 @@ describe('useCanRun on a version being read', () => {
 
     expect(result.current.fresh.canRun).toBe(true);
     expect(result.current.retry.canRun).toBe(true);
+  });
+
+  describe('useCanRun on an unsaved new workflow', () => {
+    beforeEach(() => {
+      experimentalFeatures = true;
+      isPinnedView = false;
+      isNewWorkflow = true;
+      workflowState = { jobs: [{}], triggers: [], workflow: null };
+    });
+
+    test('refuses the run and says to create it first', () => {
+      const { result } = renderHook(() => useCanRun(), { wrapper });
+
+      expect(result.current.canRun).toBe(false);
+      expect(result.current.tooltipMessage).toBe(
+        'Create this workflow before running it'
+      );
+    });
+
+    test('lets it through without experimental features, as main does', () => {
+      experimentalFeatures = false;
+
+      const { result } = renderHook(() => useCanRun(), { wrapper });
+
+      expect(result.current.canRun).toBe(true);
+    });
   });
 });

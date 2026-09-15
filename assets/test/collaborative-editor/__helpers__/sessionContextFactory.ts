@@ -285,15 +285,7 @@ export interface CreateSessionContextOptions {
   project?: Partial<ProjectContext> | null;
   config?: Partial<AppConfig>;
   permissions?: Partial<Permissions>;
-  /**
-   * The lifecycle lock. Omit to stand in for an older node that does not send
-   * it, which the schema then defaults to false.
-   */
   content_locked?: boolean;
-  /**
-   * Whether this user has experimental features on. Omit to stand in for an
-   * older node that does not send it, which the schema defaults to false.
-   */
   experimental_features_enabled?: boolean;
   latest_snapshot_lock_version?: number;
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
@@ -421,8 +413,6 @@ export function createSessionContext(
     response.limits = limits;
   }
 
-  // Only add the lifecycle lock if provided, so omitting it reproduces an older
-  // node that does not send the field at all.
   if (options.content_locked !== undefined) {
     response.content_locked = options.content_locked;
   }

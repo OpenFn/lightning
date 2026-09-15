@@ -1,4 +1,7 @@
-// Modal from a live workflow: create a new sandbox or join an active one; both leave for the sandbox editor.
+/**
+ * Creating or joining a sandbox from the editor, and choosing what data the
+ * clone starts from.
+ */
 
 import {
   Dialog,
@@ -42,10 +45,6 @@ import type { Sandbox } from '../types/workflow';
 import { Button } from './Button';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 
-// A dataclip body arrives as one line, which is unreadable when the point of
-// the screen is to find what should not leave production. Indented the same way
-// the run viewer indents one. Left alone if it does not parse, because then the
-// raw text is the only honest thing to show.
 function formatBody(body: string): string {
   try {
     return JSON.stringify(JSON.parse(body), null, 2);
@@ -57,8 +56,6 @@ function formatBody(body: string): string {
 type StartChoice = 'nothing' | 'run' | 'saved';
 type Step = 'choose' | 'review';
 
-// The run's input, and which run it came from. A body that belongs to another
-// run is not this run's body, so it can never be shown or sent as one.
 type RunReview =
   | { status: 'idle' }
   | { status: 'loading'; runId: string }
@@ -70,9 +67,6 @@ interface EditInSandboxPickerProps {
   onClose: () => void;
 }
 
-// Turn an unknown error into a user-facing description. Channel replies carry
-// structured field/base errors we can format; anything else gets a generic
-// retry hint. Shared by the list-load and create handlers.
 function describeSandboxError(error: unknown): string {
   return isChannelRequestError(error)
     ? formatChannelErrorMessage({
@@ -82,10 +76,6 @@ function describeSandboxError(error: unknown): string {
     : 'Please try again.';
 }
 
-// Pull a name-field validation message out of a channel error, if present.
-// Duplicate names (and other name validations) come back as a validation_error
-// keyed under `name`; those render inline under the input. Everything else
-// (system/unexpected errors) returns null and is surfaced as a toast instead.
 function extractNameFieldError(error: unknown): string | null {
   if (!isChannelRequestError(error)) return null;
   if (error.type !== 'validation_error') return null;
@@ -95,9 +85,6 @@ function extractNameFieldError(error: unknown): string | null {
 
   const joined = nameErrors.join(', ');
 
-  // The duplicate-name case gets a friendly, product-specific message. Other
-  // name validations (blank, too long, invalid) keep their own server message
-  // so a different failure is never mislabelled as a duplicate.
   if (/taken/i.test(joined)) {
     return 'A sandbox with this name exists already.';
   }
@@ -105,13 +92,6 @@ function extractNameFieldError(error: unknown): string | null {
   return joined;
 }
 
-// A joinable sandbox row: the whole row is the click target (joins the
-// sandbox). A colour stripe on the left, then the sandbox name over a single
-// muted metadata line ("Created {relative} by {owner}"), and a quiet "Join"
-// affordance on the right that fills in and reveals an arrow on hover. The
-// creation time shows as a relative label with the exact timestamp on hover.
-// The owner can be null (unknown), in which case the "by {owner}" suffix is
-// omitted.
 function SandboxRow({
   sandbox,
   onJoin,
@@ -129,9 +109,6 @@ function SandboxRow({
     : '';
   const exact = validDate ? format(date, 'd MMM yyyy, HH:mm') : '';
 
-  // The whole row is the click target. Inner elements are phrasing spans (not
-  // <div>/<p>) so the DOM stays valid inside the <button>; the timestamp's
-  // Tooltip trigger is a Radix asChild <span>, which is valid nested here too.
   return (
     <li data-testid="sandbox-row">
       <button
@@ -189,7 +166,6 @@ function SandboxRow({
   );
 }
 
-// A single "start with" choice: radio, label, and a line saying what it means.
 function StartOption({
   value,
   checked,
@@ -318,7 +294,6 @@ function SavedInputList({
   );
 }
 
-// Three placeholder rows shown while the sandbox list loads.
 function SandboxListSkeleton() {
   return (
     <ul className="mt-3 space-y-1" data-testid="sandbox-list-loading">
@@ -353,17 +328,12 @@ function createButtonLabel({
   return needsReview ? 'Continue' : 'Create sandbox';
 }
 
-// A sandbox copy is restricted to these: a step result carries whatever the
-// previous step emitted, which is the data we are trying not to move.
 const COPYABLE_DATACLIP_TYPES = ['global', 'saved_input', 'http_request'];
 
 function isCopyableDataclip(dataclip: Dataclip): boolean {
   return COPYABLE_DATACLIP_TYPES.includes(dataclip.type);
 }
 
-// Shape only, and checked here as well as on the server so the person is told
-// before the sandbox is attempted. Size is the server's to judge, since the
-// limit is configured there.
 function describeBodyProblem(body: string): string | null {
   try {
     const parsed: unknown = JSON.parse(body);
@@ -382,10 +352,6 @@ function describeBodyProblem(body: string): string | null {
   }
 }
 
-// The dataclip id rides along so the sandbox opens with it already selected
-// rather than merely holding it somewhere. The run panel has to be asked for,
-// or the sandbox opens on a bare canvas and the input we carried is selected
-// somewhere nobody can see.
 const sandboxPath = (
   projectId: string,
   workflowId: string,
@@ -403,8 +369,6 @@ const hardNavigateToSandbox = (
   workflowId: string,
   dataclipId?: string | null
 ) => {
-  // A deliberate departure, already agreed to, so the browser's own warning
-  // would only ask the same question a second time.
   suppressUnloadWarning();
   window.location.href = sandboxPath(projectId, workflowId, dataclipId);
 };
@@ -415,15 +379,6 @@ export function EditInSandboxPicker({
 }: EditInSandboxPickerProps) {
   const { listSandboxes, editInSandbox } = useWorkflowActions();
 
-  // Asks the LiveView to navigate rather than reloading the browser. The socket
-  // survives, so there is no white flash and no unload warning to suppress, and
-  // because it is a navigation rather than a patch the LiveView remounts and
-  // every mount hook runs again. That matters: the project scope and the
-  // workflow-ownership check are mount hooks, so a patch would leave the old
-  // project's permissions resolved.
-  //
-  // The picker is mounted whether or not there is a LiveView to ask, so this
-  // does not insist on one: without it the old hard navigation still works.
   const liveView = useOptionalLiveViewActions();
 
   const goToSandbox = useCallback(
@@ -439,42 +394,36 @@ export function EditInSandboxPicker({
 
   const { guard, ...discardPrompt } = useDiscardGuard();
 
-  // Creating a sandbox can be gated by the plan or by nesting depth; joining an
-  // existing one never is. So the lock belongs on this button, not on the one
-  // that opens this dialog. The wording comes from whichever gate refused.
   const newSandboxLimit = useLimits().new_sandbox ?? {
     allowed: true,
     message: null,
   };
   const createLocked = !newSandboxLimit.allowed;
 
-  // High-priority Escape handler to prevent closing the parent IDE/inspector.
-  // Priority 100 (MODAL) ensures this runs before the IDE handler (priority 50);
-  // Headless UI's own Escape handling never fires while those intercept it.
+  const [name, setName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleDismiss = () => {
+    if (isCreating) return;
+    onClose();
+  };
+
   useKeyboardShortcut(
     'Escape',
     () => {
-      onClose();
+      handleDismiss();
     },
     100,
     { enabled: isOpen }
   );
 
-  const [name, setName] = useState('');
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [sandboxes, setSandboxes] = useState<Sandbox[]>([]);
   const [startWith, setStartWith] = useState<StartChoice>('nothing');
   const [step, setStep] = useState<Step>('choose');
   const [reviewError, setReviewError] = useState<string | null>(null);
-  // One value rather than four booleans and a token. Each state carries the run
-  // it belongs to, so a run swap invalidates it by construction and there is
-  // nothing to remember to reset. Four rounds of review found bugs in the
-  // previous shape, every one of them a flag left out of a reset.
   const [review, setReview] = useState<RunReview>({ status: 'idle' });
-  // A reply lands after a render, so what the person now wants has to be read
-  // live rather than out of the closure that started the request.
   const startWithRef = useRef<StartChoice>('nothing');
   const canStartFromRunRef = useRef(false);
   const activeRunIdRef = useRef<string | null>(null);
@@ -488,21 +437,15 @@ export function EditInSandboxPicker({
   const releases = useReleases();
   const requestReleases = useRequestReleases();
 
-  // Any job in the project resolves the same set of named dataclips, so the
-  // first one is enough to ask for them.
   const anyJobId = jobs[0]?.id ?? null;
   const [savedDataclips, setSavedDataclips] = useState<Dataclip[]>([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const [savedInputsFiltered, setSavedInputsFiltered] = useState(false);
   const [savedInputsFailed, setSavedInputsFailed] = useState(false);
 
-  // A run's own input is its first step's input. Anything deeper is a step
-  // result, which is a different thing to offer.
   const runInputDataclipId = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
   const runStepJobId = activeRun?.steps?.[0]?.job_id ?? null;
 
-  // Gated once, here, so no read can forget to ask. A review belongs to one run
-  // and to the run choice: it is not this dialog's state if either has moved on.
   const activeReview =
     review.status !== 'idle' &&
     review.runId === activeRun?.id &&
@@ -519,8 +462,6 @@ export function EditInSandboxPicker({
   const hasLoadedBody = activeReview?.status === 'ready';
   const runInputMissing = activeReview?.status === 'missing';
 
-  // Everything the fetch needs. Without all of it the choice could only create
-  // an empty sandbox while reporting success.
   const canStartFromRun =
     runInputDataclipId !== null &&
     runStepJobId !== null &&
@@ -528,8 +469,6 @@ export function EditInSandboxPicker({
     Boolean(project?.id);
   const runLabel = activeRun ? activeRun.id.slice(0, 6) : null;
 
-  // Read when the dialog opens, so a run arriving later cannot change a choice
-  // the person may already have made.
   canStartFromRunRef.current = canStartFromRun;
 
   useEffect(() => {
@@ -538,11 +477,9 @@ export function EditInSandboxPicker({
     let cancelled = false;
     setIsLoadingList(true);
     setSandboxes([]);
-    // Opened with a run in hand, which is what happens when someone is looking
-    // at a failure and reaches for a sandbox to fix it. That run's input is
-    // what they came to reuse, so it is the choice already made.
     setStartWith(canStartFromRunRef.current ? 'run' : 'nothing');
     setStep('choose');
+    setIsCreating(false);
     setReviewError(null);
     setReview({ status: 'idle' });
     setSavedDataclipId(null);
@@ -582,8 +519,6 @@ export function EditInSandboxPicker({
       limit: 100,
     })
       .then(({ data }) => {
-        // Only what a sandbox can actually copy. Naming is not type-restricted,
-        // so a named step result can appear here and would be refused on create.
         if (cancelled) return;
 
         setSavedDataclips(data.filter(isCopyableDataclip));
@@ -613,12 +548,6 @@ export function EditInSandboxPicker({
     void requestReleases();
   }, [isOpen, releases.length, requestReleases]);
 
-  // A sandbox always forks the version live now, because promote rebuilds the
-  // parent from the sandbox and an older fork would delete the newer work.
-  //
-  // The run's version comes from the history summaries, the same place the
-  // history panel reads it. Opening a run does not load its snapshot, so the
-  // document on screen says nothing about which version the run used.
   const runVersionNumber =
     history
       .flatMap(workOrder => workOrder.runs)
@@ -634,25 +563,17 @@ export function EditInSandboxPicker({
   useEffect(() => {
     if (canStartFromRun || startWith !== 'run') return;
 
-    // The run went away. Leaving the review step behind would strand a redacted
-    // body somewhere the person cannot reach or send.
     setStartWith('nothing');
     setStep('choose');
     setReview({ status: 'idle' });
   }, [canStartFromRun, startWith]);
 
-  // A reply may only land if it is still the reply this dialog is waiting for:
-  // the same request, the same run, and the same choice. Read from refs because
-  // all three can have changed since the request went out.
   const stillLoading = useCallback((runId: string) => {
     const current = reviewRef.current;
 
     return current.status === 'loading' && current.runId === runId;
   }, []);
 
-  // Landing the result is safe whatever the person has since chosen, because a
-  // review is only ever read back through `activeReview`. Moving them to the
-  // review screen is not: they may have picked something else while it loaded.
   const shouldShowReview = useCallback(
     (runId: string) =>
       startWithRef.current === 'run' && activeRunIdRef.current === runId,
@@ -661,8 +582,6 @@ export function EditInSandboxPicker({
 
   useEffect(() => {
     if (step === 'review' && !activeReview) {
-      // Whatever the review belonged to has moved on, so the screen showing it
-      // cannot be typed into or sent. Go back rather than sit there dead.
       setStep('choose');
     }
   }, [step, activeReview]);
@@ -679,14 +598,10 @@ export function EditInSandboxPicker({
             trimmed,
             start
           );
-          // Leaving takes the page with it, so uncommitted edits on this
-          // workflow would go too.
           guard(() => {
             goToSandbox(project_id, workflow_id, dataclip_id);
           });
         } catch (error) {
-          // A rejected name (duplicate, invalid) belongs under the input as an
-          // inline field error; only genuinely unexpected/system errors toast.
           const fieldError = extractNameFieldError(error);
           if (fieldError) {
             setNameError(fieldError);
@@ -705,8 +620,6 @@ export function EditInSandboxPicker({
     [name, editInSandbox, guard, goToSandbox]
   );
 
-  // The run's input is checked before it travels, so that choice takes a review
-  // step first. The other two create straight away.
   const handleContinue = useCallback(() => {
     if (startWith === 'saved') {
       if (!savedDataclipId) return;
@@ -725,8 +638,6 @@ export function EditInSandboxPicker({
 
     setReviewError(null);
 
-    // Already reviewed this run: keep it, or Back then Continue would restore
-    // the production body the person had just redacted.
     if (hasLoadedBody) {
       setStep('review');
       return;
@@ -735,9 +646,6 @@ export function EditInSandboxPicker({
     const runId = activeRun.id;
     setReview({ status: 'loading', runId });
 
-    // Whether the input was kept is the dataclip's own answer. Inferring it from
-    // the body does not work: a wiped http_request still serves a JSON object,
-    // `{"data": null, "request": null}`, which reads as perfectly good data.
     void getRunDataclip(project.id, runId, runStepJobId)
       .then(async ({ dataclip }) => {
         if (!dataclip || dataclip.wiped_at) {
@@ -801,17 +709,12 @@ export function EditInSandboxPicker({
     [guard, goToSandbox]
   );
 
-  // The sandbox already exists by the time we ask, so backing out has to
-  // release the create button rather than leave it spinning forever.
   const cancelDiscard = discardPrompt.cancel;
   const handleDiscardCancel = useCallback(() => {
     cancelDiscard();
     setIsCreating(false);
   }, [cancelDiscard]);
 
-  // A name is required to create. The server already returns only joinable
-  // sandboxes (each holding a clone of this workflow), so the list is rendered
-  // as-is.
   const canCreate =
     name.trim().length > 0 &&
     (startWith !== 'saved' || savedDataclipId !== null) &&
@@ -821,7 +724,7 @@ export function EditInSandboxPicker({
     <>
       <Dialog
         open={isOpen}
-        onClose={onClose}
+        onClose={handleDismiss}
         className="relative z-[60]"
         data-testid="edit-in-sandbox-picker"
       >
@@ -845,15 +748,12 @@ export function EditInSandboxPicker({
                 data-enter:duration-300 data-enter:ease-out
                 data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full
                 sm:p-6`,
-                // Reading a real dataclip to find what should not leave
-                // production needs the room to do it. The picker itself is a
-                // short list and stays narrow.
                 step === 'review' ? 'sm:max-w-4xl' : 'sm:max-w-lg'
               )}
             >
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleDismiss}
                 aria-label="Close"
                 className="absolute right-4 top-4 sm:right-6 sm:top-6 rounded-md
                 p-1 text-gray-400
@@ -1012,8 +912,6 @@ export function EditInSandboxPicker({
                       className="mt-3"
                       onSubmit={event => {
                         event.preventDefault();
-                        // Enter can submit even while the button is disabled; honour
-                        // the same guards (non-empty name, no create in flight).
                         if (
                           createLocked ||
                           isCreating ||
@@ -1035,7 +933,6 @@ export function EditInSandboxPicker({
                             value={name}
                             onChange={event => {
                               setName(event.target.value);
-                              // Editing the name dismisses a stale field error.
                               setNameError(null);
                             }}
                             placeholder="What are you trying out?"
@@ -1198,12 +1095,6 @@ export function EditInSandboxPicker({
                       {isLoadingList ? (
                         <SandboxListSkeleton />
                       ) : (
-                        // Cap the list at roughly 5-6 rows so a user with many
-                        // sandboxes scrolls the list rather than the whole modal. The
-                        // scroll container carries the row's -mx-3 bleed itself
-                        // (-mx-3 px-3), so the rows fit exactly inside it: no
-                        // horizontal scrollbar, the hover bleed is kept, and the px-3
-                        // keeps the vertical scrollbar clear of the "Join" text.
                         <ul
                           className="mt-3 -mx-3 max-h-80 space-y-1 overflow-y-auto
                       overflow-x-hidden px-3"

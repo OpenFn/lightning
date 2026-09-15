@@ -48,13 +48,6 @@ defmodule LightningWeb.WorkflowChannel do
         %{"project_id" => project_id, "action" => action},
         socket
       ) do
-    # Room formats (the suffix after the workflow id selects what to load):
-    # - "workflow_id"           → latest (the live collaborative editing room)
-    # - "workflow_id:releaseN"  → release version N (isolated, read-only)
-    # - "workflow_id:vN"        → the snapshot at lock_version N (isolated,
-    #                             read-only)
-    # - "workflow_id:run:<id>"  → the exact snapshot a run executed against
-    #                             ("view as executed", isolated, read-only)
     {workflow_id, view} = parse_room_topic(rest)
 
     with {:user, user} when not is_nil(user) <-
@@ -78,15 +71,6 @@ defmodule LightningWeb.WorkflowChannel do
           user: user,
           workflow: workflow,
           room_topic: topic,
-          # A pinned release, a pinned snapshot and a run's own view all hold a
-          # past state of the workflow rather than the workflow. The session
-          # refuses to write from one, so a save issued here cannot put old
-          # content back.
-          #
-          # Read from the room topic rather than the resolved kind. The kind is
-          # what the resolver happened to return, and joining a pinned topic
-          # with a different action returned :existing, which handed back a
-          # writable session on a pinned document. The suffix alone decides.
           view_only?: view != :latest
         )
 
@@ -282,12 +266,6 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
-  # Version-scoped history. `version_number` is either an integer release version
-  # (the same vN the `?release=` contract uses) or the string "draft" for the
-  # unversioned runs (drafts, tests, intermediate saves). Both stay capped at the
-  # recent-history limit, matching the default feed; the unbounded per-version
-  # listing lives on the separate full history page. Absent → the default top-20
-  # feed below.
   @impl true
   def handle_in(
         "request_history",
@@ -400,9 +378,6 @@ defmodule LightningWeb.WorkflowChannel do
     transition_lifecycle_state(socket, :draft)
   end
 
-  # Persists the per-user "don't show again" choice for the enable-trigger
-  # warning modal. Rides back to the editor in get_context as
-  # `suppress_enable_trigger_warning`.
   @impl true
   def handle_in(
         "set_suppress_enable_trigger_warning",
@@ -425,14 +400,8 @@ defmodule LightningWeb.WorkflowChannel do
     project = socket.assigns.project
     user = socket.assigns.current_user
 
-    # Same gate as "edit_in_sandbox": the picker exposes sibling-sandbox
-    # collaborators, so only users who could actually create or join a sandbox
-    # (editor and up) may list them. Viewers get nothing.
     case authorize_provision_sandbox(user, project) do
       :ok ->
-        # The picker can only "join" a sandbox that already contains a clone of
-        # this workflow, so drop sandboxes with no joinable workflow id before
-        # serializing rather than sending rows the client can't act on.
         sandboxes =
           project.id
           |> Projects.list_active_sandboxes_for_editing(
@@ -455,10 +424,6 @@ defmodule LightningWeb.WorkflowChannel do
     parent = socket.assigns.project
     user = socket.assigns.current_user
 
-    # The name as it is now, not as the document on screen holds it. A run's own
-    # view is an ordinary place to branch from, and its assigned workflow
-    # carries the name the snapshot was saved under, so a rename since would
-    # send the clone looking for a workflow that no longer answers to it.
     branch_from_name = current_workflow_name(socket)
 
     attrs =
@@ -501,9 +466,6 @@ defmodule LightningWeb.WorkflowChannel do
     sandbox = socket.assigns.project
     user = socket.assigns.current_user
 
-    # Promote saves before merging, so the answer must be about the working name.
-    # The fallback is the name this socket joined on, already stale after a
-    # rename.
     workflow_name =
       case params do
         %{"workflow_name" => name} when is_binary(name) and name != "" -> name
@@ -524,9 +486,6 @@ defmodule LightningWeb.WorkflowChannel do
     end)
   end
 
-  # Advisory, so the confirmation can name what a restore is about to destroy
-  # before anyone agrees to it. Answers about the workflow as it stands, not the
-  # row this socket joined on.
   @impl true
   def handle_in("request_restore_check", %{"version_number" => number}, socket)
       when is_integer(number) do
@@ -548,11 +507,6 @@ defmodule LightningWeb.WorkflowChannel do
     end)
   end
 
-  # A restore is a publish, not an edit: it writes an earlier version's content
-  # into the live workflow and leaves it live. Gated on :edit_workflow rather
-  # than authorize_content_edit/1, which refuses a live workflow outside a
-  # sandbox and would refuse the only case that matters. go_live and promote
-  # answer the same question the same way.
   @impl true
   def handle_in("restore_version", %{"version_number" => number}, socket)
       when is_integer(number) do
@@ -563,23 +517,10 @@ defmodule LightningWeb.WorkflowChannel do
          %WorkflowRelease{snapshot: %_{}} = release <-
            WorkflowReleases.get_by_version_number(workflow.id, number),
          {:ok, restored} <- restore_or_conflict(workflow, release, user) do
-      # The content was replaced wholesale, which the incremental reconciler
-      # cannot express, so ask every open editor to reload from the database.
       WorkflowReconciler.request_reconciliation(workflow.id)
 
       broadcast_workflow_saved(socket, restored)
 
-      # The restoring client is excluded from the broadcast, and without this
-      # its idea of the latest version stays behind: the version chip would
-      # read as "you are on an old version" straight after a rollback, and the
-      # dropdown would still offer Restore on the version now live.
-      #
-      # Only the assign is skipped on a version being read. Replacing that
-      # socket's workflow with the restored row measures its document against
-      # content it was never meant to match, so the view reads as unsaved. The
-      # push is safe and needed: the context builder already answers with the
-      # snapshot for a version view, and without it the restoring client's idea
-      # of the latest version stays behind for the life of the session.
       socket =
         if socket.assigns.workflow_kind == :version do
           socket
@@ -602,11 +543,6 @@ defmodule LightningWeb.WorkflowChannel do
     workflow = socket.assigns.workflow
     user = socket.assigns.current_user
 
-    # The parent is resolved server-side from the sandbox: the client cannot
-    # supply it. Authorization is checked here (mirroring Sandboxes.merge/4),
-    # while Projects.promote_workflow/2 performs the merge only. Archiving the
-    # sandbox is a separate, explicit step ("archive_sandbox") so several
-    # workflows can be promoted from the same sandbox before it is retired.
     with %_{} = parent <- fetch_parent_project(sandbox),
          :ok <- authorize_merge_sandbox(user, parent),
          {:ok, result} <- Projects.promote_workflow(workflow, user) do
@@ -622,13 +558,6 @@ defmodule LightningWeb.WorkflowChannel do
     sandbox = socket.assigns.project
     user = socket.assigns.current_user
 
-    # Archiving retires the sandbox after its workflows have been promoted. Only
-    # a project with a parent is a sandbox; a root project has no parent and is
-    # refused. `Sandboxes.schedule_sandbox_deletion/2` is the same soft-delete
-    # the sandboxes management screen uses; it is gated on the `:delete_sandbox`
-    # policy (owner/admin on the sandbox or its root), which we check up front so
-    # the client gets a structured unauthorized reply. The parent id is returned
-    # so the client can navigate back to it.
     with %_{} = parent <- fetch_parent_project(sandbox),
          :ok <- authorize_delete_sandbox(user, sandbox),
          {:ok, _scheduled} <- Sandboxes.schedule_sandbox_deletion(sandbox, user) do
@@ -740,28 +669,15 @@ defmodule LightningWeb.WorkflowChannel do
     {:reply, {:ok, %{taken: taken}}, socket}
   end
 
-  # Returns the workflow's published versions (releases recorded at each go-live
-  # and promote), newest first. This is deliberately NOT every save: a save
-  # captures a snapshot, but only a deliberate publish records a release. The
-  # client pins one via `?release=<version_number>`; each entry also carries the
-  # snapshot's lock_version as informational metadata.
-  #
-  # A separate request from `request_versions` below, rather than a redefinition
-  # of it, because the two answer different questions with differently shaped
-  # rows. One event returning either shape depending on what the server believes
-  # would leave a client unable to read its own reply.
   @impl true
   def handle_in("request_releases", _payload, socket) do
     workflow = socket.assigns.workflow
     workflow_kind = socket.assigns.workflow_kind
 
     async_task(socket, "request_releases", fn ->
-      # A genuinely-new workflow has no DB row and thus no releases, so
-      # short-circuit to an empty list rather than reloading a nil row.
       if workflow_kind == :new do
         %{releases: []}
       else
-        # Ordered newest-first, so the head is the current published version.
         releases =
           case Lightning.Workflows.WorkflowReleases.list_for_workflow(
                  workflow.id
@@ -781,23 +697,16 @@ defmodule LightningWeb.WorkflowChannel do
     end)
   end
 
-  # Returns every saved snapshot of the workflow, each numbered by its own
-  # lock_version. This is the list for a client with no publish trail to read,
-  # and it is what `?v=<lock_version>` pins. Nothing in the release experience
-  # asks for it, because `request_releases` above is that list.
   @impl true
   def handle_in("request_versions", _payload, socket) do
     workflow = socket.assigns.workflow
     workflow_kind = socket.assigns.workflow_kind
 
     async_task(socket, "request_versions", fn ->
-      # A genuinely-new workflow has no DB row and thus no snapshots, so
       # short-circuit to an empty list rather than reloading a nil row.
       if workflow_kind == :new do
         %{versions: []}
       else
-        # On a pinned view the socket's workflow carries the pinned
-        # lock_version, so "which one is current" has to come from the row.
         latest_lock_version =
           Lightning.Workflows.get_workflow(workflow.id).lock_version
 
@@ -1210,12 +1119,6 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
-  # A workflow-level announcement reaches every socket on the workflow, but
-  # Phoenix only routes it through handle_out when the broadcast's topic is the
-  # socket's own. A version being read is subscribed to the workflow's room and
-  # sits on a different topic, so it arrives here instead. Passed on rather than
-  # logged as a surprise: a second person reading the same version still needs
-  # to learn that the version they are reading is no longer the latest.
   @impl true
   def handle_info(
         %Phoenix.Socket.Broadcast{event: "workflow_saved", payload: payload},
@@ -1235,18 +1138,6 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
-  # Editability folds in the lifecycle lock, and it is resolved at join. So a
-  # go-live from one socket left every other socket in the room with an open
-  # write gate: their frames kept reaching the document, and the save they
-  # eventually pressed was refused against the row, with nothing on screen to
-  # say why. Intercepting the save broadcast is what lets each socket recompute
-  # for itself.
-
-  # Phoenix sends a broadcast the channel does not intercept straight to the
-  # transport, so without this line the clause below never runs in production.
-  # A channel test has no transport and calls it either way, which is why the
-  # intercept is asserted directly rather than through behaviour.
-
   intercept ["workflow_saved"]
 
   @impl true
@@ -1261,9 +1152,6 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
-  # Only the live room, and only when the lifecycle actually moved: an ordinary
-  # save broadcasts here too, and a version room is a reading view whose
-  # permissions do not follow the row.
   defp refresh_lifecycle_from_broadcast(
          %{assigns: %{workflow_kind: :existing, workflow: %{state: was}}} =
            socket,
@@ -1273,9 +1161,6 @@ defmodule LightningWeb.WorkflowChannel do
     socket = refresh_lifecycle_lock(socket, workflow)
     push(socket, "session_context_updated", build_session_context(socket))
 
-    # Only the sockets that did not act reach this clause, so this needs no
-    # actor to compare against: whoever is told, someone else did it. Their
-    # editor is about to change under them and the change deserves saying.
     push(socket, "lifecycle_changed", %{state: now})
 
     socket
@@ -1368,20 +1253,6 @@ defmodule LightningWeb.WorkflowChannel do
         :can_archive_sandbox
       ])
 
-    # `workflow` is what the client is comparing its document against, so it has
-    # to be what the document holds.
-    #
-    # A genuinely-new workflow has no DB row. A version view holds a snapshot,
-    # and reloading there would hand the client the current workflow as the
-    # baseline for a document that is a past one, making every pinned view look
-    # unsaved from the moment it opened. Only an :existing view is the current
-    # workflow, and only it can be stale.
-    #
-    # The latest lock_version is a separate question and always comes from the
-    # row, because the client uses it to tell whether it is behind.
-    # A version view needs only the row's lock_version and lifecycle state; an
-    # :existing view uses the row itself as the client's baseline, so it needs
-    # the associations too.
     latest_row =
       workflow_kind != :new &&
         Lightning.Workflows.get_workflow(
@@ -1406,9 +1277,6 @@ defmodule LightningWeb.WorkflowChannel do
         {:existing, %Lightning.Workflows.Workflow{} = row} ->
           row
 
-        # A snapshot carries no lifecycle state, so the struct built from one
-        # falls back to the schema default of :draft. The client reads state off
-        # this baseline, so give it the row's real one.
         {:version, %Lightning.Workflows.Workflow{state: state}} ->
           %{workflow | state: state}
 
@@ -1466,10 +1334,6 @@ defmodule LightningWeb.WorkflowChannel do
       id: project.id,
       name: project.name,
       concurrency: project.concurrency,
-      # A sandbox is a project with a parent. The editor needs it to decide
-      # which version list to show: publishing means production, and nothing in
-      # a sandbox reaches production, so a sandbox browses its saves the way the
-      # editor always has.
       is_sandbox: not is_nil(project.parent_id)
     }
   end
@@ -1493,23 +1357,15 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
-  # save_workflow deliberately lets Ecto.StaleEntryError through, and the
-  # collaborative editor saves on a debounce, so a second person typing is
-  # enough to collide with a restore. Unrescued it kills the channel and the
-  # client waits out its timeout for a reply that never comes.
   defp restore_or_conflict(workflow, release, user) do
     Workflows.restore_version(workflow, release, user)
   rescue
     Ecto.StaleEntryError -> {:error, :workflow_moved_on}
   end
 
-  # A trigger the snapshot does not hold is deleted by the restore, and the URL
-  # built from it stops answering. Nobody should discover that afterwards.
   defp render_losing_triggers(workflow, snapshot) do
     kept = MapSet.new(snapshot.triggers, & &1.id)
 
-    # `force` because the assign is the workflow as it was at join, and this
-    # answers about the workflow as it stands.
     workflow
     |> Lightning.Repo.preload(:triggers, force: true)
     |> Map.fetch!(:triggers)
@@ -1524,11 +1380,6 @@ defmodule LightningWeb.WorkflowChannel do
     )
   end
 
-  # A trigger the snapshot holds and the workflow no longer does is re-created
-  # by the restore, and it arrives off, without whatever webhook auth methods
-  # were once attached to it: a snapshot never recorded those. So the URL comes
-  # back inert and has to be switched on deliberately once its authentication
-  # is back.
   defp render_returning_triggers(workflow, snapshot) do
     live =
       workflow
@@ -1548,11 +1399,7 @@ defmodule LightningWeb.WorkflowChannel do
       inserted_at: release.inserted_at,
       published_by: render_release_publisher(release.published_by),
       source_project: render_release_source_project(release.source_project),
-      # The client pins a version via `?release=<version_number>`; lock_version
-      # is kept here only as informational snapshot metadata.
       lock_version: release.snapshot && release.snapshot.lock_version,
-      # The content this version published. The client ticks the row whose
-      # content it is looking at, so it needs identity rather than a number.
       snapshot_id: release.snapshot_id,
       restored_from_version_number: release.restored_from_version_number,
       is_latest: is_latest
@@ -1589,26 +1436,6 @@ defmodule LightningWeb.WorkflowChannel do
     ])
   end
 
-  # Whether the workflow's content is frozen by its lifecycle: a live workflow
-  # is read-only on its own project, and stays editable inside a sandbox.
-  #
-  # Kept apart from `can_edit_workflow` on purpose. This is a fact about the
-  # workflow, not about the person, and an editor looking at a live workflow is
-  # still an editor. Folding the two together answered "you cannot edit" to both
-  # a viewer and an editor and left the client guessing which it meant, which it
-  # did by reading `can_provision_sandbox` as a stand-in for "is an editor".
-  #
-  # This assign gates the inbound yjs writes as well as the client's UI, so the
-  # lock is enforced on the server rather than advised to the client.
-  #
-  # It also has to answer for the person after all, on one point: the lock only
-  # applies to a user who has opted into experimental features. The lifecycle
-  # column is backfilled so that every workflow with an enabled trigger is
-  # `:live`, which is every workflow anyone is actually running. Applying the
-  # lock to everyone would make those workflows read-only the moment this
-  # deploys, for people who never asked for a lifecycle and have no button to
-  # release it. So without the flag there is no lock, which is exactly the
-  # editor they have today.
   defp content_locked?(workflow, project, user) do
     Lightning.Accounts.experimental_features_enabled?(user) and
       not Lightning.Workflows.editable_state?(workflow, project)
@@ -1626,15 +1453,8 @@ defmodule LightningWeb.WorkflowChannel do
           can_run_workflow: ProjectUsers.permitted?(:run_workflow, scope),
           can_write_webhook_auth_method:
             ProjectUsers.permitted?(:write_webhook_auth_method, scope),
-          # Provisioning is a policy on the parent project rather than a
-          # per-workflow question, so it is not answered by the workflow scope.
           can_provision_sandbox:
             Permissions.can?(:sandboxes, :provision_sandbox, user, project),
-          # Mirrors the archive_sandbox event's guard: the project must be a
-          # sandbox and the user must pass :delete_sandbox. The policy checks
-          # role only, so the parent_id test is what makes this false on a root
-          # project. The client only offers Archive when the server would allow
-          # it.
           can_archive_sandbox:
             not is_nil(project.parent_id) and
               Permissions.can?(:sandboxes, :delete_sandbox, user, project)
@@ -1705,9 +1525,6 @@ defmodule LightningWeb.WorkflowChannel do
     )
   end
 
-  # The session refuses every write from a pinned view, whatever asked for it.
-  # The client is expected to leave the view first, so reaching this means a
-  # stale tab or a direct channel call rather than something a button did.
   defp workflow_error_reply(socket, {:error, :read_only_view}) do
     {:reply,
      {:error,
@@ -1830,8 +1647,6 @@ defmodule LightningWeb.WorkflowChannel do
       }}, socket}
   end
 
-  # Last resort: never let an unexpected error reason crash the channel and drop
-  # the user's socket. Log it and reply with a generic internal error.
   defp workflow_error_reply(socket, error) do
     Logger.warning("Unhandled workflow channel error: #{inspect(error)}")
 
@@ -1904,18 +1719,6 @@ defmodule LightningWeb.WorkflowChannel do
   # document update.
   @read_only_frame_types [:sync_step1, :awareness, :query_awareness]
 
-  # Decides whether an inbound Yjs frame may reach the shared document. The
-  # conditions are named here rather than folded into one assign, because
-  # dropping any would let writes into the document every collaborator in the
-  # room shares: the role says whether this person may edit at all, the lock
-  # says whether the workflow's content may change right now, and the kind says
-  # whether this document is the workflow or a view of one of its past states.
-  # A user who fails any of them may send only the read-safe frames above.
-  #
-  # The kind matters on its own: a pinned view of a *draft* workflow passes the
-  # lifecycle lock, because that lock asks about the workflow rather than about
-  # the document on screen, and editing an old version's document is not
-  # something any of it is for.
   defp forward_yjs_message?(_chunk, %{
          assigns: %{
            can_edit_workflow: true,
@@ -1949,17 +1752,6 @@ defmodule LightningWeb.WorkflowChannel do
   # that permission changes made during an active session are enforced.
   #
   # Returns :ok if authorized, {:error, %{type: string, message: string}} if not.
-  # A lifecycle transition acts on the workflow, never on the document the
-  # person happens to be reading.
-  #
-  # From the live document it goes through the session, so that going live
-  # publishes what is on screen rather than the last thing saved. From a view
-  # there is nothing on screen to publish: the document is a past state, and the
-  # transition is only a change of state and trigger enablement, which the
-  # context does on the row. Routing a view through a session instead meant
-  # spawning one on the live document parented to this channel, which then
-  # pushed live updates into the document being read and counted the reader
-  # twice in presence.
   defp apply_lifecycle_state(
          %{assigns: %{workflow_kind: :version}} = socket,
          target
@@ -1971,13 +1763,19 @@ defmodule LightningWeb.WorkflowChannel do
         {:error, :workflow_deleted}
 
       workflow ->
-        # Preloaded for the limiter below; both lifecycle functions preload
-        # triggers themselves.
         workflow = Lightning.Repo.preload(workflow, :triggers)
 
-        case target do
+        target
+        |> case do
           :live -> go_live_within_limits(workflow, user)
           :draft -> Workflows.switch_to_draft(workflow, user)
+        end
+        |> case do
+          {:ok, updated} ->
+            {:ok, Repo.preload(updated, [:jobs, :edges, :triggers], force: true)}
+
+          error ->
+            error
         end
     end
   end
@@ -1990,14 +1788,6 @@ defmodule LightningWeb.WorkflowChannel do
     )
   end
 
-  # The session path asks the limiter on its way through the save. This one does
-  # not go through a save, so it asks here. Every other route that puts a
-  # workflow live checks this first, and it governs how many workflows a plan may
-  # have answering triggers, so skipping it hands out entitlement for free.
-  #
-  # Only an enable that actually turns a trigger on counts, which is how the
-  # workflows list reads it too: flipping one that is already answering asks the
-  # limiter nothing.
   defp go_live_within_limits(workflow, user) do
     activating? =
       Enum.any?(workflow.triggers, fn trigger -> !trigger.enabled end)
@@ -2009,16 +1799,9 @@ defmodule LightningWeb.WorkflowChannel do
       :ok ->
         Workflows.go_live(workflow, user)
 
-      # The limiter answers with a three-tuple carrying the plan's own wording.
-      # Passed along whole it misses the clause that renders that wording and
-      # lands on the catch-all, so the person is told an internal error
-      # occurred rather than which limit they have reached.
       {:error, _reason, %Lightning.Extensions.Message{} = message} ->
         {:error, message}
 
-      # The behaviour types the error exactly as above, so this is only here so
-      # a limiter that answers differently refuses the go-live rather than
-      # raising inside the channel.
       other ->
         Logger.warning(
           "Unexpected usage limiter reply on go_live: #{inspect(other)}"
@@ -2031,24 +1814,8 @@ defmodule LightningWeb.WorkflowChannel do
   defp transition_lifecycle_state(socket, target_state) do
     with :ok <- authorize_edit_workflow(socket),
          {:ok, workflow} <- apply_lifecycle_state(socket, target_state) do
-      # Always the live room, never this socket's. A transition issued from a
-      # view broadcast on the view's own topic, so nobody editing the workflow
-      # learned it had gone live and kept editing something now in production.
       broadcast_workflow_saved(socket, workflow)
 
-      # Editability folds in the lifecycle lock and is resolved at join, so going
-      # live makes it stale on every socket in the room.
-      #
-      # On a version being read, only the lock moves. Replacing the assigned
-      # workflow there would measure the document against content it was never
-      # meant to match, so the view would read as unsaved the moment the
-      # transition landed.
-      #
-      # The lock itself has to move, and skipping the push with it was a real
-      # bug: switching to draft from a run's own view asks for the context
-      # straight afterwards, and a stale "still locked" made the client decide
-      # the run no longer belonged on the document it was moving to and clear
-      # it. That is the journey this work exists to fix.
       socket =
         if socket.assigns.workflow_kind == :version do
           assign(
@@ -2073,10 +1840,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # A change to the workflow is announced in the workflow's own room, never in
-  # whichever room the person happens to be standing in. Restoring and going
-  # live are both reachable from a version being read, and broadcasting on that
-  # socket's topic meant nobody editing the workflow heard about it.
   defp broadcast_workflow_saved(socket, workflow) do
     LightningWeb.Endpoint.broadcast_from!(
       self(),
@@ -2089,9 +1852,6 @@ defmodule LightningWeb.WorkflowChannel do
     )
   end
 
-  # Re-assigns the workflow too, so later authorization reads the new state. The
-  # role is untouched: a lifecycle transition moves the lock, never the person's
-  # standing in the project.
   defp refresh_lifecycle_lock(socket, workflow) do
     socket
     |> assign(:workflow, workflow)
@@ -2105,10 +1865,6 @@ defmodule LightningWeb.WorkflowChannel do
     )
   end
 
-  # Content edits (save, save-and-sync, reset) are gated on top of the role
-  # check: a live workflow is read-only outside a sandbox, and the client only
-  # disables the affected controls. Lifecycle transitions (go_live/switch_to_draft)
-  # legitimately act on a live workflow, so they keep the role-only gate.
   defp authorize_content_edit(socket) do
     case authorize_edit_workflow(socket) do
       :ok -> ensure_editable_state(socket)
@@ -2133,18 +1889,12 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # The lifecycle state can change mid-session (via go_live/switch_to_draft), so
-  # read it fresh rather than trusting the join-time socket assign. A brand-new
-  # workflow has no row yet and is always a draft.
   defp current_workflow(socket) do
     case socket.assigns.workflow_kind do
       :new ->
         socket.assigns.workflow
 
       _ ->
-        # Deliberate fresh read on the save path: another client's
-        # go_live/switch_to_draft can make the socket's cached workflow assign
-        # stale, so gate on current DB state rather than caching it on the socket.
         Workflows.get_workflow(socket.assigns.workflow.id) ||
           socket.assigns.workflow
     end
@@ -2227,11 +1977,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # The reviewed body travels by value, so what the person saw is what lands.
-  # A saved dataclip travels by id, and the copy is restricted to the parent's
-  # own named dataclips.
-  # The editor offers one deliberate choice, so a dataclip the parent cannot
-  # copy is refused rather than dropped into an empty sandbox unexplained.
   defp check_chosen_dataclip(parent, %{dataclip_ids: ids}) do
     if Sandboxes.copyable_dataclips?(parent, ids),
       do: :ok,
@@ -2240,9 +1985,6 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp check_chosen_dataclip(_parent, _attrs), do: :ok
 
-  # Matched on presence, not on shape: a malformed body must be refused rather
-  # than fall through to the copy path and report success for data that never
-  # travelled.
   defp put_starting_data(attrs, params) do
     case params do
       %{"starting_dataclip" => starting} ->
@@ -2266,9 +2008,6 @@ defmodule LightningWeb.WorkflowChannel do
     Lightning.Helpers.url_safe_name(raw)
   end
 
-  # The workflow's name as it is now. A version being read carries the name the
-  # snapshot was saved under, and both the picker and the branch match on name,
-  # so a rename since would look for a workflow that no longer answers to it.
   defp current_workflow_name(socket) do
     case Workflows.get_workflow(socket.assigns.workflow_id) do
       nil -> socket.assigns.workflow.name
@@ -2363,32 +2102,16 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp fetch_auth_methods(_ids, _project), do: []
 
-  # Splits the room's `rest` (everything after "workflow:collaborate:") into the
-  # workflow id and the view selector. The workflow id is a UUID and never
-  # contains a colon, so the first colon delimits the optional suffix.
-  #
-  # Each of the three reading views gets a suffix of its own, because the suffix
-  # is the only thing identifying a collaborative document: the document name
-  # comes from the suffix alone (`Lightning.Collaborate.extract_document_name/1`)
-  # and a document already running is reused as it stands, resolved content and
-  # all. Two views that mean different content must therefore never share a
-  # suffix. Release 3 and lock_version 3 are ordinarily different snapshots, so
-  # they are `:release3` and `:v3`, never both `:v3`.
   defp parse_room_topic(rest) do
     case String.split(rest, ":", parts: 2) do
       [workflow_id, "release" <> version] -> {workflow_id, {:release, version}}
       [workflow_id, "v" <> version] -> {workflow_id, {:version, version}}
       [workflow_id, "run:" <> run_id] -> {workflow_id, {:as_executed, run_id}}
       [workflow_id] -> {workflow_id, :latest}
-      [workflow_id | _] -> {workflow_id, :latest}
+      [workflow_id, suffix] -> {workflow_id, {:unknown, suffix}}
     end
   end
 
-  # Release-pinned view. `?release=` carries the release version_number, the vN
-  # the publish trail shows, not the snapshot's lock_version. The channel owns
-  # version parsing (and the "invalid version format" error); it translates the
-  # version_number to its snapshot via the workflow_releases table, then reuses
-  # the resolver's snapshot-load path.
   defp load_workflow("edit", workflow_id, project, user, {:release, version}) do
     Logger.info("Loading workflow release version: #{version}")
 
@@ -2401,11 +2124,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Snapshot-pinned view. `?v=` carries a snapshot's own lock_version, which is
-  # how every save is numbered when there is no publish trail to read. Nothing in
-  # the release experience joins this room; it is the contract for a client
-  # without that experience, and it stays a separate suffix from `:releaseN`
-  # precisely so the two numbering schemes cannot be handed the same document.
   defp load_workflow("edit", workflow_id, project, user, {:version, version}) do
     Logger.info("Loading workflow snapshot version: #{version}")
 
@@ -2418,13 +2136,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # "View as executed". Loads the workflow exactly as a specific run saw it, for
-  # ANY run including draft/test runs whose snapshot is not a release. This is a
-  # separate contract from `?release=<version_number>` on purpose: it addresses
-  # a run, resolves that run's snapshot lock_version, and hydrates it read-only
-  # through the same resolver path the version view uses (kind :version). Because
-  # it never touches version_number, it cannot collide with the release
-  # contract.
   defp load_workflow(
          "edit",
          workflow_id,
@@ -2435,8 +2146,6 @@ defmodule LightningWeb.WorkflowChannel do
     resolve_as_executed(workflow_id, run_id, project, user)
   end
 
-  # Authorise before resolving, so a non-member cannot learn whether a workflow
-  # exists from the error.
   defp load_workflow("edit", workflow_id, project, user, :latest) do
     with :ok <- Permissions.can(:workflows, :access_read, user, project),
          {:ok, workflow, kind} <-
@@ -2456,10 +2165,10 @@ defmodule LightningWeb.WorkflowChannel do
   # The resolver reconciles by id, so a "new" join for an id owned by another
   # project returns {:error, :wrong_project}, mapped to the same client-facing
   # string as the "edit" path.
-  # A new workflow has no past state, so a pinned suffix on it is a
-  # contradiction. Refused outright rather than quietly ignored: ignoring it
-  # handed back a writable session on a pinned document, which is a save of old
-  # content over the workflow.
+  defp load_workflow(_action, _workflow_id, _project, _user, {:unknown, suffix}) do
+    {:error, "invalid room suffix '#{suffix}'"}
+  end
+
   defp load_workflow("new", _workflow_id, _project, _user, view)
        when view != :latest do
     {:error, "invalid parameters. a new workflow has no version to pin"}
@@ -2485,13 +2194,7 @@ defmodule LightningWeb.WorkflowChannel do
     {:error, "invalid action '#{action}', must be 'new' or 'edit'"}
   end
 
-  # Resolves a release version_number to its snapshot and hydrates that read-only
-  # view through the existing resolver path. An unknown version_number (a
-  # hand-typed number, or an old lock_version that was never published) yields
-  # the same not-found the resolver returns for a missing snapshot.
   defp resolve_release(workflow_id, version_number, version, project, user) do
-    # Authorise before resolving, and read a foreign workflow as not found, so
-    # this path is no more of an existence oracle than the latest one.
     with :ok <- Permissions.can(:workflows, :access_read, user, project),
          %Workflows.Workflow{} <-
            Workflows.get_workflow_for_project(project, workflow_id) do
@@ -2502,9 +2205,6 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Authorise before resolving, so a non-member cannot learn whether a workflow
-  # exists from the error, and so a foreign or deleted workflow reads the same as
-  # a missing one.
   defp resolve_snapshot(workflow_id, lock_version, version, project, user) do
     with :ok <- Permissions.can(:workflows, :access_read, user, project),
          {:ok, workflow, kind} <-
@@ -2539,15 +2239,7 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Resolves a run id to the exact snapshot lock_version that run executed
-  # against, then hydrates that read-only view through the resolver's snapshot
-  # path. Works for any run of this workflow, released or not (draft/test runs
-  # included), because it keys on the run's own snapshot rather than on the
-  # release table. The run must belong to this workflow (checked via the
-  # snapshot's workflow_id), so a run id from another workflow reads as not-found.
   defp resolve_as_executed(workflow_id, run_id, project, user) do
-    # Authorise first, so a non-member cannot tell a real run id from a made-up
-    # one.
     with :ok <- Permissions.can(:workflows, :access_read, user, project),
          {:ok, run_id} <- cast_run_id(run_id),
          lock_version when is_integer(lock_version) <-
@@ -2581,10 +2273,6 @@ defmodule LightningWeb.WorkflowChannel do
     |> Repo.one()
   end
 
-  # Normalizes the client-supplied version_number filter. An integer (or a
-  # numeric string, since a JSON number can arrive either way) pins a release;
-  # "draft"/"unversioned" selects the runs whose snapshot was never released.
-  # Anything else falls back to the draft view rather than erroring.
   defp history_filter(v) when v in ["draft", "unversioned"], do: :draft
   defp history_filter(v) when is_integer(v), do: {:release, v}
 
@@ -2634,10 +2322,6 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
-  # `version` is the snapshot's lock_version (raw, always present on a run).
-  # `version_number` is the human release version this run is attributed to, or
-  # nil when the run's snapshot was never released (draft/test/intermediate) —
-  # the client renders that as "Draft".
   defp format_run_for_history(run, version_numbers) do
     # Preload snapshot if not already loaded
     run = Repo.preload(run, :snapshot)
@@ -2651,8 +2335,6 @@ defmodule LightningWeb.WorkflowChannel do
       finished_at: run.finished_at,
       version: lock_version,
       version_number: lock_version && Map.get(version_numbers, lock_version),
-      # Identity, so the client can ask whether this run executed the content
-      # that is live now without comparing version numbers.
       snapshot_id: run.snapshot_id
     }
   end

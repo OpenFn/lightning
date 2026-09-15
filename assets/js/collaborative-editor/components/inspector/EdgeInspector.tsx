@@ -52,13 +52,6 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
     [edge.id, updateEdge]
   );
 
-  // The footer holds the edit-only actions: enable or disable the path, and
-  // delete it. Trigger edges never show one.
-  //
-  // Both actions here are edits, so a read-only view refuses them. The footer
-  // stays and each tooltip carries the reason: collapsing it removed the only
-  // explanation on offer.
-
   const toggleTooltip = isReadOnly
     ? tooltipMessage
     : 'Enable or disable this path';

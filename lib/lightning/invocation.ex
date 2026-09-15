@@ -88,10 +88,6 @@ defmodule Lightning.Invocation do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
-    # Named dataclips from anywhere in the project are a new kind of input to
-    # offer, so the picker lists them only for someone with experimental
-    # features. Everyone else gets the job's own inputs, which is the list this
-    # has always returned.
     base =
       if Keyword.get(opts, :named_dataclips, false) do
         Query.selectable_for_job(job_id, project_id_for_job(job_id, opts), limit)
@@ -107,8 +103,6 @@ defmodule Lightning.Invocation do
     |> maybe_filter_uuid_prefix(user_filters)
   end
 
-  # The project anchors the dataclip query, so callers that already know it pass
-  # it rather than making this look it up on every search keystroke.
   defp project_id_for_job(job_id, opts) do
     case Keyword.get(opts, :project_id) do
       nil ->

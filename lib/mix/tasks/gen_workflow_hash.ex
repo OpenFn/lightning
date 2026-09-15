@@ -58,9 +58,6 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
     print_hash(workflow_id, opts)
   end
 
-  # The logger level is one setting for the whole VM, and this task also runs
-  # inside the test suite, where leaving it raised silences every later
-  # assertion on a log line.
   defp quietly(fun) do
     previous_level = Logger.level()
     Logger.configure(level: :error)

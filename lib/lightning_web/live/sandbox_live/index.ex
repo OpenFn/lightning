@@ -930,8 +930,6 @@ defmodule LightningWeb.SandboxLive.Index do
   defp find_target_project(_workspace_projects, _target_id, nil, _descendants),
     do: nil
 
-  # `descendant_ids` is read once when the dialog opens and carried on the
-  # socket, because the form re-runs this on every change inside it.
   defp find_target_project(workspace_projects, target_id, source, descendant_ids) do
     Enum.find(workspace_projects, fn project ->
       project.id == target_id and
@@ -939,16 +937,11 @@ defmodule LightningWeb.SandboxLive.Index do
     end)
   end
 
-  # Merging into the sandbox or into anything under it retires what it just
-  # wrote, since archiving the source schedules its whole subtree for deletion.
-  # Nothing downstream refuses that. Role is the caller's question.
   defp mergeable_target?(project, source_sandbox, descendant_ids) do
     is_nil(project.scheduled_deletion) and project.id != source_sandbox.id and
       not MapSet.member?(descendant_ids, project.id)
   end
 
-  # Read rather than walked: `Projects.descendant_of?/3` needs the whole parent
-  # chain preloaded, and the workspace list only loads one level.
   defp sandbox_descendant_ids(sandbox) do
     MapSet.new(Projects.descendant_ids([sandbox.id]))
   end

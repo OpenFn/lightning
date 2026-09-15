@@ -47,7 +47,6 @@ export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
       canDelete = false;
       disableReason = "You don't have permission to edit this workflow";
     } else if (contentLocked) {
-      // Deleting a step changes the content, which a live workflow refuses.
       canDelete = false;
       disableReason = CONTENT_LOCKED_MESSAGE;
     } else if (hasChildEdges) {
