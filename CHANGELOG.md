@@ -48,6 +48,11 @@ and this project adheres to
   restored while production keeps running. Behind the experimental features
   setting. [#4852](https://github.com/OpenFn/lightning/issues/4852)
 
+- Experimental features say so while they are on: a row in the sidebar footer on
+  every page, and a note in the account menu explaining what it means and
+  linking to the switch that turns it off.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
 - The editor asks before it throws away unsaved changes. Switching version,
   opening a run that pins one, and leaving for a sandbox each destroyed the
   collaborative document and took uncommitted edits with it, silently.
@@ -65,6 +70,29 @@ and this project adheres to
   over the workflow. Going live or switching to draft while reading one saved
   the old content in place of the current, deleting anything added since and
   recording it as an ordinary new version.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- A `?v=` link opened on a live workflow now opens what is live. That parameter
+  names a save, a live workflow browses its publishes, and honouring it put a
+  version on screen that the list beside it could not name.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- Deleting a trigger now counts as a change to a workflow's content. It was
+  read as a change to the trigger's enabled flag alone, which a promote cannot
+  carry, so a sandbox that had deleted one reported itself as identical to its
+  parent. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- A merge or promote of selected workflows no longer asks everyone editing the
+  project's other workflows to reload, which threw away whatever they had not
+  saved. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- Opening an older version of a workflow whose trigger carries a webhook auth
+  method no longer fails to load.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- The version list is refreshed after a save, so the version you just made is
+  there when you next open the picker. Reopening it after a failed load now
+  tries again rather than staying empty.
   [#4852](https://github.com/OpenFn/lightning/issues/4852)
 
 - Opening the merge dialog, and deleting a sandbox, no longer crash in a
