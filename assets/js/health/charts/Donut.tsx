@@ -81,6 +81,10 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
               shape={props => (
                 <a
                   href={slices[props.index]?.href}
+                  // An SVG anchor is a tab stop, and the frame around it is
+                  // `aria-hidden` — the same reason `rootTabIndex` is -1. The
+                  // legend rows below carry these links reachably.
+                  tabIndex={-1}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="cursor-pointer"
