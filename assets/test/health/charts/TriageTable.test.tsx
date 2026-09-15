@@ -151,7 +151,9 @@ describe('TriageTable', () => {
     test('links a normal row to history filtered on the signature', () => {
       table([signature()]);
 
-      const link = screen.getByRole('link', { name: 'View' });
+      const link = screen.getByRole('link', {
+        name: 'View (opens in a new tab)',
+      });
       expect(link).toHaveAttribute(
         'href',
         '/projects/proj-1/history' +
@@ -180,7 +182,9 @@ describe('TriageTable', () => {
         }),
       ]);
 
-      const link = screen.getByRole('link', { name: 'View' });
+      const link = screen.getByRole('link', {
+        name: 'View (opens in a new tab)',
+      });
       expect(link).toHaveAttribute(
         'href',
         '/projects/proj-1/history' +
@@ -204,7 +208,9 @@ describe('TriageTable', () => {
         }),
       ]);
 
-      const link = screen.getByRole('link', { name: 'View' });
+      const link = screen.getByRole('link', {
+        name: 'View (opens in a new tab)',
+      });
       expect(link).toHaveAttribute(
         'href',
         '/projects/proj-1/history' +
@@ -219,7 +225,9 @@ describe('TriageTable', () => {
     test('renders no button when exit_reason never resolved', () => {
       table([signature({ exit_reason: '' })]);
 
-      expect(screen.queryByRole('link', { name: 'View' })).toBeNull();
+      expect(
+        screen.queryByRole('link', { name: 'View (opens in a new tab)' })
+      ).toBeNull();
     });
   });
 });

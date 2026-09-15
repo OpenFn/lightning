@@ -120,11 +120,12 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <span className="grow">{label}</span>
-              <span className="tabular-nums">{value.toLocaleString()}</span>
+              <span className="grow">{label}</span>{' '}
+              <span className="tabular-nums">{value.toLocaleString()}</span>{' '}
               <span className="w-12 text-right tabular-nums text-gray-500">
                 {share(value)}
-              </span>
+              </span>{' '}
+              <span className="sr-only">(opens in a new tab)</span>
             </a>
           </li>
         ))}

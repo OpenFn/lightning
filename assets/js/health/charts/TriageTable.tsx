@@ -159,7 +159,7 @@ const ViewButton = ({ href }: { href: string }) => (
     rel="noopener noreferrer"
     className="inline-flex items-center gap-x-1 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
   >
-    View
+    View <span className="sr-only">(opens in a new tab)</span>
     <span className="hero-arrow-right-micro h-3 w-3" />
   </a>
 );
