@@ -968,10 +968,10 @@ export const useCanRun = (
   const experimentalFeatures = useExperimentalFeatures();
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
+  // Not behind the flag: the base refused this through the read-only lock that
+  // this hook no longer consults.
   const isUnsavedNewWorkflow =
-    experimentalFeatures &&
-    isNewWorkflow &&
-    (jobs.length > 0 || triggers.length > 0);
+    isNewWorkflow && (jobs.length > 0 || triggers.length > 0);
 
   // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
   const hasPermission = hasEditPermission || hasRunPermission;

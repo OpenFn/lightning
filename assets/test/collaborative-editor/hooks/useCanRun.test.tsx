@@ -122,12 +122,18 @@ describe('useCanRun on a version being read', () => {
       );
     });
 
-    test('lets it through without experimental features, as main does', () => {
+    test('refuses it without experimental features too', () => {
+      // The base refused this through the read-only lock, which useCanRun no
+      // longer consults. Gating the replacement on the flag would let a
+      // flag-off user run a workflow that does not exist yet.
       experimentalFeatures = false;
 
       const { result } = renderHook(() => useCanRun(), { wrapper });
 
-      expect(result.current.canRun).toBe(true);
+      expect(result.current.canRun).toBe(false);
+      expect(result.current.tooltipMessage).toBe(
+        'Create this workflow before running it'
+      );
     });
   });
 });
