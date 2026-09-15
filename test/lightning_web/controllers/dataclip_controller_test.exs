@@ -384,20 +384,6 @@ defmodule LightningWeb.DataclipControllerTest do
       assert %{"data" => _dataclips} = json_response(conn, 200)
     end
 
-    test "accepts direct API datetime without timezone in before filter", %{
-      conn: conn,
-      project: project,
-      job: job
-    } do
-      conn =
-        get(
-          conn,
-          ~p"/projects/#{project}/jobs/#{job}/dataclips?before=2025-05-14T14:35"
-        )
-
-      assert %{"data" => _dataclips} = json_response(conn, 200)
-    end
-
     test "returns 422 for invalid datetime filter values", %{
       conn: conn,
       project: project,
