@@ -928,6 +928,101 @@ defmodule LightningWeb.RunLive.IndexTest do
       assert html =~ "after"
     end
 
+    # For Europe/London in January (GMT), local 10:00..10:10 must map to
+    # 10:00Z..10:10Z. A run at 10:05Z should match, while 09:05Z should not.
+    # This catches the old fixed-offset behavior that incorrectly applied a
+    # summer offset to winter dates.
+    test "received date filter applies timezone rules for the filtered date", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      jobs: jobs
+    } do
+      trigger = List.first(workflow.triggers)
+      snapshot = Lightning.Workflows.Snapshot.get_current_for(workflow)
+
+      matching_utc = ~U[2026-01-15 10:05:00Z]
+      non_matching_utc = ~U[2026-01-15 09:05:00Z]
+
+      matching_dataclip = insert(:dataclip, project: project)
+
+      matching_work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: matching_dataclip,
+          state: :failed,
+          inserted_at: matching_utc,
+          last_activity: matching_utc
+        )
+        |> with_run(
+          state: :failed,
+          dataclip: matching_dataclip,
+          starting_trigger: trigger,
+          finished_at: matching_utc,
+          steps:
+            jobs
+            |> Enum.map(fn j ->
+              build(:step,
+                job: j,
+                snapshot: snapshot,
+                input_dataclip: matching_dataclip,
+                started_at: matching_utc,
+                finished_at: matching_utc,
+                exit_reason: "fail"
+              )
+            end)
+        )
+
+      non_matching_dataclip = insert(:dataclip, project: project)
+
+      non_matching_work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: non_matching_dataclip,
+          state: :failed,
+          inserted_at: non_matching_utc,
+          last_activity: non_matching_utc
+        )
+        |> with_run(
+          state: :failed,
+          dataclip: non_matching_dataclip,
+          starting_trigger: trigger,
+          finished_at: non_matching_utc,
+          steps:
+            jobs
+            |> Enum.map(fn j ->
+              build(:step,
+                job: j,
+                snapshot: snapshot,
+                input_dataclip: non_matching_dataclip,
+                started_at: non_matching_utc,
+                finished_at: non_matching_utc,
+                exit_reason: "fail"
+              )
+            end)
+        )
+
+      conn = put_connect_params(conn, %{"tz" => "Europe/London"})
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              wo_date_after: "2026-01-15T10:00",
+              wo_date_before: "2026-01-15T10:10"
+            }
+          )
+        )
+
+      render_async(view)
+
+      assert has_element?(view, "#workorder-#{matching_work_order.id}")
+      refute has_element?(view, "#workorder-#{non_matching_work_order.id}")
+    end
+
     test "clearing date filter resets chip", %{
       conn: conn,
       project: project
