@@ -155,7 +155,7 @@ describe('TriageTable', () => {
       expect(link).toHaveAttribute(
         'href',
         '/projects/proj-1/history' +
-          '?filters%5Bworkflow_id%5D=wf-1' +
+          '?filters%5Bworkflow_id%5D=wf-1&filters%5Blog%5D=true' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
           '&filters%5Berror_signature_exit_reason%5D=fail' +
           '&filters%5Berror_signature_error_type%5D=RuntimeError' +
@@ -184,7 +184,7 @@ describe('TriageTable', () => {
       expect(link).toHaveAttribute(
         'href',
         '/projects/proj-1/history' +
-          '?filters%5Bworkflow_id%5D=wf-1' +
+          '?filters%5Bworkflow_id%5D=wf-1&filters%5Blog%5D=true' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
           '&filters%5Berror_signature_exit_reason%5D=crash'
       );
@@ -208,7 +208,7 @@ describe('TriageTable', () => {
       expect(link).toHaveAttribute(
         'href',
         '/projects/proj-1/history' +
-          '?filters%5Bworkflow_id%5D=wf-1' +
+          '?filters%5Bworkflow_id%5D=wf-1&filters%5Blog%5D=true' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
           '&filters%5Brejected%5D=true'
       );

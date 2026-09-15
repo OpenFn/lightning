@@ -4,9 +4,11 @@ import type { WorkOrderStateCounts } from './types';
  * A link from this page into history, scoped to the workflow and to whatever
  * else the caller wants filtered.
  *
- * No search field is named. History reads the four of them as a set: name one
- * and the other three arrive switched off, name none and the default — all
- * four — stands. See `SearchParams.put_search_fields/2`.
+ * `log` is named so that history's four search-field buttons show what history
+ * will actually search. Naming none of them puts the two out of step: the
+ * server falls back to all four (`SearchParams.put_search_fields/2`) while the
+ * buttons read an unnamed field as off. `log` on its own is how history opens
+ * when you go there directly, from `init_filters/0`.
  */
 export const historyUrl = (
   projectId: string,
@@ -15,6 +17,7 @@ export const historyUrl = (
 ) => {
   const params = new URLSearchParams({
     'filters[workflow_id]': workflowId,
+    'filters[log]': 'true',
   });
 
   // Absent parts of a filter are skipped, so a caller can hand over an
