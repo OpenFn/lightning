@@ -15,6 +15,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [2.19.0-pre1] - 2026-09-15
+
 ### Changed
 
 - Lightning now keeps its own adaptor registry instead of fetching the list from
