@@ -151,9 +151,6 @@ defmodule LightningWeb.DataclipController do
                 next_cron_run_dataclip_id: next_cron_run_dataclip_id,
                 can_edit_dataclip: can_edit_dataclip
               })
-            else
-              {:error, changeset} ->
-                {:error, changeset}
             end
 
           :error ->
