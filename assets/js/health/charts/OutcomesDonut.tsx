@@ -1,4 +1,4 @@
-import { stateUrls } from '../historyUrl';
+import { stateUrl } from '../historyUrl';
 import {
   FAILURE_STATES,
   failureTotal,
@@ -46,42 +46,38 @@ export const OutcomesDonut = ({
   projectId,
   workflowId,
   from,
-}: OutcomesDonutProps) => {
-  const url = stateUrls(projectId, workflowId, from);
-
-  return (
-    <Donut
-      slices={[
-        {
-          key: 'success',
-          label: 'Success',
-          color: SUCCESS,
-          value: counts.success,
-          href: url('success'),
-        },
-        {
-          key: 'failed',
-          label: 'Failed',
-          color: FAILED,
-          value: failureTotal(counts),
-          href: url(...FAILURE_STATES),
-        },
-        // Only drawn when it happened. Success and Failed are this panel's
-        // headline pair and stay put at zero — "Failed 0" is the answer someone
-        // came for — but a "Cancelled 0" row on every healthy workflow is noise.
-        ...(counts.cancelled > 0
-          ? [
-              {
-                key: 'cancelled',
-                label: 'Cancelled',
-                color: CANCELLED,
-                value: counts.cancelled,
-                href: url('cancelled'),
-              },
-            ]
-          : []),
-      ]}
-      emptyMessage={emptyMessage}
-    />
-  );
-};
+}: OutcomesDonutProps) => (
+  <Donut
+    slices={[
+      {
+        key: 'success',
+        label: 'Success',
+        color: SUCCESS,
+        value: counts.success,
+        href: stateUrl(projectId, workflowId, from, 'success'),
+      },
+      {
+        key: 'failed',
+        label: 'Failed',
+        color: FAILED,
+        value: failureTotal(counts),
+        href: stateUrl(projectId, workflowId, from, ...FAILURE_STATES),
+      },
+      // Only drawn when it happened. Success and Failed are this panel's
+      // headline pair and stay put at zero — "Failed 0" is the answer someone
+      // came for — but a "Cancelled 0" row on every healthy workflow is noise.
+      ...(counts.cancelled > 0
+        ? [
+            {
+              key: 'cancelled',
+              label: 'Cancelled',
+              color: CANCELLED,
+              value: counts.cancelled,
+              href: stateUrl(projectId, workflowId, from, 'cancelled'),
+            },
+          ]
+        : []),
+    ]}
+    emptyMessage={emptyMessage}
+  />
+);

@@ -1,4 +1,4 @@
-import { stateUrls } from '../historyUrl';
+import { stateUrl } from '../historyUrl';
 import {
   FAILURE_STATES,
   type FailureState,
@@ -54,21 +54,17 @@ export const FailureBreakdownDonut = ({
   projectId,
   workflowId,
   from,
-}: FailureBreakdownDonutProps) => {
-  const url = stateUrls(projectId, workflowId, from);
-
-  return (
-    <Donut
-      // States that never happened are dropped rather than drawn at zero — six
-      // rows of which four read "0" buries the two that matter.
-      slices={FAILURE_STATES.filter(state => counts[state] > 0).map(state => ({
-        key: state,
-        label: state,
-        color: COLORS[state],
-        value: counts[state],
-        href: url(state),
-      }))}
-      emptyMessage={emptyMessage}
-    />
-  );
-};
+}: FailureBreakdownDonutProps) => (
+  <Donut
+    // States that never happened are dropped rather than drawn at zero — six
+    // rows of which four read "0" buries the two that matter.
+    slices={FAILURE_STATES.filter(state => counts[state] > 0).map(state => ({
+      key: state,
+      label: state,
+      color: COLORS[state],
+      value: counts[state],
+      href: stateUrl(projectId, workflowId, from, state),
+    }))}
+    emptyMessage={emptyMessage}
+  />
+);

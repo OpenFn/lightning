@@ -27,24 +27,21 @@ export const historyUrl = (
 };
 
 /**
- * Returns a link builder bound to one workflow and window: call it with the
- * states a slice stands for and it gives back that slice's history link.
+ * The history link for the states a slice stands for, over one window.
  *
  * History's status filter is a flag per state, so a slice that folded several
  * states together ticks all of them rather than naming a bucket history
- * doesn't have.
+ * doesn't have. A state history doesn't know is dropped server-side, leaving
+ * the filter empty and the link showing every state under a wedge that counted
+ * one — so the states are named by type rather than by string.
  */
-export const stateUrls = (
+export const stateUrl = (
   projectId: string,
   workflowId: string,
-  from: string
-) => {
-  // A state history doesn't know is dropped server-side, leaving the status
-  // filter empty and the link showing every state under a wedge that counted
-  // one — so the states are named by type rather than by string.
-  return (...states: (keyof WorkOrderStateCounts)[]) =>
-    historyUrl(projectId, workflowId, {
-      date_after: from,
-      ...Object.fromEntries(states.map(state => [state, 'true'])),
-    });
-};
+  from: string,
+  ...states: (keyof WorkOrderStateCounts)[]
+) =>
+  historyUrl(projectId, workflowId, {
+    date_after: from,
+    ...Object.fromEntries(states.map(state => [state, 'true'])),
+  });
