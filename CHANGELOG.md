@@ -51,7 +51,7 @@ and this project adheres to
 - Experimental features say so while they are on: a row in the sidebar footer on
   every page, and a note in the account menu explaining what it means and
   linking to the switch that turns it off.
-  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+  [#5179](https://github.com/OpenFn/lightning/issues/5179)
 
 - The editor asks before it throws away unsaved changes. Switching version,
   opening a run that pins one, and leaving for a sandbox each destroyed the
@@ -75,25 +75,25 @@ and this project adheres to
 - A `?v=` link opened on a live workflow now opens what is live. That parameter
   names a save, a live workflow browses its publishes, and honouring it put a
   version on screen that the list beside it could not name.
-  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+  [#5180](https://github.com/OpenFn/lightning/issues/5180)
 
 - Deleting a trigger now counts as a change to a workflow's content. It was
   read as a change to the trigger's enabled flag alone, which a promote cannot
   carry, so a sandbox that had deleted one reported itself as identical to its
-  parent. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+  parent. [#5181](https://github.com/OpenFn/lightning/issues/5181)
 
 - A merge or promote of selected workflows no longer asks everyone editing the
   project's other workflows to reload, which threw away whatever they had not
-  saved. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+  saved. [#5182](https://github.com/OpenFn/lightning/issues/5182)
 
 - Opening an older version of a workflow whose trigger carries a webhook auth
   method no longer fails to load.
-  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+  [#5183](https://github.com/OpenFn/lightning/issues/5183)
 
 - The version list is refreshed after a save, so the version you just made is
   there when you next open the picker. Reopening it after a failed load now
   tries again rather than staying empty.
-  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+  [#5184](https://github.com/OpenFn/lightning/issues/5184)
 
 - Opening the merge dialog, and deleting a sandbox, no longer crash in a
   workspace with a branch more than one level deep. A sandbox can no longer be
