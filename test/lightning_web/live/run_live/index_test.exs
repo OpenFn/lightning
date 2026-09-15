@@ -935,7 +935,7 @@ defmodule LightningWeb.RunLive.IndexTest do
          } do
       conn =
         put_connect_params(conn, %{
-          "tz_offset_minutes" => "-480"
+          "tz" => "Europe/London"
         })
 
       {:ok, view, _html} =

@@ -128,7 +128,7 @@ defmodule LightningWeb.RunLive.Index do
     ]
 
     params = Map.put_new(params, "filters", init_filters())
-    tz_offset_minutes = browser_tz_offset_minutes(socket)
+    timezone = browser_timezone(socket)
 
     {:ok,
      socket
@@ -149,7 +149,7 @@ defmodule LightningWeb.RunLive.Index do
        pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"],
        channel_logs_params: %{},
-       tz_offset_minutes: tz_offset_minutes
+       timezone: timezone
      )}
   end
 
@@ -179,14 +179,14 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_params(params, _url, socket) do
     %{project: project} = socket.assigns
-    tz_offset_minutes = socket.assigns.tz_offset_minutes
+    timezone = socket.assigns.timezone
 
     filters = Map.get(params, "filters", init_filters())
 
     normalized_params =
       params
       |> Map.put("filters", filters)
-      |> Map.put("__tz_offset_minutes", tz_offset_minutes)
+      |> Map.put("__tz", timezone)
 
     {:noreply,
      socket
@@ -215,13 +215,13 @@ defmodule LightningWeb.RunLive.Index do
         provided_filters: Map.get(page_params, "filters", %{})
       },
       fn ->
-        tz_offset_minutes = Map.get(page_params, "__tz_offset_minutes")
+        timezone = Map.get(page_params, "__tz")
         raw_filters = Map.get(page_params, "filters", init_filters())
 
         normalized_filters =
           normalize_history_datetime_filters(
             raw_filters,
-            tz_offset_minutes
+            timezone
           )
 
         search_params = SearchParams.new(normalized_filters)
@@ -320,12 +320,12 @@ defmodule LightningWeb.RunLive.Index do
         %Events.WorkOrderCreated{work_order: work_order},
         %{assigns: %{live_action: :index}} = socket
       ) do
-    %{project: project, filters: filters, tz_offset_minutes: tz_offset_minutes} =
+    %{project: project, filters: filters, timezone: timezone} =
       socket.assigns
 
     params =
       filters
-      |> normalize_history_datetime_filters(tz_offset_minutes)
+      |> normalize_history_datetime_filters(timezone)
       |> Map.merge(%{"workorder_id" => work_order.id})
       |> SearchParams.new()
 
@@ -680,7 +680,7 @@ defmodule LightningWeb.RunLive.Index do
 
       search_params =
         filters
-        |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+        |> normalize_history_datetime_filters(socket.assigns.timezone)
         |> SearchParams.new()
 
       case Invocation.export_workorders(project, current_user, search_params) do
@@ -736,7 +736,7 @@ defmodule LightningWeb.RunLive.Index do
   defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
     filter =
       socket.assigns.filters
-      |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+      |> normalize_history_datetime_filters(socket.assigns.timezone)
       |> SearchParams.new()
 
     socket.assigns.project
@@ -772,7 +772,7 @@ defmodule LightningWeb.RunLive.Index do
   defp handle_bulk_rerun(socket, %{"type" => "all"}) do
     filter =
       socket.assigns.filters
-      |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+      |> normalize_history_datetime_filters(socket.assigns.timezone)
       |> SearchParams.new()
 
     socket.assigns.project
@@ -791,7 +791,7 @@ defmodule LightningWeb.RunLive.Index do
   defp handle_bulk_cancel(socket, %{"type" => "all"}) do
     filter =
       socket.assigns.filters
-      |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+      |> normalize_history_datetime_filters(socket.assigns.timezone)
       |> SearchParams.new()
 
     work_orders =
@@ -937,60 +937,74 @@ defmodule LightningWeb.RunLive.Index do
     wo_date_before
   )
 
-  defp browser_tz_offset_minutes(socket) do
+  defp browser_timezone(socket) do
     if connected?(socket) do
       case socket
            |> get_connect_params()
            |> Kernel.||(%{})
-           |> Map.get("tz_offset_minutes") do
-        value when is_binary(value) ->
-          case Integer.parse(value) do
-            {parsed, ""} -> parsed
-            _ -> nil
-          end
+           |> Map.get("tz") do
+        value when is_binary(value) and value != "" ->
+          value
 
         _ ->
           nil
       end
+    else
+      nil
     end
   end
 
   defp normalize_history_datetime_filters(filters, nil), do: filters
 
-  defp normalize_history_datetime_filters(filters, offset_minutes)
-       when is_integer(offset_minutes) do
+  defp normalize_history_datetime_filters(filters, timezone)
+       when is_binary(timezone) do
     Enum.reduce(@history_datetime_filter_keys, filters, fn key, acc ->
       Map.update(
         acc,
         key,
         nil,
-        &normalize_datetime_filter_value(&1, offset_minutes)
+        &normalize_datetime_filter_value(&1, timezone)
       )
     end)
   end
 
-  defp normalize_datetime_filter_value(value, _offset_minutes)
+  defp normalize_datetime_filter_value(value, _timezone)
        when value in [nil, ""],
        do: value
 
-  # Convert browser-local wall time to UTC using the browser offset from connect params.
-  defp normalize_datetime_filter_value(value, offset_minutes)
-       when is_binary(value) and is_integer(offset_minutes) do
+  # Convert browser-local wall time to UTC using the browser's IANA timezone.
+  defp normalize_datetime_filter_value(value, timezone)
+       when is_binary(value) and is_binary(timezone) do
     if String.match?(value, ~r/(Z|[+-]\d{2}:?\d{2})$/) do
       value
     else
       with {:ok, naive} <- parse_local_naive_datetime(value) do
-        naive
-        |> DateTime.from_naive!("Etc/UTC")
-        |> DateTime.add(offset_minutes * 60, :second)
-        |> DateTime.to_iso8601()
+        case DateTime.from_naive(naive, timezone) do
+          {:ok, local_datetime} ->
+            local_datetime
+            |> DateTime.shift_zone!("Etc/UTC")
+            |> DateTime.to_iso8601()
+
+          {:ambiguous, local_datetime, _other} ->
+            local_datetime
+            |> DateTime.shift_zone!("Etc/UTC")
+            |> DateTime.to_iso8601()
+
+          {:gap, _before, gap_after} ->
+            gap_after
+            |> DateTime.shift_zone!("Etc/UTC")
+            |> DateTime.to_iso8601()
+
+          {:error, _reason} ->
+            value
+        end
       else
         _ -> value
       end
     end
   end
 
-  defp normalize_datetime_filter_value(value, _offset_minutes), do: value
+  defp normalize_datetime_filter_value(value, _timezone), do: value
 
   # Append seconds before parsing, if the value is in the format "YYYY-MM-DDTHH:MM".
   defp parse_local_naive_datetime(value) when is_binary(value) do

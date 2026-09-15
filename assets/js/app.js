@@ -65,7 +65,7 @@ const csrfToken = document
 const liveSocket = new LiveSocket('/live', Socket, {
   params: {
     _csrf_token: csrfToken,
-    tz_offset_minutes: String(new Date().getTimezoneOffset()),
+    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
   },
   hooks,
   dom: {
