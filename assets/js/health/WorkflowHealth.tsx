@@ -56,11 +56,10 @@ export const WorkflowHealth = ({
         <h1 className="min-w-0 text-2xl font-semibold break-words text-gray-900">
           {workflowName}
         </h1>
-        {/* The picker and the freshness stamp both belong to the whole page,
-            so they stack in the header rather than sitting on any one card. */}
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        {/* The picker sets the window for every card, so it belongs to the
+            header rather than to any one of them. */}
+        <div className="shrink-0">
           <RangePicker days={days} onChange={setDays} />
-          <UpdatedAt at={outcomes.data?.window.to ?? null} />
         </div>
       </div>
 
@@ -194,17 +193,6 @@ const ChartLoading = () => (
   <div className={FRAME}>
     <span className="sr-only">Loading…</span>
   </div>
-);
-
-// The stamp is the server's compute time, not the moment the browser asked —
-// `window.to` is when the numbers were true, however long the round trip took.
-//
-// Holds its line while empty (`min-h-4` is one `text-xs` line) so the picker
-// above it doesn't move.
-const UpdatedAt = ({ at }: { at: string | null }) => (
-  <p role="status" className="min-h-4 text-xs text-gray-500">
-    {at && `Last Updated ${new Date(at).toLocaleTimeString()}`}
-  </p>
 );
 
 // "1 work order", "1,287 failed work orders".
