@@ -72,9 +72,7 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
                 rows below carry the same links reachably. */}
             <Pie
               rootTabIndex={-1}
-              onClick={(_, index) =>
-                window.open(slices[index]?.href, '_blank', 'noopener')
-              }
+              onClick={(_, index) => window.open(slices[index]?.href, '_blank')}
               className="cursor-pointer"
               // `fill` per entry rather than a `<Cell>` child — Cell is
               // deprecated and goes in Recharts 4.
