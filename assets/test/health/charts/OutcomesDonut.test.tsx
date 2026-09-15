@@ -2,8 +2,15 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
 import { OutcomesDonut } from '#/health/charts/OutcomesDonut';
+import { FAILURE_STATES } from '#/health/types';
 
 import { counts } from './counts';
+
+const links = {
+  projectId: 'proj-1',
+  workflowId: 'wf-1',
+  from: '2026-08-01T10:00:00Z',
+};
 
 describe('OutcomesDonut', () => {
   test('folds every failure state into one Failed slice', () => {
@@ -18,6 +25,7 @@ describe('OutcomesDonut', () => {
           rejected: 3,
         })}
         emptyMessage="No work orders"
+        {...links}
       />
     );
 
@@ -38,6 +46,7 @@ describe('OutcomesDonut', () => {
       <OutcomesDonut
         counts={counts({ success: 80, failed: 10, cancelled: 10 })}
         emptyMessage="No work orders"
+        {...links}
       />
     );
 
@@ -52,6 +61,7 @@ describe('OutcomesDonut', () => {
       <OutcomesDonut
         counts={counts({ success: 80, failed: 10 })}
         emptyMessage="No work orders"
+        {...links}
       />
     );
 
@@ -65,6 +75,7 @@ describe('OutcomesDonut', () => {
       <OutcomesDonut
         counts={counts({ success: 1146, failed: 98 })}
         emptyMessage="No work orders"
+        {...links}
       />
     );
 
@@ -76,6 +87,7 @@ describe('OutcomesDonut', () => {
       <OutcomesDonut
         counts={counts()}
         emptyMessage="No finished work orders in the last 30 days"
+        {...links}
       />
     );
 
@@ -83,5 +95,49 @@ describe('OutcomesDonut', () => {
       screen.getByText('No finished work orders in the last 30 days')
     ).toBeVisible();
     expect(screen.queryByText('Success')).not.toBeInTheDocument();
+  });
+  // The wedge is aria-hidden and out of the tab order, so the legend row is
+  // the only link a keyboard or screen reader can reach.
+  describe('legend links', () => {
+    test('sends Success to history filtered to that state and window', () => {
+      render(
+        <OutcomesDonut
+          counts={counts({ success: 80, failed: 10 })}
+          emptyMessage="No work orders"
+          {...links}
+        />
+      );
+
+      expect(screen.getByRole('link', { name: /Success/ })).toHaveAttribute(
+        'href',
+        '/projects/proj-1/history' +
+          '?filters%5Bworkflow_id%5D=wf-1' +
+          '&filters%5Blog%5D=true' +
+          '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
+          '&filters%5Bsuccess%5D=true'
+      );
+    });
+
+    // History has no `failed` bucket — it filters a flag per state — so the
+    // wedge that folded six states together has to tick all six, or the link
+    // lands on fewer work orders than the number beside it.
+    test('ticks every failure state on the Failed wedge', () => {
+      render(
+        <OutcomesDonut
+          counts={counts({ success: 80, failed: 10, lost: 2 })}
+          emptyMessage="No work orders"
+          {...links}
+        />
+      );
+
+      const href = screen
+        .getByRole('link', { name: /Failed/ })
+        .getAttribute('href');
+
+      for (const state of FAILURE_STATES) {
+        expect(href).toContain(`filters%5B${state}%5D=true`);
+      }
+      expect(href).not.toContain('success');
+    });
   });
 });

@@ -1,3 +1,4 @@
+import { stateUrls } from '../historyUrl';
 import {
   FAILURE_STATES,
   type FailureState,
@@ -13,6 +14,9 @@ import { FAILED } from './OutcomesDonut';
  * `success` is not a slice — this panel breaks down the Outcomes donut's red
  * wedge, so its shares are of failures and the two totals have to agree. Both
  * panels read the same `FAILURE_STATES` list, so they cannot drift apart.
+ *
+ * Every slice links to the work orders it counts, over the same window the
+ * page is showing.
  */
 
 // Categorical, not status: every slice here is already a failure, so hue
@@ -38,21 +42,33 @@ const COLORS: Record<FailureState, string> = {
 interface FailureBreakdownDonutProps {
   counts: WorkOrderStateCounts;
   emptyMessage: string;
+  projectId: string;
+  workflowId: string;
+  /** `window.from` off the same response — the picked range's start. */
+  from: string;
 }
 
 export const FailureBreakdownDonut = ({
   counts,
   emptyMessage,
-}: FailureBreakdownDonutProps) => (
-  <Donut
-    // States that never happened are dropped rather than drawn at zero — six
-    // rows of which four read "0" buries the two that matter.
-    slices={FAILURE_STATES.filter(state => counts[state] > 0).map(state => ({
-      key: state,
-      label: state,
-      color: COLORS[state],
-      value: counts[state],
-    }))}
-    emptyMessage={emptyMessage}
-  />
-);
+  projectId,
+  workflowId,
+  from,
+}: FailureBreakdownDonutProps) => {
+  const url = stateUrls(projectId, workflowId, from);
+
+  return (
+    <Donut
+      // States that never happened are dropped rather than drawn at zero — six
+      // rows of which four read "0" buries the two that matter.
+      slices={FAILURE_STATES.filter(state => counts[state] > 0).map(state => ({
+        key: state,
+        label: state,
+        color: COLORS[state],
+        value: counts[state],
+        href: url(state),
+      }))}
+      emptyMessage={emptyMessage}
+    />
+  );
+};

@@ -5,6 +5,12 @@ import { FailureBreakdownDonut } from '#/health/charts/FailureBreakdownDonut';
 
 import { counts } from './counts';
 
+const links = {
+  projectId: 'proj-1',
+  workflowId: 'wf-1',
+  from: '2026-08-01T10:00:00Z',
+};
+
 describe('FailureBreakdownDonut', () => {
   test('lists each failure state with its count and share of failures', () => {
     render(
@@ -17,6 +23,7 @@ describe('FailureBreakdownDonut', () => {
           lost: 7,
         })}
         emptyMessage="No failures"
+        {...links}
       />
     );
 
@@ -36,6 +43,7 @@ describe('FailureBreakdownDonut', () => {
       <FailureBreakdownDonut
         counts={counts({ failed: 3, rejected: 1 })}
         emptyMessage="No failures"
+        {...links}
       />
     );
 
@@ -48,6 +56,7 @@ describe('FailureBreakdownDonut', () => {
       <FailureBreakdownDonut
         counts={counts({ failed: 3 })}
         emptyMessage="No failures"
+        {...links}
       />
     );
 
@@ -63,6 +72,7 @@ describe('FailureBreakdownDonut', () => {
       <FailureBreakdownDonut
         counts={counts({ failed: 3, cancelled: 90 })}
         emptyMessage="No failures"
+        {...links}
       />
     );
 
@@ -76,6 +86,7 @@ describe('FailureBreakdownDonut', () => {
       <FailureBreakdownDonut
         counts={counts({ success: 10, cancelled: 5 })}
         emptyMessage="No failures in the last 30 days"
+        {...links}
       />
     );
 
@@ -87,10 +98,31 @@ describe('FailureBreakdownDonut', () => {
       <FailureBreakdownDonut
         counts={counts({ success: 1146 })}
         emptyMessage="No failures in the last 30 days"
+        {...links}
       />
     );
 
     expect(screen.getByText('No failures in the last 30 days')).toBeVisible();
     expect(screen.queryByText('failed')).not.toBeInTheDocument();
+  });
+  // One state per slice here, where the Outcomes donut's Failed wedge ticks
+  // all six — the same history filter, narrowed to the wedge that was clicked.
+  test('links each slice to that one state over the picked window', () => {
+    render(
+      <FailureBreakdownDonut
+        counts={counts({ failed: 10, lost: 2 })}
+        emptyMessage="No failures"
+        {...links}
+      />
+    );
+
+    expect(screen.getByRole('link', { name: /lost/ })).toHaveAttribute(
+      'href',
+      '/projects/proj-1/history' +
+        '?filters%5Bworkflow_id%5D=wf-1' +
+        '&filters%5Blog%5D=true' +
+        '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
+        '&filters%5Blost%5D=true'
+    );
   });
 });

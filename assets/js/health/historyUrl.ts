@@ -26,3 +26,23 @@ export const historyUrl = (
 
   return `/projects/${projectId}/history?${params.toString()}`;
 };
+
+/**
+ * Returns a link builder bound to one workflow and window: call it with the
+ * states a slice stands for and it gives back that slice's history link.
+ *
+ * History's status filter is a flag per state, so a slice that folded several
+ * states together ticks all of them rather than naming a bucket history
+ * doesn't have.
+ */
+export const stateUrls = (
+  projectId: string,
+  workflowId: string,
+  from: string
+) => {
+  return (...states: string[]) =>
+    historyUrl(projectId, workflowId, {
+      date_after: from,
+      ...Object.fromEntries(states.map(state => [state, 'true'])),
+    });
+};
