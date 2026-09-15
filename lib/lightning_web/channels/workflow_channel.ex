@@ -1848,13 +1848,6 @@ defmodule LightningWeb.WorkflowChannel do
 
       {:error, _reason, %Lightning.Extensions.Message{} = message} ->
         {:error, message}
-
-      other ->
-        Logger.warning(
-          "Unexpected usage limiter reply on go_live: #{inspect(other)}"
-        )
-
-        {:error, :internal_error}
     end
   end
 
