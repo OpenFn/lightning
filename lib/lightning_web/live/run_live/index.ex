@@ -734,6 +734,9 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
+    # We should convert local wall-time inputs into UTC ISO datetimes using the
+    # browser timezone before building the SearchParams on the converted values,
+    # as the database stores timestamps in UTC.
     filter =
       socket.assigns.filters
       |> normalize_history_datetime_filters(socket.assigns.timezone)
@@ -770,6 +773,9 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all"}) do
+    # We should convert local wall-time inputs into UTC ISO datetimes using the
+    # browser timezone before building the SearchParams on the converted values,
+    # as the database stores timestamps in UTC.
     filter =
       socket.assigns.filters
       |> normalize_history_datetime_filters(socket.assigns.timezone)
@@ -789,6 +795,9 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp handle_bulk_cancel(socket, %{"type" => "all"}) do
+    # We should convert local wall-time inputs into UTC ISO datetimes using the
+    # browser timezone before building the SearchParams on the converted values,
+    # as the database stores timestamps in UTC.
     filter =
       socket.assigns.filters
       |> normalize_history_datetime_filters(socket.assigns.timezone)
