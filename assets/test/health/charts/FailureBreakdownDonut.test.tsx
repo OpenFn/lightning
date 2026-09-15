@@ -120,7 +120,6 @@ describe('FailureBreakdownDonut', () => {
       'href',
       '/projects/proj-1/history' +
         '?filters%5Bworkflow_id%5D=wf-1' +
-        '&filters%5Blog%5D=true' +
         '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
         '&filters%5Blost%5D=true'
     );

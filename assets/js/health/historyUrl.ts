@@ -2,11 +2,9 @@
  * A link from this page into history, scoped to the workflow and to whatever
  * else the caller wants filtered.
  *
- * History only applies its own defaults to a visit that names no filters at
- * all, and every link from here names several. Without `log`, arriving drops
- * the one search field a normal history visit starts with, and the first
- * search term typed into the box matches nothing with every toggle visibly
- * off.
+ * No search field is named. History reads the four of them as a set: name one
+ * and the other three arrive switched off, name none and the default — all
+ * four — stands. See `SearchParams.put_search_fields/2`.
  */
 export const historyUrl = (
   projectId: string,
@@ -15,7 +13,6 @@ export const historyUrl = (
 ) => {
   const params = new URLSearchParams({
     'filters[workflow_id]': workflowId,
-    'filters[log]': 'true',
   });
 
   // Absent parts of a filter are skipped, so a caller can hand over an
