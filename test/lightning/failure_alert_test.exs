@@ -153,6 +153,9 @@ defmodule Lightning.FailureAlertTest do
       assert html_body =~ workorder.id
 
       assert html_body =~
+               "/projects/#{project.id}/w/#{workorder.workflow_id}/health"
+
+      assert html_body =~
                "A \"#{workorder.workflow.name}\" run just failed in \"#{workorder.workflow.project.name}\""
 
       s2 =
