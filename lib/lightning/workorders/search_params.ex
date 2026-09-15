@@ -142,19 +142,19 @@ defmodule Lightning.WorkOrders.SearchParams do
     |> dates_to_string()
   end
 
-  # A link naming none of the four search-field flags reads back the same as one
-  # naming all four: `put_search_fields/2` leaves the key out and the schema
-  # default stands. Spelling them out only lengthens the URL, which the digest
-  # email prints as text. A link naming some of them is making a choice, so the
-  # rest are still filled in.
+  # A link naming some of the four search-field flags is making a choice, so the
+  # rest are filled in. A link naming none of them gets `log` alone, matching
+  # what a bare visit to history sets. Leaving all four out is not an option:
+  # the schema reads that URL as "search everything" while the toggle chips,
+  # painted from the raw params, read it as "search nothing" -- and the first
+  # search run from such a page ships four `false`s and matches no rows.
   defp merge_fields(search_params, defaults) do
     if Enum.any?(defaults, &Map.has_key?(search_params, &1)) do
       (defaults -- Map.keys(search_params))
-      |> Enum.map(fn x -> {x, true} end)
-      |> Enum.into(%{})
+      |> Map.new(fn x -> {x, true} end)
       |> Map.merge(search_params)
     else
-      search_params
+      Map.put(search_params, "log", true)
     end
   end
 

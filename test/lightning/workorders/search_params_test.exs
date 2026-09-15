@@ -130,30 +130,25 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "failed" => true,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "sort_direction" => "desc",
-               "sort_by" => "inserted_at"
+               "sort_by" => "inserted_at",
+               "log" => true
              }
     end
 
-    test "omits the search-field flags when the caller names none of them" do
+    test "falls back to log alone when the caller names no search field" do
       params =
         SearchParams.to_uri_params(%{
           "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
         })
 
-      assert params == %{"workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"}
+      assert params == %{
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
+               "log" => true
+             }
 
-      # Dropping them changes nothing on the way back in: the schema default
-      # stands, so search still covers all four fields.
-      assert Enum.sort(SearchParams.new(params).search_fields) ==
-               Enum.sort(
-                 SearchParams.new(%{
-                   "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
-                   "id" => true,
-                   "body" => true,
-                   "log" => true,
-                   "dataclip_name" => true
-                 }).search_fields
-               )
+      # What the link says and what the history page's toggles show are the
+      # same thing, and both match a bare visit to history.
+      assert SearchParams.new(params).search_fields == [:log]
     end
 
     test "converts dates to string" do

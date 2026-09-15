@@ -196,9 +196,12 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert params["filters[workflow_id]"] == workflow.id
 
-      # The four search-field flags are not spelled out: history applies its own
-      # defaults to a link that names none of them.
-      refute Map.has_key?(params, "filters[log]")
+      # Only `log` is spelled out, matching what a bare visit to history sets.
+      # The other three are left off, and off is what the page shows for them.
+      assert params["filters[log]"] == "true"
+      refute Map.has_key?(params, "filters[id]")
+      refute Map.has_key?(params, "filters[body]")
+      refute Map.has_key?(params, "filters[dataclip_name]")
 
       assert digest_url |> URI.parse() |> Map.get(:path) ==
                "/projects/#{workflow.project_id}/history"
@@ -268,7 +271,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         See these runs in history: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
-        Group these failures by error: #{url(~p"/projects/#{workflow_a.project_id}/w/#{workflow_a.id}/health")}
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_a.project_id}/w/#{workflow_a.id}/health")}
 
         Workflow B:
         • 10 workorders were successful today
@@ -282,7 +285,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         See these runs in history: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
-        Group these failures by error: #{url(~p"/projects/#{workflow_c.project_id}/w/#{workflow_c.id}/health")}
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_c.project_id}/w/#{workflow_c.id}/health")}
 
         OpenFn
         """
@@ -353,7 +356,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         See these runs in history: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
-        Group these failures by error: #{url(~p"/projects/#{workflow_a.project_id}/w/#{workflow_a.id}/health")}
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_a.project_id}/w/#{workflow_a.id}/health")}
 
         Workflow B:
         • 10 workorders were successful this week
@@ -367,7 +370,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         See these runs in history: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
-        Group these failures by error: #{url(~p"/projects/#{workflow_c.project_id}/w/#{workflow_c.id}/health")}
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_c.project_id}/w/#{workflow_c.id}/health")}
 
         OpenFn
         """
@@ -440,7 +443,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         See these runs in history: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
-        Group these failures by error: #{url(~p"/projects/#{workflow_a.project_id}/w/#{workflow_a.id}/health")}
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_a.project_id}/w/#{workflow_a.id}/health")}
 
         Workflow B:
         • 10 workorders were successful this month
@@ -454,7 +457,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         See these runs in history: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
-        Group these failures by error: #{url(~p"/projects/#{workflow_c.project_id}/w/#{workflow_c.id}/health")}
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_c.project_id}/w/#{workflow_c.id}/health")}
 
         OpenFn
         """

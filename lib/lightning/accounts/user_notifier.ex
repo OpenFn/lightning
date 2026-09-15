@@ -375,7 +375,7 @@ defmodule Lightning.Accounts.UserNotifier do
     if failed_workorders > 0 do
       history ++
         [
-          "Group these failures by error: " <>
+          "See this workflow's failures grouped by error: " <>
             url(~p"/projects/#{workflow.project_id}/w/#{workflow.id}/health")
         ]
     else
