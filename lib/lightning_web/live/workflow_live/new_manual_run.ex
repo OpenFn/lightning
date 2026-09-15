@@ -47,7 +47,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     end
   end
 
-  defp normalize_filters(filters) when is_map(filters), do: {:ok, filters}
+  defp normalize_filters(filters) when is_map(filters),
+    do: get_dataclips_filters(filters)
 
   defp normalize_filters(search_text) when is_binary(search_text),
     do: get_dataclips_filters(search_text)

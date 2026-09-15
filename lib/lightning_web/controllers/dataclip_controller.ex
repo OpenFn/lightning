@@ -124,8 +124,7 @@ defmodule LightningWeb.DataclipController do
       if valid_uuid?(job_id) do
         case parse_limit(params["limit"]) do
           {:ok, limit} ->
-            with {:ok, filters} <- NewManualRun.get_dataclips_filters(params),
-                 {:ok,
+            with {:ok,
                   %{
                     dataclips: dataclips,
                     next_cron_run_dataclip_id: next_cron_run_dataclip_id
@@ -133,7 +132,7 @@ defmodule LightningWeb.DataclipController do
                    NewManualRun.search_selectable_dataclips(
                      job_id,
                      project,
-                     filters,
+                     params,
                      limit,
                      0
                    ) do
