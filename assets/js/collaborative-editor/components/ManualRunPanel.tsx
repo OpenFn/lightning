@@ -18,7 +18,6 @@ import ExistingView from '../../manual-run-panel/views/ExistingView';
 import type { Dataclip } from '../api/dataclips';
 import * as dataclipApi from '../api/dataclips';
 import { RENDER_MODES, type RenderMode } from '../constants/panel';
-import type { RunPanelEntryPoint } from '../types/ui';
 import { useActiveRun, useFollowRun } from '../hooks/useHistory';
 import { useRunRetry } from '../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../hooks/useRunRetryShortcuts';
@@ -26,6 +25,7 @@ import { useAppConfig } from '../hooks/useSessionContext';
 import { useCanRun } from '../hooks/useWorkflow';
 import type { SaveWorkflowOptions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
+import type { RunPanelEntryPoint } from '../types/ui';
 import type { Workflow } from '../types/workflow';
 import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
@@ -64,6 +64,14 @@ interface ManualRunPanelProps {
 }
 
 type TabValue = 'empty' | 'custom' | 'existing';
+
+const toUtcIsoDateTime = (value: string): string => {
+  if (!value) return '';
+
+  // Parse datetime in the browser timezone, then serialize to UTC for the API.
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+};
 
 export function ManualRunPanel({
   workflow,
@@ -163,14 +171,20 @@ export function ManualRunPanel({
 
   const currentRun = useActiveRun();
 
-  const runContext = jobId
-    ? { type: 'job' as const, id: jobId }
-    : triggerId
-      ? { type: 'trigger' as const, id: triggerId }
-      : {
-          type: 'trigger' as const,
-          id: workflow.triggers[0]?.id || '',
-        };
+  const runContext = useMemo(() => {
+    if (jobId) {
+      return { type: 'job' as const, id: jobId };
+    }
+
+    if (triggerId) {
+      return { type: 'trigger' as const, id: triggerId };
+    }
+
+    return {
+      type: 'trigger' as const,
+      id: workflow.triggers[0]?.id || '',
+    };
+  }, [jobId, triggerId, workflow.triggers]);
 
   const contextJob =
     runContext.type === 'job'
@@ -285,6 +299,7 @@ export function ManualRunPanel({
     followedRunStep,
     dataclips,
     manuallyUnselected,
+    selectedDataclip,
     setSelectedDataclip,
     setSelectedTab,
   ]);
@@ -331,13 +346,23 @@ export function ManualRunPanel({
     };
 
     void fetchDataclips();
-  }, [projectId, dataclipJobId, followedRunId]);
+  }, [
+    projectId,
+    dataclipJobId,
+    followedRunId,
+    disableAutoSelection,
+    manuallyUnselected,
+    setSelectedDataclip,
+    setSelectedTab,
+  ]);
 
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};
     if (selectedClipType) filters['type'] = selectedClipType;
-    if (selectedDates.before) filters['before'] = selectedDates.before;
-    if (selectedDates.after) filters['after'] = selectedDates.after;
+    if (selectedDates.before)
+      filters['before'] = toUtcIsoDateTime(selectedDates.before);
+    if (selectedDates.after)
+      filters['after'] = toUtcIsoDateTime(selectedDates.after);
     if (namedOnly) filters['named_only'] = 'true';
     return filters;
   }, [selectedClipType, selectedDates.before, selectedDates.after, namedOnly]);
@@ -392,14 +417,8 @@ export function ManualRunPanel({
     if (!dataclipJobId) return;
 
     const timeoutId = setTimeout(() => {
-      const filters: Record<string, string> = {};
-      if (selectedClipType) filters['type'] = selectedClipType;
-      if (selectedDates.before) filters['before'] = selectedDates.before;
-      if (selectedDates.after) filters['after'] = selectedDates.after;
-      if (namedOnly) filters['named_only'] = 'true';
-
       void dataclipApi
-        .searchDataclips(projectId, dataclipJobId, searchQuery, filters)
+        .searchDataclips(projectId, dataclipJobId, searchQuery, buildFilters())
         .then(response => {
           setDataclips(response.data);
           return response;
@@ -410,28 +429,25 @@ export function ManualRunPanel({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [
-    selectedClipType,
-    selectedDates.before,
-    selectedDates.after,
-    namedOnly,
-    searchQuery,
-    selectedTab,
-    projectId,
-    dataclipJobId,
-  ]);
+  }, [searchQuery, selectedTab, projectId, dataclipJobId, buildFilters]);
 
-  const handleCustomBodyChange = useCallback((value: string) => {
-    setCustomBody(value);
-  }, []);
+  const handleCustomBodyChange = useCallback(
+    (value: string) => {
+      setCustomBody(value);
+    },
+    [setCustomBody]
+  );
 
-  const handleSelectDataclip = useCallback((dataclip: Dataclip) => {
-    setSelectedDataclip(dataclip);
-  }, []);
+  const handleSelectDataclip = useCallback(
+    (dataclip: Dataclip) => {
+      setSelectedDataclip(dataclip);
+    },
+    [setSelectedDataclip]
+  );
 
   const handleUnselectDataclip = useCallback(() => {
     setSelectedDataclip(null);
-  }, []);
+  }, [setSelectedDataclip]);
 
   const handleDataclipNameChange = useCallback(
     async (dataclipId: string, name: string | null) => {
@@ -446,7 +462,7 @@ export function ManualRunPanel({
       setSelectedDataclip(updated);
       setDataclips(prev => prev.map(d => (d.id === updated.id ? updated : d)));
     },
-    [projectId]
+    [projectId, setSelectedDataclip]
   );
 
   useKeyboardShortcut(

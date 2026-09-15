@@ -384,6 +384,117 @@ defmodule LightningWeb.DataclipControllerTest do
       assert %{"data" => _dataclips} = json_response(conn, 200)
     end
 
+    test "returns 422 for invalid datetime filter values", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      conn =
+        get(
+          conn,
+          ~p"/projects/#{project}/jobs/#{job}/dataclips?before=not-a-date"
+        )
+
+      assert response(conn, 422)
+    end
+
+    # Ensure direct API datetime values without timezone are still applied as
+    # real boundaries, not just parsed successfully.
+    test "applies before filter boundary for direct API datetime without timezone",
+         %{
+           conn: conn,
+           project: project,
+           job: job
+         } do
+      inside_ts = ~U[2026-01-15 10:05:00Z]
+      outside_ts = ~U[2026-01-15 10:15:00Z]
+
+      inside =
+        insert(:dataclip, project: project, inserted_at: inside_ts)
+
+      outside =
+        insert(:dataclip, project: project, inserted_at: outside_ts)
+
+      insert(:step,
+        job: job,
+        input_dataclip: inside,
+        started_at: inside_ts,
+        finished_at: inside_ts
+      )
+
+      insert(:step,
+        job: job,
+        input_dataclip: outside,
+        started_at: outside_ts,
+        finished_at: outside_ts
+      )
+
+      conn =
+        get(
+          conn,
+          ~p"/projects/#{project}/jobs/#{job}/dataclips?before=2026-01-15T10:10:00"
+        )
+
+      %{"data" => dataclips} = json_response(conn, 200)
+      returned_ids = MapSet.new(Enum.map(dataclips, & &1["id"]))
+
+      assert MapSet.member?(returned_ids, inside.id)
+      refute MapSet.member?(returned_ids, outside.id)
+    end
+
+    test "before filter includes dataclip exactly on the boundary", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      before_boundary_ts = ~U[2026-01-15 10:09:59Z]
+      boundary_ts = ~U[2026-01-15 10:10:00Z]
+      after_boundary_ts = ~U[2026-01-15 10:10:01Z]
+
+      before_boundary =
+        insert(:dataclip, project: project, inserted_at: before_boundary_ts)
+
+      on_boundary =
+        insert(:dataclip, project: project, inserted_at: boundary_ts)
+
+      after_boundary =
+        insert(:dataclip, project: project, inserted_at: after_boundary_ts)
+
+      insert(:step,
+        job: job,
+        input_dataclip: before_boundary,
+        started_at: before_boundary_ts,
+        finished_at: before_boundary_ts
+      )
+
+      insert(:step,
+        job: job,
+        input_dataclip: on_boundary,
+        started_at: boundary_ts,
+        finished_at: boundary_ts
+      )
+
+      insert(:step,
+        job: job,
+        input_dataclip: after_boundary,
+        started_at: after_boundary_ts,
+        finished_at: after_boundary_ts
+      )
+
+      conn =
+        get(
+          conn,
+          ~p"/projects/#{project}/jobs/#{job}/dataclips?before=2026-01-15T10:10:00"
+        )
+
+      %{"data" => dataclips} = json_response(conn, 200)
+      returned_ids = MapSet.new(Enum.map(dataclips, & &1["id"]))
+
+      assert MapSet.member?(returned_ids, before_boundary.id)
+      assert MapSet.member?(returned_ids, on_boundary.id)
+      refute MapSet.member?(returned_ids, after_boundary.id)
+    end
+
     test "requires authentication", %{project: project, job: job} do
       conn = build_conn()
       conn = get(conn, ~p"/projects/#{project}/jobs/#{job}/dataclips")

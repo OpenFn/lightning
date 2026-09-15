@@ -10,6 +10,8 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+
 # Apollo (AI assistant service). Compiled defaults so these are never nil;
 # Config.Bootstrap overrides them from the environment. See there for what
 # each one bounds.

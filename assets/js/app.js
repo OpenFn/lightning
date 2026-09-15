@@ -63,7 +63,10 @@ const csrfToken = document
   .getAttribute('content');
 
 const liveSocket = new LiveSocket('/live', Socket, {
-  params: { _csrf_token: csrfToken },
+  params: {
+    _csrf_token: csrfToken,
+    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  },
   hooks,
   dom: {
     onBeforeElUpdated(from, to) {
