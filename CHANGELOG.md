@@ -19,6 +19,13 @@ and this project adheres to
 
 ### Changed
 
+### Removed
+
+- The `petal_components` dependency. The three components still in use are now
+  the app's own: the re-authenticate page's avatar uses `user_avatar`, the audit
+  log's event badge uses `pill`, and the superuser note on the users page is
+  plain markup.
+
 ### Fixed
 
 ## [2.19.0-pre] - 2026-09-10
