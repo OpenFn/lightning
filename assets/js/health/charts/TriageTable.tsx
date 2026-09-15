@@ -1,3 +1,4 @@
+import { historyUrl } from '../historyUrl';
 import type { ErrorSignature } from '../types';
 
 import { EMPTY } from './Donut';
@@ -134,7 +135,7 @@ export const TriageTable = ({
               <td className="py-3 pl-4 text-right">
                 {signature.exit_reason && (
                   <ViewButton
-                    href={historyUrl(projectId, workflowId, from, signature)}
+                    href={signatureUrl(projectId, workflowId, from, signature)}
                   />
                 )}
               </td>
@@ -158,7 +159,7 @@ const ViewButton = ({ href }: { href: string }) => (
     rel="noopener noreferrer"
     className="inline-flex items-center gap-x-1 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
   >
-    View
+    View <span className="sr-only">(opens in a new tab)</span>
     <span className="hero-arrow-right-micro h-3 w-3" />
   </a>
 );
@@ -173,35 +174,25 @@ const ViewButton = ({ href }: { href: string }) => (
 // row's, and a status the reason names would only subtract from it — a `fail:`
 // row counts every work order whose latest run holds a step that failed,
 // whatever state the run itself ended in.
-const historyUrl = (
+const signatureUrl = (
   projectId: string,
   workflowId: string,
   from: string,
   signature: ErrorSignature
 ) => {
-  // History only applies its own defaults to a visit that names no filters at
-  // all, and this link names several. Without `log`, arriving here drops the
-  // one search field a normal history visit starts with, and the first search
-  // term typed into the box matches nothing with every toggle visibly off.
-  const params = new URLSearchParams({
-    'filters[workflow_id]': workflowId,
-    'filters[date_after]': from,
-    'filters[log]': 'true',
-  });
-
   if (signature.exit_reason === 'rejected') {
-    params.set('filters[rejected]', 'true');
-  } else {
-    params.set('filters[error_signature_exit_reason]', signature.exit_reason);
-    if (signature.error_type) {
-      params.set('filters[error_signature_error_type]', signature.error_type);
-    }
-    if (signature.job_id) {
-      params.set('filters[error_signature_job_id]', signature.job_id);
-    }
+    return historyUrl(projectId, workflowId, {
+      date_after: from,
+      rejected: 'true',
+    });
   }
 
-  return `/projects/${projectId}/history?${params.toString()}`;
+  return historyUrl(projectId, workflowId, {
+    date_after: from,
+    error_signature_exit_reason: signature.exit_reason,
+    error_signature_error_type: signature.error_type,
+    error_signature_job_id: signature.job_id,
+  });
 };
 
 // The parts are styled apart rather than concatenated server-side: the error
