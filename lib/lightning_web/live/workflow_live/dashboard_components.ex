@@ -569,10 +569,11 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   slot :suffix, required: false
   slot :link, required: false
+  attr :rest, :global
 
   def metric_card(assigns) do
     ~H"""
-    <div class="bg-white rounded-lg ring-1 ring-gray-200 shadow-xs py-4 px-5">
+    <div class="bg-white rounded-lg ring-1 ring-gray-200 shadow-xs py-4 px-5" {@rest}>
       <h2 class="text-[13px] font-medium text-gray-500 truncate">{@title}</h2>
       <div class="mt-2 text-3xl font-bold text-gray-800">
         {render_slot(@value)}
