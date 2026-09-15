@@ -224,6 +224,10 @@ and this project adheres to
   warns which triggers and channels will lose authentication.
 - Deleting a webhook auth method now logs each trigger and channel it was
   detached from, in addition to the deletion itself.
+- Project settings now allow `owner` and `admin` users to edit collaborator
+  roles inline (viewer/editor/admin) without remove-and-readd. Owner rows and
+  self-role edits remain non-editable.
+  [#3603](https://github.com/OpenFn/lightning/issues/3603)
 
 ### Changed
 

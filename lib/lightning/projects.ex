@@ -803,6 +803,25 @@ defmodule Lightning.Projects do
   @notification_pref_fields [:failure_alert, :digest]
 
   @doc """
+  Updates a project user.
+
+  ## Examples
+
+      iex> update_project_user(project_user, %{field: new_value})
+      {:ok, %ProjectUser{}}
+
+      iex> update_project_user(projectUser, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+  """
+  @spec update_project_user(ProjectUser.t(), map()) ::
+          {:ok, ProjectUser.t()} | {:error, Ecto.Changeset.t()}
+  def update_project_user(%ProjectUser{} = project_user, attrs) do
+    project_user
+    |> ProjectUser.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
   Updates a single notification preference on a project user.
 
   Returns `:unchanged` when the submitted value casts equal to the current
