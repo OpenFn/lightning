@@ -115,10 +115,6 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "log" => true,
                "body" => false,
                "failed" => true,
-               "wo_date_after" => nil,
-               "wo_date_before" => nil,
-               "date_after" => nil,
-               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "dataclip_name" => true
              }
@@ -131,19 +127,33 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "failed" => true,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
              }) == %{
-               "id" => true,
-               "log" => true,
-               "body" => true,
                "failed" => true,
-               "wo_date_after" => nil,
-               "wo_date_before" => nil,
-               "date_after" => nil,
-               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "sort_direction" => "desc",
-               "sort_by" => "inserted_at",
-               "dataclip_name" => true
+               "sort_by" => "inserted_at"
              }
+    end
+
+    test "omits the search-field flags when the caller names none of them" do
+      params =
+        SearchParams.to_uri_params(%{
+          "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
+        })
+
+      assert params == %{"workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"}
+
+      # Dropping them changes nothing on the way back in: the schema default
+      # stands, so search still covers all four fields.
+      assert Enum.sort(SearchParams.new(params).search_fields) ==
+               Enum.sort(
+                 SearchParams.new(%{
+                   "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
+                   "id" => true,
+                   "body" => true,
+                   "log" => true,
+                   "dataclip_name" => true
+                 }).search_fields
+               )
     end
 
     test "converts dates to string" do
@@ -162,10 +172,8 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "log" => false,
                "id" => false,
                "crashed" => true,
-               "wo_date_after" => nil,
                "wo_date_before" => now |> DateTime.to_string(),
                "date_after" => now |> DateTime.to_string(),
-               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "dataclip_name" => true
              }

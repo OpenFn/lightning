@@ -145,7 +145,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]="
+          "filters[date_after]=#{date}.*&amp;filters[pending]=true&amp;filters[running]=true"
         end)
 
       assert html
@@ -220,7 +220,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]="
+          "filters[date_after]=#{date}"
         end)
 
       assert html

@@ -142,27 +142,34 @@ defmodule Lightning.WorkOrders.SearchParams do
     |> dates_to_string()
   end
 
+  # A link naming none of the four search-field flags reads back the same as one
+  # naming all four: `put_search_fields/2` leaves the key out and the schema
+  # default stands. Spelling them out only lengthens the URL, which the digest
+  # email prints as text. A link naming some of them is making a choice, so the
+  # rest are still filled in.
   defp merge_fields(search_params, defaults) do
-    (defaults -- Map.keys(search_params))
-    |> Enum.map(fn x -> {x, true} end)
-    |> Enum.into(%{})
-    |> Map.merge(search_params)
+    if Enum.any?(defaults, &Map.has_key?(search_params, &1)) do
+      (defaults -- Map.keys(search_params))
+      |> Enum.map(fn x -> {x, true} end)
+      |> Enum.into(%{})
+      |> Map.merge(search_params)
+    else
+      search_params
+    end
   end
 
+  # A date the caller did not set is dropped rather than emitted as an empty
+  # param, so the URL carries only the dates it actually filters on.
   defp dates_to_string(search_params) do
     ~w(date_after date_before wo_date_after wo_date_before)a
-    |> Enum.map(fn key ->
+    |> Enum.reduce(search_params, fn key, params ->
       key = Atom.to_string(key)
-      value = Map.get(search_params, key)
 
-      if value do
-        {key, DateTime.to_string(value)}
-      else
-        {key, value}
+      case Map.get(params, key) do
+        nil -> Map.delete(params, key)
+        value -> Map.put(params, key, DateTime.to_string(value))
       end
     end)
-    |> Enum.into(%{})
-    |> Map.merge(search_params, fn _key, v1, _v2 -> v1 end)
   end
 
   # Oban args (JSON): rebuilds the struct new/1 validated before enqueue. Runs
