@@ -197,9 +197,9 @@ const bucketHours = (buckets: RunBucket[]) => {
 /**
  * The card's meta line, measured off the same buckets the chart draws.
  *
- * Names the zone as well as the width: the axis and the tooltip are in UTC,
- * while the page's freshness stamp is in the reader's own clock, so a bar can
- * sit hours behind a "Last Updated" that looks current.
+ * Names the zone as well as the width: the axis and the tooltip are in UTC, so
+ * a reader whose own day starts hours either side of it can tell which day a
+ * bar is counting.
  */
 export const bucketMeta = (buckets: RunBucket[]) => {
   const hours = bucketHours(buckets);
