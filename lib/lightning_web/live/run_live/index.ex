@@ -975,31 +975,33 @@ defmodule LightningWeb.RunLive.Index do
   # Convert browser-local wall time to UTC using the browser's IANA timezone.
   defp normalize_datetime_filter_value(value, timezone)
        when is_binary(value) and is_binary(timezone) do
-    if String.match?(value, ~r/(Z|[+-]\d{2}:?\d{2})$/) do
+    if Regex.match?(~r/(Z|[+-]\d{2}:?\d{2})$/, value) do
       value
     else
-      with {:ok, naive} <- parse_local_naive_datetime(value) do
-        case DateTime.from_naive(naive, timezone) do
-          {:ok, local_datetime} ->
-            local_datetime
-            |> DateTime.shift_zone!("Etc/UTC")
-            |> DateTime.to_iso8601()
+      case parse_local_naive_datetime(value) do
+        {:ok, naive} ->
+          case DateTime.from_naive(naive, timezone) do
+            {:ok, local_datetime} ->
+              local_datetime
+              |> DateTime.shift_zone!("Etc/UTC")
+              |> DateTime.to_iso8601()
 
-          {:ambiguous, local_datetime, _other} ->
-            local_datetime
-            |> DateTime.shift_zone!("Etc/UTC")
-            |> DateTime.to_iso8601()
+            {:ambiguous, local_datetime, _other} ->
+              local_datetime
+              |> DateTime.shift_zone!("Etc/UTC")
+              |> DateTime.to_iso8601()
 
-          {:gap, _before, gap_after} ->
-            gap_after
-            |> DateTime.shift_zone!("Etc/UTC")
-            |> DateTime.to_iso8601()
+            {:gap, _before, gap_after} ->
+              gap_after
+              |> DateTime.shift_zone!("Etc/UTC")
+              |> DateTime.to_iso8601()
 
-          {:error, _reason} ->
-            value
-        end
-      else
-        _ -> value
+            {:error, _reason} ->
+              value
+          end
+
+        _ ->
+          value
       end
     end
   end
