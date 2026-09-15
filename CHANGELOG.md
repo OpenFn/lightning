@@ -19,6 +19,13 @@ and this project adheres to
 
 ### Changed
 
+- Failure alerts and project digests now link to the workflow health page, where
+  failures are grouped by error signature. The digest keeps its history link for
+  the runs behind its counts, and shows the health link only for workflows that
+  actually failed.
+- Links to the history page are shorter. They no longer spell out search filters
+  the page already applies by default, or carry empty date filters.
+
 ### Fixed
 
 ## [2.19.0-pre1] - 2026-09-15
@@ -85,10 +92,10 @@ and this project adheres to
   version on screen that the list beside it could not name.
   [#5180](https://github.com/OpenFn/lightning/issues/5180)
 
-- Deleting a trigger now counts as a change to a workflow's content. It was
-  read as a change to the trigger's enabled flag alone, which a promote cannot
-  carry, so a sandbox that had deleted one reported itself as identical to its
-  parent. [#5181](https://github.com/OpenFn/lightning/issues/5181)
+- Deleting a trigger now counts as a change to a workflow's content. It was read
+  as a change to the trigger's enabled flag alone, which a promote cannot carry,
+  so a sandbox that had deleted one reported itself as identical to its parent.
+  [#5181](https://github.com/OpenFn/lightning/issues/5181)
 
 - A merge or promote of selected workflows no longer asks everyone editing the
   project's other workflows to reload, which threw away whatever they had not
