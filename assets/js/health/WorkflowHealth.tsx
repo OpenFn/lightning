@@ -64,11 +64,13 @@ export const WorkflowHealth = ({
         </div>
       </div>
 
-      {/* Four columns: a narrow donut beside a wide time axis, then an even
-          split. Stacks in source order below `lg`. */}
-      <div className="grid gap-6 lg:grid-cols-4">
+      {/* One card wide by default. At `lg` five columns, so the time axis and
+          the triage table get three of them and the donuts two. At `xl` four,
+          tightening the donuts to one. Always in source order. */}
+      <div className="grid gap-6 lg:grid-cols-5 xl:grid-cols-4">
         <Card
           title="Outcomes"
+          className="lg:col-span-2 xl:col-span-1"
           meta={outcomes.data && workOrders(outcomes.data.counts)}
         >
           <Panel data={outcomes.data} error={outcomes.error}>
@@ -98,7 +100,7 @@ export const WorkflowHealth = ({
           </Panel>
         </Card>
 
-        <Card title="Triage" className="lg:col-span-2">
+        <Card title="Triage" className="lg:col-span-3">
           <Panel data={signatures.data} error={signatures.error}>
             {({ signatures, window }) => (
               <TriageTable
@@ -113,10 +115,12 @@ export const WorkflowHealth = ({
         </Card>
 
         {/* Same reply as the Outcomes panel — one aggregate read two ways, so
-            the slices here and the red wedge there cannot disagree. */}
+            the slices here and the red wedge there cannot disagree. Self-start,
+            so the card is only as tall as a donut plus its legend rather than
+            stretching to the triage table beside it. */}
         <Card
           title="Failure breakdown"
-          className="lg:col-span-2"
+          className="self-start lg:col-span-2 xl:col-span-1"
           meta={outcomes.data && failures(outcomes.data.counts)}
         >
           <Panel data={outcomes.data} error={outcomes.error}>

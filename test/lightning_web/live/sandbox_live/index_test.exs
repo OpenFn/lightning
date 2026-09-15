@@ -2408,7 +2408,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      # Both rows start selected; deselect one.
       assert view |> element("#merge-collections-to-add") |> render() =~
                "2 of 2 selected"
 
@@ -2621,7 +2620,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      # Sandbox-only collections list in their own panel, all preselected.
       to_add_html = view |> element("#merge-collections-to-add") |> render()
 
       assert to_add_html =~ "Collections to add"
@@ -2682,7 +2680,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      # The modal says nothing about target-only collections.
       modal_html = view |> element("#merge-sandbox-modal") |> render()
       refute modal_html =~ "parent-only"
 

@@ -787,9 +787,9 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_selected_collection_names, MapSet.new(to_create))
   end
 
-  # The change event fires for every input in the merge form (toggling any
-  # checkbox re-submits it), so only recompute the collections preview - and
-  # reset the row selections - when the target actually changed.
+  # Toggling any checkbox re-submits the merge form, so the change event
+  # fires for every input. Recomputing the preview also resets the row
+  # selections, so only do it when the target changed.
   defp maybe_assign_merge_collections(socket, sandbox, target_project) do
     new_target_id = target_project && target_project.id
 
@@ -1110,11 +1110,9 @@ defmodule LightningWeb.SandboxLive.Index do
     MergeProjects.diverged_workflows(target_project, source)
   end
 
-  # The merge always creates whatever collections the target lacks; only
-  # names the user explicitly unchecked are skipped. The unchecked set is
-  # honored only for the target it was previewed against - for any other
-  # target nothing is skipped. Either way a collection added to the sandbox
-  # after the preview still gets created: skipping is explicit, creating is
+  # Only names the user explicitly unchecked are skipped, and only for the
+  # target they were previewed against. A collection added to the sandbox
+  # after the preview is still created. Skipping is explicit, creating is
   # the default.
   defp skipped_collection_names(assigns, target) do
     if assigns.merge_collections_target_id == target.id do

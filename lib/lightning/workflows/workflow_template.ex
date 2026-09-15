@@ -42,8 +42,9 @@ defmodule Lightning.Workflows.WorkflowTemplate do
       max: 1000,
       message: "Description must be less than 1000 characters"
     )
-    # positions is jsonb and code, description and tags are text columns, all
-    # copied into the snapshot. publish_template exposes every one (#4893).
+    # positions is jsonb and code, description and tags are text columns.
+    # Postgres refuses a NUL in either, and publish_template passes every one
+    # of them straight from the client.
     |> Lightning.Validators.validate_no_null_bytes_deep(
       :positions,
       "Positions can't contain a null byte"

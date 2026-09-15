@@ -6,8 +6,8 @@
  * into the same git-synced repos, so if the two disagree the same workflow
  * exports two different ways depending on which side did it.
  *
- * Reachable only since #4577: a job name could not contain `>` before, so
- * `a` + `b->c` and `a->b` + `c` could not both key to `a->b->c`.
+ * A job name may contain `>`, so `a` + `b->c` and `a->b` + `c` both key to
+ * `a->b->c`.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -74,8 +74,8 @@ describe('edge keys match the server', () => {
 
     const spec = specFor(collision as EdgeCase);
 
-    // Two edges in, two out. The browser used to keep the last and the spec
-    // came out an edge short, with no error.
+    // Two edges in, two out. Keeping only the last would leave the spec an
+    // edge short, with no error.
     expect(Object.keys(spec.edges)).toHaveLength(2);
 
     // Both edges still name their own source and target, which is what the

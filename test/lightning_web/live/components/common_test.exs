@@ -4,11 +4,11 @@ defmodule LightningWeb.Components.CommonTest do
   import Phoenix.LiveViewTest
 
   describe "wrapper_tooltip/1 and HTML" do
-    # The hook used to read aria-label off the DOM *property*, which undoes the
-    # escaping HEEx applied to the attribute, and hand the result to tippy with
-    # allowHTML on, so a workflow name holding markup became live elements for
-    # anyone viewing the project (#4577). The content now goes in a <template>
-    # that the browser parses, so no caller decides whether a name is markup.
+    # Tooltip content goes in a <template> the browser parses. It must never
+    # travel through an attribute the hook reads back as a DOM property and
+    # hands to tippy with allowHTML on. Reading the property undoes the escaping
+    # HEEx applied, so a workflow name holding markup would render as live
+    # elements for anyone viewing the project.
     defp render_tooltip(assigns) do
       render_component(
         &LightningWeb.Components.Common.wrapper_tooltip/1,

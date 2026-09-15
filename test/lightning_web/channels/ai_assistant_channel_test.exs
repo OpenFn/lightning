@@ -3,6 +3,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
   @moduletag :capture_log
   import Mox
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   import Lightning.{
@@ -17,6 +18,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
   alias LightningWeb.AiAssistantChannel
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Process.put(:oban_testing, :manual)
@@ -350,7 +352,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert %{"content" => [message]} = errors
       assert message =~ "should be at most 10000 character(s)"
 
-      # Shown to the reader as it stands, so it cannot be a code.
+      # The reason is shown to the user verbatim, so it is a message rather
+      # than an error code.
       assert reason =~ "should be at most 10000 character(s)"
     end
   end

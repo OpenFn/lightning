@@ -11,7 +11,6 @@ import {
 } from '../../../js/collaborative-editor/hooks/useRunRetry';
 import type { Dataclip } from '../../../js/collaborative-editor/api/dataclips';
 import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
-import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import type {
   RunDetail,
   StepDetail,
@@ -23,6 +22,7 @@ import {
   getURLStateMockValue,
 } from '../__helpers__';
 import type { SessionContextState } from '../../../js/collaborative-editor/types/sessionContext';
+import { createTestSessionStore } from '../__helpers__/sessionStoreHelpers';
 import { createMockSocket } from '../mocks/phoenixSocket';
 import {
   createMockSessionContextStore,
@@ -74,7 +74,7 @@ function setMockActiveRun(run: RunDetail | null) {
  */
 function createWrapper(): React.ComponentType<{ children: React.ReactNode }> {
   // Create session store and initialize it
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const mockSocket = createMockSocket();
   sessionStore.initializeSession(mockSocket, 'test:room', {
     id: 'user-1',
@@ -728,7 +728,7 @@ describe('useRunRetry - handleRetry', () => {
       };
 
       // Create wrapper with getLimits mock using standardized factories
-      const sessionStore = createSessionStore();
+      const sessionStore = createTestSessionStore();
       const mockSocket = createMockSocket();
       sessionStore.initializeSession(mockSocket, 'test:room', {
         id: 'user-1',
@@ -810,7 +810,7 @@ describe('useRunRetry - handleRetry', () => {
       };
 
       // Create wrapper with getLimits mock using standardized factories
-      const sessionStore = createSessionStore();
+      const sessionStore = createTestSessionStore();
       const mockSocket = createMockSocket();
       sessionStore.initializeSession(mockSocket, 'test:room', {
         id: 'user-1',

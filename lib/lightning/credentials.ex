@@ -584,19 +584,64 @@ defmodule Lightning.Credentials do
 
   @doc """
   Creates a credential schema from credential json schema.
+
+  `{:error, :not_found}` means the catalogue has no such adaptor;
+  `{:error, :not_ready}` means it has never loaded.
   """
-  @spec get_schema(String.t()) :: Credentials.Schema.t()
+  @spec get_schema(String.t()) ::
+          {:ok, Credentials.Schema.t()}
+          | {:error, :not_found | :not_ready | term()}
   def get_schema(schema_name) do
-    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
-
-    File.read("#{schemas_path}/#{schema_name}.json")
-    |> case do
-      {:ok, raw_json} ->
-        Credentials.Schema.new(raw_json, schema_name)
-
-      {:error, reason} ->
-        raise "Error reading credential schema. Got: #{reason |> inspect()}"
+    with {:ok, resolved} <- Lightning.Adaptors.resolve_name(schema_name),
+         {:ok, schema_body} <- Lightning.Adaptors.schema(resolved) do
+      {:ok, Credentials.Schema.new(schema_body, resolved)}
     end
+  end
+
+  @doc """
+  Resolves every credential's legacy short-form `schema` to its full npm
+  package name, in place. Idempotent; safe to call repeatedly.
+
+  Does not touch `updated_at` or emit audit events; this is a
+  storage-format fix, not an edit.
+  """
+  @spec reconcile_legacy_schema_names(atom()) :: non_neg_integer()
+  def reconcile_legacy_schema_names(sup) do
+    updated =
+      from(c in Credential,
+        where: not like(c.schema, "@%"),
+        select: c.schema,
+        distinct: true
+      )
+      |> Repo.all()
+      |> Enum.reduce(0, fn short, count ->
+        case Lightning.Adaptors.resolve_name(sup, short) do
+          {:ok, ^short} ->
+            count
+
+          {:ok, full} ->
+            {n, _} =
+              Repo.update_all(from(c in Credential, where: c.schema == ^short),
+                set: [schema: full]
+              )
+
+            count + n
+
+          {:error, reason} ->
+            Logger.warning(
+              "Could not resolve credential schema #{inspect(short)}: " <>
+                "#{inspect(reason)}"
+            )
+
+            count
+        end
+      end)
+
+    if updated > 0 do
+      Logger.info("Reconciled #{updated} legacy credential schema name(s)")
+    end
+
+    updated
   end
 
   defp cast_credential_body_change(
@@ -606,6 +651,13 @@ defmodule Lightning.Credentials do
     case put_typed_body(body, schema_name) do
       {:ok, updated_body} ->
         Ecto.Changeset.put_change(changeset, :body, updated_body)
+
+      {:error, reason} when reason in [:not_ready, :timeout, :unavailable] ->
+        Ecto.Changeset.add_error(
+          changeset,
+          :body,
+          "adaptor catalogue is not ready yet, try again shortly"
+        )
 
       {:error, _reason} ->
         Ecto.Changeset.add_error(changeset, :body, "Invalid body types")
@@ -619,9 +671,8 @@ defmodule Lightning.Credentials do
        do: {:ok, body}
 
   defp put_typed_body(body, schema_name) do
-    schema = get_schema(schema_name)
-
-    with changeset <- SchemaDocument.changeset(body, schema: schema),
+    with {:ok, schema} <- get_schema(schema_name),
+         changeset <- SchemaDocument.changeset(body, schema: schema),
          {:ok, typed_body} <- Ecto.Changeset.apply_action(changeset, :insert) do
       updated_body =
         Enum.into(typed_body, body, fn {field, typed_value} ->

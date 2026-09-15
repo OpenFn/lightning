@@ -15,29 +15,81 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Lightning now keeps its own adaptor registry instead of fetching the list from
+  npm at startup, so new adaptors and versions show up without a rebuild or
+  redeploy. See [ADAPTORS.md](ADAPTORS.md).
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+> **Upgrading.** Delete `SCHEMAS_PATH` and `ADAPTORS_REGISTRY_JSON_PATH` from
+> your deployment config; nothing reads them any more.
+>
+> Drop any build step that calls `mix lightning.install_schemas`,
+> `mix lightning.install_adaptor_icons` or
+> `mix lightning.download_adaptor_registry_cache`, these have been removed.
+>
+> Point `ADAPTORS_ICONS_PATH` to a persistent volume or storage that survives a
+> restart, the official image and `docker-compose.yml` mount a volume for it. A
+> running instance now needs outbound access to jsDelivr and
+> raw.githubusercontent.com (in addition to npm). `LOCAL_ADAPTORS` and
+> `OPENFN_ADAPTORS_REPO` still work under their old names and warn at boot;
+> rename them to `ADAPTORS_STRATEGY=local` and `ADAPTORS_LOCAL_REPO`. These will
+> be removed in a future release.
+
 ### Added
 
-- A workflow is now a draft or it is live, and you drive that from the editor. A live workflow processes production data and is read-only, so to change one you edit it in a sandbox: the workflow is cloned in as a draft, you turn it on there to test against its own webhook URL and schedules, and you promote it back when it is right. Every go-live, promote and restore is recorded as a version, with who published it and where it came from, and any version can be restored while production keeps running. Behind the experimental features setting. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+- A workflow is now a draft or it is live, and you drive that from the editor. A
+  live workflow processes production data and is read-only, so to change one you
+  edit it in a sandbox: the workflow is cloned in as a draft, you turn it on
+  there to test against its own webhook URL and schedules, and you promote it
+  back when it is right. Every go-live, promote and restore is recorded as a
+  version, with who published it and where it came from, and any version can be
+  restored while production keeps running. Behind the experimental features
+  setting. [#4852](https://github.com/OpenFn/lightning/issues/4852)
 
-- The editor asks before it throws away unsaved changes. Switching version, opening a run that pins one, and leaving for a sandbox each destroyed the collaborative document and took uncommitted edits with it, silently. [#5134](https://github.com/OpenFn/lightning/issues/5134)
+- The editor asks before it throws away unsaved changes. Switching version,
+  opening a run that pins one, and leaving for a sandbox each destroyed the
+  collaborative document and took uncommitted edits with it, silently.
+  [#5134](https://github.com/OpenFn/lightning/issues/5134)
 
 ### Fixed
 
-- A live workflow can be run and retried by hand again. Every run control saved the workflow on its way out, and a live one refuses that save, so the run never happened. Running is not editing: the person responsible for a live workflow has to be able to put a test input through what is in production. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+- A live workflow can be run and retried by hand again. Every run control saved
+  the workflow on its way out, and a live one refuses that save, so the run
+  never happened. Running is not editing: the person responsible for a live
+  workflow has to be able to put a test input through what is in production.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
 
-- Reading an older version of a workflow can no longer write that version back over the workflow. Going live or switching to draft while reading one saved the old content in place of the current, deleting anything added since and recording it as an ordinary new version. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+- Reading an older version of a workflow can no longer write that version back
+  over the workflow. Going live or switching to draft while reading one saved
+  the old content in place of the current, deleting anything added since and
+  recording it as an ordinary new version.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
 
-- Opening the merge dialog, and deleting a sandbox, no longer crash in a workspace with a branch more than one level deep. A sandbox can no longer be merged into one of its own descendants either, which used to schedule the source for deletion. [#5141](https://github.com/OpenFn/lightning/issues/5141)
+- Opening the merge dialog, and deleting a sandbox, no longer crash in a
+  workspace with a branch more than one level deep. A sandbox can no longer be
+  merged into one of its own descendants either, which used to schedule the
+  source for deletion. [#5141](https://github.com/OpenFn/lightning/issues/5141)
 
-- Merging a sandbox no longer reports its own merge as the parent having moved on. A merge now records where it left the parent, so the next one compares against that rather than warning about work it did itself. [#5167](https://github.com/OpenFn/lightning/issues/5167)
+- Merging a sandbox no longer reports its own merge as the parent having moved
+  on. A merge now records where it left the parent, so the next one compares
+  against that rather than warning about work it did itself.
+  [#5167](https://github.com/OpenFn/lightning/issues/5167)
 
-- Merging into a project someone has open now updates their editor instead of leaving it stale. A stale document overwrote the merge on its next save. [#5168](https://github.com/OpenFn/lightning/issues/5168)
+- Merging into a project someone has open now updates their editor instead of
+  leaving it stale. A stale document overwrote the merge on its next save.
+  [#5168](https://github.com/OpenFn/lightning/issues/5168)
 
-- Undo and redo are disabled while reading an older version of a workflow. They were writing into that version's own document. [#5169](https://github.com/OpenFn/lightning/issues/5169)
+- Undo and redo are disabled while reading an older version of a workflow. They
+  were writing into that version's own document.
+  [#5169](https://github.com/OpenFn/lightning/issues/5169)
 
 ### Security
 
-- A project's environment can no longer be changed once the project exists. It decides which of a credential's value sets the project reads, so an admin who could retype it could read any set of any credential the project holds.
+- A project's environment can no longer be changed once the project exists. It
+  decides which of a credential's value sets the project reads, so an admin who
+  could retype it could read any set of any credential the project holds.
 
 ## [2.19.0-pre] - 2026-09-10
 

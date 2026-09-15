@@ -35,8 +35,8 @@ defmodule Lightning.Validators do
   #
   # Control characters are out because job names are written into the
   # `workflow_snapshots.jobs` jsonb column, and Postgres refuses a NUL inside
-  # jsonb, so a name carrying one crashes the snapshot insert (#4893). We
-  # reject rather than strip.
+  # jsonb, so a name carrying one crashes the snapshot insert. We reject
+  # rather than strip.
   #
   # `Lightning.LogMessage` keeps a narrower regex that it strips rather than
   # rejects. That is deliberate for log lines, which legitimately hold tabs and
@@ -59,7 +59,7 @@ defmodule Lightning.Validators do
   # A name that merely contains one of these is fine: a joiner is how an emoji
   # sequence, a Devanagari conjunct and an Arabic ligature are written.
   # Written on one line on purpose: PCRE's /x does not ignore whitespace inside
-  # a character class, so laying this out over several lines silently put a
+  # a character class, so laying this out over several lines would put a
   # literal space and newline into the set.
   @invisible_regex ~r/\A[\p{Cf}\x{034F}\x{115F}\x{1160}\x{17B4}\x{17B5}\x{180B}-\x{180F}\x{2065}\x{2800}\x{3164}\x{FE00}-\x{FE0F}\x{FFA0}\x{FFF0}-\x{FFF8}\x{13430}-\x{1343F}\x{E0000}-\x{E0FFF}]+\z/u
 
