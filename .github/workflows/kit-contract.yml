@@ -1,11 +1,10 @@
 name: Integration Testing
 on:
   pull_request:
-    types: [opened, synchronize, labeled]
+    types: [opened, synchronize]
 jobs:
   contract:
     name: test build against kit
-    if: contains(github.event.pull_request.labels.*.name, 'run_contract_tests')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:
