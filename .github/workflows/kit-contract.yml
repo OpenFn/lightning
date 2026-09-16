@@ -1,0 +1,22 @@
+name: Integration Testing
+on:
+  pull_request:
+    types: [opened, synchronize, labeled]
+jobs:
+  contract:
+    name: test build against kit
+    if: contains(github.event.pull_request.labels.*.name, 'run_contract_tests')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: OpenFn/kit-lightning-integration@v1
+        with:
+          lightning: ${{ github.workspace }}
+          worker: latest
