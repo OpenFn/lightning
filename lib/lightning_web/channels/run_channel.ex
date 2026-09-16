@@ -480,7 +480,7 @@ defmodule LightningWeb.RunChannel do
        when is_integer(code),
        do: code
 
-  defp default_response_status(:success, _config), do: 201
+  defp default_response_status(:success, _config), do: 200
 
   defp default_response_status(_run_status, %{error_code: code})
        when is_integer(code),
