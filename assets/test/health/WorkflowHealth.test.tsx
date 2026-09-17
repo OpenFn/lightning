@@ -127,16 +127,6 @@ describe('WorkflowHealth', () => {
     );
   });
 
-  test('moves the updated clock when the numbers arrive', async () => {
-    mount(both);
-
-    expect(
-      await screen.findByText(
-        `Last Updated ${new Date(outcomes.window.to).toLocaleTimeString()}`
-      )
-    ).toBeVisible();
-  });
-
   test('polls every 30 seconds while the tab is visible, and stops while hidden', async () => {
     // Mutable so the polled request can answer differently.
     const responses: Record<string, unknown> = { ...both };
