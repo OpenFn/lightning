@@ -95,12 +95,14 @@ export const WorkflowHealth = ({
         <Card
           title="Runs over time"
           className="lg:col-span-6"
-          meta={volume.data && bucketMeta(volume.data.buckets)}
+          meta={volume.data && bucketMeta(volume.data)}
         >
           <Panel data={volume.data} error={volume.error}>
-            {({ buckets, window }) => (
+            {({ buckets, window, timezone, bucket_hours }) => (
               <VolumeBars
                 buckets={buckets}
+                timezone={timezone}
+                hours={bucket_hours}
                 emptyMessage={emptyMessage(window, 'runs')}
               />
             )}

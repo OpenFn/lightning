@@ -20,7 +20,7 @@ describe('VolumeBars', () => {
             failed: 3,
             crashed: 2,
           }),
-          bucket('2026-09-09T00:00:00Z', {
+          bucket('2026-09-08T01:00:00Z', {
             success: 60,
             killed: 1,
             exception: 1,
@@ -28,6 +28,8 @@ describe('VolumeBars', () => {
             cancelled: 4,
           }),
         ]}
+        timezone="Etc/UTC"
+        hours={2}
         emptyMessage="No runs"
       />
     );
@@ -49,8 +51,10 @@ describe('VolumeBars', () => {
       <VolumeBars
         buckets={[
           bucket('2026-09-08T00:00:00Z', { failed: 2, cancelled: 5 }),
-          bucket('2026-09-09T00:00:00Z'),
+          bucket('2026-09-08T01:00:00Z'),
         ]}
+        timezone="Etc/UTC"
+        hours={2}
         emptyMessage="No runs"
       />
     );
@@ -67,8 +71,10 @@ describe('VolumeBars', () => {
       <VolumeBars
         buckets={[
           bucket('2026-09-08T00:00:00Z'),
-          bucket('2026-09-09T00:00:00Z'),
+          bucket('2026-09-08T01:00:00Z'),
         ]}
+        timezone="Etc/UTC"
+        hours={2}
         emptyMessage="No runs in the last 30 days"
       />
     );
@@ -78,54 +84,75 @@ describe('VolumeBars', () => {
   });
 });
 
-// Measured off the gap between the first two buckets, so the meta line follows
-// the bars rather than the range the reader picked.
+// Read off the payload, since the server cuts the grid and names its width.
 describe('bucketMeta', () => {
-  test('names the bucket width the server actually sent', () => {
-    const hourly = (hours: number) => [
-      bucket('2026-09-09T00:00:00Z'),
-      bucket(
-        new Date(
-          Date.parse('2026-09-09T00:00:00Z') + hours * 3_600_000
-        ).toISOString()
-      ),
-    ];
-
-    expect(bucketMeta(hourly(2))).toBe('2-hour buckets · UTC');
-    expect(bucketMeta(hourly(12))).toBe('12-hour buckets · UTC');
-    expect(bucketMeta(hourly(24))).toBe('daily buckets · UTC');
+  const volume = (bucket_hours: number) => ({
+    window: { from: '2026-09-08T21:00:00Z', to: '2026-09-09T21:00:00Z' },
+    timezone: 'Africa/Nairobi',
+    bucket_hours,
+    buckets: [],
   });
 
-  // One bucket has no width to disagree with, so a coarser label is the worst
-  // this can cost.
-  test('falls back to daily when there is nothing to measure', () => {
-    expect(bucketMeta([bucket('2026-09-09T00:00:00Z')])).toBe(
-      'daily buckets · UTC'
-    );
+  test('names the bar width and the clock it is cut on', () => {
+    expect(bucketMeta(volume(2))).toBe('2-hour buckets · Africa/Nairobi');
+    expect(bucketMeta(volume(12))).toBe('12-hour buckets · Africa/Nairobi');
+    expect(bucketMeta(volume(24))).toBe('daily buckets · Africa/Nairobi');
   });
 });
 
-// The axis names where a bucket starts; the tooltip names the whole slot. The
-// day part is left to the locale, so only the clock is asserted literally.
+// The axis names where a bar starts; the tooltip names the whole slot. The day
+// part is left to the locale, so only the clock is asserted literally.
 describe('tickLabel and rangeLabel', () => {
   const at = '2026-09-09T14:00:00Z';
-  const day = tickLabel(at, 24);
+  const day = tickLabel(at, 24, 'Etc/UTC');
 
-  test('clocks the narrow buckets and dates the wide ones', () => {
-    expect(tickLabel(at, 2)).toBe('14:00');
+  test('clocks the narrow bars and dates the wide ones', () => {
+    expect(tickLabel(at, 2, 'Etc/UTC')).toBe('14:00');
     expect(day).not.toBe('');
   });
 
   // The date names where a day starts, so it goes on the morning bar and the
   // afternoon is left blank — a date under the afternoon bar would put the
   // day's start half a day late.
-  test('dates a half-day bucket on its morning bar only', () => {
-    expect(tickLabel('2026-09-09T00:00:00Z', 12)).toBe(day);
-    expect(tickLabel(at, 12)).toBe('');
+  test('dates a half-day bar on its morning bar only', () => {
+    expect(tickLabel('2026-09-09T00:00:00Z', 12, 'Etc/UTC')).toBe(day);
+    expect(tickLabel(at, 12, 'Etc/UTC')).toBe('');
   });
 
-  test('gives the tooltip the whole slot, in UTC', () => {
-    expect(rangeLabel(at, 24)).toBe(`${day} UTC`);
-    expect(rangeLabel(at, 2)).toBe(`${day}, 14:00 – 16:00 UTC`);
+  test('gives the tooltip the whole slot, with no timezone suffix', () => {
+    expect(rangeLabel(at, 24, 'Etc/UTC')).toBe(day);
+    expect(rangeLabel(at, 2, 'Etc/UTC')).toBe(`${day}, 14:00 – 16:00`);
+  });
+
+  // Closed on the wall clock, not on `start + hours`: the last bar of a local
+  // day ends at midnight, and a bar spanning a clock change is 11 or 13 real
+  // hours but still 12 on the clock its labels are drawn on.
+  test('closes the last bar of a day at midnight', () => {
+    const lastBar = '2026-10-25T12:00:00Z';
+
+    expect(rangeLabel('2026-09-09T22:00:00Z', 2, 'Etc/UTC')).toMatch(
+      /22:00 – 00:00$/
+    );
+    expect(rangeLabel(lastBar, 12, 'Europe/London')).toMatch(/12:00 – 00:00$/);
+  });
+
+  // A bar opening at 21:00Z is the start of the next day in Nairobi, and it is
+  // that date the reader has to see.
+  test("dates a bar on the reader's calendar, not on UTC", () => {
+    expect(tickLabel('2026-09-08T21:00:00Z', 24, 'Africa/Nairobi')).toBe(
+      tickLabel('2026-09-09T00:00:00Z', 24, 'Etc/UTC')
+    );
+    expect(tickLabel('2026-09-08T21:00:00Z', 12, 'Africa/Nairobi')).toBe(
+      tickLabel('2026-09-09T00:00:00Z', 24, 'Etc/UTC')
+    );
+  });
+
+  // The half- and quarter-hour zones. The grid is floored on the local clock,
+  // so a boundary is a local whole hour and no label ever needs minutes.
+  test('clocks the off-the-hour zones as whole local hours', () => {
+    expect(tickLabel('2026-09-08T18:30:00Z', 2, 'Asia/Kolkata')).toBe('00:00');
+    expect(tickLabel('2026-09-08T18:15:00Z', 2, 'Asia/Kathmandu')).toBe(
+      '00:00'
+    );
   });
 });

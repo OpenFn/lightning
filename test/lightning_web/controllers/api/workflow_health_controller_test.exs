@@ -33,9 +33,17 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
     )
   end
 
-  defp get_runs(conn, user, project_id, workflow_id, params \\ %{}) do
-    conn
-    |> log_in_user(user)
+  defp get_runs(
+         conn,
+         user,
+         project_id,
+         workflow_id,
+         params \\ %{},
+         headers \\ []
+       ) do
+    Enum.reduce(headers, log_in_user(conn, user), fn {name, value}, conn ->
+      put_req_header(conn, name, value)
+    end)
     |> get(
       ~p"/api/projects/#{project_id}/workflows/#{workflow_id}/health/runs",
       params
@@ -392,6 +400,97 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
 
       assert Enum.sum_by(response["buckets"], & &1["failed"]) == 1
       assert Enum.sum_by(response["buckets"], & &1["success"]) == 0
+    end
+  end
+
+  # Nothing in Lightning records a reader's timezone, so the browser says. No
+  # header, or one saying the browser does not know, is UTC; anything else the
+  # tz database does not know is a 400, because the browser chose it.
+  describe "x-timezone" do
+    test "cuts the grid on the timezone the reader sent", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      response =
+        conn
+        |> get_runs(user, project.id, workflow.id, %{"days" => "1"}, [
+          {"x-timezone", "Africa/Nairobi"}
+        ])
+        |> json_response(200)
+
+      assert response["timezone"] == "Africa/Nairobi"
+
+      {:ok, from, 0} = DateTime.from_iso8601(response["window"]["from"])
+      local = DateTime.shift_zone!(from, "Africa/Nairobi")
+
+      assert local.minute == 0 and local.second == 0
+    end
+
+    test "falls back to UTC without the header", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      response =
+        conn
+        |> get_runs(user, project.id, workflow.id, %{"days" => "1"})
+        |> json_response(200)
+
+      assert response["timezone"] == "Etc/UTC"
+    end
+
+    # A host clock CLDR could not map to a zone. The browser is saying it does
+    # not know, not naming one we failed to recognise.
+    test "falls back to UTC when the browser says it does not know", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      response =
+        conn
+        |> get_runs(user, project.id, workflow.id, %{"days" => "1"}, [
+          {"x-timezone", "Etc/Unknown"}
+        ])
+        |> json_response(200)
+
+      assert response["timezone"] == "Etc/UTC"
+    end
+
+    test "tells caches the body turns on the header", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      conn = get_runs(conn, user, project.id, workflow.id, %{"days" => "1"})
+
+      assert get_resp_header(conn, "vary") == ["x-timezone"]
+    end
+
+    # Unknown, empty, and long — the cache key has to stay bounded to the tz
+    # database whatever arrives.
+    test "rejects a value it cannot use", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      for value <- ["Mars/Olympus", "", String.duplicate("x", 5_000)] do
+        response =
+          conn
+          |> get_runs(user, project.id, workflow.id, %{"days" => "1"}, [
+            {"x-timezone", value}
+          ])
+          |> json_response(400)
+
+        assert response == %{
+                 "error" => "x-timezone must be an IANA timezone name"
+               }
+      end
     end
   end
 

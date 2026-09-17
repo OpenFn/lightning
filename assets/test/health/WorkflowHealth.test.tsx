@@ -34,13 +34,15 @@ const errorSignatures = {
   ],
 };
 
-// Two buckets is the least the chart can measure its own width from. What the
-// bars look like is `VolumeBars`'s own test; the page only hands them through.
+// Bars as the server cuts them, on the reader's clock. What they look like
+// drawn is `VolumeBars`'s own test; the page only hands them through.
 const runVolume = {
   window: outcomes.window,
+  timezone: 'Africa/Nairobi',
+  bucket_hours: 2,
   buckets: [
     bucket('2026-08-30T00:00:00Z', { success: 40, failed: 3 }),
-    bucket('2026-08-31T00:00:00Z', { success: 60, failed: 1 }),
+    bucket('2026-08-30T01:00:00Z', { success: 60, failed: 1 }),
   ],
 };
 
@@ -124,6 +126,23 @@ describe('WorkflowHealth', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/projects/proj-1/workflows/wf-1/health/runs?days=30',
       expect.objectContaining({ credentials: 'same-origin' })
+    );
+  });
+
+  // Nothing server-side records a reader's timezone, so the request has to
+  // carry it or the chart's buckets are cut on UTC.
+  test("tells the server the reader's timezone", async () => {
+    const { fetchMock } = mount(both);
+
+    await screen.findAllByText('Success');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/runs?days=30',
+      expect.objectContaining({
+        headers: {
+          'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      })
     );
   });
 

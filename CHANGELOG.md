@@ -26,6 +26,14 @@ and this project adheres to
 
 ### Changed
 
+- The runs volume chart on the workflow health page is now bucketed on your own
+  timezone rather than UTC, so a daily bar covers your day, the week view's bars
+  split at your noon, a day the clocks change is still one bar, and the card
+  names the clock it was drawn on. A browser that sends no timezone, or says it
+  does not know one, still gets UTC; one that sends a zone the tz database does
+  not know now gets an error.
+  [#5191](https://github.com/OpenFn/lightning/pull/5191)
+
 ### Removed
 
 - The `petal_components` dependency. The three components still in use are now

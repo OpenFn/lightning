@@ -2832,7 +2832,7 @@ defmodule Lightning.InvocationTest do
       %{project: project, workflow: workflow, snapshot: snapshot, run: run}
     end
 
-    defp add_step(ctx, name, opts \\ []) do
+    defp add_step(ctx, name, opts) do
       step =
         insert(
           :step,
