@@ -20,7 +20,7 @@ defmodule LightningWeb.Endpoint do
       connect_info: [:peer_data, :uri, :user_agent, session: @session_options]
     ]
 
-  socket "/worker", LightningWeb.WorkerSocket,
+  socket "/worker/socket", LightningWeb.WorkerSocket,
     websocket: [
       error_handler: {LightningWeb.WorkerSocket, :handle_error, []},
       compress: true,
