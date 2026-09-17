@@ -104,6 +104,8 @@ export const WorkflowHealth = ({
                 timezone={timezone}
                 hours={bucket_hours}
                 emptyMessage={emptyMessage(window, 'runs')}
+                projectId={projectId}
+                workflowId={workflowId}
               />
             )}
           </Panel>
