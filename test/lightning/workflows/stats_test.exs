@@ -685,7 +685,7 @@ defmodule Lightning.Workflows.StatsTest do
     end
   end
 
-  describe "runs/2" do
+  describe "runs/3" do
     # A run whose `inserted_at` we choose, on a work order active at the same
     # moment — the shape the window needs and `insert_run/4` can't give.
     defp run_at(workflow, trigger, state, at) do
@@ -716,8 +716,8 @@ defmodule Lightning.Workflows.StatsTest do
       older = DateTime.add(DateTime.utc_now(), -5, :hour)
       newer = DateTime.add(DateTime.utc_now(), -90, :minute)
 
-      # A hair inside a bucket, not in the next one: `extract(epoch ...)` is
-      # `numeric` and casting it rounds, so the query has to floor first.
+      # A hair inside a bucket, not in the next one: `date_bin` floors, and this
+      # is the run that would move if it ever stopped.
       edge =
         DateTime.utc_now()
         |> DateTime.to_unix()
@@ -743,38 +743,121 @@ defmodule Lightning.Workflows.StatsTest do
       assert %{crashed: 1} = Enum.at(buckets, bucket_of(result, edge))
     end
 
-    # Boundaries on the clock, so the chart can label a bar "2am" or "Tuesday"
-    # and be telling the truth. And a bar chart with holes in it is a different
-    # chart, so every bucket carries every final state, zero-filled.
+    # Boundaries on the reader's clock, so the chart can label a bar with an
+    # hour or a date and be telling the truth. And a bar chart with holes in it
+    # is a different chart, so every bucket carries every final state,
+    # zero-filled.
+    #
+    # Kolkata and Kathmandu are the zones that prove the grid really moved:
+    # their local whole hour is UTC :30 and :15. Europe/London is here because
+    # a 30 day window may straddle a clock change, and every boundary has to
+    # stay on a local midnight when it does.
     test "cuts each window into clock-aligned, zero-filled buckets", ctx do
       %{workflow: workflow} = ctx
 
       zeroed = Map.new(Run.final_states(), &{&1, 0})
 
-      for {days, seconds, count} <- [
-            {1, 7_200, 13},
-            {7, 43_200, 15},
-            {30, 86_400, 31}
-          ] do
-        assert %{buckets: buckets, window: window} = Stats.runs(workflow, days)
+      for timezone <- [
+            "Etc/UTC",
+            "Africa/Nairobi",
+            "Asia/Kolkata",
+            "Asia/Kathmandu",
+            "Europe/London"
+          ],
+          {days, hours, count} <- [{1, 2, 13}, {7, 12, 15}, {30, 24, 31}] do
+        assert %{buckets: buckets, window: window} =
+                 Stats.runs(workflow, days, timezone)
 
         assert length(buckets) == count
-        assert rem(DateTime.to_unix(window.from), seconds) == 0
+        assert DateTime.compare(window.from, hd(buckets).at) == :eq
 
+        # Every bar opens on a local whole hour that the width divides — local
+        # midnight for a daily bar, local noon or midnight for a half-day.
+        for bucket <- buckets do
+          local = DateTime.shift_zone!(bucket.at, timezone)
+
+          assert local.minute == 0 and local.second == 0
+          assert rem(local.hour, hours) == 0
+        end
+
+        # An hour's grace: the grid is `count` wall-clock steps wide, and a
+        # spring-forward day makes that an hour less in real time.
         assert DateTime.compare(
                  window.from,
-                 DateTime.add(window.to, -days, :day)
+                 window.to |> DateTime.add(-days, :day) |> DateTime.add(1, :hour)
                ) != :gt
-
-        assert DateTime.diff(Enum.at(buckets, 1).at, hd(buckets).at) == seconds
 
         for bucket <- buckets, do: assert(Map.delete(bucket, :at) == zeroed)
 
         # The window ends inside the last bucket, which is still filling.
         last = List.last(buckets).at
         assert DateTime.compare(last, window.to) == :lt
-        assert DateTime.diff(window.to, last, :second) < seconds
+        assert DateTime.diff(window.to, last, :second) < hours * 3_600
       end
+    end
+
+    # The half- and quarter-hour timezones. A whole-hour one cannot prove the
+    # grid moved, because at these widths its boundaries are the same list of
+    # instants as UTC's — the offset cancels out of the arithmetic. These two
+    # can: a local whole hour is not a UTC whole hour.
+    test "anchors the grid off the hour for offsets that are", ctx do
+      %{workflow: workflow} = ctx
+
+      for {timezone, minute} <- [{"Asia/Kolkata", 30}, {"Asia/Kathmandu", 15}] do
+        assert %{window: window} = Stats.runs(workflow, 1, timezone)
+
+        assert window.from.minute == minute
+        assert window.from.second == 0
+      end
+    end
+
+    # The claim the local-calendar grid rests on, and the one a UTC grid gets
+    # wrong: London's October Sunday is 25 hours long, and both sides of the
+    # change belong to the same bar. Asserted against the binning expression
+    # itself, because the window is always the last 30 days and no fixed
+    # transition stays inside it.
+    test "bins a 25-hour local day as a single bucket" do
+      %{rows: rows} =
+        Repo.query!("""
+        SELECT date_bin(
+                 make_interval(hours => 24),
+                 t at time zone 'UTC' at time zone 'Europe/London',
+                 timestamp '2000-01-01'
+               )
+        FROM (VALUES (timestamp '2025-10-26 00:30'),
+                     (timestamp '2025-10-26 23:30')) AS v(t)
+        """)
+
+      assert rows == List.duplicate([~N[2025-10-26 00:00:00.000000]], 2)
+    end
+
+    # Without the timezone in the key, the first reader to load the page would
+    # pin their grid on every other timezone for the TTL — and on one machine
+    # that is invisible.
+    test "caches each timezone's grid separately", ctx do
+      %{workflow: workflow} = ctx
+
+      utc = Stats.runs(workflow, 1, "Etc/UTC")
+      kolkata = Stats.runs(workflow, 1, "Asia/Kolkata")
+
+      assert utc.window.from != kolkata.window.from
+      assert utc.timezone == "Etc/UTC"
+      assert kolkata.timezone == "Asia/Kolkata"
+
+      for timezone <- ["Etc/UTC", "Asia/Kolkata"] do
+        assert {:ok, true} =
+                 Cachex.exists?(
+                   :workflow_stats,
+                   {:runs, workflow.id, 1, timezone}
+                 )
+      end
+    end
+
+    test "defaults to a UTC grid when no timezone is given", ctx do
+      %{workflow: workflow} = ctx
+
+      assert %{window: window, timezone: "Etc/UTC"} = Stats.runs(workflow, 1)
+      assert rem(DateTime.to_unix(window.from), 7_200) == 0
     end
 
     # Keyed without the change marker — a settle must not mint a new key.
@@ -789,7 +872,10 @@ defmodule Lightning.Workflows.StatsTest do
       assert Stats.runs(workflow, 1) == first
 
       assert {:ok, true} =
-               Cachex.exists?(:workflow_stats, {:runs, workflow.id, 1})
+               Cachex.exists?(
+                 :workflow_stats,
+                 {:runs, workflow.id, 1, "Etc/UTC"}
+               )
     end
 
     test "skips runs outside the window, in flight, or on another workflow",

@@ -52,7 +52,17 @@ export function useHealthQuery<T>(url: string): Query<T> {
 
     setInFlight(true);
 
-    fetch(url, { credentials: 'same-origin', signal: controller.signal })
+    // Read inside the effect, so a reader whose machine changes timezone
+    // mid-session picks it up on the next poll. Sent to all three endpoints;
+    // only `runs` reads it, which is cheaper than threading a per-endpoint
+    // flag through a hook whose job is to be indifferent to the endpoint.
+    fetch(url, {
+      credentials: 'same-origin',
+      signal: controller.signal,
+      headers: {
+        'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+    })
       .then(response => {
         if (!response.ok) throw new Error('Could not load workflow stats');
 

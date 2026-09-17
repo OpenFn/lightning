@@ -26,6 +26,11 @@ and this project adheres to
 
 ### Changed
 
+- The runs volume chart on the workflow health page is now bucketed in your own
+  timezone rather than UTC, so a daily bar covers your day, the week view's bars
+  split at your noon, and a day the clocks change is still one bar. Bar widths
+  are unchanged, and the card names the clock they are drawn on.
+
 ### Fixed
 
 ## [2.19.0-pre1] - 2026-09-15
