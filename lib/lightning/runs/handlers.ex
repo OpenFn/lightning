@@ -115,6 +115,12 @@ defmodule Lightning.Runs.Handlers do
       end
     end
 
+    # Error types a worker can report on a finished run.
+    @known_error_types ~w(
+      UserError RuntimeError RuntimeCrash CompileError AdaptorError
+      TimeoutError OOMError Lost LostAfterStart
+    )
+
     def new(params) do
       %__MODULE__{}
       |> cast(params, [
@@ -125,6 +131,7 @@ defmodule Lightning.Runs.Handlers do
         :final_state,
         :timestamp
       ])
+      |> validate_inclusion(:error_type, @known_error_types)
       |> put_new_change(:timestamp, Lightning.current_time())
       |> then(fn changeset ->
         if reason = get_change(changeset, :reason) do
