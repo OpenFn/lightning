@@ -81,7 +81,6 @@
           field={f[:current_password]}
           label="Enter password to confirm"
           required="true"
-          phx-debounce="blur"
           autocomplete="current-password"
         />
       </div>
@@ -92,7 +91,7 @@
     <.button
       type="submit"
       theme="primary"
-      disabled={!@email_changeset.valid?}
+      disabled={email_form_submit_disabled?(@email_changeset)}
       phx-disable-with="Sending confirmation email..."
     >
       Update email

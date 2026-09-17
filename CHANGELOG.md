@@ -28,6 +28,10 @@ and this project adheres to
 
 ### Fixed
 
+- Profile email updates no longer show password validation errors while typing;
+  the current password is checked when submitting Update email.
+  [#2546](https://github.com/OpenFn/lightning/issues/2546)
+
 ## [2.19.0-pre] - 2026-09-10
 
 ### Changed
