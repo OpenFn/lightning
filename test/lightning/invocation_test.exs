@@ -1781,6 +1781,140 @@ defmodule Lightning.InvocationTest do
       assert found_workorder.id == wo_now.id
     end
 
+    # The runs chart's bar link. Not expressible with either date filter above:
+    # both work orders here arrived and last moved at the same times, and only
+    # their runs differ.
+    test "filters workorders by when a run was created, half-open on the end" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      bar_start = ~U[2026-09-08T02:00:00.000000Z]
+      bar_end = ~U[2026-09-08T04:00:00.000000Z]
+
+      run_at = fn at ->
+        work_order =
+          insert(:workorder,
+            workflow: workflow,
+            trigger: trigger,
+            inserted_at: bar_start,
+            last_activity: bar_end
+          )
+
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger,
+          inserted_at: at
+        )
+
+        work_order.id
+      end
+
+      before_bar = run_at.(DateTime.add(bar_start, -1, :second))
+      inside_bar = run_at.(DateTime.add(bar_start, 30, :minute))
+      on_start = run_at.(bar_start)
+      # The chart puts a run landing exactly on a boundary in the *later* bar,
+      # so the bar that closes here must not claim it.
+      on_end = run_at.(bar_end)
+
+      found =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "run_date_after" => bar_start,
+            "run_date_before" => bar_end
+          })
+        ).entries
+        |> Enum.map(& &1.id)
+
+      assert Enum.sort(found) == Enum.sort([inside_bar, on_start])
+      refute before_bar in found
+      refute on_end in found
+    end
+
+    # A band of that bar. `run_status` and not `status`, which is the work
+    # order's *current* state: the retried work order here is a success now,
+    # and the red band that counted its failed run still has to reach it.
+    test "filters workorders by the run's own state, not the work order's" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      bar_start = ~U[2026-09-08T02:00:00.000000Z]
+      bar_end = ~U[2026-09-08T04:00:00.000000Z]
+
+      run_at = fn wo_state, run_status ->
+        work_order =
+          insert(:workorder,
+            workflow: workflow,
+            trigger: trigger,
+            state: wo_state,
+            last_activity: bar_end
+          )
+
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger,
+          state: run_status,
+          inserted_at: DateTime.add(bar_start, 30, :minute)
+        )
+
+        work_order.id
+      end
+
+      retried = run_at.(:success, :failed)
+      still_failed = run_at.(:failed, :failed)
+      succeeded = run_at.(:success, :success)
+
+      failures =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "run_date_after" => bar_start,
+            "run_date_before" => bar_end,
+            "run_status" => ["failed", "crashed", "killed", "exception", "lost"]
+          })
+        ).entries
+        |> Enum.map(& &1.id)
+
+      assert Enum.sort(failures) == Enum.sort([retried, still_failed])
+      refute succeeded in failures
+    end
+
+    # The newest bar is still filling, so its link carries no upper bound.
+    test "filters workorders by an open-ended run window" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      now = DateTime.utc_now()
+
+      work_order = insert(:workorder, workflow: workflow, trigger: trigger)
+
+      # Two runs, one either side of the bound: the work order matches on the
+      # newer one, and is listed once rather than twice.
+      for at <- [DateTime.add(now, -1, :hour), now] do
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger,
+          inserted_at: at
+        )
+      end
+
+      assert [found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "run_date_after" => DateTime.add(now, -1, :minute)
+                 })
+               ).entries
+
+      assert found.id == work_order.id
+    end
+
     # to be replaced by paginator unit tests
     @tag :skip
     test "filters workorders sets timeout" do
