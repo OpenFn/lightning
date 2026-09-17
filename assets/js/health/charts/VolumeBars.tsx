@@ -8,6 +8,7 @@ import {
   YAxis,
 } from 'recharts';
 
+import { historyUrl } from '../historyUrl';
 import type { FailureState } from '../types';
 import { FAILURE_STATES } from '../types';
 
@@ -30,7 +31,7 @@ import { CANCELLED, FAILED, SUCCESS } from './OutcomesDonut';
 // both.
 type RunFailureState = Exclude<FailureState, 'rejected'>;
 
-const RUN_FAILURE_STATES = FAILURE_STATES.filter(
+export const RUN_FAILURE_STATES = FAILURE_STATES.filter(
   (state): state is RunFailureState => state !== 'rejected'
 );
 
@@ -57,10 +58,19 @@ export interface RunVolume {
 
 // Top to bottom, as the legend and the spoken totals read. The bars draw from
 // the reverse of it, since Recharts puts the first `Bar` on the axis.
+//
+// `states` is what the band actually stacked, and is what its history link
+// filters on — the red one folds five, and it is the only place those five can
+// be named.
 const SERIES = [
-  { key: 'success', label: 'Success', color: SUCCESS },
-  { key: 'cancelled', label: 'Cancelled', color: CANCELLED },
-  { key: 'failed', label: 'Failed', color: FAILED },
+  { key: 'success', label: 'Success', color: SUCCESS, states: ['success'] },
+  {
+    key: 'cancelled',
+    label: 'Cancelled',
+    color: CANCELLED,
+    states: ['cancelled'],
+  },
+  { key: 'failed', label: 'Failed', color: FAILED, states: RUN_FAILURE_STATES },
 ] as const;
 
 interface VolumeBarsProps {
@@ -68,6 +78,8 @@ interface VolumeBarsProps {
   timezone: string;
   hours: number;
   emptyMessage: string;
+  projectId: string;
+  workflowId: string;
 }
 
 export const VolumeBars = ({
@@ -75,6 +87,8 @@ export const VolumeBars = ({
   timezone,
   hours,
   emptyMessage,
+  projectId,
+  workflowId,
 }: VolumeBarsProps) => {
   const rows = buckets.map(bucket => ({
     at: bucket.at,
@@ -147,17 +161,37 @@ export const VolumeBars = ({
               }
             />
             {/* Reversed, so failures land on the axis and can be read against
-                a fixed baseline day to day rather than judged by thickness. */}
-            {[...totals].reverse().map(({ key, label: name, color }) => (
-              <Bar
-                key={key}
-                dataKey={key}
-                name={name}
-                stackId="runs"
-                maxBarSize={64}
-                fill={color}
-              />
-            ))}
+                a fixed baseline day to day rather than judged by thickness.
+
+                Each band links to its own states rather than the chart
+                carrying one link for the whole column: the red band is the
+                answer most readers came for, and a column-wide link would
+                make them filter the failures out again on arrival. Clicking
+                is a mouse affordance only — the frame is `aria-hidden`, and
+                thirty bars times three bands is not a link list. */}
+            {[...totals]
+              .reverse()
+              .map(({ key, label: name, color, states }) => (
+                <Bar
+                  key={key}
+                  dataKey={key}
+                  name={name}
+                  stackId="runs"
+                  maxBarSize={64}
+                  fill={color}
+                  className="cursor-pointer"
+                  onClick={(_bar, index) => {
+                    const href = bucketUrl(
+                      projectId,
+                      workflowId,
+                      buckets,
+                      index,
+                      states
+                    );
+                    if (href) window.open(href, '_blank');
+                  }}
+                />
+              ))}
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -203,6 +237,33 @@ export const VolumeBars = ({
  */
 export const bucketMeta = ({ timezone, bucket_hours: hours }: RunVolume) =>
   `${hours >= 24 ? 'daily' : `${hours}-hour`} buckets · ${timezone}`;
+
+/**
+ * The history link for one band of one bar: the work orders with a run
+ * created inside the bar's slot that settled in one of the band's states.
+ *
+ * Half-open, and the slot's end is the *next* bar's start rather than its own
+ * plus a width: no timezone arithmetic happens here, and a bar spanning a
+ * clock change is 11 or 13 real hours wide. The newest bar has no upper bound
+ * — it is still filling.
+ */
+export const bucketUrl = (
+  projectId: string,
+  workflowId: string,
+  buckets: RunBucket[],
+  index: number,
+  states: readonly string[]
+) => {
+  const bucket = buckets[index];
+
+  if (!bucket) return null;
+
+  return historyUrl(projectId, workflowId, {
+    run_date_after: bucket.at,
+    run_date_before: buckets[index + 1]?.at,
+    run_status: states,
+  });
+};
 
 const TICK_FILL = '#6b7280';
 

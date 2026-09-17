@@ -3,12 +3,16 @@ import { describe, expect, test } from 'vitest';
 
 import {
   bucketMeta,
+  bucketUrl,
+  RUN_FAILURE_STATES,
   rangeLabel,
   tickLabel,
   VolumeBars,
 } from '#/health/charts/VolumeBars';
 
 import { bucket } from './counts';
+
+const links = { projectId: 'proj-1', workflowId: 'wf-1' };
 
 describe('VolumeBars', () => {
   test('folds every run failure state into one Failed total', () => {
@@ -31,6 +35,7 @@ describe('VolumeBars', () => {
         timezone="Etc/UTC"
         hours={2}
         emptyMessage="No runs"
+        {...links}
       />
     );
 
@@ -56,6 +61,7 @@ describe('VolumeBars', () => {
         timezone="Etc/UTC"
         hours={2}
         emptyMessage="No runs"
+        {...links}
       />
     );
 
@@ -76,6 +82,7 @@ describe('VolumeBars', () => {
         timezone="Etc/UTC"
         hours={2}
         emptyMessage="No runs in the last 30 days"
+        {...links}
       />
     );
 
@@ -155,5 +162,60 @@ describe('tickLabel and rangeLabel', () => {
     expect(tickLabel('2026-09-08T18:15:00Z', 2, 'Asia/Kathmandu')).toBe(
       '00:00'
     );
+  });
+});
+
+// The bar's own link. Its end is the next bar's start, so the boundary a run
+// lands on belongs to exactly one bar — the same half-open slot `date_bin`
+// counted it in.
+describe('bucketUrl', () => {
+  const buckets = [
+    bucket('2026-09-08T00:00:00Z'),
+    bucket('2026-09-08T02:00:00Z'),
+    bucket('2026-09-08T04:00:00Z'),
+  ];
+
+  const params = (index: number, states: readonly string[] = ['success']) => {
+    const href = bucketUrl(
+      links.projectId,
+      links.workflowId,
+      buckets,
+      index,
+      states
+    );
+
+    return href ? new URLSearchParams(href.split('?')[1]) : null;
+  };
+
+  test('closes a bar on the next one’s start', () => {
+    expect(params(1)?.get('filters[run_date_after]')).toBe(
+      '2026-09-08T02:00:00Z'
+    );
+    expect(params(1)?.get('filters[run_date_before]')).toBe(
+      '2026-09-08T04:00:00Z'
+    );
+  });
+
+  // Still filling, and an upper bound would be whenever the response was
+  // computed rather than now.
+  test('leaves the newest bar open-ended', () => {
+    expect(params(2)?.get('filters[run_date_after]')).toBe(
+      '2026-09-08T04:00:00Z'
+    );
+    expect(params(2)?.has('filters[run_date_before]')).toBe(false);
+  });
+
+  test('scopes the link to the workflow', () => {
+    expect(params(0)?.get('filters[workflow_id]')).toBe('wf-1');
+  });
+
+  // The band, not the bar. `run_status` and not `status`, so a failure since
+  // retried to success still shows up under the band that counted it.
+  test('filters on the band’s own run states', () => {
+    expect(
+      params(1, RUN_FAILURE_STATES)?.getAll('filters[run_status][]')
+    ).toEqual([...RUN_FAILURE_STATES]);
+    expect(params(1)?.getAll('filters[run_status][]')).toEqual(['success']);
+    expect(params(1)?.has('filters[failed]')).toBe(false);
   });
 });

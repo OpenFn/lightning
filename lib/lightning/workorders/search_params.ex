@@ -16,6 +16,9 @@ defmodule Lightning.WorkOrders.SearchParams do
     :date_before,
     :wo_date_after,
     :wo_date_before,
+    :run_date_after,
+    :run_date_before,
+    :run_status,
     :sort_by,
     :sort_direction,
     :error_signature_exit_reason,
@@ -30,6 +33,9 @@ defmodule Lightning.WorkOrders.SearchParams do
   @derive {JSON.Encoder, only: @fields}
 
   @status_values Lightning.WorkOrder.states()
+  # Run states, not work order states: the workflow health page's runs chart
+  # counts runs, and only a *final* run has an outcome to have been counted.
+  @run_status_values Lightning.Run.final_states()
   @search_field_values [:id, :body, :log, :dataclip_name]
 
   # String forms for the URI/flag params new/1 receives from the UI.
@@ -53,6 +59,9 @@ defmodule Lightning.WorkOrders.SearchParams do
           date_before: DateTime.t(),
           wo_date_after: DateTime.t(),
           wo_date_before: DateTime.t(),
+          run_date_after: DateTime.t(),
+          run_date_before: DateTime.t(),
+          run_status: [atom()],
           sort_by: String.t(),
           sort_direction: String.t(),
           error_signature_exit_reason: String.t(),
@@ -78,6 +87,15 @@ defmodule Lightning.WorkOrders.SearchParams do
     field(:wo_date_before, :utc_datetime_usec)
     field(:sort_by, :string)
     field(:sort_direction, :string)
+
+    # Workflow health page filters
+    field(:run_date_after, :utc_datetime_usec)
+    field(:run_date_before, :utc_datetime_usec)
+
+    field(:run_status, {:array, Ecto.Enum},
+      values: @run_status_values,
+      default: []
+    )
 
     # The error signature the workflow health page's triage row draws its
     # "View" button from. `error_signature_exit_reason` switches the

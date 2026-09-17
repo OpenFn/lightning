@@ -13,7 +13,7 @@ import type { WorkOrderStateCounts } from './types';
 export const historyUrl = (
   projectId: string,
   workflowId: string,
-  filters: Record<string, string | null | undefined>
+  filters: Record<string, string | readonly string[] | null | undefined>
 ) => {
   const params = new URLSearchParams({
     'filters[workflow_id]': workflowId,
@@ -21,9 +21,15 @@ export const historyUrl = (
   });
 
   // Absent parts of a filter are skipped, so a caller can hand over an
-  // optional field without guarding it.
+  // optional field without guarding it. A list goes over as `key[]` repeated,
+  // which is what Plug decodes back into a list for a `{:array, _}` field —
+  // one joined string would fail to cast.
   for (const [key, value] of Object.entries(filters)) {
-    if (value) params.set(`filters[${key}]`, value);
+    if (Array.isArray(value)) {
+      for (const item of value) params.append(`filters[${key}][]`, item);
+    } else if (typeof value === 'string' && value) {
+      params.set(`filters[${key}]`, value);
+    }
   }
 
   return `/projects/${projectId}/history?${params.toString()}`;
