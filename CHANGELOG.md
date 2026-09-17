@@ -23,6 +23,11 @@ and this project adheres to
   [#5188](https://github.com/OpenFn/lightning/pull/5188)
 - A "Steps with failures" card on the workflow health page, ranking the jobs the
   window's failures landed on, heaviest first.
+- A band of a bar in the runs volume chart now opens the work orders it counted,
+  filtered to that bar's window and the run states the band stacked. History
+  gained run-level filters to carry it, so a failure that was later retried to
+  success is still reachable from the band that counted it.
+  [#5191](https://github.com/OpenFn/lightning/pull/5191)
 
 ### Changed
 
