@@ -26,7 +26,11 @@ export type MessageRole = 'user' | 'assistant';
  * - cancelled: Message was cancelled by user
  */
 export type MessageStatus =
-  'pending' | 'processing' | 'success' | 'error' | 'cancelled';
+  | 'pending'
+  | 'processing'
+  | 'success'
+  | 'error'
+  | 'cancelled';
 
 /**
  * User info attached to a message for attribution in collaborative sessions
@@ -94,6 +98,11 @@ export interface Message {
   from_global?: boolean;
   /** Recorded server-side when this reply's changes never reached the canvas. */
   apply_failed?: boolean;
+  /**
+   * Recorded server-side when Apollo attempted a code edit and none of its
+   * patches applied, so the reply arrives with nothing to apply.
+   */
+  code_change_failed?: boolean;
   /**
    * Why this message failed, in words meant for the person reading it. Set by
    * the server on the message that failed; absent on anything that did not.
@@ -183,7 +192,10 @@ export interface Session {
  * Connection state for the Phoenix Channel
  */
 export type ConnectionState =
-  'disconnected' | 'connecting' | 'connected' | 'error';
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'error';
 
 /**
  * Tracks a workflow YAML that was applied to the canvas early, during

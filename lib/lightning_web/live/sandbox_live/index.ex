@@ -272,7 +272,8 @@ defmodule LightningWeb.SandboxLive.Index do
            |> assign(
              :merge_selected_credential_ids,
              all_credential_ids(merge_credentials)
-           )}
+           )
+           |> assign_merge_collections(sandbox, target_project)}
         else
           {:noreply,
            socket
@@ -421,7 +422,43 @@ defmodule LightningWeb.SandboxLive.Index do
      |> assign(:merge_source_workflows, source_workflows)
      |> assign(:merge_selected_workflow_ids, selected_ids)
      |> assign(:merge_credentials, merge_credentials)
-     |> assign(:merge_selected_credential_ids, selected_credential_ids)}
+     |> assign(:merge_selected_credential_ids, selected_credential_ids)
+     |> maybe_assign_merge_collections(sandbox, target_project)}
+  end
+
+  @impl true
+  def handle_event("toggle-collection-to-add", %{"name" => name}, socket) do
+    if name in socket.assigns.merge_collections_to_add do
+      selected = socket.assigns.merge_selected_collection_names
+
+      new_selected =
+        if MapSet.member?(selected, name) do
+          MapSet.delete(selected, name)
+        else
+          MapSet.put(selected, name)
+        end
+
+      {:noreply, assign(socket, :merge_selected_collection_names, new_selected)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle-all-collections-to-add", _params, socket) do
+    all_names = MapSet.new(socket.assigns.merge_collections_to_add)
+
+    new_selected =
+      if MapSet.equal?(
+           socket.assigns.merge_selected_collection_names,
+           all_names
+         ) do
+        MapSet.new()
+      else
+        all_names
+      end
+
+    {:noreply, assign(socket, :merge_selected_collection_names, new_selected)}
   end
 
   @impl true
@@ -472,12 +509,16 @@ defmodule LightningWeb.SandboxLive.Index do
               selected_credential_ids =
                 MapSet.to_list(socket.assigns.merge_selected_credential_ids)
 
+              skip_collections =
+                skipped_collection_names(socket.assigns, target)
+
               source
               |> perform_merge(
                 target,
                 actor,
                 selected_ids,
-                selected_credential_ids
+                selected_credential_ids,
+                skip_collections
               )
               |> handle_merge_result(socket, source, target, root_project, actor)
             else
@@ -574,6 +615,8 @@ defmodule LightningWeb.SandboxLive.Index do
           selected_workflow_ids={@merge_selected_workflow_ids}
           credentials={@merge_credentials}
           selected_credential_ids={@merge_selected_credential_ids}
+          collections_to_add={@merge_collections_to_add}
+          selected_collection_names={@merge_selected_collection_names}
         />
 
         <.live_component
@@ -705,6 +748,40 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_selected_workflow_ids, MapSet.new())
     |> assign(:merge_credentials, [])
     |> assign(:merge_selected_credential_ids, MapSet.new())
+    |> assign_merge_collections(nil, nil)
+  end
+
+  # Previews the collections the merge would create in the target (the
+  # sandbox-only names), all preselected. Unchecking a row skips creating
+  # that collection; picking a new target recomputes the list.
+  defp assign_merge_collections(socket, _sandbox, nil) do
+    socket
+    |> assign(:merge_collections_target_id, nil)
+    |> assign(:merge_collections_to_add, [])
+    |> assign(:merge_selected_collection_names, MapSet.new())
+  end
+
+  defp assign_merge_collections(socket, sandbox, target_project) do
+    %{to_create: to_create} =
+      Sandboxes.preview_collections(sandbox, target_project)
+
+    socket
+    |> assign(:merge_collections_target_id, target_project.id)
+    |> assign(:merge_collections_to_add, to_create)
+    |> assign(:merge_selected_collection_names, MapSet.new(to_create))
+  end
+
+  # The change event fires for every input in the merge form (toggling any
+  # checkbox re-submits it), so only recompute the collections preview - and
+  # reset the row selections - when the target actually changed.
+  defp maybe_assign_merge_collections(socket, sandbox, target_project) do
+    new_target_id = target_project && target_project.id
+
+    if socket.assigns.merge_collections_target_id == new_target_id do
+      socket
+    else
+      assign_merge_collections(socket, sandbox, target_project)
+    end
   end
 
   defp merge_changeset(params \\ %{}) do
@@ -1009,19 +1086,38 @@ defmodule LightningWeb.SandboxLive.Index do
     MergeProjects.diverged_workflows(target_project, source)
   end
 
+  # The merge always creates whatever collections the target lacks; only
+  # names the user explicitly unchecked are skipped. The unchecked set is
+  # honored only for the target it was previewed against - for any other
+  # target nothing is skipped. Either way a collection added to the sandbox
+  # after the preview still gets created: skipping is explicit, creating is
+  # the default.
+  defp skipped_collection_names(assigns, target) do
+    if assigns.merge_collections_target_id == target.id do
+      assigns.merge_collections_to_add
+      |> MapSet.new()
+      |> MapSet.difference(assigns.merge_selected_collection_names)
+      |> MapSet.to_list()
+    else
+      []
+    end
+  end
+
   defp perform_merge(
          source,
          target,
          actor,
          {selected_workflow_ids, deleted_target_workflow_ids},
-         selected_credential_ids
+         selected_credential_ids,
+         skip_collections
        ) do
     maybe_commit_to_github(target, "pre-merge commit")
 
     opts = %{
       selected_workflow_ids: selected_workflow_ids,
       deleted_target_workflow_ids: deleted_target_workflow_ids,
-      selected_credential_ids: selected_credential_ids
+      selected_credential_ids: selected_credential_ids,
+      skip_collections: skip_collections
     }
 
     case Sandboxes.merge(source, target, actor, opts) do

@@ -18,6 +18,7 @@ defmodule Lightning.Accounts.UserNotifier do
   alias Lightning.Projects
   alias Lightning.Projects.MailRecipients
   alias Lightning.Projects.Project
+  alias Lightning.WorkOrder
   alias Lightning.WorkOrders.SearchParams
 
   require Logger
@@ -349,11 +350,12 @@ defmodule Lightning.Accounts.UserNotifier do
          failed_workorders: failed_workorders
        }) do
     digest_lookup = %{daily: "today", monthly: "this month", weekly: "this week"}
+    states = Enum.sort(WorkOrder.failure_states())
 
     """
     #{workflow.name}:
     • #{successful_workorders} workorders were successful #{digest_lookup[digest]}
-    • #{failed_workorders} workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+    • #{failed_workorders} workorders were not (#{Enum.join(states, ", ")} etc.)
 
     Click this link to review: #{build_digest_url(workflow, start_date, end_date)}
 

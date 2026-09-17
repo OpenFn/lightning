@@ -1030,6 +1030,189 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  # The triage row's "View" button: `filter_by_error_signature/2` inside
+  # `search_workorders_query/2`. Exercised through `search_workorders_for_export_query/2`
+  # since it applies no destructive-action side filter of its own.
+  describe "filter_by_error_signature/2" do
+    defp signature_params(exit_reason, error_type, job_id) do
+      SearchParams.new(%{
+        "status" => SearchParams.status_list(),
+        "error_signature_exit_reason" => exit_reason,
+        "error_signature_error_type" => error_type,
+        "error_signature_job_id" => job_id
+      })
+    end
+
+    defp signature_matches(project, exit_reason, error_type, job_id \\ nil) do
+      project
+      |> Invocation.search_workorders_for_export_query(
+        signature_params(exit_reason, error_type, job_id)
+      )
+      |> Repo.all()
+      |> Enum.map(& &1.id)
+      |> MapSet.new()
+    end
+
+    defp workorder(workflow, trigger, state) do
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state
+      )
+    end
+
+    # The run carries the work order's own state: every case here is a work
+    # order that ran once and stopped there.
+    defp ran_wo(workflow, trigger, state, steps \\ []) do
+      wo = workorder(workflow, trigger, state)
+
+      insert(:run,
+        work_order: wo,
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state,
+        steps: steps
+      )
+
+      wo
+    end
+
+    defp failing_step(job, error_type) do
+      build(:step, job: job, exit_reason: "fail", error_type: error_type)
+    end
+
+    test "matches exactly the work orders behind a step-level signature, and none of a rejected or lost row" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, job: job} =
+        build_workflow(project: project)
+
+      other_job = insert(:job, workflow: workflow)
+
+      crashed_wo =
+        ran_wo(workflow, trigger, :crashed, [failing_step(job, "RuntimeError")])
+
+      failed_wo =
+        ran_wo(workflow, trigger, :failed, [failing_step(job, "RuntimeError")])
+
+      # Same reason and error type, different job — must not match.
+      ran_wo(workflow, trigger, :failed, [
+        failing_step(other_job, "RuntimeError")
+      ])
+
+      workorder(workflow, trigger, :rejected)
+
+      lost_wo = ran_wo(workflow, trigger, :lost)
+
+      assert signature_matches(project, "fail", "RuntimeError", job.id) ==
+               MapSet.new([crashed_wo.id, failed_wo.id])
+
+      # `"rejected"` is `to_signature/2`'s own literal, not a worker reason —
+      # not present in `Run.state_reasons/0`, so the run-level branch fails
+      # closed rather than matching the rejected work order.
+      assert signature_matches(project, "rejected", "RunLimitExceeded") ==
+               MapSet.new()
+
+      # The run-level branch, for a work order whose latest run never
+      # reached a step.
+      assert signature_matches(project, "lost", nil) == MapSet.new([lost_wo.id])
+    end
+
+    # Mirrors `stats_test.exs`, "treats an empty error type on the run the
+    # same as a missing one": the row reports `nil`, so the filter has to
+    # read `""` as `nil` too or the View button lands on an empty page.
+    test "reads an empty error type on the run as a missing one" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger} = build_workflow(project: project)
+
+      wo = workorder(workflow, trigger, :crashed)
+
+      insert(:run,
+        work_order: wo,
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: :crashed,
+        error_type: ""
+      )
+
+      assert signature_matches(project, "crash", nil) == MapSet.new([wo.id])
+    end
+
+    # Guards every unfiltered history search, not just the View button: the
+    # signature filter sits in the query behind search, bulk retry, bulk cancel
+    # and export, and its run-level branch fails closed. A nil signature that
+    # stopped being a no-op would empty the history page for everyone.
+    test "with all three fields nil is a no-op" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger} = build_workflow(project: project)
+
+      wo = workorder(workflow, trigger, :failed)
+
+      params = SearchParams.new(%{"status" => SearchParams.status_list()})
+
+      assert %{
+               error_signature_exit_reason: nil,
+               error_signature_error_type: nil,
+               error_signature_job_id: nil
+             } = params
+
+      found =
+        project
+        |> Invocation.search_workorders_for_export_query(params)
+        |> Repo.all()
+        |> Enum.map(& &1.id)
+
+      assert found == [wo.id]
+    end
+
+    test "search_workorders_for_retry/2 scopes a bulk retry to the signature" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, job: job} =
+        build_workflow(project: project)
+
+      matching_wo =
+        ran_wo(workflow, trigger, :failed, [failing_step(job, "RuntimeError")])
+
+      ran_wo(workflow, trigger, :failed, [failing_step(job, "CompileError")])
+
+      found =
+        Invocation.search_workorders_for_retry(
+          project,
+          signature_params("fail", "RuntimeError", job.id)
+        )
+
+      assert [matching_wo.id] == Enum.map(found, & &1.id)
+    end
+
+    test "a nil error_type filter matches a step whose own error_type is the empty string" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, job: job} =
+        build_workflow(project: project)
+
+      wo = ran_wo(workflow, trigger, :failed, [failing_step(job, "")])
+
+      assert signature_matches(project, "fail", nil, job.id) ==
+               MapSet.new([wo.id])
+    end
+
+    test "a successful work order is not matched, even when its latest run holds a failing step" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, job: job} =
+        build_workflow(project: project)
+
+      ran_wo(workflow, trigger, :success, [failing_step(job, "RuntimeError")])
+
+      assert signature_matches(project, "fail", "RuntimeError", job.id) ==
+               MapSet.new()
+    end
+  end
+
   describe "search_workorders/1" do
     test "returns workorders ordered inserted at desc, with nulls first" do
       project = insert(:project)

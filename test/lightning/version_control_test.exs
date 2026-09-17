@@ -536,6 +536,47 @@ defmodule Lightning.VersionControlTest do
                VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
+    test "refuses to dispatch when the project cannot be exported", %{
+      commit_message: commit_message,
+      project: project,
+      repo_connection: repo_connection
+    } do
+      # `My Flow` and `My-Flow` are two names that become one spec key, so the
+      # export refuses the whole project.
+      #
+      # No GitHub mocks are set here on purpose: verify_on_exit! turns any call
+      # to the client into a failure, so this also asserts we never dispatched.
+      # Snapshotted, because the sync exports the snapshot set rather than the
+      # live workflows, and an unsnapshotted workflow is not in the spec the
+      # Action would fetch.
+      for name <- ["My Flow", "My-Flow"] do
+        {:ok, _} =
+          insert(:simple_workflow, name: name, project: project)
+          |> Snapshot.create()
+      end
+
+      assert {:error, message} =
+               VersionControl.initiate_sync(repo_connection, commit_message)
+
+      assert message =~ "two workflows in this project"
+      assert message =~ ~s("My-Flow")
+      assert message =~ ~s("My Flow")
+      assert message =~ "Rename one of them"
+    end
+
+    test "dispatches normally when the project exports cleanly", %{
+      commit_message: commit_message,
+      repo_connection: repo_connection
+    } do
+      # The pre-flight generates the spec and throws it away, so a project
+      # without a collision has to reach GitHub exactly as before.
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+
+      assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
+    end
+
     test "creates GH workflow dispatch event using JSON config (default)", %{
       commit_message: commit_message,
       repo_connection: repo_connection,

@@ -5,7 +5,7 @@ defmodule LightningWeb.Components.Icon do
   # and reuse.
   #
   # Note: we're in the process of migrating away from defining SVGs here and
-  # instead using Heroicons from Petal.
+  # instead using Heroicons.
 
   use LightningWeb, :component
 

@@ -4,6 +4,18 @@
 #
 #     mix run tooling/seeds/export_load.exs
 #
+# The history covers every work order state the workflow health page draws, with
+# a spread of error signatures, so the same seed doubles as fixture data for
+# that page. It is much smaller than the export test needs — logs and dataclips
+# are what make the export slow, and the health page reads neither:
+#
+#     WORK_ORDERS=400 LOGS_PER_RUN=2 DATACLIP_POOL=50 DATACLIP_BYTES=500 \
+#       SPREAD_DAYS=45 PROJECT_NAME=health-test \
+#       mix run tooling/seeds/export_load.exs
+#
+# `SPREAD_DAYS` past 30 puts some of the history outside the health page's
+# window, which is how you check the window actually excludes anything.
+#
 # Everything is tunable with env vars (defaults in parentheses):
 #
 #     WORK_ORDERS=3000        # work orders to create
@@ -45,6 +57,39 @@ defmodule ExportLoadSeed do
   @wo_chunk 200
   @dataclip_chunk 50
   @log_chunk 1000
+
+  # Every state the workflow health page draws, with success still dominating:
+  # half, then 10% failed and 5% each of the rest.
+  @wo_states %{
+    0 => :failed,
+    1 => :failed,
+    2 => :crashed,
+    3 => :cancelled,
+    4 => :killed,
+    5 => :exception,
+    6 => :lost,
+    7 => :rejected,
+    8 => :running,
+    9 => :pending
+  }
+
+  @in_flight [:available, :started]
+
+  # What the run and its last step report, so the triage table gets a spread of
+  # real signatures rather than one row of `fail:unknown`. A `nil` step
+  # error_type is the common shape — `mark_steps_lost/1` and the worker's cancel
+  # path stamp the reason and leave the type to the run.
+  @failures %{
+    crashed: {"CompileError", nil, nil},
+    cancelled: {"Cancelled", "cancel", nil},
+    killed: {"OOMError", "kill", nil},
+    exception: {"ExecutionError", "exception", nil},
+    lost: {"LostAfterStart", "lost", nil}
+  }
+
+  # `:failed` rotates through a few types so the table has more than one row to
+  # sort; the rest are one signature each.
+  @failed_types ["RuntimeError", "JobError", "AdaptorError", "TimeoutError"]
 
   def config do
     %{
@@ -323,10 +368,11 @@ defmodule ExportLoadSeed do
   end
 
   defp build_work_order(index, ctx, base, step_seconds, message) do
-    %{config: config, jobs: jobs, dataclips: dataclips} = ctx
+    %{config: config, dataclips: dataclips} = ctx
 
     inserted_at = DateTime.add(base, -index * step_seconds, :second)
     wo_id = Ecto.UUID.generate()
+    wo_state = state_for(index)
 
     work_order = %{
       id: wo_id,
@@ -334,85 +380,113 @@ defmodule ExportLoadSeed do
       snapshot_id: ctx.snapshot.id,
       trigger_id: ctx.trigger.id,
       dataclip_id: pick(dataclips, index),
-      state: state_for(index),
-      last_activity: inserted_at,
+      state: wo_state,
+      last_activity: last_activity_for(index, base, inserted_at),
       inserted_at: inserted_at,
       updated_at: inserted_at
     }
 
+    # A rejected work order is one the run limit refused, so it has no run at
+    # all — the one shape on this page that has to survive without one.
     runs =
-      for r <- 1..config.runs_per_wo do
-        run_id = Ecto.UUID.generate()
-        run_at = DateTime.add(inserted_at, r, :second)
-
-        steps =
-          for s <- 1..config.steps_per_run do
-            step_id = Ecto.UUID.generate()
-            slot = (index * config.runs_per_wo + r) * config.steps_per_run + s
-            job = Enum.at(jobs, rem(s - 1, length(jobs)))
-
-            %{
-              step: %{
-                id: step_id,
-                job_id: job.id,
-                snapshot_id: ctx.snapshot.id,
-                input_dataclip_id: pick(dataclips, slot * 2),
-                output_dataclip_id: pick(dataclips, slot * 2 + 1),
-                exit_reason: "success",
-                started_at: run_at,
-                finished_at: DateTime.add(run_at, 5, :second),
-                inserted_at: run_at,
-                updated_at: run_at
-              },
-              run_step: %{
-                id: Ecto.UUID.generate(),
-                run_id: run_id,
-                step_id: step_id,
-                inserted_at: run_at
-              }
-            }
-          end
-
-        logs =
-          for l <- 1..config.logs_per_run do
-            %{
-              id: Ecto.UUID.generate(),
-              run_id: run_id,
-              step_id:
-                steps
-                |> Enum.at(rem(l, config.steps_per_run))
-                |> get_in([:step, :id]),
-              message: "[#{l}] #{message}",
-              level: :info,
-              source: "R/T",
-              timestamp: DateTime.add(run_at, l, :millisecond)
-            }
-          end
-
-        %{
-          run: %{
-            id: run_id,
-            work_order_id: wo_id,
-            dataclip_id: work_order.dataclip_id,
-            starting_trigger_id: ctx.trigger.id,
-            snapshot_id: ctx.snapshot.id,
-            state: run_state_for(work_order.state),
-            claimed_at: run_at,
-            started_at: run_at,
-            finished_at: DateTime.add(run_at, 20, :second),
-            priority: :normal,
-            queue: "default",
-            worker_name: "seed-worker",
-            inserted_at: run_at,
-            updated_at: run_at
-          },
-          steps: Enum.map(steps, & &1.step),
-          run_steps: Enum.map(steps, & &1.run_step),
-          logs: logs
-        }
+      if wo_state == :rejected do
+        []
+      else
+        wo_state
+        |> run_states(config.runs_per_wo)
+        |> Enum.with_index(1)
+        |> Enum.map(fn {run_state, r} ->
+          build_run(work_order, run_state, r, index, ctx, inserted_at, message)
+        end)
       end
 
     %{work_order: work_order, runs: runs}
+  end
+
+  defp build_run(work_order, run_state, r, index, ctx, inserted_at, message) do
+    %{config: config, jobs: jobs, dataclips: dataclips} = ctx
+
+    run_id = Ecto.UUID.generate()
+    run_at = DateTime.add(inserted_at, r, :second)
+
+    finished_at =
+      if run_state in @in_flight,
+        do: nil,
+        else: DateTime.add(run_at, 20, :second)
+
+    {run_error_type, step_reason, step_error_type} =
+      failure_for(run_state, index)
+
+    # A run stops at the step that broke, so a failing run has fewer steps than
+    # a successful one — and `nil` steps is a run that never reached one at all.
+    step_count = step_count_for(run_state, index, config.steps_per_run)
+
+    steps =
+      for s <- 1..step_count//1 do
+        step_id = Ecto.UUID.generate()
+        slot = (index * config.runs_per_wo + r) * config.steps_per_run + s
+        job = Enum.at(jobs, rem(s - 1, length(jobs)))
+        last? = s == step_count
+
+        %{
+          step: %{
+            id: step_id,
+            job_id: job.id,
+            snapshot_id: ctx.snapshot.id,
+            input_dataclip_id: pick(dataclips, slot * 2),
+            output_dataclip_id: pick(dataclips, slot * 2 + 1),
+            exit_reason: if(last?, do: step_reason, else: "success"),
+            error_type: if(last?, do: step_error_type),
+            started_at: run_at,
+            finished_at: DateTime.add(run_at, 5, :second),
+            inserted_at: run_at,
+            updated_at: run_at
+          },
+          run_step: %{
+            id: Ecto.UUID.generate(),
+            run_id: run_id,
+            step_id: step_id,
+            inserted_at: run_at
+          }
+        }
+      end
+
+    logs =
+      for l <- 1..config.logs_per_run, steps != [] do
+        %{
+          id: Ecto.UUID.generate(),
+          run_id: run_id,
+          step_id:
+            steps |> Enum.at(rem(l, length(steps))) |> get_in([:step, :id]),
+          message: "[#{l}] #{message}",
+          level: :info,
+          source: "R/T",
+          timestamp: DateTime.add(run_at, l, :millisecond)
+        }
+      end
+
+    %{
+      run: %{
+        id: run_id,
+        work_order_id: work_order.id,
+        dataclip_id: work_order.dataclip_id,
+        starting_trigger_id: ctx.trigger.id,
+        snapshot_id: ctx.snapshot.id,
+        state: run_state,
+        error_type: run_error_type,
+        claimed_at: if(run_state != :available, do: run_at),
+        started_at: if(run_state != :available, do: run_at),
+        finished_at: finished_at,
+        priority: :normal,
+        queue: "default",
+        worker_name: "seed-worker",
+        inserted_at: run_at,
+        updated_at: run_at
+      },
+      steps: Enum.map(steps, & &1.step),
+      run_steps: Enum.map(steps, & &1.run_step),
+      logs: logs
+    }
   end
 
   defp insert_batch(built) do
@@ -435,20 +509,55 @@ defmodule ExportLoadSeed do
     |> Enum.each(&Repo.insert_all(LogLine, &1))
   end
 
-  # A realistic-ish mix: mostly success, some failures and a few still running.
-  defp state_for(index) do
-    case rem(index, 10) do
-      0 -> :failed
-      1 -> :crashed
-      2 -> :running
-      _ -> :success
-    end
+  defp state_for(index), do: Map.get(@wo_states, rem(index, 20), :success)
+
+  # The latest run is the one whose completion set the work order's state, so it
+  # carries that state and every run before it is a failed attempt someone
+  # retried. With the default RUNS_PER_WO=2 that makes half the history
+  # retried-to-success work orders, which is the case the health page's unit
+  # exists for: the failed run stays failed and the work order still counts once,
+  # as a success.
+  defp run_states(wo_state, count) do
+    List.duplicate(:failed, count - 1) ++ [latest_run_state(wo_state)]
   end
 
-  defp run_state_for(:running), do: :started
-  defp run_state_for(:crashed), do: :crashed
-  defp run_state_for(:failed), do: :failed
-  defp run_state_for(_), do: :success
+  defp latest_run_state(:pending), do: :available
+  defp latest_run_state(:running), do: :started
+  defp latest_run_state(wo_state), do: wo_state
+
+  # Rotated on `div(index, 20)`, not `rem`: the two `:failed` buckets both sit
+  # at a fixed `rem(index, 20)`, so anything modulo a factor of 20 would pin
+  # each of them to a single type.
+  defp failure_for(:failed, index) do
+    type = Enum.at(@failed_types, rem(div(index, 20), length(@failed_types)))
+    {type, "fail", type}
+  end
+
+  defp failure_for(state, _index) do
+    Map.get(@failures, state, {nil, "success", nil})
+  end
+
+  # A crashed run never reached a step; a failing run stops at the one that
+  # broke, which rotates so the signatures name different jobs.
+  defp step_count_for(:crashed, _index, _per_run), do: 0
+
+  defp step_count_for(state, _index, per_run) when state in @in_flight,
+    do: per_run
+
+  defp step_count_for(state, index, per_run) do
+    if state == :success, do: per_run, else: rem(index, per_run) + 1
+  end
+
+  # Mostly the same as inserted_at, but every 25th work order was retried
+  # recently — the health page's window is measured on last_activity, so these
+  # are the rows that show up as today's work however old they are.
+  defp last_activity_for(index, base, inserted_at) do
+    if rem(index, 25) == 0 do
+      DateTime.add(base, -rem(index, 3) * 3600, :second)
+    else
+      inserted_at
+    end
+  end
 
   defp pick(dataclips, i) do
     :erlang.element(rem(i, tuple_size(dataclips)) + 1, dataclips)

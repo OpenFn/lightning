@@ -15,6 +15,7 @@ defmodule LightningWeb.LayoutComponents do
   """
   attr :first_name, :string, required: true
   attr :last_name, :string, default: nil
+  attr :size, :string, default: "xs", values: ~w(xs sm)
   attr :class, :string, default: nil
 
   def user_avatar(assigns) do
@@ -22,11 +23,21 @@ defmodule LightningWeb.LayoutComponents do
       String.at(assigns.first_name, 0) <>
         if assigns.last_name, do: String.at(assigns.last_name, 0), else: ""
 
-    assigns = assign(assigns, :initials, String.upcase(initials))
+    assigns =
+      assigns
+      |> assign(:initials, String.upcase(initials))
+      |> assign(
+        :size_class,
+        case assigns.size do
+          "xs" -> "h-5 w-5 text-[10px]"
+          "sm" -> "h-8 w-8 text-sm"
+        end
+      )
 
     ~H"""
     <div class={[
-      "h-5 w-5 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-semibold text-gray-500",
+      "rounded-full bg-gray-100 flex items-center justify-center font-semibold text-gray-500",
+      @size_class,
       @class
     ]}>
       {@initials}

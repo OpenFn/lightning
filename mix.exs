@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.18.2",
+      version: "2.19.0-pre",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -145,7 +145,6 @@ defmodule Lightning.MixProject do
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.19"},
-      {:petal_components, "~> 3.0"},
       {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},

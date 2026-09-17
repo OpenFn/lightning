@@ -433,6 +433,122 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       refute retried.failure_message
     end
 
+    test "marks a reply whose code edits all failed to apply", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{"message_options" => %{"use_global_assistant" => true}}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "fix the mapping",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Here is what I changed.",
+          "usage" => %{},
+          "meta" => %{
+            "subagent_calls" => [
+              %{
+                "_call_metadata" => %{"subagent" => "job_agent"},
+                "diff" => %{
+                  "patches_applied" => 0,
+                  "warning" =>
+                    "Failed to apply edit: KeyError at /app/services/job_chat.py"
+                }
+              }
+            ]
+          }
+        })
+      )
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      assert assistant.meta["code_change_failed"] == true
+
+      # Apollo's warning carries a container path, so it stays out of the row.
+      assert log =~ "Apollo applied no code edits"
+      refute assistant.content =~ "job_chat.py"
+    end
+
+    test "does not mark a reply that still produced a workflow", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{"message_options" => %{"use_global_assistant" => true}}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "fix both steps",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Changed one of them.",
+          "usage" => %{},
+          "attachments" => [
+            %{"type" => "workflow_yaml", "content" => "workflow:\n  name: new"}
+          ],
+          "meta" => %{
+            "subagent_calls" => [
+              %{"diff" => %{"patches_applied" => 0}},
+              %{"diff" => %{"patches_applied" => 1}}
+            ]
+          }
+        })
+      )
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      refute assistant.meta["code_change_failed"]
+    end
+
     test "persists the segments timeline alongside the flat response",
          %{user: user, project: project} do
       workflow = insert(:workflow, project: project)

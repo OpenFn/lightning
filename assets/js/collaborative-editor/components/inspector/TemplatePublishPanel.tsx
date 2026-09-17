@@ -12,20 +12,36 @@ import { notifications } from '#/collaborative-editor/lib/notifications';
 import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 import logger from '#/utils/logger';
+import {
+  exceedsGraphemeCap,
+  isNameTooWideForColumn,
+} from '#/utils/nameValidation';
 import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
 import { convertWorkflowStateToSpec } from '#/yaml/util';
 
 logger.ns('TemplatePublishPanel').seal();
 
-// Validation schema matching backend constraints
-const TemplatePublishSchema = z.object({
+// Validation schema matching backend constraints, meaning
+// Lightning.Workflows.WorkflowTemplate.changeset/2.
+//
+// name is counted in codepoints (the unit the column is measured in) and
+// description in graphemes (the unit the server's product cap uses), because
+// defaultValues prefills both and `.max()` on UTF-16 units let the form open
+// holding a value it would refuse to submit.
+export const TemplatePublishSchema = z.object({
   name: z
     .string()
     .min(1, 'Name is required')
-    .max(255, 'Name must be less than 255 characters'),
+    .refine(
+      val => !isNameTooWideForColumn(val),
+      'Name must be less than 255 characters'
+    ),
   description: z
     .string()
-    .max(1000, 'Description must be less than 1000 characters')
+    .refine(
+      val => !exceedsGraphemeCap(val, 1000),
+      'Description must be less than 1000 characters'
+    )
     .optional()
     .default(''),
   tags: z.string().optional().default(''),

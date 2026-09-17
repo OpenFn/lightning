@@ -1558,9 +1558,13 @@ defmodule Lightning.Projects do
       iex> export_project(:yaml, project_id)
       {:ok, string}
 
+  Returns `{:error, message}` when two entities in the project would be written
+  under the same key in the spec. See
+  `Lightning.ExportUtils.DuplicateKeyError`.
+
   """
   @spec export_project(atom(), Ecto.UUID.t(), [Ecto.UUID.t()] | nil) ::
-          {:ok, binary}
+          {:ok, binary} | {:error, binary}
   def export_project(:yaml, project_id, snapshot_ids \\ nil) do
     project = get_project!(project_id)
 
@@ -1569,7 +1573,7 @@ defmodule Lightning.Projects do
         do: Snapshot.get_all_by_ids(snapshot_ids, project_id),
         else: nil
 
-    {:ok, _yaml} = ExportUtils.generate_new_yaml(project, snapshots)
+    ExportUtils.generate_new_yaml(project, snapshots)
   end
 
   @doc """
