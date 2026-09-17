@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- The workflow health charts now link into history. A donut wedge or legend row
+  opens the work orders it counted, filtered to those states and that window,
+  and a triage row opens the ones sharing its error signature.
+  [#5188](https://github.com/OpenFn/lightning/pull/5188)
+
 ### Changed
 
 ### Removed
