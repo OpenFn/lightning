@@ -110,7 +110,9 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   def handle_event("validate_email", %{"user" => user_params}, socket) do
     changeset =
       socket.assigns.user
-      |> Accounts.validate_change_user_email(user_params, validate_password: false)
+      |> Accounts.validate_change_user_email(user_params,
+        validate_password: false
+      )
       |> Map.put(:action, :validate_email)
 
     {:noreply, assign(socket, :email_changeset, changeset)}
