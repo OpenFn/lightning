@@ -77,6 +77,9 @@ export const WorkflowHealth = ({
               <OutcomesDonut
                 counts={counts}
                 emptyMessage={emptyMessage(window)}
+                projectId={projectId}
+                workflowId={workflowId}
+                from={window.from}
               />
             )}
           </Panel>
@@ -127,6 +130,9 @@ export const WorkflowHealth = ({
               <FailureBreakdownDonut
                 counts={counts}
                 emptyMessage={emptyMessage(window, 'failures')}
+                projectId={projectId}
+                workflowId={workflowId}
+                from={window.from}
               />
             )}
           </Panel>

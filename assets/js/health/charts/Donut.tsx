@@ -1,11 +1,4 @@
-import {
-  Cell,
-  Label,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
+import { Label, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 import { ChartTooltip } from './ChartTooltip';
 
@@ -13,9 +6,9 @@ import { ChartTooltip } from './ChartTooltip';
  * A part-to-whole donut with the total in the middle and an always-on legend.
  *
  * Takes slices rather than any `Stats` payload, so it renders in a test or on
- * another page without a fetch. Callers decide what a slice is and what the
+ * another page without a fetch. Callers decide what a slice is, what the
  * shares are of — the outcomes panel's denominator is every finished run, the
- * failure panel's is only the failures.
+ * failure panel's is only the failures — and where a slice leads.
  */
 
 export interface Slice {
@@ -23,6 +16,8 @@ export interface Slice {
   label: string;
   color: string;
   value: number;
+  /** Where the rows this slice counts can be read. */
+  href: string;
 }
 
 interface DonutProps {
@@ -72,10 +67,20 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
             />
             {/* `accessibilityLayer` only governs the svg; the pie's own root
                 group is a tab stop by default (`rootTabIndex` 0), and
-                `aria-hidden` on the frame doesn't take it out of the order. */}
+                `aria-hidden` on the frame doesn't take it out of the order.
+                So clicking a wedge is a mouse affordance only — the legend
+                rows below carry the same links reachably. */}
             <Pie
               rootTabIndex={-1}
-              data={slices.map(({ label, value }) => ({ name: label, value }))}
+              onClick={(_, index) => window.open(slices[index]?.href, '_blank')}
+              className="cursor-pointer"
+              // `fill` per entry rather than a `<Cell>` child — Cell is
+              // deprecated and goes in Recharts 4.
+              data={slices.map(({ label, value, color }) => ({
+                name: label,
+                value,
+                fill: color,
+              }))}
               dataKey="value"
               nameKey="name"
               innerRadius={60}
@@ -83,9 +88,6 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
               stroke="#fff"
               strokeWidth={2}
             >
-              {slices.map(({ key, color }) => (
-                <Cell key={key} fill={color} />
-              ))}
               <Label
                 value={total.toLocaleString()}
                 position="center"
@@ -103,18 +105,26 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
           chart above is hidden from assistive tech; this legend is its
           accessible representation. */}
       <ul className="mt-2 flex flex-col gap-1 text-sm text-gray-700">
-        {slices.map(({ key, label, color, value }) => (
-          <li key={key} className="flex items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: color }}
-            />
-            <span className="grow">{label}</span>
-            <span className="tabular-nums">{value.toLocaleString()}</span>
-            <span className="w-12 text-right tabular-nums text-gray-500">
-              {share(value)}
-            </span>
+        {slices.map(({ key, label, color, value, href }) => (
+          <li key={key}>
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+            >
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              <span className="grow">{label}</span>{' '}
+              <span className="tabular-nums">{value.toLocaleString()}</span>{' '}
+              <span className="w-12 text-right tabular-nums text-gray-500">
+                {share(value)}
+              </span>{' '}
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
           </li>
         ))}
       </ul>

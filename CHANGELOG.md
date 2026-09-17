@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- The workflow health charts now link into history. A donut wedge or legend row
+  opens the work orders it counted, filtered to those states and that window,
+  and a triage row opens the ones sharing its error signature.
+  [#5188](https://github.com/OpenFn/lightning/pull/5188)
+
 ### Changed
 
 ### Fixed
@@ -85,10 +90,10 @@ and this project adheres to
   version on screen that the list beside it could not name.
   [#5180](https://github.com/OpenFn/lightning/issues/5180)
 
-- Deleting a trigger now counts as a change to a workflow's content. It was
-  read as a change to the trigger's enabled flag alone, which a promote cannot
-  carry, so a sandbox that had deleted one reported itself as identical to its
-  parent. [#5181](https://github.com/OpenFn/lightning/issues/5181)
+- Deleting a trigger now counts as a change to a workflow's content. It was read
+  as a change to the trigger's enabled flag alone, which a promote cannot carry,
+  so a sandbox that had deleted one reported itself as identical to its parent.
+  [#5181](https://github.com/OpenFn/lightning/issues/5181)
 
 - A merge or promote of selected workflows no longer asks everyone editing the
   project's other workflows to reload, which threw away whatever they had not

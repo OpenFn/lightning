@@ -151,13 +151,14 @@ describe('TriageTable', () => {
     test('links a normal row to history filtered on the signature', () => {
       table([signature()]);
 
-      const link = screen.getByRole('link', { name: 'View' });
+      const link = screen.getByRole('link', {
+        name: 'View (opens in a new tab)',
+      });
       expect(link).toHaveAttribute(
         'href',
         '/projects/proj-1/history' +
-          '?filters%5Bworkflow_id%5D=wf-1' +
+          '?filters%5Bworkflow_id%5D=wf-1&filters%5Blog%5D=true' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
-          '&filters%5Blog%5D=true' +
           '&filters%5Berror_signature_exit_reason%5D=fail' +
           '&filters%5Berror_signature_error_type%5D=RuntimeError' +
           '&filters%5Berror_signature_job_id%5D=a1b2c3d4-0000-0000-0000-000000000000'
@@ -181,13 +182,14 @@ describe('TriageTable', () => {
         }),
       ]);
 
-      const link = screen.getByRole('link', { name: 'View' });
+      const link = screen.getByRole('link', {
+        name: 'View (opens in a new tab)',
+      });
       expect(link).toHaveAttribute(
         'href',
         '/projects/proj-1/history' +
-          '?filters%5Bworkflow_id%5D=wf-1' +
+          '?filters%5Bworkflow_id%5D=wf-1&filters%5Blog%5D=true' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
-          '&filters%5Blog%5D=true' +
           '&filters%5Berror_signature_exit_reason%5D=crash'
       );
     });
@@ -206,13 +208,14 @@ describe('TriageTable', () => {
         }),
       ]);
 
-      const link = screen.getByRole('link', { name: 'View' });
+      const link = screen.getByRole('link', {
+        name: 'View (opens in a new tab)',
+      });
       expect(link).toHaveAttribute(
         'href',
         '/projects/proj-1/history' +
-          '?filters%5Bworkflow_id%5D=wf-1' +
+          '?filters%5Bworkflow_id%5D=wf-1&filters%5Blog%5D=true' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
-          '&filters%5Blog%5D=true' +
           '&filters%5Brejected%5D=true'
       );
       expect(link.getAttribute('href')).not.toContain('error_signature_');
@@ -222,7 +225,9 @@ describe('TriageTable', () => {
     test('renders no button when exit_reason never resolved', () => {
       table([signature({ exit_reason: '' })]);
 
-      expect(screen.queryByRole('link', { name: 'View' })).toBeNull();
+      expect(
+        screen.queryByRole('link', { name: 'View (opens in a new tab)' })
+      ).toBeNull();
     });
   });
 });
