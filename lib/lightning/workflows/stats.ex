@@ -168,21 +168,45 @@ defmodule Lightning.Workflows.Stats do
     # timezone for the TTL.
     cached_until_ttl(
       {:runs, workflow_id, days_back, timezone},
-      fn ->
-        {hours, count} = Map.fetch!(@buckets, days_back)
-        to = DateTime.utc_now()
-        starts = bucket_starts(to, hours, count, timezone)
-        from = resolve(hd(starts), timezone)
-
-        %{
-          window: %{from: from, to: to},
-          timezone: timezone,
-          bucket_hours: hours,
-          buckets: bucket_runs(workflow_id, starts, from, hours, timezone)
-        }
-      end,
+      fn -> bucket_window(workflow_id, days_back, timezone) end,
       @runs_ttl
     )
+  end
+
+  # Postgres, not Tzdata, is the authority on what `at time zone` accepts, and
+  # the two zone sets are versioned apart: `:tzdata` autoupdates at runtime
+  # everywhere but test, while `pg_timezone_names` is fixed at the server's
+  # build. So a zone the controller validated can still be one this server has
+  # never heard of — `America/Coyhaique` is exactly that against PG 15, and it
+  # is what Chrome reports in Coyhaique, Chile.
+  #
+  # Redrawn on UTC rather than left to raise, which keeps the policy the
+  # controller already sets for every other unusable timezone: a bad window
+  # cannot be drawn, a bad clock still can. The result is cached under the
+  # requested zone, so the dead query runs once per `@runs_ttl`, not per poll.
+  #
+  # Not checked up front: `pg_timezone_names` costs ~90 ms to scan, more than
+  # the query it would guard.
+  defp bucket_window(workflow_id, days_back, timezone) do
+    {hours, count} = Map.fetch!(@buckets, days_back)
+    to = DateTime.utc_now()
+    starts = bucket_starts(to, hours, count, timezone)
+    from = resolve(hd(starts), timezone)
+
+    %{
+      window: %{from: from, to: to},
+      timezone: timezone,
+      bucket_hours: hours,
+      buckets: bucket_runs(workflow_id, starts, from, hours, timezone)
+    }
+  rescue
+    error in Postgrex.Error ->
+      if error.postgres[:code] == :invalid_parameter_value and
+           timezone != "Etc/UTC" do
+        bucket_window(workflow_id, days_back, "Etc/UTC")
+      else
+        reraise error, __STACKTRACE__
+      end
   end
 
   # The local wall-clock start of every bar, oldest first, as naive local

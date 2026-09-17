@@ -77,6 +77,8 @@ defmodule LightningWeb.API.WorkflowHealthController do
   # limit (`application.ex:62-65`), so an arbitrary string would let one
   # authenticated reader mint unbounded entries; `Tzdata.zone_exists?/1` bounds
   # the key to the tz database.
+  # Postgres, which does the binning, knows a narrower set — `Stats.runs/3`
+  # falls back to UTC for the difference.
   defp validate_timezone(conn, _opts) do
     timezone =
       with [timezone] <- get_req_header(conn, "x-timezone"),
