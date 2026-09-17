@@ -76,12 +76,6 @@ defmodule LightningWeb.UserConfirmationRequiredLive do
     {:noreply, assign(socket, :email_changeset, changeset)}
   end
 
-  def email_form_submit_disabled?(changeset) do
-    password = Ecto.Changeset.get_field(changeset, :current_password)
-
-    not changeset.valid? or password in [nil, ""]
-  end
-
   def handle_event("change_email", %{"user" => user_params}, socket) do
     user = socket.assigns.current_user
     changeset = Accounts.validate_change_user_email(user, user_params)
@@ -125,4 +119,11 @@ defmodule LightningWeb.UserConfirmationRequiredLive do
          )}
     end
   end
+
+  def email_form_submit_disabled?(changeset) do
+    password = Ecto.Changeset.get_field(changeset, :current_password)
+
+    not changeset.valid? or password in [nil, ""]
+  end
+
 end

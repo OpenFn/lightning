@@ -116,12 +116,6 @@ defmodule LightningWeb.ProfileLive.FormComponent do
     {:noreply, assign(socket, :email_changeset, changeset)}
   end
 
-  def email_form_submit_disabled?(changeset) do
-    password = Ecto.Changeset.get_field(changeset, :current_password)
-
-    not changeset.valid? or password in [nil, ""]
-  end
-
   @impl true
   def handle_event("validate_basic_info", %{"user" => user_params}, socket) do
     changeset =
@@ -130,6 +124,12 @@ defmodule LightningWeb.ProfileLive.FormComponent do
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :user_info_changeset, changeset)}
+  end
+
+  def email_form_submit_disabled?(changeset) do
+    password = Ecto.Changeset.get_field(changeset, :current_password)
+
+    not changeset.valid? or password in [nil, ""]
   end
 
   def enum_options(module, field) do
