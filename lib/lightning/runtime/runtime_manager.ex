@@ -105,7 +105,10 @@ defmodule Lightning.Runtime.RuntimeManager do
         config
         |> Map.merge(%{
           ws_url:
-            Phoenix.VerifiedRoutes.unverified_url(config.endpoint, "/worker")
+            Phoenix.VerifiedRoutes.unverified_url(
+              config.endpoint,
+              "/worker/socket"
+            )
             |> URI.parse()
             |> Map.put(:scheme, "ws")
             |> URI.to_string(),
