@@ -1814,8 +1814,8 @@ defmodule Lightning.InvocationTest do
       before_bar = run_at.(DateTime.add(bar_start, -1, :second))
       inside_bar = run_at.(DateTime.add(bar_start, 30, :minute))
       on_start = run_at.(bar_start)
-      # `date_bin` puts a run landing exactly on a boundary in the *later*
-      # bucket, so the bar that closes here must not claim it.
+      # The chart puts a run landing exactly on a boundary in the *later* bar,
+      # so the bar that closes here must not claim it.
       on_end = run_at.(bar_end)
 
       found =
@@ -2966,7 +2966,7 @@ defmodule Lightning.InvocationTest do
       %{project: project, workflow: workflow, snapshot: snapshot, run: run}
     end
 
-    defp add_step(ctx, name, opts \\ []) do
+    defp add_step(ctx, name, opts) do
       step =
         insert(
           :step,

@@ -129,8 +129,8 @@ describe('WorkflowHealth', () => {
     );
   });
 
-  // Nothing server-side records a reader's timezone, so the request has to carry
-  // it or the chart's buckets go back to being cut on UTC.
+  // Nothing server-side records a reader's timezone, so the request has to
+  // carry it or the chart's buckets are cut on UTC.
   test("tells the server the reader's timezone", async () => {
     const { fetchMock } = mount(both);
 
