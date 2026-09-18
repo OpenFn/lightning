@@ -403,9 +403,9 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
     end
   end
 
-  # Nothing in Lightning records a reader's timezone, so the browser says. A bad
-  # value still has a drawable answer, so it falls back to UTC rather than
-  # 400ing the way a bad `days` does.
+  # Nothing in Lightning records a reader's timezone, so the browser says. No
+  # header, or one saying the browser does not know, is UTC; anything else the
+  # tz database does not know is a 400, because the browser chose it.
   describe "x-timezone" do
     test "cuts the grid on the timezone the reader sent", %{
       conn: conn,
@@ -442,9 +442,38 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       assert response["timezone"] == "Etc/UTC"
     end
 
+    # A host clock CLDR could not map to a zone. The browser is saying it does
+    # not know, not naming one we failed to recognise.
+    test "falls back to UTC when the browser says it does not know", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      response =
+        conn
+        |> get_runs(user, project.id, workflow.id, %{"days" => "1"}, [
+          {"x-timezone", "Etc/Unknown"}
+        ])
+        |> json_response(200)
+
+      assert response["timezone"] == "Etc/UTC"
+    end
+
+    test "tells caches the body turns on the header", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      conn = get_runs(conn, user, project.id, workflow.id, %{"days" => "1"})
+
+      assert get_resp_header(conn, "vary") == ["x-timezone"]
+    end
+
     # Unknown, empty, and long — the cache key has to stay bounded to the tz
     # database whatever arrives.
-    test "falls back to UTC on a value it cannot use", %{
+    test "rejects a value it cannot use", %{
       conn: conn,
       user: user,
       project: project,
@@ -456,9 +485,11 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
           |> get_runs(user, project.id, workflow.id, %{"days" => "1"}, [
             {"x-timezone", value}
           ])
-          |> json_response(200)
+          |> json_response(400)
 
-        assert response["timezone"] == "Etc/UTC"
+        assert response == %{
+                 "error" => "x-timezone must be an IANA timezone name"
+               }
       end
     end
   end
