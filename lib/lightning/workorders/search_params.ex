@@ -142,27 +142,30 @@ defmodule Lightning.WorkOrders.SearchParams do
     |> dates_to_string()
   end
 
+  # Naming none of the four search-field flags is ambiguous. The schema reads
+  # that URL as "search all four", but the history page paints its toggles from
+  # the raw params and shows them all off, so the next search from that page
+  # finds nothing. `log` alone agrees with both, and is what a bare visit sets.
   defp merge_fields(search_params, defaults) do
-    (defaults -- Map.keys(search_params))
-    |> Enum.map(fn x -> {x, true} end)
-    |> Enum.into(%{})
-    |> Map.merge(search_params)
+    if Enum.any?(defaults, &Map.has_key?(search_params, &1)) do
+      (defaults -- Map.keys(search_params))
+      |> Map.new(fn x -> {x, true} end)
+      |> Map.merge(search_params)
+    else
+      Map.put(search_params, "log", true)
+    end
   end
 
   defp dates_to_string(search_params) do
     ~w(date_after date_before wo_date_after wo_date_before)a
-    |> Enum.map(fn key ->
+    |> Enum.reduce(search_params, fn key, params ->
       key = Atom.to_string(key)
-      value = Map.get(search_params, key)
 
-      if value do
-        {key, DateTime.to_string(value)}
-      else
-        {key, value}
+      case Map.get(params, key) do
+        nil -> Map.delete(params, key)
+        value -> Map.put(params, key, DateTime.to_string(value))
       end
     end)
-    |> Enum.into(%{})
-    |> Map.merge(search_params, fn _key, v1, _v2 -> v1 end)
   end
 
   # Oban args (JSON): rebuilds the struct new/1 validated before enqueue. Runs

@@ -182,19 +182,24 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       digest_url = UserNotifier.build_digest_url(workflow, start_date, end_date)
 
-      assert digest_url
-             |> URI.decode_query(%{}, :rfc3986)
-             |> Map.get("filters[date_after]") ==
+      params =
+        digest_url
+        |> URI.parse()
+        |> Map.fetch!(:query)
+        |> URI.decode_query(%{}, :rfc3986)
+
+      assert params["filters[date_after]"] ==
                start_date |> DateTime.to_string() |> String.replace(" ", "+")
 
-      assert digest_url
-             |> URI.decode_query(%{}, :rfc3986)
-             |> Map.get("filters[date_before]") ==
+      assert params["filters[date_before]"] ==
                end_date |> DateTime.to_string() |> String.replace(" ", "+")
 
-      assert digest_url
-             |> URI.decode_query(%{}, :rfc3986)
-             |> Map.get("filters[workflow_id]") == workflow.id
+      assert params["filters[workflow_id]"] == workflow.id
+
+      assert params["filters[log]"] == "true"
+      refute Map.has_key?(params, "filters[id]")
+      refute Map.has_key?(params, "filters[body]")
+      refute Map.has_key?(params, "filters[dataclip_name]")
 
       assert digest_url |> URI.parse() |> Map.get(:path) ==
                "/projects/#{workflow.project_id}/history"
@@ -262,19 +267,23 @@ defmodule Lightning.Accounts.UserNotifierTest do
         • 12 workorders were successful today
         • 3 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-        Click this link to review: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+        See these runs in history: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_a.project_id}/w/#{workflow_a.id}/health")}
 
         Workflow B:
         • 10 workorders were successful today
         • 0 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-        Click this link to review: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
+        See these runs in history: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         • 3 workorders were successful today
         • 7 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-        Click this link to review: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+        See these runs in history: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_c.project_id}/w/#{workflow_c.id}/health")}
 
         OpenFn
         """
@@ -343,19 +352,23 @@ defmodule Lightning.Accounts.UserNotifierTest do
         • 12 workorders were successful this week
         • 3 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-        Click this link to review: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+        See these runs in history: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_a.project_id}/w/#{workflow_a.id}/health")}
 
         Workflow B:
         • 10 workorders were successful this week
         • 0 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-        Click this link to review: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
+        See these runs in history: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         • 3 workorders were successful this week
         • 7 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-        Click this link to review: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+        See these runs in history: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_c.project_id}/w/#{workflow_c.id}/health")}
 
         OpenFn
         """
@@ -426,19 +439,23 @@ defmodule Lightning.Accounts.UserNotifierTest do
         • 12 workorders were successful this month
         • 3 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-        Click this link to review: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+        See these runs in history: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_a.project_id}/w/#{workflow_a.id}/health")}
 
         Workflow B:
         • 10 workorders were successful this month
         • 0 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-        Click this link to review: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
+        See these runs in history: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         • 3 workorders were successful this month
         • 7 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-        Click this link to review: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+        See these runs in history: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+
+        See this workflow's failures grouped by error: #{url(~p"/projects/#{workflow_c.project_id}/w/#{workflow_c.id}/health")}
 
         OpenFn
         """
@@ -497,7 +514,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
           • 0 workorders were successful #{period}
           • 0 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
-          Click this link to review: #{UserNotifier.build_digest_url(workflow, start_date, end_date)}
+          See these runs in history: #{UserNotifier.build_digest_url(workflow, start_date, end_date)}
 
           OpenFn
           """
