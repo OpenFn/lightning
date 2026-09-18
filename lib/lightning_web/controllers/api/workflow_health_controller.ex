@@ -19,7 +19,6 @@ defmodule LightningWeb.API.WorkflowHealthController do
   plug :authorize_workflow
   # After :authorize_workflow so a 404 wins over a 400.
   plug :validate_days
-  # Auth, then params, then presentation.
   plug :validate_timezone when action in [:runs]
 
   def outcomes(conn, _params) do
@@ -39,9 +38,12 @@ defmodule LightningWeb.API.WorkflowHealthController do
     )
   end
 
+  # `vary` because this is the one action whose body depends on a request
+  # header, and nothing between the browser and here would guess that.
   def runs(conn, _params) do
-    json(
-      conn,
+    conn
+    |> put_resp_header("vary", "x-timezone")
+    |> json(
       Workflows.Stats.runs(
         conn.assigns.workflow,
         conn.assigns.days_back,
@@ -54,6 +56,11 @@ defmodule LightningWeb.API.WorkflowHealthController do
   @days %{"1" => 1, "7" => 7, "30" => 30}
   @default_days "30"
   @default_timezone "Etc/UTC"
+
+  # CLDR's sentinel for a host clock it could not map to an IANA zone. A
+  # browser sending it is telling us it does not know, which is the same thing
+  # as not telling us.
+  @unknown_timezone "Etc/Unknown"
 
   defp validate_days(conn, _opts) do
     case Map.fetch(@days, conn.params["days"] || @default_days) do
@@ -68,27 +75,36 @@ defmodule LightningWeb.API.WorkflowHealthController do
     end
   end
 
-  # The reader's timezone, because nothing in Lightning records one. Unknown
-  # or absent falls back to UTC rather than 400ing: a bad `days` means a window
-  # we cannot draw, but a bad timezone still has a drawable answer, and an old
-  # cached bundle that sends no header has to keep working through a deploy.
+  # The reader's timezone, because nothing in Lightning records one. The only
+  # place a default is chosen: a browser that sends no header, or says it does
+  # not know, gets UTC; anything else that is not a zone is a 400, because the
+  # browser picked it and drawing someone else's clock would hide that.
   #
-  # Validated before it reaches the cache key. `:workflow_stats` has no size
-  # limit (`application.ex:62-65`), so an arbitrary string would let one
-  # authenticated reader mint unbounded entries; `Tzdata.zone_exists?/1` bounds
-  # the key to the tz database.
-  # Postgres, which does the binning, knows a narrower set — `Stats.runs/3`
-  # falls back to UTC for the difference.
+  # Validated before it reaches the cache key, so `:workflow_stats` is keyed on
+  # the tz database rather than on anything a header can carry.
   defp validate_timezone(conn, _opts) do
-    timezone =
-      with [timezone] <- get_req_header(conn, "x-timezone"),
-           true <- Tzdata.zone_exists?(timezone) do
-        timezone
-      else
-        _ -> @default_timezone
-      end
+    case get_req_header(conn, "x-timezone") do
+      [] ->
+        assign(conn, :timezone, @default_timezone)
 
-    assign(conn, :timezone, timezone)
+      [@unknown_timezone] ->
+        assign(conn, :timezone, @default_timezone)
+
+      [timezone] ->
+        if Tzdata.zone_exists?(timezone),
+          do: assign(conn, :timezone, timezone),
+          else: reject_timezone(conn)
+
+      _ ->
+        reject_timezone(conn)
+    end
+  end
+
+  defp reject_timezone(conn) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: "x-timezone must be an IANA timezone name"})
+    |> halt()
   end
 
   defp authorize_workflow(conn, _opts) do
