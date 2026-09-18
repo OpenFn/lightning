@@ -23,18 +23,23 @@ and this project adheres to
   [#5188](https://github.com/OpenFn/lightning/pull/5188)
 - A "Steps with failures" card on the workflow health page, ranking the jobs the
   window's failures landed on, heaviest first.
-- A band of a bar in the runs volume chart now opens the work orders it counted,
-  filtered to that bar's window and the run states the band stacked. History
-  gained run-level filters to carry it, so a failure that was later retried to
-  success is still reachable from the band that counted it.
+- A band of a bar in the runs volume chart on the workflow health page now opens
+  the work orders it counted, filtered to that bar's slot and the run states the
+  band stacked. [#5191](https://github.com/OpenFn/lightning/pull/5191)
+- History can now filter on when a run was created and on the state a run
+  finished in, each as its own chip, so a failure later retried to success is
+  still reachable from the band that counted it.
   [#5191](https://github.com/OpenFn/lightning/pull/5191)
 
 ### Changed
 
-- The runs volume chart on the workflow health page is now bucketed in your own
+- The runs volume chart on the workflow health page is now bucketed on your own
   timezone rather than UTC, so a daily bar covers your day, the week view's bars
-  split at your noon, and a day the clocks change is still one bar. Bar widths
-  are unchanged, and the card names the clock they are drawn on.
+  split at your noon, a day the clocks change is still one bar, and the card
+  names the clock it was drawn on. A browser that sends no timezone, or says it
+  does not know one, still gets UTC; one that sends a zone the tz database does
+  not know now gets an error.
+  [#5191](https://github.com/OpenFn/lightning/pull/5191)
 
 ### Fixed
 
