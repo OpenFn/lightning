@@ -90,7 +90,15 @@ export const TriageTable = ({
     // `-mr-6 pr-4` bleeds the scroll region out to the card's own edge (the
     // card is `p-6`), so the scrollbar sits flush against it instead of
     // floating in the middle of the card's padding.
-    <div className="-mr-6 max-h-96 overflow-y-auto pr-4">
+    //
+    // `relative` is load-bearing, not decoration: every row holds an
+    // `sr-only` span, which Tailwind implements as `position: absolute`. An
+    // absolutely positioned box is not clipped by a static ancestor's
+    // `overflow`, so without a containing block here those spans resolve
+    // against the page's own scroll container and stretch it to the last
+    // row's static position — a screenful of blank space under the page, one
+    // row per failure signature.
+    <div className="relative -mr-6 max-h-96 overflow-y-auto pr-4">
       <table className="w-full text-left text-sm">
         <thead className="sticky top-0 z-10 bg-white">
           <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
