@@ -29,10 +29,12 @@
 #   2. Creates <base>/<branch> via `git worktree add`.
 #   3. Copies .env, .dev.env and .dev.override.env from the CURRENT worktree
 #      (so a sub-branch inherits the env you're working in), skipping absent ones.
-#   4. Runs the per-worktree slice of ./bin/bootstrap: fetch/compile deps, install
+#   4. Runs the new worktree's own ./bin/bootstrap: fetch/compile deps, install
 #      node modules, build assets, install runtime/schemas/icons, create + migrate
 #      the database. The DB follows whatever DATABASE_URL the copied env resolves
-#      to (shared lightning_dev unless the env overrides it).
+#      to (shared lightning_dev unless the env overrides it). It may also install
+#      missing system packages and toolchains, since it's the full bootstrap, not
+#      a subset.
 #
 # On failure after the worktree exists, it's removed by default (along with the
 # branch if this script created it). Pass --no-clean to keep it for debugging.
@@ -42,8 +44,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source the reusable project setup functions.
-source "$SCRIPT_DIR/bootstrap.d/common.sh"
+# The setup steps come from the target worktree's own bin/bootstrap, so all this
+# script needs from bootstrap.d is the output helpers.
+source "$SCRIPT_DIR/bootstrap.d/style.sh"
 
 DEFAULT_BASE=".claude/worktrees/"
 
@@ -72,9 +75,9 @@ print_help() {
   cat <<EOF
 ${BOLD}worktree${RESET} - create a ready-to-run git worktree for a branch or a PR.
 
-Creates a new worktree, copies your env files into it, and runs the
-per-worktree slice of ./bin/bootstrap so it's immediately runnable
-(deps, assets, runtime/schemas/icons, and a migrated database).
+Creates a new worktree, copies your env files into it, and runs that
+worktree's own ./bin/bootstrap so it's immediately runnable (deps,
+assets, runtime/schemas/icons, and a migrated database).
 
 ${BOLD}Usage:${RESET}
   ./bin/worktree [--no-clean] <branch> [path] [-- <command>...]
@@ -314,7 +317,8 @@ on_exit() {
     err "Setup failed during $CURRENT_STEP (exit $status)."
     echo "Removing worktree: $TARGET" >&2
     hint "Re-run with --no-clean to keep it in place next time."
-    # cwd may be inside the worktree about to be removed.
+    # git worktree remove refuses to run from inside the worktree, and a caller
+    # may have left us anywhere.
     cd "$SOURCE_ROOT" 2>/dev/null || cd /
     git -C "$SOURCE_ROOT" worktree remove --force "$TARGET"
     if [[ $CREATED_BRANCH -eq 1 ]]; then
@@ -353,19 +357,16 @@ exec_run_cmd() {
   exec "${RUN_CMD[@]}"
 }
 
-# Run the per-worktree slice of ./bin/bootstrap from inside the new worktree.
+# The new worktree runs its own bin/bootstrap. Running this script's copy instead
+# breaks the moment the two branches disagree about which mix tasks exist.
+#
+# It repeats bootstrap's machine-wide checks, which is deliberate: they cost a
+# couple of seconds, and they're what reports a missing system library properly.
 run_setup() {
-  cd "$TARGET"
-
-  CURRENT_STEP="platform environment setup"
-  detect_and_source_platform
-  platform_setup_environment
-
-  CURRENT_STEP="project directory setup"
-  setup_project_directory
-
-  CURRENT_STEP="database setup"
-  setup_project_database
+  CURRENT_STEP="project setup"
+  [[ -x "$TARGET/bin/bootstrap" ]] ||
+    die "$BRANCH has no executable bin/bootstrap; set the worktree up by hand."
+  ( cd "$TARGET" && ./bin/bootstrap )
 }
 
 main() {
