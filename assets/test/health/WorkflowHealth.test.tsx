@@ -350,7 +350,7 @@ describe('WorkflowHealth', () => {
     mount({ outcomes: 404, failures: 404, runs: 404 });
 
     // Every slice refused takes every panel with it.
-    expect(await screen.findAllByText(ERROR)).toHaveLength(4);
+    expect(await screen.findAllByText(ERROR)).toHaveLength(5);
     expect(screen.queryByText(/404|Not Found/)).toBeNull();
   });
 
@@ -367,7 +367,9 @@ describe('WorkflowHealth', () => {
   test('keeps the donuts when only the triage query fails', async () => {
     mount({ ...both, failures: 500 });
 
-    expect(await screen.findByText(ERROR)).toBeVisible();
+    // Two panels read that one response — the triage table and the step bars
+    // folded from it — so both degrade together.
+    expect(await screen.findAllByText(ERROR)).toHaveLength(2);
     expect(screen.getAllByText('Success')[0]).toBeVisible();
     expect(screen.getByText('69.5%')).toBeVisible();
   });
@@ -387,6 +389,9 @@ describe('WorkflowHealth', () => {
       screen.getByRole('heading', { name: 'Failure breakdown' })
     ).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Triage' })).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'Steps with failures' })
+    ).toBeVisible();
   });
 
   test('aborts in-flight requests on unmount', async () => {
@@ -422,7 +427,7 @@ describe('WorkflowHealth', () => {
     expect(screen.queryAllByText('Success')).toHaveLength(0);
     // Each panel holds a placeholder, but only for a reader who lands inside
     // it. jsdom does no layout, so the reserved height needs a browser.
-    expect(screen.getAllByText('Loading…')).toHaveLength(4);
+    expect(screen.getAllByText('Loading…')).toHaveLength(5);
   });
 
   // Why the panels drop together rather than each keeping its own last answer:
@@ -436,7 +441,7 @@ describe('WorkflowHealth', () => {
     mount(responses);
 
     expect(
-      await screen.findByText('No failures in the last 30 days')
+      (await screen.findAllByText('No failures in the last 30 days'))[0]
     ).toBeVisible();
 
     // The cheap slice answers the new range; the heavy join never lands.
@@ -450,7 +455,9 @@ describe('WorkflowHealth', () => {
 
     await screen.findByText('1,287 work orders');
 
-    expect(screen.queryByText('No failures in the last 30 days')).toBeNull();
+    expect(
+      screen.queryAllByText('No failures in the last 30 days')
+    ).toHaveLength(0);
   });
 
   // The one case where the kept numbers are dropped: nothing is coming to

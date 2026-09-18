@@ -21,6 +21,8 @@ and this project adheres to
   opens the work orders it counted, filtered to those states and that window,
   and a triage row opens the ones sharing its error signature.
   [#5188](https://github.com/OpenFn/lightning/pull/5188)
+- A "Steps with failures" card on the workflow health page, ranking the jobs the
+  window's failures landed on, heaviest first.
 
 ### Changed
 

@@ -4,17 +4,7 @@ import { describe, expect, test } from 'vitest';
 import { TriageTable } from '#/health/charts/TriageTable';
 import type { ErrorSignature } from '#/health/types';
 
-const signature = (
-  overrides: Partial<ErrorSignature> = {}
-): ErrorSignature => ({
-  count: 62,
-  exit_reason: 'fail',
-  error_type: 'RuntimeError',
-  job_id: 'a1b2c3d4-0000-0000-0000-000000000000',
-  step_name: 'Map-beneficiary',
-  adaptor: '@openfn/language-common@2.0.0',
-  ...overrides,
-});
+import { signature } from './counts';
 
 const rowText = (name: string | RegExp) =>
   within(screen.getByRole('row', { name })).getByRole('cell', { name })
