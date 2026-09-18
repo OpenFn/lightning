@@ -188,7 +188,7 @@ defmodule AdaptorCache.Cli do
     case Publish.run(name, version) do
       :ok ->
         IO.puts(
-          "adaptor_cache: published #{name}@#{version} (packument + search response updated)."
+          "adaptor_cache: published #{name}@#{version} (name list + search response + packument updated)."
         )
 
       {:error, reason} ->

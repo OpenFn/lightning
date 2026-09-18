@@ -19,6 +19,8 @@ defmodule AdaptorCache.Router do
     "github" => "https://raw.githubusercontent.com"
   }
 
+  def upstream(prefix), do: @upstreams[prefix]
+
   get "/_healthz" do
     send_resp(conn, 200, "ok\n")
   end

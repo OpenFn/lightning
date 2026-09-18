@@ -111,12 +111,21 @@ bin/adaptor_cache publish @openfn/language-brand-new 1.0.0   # new adaptor appea
 bin/adaptor_cache publish @openfn/language-http 9.9.9         # new version of an existing adaptor
 ```
 
-Either form updates the packument _and_ the search response's `latest_version`
-together in one call. `scheduler.ex`'s change-detection compares the search
-response against the DB to decide whether to bother fetching the packument at
-all, so updating only one is a silent no-op. Run
-`mix lightning.adaptors.refresh` (or reopen the picker) afterwards to see it
-take effect.
+Either form updates three responses together in one call: the package's own
+packument, the `@openfn` name list (`/-/user/openfn/package`) and the search
+response. `scheduler.ex`'s change-detection compares the search response against
+the DB to decide whether to bother fetching the packument at all, and
+`registry.ex` only trusts names on the name list, so updating one without the
+others is a silent no-op. Run `mix lightning.adaptors.refresh` (or reopen the
+picker) afterwards to see it take effect.
+
+Each of the three starts from whatever is already recorded. Anything not
+recorded yet is fetched from npm and recorded first, so publishing a new version
+never replaces npm's real version list with a one-entry synthetic one. A 404
+packument is npm saying the package is genuinely new, and that alone starts an
+empty record. If npm can't be reached, the new version is written nowhere —
+anything already fetched stays recorded as npm's own response, exactly as a
+proxy MISS would have left it.
 
 ## Scenarios
 
