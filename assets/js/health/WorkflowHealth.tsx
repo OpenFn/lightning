@@ -6,6 +6,7 @@ import { cn } from '#/utils/cn';
 import { FRAME } from './charts/Donut';
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
+import { StepFailureBars, stepFailureTotal } from './charts/StepFailureBars';
 import { TriageTable } from './charts/TriageTable';
 import type { RunVolume } from './charts/VolumeBars';
 import { bucketMeta, VolumeBars } from './charts/VolumeBars';
@@ -63,13 +64,17 @@ export const WorkflowHealth = ({
         </div>
       </div>
 
-      {/* One card wide by default. At `lg` five columns, so the time axis and
-          the triage table get three of them and the donuts two. At `xl` four,
-          tightening the donuts to one. Always in source order. */}
-      <div className="grid gap-6 lg:grid-cols-5 xl:grid-cols-4">
+      {/* One card wide by default. At `lg` twelve columns: the top row is the
+          two summaries either side of the time axis (3 + 6 + 3), and the
+          bottom row is the triage table with the breakdown donut beside it
+          (9 + 3). The axis takes half the row because it is the only card
+          whose reading gets better with width — thirty bars and their ticks —
+          where a donut past its `max-w-sm` just centres in more whitespace.
+          Always in source order. */}
+      <div className="grid gap-6 lg:grid-cols-12">
         <Card
           title="Outcomes"
-          className="lg:col-span-2 xl:col-span-1"
+          className="lg:col-span-3"
           meta={outcomes.data && workOrders(outcomes.data.counts)}
         >
           <Panel data={outcomes.data} error={outcomes.error}>
@@ -89,7 +94,7 @@ export const WorkflowHealth = ({
             names the bucket size rather than a total that won't reconcile. */}
         <Card
           title="Runs over time"
-          className="lg:col-span-3"
+          className="lg:col-span-6"
           meta={volume.data && bucketMeta(volume.data.buckets)}
         >
           <Panel data={volume.data} error={volume.error}>
@@ -102,7 +107,29 @@ export const WorkflowHealth = ({
           </Panel>
         </Card>
 
-        <Card title="Triage" className="lg:col-span-3">
+        {/* The same `failures` reply as Triage, folded from "what broke" down
+            to "where" — so it costs no request, and the two cannot disagree
+            about a step's weight. Top row, because "which step do I look at"
+            is a question to answer before reading the triage table, not after.
+            Not self-start: the three cards across this row read as one band, so
+            it takes the row's height rather than sitting short beside the time
+            axis. */}
+        <Card
+          title="Steps with failures"
+          className="lg:col-span-3"
+          meta={signatures.data && stepFailureTotal(signatures.data.signatures)}
+        >
+          <Panel data={signatures.data} error={signatures.error}>
+            {({ signatures, window }) => (
+              <StepFailureBars
+                signatures={signatures}
+                emptyMessage={emptyMessage(window, 'failures')}
+              />
+            )}
+          </Panel>
+        </Card>
+
+        <Card title="Triage" className="lg:col-span-9">
           <Panel data={signatures.data} error={signatures.error}>
             {({ signatures, window }) => (
               <TriageTable
@@ -122,7 +149,7 @@ export const WorkflowHealth = ({
             stretching to the triage table beside it. */}
         <Card
           title="Failure breakdown"
-          className="self-start lg:col-span-2 xl:col-span-1"
+          className="self-start lg:col-span-3"
           meta={outcomes.data && failures(outcomes.data.counts)}
         >
           <Panel data={outcomes.data} error={outcomes.error}>
