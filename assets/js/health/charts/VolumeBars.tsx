@@ -267,9 +267,9 @@ export const bucketUrl = (
 
 const TICK_FILL = '#6b7280';
 
-// In the timezone the server cut the grid on, not the browser's own: a bar starts
-// at a local whole hour there, so a Delhi bar opening at UTC 18:30 labels as
-// 00:00 and no label ever needs minutes.
+// In the timezone the server cut the grid on, not the browser's own: a bar
+// starts at a local whole hour there, so a Delhi bar opening at UTC 18:30
+// labels as 00:00 and no label ever needs minutes.
 const dayLabel = (date: Date, timezone: string) =>
   date.toLocaleDateString(undefined, {
     month: 'short',

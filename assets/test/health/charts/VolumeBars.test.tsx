@@ -155,8 +155,7 @@ describe('tickLabel and rangeLabel', () => {
   });
 
   // The half- and quarter-hour zones. The grid is floored on the local clock,
-  // so a boundary is a local whole hour and no label ever needs minutes — the
-  // thing that broke when the hour was read off UTC.
+  // so a boundary is a local whole hour and no label ever needs minutes.
   test('clocks the off-the-hour zones as whole local hours', () => {
     expect(tickLabel('2026-09-08T18:30:00Z', 2, 'Asia/Kolkata')).toBe('00:00');
     expect(tickLabel('2026-09-08T18:15:00Z', 2, 'Asia/Kathmandu')).toBe(
@@ -166,7 +165,7 @@ describe('tickLabel and rangeLabel', () => {
 });
 
 // The bar's own link. Its end is the next bar's start, so the boundary a run
-// lands on belongs to exactly one bar — the same half-open slot `date_bin`
+// lands on belongs to exactly one bar — the same half-open slot the server
 // counted it in.
 describe('bucketUrl', () => {
   const buckets = [

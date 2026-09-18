@@ -125,9 +125,9 @@ defmodule Lightning.Workflows.Stats do
   whole and JSON-encoded — to draw thirty bars.
 
   Bucketed on the local calendar rather than on the epoch, which is what makes
-  it daylight-saving-correct: `date_bin` bins the *local* timestamp, so
-  London's 25-hour October day is one bar 25 hours wide and every boundary
-  stays on local midnight.
+  it daylight-saving-correct: every boundary is a local whole hour turned into
+  the instant it names, so London's 25-hour October day is one bar 25 hours
+  wide and every daily boundary stays on local midnight.
 
   Buckets are counted on `inserted_at` — when the attempt started, not when it
   settled — so a run stays in the bar the traffic arrived in. Every bucket and
@@ -151,11 +151,7 @@ defmodule Lightning.Workflows.Stats do
           bucket_hours: pos_integer(),
           buckets: [run_bucket()]
         }
-  def runs(
-        %Workflow{id: workflow_id},
-        days_back \\ @default_days_back,
-        timezone \\ "Etc/UTC"
-      )
+  def runs(%Workflow{id: workflow_id}, days_back, timezone)
       when is_map_key(@buckets, days_back) do
     # No change marker in this key — a busy workflow moves the marker faster
     # than the page polls, so every poll would miss (211 ms and 1.4 GiB of
@@ -173,45 +169,43 @@ defmodule Lightning.Workflows.Stats do
     )
   end
 
-  # Postgres, not Tzdata, is the authority on what `at time zone` accepts, and
-  # the two zone sets are versioned apart: `:tzdata` autoupdates at runtime
-  # everywhere but test, while `pg_timezone_names` is fixed at the server's
-  # build. So a zone the controller validated can still be one this server has
-  # never heard of — `America/Coyhaique` is exactly that against PG 15, and it
-  # is what Chrome reports in Coyhaique, Chile.
+  # The start of every bar as a real instant, oldest first, in UTC. Resolved
+  # here and nowhere else: Tzdata and `pg_timezone_names` are versioned apart,
+  # so a boundary the two databases place differently would be runs tallied
+  # into a bar that is never drawn.
   #
-  # Redrawn on UTC rather than left to raise, which keeps the policy the
-  # controller already sets for every other unusable timezone: a bad window
-  # cannot be drawn, a bad clock still can. The result is cached under the
-  # requested zone, so the dead query runs once per `@runs_ttl`, not per poll.
-  #
-  # Not checked up front: `pg_timezone_names` costs ~90 ms to scan, more than
-  # the query it would guard.
-  defp bucket_window(workflow_id, days_back, timezone) do
+  # The list has to be strictly ascending: `width_bucket` reads an unsorted
+  # array without complaining and returns a plausible number, so a boundary
+  # that landed at or before its neighbour would be wrong counts per bar and no
+  # error. The boundary test holds that for the zones it names — London,
+  # Havana, Troll, Lord Howe, Chatham — not for all of tzdata.
+  @doc false
+  @spec boundaries(DateTime.t(), 1 | 7 | 30, Calendar.time_zone()) :: [
+          DateTime.t()
+        ]
+  def boundaries(to, days_back, timezone) do
     {hours, count} = Map.fetch!(@buckets, days_back)
+
+    to
+    |> bucket_starts(hours, count, timezone)
+    |> Enum.map(&resolve(&1, timezone))
+  end
+
+  defp bucket_window(workflow_id, days_back, timezone) do
+    {hours, _count} = Map.fetch!(@buckets, days_back)
     to = DateTime.utc_now()
-    starts = bucket_starts(to, hours, count, timezone)
-    from = resolve(hd(starts), timezone)
+    starts = boundaries(to, days_back, timezone)
 
     %{
-      window: %{from: from, to: to},
+      window: %{from: hd(starts), to: to},
       timezone: timezone,
       bucket_hours: hours,
-      buckets: bucket_runs(workflow_id, starts, from, hours, timezone)
+      buckets: bucket_runs(workflow_id, starts)
     }
-  rescue
-    error in Postgrex.Error ->
-      if error.postgres[:code] == :invalid_parameter_value and
-           timezone != "Etc/UTC" do
-        bucket_window(workflow_id, days_back, "Etc/UTC")
-      else
-        reraise error, __STACKTRACE__
-      end
   end
 
   # The local wall-clock start of every bar, oldest first, as naive local
-  # datetimes — the same domain `date_bin` bins in below, so a tally matches a
-  # bar by equality and no timezone arithmetic is needed to line them up.
+  # datetimes, for `boundaries/3` to resolve.
   #
   # Anchored on the bucket `now` is in, not on `now` itself: a window that ends
   # mid-bucket would put every boundary at whatever minute the request landed
@@ -241,14 +235,16 @@ defmodule Lightning.Workflows.Stats do
     |> DateTime.shift_zone!("Etc/UTC")
   end
 
-  defp bucket_runs(workflow_id, starts, from, hours, timezone) do
-    tallies = tally_runs(workflow_id, from, hours, timezone)
+  defp bucket_runs(workflow_id, starts) do
+    tallies = tally_runs(workflow_id, starts)
 
-    Enum.map(starts, fn start ->
+    starts
+    |> Enum.with_index(1)
+    |> Enum.map(fn {start, bucket} ->
       tallies
-      |> Map.get(start, [])
+      |> Map.get(bucket, [])
       |> Enum.into(@zero_run_counts)
-      |> Map.put(:at, resolve(start, timezone))
+      |> Map.put(:at, start)
     end)
   end
 
@@ -259,12 +255,14 @@ defmodule Lightning.Workflows.Stats do
   # the window before the nested loop into `runs(work_order_id, inserted_at)`,
   # instead of probing every work order the workflow ever had.
   #
-  # `inserted_at` is a naked `timestamp` holding UTC, so it is labelled UTC and
-  # then read on the reader's clock before binning: `date_bin` bins the local
-  # wall clock, which is what puts a boundary on local midnight and makes a
-  # 25-hour day one bar. The origin is a midnight, so every width — 2, 12, 24 —
-  # aligns to one.
-  defp tally_runs(workflow_id, from, hours, timezone) do
+  # `inserted_at` is a naked `timestamp` holding UTC, so the boundaries go down
+  # as naive UTC datetimes to match it, and `width_bucket` assigns each row the
+  # 1-based slot it falls in — lower edge inclusive. Slot 0 is below the oldest
+  # boundary, which the `>= from` filter has already excluded; the highest slot
+  # is the bar `now` is in, still filling.
+  defp tally_runs(workflow_id, [from | _] = starts) do
+    edges = Enum.map(starts, &DateTime.to_naive/1)
+
     from(r in Run,
       join: wo in WorkOrder,
       on: wo.id == r.work_order_id,
@@ -275,10 +273,9 @@ defmodule Lightning.Workflows.Stats do
       select: {
         selected_as(
           fragment(
-            "date_bin(make_interval(hours => ?::int), ? at time zone 'UTC' at time zone ?, timestamp '2000-01-01')",
-            ^hours,
+            "width_bucket(?, ?)",
             r.inserted_at,
-            ^timezone
+            ^edges
           ),
           :bucket
         ),
@@ -288,7 +285,7 @@ defmodule Lightning.Workflows.Stats do
     )
     |> Repo.all()
     |> Enum.group_by(
-      fn {bucket, _, _} -> NaiveDateTime.truncate(bucket, :second) end,
+      fn {bucket, _, _} -> bucket end,
       fn {_, state, count} -> {state, count} end
     )
   end
