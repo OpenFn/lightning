@@ -59,6 +59,11 @@ defmodule Lightning.Application do
 
     # Workflow health page stats, cached briefly to dedupe bursts on the same
     # workflow. See `Lightning.Workflows.Stats`.
+    #
+    # Unbounded, keyed by workflow, window and timezone. An entry is ~16 KiB
+    # and lives two minutes, and filling one costs a ~200 ms aggregate, so the
+    # database is the scarce resource here and a size limit would bound the
+    # wrong one.
     workflow_stats_cache_childspec =
       Supervisor.child_spec({Cachex, name: :workflow_stats},
         id: :workflow_stats_cache

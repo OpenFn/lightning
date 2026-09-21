@@ -246,6 +246,44 @@
               </div>
             </div>
 
+            <%!-- Run status chip. Only when set: a runs-chart band is the only
+                  thing that sets it, and unlike the two date chips above there
+                  is no dropdown behind it to open. Its own chip rather than a
+                  clause on the run-date one, so a reader who wants the whole
+                  slot can drop the band without losing the slot. --%>
+            <% run_status = get_change(@filters_changeset, :run_status) || [] %>
+            <%= if run_status != [] do %>
+              <.filter_chip
+                id="run-status-filter-chip"
+                active={true}
+                clear_fields={[{:run_status, nil}]}
+              >
+                Run status: {Enum.map_join(
+                  run_status,
+                  ", ",
+                  &String.capitalize/1
+                )}
+              </.filter_chip>
+            <% end %>
+
+            <%!-- Run date chip. "Created", because these bound a run's
+                  `inserted_at` — the chips above bound the work order's
+                  arrival and its last activity. --%>
+            <% run_date_after = get_change(@filters_changeset, :run_date_after)
+            run_date_before = get_change(@filters_changeset, :run_date_before) %>
+            <%= if run_date_after || run_date_before do %>
+              <.filter_chip
+                id="run-dates-filter-chip"
+                active={true}
+                clear_fields={[
+                  {:run_date_after, nil},
+                  {:run_date_before, nil}
+                ]}
+              >
+                Run created {format_run_range(run_date_after, run_date_before)}
+              </.filter_chip>
+            <% end %>
+
             <%!-- Work order ID chip (only when workorder_id filter is active) --%>
             <%= if workorder_id = get_change(@filters_changeset, :workorder_id) do %>
               <.filter_chip

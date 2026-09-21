@@ -92,16 +92,20 @@ defmodule Lightning.Workflows.Stats do
     end)
   end
 
-  # How the runs chart slices each window: `{bucket_seconds, bucket_count}`.
-  # Every width divides a day evenly, so a window whose `from` sits on the grid
-  # keeps every bucket boundary on the clock — 2-hourly, AM/PM, midnight.
+  # How the runs chart slices each window: `{bucket_hours, bucket_count}`.
+  # Widths are wall-clock hours on the reader's calendar, not fixed durations —
+  # a "daily" bar is a local day, which is 23 or 25 hours across a clock change.
   #
   # One bucket more than the width divides into: `now` sits mid-bucket, so a
-  # grid of exactly `days_back / width` bars would start *after*
+  # grid of exactly `days_back * 24 / width` bars would start *after*
   # `now - days_back` and leave the oldest hours of the window undrawn while
   # the donuts beside it counted them. The oldest bar instead reaches back
   # past `from`, and `window` reports the range actually covered.
-  @buckets %{1 => {7_200, 13}, 7 => {43_200, 15}, 30 => {86_400, 31}}
+  #
+  # ponytail: the counts are wall-clock, so on a spring-forward day the grid
+  # covers an hour less real time than the donuts beside it. Add a bucket to
+  # each width if anyone ever notices.
+  @buckets %{1 => {2, 13}, 7 => {12, 15}, 30 => {24, 31}}
 
   @zero_run_counts Map.new(Run.final_states(), &{&1, 0})
 
@@ -112,12 +116,18 @@ defmodule Lightning.Workflows.Stats do
         }
 
   @doc """
-  Final run counts per state, bucketed across the last `days_back` days:
-  2-hourly over a day, AM/PM over a week, daily over a month.
+  Final run counts per state, bucketed across the last `days_back` days on a
+  grid cut to `timezone`'s clock: local 2-hourly over a day, local half-days
+  over a week, local days over a month.
 
   Bucketed here rather than in the browser, because the alternative is shipping
   every run in the window — six figures of rows on a busy workflow, cached
   whole and JSON-encoded — to draw thirty bars.
+
+  Bucketed on the local calendar rather than on the epoch, which is what makes
+  it daylight-saving-correct: every boundary is a local whole hour turned into
+  the instant it names, so London's 25-hour October day is one bar 25 hours
+  wide and every daily boundary stays on local midnight.
 
   Buckets are counted on `inserted_at` — when the attempt started, not when it
   settled — so a run stays in the bar the traffic arrived in. Every bucket and
@@ -125,56 +135,116 @@ defmodule Lightning.Workflows.Stats do
   reasoning about which bars are missing.
 
   The last bucket is the one `now` falls in, so it is still filling; the first
-  reaches back past `now - days_back`, so nothing in the window goes undrawn.
-  `window` is the range the bars actually cover.
+  reaches back past `now - days_back`, so nothing in the window goes undrawn —
+  except on a spring-forward day in the reader's zone, where the grid is a
+  wall-clock hour wide but an hour short in real time.
+  `window` is the range the bars actually cover, `bucket_hours` is the width
+  the chart labels, and `timezone` is the clock both were cut on.
 
   A bucket is `at` alongside one key per state, flat rather than nested, which
   is the row shape Recharts takes as `data` — the list goes to the chart
   untouched, and each `Bar` names the state it draws.
   """
-  @spec runs(Workflow.t(), 1 | 7 | 30) :: %{
+  @spec runs(Workflow.t(), 1 | 7 | 30, Calendar.time_zone()) :: %{
           window: %{from: DateTime.t(), to: DateTime.t()},
+          timezone: Calendar.time_zone(),
+          bucket_hours: pos_integer(),
           buckets: [run_bucket()]
         }
-  def runs(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
+  def runs(%Workflow{id: workflow_id}, days_back, timezone)
       when is_map_key(@buckets, days_back) do
     # No change marker in this key — a busy workflow moves the marker faster
     # than the page polls, so every poll would miss (211 ms and 1.4 GiB of
     # buffer traffic per recompute at 44k work orders). Costs up to
     # `@runs_ttl` of staleness on a chart whose finest bar is two hours wide.
+    #
+    # The timezone *is* in the key: it moves every boundary, and Cachex keys a
+    # fetch in flight by key alone (see `cached_until_ttl/3` below), so without
+    # it the first reader to load the page would pin their grid on every other
+    # timezone for the TTL.
     cached_until_ttl(
-      {:runs, workflow_id, days_back},
-      fn ->
-        {seconds, count} = Map.fetch!(@buckets, days_back)
-        window = bucket_window(seconds, count)
-
-        %{
-          window: window,
-          buckets: bucket_runs(workflow_id, window.from, seconds, count)
-        }
-      end,
+      {:runs, workflow_id, days_back, timezone},
+      fn -> bucket_window(workflow_id, days_back, timezone) end,
       @runs_ttl
     )
   end
 
-  # Anchored on the bucket `now` is in, not on `now` itself: a window that ends
-  # mid-bucket would put every boundary at whatever minute the request landed
-  # on, and the labels the chart draws — "2am", "PM", a date — would be lies.
-  defp bucket_window(seconds, count) do
-    to = DateTime.utc_now()
-    current = DateTime.from_unix!(div(DateTime.to_unix(to), seconds) * seconds)
+  # The start of every bar as a real instant, oldest first, in UTC. Resolved
+  # here and nowhere else: Tzdata and `pg_timezone_names` are versioned apart,
+  # so a boundary the two databases place differently would be runs tallied
+  # into a bar that is never drawn.
+  #
+  # The list has to be strictly ascending: `width_bucket` reads an unsorted
+  # array without complaining and returns a plausible number, so a boundary
+  # that landed at or before its neighbour would be wrong counts per bar and no
+  # error. The boundary test holds that for the zones it names — London,
+  # Havana, Troll, Lord Howe, Chatham — not for all of tzdata.
+  @doc false
+  @spec boundaries(DateTime.t(), 1 | 7 | 30, Calendar.time_zone()) :: [
+          DateTime.t()
+        ]
+  def boundaries(to, days_back, timezone) do
+    {hours, count} = Map.fetch!(@buckets, days_back)
 
-    %{from: DateTime.add(current, -(count - 1) * seconds, :second), to: to}
+    to
+    |> bucket_starts(hours, count, timezone)
+    |> Enum.map(&resolve(&1, timezone))
   end
 
-  defp bucket_runs(workflow_id, from, seconds, count) do
-    tallies = tally_runs(workflow_id, from, seconds)
+  defp bucket_window(workflow_id, days_back, timezone) do
+    {hours, _count} = Map.fetch!(@buckets, days_back)
+    to = DateTime.utc_now()
+    starts = boundaries(to, days_back, timezone)
 
-    Enum.map(0..(count - 1), fn index ->
+    %{
+      window: %{from: hd(starts), to: to},
+      timezone: timezone,
+      bucket_hours: hours,
+      buckets: bucket_runs(workflow_id, starts)
+    }
+  end
+
+  # The local wall-clock start of every bar, oldest first, as naive local
+  # datetimes, for `boundaries/3` to resolve.
+  #
+  # Anchored on the bucket `now` is in, not on `now` itself: a window that ends
+  # mid-bucket would put every boundary at whatever minute the request landed
+  # on, and the labels the chart draws — an hour, a date — would be lies.
+  defp bucket_starts(to, hours, count, timezone) do
+    local = to |> DateTime.shift_zone!(timezone) |> DateTime.to_naive()
+
+    current =
+      local
+      |> NaiveDateTime.beginning_of_day()
+      |> NaiveDateTime.add(div(local.hour, hours) * hours, :hour)
+      |> NaiveDateTime.truncate(:second)
+
+    Enum.map((count - 1)..0//-1, &NaiveDateTime.add(current, -&1 * hours, :hour))
+  end
+
+  # A local wall-clock time back to a real instant, reported in UTC like every
+  # other timestamp on this page. A spring-forward gap has no such instant —
+  # take the one the clock jumps to; an autumn repeat has two — take the first,
+  # so the bar opens when its label says it does.
+  defp resolve(naive, timezone) do
+    case DateTime.from_naive(naive, timezone) do
+      {:ok, datetime} -> datetime
+      {:ambiguous, first, _second} -> first
+      {:gap, _before, after_gap} -> after_gap
+    end
+    |> DateTime.shift_zone!("Etc/UTC")
+  end
+
+  defp bucket_runs(workflow_id, starts) do
+    tallies = tally_runs(workflow_id, starts)
+
+    starts
+    |> Enum.with_index(1)
+    |> Enum.map(fn {start, bucket} ->
       tallies
-      |> Map.get(index, [])
+      |> Map.get(bucket, [])
       |> Enum.into(@zero_run_counts)
-      |> Map.put(:at, DateTime.add(from, index * seconds, :second))
+      |> Map.put(:at, start)
     end)
   end
 
@@ -185,11 +255,14 @@ defmodule Lightning.Workflows.Stats do
   # the window before the nested loop into `runs(work_order_id, inserted_at)`,
   # instead of probing every work order the workflow ever had.
   #
-  # The grid is aligned, so integer division by the bucket width is the whole
-  # of the bucketing — no `date_trunc` special case per width. `floor` before
-  # the cast because `extract` yields `numeric` and `numeric::bigint` rounds:
-  # without it a run at 01:59:59.7 is counted in the 02:00 bar.
-  defp tally_runs(workflow_id, from, seconds) do
+  # `inserted_at` is a naked `timestamp` holding UTC, so the boundaries go down
+  # as naive UTC datetimes to match it, and `width_bucket` assigns each row the
+  # 1-based slot it falls in — lower edge inclusive. Slot 0 is below the oldest
+  # boundary, which the `>= from` filter has already excluded; the highest slot
+  # is the bar `now` is in, still filling.
+  defp tally_runs(workflow_id, [from | _] = starts) do
+    edges = Enum.map(starts, &DateTime.to_naive/1)
+
     from(r in Run,
       join: wo in WorkOrder,
       on: wo.id == r.work_order_id,
@@ -200,10 +273,9 @@ defmodule Lightning.Workflows.Stats do
       select: {
         selected_as(
           fragment(
-            "div(floor(extract(epoch from ? - ?))::bigint, ?)::int",
+            "width_bucket(?, ?)",
             r.inserted_at,
-            type(^from, :utc_datetime_usec),
-            type(^seconds, :integer)
+            ^edges
           ),
           :bucket
         ),
@@ -212,9 +284,10 @@ defmodule Lightning.Workflows.Stats do
       }
     )
     |> Repo.all()
-    |> Enum.group_by(fn {bucket, _, _} -> bucket end, fn {_, state, count} ->
-      {state, count}
-    end)
+    |> Enum.group_by(
+      fn {bucket, _, _} -> bucket end,
+      fn {_, state, count} -> {state, count} end
+    )
   end
 
   defp window(days_back) do
@@ -229,7 +302,7 @@ defmodule Lightning.Workflows.Stats do
   # something settles: a poll that finds nothing has moved is a hit on every
   # pod, because the answer is read from Postgres and not from one node's ETS.
   # The trade is that a workflow settling work orders faster than the poll
-  # recomputes on every poll, which is why `runs/2` opts out and takes
+  # recomputes on every poll, which is why `runs/3` opts out and takes
   # `@ttl`-bounded staleness instead.
   #
   # The marker only moves when a work order settles, so a stat counting unsettled
@@ -239,7 +312,7 @@ defmodule Lightning.Workflows.Stats do
   # flight by key alone and ignores the fallback closure
   # (`deps/cachex/lib/cachex/services/courier.ex:60-62`), so a second caller
   # with a different closure for the same key never runs its own and is handed
-  # the first one's answer. `outcomes/2`, `error_signatures/2` and `runs/2` are
+  # the first one's answer. `outcomes/2`, `error_signatures/2` and `runs/3` are
   # safe because their key prefixes differ.
   defp cached({_slice, workflow_id, _days} = key, fun) do
     key

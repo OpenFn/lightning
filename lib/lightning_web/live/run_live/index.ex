@@ -36,6 +36,9 @@ defmodule LightningWeb.RunLive.Index do
     date_before: :utc_datetime,
     wo_date_after: :utc_datetime,
     wo_date_before: :utc_datetime,
+    run_date_after: :utc_datetime,
+    run_date_before: :utc_datetime,
+    run_status: {:array, :string},
     pending: :boolean,
     running: :boolean,
     success: :boolean,
@@ -843,6 +846,21 @@ defmodule LightningWeb.RunLive.Index do
       end
     end
   end
+
+  # The run-date chip's range.
+  #
+  # Stamped in UTC and says so: the bars this comes from are cut on the
+  # reader's clock, nothing in Lightning records what that clock is, and a bare
+  # "14:00" under a bar labelled "16:00" is worse than a suffix. The suffix
+  # goes on once, at the end, rather than on both ends of a range.
+  defp format_run_range(nil, nil), do: "any time"
+  defp format_run_range(from, nil), do: "after #{run_stamp(from)} UTC"
+  defp format_run_range(nil, to), do: "before #{run_stamp(to)} UTC"
+
+  defp format_run_range(from, to),
+    do: "#{run_stamp(from)} – #{run_stamp(to)} UTC"
+
+  defp run_stamp(date), do: Timex.format!(date, "{D}-{Mshort} {h24}:{m}")
 
   defp format_date_range(date_after, date_before) do
     case {date_after, date_before} do
