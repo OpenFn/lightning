@@ -21,282 +21,261 @@ and this project adheres to
 
 ### Fixed
 
-## [2.19.0-pre1] - 2026-09-15
+## [2.19.0] - 2026-09-21
 
-### Changed
-
-- Lightning now keeps its own adaptor registry instead of fetching the list from
-  npm at startup, so new adaptors and versions show up without a rebuild or
-  redeploy. See [ADAPTORS.md](ADAPTORS.md).
-  [#4801](https://github.com/OpenFn/lightning/pull/4801)
-
-> **Upgrading.** Delete `SCHEMAS_PATH` and `ADAPTORS_REGISTRY_JSON_PATH` from
-> your deployment config; nothing reads them any more.
+> **Upgrading.** Two things in this release need a change to a self-hosted
+> instance before you deploy it.
 >
-> Drop any build step that calls `mix lightning.install_schemas`,
-> `mix lightning.install_adaptor_icons` or
-> `mix lightning.download_adaptor_registry_cache`, these have been removed.
+> **Adaptors.** Lightning now fetches adaptors at runtime rather than at build
+> time. See
+> [Lightning now keeps its own catalogue of adaptors](#adaptor-catalogue) below
+> for what changed.
 >
-> Point `ADAPTORS_ICONS_PATH` to a persistent volume or storage that survives a
-> restart, the official image and `docker-compose.yml` mount a volume for it. A
-> running instance now needs outbound access to jsDelivr and
-> raw.githubusercontent.com (in addition to npm). `LOCAL_ADAPTORS` and
-> `OPENFN_ADAPTORS_REPO` still work under their old names and warn at boot;
-> rename them to `ADAPTORS_STRATEGY=local` and `ADAPTORS_LOCAL_REPO`. These will
-> be removed in a future release.
+> 1. Remove `SCHEMAS_PATH` and `ADAPTORS_REGISTRY_JSON_PATH` from your config.
+>    Nothing reads them any more.
+> 2. Remove any build step that runs `mix lightning.install_schemas`,
+>    `mix lightning.install_adaptor_icons` or
+>    `mix lightning.download_adaptor_registry_cache`. All three are gone.
+> 3. Point `ADAPTORS_ICONS_PATH` at storage that survives a restart. The
+>    official image and `docker-compose.yml` already mount a volume for it.
+> 4. Allow the running instance outbound access to jsDelivr and
+>    raw.githubusercontent.com, on top of the npm access it already needed.
+>
+> `LOCAL_ADAPTORS` and `OPENFN_ADAPTORS_REPO` still work, but warn at boot and
+> will be removed in a future release. Rename them to `ADAPTORS_STRATEGY=local`
+> and `ADAPTORS_LOCAL_REPO`.
+>
+> **Apollo.** `APOLLO_TIMEOUT` is renamed `APOLLO_IDLE_TIMEOUT_MS` and is no
+> longer read under its old name. If you set it, move its value across;
+> Lightning warns at boot if the old name is still there. See
+> [`APOLLO_TIMEOUT` is renamed](#apollo-timeouts) below for the two new settings
+> that join it and for what the default assumes about your Apollo version.
 
 ### Added
 
-- A workflow is now a draft or it is live, and you drive that from the editor. A
-  live workflow processes production data and is read-only, so to change one you
-  edit it in a sandbox: the workflow is cloned in as a draft, you turn it on
-  there to test against its own webhook URL and schedules, and you promote it
-  back when it is right. Every go-live, promote and restore is recorded as a
-  version, with who published it and where it came from, and any version can be
-  restored while production keeps running. Behind the experimental features
-  setting. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+- A workflow is now either a draft or live. A live workflow is the one handling
+  production data, so Lightning keeps it read-only: to change it, you open it in
+  a sandbox, where it arrives as a draft with its own webhook URL and schedules
+  to test against, and you promote it back when you are happy with it. You can
+  still start a run or a retry by hand on a live workflow, so whoever looks
+  after it can put a test input through what is actually in production. Behind
+  the experimental features setting for now.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+  [#5180](https://github.com/OpenFn/lightning/issues/5180)
+  [#5181](https://github.com/OpenFn/lightning/issues/5181)
 
-- Experimental features say so while they are on: a row in the sidebar footer on
-  every page, and a note in the account menu explaining what it means and
-  linking to the switch that turns it off.
+- Workflows now keep a version history. Going live, promoting from a sandbox and
+  restoring each record a version, along with who did it and where it came from,
+  and you can put any earlier version back while production keeps running.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- The AI assistant shows you what it changed. As the reply streams in, every
+  step it edited appears as a code diff you can read there and then, with a link
+  to open that step and a button to copy the new code. Alongside it is a plain
+  summary of the structural changes: steps added or removed, paths rewired,
+  steps renamed, and a webhook trigger's settings, including its custom URL
+  path, its reply timing and its response codes. If you do not want the changes,
+  the footer of the latest reply will revert them and put the workflow back as
+  it was, and you can restore them again afterwards. Reverting asks first,
+  because it replaces the whole workflow.
+  [#5036](https://github.com/OpenFn/lightning/issues/5036)
+  [#5149](https://github.com/OpenFn/lightning/issues/5149)
+  [#5161](https://github.com/OpenFn/lightning/pull/5161)
+
+- You can now choose a webhook trigger's URL yourself instead of taking the
+  generated one. Give the trigger a path like `facility-001` and it answers at
+  `/i/<project-id>/facility-001`, so you know the URL before the workflow is
+  deployed and can hand it out in advance. This is a real help when the same
+  workflow goes out to many sites at once. Set the path in the trigger panel, in
+  `project.yaml`, or through the workflows API. The trigger panel now lists
+  every URL the trigger answers on, with the generated one always there and the
+  custom one beside it, editable in place, with copy, edit and delete on the
+  row. A path that another workflow in the project is already using, or one the
+  server would reject, is flagged while you type rather than when you save.
+  Existing `/i/<trigger-id>` URLs carry on working.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+
+- Each workflow has a health page, reached from the "Health" link on its row in
+  the workflows list. Pick the last 24 hours, 7 days or 30 days and you get how
+  its work orders ended, what the failures were, how many runs it did over time,
+  and a triage table that groups failures by the error behind them, commonest
+  first. Every triage row opens the history page filtered to exactly those work
+  orders, so you can retry the whole group at once. The page keeps itself up to
+  date while you have it open.
+  [#5108](https://github.com/OpenFn/lightning/issues/5108)
+
+- Lightning now says when you have experimental features switched on: a row in
+  the sidebar footer on every page, and a note in the account menu explaining
+  what it means and linking to the switch that turns it off.
   [#5179](https://github.com/OpenFn/lightning/issues/5179)
 
-- The editor asks before it throws away unsaved changes. Switching version,
-  opening a run that pins one, and leaving for a sandbox each destroyed the
-  collaborative document and took uncommitted edits with it, silently.
-  [#5134](https://github.com/OpenFn/lightning/issues/5134)
-
-### Fixed
-
-- A live workflow can be run and retried by hand again. Every run control saved
-  the workflow on its way out, and a live one refuses that save, so the run
-  never happened. Running is not editing: the person responsible for a live
-  workflow has to be able to put a test input through what is in production.
-  [#4852](https://github.com/OpenFn/lightning/issues/4852)
-
-- Reading an older version of a workflow can no longer write that version back
-  over the workflow. Going live or switching to draft while reading one saved
-  the old content in place of the current, deleting anything added since and
-  recording it as an ordinary new version.
-  [#4852](https://github.com/OpenFn/lightning/issues/4852)
-
-- A `?v=` link opened on a live workflow now opens what is live. That parameter
-  names a save, a live workflow browses its publishes, and honouring it put a
-  version on screen that the list beside it could not name.
-  [#5180](https://github.com/OpenFn/lightning/issues/5180)
-
-- Deleting a trigger now counts as a change to a workflow's content. It was
-  read as a change to the trigger's enabled flag alone, which a promote cannot
-  carry, so a sandbox that had deleted one reported itself as identical to its
-  parent. [#5181](https://github.com/OpenFn/lightning/issues/5181)
-
-- A merge or promote of selected workflows no longer asks everyone editing the
-  project's other workflows to reload, which threw away whatever they had not
-  saved. [#5182](https://github.com/OpenFn/lightning/issues/5182)
-
-- Opening an older version of a workflow whose trigger carries a webhook auth
-  method no longer fails to load.
-  [#5183](https://github.com/OpenFn/lightning/issues/5183)
-
-- The version list is refreshed after a save, so the version you just made is
-  there when you next open the picker. Reopening it after a failed load now
-  tries again rather than staying empty.
-  [#5184](https://github.com/OpenFn/lightning/issues/5184)
-
-- Opening the merge dialog, and deleting a sandbox, no longer crash in a
-  workspace with a branch more than one level deep. A sandbox can no longer be
-  merged into one of its own descendants either, which used to schedule the
-  source for deletion. [#5141](https://github.com/OpenFn/lightning/issues/5141)
-
-- Merging a sandbox no longer reports its own merge as the parent having moved
-  on. A merge now records where it left the parent, so the next one compares
-  against that rather than warning about work it did itself.
-  [#5167](https://github.com/OpenFn/lightning/issues/5167)
-
-- Merging into a project someone has open now updates their editor instead of
-  leaving it stale. A stale document overwrote the merge on its next save.
-  [#5168](https://github.com/OpenFn/lightning/issues/5168)
-
-- Undo and redo are disabled while reading an older version of a workflow. They
-  were writing into that version's own document.
-  [#5169](https://github.com/OpenFn/lightning/issues/5169)
-
-### Security
-
-- A project's environment can no longer be changed once the project exists. It
-  decides which of a credential's value sets the project reads, so an admin who
-  could retype it could read any set of any credential the project holds.
-
-## [2.19.0-pre] - 2026-09-10
-
-### Changed
-
-- "A failed work order" now means the same thing on the workflows list, its
-  history links, the health page and the digest email: cancelled no longer
-  counts, and rejected now does. Each 30-day window is measured from a work
-  order's last activity rather than when it was created, so one retried today
-  counts as recent everywhere.
-- The AI assistant's reply footer now reads "Revert changes" and "Restore
-  changes" rather than "Revert this reply", and its confirmation matches.
-  [#5161](https://github.com/OpenFn/lightning/pull/5161)
-- The AI assistant is the global assistant for everyone. It was behind the
-  experimental features setting and an opt-in tickbox on the chat input, and
-  both are gone: every message goes to it, and the badge naming which assistant
-  answered goes with them. Existing workflow conversations still open and read
-  as they always did, and replying in one moves it to the global assistant from
-  that message on. [#5042](https://github.com/OpenFn/lightning/issues/5042)
-- The AI assistant's attachment tickboxes are now about the run you are looking
-  at, and they appear wherever you are. "Send run logs" and "Send run data" sit
-  above the message box on the canvas and in the run history as well as in the
-  step editor, and appear once a run is loaded rather than sitting greyed out.
-  "Send run data" now covers every step in the run rather than the one that
-  happened to be highlighted, and still sends the shape of the data with the
-  values removed. The "Press Enter to send" hint below the box is gone, since
-  the notice and the send button now share that row.
-  [#5037](https://github.com/OpenFn/lightning/issues/5037)
-- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
-  first character of a string, which breaks names in many languages. Lightning
-  does not normalise anything today, but #4577 adds it on every name, so the
-  runtime moves first.
-
-### Removed
-
-- The AI assistant's "Send code" tickbox. The assistant reads your workflow to
-  answer anything about it, so the box did nothing except in one case, where it
-  looked like a choice and was not one.
-  [#5037](https://github.com/OpenFn/lightning/issues/5037)
-
-### Added
-
-- The assistant's change summary now reports a webhook trigger's settings. A
-  custom path being set, changed or cleared shows as its own row, as do the
-  reply timing and the response codes, all of which used to land with nothing
-  said about them. [#5149](https://github.com/OpenFn/lightning/issues/5149)
-- The AI assistant now shows what changed as a global reply edits your workflow.
-  Each change renders under the status that made it, while the reply is still
-  streaming, as a per-step code diff with syntax highlighting, old and new line
-  numbers and a link to open that step in the editor, alongside a compact
-  summary of structural changes like added or removed paths, trigger changes and
-  step renames. Each diff block copies the step's code, and the latest reply can
-  be undone, restoring the workflow to how it stood before that reply and
-  offering to redo it. Undo confirms first when the workflow has been edited
-  since, because it replaces the whole workflow.
-  [#5036](https://github.com/OpenFn/lightning/issues/5036)
-- Webhook triggers can be given a custom URL path, so an endpoint's URL is known
-  before it is deployed. A trigger with a path of `facility-001` answers at
-  `/i/<project-id>/facility-001`, where `<project-id>` is the project's UUID.
-  Set it in the trigger panel, in `project.yaml`, or through the workflows API.
-  Existing `/i/<trigger-id>` URLs are unchanged.
-  [#4952](https://github.com/OpenFn/lightning/issues/4952)
-- A workflow health page at `/projects/:project_id/w/:workflow_id/health`,
-  reached from the "Health" link on each row of the workflows list. It covers
-  the last 24 hours, 7 days or 30 days: a donut of work order outcomes, a
-  breakdown of the failing ones, and a triage table grouping failures by error
-  signature, heaviest first. Each triage row links to history filtered to its
-  own work orders, where "retry all" can retry the group. The page re-reads its
-  numbers every 30 seconds while the tab is open.
-- Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
-  scenario file (users, API tokens, credentials, projects, workflows) via
-  `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
-  external test harnesses. Workflows in a scenario are written in the existing
-  workflow-spec format — the same YAML the collaborative editor imports and
-  exports, validated against the same JSON Schema.
+- `mix lightning.kickstart` fills a development or test instance from a single
+  YAML or JSON file describing users, API tokens, credentials, projects and
+  workflows. Run it again and it brings the instance back to what the file says
+  rather than making duplicates, so it is a reliable starting point for local
+  work and for automated test harnesses; `bin/e2e --scenario` uses it the same
+  way. Workflows are written in the same format the editor imports and exports.
+  It is a dev and test facility, and is not available on a release build.
   [#4974](https://github.com/OpenFn/lightning/issues/4974)
 
 ### Changed
 
-- The webhook trigger panel now lists every URL a trigger answers on. The
-  default URL is always there and the custom one sits next to it, editable in
-  place, with add, edit, delete and copy on the row itself. A path already used
-  by another workflow in the project is reported while you type, not after you
-  save. A path the server would reject shows what is wrong and is left as you
-  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
-- **Breaking:** `APOLLO_TIMEOUT` is renamed `APOLLO_IDLE_TIMEOUT_MS` and joined
-  by `APOLLO_CONNECT_TIMEOUT_MS` and `APOLLO_REQUEST_TIMEOUT_MS`. The old name
-  is no longer read and logs a warning at boot if it is still set. On the wire
-  it only ever measured silence, so put its value on `APOLLO_IDLE_TIMEOUT_MS` if
-  you were setting it. All three have defaults, so a deployment need not set any
-  of them. The idle default is 30s, which assumes Apollo v3.1.1 or later and its
-  15s keepalive; on an older Apollo a working stream can go quiet for longer
-  than that, so raise it or upgrade Apollo.
+- <a id="adaptor-catalogue"></a>Lightning now keeps its own catalogue of
+  adaptors in the database and refreshes it hourly while it runs, so a new
+  adaptor or a new version of one appears in the editor within the hour with no
+  rebuild and no redeploy. It used to read the list from npm once at startup and
+  hold it in memory. Credential schemas and adaptor icons come from that
+  catalogue too, rather than being baked into the Docker image at build time. A
+  superuser can force a refresh from the Maintenance page, and an instance with
+  no internet access can be loaded from a snapshot exported from one that has.
+  [ADAPTORS.md](ADAPTORS.md) covers local adaptor checkouts, offline instances,
+  internal npm mirrors and troubleshooting.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+- There is now one AI assistant, and it can read and edit your whole workflow
+  rather than a single step's code. It used to sit behind the experimental
+  features setting and a tickbox on the chat box, and both are gone, so every
+  message goes to it. Older conversations still open and read as they always
+  did, and replying in one carries on with the new assistant from that message
+  onwards. [#5042](https://github.com/OpenFn/lightning/issues/5042)
+
+- "Send run logs" and "Send run data" now follow the run you are looking at, and
+  you get them wherever you can chat: the canvas, the run history and the step
+  editor. They appear once a run has loaded rather than sitting greyed out, and
+  "Send run data" covers every step in the run instead of only the one you had
+  highlighted. As before, it sends the shape of the data with the values
+  stripped out. [#5037](https://github.com/OpenFn/lightning/issues/5037)
+
+- A failed work order means the same thing everywhere it is counted: the
+  workflows list, the links off it, the health page and the digest email. A work
+  order somebody cancelled on purpose is no longer counted as a failure, and one
+  that was rejected now is. The 30-day windows are measured from when a work
+  order last did something rather than when it was first created, so one you
+  retried today counts as recent on every one of those screens.
+
+- <a id="apollo-timeouts"></a>**Breaking:** for self-hosters, `APOLLO_TIMEOUT`
+  is renamed `APOLLO_IDLE_TIMEOUT_MS`. If you set the old one, move its value
+  onto the new name; the old name is no longer read and Lightning warns at boot
+  if it is still set. Two more settings join it, `APOLLO_CONNECT_TIMEOUT_MS` and
+  `APOLLO_REQUEST_TIMEOUT_MS`. All three have defaults, so you need not set any
+  of them. The idle default of 30 seconds assumes Apollo v3.1.1 or later, which
+  sends a keepalive every 15 seconds. On an older Apollo a healthy stream can go
+  quiet for longer than that, so either upgrade Apollo or raise the timeout.
   [#4882](https://github.com/OpenFn/lightning/issues/4882)
+
+- Lightning now runs on Erlang/OTP 28 and Elixir 1.18.4. The official Docker
+  image already has them; if you build from source or run a release of your own,
+  move your build to those versions.
+
+### Removed
+
+- The AI assistant's "Send code" tickbox. The assistant reads your workflow to
+  answer anything about it whether you tick the box or not, so it looked like a
+  choice it was not. [#5037](https://github.com/OpenFn/lightning/issues/5037)
 
 ### Fixed
 
-- The assistant says when it tried to change your code and could not. Apollo
-  reports how many of its edits landed, and none landing used to arrive as a
-  reply with nothing to apply and no explanation, which read as the assistant
-  declining to help. There is now a line saying so, with a way to try again.
-  Needs Apollo v3.1.2 or later, which reports that on the direct single-step
-  route as well as through the planner.
+- The editor now asks before throwing away unsaved changes, and offers to save
+  them first. Switching to an older version, opening a run that is pinned to
+  one, or leaving for a sandbox all used to wipe out uncommitted edits without a
+  word. Closing the tab or following a link away now gets the browser's own
+  warning. [#5134](https://github.com/OpenFn/lightning/issues/5134)
+
+- Undo and redo are switched off while you are reading an older version of a
+  workflow. They stayed live before, so pressing either wrote your change into
+  that old version. [#5169](https://github.com/OpenFn/lightning/issues/5169)
+
+- An older version of a workflow whose trigger has a webhook auth method
+  attached now opens. The auth method could not be encoded into the payload the
+  editor is sent, and that failure took the connection down with it, so the
+  editor never appeared. The version list also refreshes after a save, so the
+  version you just made is in it, and it tries again after a failed load rather
+  than showing you the same error until you reload the page.
+  [#5183](https://github.com/OpenFn/lightning/issues/5183)
+  [#5184](https://github.com/OpenFn/lightning/issues/5184)
+
+- Merging or promoting out of a sandbox no longer disturbs people working on
+  other workflows in the target project. It used to ask everyone with that
+  project open to reload, which threw away anything they had not saved. Anyone
+  looking at a workflow the merge did change now sees the new content
+  straightaway, instead of a stale canvas that would overwrite the merge the
+  next time they saved. [#5182](https://github.com/OpenFn/lightning/issues/5182)
+  [#5168](https://github.com/OpenFn/lightning/issues/5168)
+
+- Merging a sandbox a second time no longer warns that someone else has changed
+  the parent, when the only thing that changed it was your own previous merge.
+  [#5167](https://github.com/OpenFn/lightning/issues/5167)
+
+- The merge dialog and deleting a sandbox no longer crash in a workspace where
+  sandboxes are nested more than one level deep. A sandbox also cannot be merged
+  into one of its own descendants any more, which used to leave the source
+  scheduled for deletion.
+  [#5141](https://github.com/OpenFn/lightning/issues/5141)
+
+- When the assistant tries to change your code and the change cannot be applied,
+  it now says so on the reply, beside the changes that did not land, and offers
+  to try again. You used to get a reply with nothing in it, or a panel of raw
+  YAML, and no explanation either way. The failure is remembered as well, so
+  reloading the page no longer makes it look as though the changes went through;
+  a retry that works clears it. Reporting an edit that Apollo itself could not
+  apply needs Apollo v3.1.2 or later.
   [#5133](https://github.com/OpenFn/lightning/issues/5133)
-- Starting an AI chat with a message over the 10,000 character limit no longer
-  kills the connection. The reply carried a raw changeset, which cannot be
-  encoded, so the socket died before answering and the assistant appeared to do
-  nothing. The limit is also shown in the box now, once you are near it.
-  [#4883](https://github.com/OpenFn/lightning/issues/4883)
-- AI chat messages no longer sit in "processing" forever when the job running
-  them is interrupted. Oban's job-stop event now has a handler, the shutdown
-  grace period is longer than the longest an AI job can run, and a cron sweep
-  clears anything still stranded. A deploy can still sever a running answer,
-  because the platform's own kill deadline is shorter than the grace period; the
-  sweep is what recovers the message when that happens.
-  [#4260](https://github.com/OpenFn/lightning/issues/4260)
-  [#5124](https://github.com/OpenFn/lightning/issues/5124)
-- Why an AI chat failed is now recorded on the message and shown on the reply it
-  belongs to, rather than as one generic banner: a hung Apollo, a lost
-  connection and a rate limit each read differently. A failed reply keeps its
-  text as an answer, with the reason and a Try again beneath it, and the
-  question you asked is no longer marked "Failed to send" when it was sent and
-  half answered. [#5125](https://github.com/OpenFn/lightning/issues/5125)
-- An AI answer that is cut off partway through is kept rather than discarded.
-  The text and any workflow YAML the user already watched appear are saved,
-  along with the status updates, in the order they were shown.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+
+- A reply that fails part way through is no longer thrown away. What you watched
+  arrive is kept, in the order it appeared and with the progress updates that
+  came with it, and the reply tells you what actually went wrong: Apollo hung,
+  the connection dropped, you hit a rate limit. Those used to read as one
+  generic "Stream ended without complete response". There is a Try again beneath
+  it, and the question you asked is no longer marked as failed to send when it
+  was sent and half answered.
+  [#5125](https://github.com/OpenFn/lightning/issues/5125)
   [#5126](https://github.com/OpenFn/lightning/issues/5126)
   [#5127](https://github.com/OpenFn/lightning/issues/5127)
-- A failed AI stream now says which way it failed. A hung Apollo, a severed
-  connection and a genuinely short answer all read as "Stream ended without
-  complete response"; they now read as three different things.
   [#4882](https://github.com/OpenFn/lightning/issues/4882)
-- The global assistant no longer offers to paste a reply's code block into
-  whichever job you have open. It applies its own changes and shows them as
-  diffs, so those blocks are data it quoted back or work it has already done.
+
+- AI chat messages no longer sit in "processing" forever when whatever was
+  answering them is interrupted by a deploy or a restart. The interruption is
+  now reported, and anything still stranded is cleared by a periodic sweep, so
+  the chat becomes usable again on its own.
+  [#4260](https://github.com/OpenFn/lightning/issues/4260)
+  [#5124](https://github.com/OpenFn/lightning/issues/5124)
+
+- Starting an AI chat by pasting in more than 10,000 characters no longer kills
+  the chat. The connection died before the assistant could answer, so it looked
+  as though it had simply ignored you. The limit is now shown in the message box
+  as you approach it. [#4883](https://github.com/OpenFn/lightning/issues/4883)
+
+- The assistant no longer offers to paste a code block from its reply into
+  whichever step you happen to have open. It applies its own changes, so those
+  blocks are either data it quoted back to you or work it has already done. They
+  are also styled like the diffs beneath them now, instead of looking like they
+  came from a different product.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- AI assistant code blocks share the surface the workflow diffs use, so a reply
-  and the diff below it no longer read as two different products.
+
+- Asking the assistant to change the step you have open no longer drops a diff
+  over the code editor. The change had already been made, so the diff read as
+  something to accept or reject when the only button was close.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- A global assistant reply whose changes could not be applied now says so on the
-  reply itself, beside the diffs that did not land, and offers to try again. It
-  used to fall back to a raw YAML panel.
-  [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- A failed apply is now remembered, so reloading no longer turns it back into a
-  success. The reply kept its diff blocks and offered to undo changes that had
-  never landed. A retry that works clears the record.
-  [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- Editing an open step with the global assistant no longer puts a diff in the
-  code editor. The change is already applied, so the diff read as a proposal to
-  accept or reject when the only control was a close button, and reloading
-  revealed the change had been written all along.
-  [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- Changing a webhook trigger's custom path now marks the workflow as unsaved, so
-  the Save button offers to save it. The unsaved-changes check did not look at
-  the field, so the edit could be lost by navigating away.
-  [#4952](https://github.com/OpenFn/lightning/issues/4952)
-- `eligible_for_claim/0` now breaks ties with `id` after `priority` and
-  `inserted_at`, so two runs inserted in the same microsecond no longer get
-  claimed in a nondeterministic order.
-- Dataclip retention wiping now runs in batches instead of one unbatched update,
-  so projects with a large backlog of eligible dataclips no longer time out the
-  retention job.
+
+- Wiping dataclips under a project's retention policy now works through them in
+  batches. On a project with a large backlog the whole thing was done in one go,
+  which took longer than the job was allowed and timed out, so old dataclips
+  were never wiped at all.
 
 ### Security
+
+- A project's environment can no longer be changed once the project has been
+  created. It decides which set of a credential's values the project reads, so
+  anyone who could retype it could read any set of any credential the project
+  uses.
 
 - Bumped `mint` to 1.10.0, clearing
   [EEF-CVE-2026-82728](https://osv.dev/vulnerability/EEF-CVE-2026-82728) and
   [EEF-CVE-2026-82729](https://osv.dev/vulnerability/EEF-CVE-2026-82729), both
-  denial of service in Mint's HTTP/1 parser. Mint is our HTTP client, so they
-  are reachable from a response rather than from a request into Lightning, and
-  the exposure is the outbound calls Lightning makes.
+  denial of service in Mint's HTTP/1 parser. Mint is the HTTP client Lightning
+  uses to call other systems, so the risk is in what those systems send back,
+  not in requests made to Lightning.
 
 ## [2.18.2] - 2026-09-02
 
