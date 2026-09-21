@@ -26,6 +26,10 @@ and this project adheres to
 
 ### Changed
 
+- Failure alerts and project digests now link to the workflow health page, where
+  failures are grouped by error signature. The digest keeps its history link for
+  the runs behind its counts, and shows the health link only for workflows that
+  actually failed.
 - The runs volume chart on the workflow health page is now bucketed on your own
   timezone rather than UTC, so a daily bar covers your day, the week view's bars
   split at your noon, a day the clocks change is still one bar, and the card

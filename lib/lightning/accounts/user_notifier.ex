@@ -357,9 +357,29 @@ defmodule Lightning.Accounts.UserNotifier do
     • #{successful_workorders} workorders were successful #{digest_lookup[digest]}
     • #{failed_workorders} workorders were not (#{Enum.join(states, ", ")} etc.)
 
-    Click this link to review: #{build_digest_url(workflow, start_date, end_date)}
+    #{Enum.join(links(workflow, start_date, end_date, failed_workorders), "\n\n")}
 
     """
+  end
+
+  # The history link carries the digest's own window, so it still shows the runs
+  # these counts came from however long the mail sits unread. Health only does a
+  # rolling window, so it's here to group failures by error, not to stand in for
+  # those counts.
+  defp links(workflow, start_date, end_date, failed_workorders) do
+    history = [
+      "See these runs in history: #{build_digest_url(workflow, start_date, end_date)}"
+    ]
+
+    if failed_workorders > 0 do
+      history ++
+        [
+          "See this workflow's failures grouped by error: " <>
+            url(~p"/projects/#{workflow.project_id}/w/#{workflow.id}/health")
+        ]
+    else
+      history
+    end
   end
 
   @doc """

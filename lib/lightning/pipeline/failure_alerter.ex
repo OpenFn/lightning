@@ -80,6 +80,12 @@ defmodule Lightning.FailureAlerter do
         ~p"/projects/#{project.id}/history?filters[workorder_id]=#{work_order_id}"
       )
 
+    workflow_health_url =
+      url(
+        LightningWeb.Endpoint,
+        ~p"/projects/#{project.id}/w/#{workflow_id}/health"
+      )
+
     # rate limiting per workflow AND user
     bucket_key = "#{workflow_id}::#{recipient.id}"
 
@@ -95,6 +101,7 @@ defmodule Lightning.FailureAlerter do
         Lightning.FailureEmail.deliver_failure_email(recipient.email, %{
           work_order_id: work_order_id,
           work_order_url: work_order_url,
+          workflow_health_url: workflow_health_url,
           count: count,
           time_scale: time_scale,
           rate_limit: rate_limit,

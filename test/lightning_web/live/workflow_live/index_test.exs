@@ -145,7 +145,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]="
+          "filters[date_after]=#{date}.*&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true"
         end)
 
       assert html
@@ -171,7 +171,11 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              )
 
       failed_filter_pattern =
-        "filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true.*filters[rejected]=true"
+        DashboardStats.window_start()
+        |> Date.to_string()
+        |> then(fn date ->
+          "filters[crashed]=true&amp;filters[date_after]=#{date}.*&amp;filters[exception]=true&amp;filters[failed]=true&amp;filters[killed]=true&amp;filters[log]=true&amp;filters[lost]=true&amp;filters[rejected]=true"
+        end)
 
       assert html
              |> has_history_link_pattern?(
@@ -220,20 +224,20 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]="
+          "filters[date_after]=#{date}.*&amp;filters[log]=true"
         end)
 
       assert html
              |> has_history_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow1.id}.*#{date_filter}",
+               "filters[workflow_id]=#{workflow1.id}&amp;#{date_filter}",
                workorders_count
              )
 
       assert html
              |> has_history_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow2.id}.*#{date_filter}",
+               "filters[workflow_id]=#{workflow2.id}&amp;#{date_filter}",
                workorders_count
              )
 
@@ -243,14 +247,14 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert html
              |> has_history_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow1.id}.*#{failed_filter_pattern}",
+               "filters[workflow_id]=#{workflow1.id}&amp;#{failed_filter_pattern}",
                failed_runs_count
              )
 
       assert html
              |> has_history_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow2.id}.*#{failed_filter_pattern}",
+               "filters[workflow_id]=#{workflow2.id}&amp;#{failed_filter_pattern}",
                failed_runs_count
              )
 
