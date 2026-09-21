@@ -1,4 +1,5 @@
-import { Component, type ReactNode } from 'react';
+import * as Sentry from '@sentry/react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -42,8 +43,11 @@ export class ErrorBoundary extends Component<
     return { error };
   }
 
-  override componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error(`${this.props.label} error:`, error);
+    Sentry.captureReactException(error, errorInfo, {
+      tags: { errorBoundary: this.props.label },
+    });
     this.props.onError?.(error);
   }
 

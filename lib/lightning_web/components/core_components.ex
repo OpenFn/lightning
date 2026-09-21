@@ -32,6 +32,27 @@ defmodule LightningWeb.CoreComponents do
     """
   end
 
+  # Exposes the browser Sentry config to app.js via meta tags (the same
+  # channel as the CSRF token). Renders nothing unless SENTRY_FRONTEND_DSN is
+  # set; without the tags, app.js leaves the SDK disabled.
+  def sentry_frontend_tags(assigns) do
+    config = Application.get_env(:lightning, :sentry_frontend, [])
+    release = Application.get_env(:lightning, :release, [])
+
+    assigns =
+      assign(assigns,
+        dsn: config[:dsn],
+        environment: config[:environment],
+        release: release[:label]
+      )
+
+    ~H"""
+    <meta :if={@dsn} name="sentry-dsn" content={@dsn} />
+    <meta :if={@dsn} name="sentry-environment" content={@environment} />
+    <meta :if={@dsn} name="sentry-release" content={@release} />
+    """
+  end
+
   @doc """
   Generates tag for inlined form input errors.
   """

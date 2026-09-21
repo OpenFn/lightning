@@ -707,6 +707,14 @@ defmodule Lightning.Config.Bootstrap do
       enable_source_code_context: true,
       root_source_code_paths: [File.cwd!()]
 
+    # Browser-side error reporting. Kept separate from SENTRY_DSN because the
+    # frontend DSN ships to every visitor's browser and usually points at a
+    # different Sentry project than the backend one.
+    config :lightning, :sentry_frontend,
+      dsn: env!("SENTRY_FRONTEND_DSN", :string, nil),
+      environment:
+        env!("SENTRY_ENVIRONMENT", :string, Atom.to_string(config_env()))
+
     config :lightning, Lightning.PromEx,
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
       manual_metrics_start_delay: :no_delay,

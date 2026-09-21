@@ -35,22 +35,35 @@ import * as Hooks from './hooks';
 import LogViewer from './log-viewer';
 
 enableMapSet();
-const sentry = Sentry.init({
-  dsn: 'https://ad733cbe78ef48f0b1623b8262624942@o55451.ingest.us.sentry.io/118735',
 
-  // Adds request headers and IP for users, for more info visit:
-  // https://docs.sentry.io/platforms/javascript/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
+const metaContent = name =>
+  document.querySelector(`meta[name='${name}']`)?.getAttribute('content') ||
+  undefined;
 
-  // Alternatively, use `process.env.npm_package_version` for a dynamic release version
-  // if your build tool supports it.
-  release: 'my-project-name@2.3.12',
-  integrations: [],
-  enabled: false,
-  debug: true,
+// Rendered by <.sentry_frontend_tags /> in root.html.heex only when the
+// deployment sets SENTRY_FRONTEND_DSN; without a DSN the SDK stays disabled
+// and sends nothing.
+const sentryDsn = metaContent('sentry-dsn');
+
+Sentry.init({
+  dsn: sentryDsn,
+  enabled: Boolean(sentryDsn),
+  environment: metaContent('sentry-environment'),
+  release: metaContent('sentry-release'),
+  // This app handles health data — never ship IPs/headers by default.
+  sendDefaultPii: false,
+  ignoreErrors: [
+    // Benign, browser-generated, and not actionable.
+    'ResizeObserver loop limit exceeded',
+    'ResizeObserver loop completed with undelivered notifications.',
+  ],
+  denyUrls: [
+    // Errors originating in browser-extension code, not ours.
+    /^chrome-extension:\/\//i,
+    /^moz-extension:\/\//i,
+    /^safari-(web-)?extension:\/\//i,
+  ],
 });
-
-window.sentry = sentry;
 
 const hooks = {
   LogViewer,
