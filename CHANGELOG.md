@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add sentry reporting to lightning react
+  [#5196](https://github.com/OpenFn/lightning/pull/5196)
+
 ### Changed
 
 ### Removed
