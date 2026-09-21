@@ -51,7 +51,9 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
   const share = (value: number) => `${((value / total) * 100).toFixed(1)}%`;
 
   return (
-    <>
+    // Donut and legend read as one unit, centred, rather than a small ring
+    // floating in a card that is wider than the chart needs.
+    <div className="mx-auto w-full max-w-sm">
       <div className={FRAME} aria-hidden="true">
         <ResponsiveContainer width="100%" height={220}>
           <PieChart accessibilityLayer={false}>
@@ -116,6 +118,6 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
           </li>
         ))}
       </ul>
-    </>
+    </div>
   );
 };

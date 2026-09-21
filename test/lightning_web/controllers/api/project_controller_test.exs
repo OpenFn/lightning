@@ -81,7 +81,8 @@ defmodule LightningWeb.API.ProjectControllerTest do
                  },
                  "id" => project.id,
                  "links" => %{
-                   "self" => "http://localhost:4002/api/projects/#{project.id}"
+                   "self" =>
+                     "#{LightningWeb.Endpoint.url()}/api/projects/#{project.id}"
                  },
                  "relationships" => %{},
                  "type" => "projects"
@@ -111,7 +112,8 @@ defmodule LightningWeb.API.ProjectControllerTest do
                  "attributes" => %{"name" => "a-test-project"},
                  "id" => project.id,
                  "links" => %{
-                   "self" => "http://localhost:4002/api/projects/#{project.id}"
+                   "self" =>
+                     "#{LightningWeb.Endpoint.url()}/api/projects/#{project.id}"
                  },
                  "relationships" => %{},
                  "type" => "projects"
@@ -145,7 +147,8 @@ defmodule LightningWeb.API.ProjectControllerTest do
                },
                "id" => project.id,
                "links" => %{
-                 "self" => "http://localhost:4002/api/projects/#{project.id}"
+                 "self" =>
+                   "#{LightningWeb.Endpoint.url()}/api/projects/#{project.id}"
                },
                "relationships" => %{},
                "type" => "projects"

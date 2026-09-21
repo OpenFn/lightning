@@ -1,3 +1,5 @@
+import type React from 'react';
+
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 
 import { useCanRun } from '../hooks/useWorkflow';
@@ -14,6 +16,8 @@ interface NewRunButtonProps {
   tooltipSide?: 'top' | 'bottom';
   text?: string;
   variant?: 'primary' | 'secondary';
+  forRetry?: boolean;
+  enabledTooltip?: React.ReactNode;
 }
 
 /**
@@ -37,17 +41,22 @@ export function NewRunButton({
   tooltipSide = 'bottom',
   text = 'Run',
   variant = 'primary',
+  forRetry = false,
+  enabledTooltip,
 }: NewRunButtonProps) {
-  const { canRun, tooltipMessage } = useCanRun();
+  const { canRun, tooltipMessage } = useCanRun({ forRetry });
+  const { canRun: canRunFresh, tooltipMessage: freshTooltipMessage } =
+    useCanRun();
 
   // Disable if parent requests, canRun is false, or a run is in progress
   const isDisabled = disabledProp || !canRun || isRunning;
+  const isFreshRunDisabled = disabledProp || !canRunFresh || isRunning;
 
-  const tooltip = canRun ? (
-    <ShortcutKeys keys={['mod', 'enter']} />
-  ) : (
-    tooltipMessage
-  );
+  const label = isRunning ? 'Processing' : text;
+
+  const tooltip = canRun
+    ? (enabledTooltip ?? <ShortcutKeys keys={['mod', 'enter']} />)
+    : tooltipMessage;
 
   const icon = isRunning ? (
     <span className="hero-arrow-path h-4 w-4 animate-spin" />
@@ -67,7 +76,7 @@ export function NewRunButton({
           <Button variant={variant} onClick={onClick} disabled={isDisabled}>
             <span className="flex items-center gap-1">
               {icon}
-              {text}
+              {label}
             </span>
           </Button>
         </span>
@@ -90,13 +99,13 @@ export function NewRunButton({
         >
           <span className="flex items-center gap-1">
             {icon}
-            {text}
+            {label}
           </span>
         </button>
       </Tooltip>
       <Menu as="div" className="relative -ml-px block">
         <MenuButton
-          disabled={isDisabled}
+          disabled={isFreshRunDisabled}
           className={`h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
           shadow-xs cursor-pointer disabled:cursor-not-allowed
           focus-visible:outline-2 focus-visible:outline-offset-2
@@ -122,11 +131,18 @@ export function NewRunButton({
           <MenuItem>
             {({ close }) => (
               <Tooltip
-                content={<ShortcutKeys keys={['mod', 'shift', 'enter']} />}
+                content={
+                  canRunFresh ? (
+                    <ShortcutKeys keys={['mod', 'shift', 'enter']} />
+                  ) : (
+                    freshTooltipMessage
+                  )
+                }
                 side="bottom"
               >
                 <button
                   type="button"
+                  disabled={isFreshRunDisabled}
                   onClick={() => {
                     onRunWithCustomInputClick();
                     close();

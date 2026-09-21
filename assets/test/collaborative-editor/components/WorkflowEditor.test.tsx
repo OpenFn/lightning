@@ -32,6 +32,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock CollaborativeWorkflowDiagram
@@ -126,16 +127,26 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 const mockIsNewWorkflow = vi.fn(() => false);
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
+  useExperimentalFeatures: () => true,
   useIsNewWorkflow: () => mockIsNewWorkflow(),
   useProjectRepoConnection: () => undefined,
   useProject: () => ({
     id: 'project-1',
     name: 'Test Project',
   }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
 }));
 
 // Create mock workflow

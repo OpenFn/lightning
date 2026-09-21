@@ -10,7 +10,7 @@ import { TriageTable } from './charts/TriageTable';
 import type { RunVolume } from './charts/VolumeBars';
 import { bucketMeta, VolumeBars } from './charts/VolumeBars';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
-import type { ErrorSignature, ErrorSignatures, Outcomes } from './types';
+import type { ErrorSignatures, Outcomes } from './types';
 import { failureTotal } from './types';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
@@ -64,11 +64,13 @@ export const WorkflowHealth = ({
         </div>
       </div>
 
-      {/* Four columns: a narrow donut beside a wide time axis, then an even
-          split. Stacks in source order below `lg`. */}
-      <div className="grid gap-6 lg:grid-cols-4">
+      {/* One card wide by default. At `lg` five columns, so the time axis and
+          the triage table get three of them and the donuts two. At `xl` four,
+          tightening the donuts to one. Always in source order. */}
+      <div className="grid gap-6 lg:grid-cols-5 xl:grid-cols-4">
         <Card
           title="Outcomes"
+          className="lg:col-span-2 xl:col-span-1"
           meta={outcomes.data && workOrders(outcomes.data.counts)}
         >
           <Panel data={outcomes.data} error={outcomes.error}>
@@ -98,34 +100,27 @@ export const WorkflowHealth = ({
           </Panel>
         </Card>
 
-        <Card title="Triage" className="lg:col-span-2">
+        <Card title="Triage" className="lg:col-span-3">
           <Panel data={signatures.data} error={signatures.error}>
             {({ signatures, window }) => (
-              <>
-                <TriageTable
-                  signatures={signatures}
-                  emptyMessage={emptyMessage(window, 'failures')}
-                  projectId={projectId}
-                  workflowId={workflowId}
-                  from={window.from}
-                />
-                {outcomes.data &&
-                  overCounts(signatures, outcomes.data.counts) && (
-                    <p className="mt-3 text-xs text-gray-500">
-                      Some work orders failed on more than one branch, so they
-                      appear in more than one row.
-                    </p>
-                  )}
-              </>
+              <TriageTable
+                signatures={signatures}
+                emptyMessage={emptyMessage(window, 'failures')}
+                projectId={projectId}
+                workflowId={workflowId}
+                from={window.from}
+              />
             )}
           </Panel>
         </Card>
 
         {/* Same reply as the Outcomes panel — one aggregate read two ways, so
-            the slices here and the red wedge there cannot disagree. */}
+            the slices here and the red wedge there cannot disagree. Self-start,
+            so the card is only as tall as a donut plus its legend rather than
+            stretching to the triage table beside it. */}
         <Card
           title="Failure breakdown"
-          className="lg:col-span-2"
+          className="self-start lg:col-span-2 xl:col-span-1"
           meta={outcomes.data && failures(outcomes.data.counts)}
         >
           <Panel data={outcomes.data} error={outcomes.error}>
@@ -228,11 +223,6 @@ const workOrders = (counts: Outcomes['counts']) =>
 // than the drawn slices, which drop the states that never happened.
 const failures = (counts: Outcomes['counts']) =>
   count(failureTotal(counts), 'failed work order');
-
-// Rows count failed branches, so they can sum past the failure total.
-const overCounts = (signatures: ErrorSignature[], counts: Outcomes['counts']) =>
-  signatures.reduce((sum, signature) => sum + signature.count, 0) >
-  failureTotal(counts);
 
 const emptyMessage = (
   window: Outcomes['window'],

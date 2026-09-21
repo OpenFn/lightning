@@ -76,6 +76,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock the monaco module that CustomView imports
@@ -92,8 +93,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
     ydoc: null,
     awareness: null,
     isConnected: false,
-    isSynced: false,
-  }),
+    isSynced: false, settled: true }),
 }));
 
 // Mock useURLState hook with centralized helper
@@ -206,6 +206,7 @@ describe('ManualRunPanel', () => {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
@@ -400,6 +401,101 @@ describe('ManualRunPanel', () => {
         {}
       );
     });
+  });
+
+  test('preselects the dataclip named in the URL', async () => {
+    urlState.setParam('dataclip', 'dc-from-run');
+
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [
+        {
+          id: 'dc-from-run',
+          name: 'Input from run abcdef',
+          type: 'saved_input',
+        },
+        { id: 'dc-other', name: 'something else', type: 'saved_input' },
+      ],
+      next_cron_run_dataclip_id: null,
+      can_edit_dataclip: true,
+    } as never);
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      jobId: 'job-1',
+      onClose: () => {},
+    });
+
+    expect(
+      await screen.findByText('Input from run abcdef')
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        dataclip: null,
+      });
+    });
+    expect(urlState.mockFns.replaceSearchParams).not.toHaveBeenCalled();
+  });
+
+  test('drops the URL dataclip even when the run already chose one', async () => {
+    urlState.setParam('dataclip', 'dc-from-run');
+
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [
+        {
+          id: 'dc-from-run',
+          name: 'Input from run abcdef',
+          type: 'saved_input',
+        },
+      ],
+      next_cron_run_dataclip_id: null,
+      can_edit_dataclip: true,
+    } as never);
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      jobId: 'job-1',
+      onClose: () => {},
+      selectedDataclip: {
+        id: 'dc-the-run-used',
+        name: 'the run input',
+        type: 'step_result',
+      } as never,
+    });
+
+    await waitFor(() => {
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        dataclip: null,
+      });
+    });
+  });
+
+  test('leaves the selection alone when the URL names a dataclip it does not have', async () => {
+    urlState.setParam('dataclip', 'dc-missing');
+
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [{ id: 'dc-other', name: 'something else', type: 'saved_input' }],
+      next_cron_run_dataclip_id: null,
+      can_edit_dataclip: true,
+    } as never);
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      jobId: 'job-1',
+      onClose: () => {},
+    });
+
+    await waitFor(() => {
+      expect(dataclipApi.searchDataclips).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByText('dc-missing')).toBeNull();
   });
 
   test('fetches dataclips on mount with trigger context', async () => {

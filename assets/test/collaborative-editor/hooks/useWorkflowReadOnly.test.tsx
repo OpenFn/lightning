@@ -16,7 +16,6 @@ import { StoreContext } from '../../../js/collaborative-editor/contexts/StorePro
 import { useWorkflowReadOnly } from '../../../js/collaborative-editor/hooks/useWorkflow';
 import type { SessionContextStoreInstance } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
@@ -24,6 +23,7 @@ import {
   createSessionContext,
   mockPermissions,
 } from '../__helpers__/sessionContextFactory';
+import { createTestSessionStore } from '../__helpers__/sessionStoreHelpers';
 import {
   createMockURLState,
   getURLStateMockValue,
@@ -46,10 +46,16 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 // =============================================================================
 
 interface WrapperOptions {
-  permissions?: { can_edit_workflow: boolean; can_run_workflow: boolean };
+  permissions?: {
+    can_edit_workflow: boolean;
+    can_run_workflow: boolean;
+    can_provision_sandbox?: boolean;
+  };
   latestSnapshotLockVersion?: number;
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
+  workflowState?: 'draft' | 'live';
+  contentLocked?: boolean;
 }
 
 function createWrapper(options: WrapperOptions = {}): [
@@ -67,10 +73,12 @@ function createWrapper(options: WrapperOptions = {}): [
     latestSnapshotLockVersion = 1,
     workflowLockVersion = 1,
     workflowDeletedAt = null,
+    workflowState,
+    contentLocked,
   } = options;
 
   // Create stores
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const sessionContextStore = createSessionContextStore();
   const workflowStore = createWorkflowStore();
 
@@ -116,7 +124,23 @@ function createWrapper(options: WrapperOptions = {}): [
       'session_context',
       createSessionContext({
         permissions,
+        ...(contentLocked === undefined
+          ? {}
+          : { content_locked: contentLocked }),
         latest_snapshot_lock_version: latestSnapshotLockVersion,
+        ...(workflowState
+          ? {
+              workflow: {
+                jobs: [],
+                triggers: [],
+                edges: [],
+                positions: {},
+                name: 'Test Workflow',
+                enable_job_logs: false,
+                state: workflowState,
+              },
+            }
+          : {}),
       })
     );
   };
@@ -272,6 +296,98 @@ describe('useWorkflowReadOnly - Permissions', () => {
     });
   });
 
+  test('reports a live-specific reason and message when a live workflow is locked for an editor', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: {
+        can_edit_workflow: true,
+        can_run_workflow: true,
+        can_provision_sandbox: true,
+      },
+      workflowState: 'live',
+      contentLocked: true,
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('live');
+      expect(result.current.tooltipMessage).toBe(
+        'This workflow is live. Switch to draft or edit in a sandbox to make changes.'
+      );
+    });
+  });
+
+  test('stays read-only against a node that sends no lifecycle lock', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: {
+        can_edit_workflow: false,
+        can_run_workflow: true,
+        can_provision_sandbox: true,
+      },
+      workflowState: 'live',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('no_permission');
+    });
+  });
+
+  test('reports no_permission (not live) for a plain viewer on a live workflow', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: {
+        can_edit_workflow: false,
+        can_run_workflow: false,
+        can_provision_sandbox: false,
+      },
+      workflowState: 'live',
+      contentLocked: true,
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('no_permission');
+      expect(result.current.tooltipMessage).toBe(
+        'You do not have permission to edit this workflow'
+      );
+    });
+  });
+
+  test('keeps the no_permission reason for a draft workflow the user cannot edit', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
+      workflowState: 'draft',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('no_permission');
+    });
+  });
+
   test('permission restriction takes priority over pinned version', async () => {
     // Set pinned version in URL
     urlState.setParam('v', '1');
@@ -342,6 +458,29 @@ describe('useWorkflowReadOnly - Version Pinning', () => {
       expect(result.current.tooltipMessage).toBe('');
     });
   });
+
+  test('returns read-only with an as-executed reason when ?as_run is present', async () => {
+    urlState.setParam('as_run', 'run-123');
+
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
+      workflowDeletedAt: null,
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('as_run');
+      expect(result.current.tooltipMessage).toBe(
+        'You are viewing this workflow as a past run executed it'
+      );
+    });
+  });
 });
 
 // =============================================================================
@@ -376,7 +515,7 @@ describe('useWorkflowReadOnly - Valid Editing', () => {
 
 describe('useWorkflowReadOnly - Edge Cases', () => {
   test('handles null workflow gracefully', async () => {
-    const sessionStore = createSessionStore();
+    const sessionStore = createTestSessionStore();
     const sessionContextStore = createSessionContextStore();
     const workflowStore = createWorkflowStore();
 
@@ -452,7 +591,7 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
   });
 
   test('handles null permissions gracefully (loading state - not read-only)', async () => {
-    const sessionStore = createSessionStore();
+    const sessionStore = createTestSessionStore();
     const sessionContextStore = createSessionContextStore();
     const workflowStore = createWorkflowStore();
 
@@ -626,7 +765,7 @@ describe('useWorkflowReadOnly - Priority Order', () => {
 
 describe('useWorkflowReadOnly - Unsaved New Workflow', () => {
   test('returns read-only true for new workflow with content (from template or AI)', async () => {
-    const sessionStore = createSessionStore();
+    const sessionStore = createTestSessionStore();
     // Pass isNewWorkflow: true when creating the store
     const sessionContextStore = createSessionContextStore(true);
     const workflowStore = createWorkflowStore();
@@ -705,7 +844,7 @@ describe('useWorkflowReadOnly - Unsaved New Workflow', () => {
   });
 
   test('returns not read-only for new workflow without content (empty canvas)', async () => {
-    const sessionStore = createSessionStore();
+    const sessionStore = createTestSessionStore();
     // Pass isNewWorkflow: true when creating the store
     const sessionContextStore = createSessionContextStore(true);
     const workflowStore = createWorkflowStore();
@@ -771,6 +910,62 @@ describe('useWorkflowReadOnly - Unsaved New Workflow', () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(false);
       expect(result.current.tooltipMessage).toBe('');
+    });
+  });
+});
+
+describe('useWorkflowReadOnly - what is on screen decides first', () => {
+  beforeEach(() => {
+    urlState.reset();
+  });
+
+  test('a pinned version of a live workflow blames the view, not the lifecycle', async () => {
+    urlState.setParams({ v: '1' });
+
+    const [wrapper, { mockChannel }] = createWrapper({
+      contentLocked: true,
+      workflowState: 'live',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      (mockChannel as any)._test.emit(
+        'session_context',
+        createSessionContext({
+          permissions: mockPermissions,
+          content_locked: true,
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.reason).toBe('pinned_version');
+    });
+  });
+
+  test("a run's own view of a live workflow does too", async () => {
+    urlState.setParams({ as_run: 'run-1', run: 'run-1' });
+
+    const [wrapper, { mockChannel }] = createWrapper({
+      contentLocked: true,
+      workflowState: 'live',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      (mockChannel as any)._test.emit(
+        'session_context',
+        createSessionContext({
+          permissions: mockPermissions,
+          content_locked: true,
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.reason).toBe('as_run');
     });
   });
 });

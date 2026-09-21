@@ -1,7 +1,18 @@
 defmodule Lightning.MetadataServiceTest do
   use Lightning.DataCase, async: false
 
+  import Lightning.AdaptorTestHelpers
+
   alias Lightning.MetadataService
+
+  setup :isolated_adaptors
+
+  # Seeds the one name the "succeeds" cases below use; the "not in the
+  # registry" cases rely on their name staying unseeded.
+  setup do
+    ensure_adaptor("@openfn/language-common")
+    :ok
+  end
 
   describe "fetch/2" do
     test "returns the metadata when it exists" do
@@ -169,6 +180,21 @@ defmodule Lightning.MetadataServiceTest do
                  :error,
                  %Lightning.MetadataService.Error{
                    type: "no_metadata_result",
+                   __exception__: true
+                 }
+               }
+    end
+
+    test "returns an error, rather than raising, for a malformed adaptor string" do
+      credential =
+        insert(:credential)
+        |> with_body(%{name: "main", body: %{"username" => "user"}})
+
+      assert MetadataService.fetch("not a valid package!!", credential, "main") ==
+               {
+                 :error,
+                 %Lightning.MetadataService.Error{
+                   type: "no_matching_adaptor",
                    __exception__: true
                  }
                }

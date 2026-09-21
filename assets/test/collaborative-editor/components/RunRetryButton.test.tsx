@@ -66,7 +66,7 @@ describe('RunRetryButton', () => {
       );
 
       // Should show retry button (use helper to find visible text in CSS Grid layout)
-      expect(getVisibleButtonText('Run (Retry)')).toBeInTheDocument();
+      expect(getVisibleButtonText('Retry')).toBeInTheDocument();
 
       // Should show dropdown toggle
       expect(
@@ -145,7 +145,7 @@ describe('RunRetryButton', () => {
 
       // Use helper to get visible button text in CSS Grid layout
       const retryButton =
-        getVisibleButtonText('Run (Retry)').closest('button')!;
+        getVisibleButtonText('Retry').closest('button')!;
       await user.click(retryButton);
 
       expect(onRetry).toHaveBeenCalledTimes(1);
@@ -283,7 +283,7 @@ describe('RunRetryButton', () => {
       );
 
       // Use helper for CSS Grid layout
-      const retryButton = getVisibleButtonText('Run (Retry)').closest('button');
+      const retryButton = getVisibleButtonText('Retry').closest('button');
       expect(retryButton).toBeDisabled();
       expect(
         screen.getByRole('button', { name: /open options/i })
@@ -704,7 +704,7 @@ describe('RunRetryButton', () => {
       );
 
       // Use helper for CSS Grid layout
-      const retryButton = getVisibleButtonText('Run (Retry)');
+      const retryButton = getVisibleButtonText('Retry');
       expect(retryButton).toBeInTheDocument();
       // Main retry button should be wrapped in Tooltip with shortcut
     });
@@ -726,7 +726,7 @@ describe('RunRetryButton', () => {
       );
 
       // Use helper for CSS Grid layout
-      const retryButton = getVisibleButtonText('Run (Retry)').closest('button');
+      const retryButton = getVisibleButtonText('Retry').closest('button');
       expect(retryButton).toBeDisabled();
       // Disabled tooltip should show instead of keyboard shortcut tooltip
     });
@@ -774,7 +774,7 @@ describe('RunRetryButton', () => {
 
       // 1. Main button works (retry) - use helper for CSS Grid layout
       const retryButton =
-        getVisibleButtonText('Run (Retry)').closest('button')!;
+        getVisibleButtonText('Retry').closest('button')!;
       await user.click(retryButton);
       expect(onRetry).toHaveBeenCalledTimes(1);
 
@@ -826,7 +826,7 @@ describe('RunRetryButton', () => {
       );
 
       // Use helper for CSS Grid layout
-      expect(getVisibleButtonText('Run (Retry)')).toBeInTheDocument();
+      expect(getVisibleButtonText('Retry')).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: /open options/i })
       ).toBeInTheDocument();
@@ -844,7 +844,7 @@ describe('RunRetryButton', () => {
 
       // Use helper for CSS Grid layout
       expect(getVisibleButtonText('Processing')).toBeInTheDocument();
-      expect(queryVisibleButtonText('Run (Retry)')).not.toBeInTheDocument();
+      expect(queryVisibleButtonText('Retry')).not.toBeInTheDocument();
       // Chevron stays visible but disabled during processing for visual consistency
       const chevronDuringProcessing = screen.getByRole('button', {
         name: /open options/i,

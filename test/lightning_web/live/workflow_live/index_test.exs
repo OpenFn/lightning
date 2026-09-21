@@ -343,6 +343,72 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       refute view |> has_element?("#new-workflow-button[type=button][disabled]")
     end
 
+    test "the toggle, its tooltip and its sort all read the triggers", %{
+      conn: conn,
+      project: project
+    } do
+      on_trigger = build(:trigger, type: :webhook, enabled: true)
+      off_trigger = build(:trigger, type: :cron, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project, state: :live)
+        |> with_job(job)
+        |> with_trigger(on_trigger)
+        |> with_trigger(off_trigger)
+        |> with_edge({on_trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+    end
+
+    test "toggling a workflow keeps state and triggers coherent", %{
+      conn: conn,
+      project: project
+    } do
+      trigger = build(:trigger, type: :webhook, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project, state: :draft)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+
+      assert view
+             |> element("#toggle-control-#{workflow.id}")
+             |> render_click() =~ "Workflow updated"
+
+      assert %Lightning.Workflows.Workflow{
+               state: :live,
+               triggers: [%{enabled: true}]
+             } =
+               Lightning.Repo.get!(Lightning.Workflows.Workflow, workflow.id)
+               |> Lightning.Repo.preload(:triggers)
+
+      assert view |> has_element?("##{workflow.id}[checked]")
+
+      assert view
+             |> element("#toggle-control-#{workflow.id}")
+             |> render_click() =~ "Workflow updated"
+
+      assert %Lightning.Workflows.Workflow{
+               state: :draft,
+               triggers: [%{enabled: false}]
+             } =
+               Lightning.Repo.get!(Lightning.Workflows.Workflow, workflow.id)
+               |> Lightning.Repo.preload(:triggers)
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+    end
+
     @tag role: :editor
     test "does not toggle a workflow outside the project", %{
       conn: conn,
@@ -380,6 +446,67 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                include: [:triggers]
              ).triggers
              |> Enum.all?(& &1.enabled)
+    end
+
+    test "the limiter can refuse an enable, and is not asked for a no-op one", %{
+      conn: conn,
+      project: project
+    } do
+      off_trigger = build(:trigger, type: :webhook, enabled: false)
+      off_job = build(:job)
+
+      off_workflow =
+        build(:workflow, project: project)
+        |> with_job(off_job)
+        |> with_trigger(off_trigger)
+        |> with_edge({off_trigger, off_job})
+        |> insert()
+
+      on_trigger = build(:trigger, type: :webhook, enabled: true)
+      on_job = build(:job)
+
+      on_workflow =
+        build(:workflow, project: project, state: :live)
+        |> with_job(on_job)
+        |> with_trigger(on_trigger)
+        |> with_edge({on_trigger, on_job})
+        |> insert()
+
+      asked = :counters.new(1, [:atomics])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :activate_workflow}, _context ->
+          :counters.add(asked, 1, 1)
+
+          {:error, :too_many_workflows,
+           %Lightning.Extensions.Message{text: "No more workflows"}}
+        end
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "true",
+               "value_key" => off_workflow.id
+             }) =~ "No more workflows"
+
+      assert :counters.get(asked, 1) == 1
+
+      refute Lightning.Workflows.get_workflow!(off_workflow.id,
+               include: [:triggers]
+             ).triggers
+             |> Enum.any?(& &1.enabled)
+
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "true",
+               "value_key" => on_workflow.id
+             }) =~ "Workflow updated"
+
+      assert :counters.get(asked, 1) == 1
     end
 
     @tag role: :viewer
@@ -420,6 +547,70 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                ~s{tr#workflow-#{workflow.id} a#health-#{workflow.id}[href="/projects/#{project.id}/w/#{workflow.id}/health"]},
                "Health"
              )
+    end
+  end
+
+  describe "the lifecycle column" do
+    setup %{user: user} do
+      user =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Lightning.Repo.update!()
+
+      %{user: user}
+    end
+
+    test "reports the state and offers no switch on an ordinary project", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: workflow
+    } do
+      {:ok, _workflow} =
+        Lightning.Workflows.go_live(
+          Lightning.Repo.preload(workflow, :triggers),
+          user
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "State"
+      assert html =~ "Live"
+      refute html =~ ~s(name="workflow_state")
+    end
+
+    test "keeps the switch inside a sandbox", %{conn: conn, user: user} do
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/w")
+
+      assert html =~ "Turn on"
+      assert html =~ ~s(name="workflow_state")
+    end
+
+    test "is the list from before the lifecycle without the flag", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      user
+      |> Ecto.Changeset.change(%{preferences: %{}})
+      |> Lightning.Repo.update!()
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "Enabled"
+      assert html =~ ~s(name="workflow_state")
     end
   end
 

@@ -37,7 +37,7 @@
  * - `useHistoryChannelConnected()` - Returns channel status
  *
  * **Commands (via useHistoryCommands):**
- * - `requestHistory(runId?)` - Fetch history from server
+ * - `requestHistory(runId?, versionNumber?)` - Fetch history from server
  * - `requestRunSteps(runId)` - Fetch run steps from server
  * - `getRunSteps(runId)` - Read cached run steps (no fetch)
  * - `clearError()` - Clear error state
@@ -589,6 +589,18 @@ export const createHistoryStore = (
 
   let _channelProvider: PhoenixChannelProvider | null = null;
 
+  let _runAttempt = 0;
+  let _pendingRunChannel: Channel | null = null;
+
+  const _abandonPendingRun = () => {
+    if (_pendingRunChannel) {
+      (_pendingRunChannel as any).leave();
+      _pendingRunChannel = null;
+    }
+
+    _runAttempt += 1;
+  };
+
   /**
    * Connect to Phoenix channel provider for real-time updates
    */
@@ -652,7 +664,10 @@ export const createHistoryStore = (
    * Optionally includes a specific run_id to ensure that run's work order
    * is included even if it's older than the top 20
    */
-  const requestHistory = async (runId?: string): Promise<void> => {
+  const requestHistory = async (
+    runId?: string,
+    versionNumber?: string
+  ): Promise<void> => {
     if (!_channelProvider?.channel) {
       logger.warn('Cannot request history - no channel connected');
       setError('No connection available');
@@ -666,7 +681,11 @@ export const createHistoryStore = (
       const response = await channelRequest<{ history: unknown }>(
         _channelProvider.channel,
         'request_history',
-        runId ? { run_id: runId } : {}
+        versionNumber
+          ? { version_number: versionNumber }
+          : runId
+            ? { run_id: runId }
+            : {}
       );
 
       if (response.history) {
@@ -876,8 +895,10 @@ export const createHistoryStore = (
    * CRITICAL: Includes race condition prevention guards
    */
   const _viewRun = (runId: string): void => {
-    // GUARD 1: Idempotency - don't reconnect to same run
-    if (state.activeRunId === runId && state.activeRunChannel) {
+    if (
+      state.activeRunId === runId &&
+      (state.activeRunChannel || _pendingRunChannel)
+    ) {
       logger.debug('Already connected to run', runId);
       return;
     }
@@ -887,14 +908,15 @@ export const createHistoryStore = (
       _switchingFromRun();
     }
 
+    _abandonPendingRun();
+
     if (!_channelProvider?.socket) {
       logger.warn('Cannot view run - no channel provider');
       setActiveRunError('No connection available');
       return;
     }
 
-    // Capture runId in closure to detect stale responses
-    const requestedRunId = runId;
+    const attempt = _runAttempt;
 
     state = produce(state, draft => {
       draft.activeRunId = runId;
@@ -925,14 +947,14 @@ export const createHistoryStore = (
 
     // Join channel and fetch initial data
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    _pendingRunChannel = channel;
+
     const channelJoin = (channel as any).join();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     channelJoin.receive('ok', () => {
-      // GUARD 3: Ignore stale responses from previous requests
-      if (state.activeRunId !== requestedRunId) {
+      if (attempt !== _runAttempt) {
         logger.debug('Ignoring stale run response', {
-          received: requestedRunId,
-          current: state.activeRunId,
+          runId,
         });
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
         (channel as any).leave(); // Clean up the stale channel
@@ -944,9 +966,10 @@ export const createHistoryStore = (
       // Fetch initial run data
       void channelRequest<{ run: unknown }>(channel, 'fetch:run', {})
         .then(response => {
-          // Double-check we're still viewing this run
-          if (state.activeRunId === requestedRunId) {
+          if (attempt === _runAttempt) {
             handleRunReceived(response.run);
+
+            _pendingRunChannel = null;
 
             // Only set channel after successful fetch
             state = produce(state, draft => {
@@ -961,8 +984,8 @@ export const createHistoryStore = (
           return undefined;
         })
         .catch(error => {
-          // Only update error if still waiting for this run
-          if (state.activeRunId === requestedRunId) {
+          if (attempt === _runAttempt) {
+            _pendingRunChannel = null;
             logger.error('Failed to fetch run', error);
             setActiveRunError(
               `Failed to load run: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -973,8 +996,8 @@ export const createHistoryStore = (
     });
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     channelJoin.receive('error', (error: any) => {
-      // Only update error if still waiting for this run
-      if (state.activeRunId === requestedRunId) {
+      if (attempt === _runAttempt) {
+        _pendingRunChannel = null;
         logger.error('Failed to join run channel', error);
         setActiveRunError(
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -986,6 +1009,8 @@ export const createHistoryStore = (
   };
 
   const _switchingFromRun = () => {
+    _abandonPendingRun();
+
     // Leave the curren run channel before switch happens
     if (state.activeRunChannel) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
@@ -1005,6 +1030,8 @@ export const createHistoryStore = (
    * Disconnect from active run and clean up channel
    */
   const _closeRunViewer = (): void => {
+    _abandonPendingRun();
+
     // Leave channel before updating state (can't call methods on draft)
     if (state.activeRunChannel) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any

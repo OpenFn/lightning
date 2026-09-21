@@ -20,9 +20,9 @@ import {
 import _logger from '#/utils/logger';
 
 import { useSocket } from '../../react/contexts/SocketProvider';
-import { useURLState } from '#/react/lib/use-url-state';
 import { useProviderLifecycle } from '../hooks/useProviderLifecycle';
 import { useYDocPersistence } from '../hooks/useYDocPersistence';
+import { collaborationRoomName, usePinnedView } from '../lib/pinnedView';
 import {
   createSessionStore,
   type SessionStoreInstance,
@@ -47,6 +47,7 @@ interface SessionContextValue {
    */
   setIsNewWorkflow?: (isNewWorkflow: boolean) => void;
   initialRunData?: string; // JSON-encoded RunStepsData from server
+  experimentalFeatures: boolean;
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null);
@@ -56,6 +57,7 @@ interface SessionProviderProps {
   projectId: string;
   isNewWorkflow: boolean;
   initialRunData?: string; // JSON-encoded RunStepsData from server
+  experimentalFeatures: boolean;
   children: React.ReactNode;
 }
 
@@ -64,13 +66,12 @@ export const SessionProvider = ({
   projectId,
   isNewWorkflow,
   initialRunData,
+  experimentalFeatures,
   children,
 }: SessionProviderProps) => {
   const { socket, isConnected } = useSocket();
 
-  // Get version from URL reactively
-  const { params } = useURLState();
-  const version = params['v'] ?? null;
+  const { release, snapshot, asRun } = usePinnedView();
 
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());
@@ -80,15 +81,9 @@ export const SessionProvider = ({
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [connectionError, setConnectionError] = useState<Error | null>(null);
 
-  // Room naming strategy for snapshots vs collaborative editing:
-  // - NO version param → `workflow:collaborate:${workflowId}` (latest/collaborative)
-  // - WITH version param → `workflow:collaborate:${workflowId}:v${version}` (snapshot)
   const roomname = useMemo(
-    () =>
-      version
-        ? `workflow:collaborate:${workflowId}:v${version}`
-        : `workflow:collaborate:${workflowId}`,
-    [version, workflowId]
+    () => collaborationRoomName(workflowId, { release, snapshot, asRun }),
+    [workflowId, release, snapshot, asRun]
   );
 
   // Track the live "new workflow" status in a ref so the channel-join `action`
@@ -125,22 +120,21 @@ export const SessionProvider = ({
     };
   }, [roomname, sessionStore]);
 
-  // Use Y.Doc persistence hook to manage Y.Doc lifecycle
   const handleYDocInitialized = useCallback(() => {
-    logger.log('Y.Doc initialized', { version });
-  }, [version]);
+    logger.log('Y.Doc initialized', { roomname });
+  }, [roomname]);
 
   const handleYDocDestroyed = useCallback(() => {
-    logger.log('Y.Doc destroyed (version change or unmount)', { version });
+    logger.log('Y.Doc destroyed (version change or unmount)', { roomname });
     setIsSynced(false);
     setLastSyncTime(null);
     setConnectionError(null);
-  }, [version]);
+  }, [roomname]);
 
   useYDocPersistence({
     sessionStore,
     shouldInitialize: socket !== null && isConnected,
-    version,
+    version: roomname,
     onInitialized: handleYDocInitialized,
     onDestroyed: handleYDocDestroyed,
   });
@@ -227,9 +221,16 @@ export const SessionProvider = ({
       sessionStore,
       isNewWorkflow,
       setIsNewWorkflow,
+      experimentalFeatures,
       ...(initialRunData !== undefined && { initialRunData }),
     }),
-    [sessionStore, isNewWorkflow, setIsNewWorkflow, initialRunData]
+    [
+      sessionStore,
+      isNewWorkflow,
+      setIsNewWorkflow,
+      experimentalFeatures,
+      initialRunData,
+    ]
   );
 
   return (

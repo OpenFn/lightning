@@ -124,6 +124,9 @@ defmodule Lightning.MetadataService do
 
   defp get_adaptor_path(adaptor) do
     case AdaptorService.install(@adaptor_service, adaptor) do
+      {:error, {:catalogue_unavailable, _reason}} ->
+        {:error, Error.new("adaptor_catalogue_unavailable")}
+
       {:error, _} ->
         {:error, Error.new("no_matching_adaptor")}
 

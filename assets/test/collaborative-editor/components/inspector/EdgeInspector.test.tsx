@@ -15,7 +15,6 @@ import { SessionContext } from '../../../../js/collaborative-editor/contexts/Ses
 import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
-import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
@@ -31,7 +30,10 @@ import {
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
-import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
+import {
+  createMockSocket,
+  createTestSessionStore,
+} from '../../__helpers__/sessionStoreHelpers';
 
 /**
  * Helper to create and connect a workflow store with Y.Doc
@@ -68,9 +70,10 @@ function createWrapper(
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const mockSocket = createMockSocket();
   sessionStore.initializeSession(
     mockSocket,
@@ -132,9 +135,9 @@ describe('EdgeInspector - Footer Button States', () => {
       ],
     });
 
-    // Set workflow lock_version to match session context
     const workflowMap = ydoc.getMap('workflow');
     workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
 
     workflowStore = createConnectedWorkflowStore(ydoc);
     credentialStore = createCredentialStore();
@@ -159,6 +162,7 @@ describe('EdgeInspector - Footer Button States', () => {
           can_edit_workflow: false,
           can_run_workflow: false,
           can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
@@ -168,8 +172,7 @@ describe('EdgeInspector - Footer Button States', () => {
     });
   });
 
-  test('footer is rendered in read-only mode', () => {
-    // beforeEach already sets read-only permissions
+  test('footer stays put and disabled in read-only mode', () => {
     const edge = workflowStore.getSnapshot().edges[0];
     const mockOnClose = vi.fn();
 
@@ -183,13 +186,71 @@ describe('EdgeInspector - Footer Button States', () => {
       ),
     });
 
-    // Footer should be rendered with toggle and delete button
-    expect(screen.getByLabelText(/enabled/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/enabled/i)).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 
-  test('toggle and delete button are disabled in read-only mode', () => {
-    // beforeEach already sets read-only permissions
+  test('footer stays, disabled, in read-only mode with experimental features', () => {
+    const edge = workflowStore.getSnapshot().edges[0];
+    const mockOnClose = vi.fn();
+
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: false,
+          can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
+        },
+        experimental_features_enabled: true,
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+      });
+    });
+
+    render(<EdgeInspector edge={edge} onClose={mockOnClose} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    expect(screen.getByTestId('inspector-footer')).toBeInTheDocument();
+    expect(screen.getByLabelText(/enabled/i)).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
+  });
+
+  test('toggle and delete button are shown and enabled in edit mode', () => {
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
+        permissions: {
+          can_edit_workflow: true,
+          can_run_workflow: true,
+          can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+        has_read_ai_disclaimer: true,
+      });
+    });
+
     const edge = workflowStore.getSnapshot().edges[0];
     const mockOnClose = vi.fn();
 
@@ -206,8 +267,9 @@ describe('EdgeInspector - Footer Button States', () => {
     const toggle = screen.getByLabelText(/enabled/i);
     const deleteButton = screen.getByRole('button', { name: /delete/i });
 
-    expect(toggle).toBeDisabled();
-    expect(deleteButton).toBeDisabled();
+    expect(screen.getByTestId('inspector-footer')).toBeInTheDocument();
+    expect(toggle).not.toBeDisabled();
+    expect(deleteButton).not.toBeDisabled();
   });
 
   test('footer is not rendered for trigger edges', () => {
@@ -238,9 +300,9 @@ describe('EdgeInspector - Footer Button States', () => {
       ],
     });
 
-    // Set lock_version
     const workflowMap = ydocWithTriggerEdge.getMap('workflow');
     workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
 
     const workflowStoreWithTriggerEdge =
       createConnectedWorkflowStore(ydocWithTriggerEdge);
@@ -256,6 +318,7 @@ describe('EdgeInspector - Footer Button States', () => {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,

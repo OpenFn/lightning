@@ -43,6 +43,7 @@ export function JobInspector({
   const { removeJobAndClearSelection } = useWorkflowActions();
   const permissions = usePermissions();
   const { isReadOnly } = useWorkflowReadOnly();
+
   const validation = useJobDeleteValidation(job.id);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -129,15 +130,12 @@ export function JobInspector({
         </>
       }
       rightButtons={
-        <>
-          <NewRunButton
-            onClick={() => onOpenRunPanel({ jobId: job.id })}
-            tooltipSide="top"
-            disabled={isReadOnly}
-            text="Run From Here"
-            variant={needsConnect ? 'secondary' : 'primary'}
-          />
-        </>
+        <NewRunButton
+          onClick={() => onOpenRunPanel({ jobId: job.id })}
+          tooltipSide="top"
+          text="Run From Here"
+          variant={needsConnect ? 'secondary' : 'primary'}
+        />
       }
     />
   );

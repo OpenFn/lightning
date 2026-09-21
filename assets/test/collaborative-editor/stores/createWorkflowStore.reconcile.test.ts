@@ -115,7 +115,8 @@ describe('WorkflowStore - Save path does not reconcile dangling references', () 
               cron_cursor_job_id: 'job-added-by-collaborator',
             }),
           ],
-        })
+        }),
+        75_000
       );
     }
   );

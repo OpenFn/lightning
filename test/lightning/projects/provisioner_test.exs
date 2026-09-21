@@ -8,10 +8,13 @@ defmodule Lightning.Projects.ProvisionerTest do
   alias Lightning.Workflows.Snapshot
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   describe "parse_document/2 with a new project" do
+    setup :isolated_adaptors
+
     test "with invalid data" do
       Mox.verify_on_exit!()
 
@@ -169,6 +172,8 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "rejects a job with an adaptor that is not in the registry" do
+      ensure_adaptor("@openfn/language-common")
+
       %{body: body} = valid_document()
 
       body =
@@ -224,9 +229,9 @@ defmodule Lightning.Projects.ProvisionerTest do
 
     test "a control character in a workflow name is a changeset error, not a 500" do
       # This path builds its own changeset and calls Workflow.validate/1
-      # directly, so it used to skip the name rule entirely. A NUL reached
-      # Postgres and came back as a 22021 that action_fallback does not handle,
-      # which is a 500 on POST /api/provision (#4893).
+      # directly, so the name rule has to run there too. Otherwise a NUL
+      # reaches Postgres and comes back as a 22021 that action_fallback does
+      # not handle, which is a 500 on POST /api/provision.
       for name <- [
             "before\u{0000}after",
             "tab\u{0009}here",
@@ -264,6 +269,36 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert errors_on(workflow_changeset)[:name] == [
                "workflow name should be at most 255 character(s)"
              ]
+    end
+  end
+
+  describe "import_document/2 adaptor validation" do
+    setup :isolated_adaptors
+
+    test "allows the import when the adaptor is known" do
+      user = insert(:user)
+      ensure_adaptor("@openfn/language-foo")
+      %{body: body} = valid_document()
+
+      body =
+        Map.update!(body, "workflows", fn workflows ->
+          Enum.map(workflows, fn workflow ->
+            Map.update!(workflow, "jobs", fn [first_job | rest] ->
+              [
+                Map.put(first_job, "adaptor", "@openfn/language-foo@1.0.0")
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      assert {:ok, _project} = Provisioner.import_document(nil, user, body)
     end
   end
 
@@ -766,6 +801,153 @@ defmodule Lightning.Projects.ProvisionerTest do
       # job edge is disabled
       [job_edge] = edges -- [trigger_edge]
       refute job_edge.enabled
+    end
+  end
+
+  describe "collaboration reconcile" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn _flag -> nil end)
+      :ok
+    end
+
+    test "a plain import leaves open editors alone" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+      workflow = insert(:workflow, project: project)
+
+      Lightning.Collaboration.WorkflowReconciler.subscribe(workflow.id)
+
+      {:ok, _project} =
+        Provisioner.import_document(project, user, %{
+          "id" => project.id,
+          "name" => project.name,
+          "workflows" => [
+            %{
+              "id" => workflow.id,
+              "name" => "Renamed",
+              "jobs" => [],
+              "triggers" => [],
+              "edges" => []
+            }
+          ]
+        })
+
+      refute_receive %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{},
+                     200
+    end
+
+    test "a caller that asks for it gets it" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+      workflow = insert(:workflow, project: project)
+
+      Lightning.Collaboration.WorkflowReconciler.subscribe(workflow.id)
+
+      {:ok, _project} =
+        Provisioner.import_document(
+          project,
+          user,
+          %{
+            "id" => project.id,
+            "name" => project.name,
+            "workflows" => [
+              %{
+                "id" => workflow.id,
+                "name" => "Renamed",
+                "jobs" => [],
+                "triggers" => [],
+                "edges" => []
+              }
+            ]
+          },
+          reconcile_collaboration: true
+        )
+
+      assert_receive %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{},
+                     500
+    end
+  end
+
+  describe "import_document/2 workflow state inference" do
+    setup do
+      Mox.verify_on_exit!()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      %{user: insert(:user)}
+    end
+
+    test "a brand-new workflow with an enabled trigger is inferred :live",
+         %{user: user} do
+      %{body: body, project_id: project_id} = valid_document()
+
+      {:ok, %{id: ^project_id, workflows: [workflow]}} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      assert %{state: :live, triggers: [%{enabled: true}]} = workflow
+    end
+
+    test "a brand-new workflow with triggers disabled is inferred :draft",
+         %{user: user} do
+      %{body: body, project_id: project_id} = valid_document()
+      body = disable_triggers(body)
+
+      {:ok, %{id: ^project_id, workflows: [workflow]}} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      assert %{state: :draft, triggers: [%{enabled: false}]} = workflow
+    end
+
+    test "explicit state in attrs wins", %{user: user} do
+      %{body: %{"workflows" => [workflow]} = body} = valid_document()
+
+      body =
+        Map.put(body, "workflows", [Map.put(workflow, "state", "draft")])
+
+      {:ok, %{workflows: [imported]}} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      assert %{state: :draft, triggers: [%{enabled: true}]} = imported
+    end
+
+    test "re-importing an existing :live workflow without a state keeps it :live",
+         %{user: user} do
+      %{body: body} = valid_document()
+
+      {:ok, project} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      {:ok, %{workflows: [reimported]}} =
+        Provisioner.import_document(project, user, body)
+
+      assert %{state: :live} = reimported
+    end
+
+    test "re-importing an existing :draft workflow without a state keeps it " <>
+           ":draft even when a trigger is enabled",
+         %{user: user} do
+      %{body: body} = valid_document()
+
+      draft_body =
+        update_in(body, ["workflows"], fn [workflow] ->
+          [Map.put(workflow, "state", "draft")]
+        end)
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          draft_body
+        )
+
+      {:ok, %{workflows: [reimported]}} =
+        Provisioner.import_document(project, user, body)
+
+      assert %{state: :draft, triggers: [%{enabled: true}]} = reimported
     end
   end
 
@@ -2609,6 +2791,16 @@ defmodule Lightning.Projects.ProvisionerTest do
       trigger_edge: trigger_edge,
       job_edge: job_edge
     }
+  end
+
+  defp disable_triggers(body) do
+    update_in(body, ["workflows"], fn workflows ->
+      Enum.map(workflows, fn workflow ->
+        update_in(workflow, ["triggers"], fn triggers ->
+          Enum.map(triggers, &Map.put(&1, "enabled", false))
+        end)
+      end)
+    end)
   end
 
   defp put_custom_path(body, value) do

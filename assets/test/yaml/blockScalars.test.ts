@@ -4,8 +4,8 @@
  * `test/fixtures/block_scalars.json` is generated from
  * `Lightning.ExportUtils.Scalar.encode_block/2` and checked against yamerl on
  * the Elixir side. This file is the other half, and no Elixir test can run
- * this parser: a `|2` block with a trailing whitespace-only line round-trips
- * in yamerl and loses that line here (#4577).
+ * this parser. A `|2` block with a trailing whitespace-only line round-trips
+ * in yamerl and loses that line here.
  *
  * If this fails after a change to encode_block/2, regenerate the fixture and
  * check both parsers.

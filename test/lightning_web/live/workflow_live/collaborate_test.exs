@@ -1,9 +1,37 @@
 defmodule LightningWeb.WorkflowLive.CollaborateTest do
   use LightningWeb.ConnCase, async: false
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.WorkflowsFixtures
   import Phoenix.LiveViewTest
+
+  describe "what the editor knows before its channel connects" do
+    test "the page carries the lifecycle state and the experimental flag", %{
+      conn: conn
+    } do
+      user = insert(:user, preferences: %{"experimental_features" => true})
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      {:ok, live_workflow} =
+        workflow
+        |> Lightning.Repo.preload(:triggers)
+        |> Lightning.Workflows.go_live(user)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      assert live_workflow.state == :live
+      assert html =~ "data-workflow-state=\"live\""
+      assert html =~ "data-experimental-features=\"true\""
+    end
+  end
 
   describe "sandbox indicator banner data attributes" do
     test "sets root project data attributes to the user's access root in a sandbox project",
@@ -1028,6 +1056,13 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
   end
 
   describe "credential modal interactions" do
+    setup :isolated_adaptors
+
+    setup do
+      Lightning.AdaptorTestHelpers.seed_credential_schema("http")
+      :ok
+    end
+
     test "opens credential modal with schema via handle_event", %{conn: conn} do
       user = insert(:user)
 

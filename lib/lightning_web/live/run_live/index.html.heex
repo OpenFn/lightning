@@ -608,6 +608,11 @@
                   project={@project}
                   can_edit_data_retention={@can_edit_data_retention}
                   can_run_workflow={@can_run_workflow}
+                  experimental_features={
+                    Lightning.Accounts.experimental_features_enabled?(
+                      @current_user
+                    )
+                  }
                   entry_selected={
                     Enum.any?(@selected_work_orders, fn wo ->
                       wo.id == workorder.id

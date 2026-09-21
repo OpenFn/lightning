@@ -5,8 +5,8 @@ defmodule Lightning.ExportUtils.Scalar do
   `Lightning.ExportUtils` builds the project spec by concatenating strings, so
   every name, label and identifier has to be quoted and escaped here.
 
-  Output has to stay byte-identical for anything already emitted correctly:
-  customers keep their project spec in git, so a change in quoting style is a
+  Output has to stay byte-identical for anything already emitted correctly.
+  Customers keep their project spec in git, so a change in quoting style is a
   diff in every synced repo. That is why the bare and single-quoted shapes
   below are the historic ones rather than what a general purpose YAML writer
   would pick.
@@ -19,7 +19,8 @@ defmodule Lightning.ExportUtils.Scalar do
   @bare_key ~r/\A[a-zA-Z0-9][a-zA-Z0-9_\-@\.>]*[a-zA-Z0-9]\z/
 
   # The spellings that do not survive a round trip as the string we wrote.
-  # Measured against yamerl and yaml@2.7.1, in both key and value position;
+  # Measured against yamerl and the npm `yaml` parser, in both key and value
+  # position;
   # the corpus is in scalar_test.exs. Deliberately narrower than YAML 1.1:
   # `on`/`off` and `2026-08-27` are left bare because neither parser resolves
   # them and both were legal job names, so quoting would churn synced repos.

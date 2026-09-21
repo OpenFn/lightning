@@ -227,8 +227,6 @@ setup_project_directory() {
 
   step "Installing Lightning components"
   mix lightning.install_runtime
-  mix lightning.install_schemas
-  mix lightning.install_adaptor_icons
 }
 
 setup_project_database() {

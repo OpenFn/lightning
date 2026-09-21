@@ -1,17 +1,20 @@
 /**
- * useVersionMismatch - Detects when viewing latest workflow but selected run used older version
+ * Detects that the selected run executed against content other than what is on
+ * the canvas, so the shape being looked at is not the shape that ran.
  *
- * Returns version mismatch info when:
- * - A run is selected
- * - Viewing "latest" workflow (not a specific snapshot)
- * - The run was executed on a different version than currently displayed
+ * The run's results are painted onto the current document, and the banner says
+ * so and offers to switch to the version the run used.
  *
- * This prevents confusion when the workflow structure has changed since the run executed.
+ * There is nothing to warn about while a run is being read as it executed
+ * (`?as_run=`), because then the document on screen is the one that ran. That
+ * is the usual shape on a live workflow. It is not the shape in a draft, where
+ * a run stays overlaid so the content can still be edited, and where this
+ * banner is the whole explanation of the difference.
  */
 
 import { useMemo } from 'react';
 
-import { useURLState } from '#/react/lib/use-url-state';
+import { usePinnedView } from '../lib/pinnedView';
 
 import { useHistory } from './useHistory';
 import { useLatestSnapshotLockVersion } from './useSessionContext';
@@ -25,11 +28,12 @@ interface VersionMismatch {
 export function useVersionMismatch(
   selectedRunId: string | null
 ): VersionMismatch | null {
-  const { params } = useURLState();
   const history = useHistory();
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-  const currVersion = params['v'] ? Number(params['v']) : null;
+
+  const { snapshot, asRun } = usePinnedView();
+  const currVersion = snapshot === null ? null : Number(snapshot);
 
   // in the process of switching version
   const switching =
@@ -37,6 +41,7 @@ export function useVersionMismatch(
 
   return useMemo(() => {
     if (
+      asRun === selectedRunId ||
       !selectedRunId ||
       !workflow ||
       !workflow.lock_version ||
@@ -64,5 +69,12 @@ export function useVersionMismatch(
     }
 
     return null;
-  }, [selectedRunId, workflow, latestSnapshotLockVersion, history]);
+  }, [
+    asRun,
+    selectedRunId,
+    switching,
+    workflow,
+    latestSnapshotLockVersion,
+    history,
+  ]);
 }

@@ -52,11 +52,14 @@ export function WorkflowEditor({
 
   const isSyncingRef = useRef(false);
   const isInitialMountRef = useRef(true);
+  const seenPanelParamRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isSyncingRef.current) return;
 
     const panelParam = params['panel'] ?? null;
+    const panelParamJustArrived = seenPanelParamRef.current !== panelParam;
+    seenPanelParamRef.current = panelParam;
 
     if (isRunPanelOpen) {
       const contextJobId = runPanelContext?.jobId;
@@ -98,6 +101,7 @@ export function WorkflowEditor({
     } else if (
       !isRunPanelOpen &&
       panelParam === 'run' &&
+      !panelParamJustArrived &&
       !isSyncingRef.current &&
       !isInitialMountRef.current
     ) {

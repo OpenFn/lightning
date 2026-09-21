@@ -291,11 +291,30 @@ defmodule LightningWeb.Hooks do
   # it for good — so there is nothing to re-mount into. Leave the project
   # rather than bouncing through a mount that would only redirect again with a
   # less useful message.
-  defp handle_project_user_event(%ProjectDeletionScheduled{}, socket) do
-    {:halt,
-     socket
-     |> put_flash(:info, "Project deleted.")
-     |> redirect(to: ~p"/projects")}
+  defp handle_project_user_event(%ProjectDeletionScheduled{} = event, socket) do
+    destination =
+      if Lightning.Accounts.experimental_features_enabled?(
+           socket.assigns.current_user
+         ) do
+        archived_sandbox_destination(event, socket)
+      end
+
+    case destination do
+      nil ->
+        {:halt,
+         socket
+         |> put_flash(:info, "Project deleted.")
+         |> redirect(to: ~p"/projects")}
+
+      {:editor, path} ->
+        {:halt, redirect(socket, to: path)}
+
+      {:flash, path} ->
+        {:halt,
+         socket
+         |> put_flash(:info, "Sandbox archived.")
+         |> redirect(to: path)}
+    end
   end
 
   # The workflow this socket is holding open is gone. Nobody resolves it again,
@@ -355,6 +374,41 @@ defmodule LightningWeb.Hooks do
   end
 
   defp handle_project_user_event(_message, socket), do: {:cont, socket}
+
+  defp archived_sandbox_destination(
+         %ProjectDeletionScheduled{project_id: deleted_id},
+         %{assigns: %{project: %{id: project_id, parent_id: parent_id}}} = socket
+       )
+       when deleted_id == project_id and not is_nil(parent_id) do
+    case Lightning.Projects.get_project(parent_id) do
+      %{scheduled_deletion: nil} = parent ->
+        if Lightning.Policies.Permissions.can?(
+             :project_users,
+             :access_project,
+             socket.assigns.current_user,
+             parent
+           ) do
+          parent_destination(socket, parent_id)
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp archived_sandbox_destination(_event, _socket), do: nil
+
+  defp parent_destination(socket, parent_id) do
+    with %{current_workflow_id: workflow_id} when is_binary(workflow_id) <-
+           socket.assigns,
+         %{name: name} <- Lightning.Workflows.get_workflow(workflow_id),
+         %{id: parent_workflow_id} <-
+           Lightning.Workflows.get_workflow_by_name(parent_id, name) do
+      {:editor, ~p"/projects/#{parent_id}/w/#{parent_workflow_id}?archived=1"}
+    else
+      _ -> {:flash, ~p"/projects/#{parent_id}/w"}
+    end
+  end
 
   # `:current_uri` is assigned by `LightningWeb.InitAssigns`, but only from
   # `handle_params` — fall back to the project's workflow index, which re-runs

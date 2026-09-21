@@ -183,7 +183,7 @@ describe('useAIWorkflowUndo', () => {
 
   it('keeps the direction while the confirmation fades out', () => {
     // The dialog leaves over 200ms, so it is still on screen after a confirm.
-    // Reading the direction off the pending restore flipped its copy to the
+    // Reading the direction off the pending restore would flip its copy to the
     // other one on the way out.
     const { result } = setup({ hasChanged: true });
 

@@ -109,6 +109,29 @@ defmodule LightningWeb.LayoutComponents do
             {@current_user.email}
           </p>
         </div>
+        <div
+          :if={Lightning.Accounts.experimental_features_enabled?(@current_user)}
+          class="px-4 py-3 bg-amber-50"
+        >
+          <p class="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+            <.icon
+              name="hero-wrench-screwdriver-mini"
+              class="h-4 w-4 text-amber-600"
+            /> Experimental features on
+          </p>
+          <p class="mt-0.5 text-xs text-gray-600">
+            You're using features that are still being built. Things may work
+            differently for you than for your teammates.
+          </p>
+          <p class="mt-1.5 text-xs">
+            <.link
+              navigate={~p"/profile"}
+              class="font-medium text-amber-700 underline underline-offset-2"
+            >
+              Turn off in your profile
+            </.link>
+          </p>
+        </div>
         <%= if @custom_user_menu_items do %>
           {Phoenix.LiveView.TagEngine.component(
             @custom_user_menu_items.component,

@@ -3,13 +3,14 @@ defmodule LightningWeb.WorkflowLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.DashboardStats
+  alias Lightning.Extensions.Message
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias LightningWeb.Live.Helpers.TableHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
-  alias LightningWeb.WorkflowLive.Helpers
 
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
@@ -63,6 +64,7 @@ defmodule LightningWeb.WorkflowLive.Index do
         />
         <DashboardComponents.project_metrics metrics={@metrics} project={@project} />
         <DashboardComponents.workflow_list
+          lifecycle={@lifecycle}
           period={@dashboard_period}
           can_delete_workflow={@can_delete_workflow}
           workflows_stats={@workflows_stats}
@@ -99,6 +101,8 @@ defmodule LightningWeb.WorkflowLive.Index do
     {:ok,
      socket
      |> assign(
+       lifecycle:
+         Lightning.Accounts.experimental_features_enabled?(current_user),
        can_delete_workflow: can_delete_workflow,
        can_create_workflow: can_create_workflow,
        sort_key: "name",
@@ -235,8 +239,7 @@ defmodule LightningWeb.WorkflowLive.Index do
              include: [:triggers]
            ) do
       workflow
-      |> Workflows.update_triggers_enabled_state(state)
-      |> Helpers.save_workflow(actor)
+      |> transition_workflow_state(state, actor)
       |> case do
         {:ok, _workflow} ->
           {:noreply,
@@ -244,7 +247,13 @@ defmodule LightningWeb.WorkflowLive.Index do
            |> put_flash(:info, "Workflow updated")
            |> push_patch(to: redirect)}
 
-        {:error, _changeset} ->
+        {:error, %Message{text: text}} when is_binary(text) ->
+          {:noreply,
+           socket
+           |> put_flash(:error, text)
+           |> push_patch(to: redirect)}
+
+        {:error, _reason} ->
           {:noreply,
            socket
            |> put_flash(:error, "Failed to update workflow. Please try again.")
@@ -303,6 +312,24 @@ defmodule LightningWeb.WorkflowLive.Index do
       nil ->
         {:noreply, socket |> put_flash(:error, "Workflow not found.")}
     end
+  end
+
+  defp transition_workflow_state(workflow, enable?, actor)
+       when enable? in [true, "true"] do
+    activating? =
+      Enum.any?(workflow.triggers, fn trigger -> !trigger.enabled end)
+
+    case WorkflowUsageLimiter.limit_workflow_activation(
+           activating?,
+           workflow.project_id
+         ) do
+      :ok -> Workflows.go_live(workflow, actor)
+      {:error, _reason, message} -> {:error, message}
+    end
+  end
+
+  defp transition_workflow_state(workflow, _disable?, actor) do
+    Workflows.switch_to_draft(workflow, actor)
   end
 
   defp build_query_params(search_term, sort_key, sort_direction) do

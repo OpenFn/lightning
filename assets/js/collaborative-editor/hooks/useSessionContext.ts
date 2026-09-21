@@ -45,6 +45,7 @@ import type {
   UserContext,
   WorkflowTemplate,
 } from '../types/sessionContext';
+import type { BaseWorkflow } from '../types/workflow';
 
 /**
  * Main hook for accessing the SessionContextStore instance
@@ -129,6 +130,16 @@ export const useSessionContextLoading = (): boolean => {
   return useSyncExternalStore(sessionContextStore.subscribe, selectLoading);
 };
 
+export const useSessionContextLoaded = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLoaded = sessionContextStore.withSelector(
+    state => state.lastUpdated !== null
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLoaded);
+};
+
 /**
  * Hook to get error state
  * Returns error message if loading failed, null otherwise
@@ -155,10 +166,53 @@ export const usePermissions = (): Permissions | null => {
   return useSyncExternalStore(sessionContextStore.subscribe, selectPermissions);
 };
 
+export const useExperimentalFeatures = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectEnabled = sessionContextStore.withSelector(
+    state => state.experimentalFeaturesEnabled
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectEnabled);
+};
+
+export const useContentLocked = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectContentLocked = sessionContextStore.withSelector(
+    state => state.contentLocked
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectContentLocked
+  );
+};
+
+export const useSessionWorkflow = (): BaseWorkflow | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectWorkflow = sessionContextStore.withSelector(
+    state => state.workflow
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectWorkflow);
+};
+
 /**
  * Hook to get latest snapshot lock version from session context
  * Returns null if not loaded yet
  */
+export const useLatestSnapshotId = (): string | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectSnapshotId = sessionContextStore.withSelector(
+    state => state.latestSnapshotId
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectSnapshotId);
+};
+
 export const useLatestSnapshotLockVersion = (): number | null => {
   const sessionContextStore = useSessionContextStore();
 
@@ -200,9 +254,76 @@ export const useSessionContext = () => {
 };
 
 /**
- * Hook to get workflow versions list from session context
- * Returns array of versions, empty array if not loaded yet
+ * Hook to get workflow releases list from session context
+ * Returns array of releases, empty array if not loaded yet
  */
+export const useReleases = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectVersions = sessionContextStore.withSelector(
+    state => state.releases
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectVersions);
+};
+
+/**
+ * Hook to get releases loading state
+ * Returns true when releases are being loaded
+ */
+export const useReleasesLoaded = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectVersionsLoaded = sessionContextStore.withSelector(
+    state => state.releasesLoaded
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectVersionsLoaded
+  );
+};
+
+export const useReleasesLoading = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectVersionsLoading = sessionContextStore.withSelector(
+    state => state.releasesLoading
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectVersionsLoading
+  );
+};
+
+/**
+ * Hook to get releases error state
+ * Returns error message if loading failed, null otherwise
+ */
+export const useReleasesError = (): string | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectVersionsError = sessionContextStore.withSelector(
+    state => state.releasesError
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectVersionsError
+  );
+};
+
+/**
+ * Hook to get requestReleases action
+ * Returns function to request releases from server
+ */
+export const useRequestReleases = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  return sessionContextStore.requestReleases;
+};
+
 export const useVersions = () => {
   const sessionContextStore = useSessionContextStore();
 
@@ -213,44 +334,41 @@ export const useVersions = () => {
   return useSyncExternalStore(sessionContextStore.subscribe, selectVersions);
 };
 
-/**
- * Hook to get versions loading state
- * Returns true when versions are being loaded
- */
 export const useVersionsLoading = (): boolean => {
   const sessionContextStore = useSessionContextStore();
 
-  const selectVersionsLoading = sessionContextStore.withSelector(
+  const selectLoading = sessionContextStore.withSelector(
     state => state.versionsLoading
   );
 
-  return useSyncExternalStore(
-    sessionContextStore.subscribe,
-    selectVersionsLoading
-  );
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLoading);
 };
 
 /**
- * Hook to get versions error state
- * Returns error message if loading failed, null otherwise
+ * Whether a versions request has finished, whatever came back. Separate from
+ * the list being empty, so a workflow with no snapshots is not asked about
+ * forever.
  */
+export const useVersionsLoaded = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLoaded = sessionContextStore.withSelector(
+    state => state.versionsLoaded
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLoaded);
+};
+
 export const useVersionsError = (): string | null => {
   const sessionContextStore = useSessionContextStore();
 
-  const selectVersionsError = sessionContextStore.withSelector(
+  const selectError = sessionContextStore.withSelector(
     state => state.versionsError
   );
 
-  return useSyncExternalStore(
-    sessionContextStore.subscribe,
-    selectVersionsError
-  );
+  return useSyncExternalStore(sessionContextStore.subscribe, selectError);
 };
 
-/**
- * Hook to get requestVersions action
- * Returns function to request versions from server
- */
 export const useRequestVersions = () => {
   const sessionContextStore = useSessionContextStore();
 
@@ -272,6 +390,22 @@ export const useWorkflowTemplate = (): WorkflowTemplate | null => {
     sessionContextStore.subscribe,
     selectWorkflowTemplate
   );
+};
+
+export const useSuppressEnableTriggerWarning = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectSuppress = sessionContextStore.withSelector(
+    state => state.suppressEnableTriggerWarning
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectSuppress);
+};
+
+export const useMarkEnableTriggerWarningSuppressed = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  return sessionContextStore.markEnableTriggerWarningSuppressed;
 };
 
 /**

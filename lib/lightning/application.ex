@@ -39,10 +39,6 @@ defmodule Lightning.Application do
     #   formatter: Logger.Formatter.new()
     # })
 
-    adaptor_registry_childspec =
-      {Lightning.AdaptorRegistry,
-       Application.get_env(:lightning, Lightning.AdaptorRegistry, [])}
-
     adaptor_service_childspec =
       {Lightning.AdaptorService,
        [name: :adaptor_service]
@@ -127,6 +123,16 @@ defmodule Lightning.Application do
         )
       )
 
+    schema_reconciler_childspec =
+      if Application.get_env(
+           :lightning,
+           Lightning.Credentials.SchemaReconciler,
+           enabled: true
+         )[:enabled] do
+        {Lightning.Credentials.SchemaReconciler,
+         name: Lightning.Credentials.SchemaReconciler, sup: Lightning.Adaptors}
+      end
+
     goth =
       Application.get_env(:lightning, Lightning.Google, [])
       |> then(fn config ->
@@ -168,8 +174,9 @@ defmodule Lightning.Application do
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
         LightningWeb.WorkerPresence,
-        adaptor_registry_childspec,
         adaptor_service_childspec,
+        Lightning.Adaptors.Supervisor,
+        schema_reconciler_childspec,
         {Lightning.TaskWorker, name: :cli_task_worker},
         {Lightning.Runtime.RuntimeManager,
          worker_secret: Lightning.Config.worker_secret(),

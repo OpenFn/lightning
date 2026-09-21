@@ -14,8 +14,8 @@
  * - Click handler for opening publish panel
  * - Button styling based on enabled/disabled state
  *
- * Note: Download and copy functionality require manual testing due to jsdom
- * limitations with DOM manipulation and clipboard API.
+ * Note: Copy functionality requires manual testing because jsdom has no
+ * clipboard API.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -133,6 +133,16 @@ const resetSessionContextMocks = () => {
 
 // Mock useSessionContext hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
+  useExperimentalFeatures: () => true,
   useUser: vi.fn(() => mockUser),
   useWorkflowTemplate: vi.fn(() => mockWorkflowTemplate),
   useLatestSnapshotLockVersion: vi.fn(() => mockLatestSnapshotLockVersion),
@@ -275,8 +285,8 @@ describe('CodeViewPanel', () => {
     });
 
     test('falls back to a usable name when nothing survives sanitising', async () => {
-      // A CJK or Arabic name used to sanitise down to nothing and the browser
-      // was handed a file called ".yaml".
+      // A CJK or Arabic name sanitises down to nothing, which would hand the
+      // browser a file called ".yaml".
       expect(await downloadNameFor('患者確認')).toBe('workflow.yaml');
       expect(await downloadNameFor('تسجيل المريض')).toBe('workflow.yaml');
       expect(await downloadNameFor('🎉')).toBe('workflow.yaml');

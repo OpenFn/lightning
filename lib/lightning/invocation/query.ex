@@ -275,6 +275,49 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
+  Dataclips a job can be run against: the ones it has consumed, plus every
+  named dataclip in its project.
+
+  A named dataclip is a curated input rather than a trace of a past run, so the
+  result is no longer bounded by the job. The two sources are unioned rather
+  than ORed so each keeps its own index, instead of making dataclips the
+  driving relation on every keystroke of the picker's search.
+  """
+  def selectable_for_job(job_id, project_id, limit) do
+    consumed = job_input_dataclip_ids(job_id)
+
+    selectable =
+      if project_id do
+        union(consumed, ^named_dataclip_ids(project_id))
+      else
+        consumed
+      end
+
+    from(d in Dataclip,
+      where: d.id in subquery(selectable),
+      order_by: [
+        desc: d.id in subquery(consumed),
+        desc: d.inserted_at
+      ],
+      limit: ^limit
+    )
+  end
+
+  defp job_input_dataclip_ids(job_id) do
+    from(s in Step,
+      where: s.job_id == ^job_id and not is_nil(s.input_dataclip_id),
+      select: s.input_dataclip_id
+    )
+  end
+
+  defp named_dataclip_ids(project_id) do
+    from(d in Dataclip,
+      where: d.project_id == ^project_id and not is_nil(d.name),
+      select: d.id
+    )
+  end
+
+  @doc """
   By default, the dataclip body is not returned via a query. This query selects
   the body specifically.
   """

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import { Tooltip } from '../../../components/Tooltip';
 import {
   useWorkflowActions,
   useWorkflowReadOnly,
@@ -7,7 +8,6 @@ import {
 import type { Workflow } from '../../types/workflow';
 import { Button } from '../Button';
 import { Toggle } from '../Toggle';
-import { Tooltip } from '../../../components/Tooltip';
 
 import { EdgeForm } from './EdgeForm';
 import { InspectorFooter } from './InspectorFooter';
@@ -52,13 +52,11 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
     [edge.id, updateEdge]
   );
 
-  // Determine tooltip messages for disabled states
   const toggleTooltip = isReadOnly
     ? tooltipMessage
     : 'Enable or disable this path';
   const deleteTooltip = isReadOnly ? tooltipMessage : 'Delete this path';
 
-  // Only show footer for job edges (not trigger edges)
   const footer = !edge.source_trigger_id ? (
     <InspectorFooter
       leftButtons={

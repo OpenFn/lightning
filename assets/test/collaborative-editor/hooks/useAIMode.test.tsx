@@ -20,6 +20,15 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
   useProject: vi.fn(),
 }));
 

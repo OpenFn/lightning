@@ -51,6 +51,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowRelease
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.CancelManyWorkOrdersJob
   alias Lightning.WorkOrders.Events
@@ -597,6 +598,119 @@ defmodule Lightning.WorkOrders do
       where: wo.id in ^workorder_ids and wo.workflow_id == ^workflow_id,
       order_by: [desc: wo.last_activity],
       preload: [:snapshot, runs: :snapshot]
+    )
+    |> Repo.all()
+  end
+
+  @history_limit 20
+
+  @doc """
+  Recent work orders whose runs executed against the snapshot published as
+  `version_number`, newest first.
+
+  Bounded like `get_workorders_with_runs/2`, not the full history page. Each
+  work order carries only the runs matching this release, so one retried across
+  several versions shows only the runs belonging to this one. `[]` when no such
+  release exists.
+  """
+  @spec get_workorders_for_version(Ecto.UUID.t(), integer()) :: [WorkOrder.t()]
+  def get_workorders_for_version(workflow_id, version_number) do
+    lock_version =
+      from(rel in WorkflowRelease,
+        join: s in assoc(rel, :snapshot),
+        where:
+          rel.workflow_id == ^workflow_id and
+            rel.version_number == ^version_number,
+        select: s.lock_version
+      )
+      |> Repo.one()
+
+    case lock_version do
+      nil ->
+        []
+
+      lock_version ->
+        collect_history(
+          from(wo in WorkOrder,
+            join: r in assoc(wo, :runs),
+            join: s in assoc(r, :snapshot),
+            where:
+              wo.workflow_id == ^workflow_id and s.lock_version == ^lock_version
+          ),
+          from(r in Run,
+            join: s in assoc(r, :snapshot),
+            where: s.lock_version == ^lock_version,
+            order_by: [desc: r.inserted_at],
+            preload: [:snapshot]
+          )
+        )
+    end
+  end
+
+  @doc """
+  Recent work orders whose runs executed against a snapshot that was never
+  released (draft, test, or intermediate saves), newest first.
+
+  The draft/unversioned counterpart to `get_workorders_for_version/2`: same
+  bounded cap of #{@history_limit} work orders, and each work order carries only
+  its unversioned runs.
+  """
+  @spec get_workorders_unversioned(Ecto.UUID.t()) :: [WorkOrder.t()]
+  def get_workorders_unversioned(workflow_id) do
+    released_lock_versions =
+      from(rel in WorkflowRelease,
+        join: s in assoc(rel, :snapshot),
+        where: rel.workflow_id == ^workflow_id,
+        distinct: true,
+        select: s.lock_version
+      )
+      |> Repo.all()
+
+    unversioned_history(workflow_id, released_lock_versions)
+  end
+
+  defp unversioned_history(workflow_id, []) do
+    collect_history(
+      from(wo in WorkOrder,
+        join: r in assoc(wo, :runs),
+        where: wo.workflow_id == ^workflow_id
+      ),
+      from(r in Run, order_by: [desc: r.inserted_at], preload: [:snapshot])
+    )
+  end
+
+  defp unversioned_history(workflow_id, released_lock_versions) do
+    collect_history(
+      from(wo in WorkOrder,
+        join: r in assoc(wo, :runs),
+        join: s in assoc(r, :snapshot),
+        where:
+          wo.workflow_id == ^workflow_id and
+            s.lock_version not in ^released_lock_versions
+      ),
+      from(r in Run,
+        join: s in assoc(r, :snapshot),
+        where: s.lock_version not in ^released_lock_versions,
+        order_by: [desc: r.inserted_at],
+        preload: [:snapshot]
+      )
+    )
+  end
+
+  defp collect_history(wo_scope, runs_query) do
+    wo_ids =
+      from(wo in wo_scope,
+        group_by: wo.id,
+        order_by: [desc: wo.last_activity],
+        limit: @history_limit,
+        select: wo.id
+      )
+      |> Repo.all()
+
+    from(wo in WorkOrder,
+      where: wo.id in ^wo_ids,
+      order_by: [desc: wo.last_activity],
+      preload: [:snapshot, runs: ^runs_query]
     )
     |> Repo.all()
   end
