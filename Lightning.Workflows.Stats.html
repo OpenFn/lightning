@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="dist/sidebar_items-AAEED613.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -173,12 +173,13 @@ this page queries one, and it collapses every failure state into a single
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#runs/2" data-no-tooltip="" translate="no">runs(workflow, days_back \\ 30)</a>
+        <a href="#runs/3" data-no-tooltip="" translate="no">runs(workflow, days_back, timezone)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Final run counts per state, bucketed across the last <code class="inline">days_back</code> days:
-2-hourly over a day, AM/PM over a week, daily over a month.</p></div>
+        <div class="summary-synopsis"><p>Final run counts per state, bucketed across the last <code class="inline">days_back</code> days on a
+grid cut to <code class="inline">timezone</code>'s clock: local 2-hourly over a day, local half-days
+over a week, local days over a month.</p></div>
 
     </div>
 
@@ -206,7 +207,7 @@ this page queries one, and it collapses every failure state into a single
       <h1 class="signature" translate="no">run_bucket()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/stats.ex#L109" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/stats.ex#L113" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -289,19 +290,17 @@ second broken branch is its own thing to fix, not fallout from the first.</p>
 <p>Work order counts by final state over the last <code class="inline">days_back</code> days.</p>
   </section>
 </section>
-<section class="detail" id="runs/2">
-
-    <span id="runs/1"></span>
+<section class="detail" id="runs/3">
 
   <div class="detail-header">
-    <a href="#runs/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#runs/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">runs(workflow, days_back \\ 30)</h1>
+      <h1 class="signature" translate="no">runs(workflow, days_back, timezone)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/stats.ex#L139" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/stats.ex#L154" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -312,22 +311,31 @@ second broken branch is its own thing to fix, not fallout from the first.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> runs(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), 1 | 7 | 30) :: %{
+          <pre translate="no"><span class="attribute">@spec</span> runs(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(), 1 | 7 | 30, <a href="https://hexdocs.pm/elixir/Calendar.html#t:time_zone/0">Calendar.time_zone</a>()) :: %{
   window: %{from: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>(), to: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>()},
+  timezone: <a href="https://hexdocs.pm/elixir/Calendar.html#t:time_zone/0">Calendar.time_zone</a>(),
+  bucket_hours: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>(),
   buckets: [<a href="#t:run_bucket/0">run_bucket</a>()]
 }</pre>
 
       </div>
 
-<p>Final run counts per state, bucketed across the last <code class="inline">days_back</code> days:
-2-hourly over a day, AM/PM over a week, daily over a month.</p><p>Bucketed here rather than in the browser, because the alternative is shipping
+<p>Final run counts per state, bucketed across the last <code class="inline">days_back</code> days on a
+grid cut to <code class="inline">timezone</code>'s clock: local 2-hourly over a day, local half-days
+over a week, local days over a month.</p><p>Bucketed here rather than in the browser, because the alternative is shipping
 every run in the window — six figures of rows on a busy workflow, cached
-whole and JSON-encoded — to draw thirty bars.</p><p>Buckets are counted on <code class="inline">inserted_at</code> — when the attempt started, not when it
+whole and JSON-encoded — to draw thirty bars.</p><p>Bucketed on the local calendar rather than on the epoch, which is what makes
+it daylight-saving-correct: every boundary is a local whole hour turned into
+the instant it names, so London's 25-hour October day is one bar 25 hours
+wide and every daily boundary stays on local midnight.</p><p>Buckets are counted on <code class="inline">inserted_at</code> — when the attempt started, not when it
 settled — so a run stays in the bar the traffic arrived in. Every bucket and
 every state is present, zero-filled: the chart draws a flat window without
 reasoning about which bars are missing.</p><p>The last bucket is the one <code class="inline">now</code> falls in, so it is still filling; the first
-reaches back past <code class="inline">now - days_back</code>, so nothing in the window goes undrawn.
-<code class="inline">window</code> is the range the bars actually cover.</p><p>A bucket is <code class="inline">at</code> alongside one key per state, flat rather than nested, which
+reaches back past <code class="inline">now - days_back</code>, so nothing in the window goes undrawn —
+except on a spring-forward day in the reader's zone, where the grid is a
+wall-clock hour wide but an hour short in real time.
+<code class="inline">window</code> is the range the bars actually cover, <code class="inline">bucket_hours</code> is the width
+the chart labels, and <code class="inline">timezone</code> is the clock both were cut on.</p><p>A bucket is <code class="inline">at</code> alongside one key per state, flat rather than nested, which
 is the row shape Recharts takes as <code class="inline">data</code> — the list goes to the chart
 untouched, and each <code class="inline">Bar</code> names the state it draws.</p>
   </section>
