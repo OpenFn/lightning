@@ -28,6 +28,16 @@ and this project adheres to
 
 ### Fixed
 
+### Security
+
+- Bumped `mint` to 1.10.1, clearing
+  [CVE-2026-82672](https://github.com/elixir-mint/mint/security/advisories/GHSA-rj5m-69wp-cxq9).
+  Mint accepted any bytes between a chunk's size and the line ending in an
+  HTTP/1 chunked response, so a malicious server could get Mint and a stricter
+  proxy in front of it to disagree about where one response ends and the next
+  begins. Mint is the HTTP client Lightning uses to call other systems, so the
+  risk is in what those systems send back, not in requests made to Lightning.
+
 ## [2.19.0] - 2026-09-21
 
 > **Upgrading.** Two things in this release need a change to a self-hosted
