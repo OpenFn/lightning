@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Lightning.Adaptors.Supervisor — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Adaptors.Supervisor</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Supervises one instance of the adaptors subsystem: the cache, task
+supervisor, invalidator, node monitor, channel broadcaster and the
+<a href="https://hexdocs.pm/highlander_pg/1.0.8/HighlanderPG.html"><code class="inline">HighlanderPG</code></a>-wrapped scheduler.</p><p>Every child, cache, topic and lock name derives from the <code class="inline">:name</code> opt,
+so several instances can run in one BEAM. Production starts one under
+<code class="inline">name: Lightning.Adaptors</code>. The scheduler is a cluster singleton
+registered under <a href="#global_scheduler_name/1"><code class="inline">global_scheduler_name/1</code></a>.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#cache_name/1" data-no-tooltip="" translate="no">cache_name(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Cachex table name for the supervisor named <code class="inline">name</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#channel_broadcaster_name/1" data-no-tooltip="" translate="no">channel_broadcaster_name(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p><code class="inline">ChannelBroadcaster</code> GenServer name for the supervisor named <code class="inline">name</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#child_spec/1" data-no-tooltip="" translate="no">child_spec(init_arg)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#client_topic/1" data-no-tooltip="" translate="no">client_topic(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>PubSub topic carrying debounced <code class="inline">adaptors_updated</code> events for the
+supervisor named <code class="inline">name</code>; see <a href="Lightning.Adaptors.html#subscribe_to_updates/1"><code class="inline">Lightning.Adaptors.subscribe_to_updates/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#ensure_started/1" data-no-tooltip="" translate="no">ensure_started(opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Starts an instance, or returns the running one. For entry points that
+may run either against a cold BEAM or inside the booted application.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#forget/1" data-no-tooltip="" translate="no">forget(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Erases the instance's <code class="inline">:persistent_term</code> entry. Not called
+automatically, since <a href="https://www.erlang.org/doc/apps/erts/persistent_term.html#erase/1"><code class="inline">:persistent_term.erase/1</code></a> triggers a global GC.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#global_scheduler_name/1" data-no-tooltip="" translate="no">global_scheduler_name(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p><code class="inline">:global</code> Scheduler name for the supervisor named <code class="inline">name</code>; pass it to
+<a href="https://hexdocs.pm/elixir/GenServer.html#call/3"><code class="inline">GenServer.call/3</code></a> directly.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#highlander_name/1" data-no-tooltip="" translate="no">highlander_name(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p><a href="https://hexdocs.pm/highlander_pg/1.0.8/HighlanderPG.html"><code class="inline">HighlanderPG</code></a> supervisor name for the supervisor named <code class="inline">name</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#invalidator_name/1" data-no-tooltip="" translate="no">invalidator_name(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p><code class="inline">Invalidator</code> GenServer name for the supervisor named <code class="inline">name</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#lock_key/1" data-no-tooltip="" translate="no">lock_key(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Postgres advisory-lock key for the supervisor named <code class="inline">name</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#node_monitor_name/1" data-no-tooltip="" translate="no">node_monitor_name(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p><code class="inline">NodeMonitor</code> GenServer name for the supervisor named <code class="inline">name</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#scheduler_name/1" data-no-tooltip="" translate="no">scheduler_name(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Atom form of the Scheduler name for the supervisor named <code class="inline">name</code>. The
+process itself registers under <a href="#global_scheduler_name/1"><code class="inline">global_scheduler_name/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#source/1" data-no-tooltip="" translate="no">source(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the source (<code class="inline">:npm | :local</code>) of the supervisor named <code class="inline">name</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#source_topic/1" data-no-tooltip="" translate="no">source_topic(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>PubSub topic carrying <code class="inline">{:changed, name, source}</code> events for the
+supervisor named <code class="inline">name</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#start_link/1" data-no-tooltip="" translate="no">start_link(opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Starts a supervisor instance.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#strategy/1" data-no-tooltip="" translate="no">strategy(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the strategy of the supervisor named <code class="inline">name</code>. Raises if no
+supervisor has started under that name.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#tasks_name/1" data-no-tooltip="" translate="no">tasks_name(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p><a href="https://hexdocs.pm/elixir/Task.Supervisor.html"><code class="inline">Task.Supervisor</code></a> name for the supervisor named <code class="inline">name</code>.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="cache_name/1">
+
+  <div class="detail-header">
+    <a href="#cache_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">cache_name(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L179" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> cache_name(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
+
+      </div>
+
+<p>Cachex table name for the supervisor named <code class="inline">name</code>.</p>
+  </section>
+</section>
+<section class="detail" id="channel_broadcaster_name/1">
+
+  <div class="detail-header">
+    <a href="#channel_broadcaster_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">channel_broadcaster_name(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L191" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> channel_broadcaster_name(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
+
+      </div>
+
+<p><code class="inline">ChannelBroadcaster</code> GenServer name for the supervisor named <code class="inline">name</code>.</p>
+  </section>
+</section>
+<section class="detail" id="child_spec/1">
+
+  <div class="detail-header">
+    <a href="#child_spec/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">child_spec(init_arg)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L13" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="client_topic/1">
+
+  <div class="detail-header">
+    <a href="#client_topic/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">client_topic(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L228" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> client_topic(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>PubSub topic carrying debounced <code class="inline">adaptors_updated</code> events for the
+supervisor named <code class="inline">name</code>; see <a href="Lightning.Adaptors.html#subscribe_to_updates/1"><code class="inline">Lightning.Adaptors.subscribe_to_updates/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="ensure_started/1">
+
+    <span id="ensure_started/0"></span>
+
+  <div class="detail-header">
+    <a href="#ensure_started/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">ensure_started(opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L47" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> ensure_started(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Starts an instance, or returns the running one. For entry points that
+may run either against a cold BEAM or inside the booted application.</p>
+  </section>
+</section>
+<section class="detail" id="forget/1">
+
+  <div class="detail-header">
+    <a href="#forget/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">forget(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L173" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> forget(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Erases the instance's <code class="inline">:persistent_term</code> entry. Not called
+automatically, since <a href="https://www.erlang.org/doc/apps/erts/persistent_term.html#erase/1"><code class="inline">:persistent_term.erase/1</code></a> triggers a global GC.</p>
+  </section>
+</section>
+<section class="detail" id="global_scheduler_name/1">
+
+  <div class="detail-header">
+    <a href="#global_scheduler_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">global_scheduler_name(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L210" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> global_scheduler_name(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: {:global, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()}</pre>
+
+      </div>
+
+<p><code class="inline">:global</code> Scheduler name for the supervisor named <code class="inline">name</code>; pass it to
+<a href="https://hexdocs.pm/elixir/GenServer.html#call/3"><code class="inline">GenServer.call/3</code></a> directly.</p>
+  </section>
+</section>
+<section class="detail" id="highlander_name/1">
+
+  <div class="detail-header">
+    <a href="#highlander_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">highlander_name(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L214" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> highlander_name(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
+
+      </div>
+
+<p><a href="https://hexdocs.pm/highlander_pg/1.0.8/HighlanderPG.html"><code class="inline">HighlanderPG</code></a> supervisor name for the supervisor named <code class="inline">name</code>.</p>
+  </section>
+</section>
+<section class="detail" id="invalidator_name/1">
+
+  <div class="detail-header">
+    <a href="#invalidator_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">invalidator_name(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L187" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> invalidator_name(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
+
+      </div>
+
+<p><code class="inline">Invalidator</code> GenServer name for the supervisor named <code class="inline">name</code>.</p>
+  </section>
+</section>
+<section class="detail" id="lock_key/1">
+
+  <div class="detail-header">
+    <a href="#lock_key/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">lock_key(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L234" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> lock_key(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()</pre>
+
+      </div>
+
+<p>Postgres advisory-lock key for the supervisor named <code class="inline">name</code>.</p>
+  </section>
+</section>
+<section class="detail" id="node_monitor_name/1">
+
+  <div class="detail-header">
+    <a href="#node_monitor_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">node_monitor_name(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L196" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> node_monitor_name(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
+
+      </div>
+
+<p><code class="inline">NodeMonitor</code> GenServer name for the supervisor named <code class="inline">name</code>.</p>
+  </section>
+</section>
+<section class="detail" id="scheduler_name/1">
+
+  <div class="detail-header">
+    <a href="#scheduler_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">scheduler_name(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L203" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> scheduler_name(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
+
+      </div>
+
+<p>Atom form of the Scheduler name for the supervisor named <code class="inline">name</code>. The
+process itself registers under <a href="#global_scheduler_name/1"><code class="inline">global_scheduler_name/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="source/1">
+
+  <div class="detail-header">
+    <a href="#source/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">source(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L148" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> source(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: :npm | :local</pre>
+
+      </div>
+
+<p>Returns the source (<code class="inline">:npm | :local</code>) of the supervisor named <code class="inline">name</code>.</p>
+  </section>
+</section>
+<section class="detail" id="source_topic/1">
+
+  <div class="detail-header">
+    <a href="#source_topic/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">source_topic(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L221" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> source_topic(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>PubSub topic carrying <code class="inline">{:changed, name, source}</code> events for the
+supervisor named <code class="inline">name</code>.</p>
+  </section>
+</section>
+<section class="detail" id="start_link/1">
+
+  <div class="detail-header">
+    <a href="#start_link/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">start_link(opts)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L37" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> start_link(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/Supervisor.html#t:on_start/0">Supervisor.on_start</a>()</pre>
+
+      </div>
+
+<p>Starts a supervisor instance.</p><p>Options:</p><ul><li><code class="inline">:name</code> - every child name derives from it, defaulting to
+<a href="Lightning.Adaptors.Config.html#default_instance/0"><code class="inline">Lightning.Adaptors.Config.default_instance/0</code></a></li><li><code class="inline">:strategy</code> - <a href="Lightning.Adaptors.Strategy.html"><code class="inline">Lightning.Adaptors.Strategy</code></a> implementation,
+defaulting to <a href="Lightning.Adaptors.Config.html#strategy/0"><code class="inline">Lightning.Adaptors.Config.strategy/0</code></a></li><li><code class="inline">:lock_key</code> - <a href="https://hexdocs.pm/highlander_pg/1.0.8/HighlanderPG.html"><code class="inline">HighlanderPG</code></a> advisory-lock key, defaulting to
+<code class="inline">lock_key(name)</code></li><li><code class="inline">:refresh_interval</code> - scheduler tick interval in milliseconds,
+defaulting to <a href="Lightning.Adaptors.Config.html#refresh_interval/0"><code class="inline">Lightning.Adaptors.Config.refresh_interval/0</code></a></li><li><code class="inline">:warn_when_empty</code> - whether the scheduler warns when it boots on an
+empty catalogue that no timer will fill, defaulting to
+<a href="Lightning.Adaptors.Config.html#warn_when_empty?/0"><code class="inline">Lightning.Adaptors.Config.warn_when_empty?/0</code></a></li><li><code class="inline">:checked_at</code> - forwarded to the scheduler; see
+<a href="Lightning.Adaptors.Scheduler.html#start_link/1"><code class="inline">Lightning.Adaptors.Scheduler.start_link/1</code></a></li></ul>
+  </section>
+</section>
+<section class="detail" id="strategy/1">
+
+  <div class="detail-header">
+    <a href="#strategy/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">strategy(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> strategy(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">module</a>()</pre>
+
+      </div>
+
+<p>Returns the strategy of the supervisor named <code class="inline">name</code>. Raises if no
+supervisor has started under that name.</p>
+  </section>
+</section>
+<section class="detail" id="tasks_name/1">
+
+  <div class="detail-header">
+    <a href="#tasks_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">tasks_name(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/supervisor.ex#L183" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> tasks_name(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
+
+      </div>
+
+<p><a href="https://hexdocs.pm/elixir/Task.Supervisor.html"><code class="inline">Task.Supervisor</code></a> name for the supervisor named <code class="inline">name</code>.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

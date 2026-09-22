@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Setup — Lightning v2.19.0-pre</title>
+    <title>Lightning.Setup — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Setup</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -132,9 +132,9 @@ Lightning
       <div class="summary-signature">
         <a href="#ensure_minimum_setup/0" data-no-tooltip="" translate="no">ensure_minimum_setup()</a>
 
-      </div>
+          <span class="deprecated" title="Use with_minimum_setup/1 instead">deprecated</span>
 
-        <div class="summary-synopsis"><p>Set up the bare minimum so that commands can be executed against the repo.</p></div>
+      </div>
 
     </div>
 
@@ -145,6 +145,21 @@ Lightning
       </div>
 
         <div class="summary-synopsis"><p>This makes it possible to run setup_user as an external command</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#with_minimum_setup/1" data-no-tooltip="" translate="no">with_minimum_setup(fun)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Runs <code class="inline">fun</code> with the bare minimum an out-of-band command needs: the vault
+(credential bodies are encrypted), a stub PubSub, the repo, and the adaptors
+subsystem (job and credential validation resolves adaptor names against it).
+The endpoint stays down - these commands often run against an instance that
+is already serving traffic, and booting it here would fight the running
+server for the port.</p></div>
 
     </div>
 
@@ -172,16 +187,20 @@ Lightning
       <h1 class="signature" translate="no">ensure_minimum_setup()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup.ex#L33" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup.ex#L81" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
     </div>
   </div>
 
+    <div class="deprecated">
+      This function is deprecated. Use with_minimum_setup/1 instead.
+    </div>
+
   <section class="docstring">
 
-<p>Set up the bare minimum so that commands can be executed against the repo.</p>
+
   </section>
 </section>
 <section class="detail" id="setup_user/3">
@@ -198,7 +217,7 @@ Lightning
       <h1 class="signature" translate="no">setup_user(user, token \\ nil, credentials \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup.ex#L21" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup.ex#L23" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -216,6 +235,41 @@ Lightning
 
 <p>This makes it possible to run setup_user as an external command</p><p>See: Lightning.SetupUtils.setup_user() for more docs.</p><h2 id="setup_user/3-examples" class="section-heading"><a href="#setup_user/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><p>  iex&gt; kubectl exec -it deploy/demo-web -- /app/bin/lightning eval Lightning.Setup.setup_user(%{email: &quot;td@openfn.org&quot;, first_name: &quot;taylor&quot;, last_name: &quot;downs&quot;, password: &quot;shh12345!&quot;})
   :ok</p>
+  </section>
+</section>
+<section class="detail" id="with_minimum_setup/1">
+
+  <div class="detail-header">
+    <a href="#with_minimum_setup/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">with_minimum_setup(fun)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup.ex#L44" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> with_minimum_setup((-&gt; result)) :: {:ok, result, [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()]} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}
+when result: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()</pre>
+
+      </div>
+
+<p>Runs <code class="inline">fun</code> with the bare minimum an out-of-band command needs: the vault
+(credential bodies are encrypted), a stub PubSub, the repo, and the adaptors
+subsystem (job and credential validation resolves adaptor names against it).
+The endpoint stays down - these commands often run against an instance that
+is already serving traffic, and booting it here would fight the running
+server for the port.</p><p>Idempotent, so it is equally safe on a cold BEAM or inside the booted
+application.</p>
   </section>
 </section>
 

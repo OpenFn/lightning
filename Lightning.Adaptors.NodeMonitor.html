@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.AdaptorRegistry.Npm — Lightning v2.19.0-pre</title>
+    <title>Lightning.Adaptors.NodeMonitor — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">Lightning.AdaptorRegistry.Npm</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <span translate="no">Lightning.Adaptors.NodeMonitor</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L56" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/node_monitor.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,7 +111,13 @@ Lightning
 
 
     <section id="moduledoc">
-<p>NPM API functions</p>
+<p>Partition-recovery companion to <a href="Lightning.Adaptors.Invalidator.html"><code class="inline">Lightning.Adaptors.Invalidator</code></a>.</p><p>Cache entries have no TTL, so a node that misses a <code class="inline">:changed</code> broadcast
+while partitioned would otherwise serve it forever. On <code class="inline">:nodeup</code>,
+re-warms the Cachex table from Postgres to close that gap. Steady-state
+invalidation belongs to <a href="Lightning.Adaptors.Invalidator.html"><code class="inline">Lightning.Adaptors.Invalidator</code></a>.</p><p><code class="inline">:nodedown</code> is a deliberate no-op: there's nothing to invalidate on this
+end when the connection drops. The worst case while partitioned is a
+stale icon URL, which <a href="LightningWeb.AdaptorIconController.html"><code class="inline">LightningWeb.AdaptorIconController</code></a>'s
+302-on-stale-sha handles regardless of which node serves the request.</p>
     </section>
 
 </div>
@@ -130,30 +136,21 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#client/0" data-no-tooltip="" translate="no">client()</a>
+        <a href="#child_spec/1" data-no-tooltip="" translate="no">child_spec(init_arg)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#package_detail/1" data-no-tooltip="" translate="no">package_detail(package_name)</a>
+        <a href="#start_link/1" data-no-tooltip="" translate="no">start_link(opts)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Retrieve all details for an NPM package</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#user_packages/1" data-no-tooltip="" translate="no">user_packages(user)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Retrieve all packages for a given user or organization. Return empty list if
-application cannot connect to NPM. (E.g., because it's started offline.)</p></div>
+        <div class="summary-synopsis"><p>Start a NodeMonitor for the given supervisor instance.</p></div>
 
     </div>
 
@@ -171,17 +168,17 @@ application cannot connect to NPM. (E.g., because it's started offline.)</p></di
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="client/0">
+<section class="detail" id="child_spec/1">
 
   <div class="detail-header">
-    <a href="#client/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#child_spec/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">client()</h1>
+      <h1 class="signature" translate="no">child_spec(init_arg)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L61" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/node_monitor.ex#L16" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -190,20 +187,20 @@ application cannot connect to NPM. (E.g., because it's started offline.)</p></di
 
   <section class="docstring">
 
-
+<p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
   </section>
 </section>
-<section class="detail" id="package_detail/1">
+<section class="detail" id="start_link/1">
 
   <div class="detail-header">
-    <a href="#package_detail/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#start_link/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">package_detail(package_name)</h1>
+      <h1 class="signature" translate="no">start_link(opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L89" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/node_monitor.ex#L28" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -214,40 +211,11 @@ application cannot connect to NPM. (E.g., because it's started offline.)</p></di
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> package_detail(package_name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> start_link(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/GenServer.html#t:on_start/0">GenServer.on_start</a>()</pre>
 
       </div>
 
-<p>Retrieve all details for an NPM package</p>
-  </section>
-</section>
-<section class="detail" id="user_packages/1">
-
-  <div class="detail-header">
-    <a href="#user_packages/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">user_packages(user)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L73" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> user_packages(user :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()]</pre>
-
-      </div>
-
-<p>Retrieve all packages for a given user or organization. Return empty list if
-application cannot connect to NPM. (E.g., because it's started offline.)</p>
+<p>Start a NodeMonitor for the given supervisor instance.</p><p>Required opts:</p><ul><li><code class="inline">:name</code> - registered GenServer name.</li><li><code class="inline">:sup</code> - supervisor instance name, forwarded to <code class="inline">Store.warm_from_repo/1</code>.</li></ul>
   </section>
 </section>
 

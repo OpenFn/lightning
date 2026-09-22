@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.ExportUtils.Scalar — Lightning v2.19.0-pre</title>
+    <title>Lightning.ExportUtils.Scalar — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.ExportUtils.Scalar</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -112,8 +112,8 @@ Lightning
 
     <section id="moduledoc">
 <p>Encodes single strings as YAML scalars for project export.</p><p><a href="Lightning.ExportUtils.html"><code class="inline">Lightning.ExportUtils</code></a> builds the project spec by concatenating strings, so
-every name, label and identifier has to be quoted and escaped here.</p><p>Output has to stay byte-identical for anything already emitted correctly:
-customers keep their project spec in git, so a change in quoting style is a
+every name, label and identifier has to be quoted and escaped here.</p><p>Output has to stay byte-identical for anything already emitted correctly.
+Customers keep their project spec in git, so a change in quoting style is a
 diff in every synced repo. That is why the bare and single-quoted shapes
 below are the historic ones rather than what a general purpose YAML writer
 would pick.</p>
@@ -199,7 +199,7 @@ mapping entry or for a sequence item.</p></div>
       <h1 class="signature" translate="no">encode_block(value, indent)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils/scalar.ex#L83" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils/scalar.ex#L84" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -230,7 +230,7 @@ three shapes that shape gets wrong.</p>
       <h1 class="signature" translate="no">encode_key(key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils/scalar.ex#L191" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils/scalar.ex#L192" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -259,7 +259,7 @@ export has always used for them.</p>
       <h1 class="signature" translate="no">encode_quoted_value(value)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils/scalar.ex#L66" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils/scalar.ex#L67" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -289,7 +289,7 @@ bare would be a one-line diff in every synced repo that has one.</p>
       <h1 class="signature" translate="no">encode_value(value)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils/scalar.ex#L50" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils/scalar.ex#L51" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

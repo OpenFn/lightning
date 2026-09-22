@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Lightning.Adaptors.Strategy — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-behaviour" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Adaptors.Strategy</span> <small>behaviour</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Behaviour every adaptor strategy implements.</p><p>A strategy is the sole boundary between the <code class="inline">Lightning.Adaptors.*</code>
+subsystem and the outside world. It defines four callbacks:</p><ul><li><a href="#c:fetch_adaptor/1"><code class="inline">fetch_adaptor/1</code></a> returns a <a href="#t:adaptor_record/0"><code class="inline">adaptor_record/0</code></a> for one package
+name. Icon fields are not part of this record. The Scheduler stamps
+them on separately after joining the bulk icon pipeline.</li><li><a href="#c:fetch_icon/2"><code class="inline">fetch_icon/2</code></a> returns the raw bytes and extension of one icon
+variant. The Store calls it when an icon is missing on disk.</li><li><a href="#c:fetch_icons/1"><code class="inline">fetch_icons/1</code></a> bulk-fetches icons for every adaptor the strategy
+knows. The Scheduler runs it once per tick in parallel with its
+per-adaptor fan-out. See the callback docs for <code class="inline">:prior_etags</code>.</li><li><a href="#c:list_adaptors/0"><code class="inline">list_adaptors/0</code></a> is the cheap change signal: <code class="inline">name</code> and
+<code class="inline">latest_version</code> for every package the strategy knows, which the
+Scheduler diffs against the <code class="inline">adaptors</code> table.</li></ul><p>The active strategy module is resolved at runtime via
+<a href="Lightning.Adaptors.Config.html#strategy/0"><code class="inline">Lightning.Adaptors.Config.strategy/0</code></a>. Implementations surface
+transient failures (5xx, timeout, nxdomain) as <code class="inline">{:error, term()}</code> and
+do not retry.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:adaptor_record/0" data-no-tooltip="" translate="no">adaptor_record()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The record returned by <a href="#c:fetch_adaptor/1"><code class="inline">fetch_adaptor/1</code></a>. Icon fields are not on it.
+The Scheduler persists them separately after joining <a href="#c:fetch_icons/1"><code class="inline">fetch_icons/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:icon_entry/0" data-no-tooltip="" translate="no">icon_entry()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Fresh-fetch icon entry inside the <a href="#c:fetch_icons/1"><code class="inline">fetch_icons/1</code></a> result map. <code class="inline">:etag</code>
+is the upstream cache validator verbatim from the HTTP response, <code class="inline">nil</code>
+when upstream sent none. Strategies with no transport-level validator,
+such as <a href="Lightning.Adaptors.Local.html"><code class="inline">Lightning.Adaptors.Local</code></a>, omit the key entirely.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:icon_shape_value/0" data-no-tooltip="" translate="no">icon_shape_value()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Per-shape value inside the <a href="#c:fetch_icons/1"><code class="inline">fetch_icons/1</code></a> result map. Either a
+fresh <a href="#t:icon_entry/0"><code class="inline">icon_entry/0</code></a> (a 200) or <code class="inline">:not_modified</code> (a 304), which is
+only ever returned when the caller supplied a prior etag via
+<code class="inline">:prior_etags</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:icons_map/0" data-no-tooltip="" translate="no">icons_map()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Bulk icon map returned by <a href="#c:fetch_icons/1"><code class="inline">fetch_icons/1</code></a>. A shape that is absent
+means upstream has no such icon. <code class="inline">:not_modified</code> means it is unchanged
+since the prior etag. A map is a fresh fetch to apply.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:version_record/0" data-no-tooltip="" translate="no">version_record()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Per-version metadata extracted from an upstream packument or local
+<code class="inline">package.json</code>.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-callbacks summary">
+  <h2>
+    <a href="#callbacks">Callbacks</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:fetch_adaptor/1" data-no-tooltip="" translate="no">fetch_adaptor(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Fetch the full structured record for a single adaptor package.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:fetch_icon/2" data-no-tooltip="" translate="no">fetch_icon(name, arg2)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Fetch the raw bytes for one icon variant (<code class="inline">:square</code> or <code class="inline">:rectangle</code>)
+of an adaptor package, together with the file extension.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:fetch_icons/1" data-no-tooltip="" translate="no">fetch_icons(opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Bulk fetch every available icon for every adaptor known to the
+strategy.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:list_adaptors/0" data-no-tooltip="" translate="no">list_adaptors()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Cheap change signal: <code class="inline">name</code> and <code class="inline">latest_version</code> for every package the
+strategy knows. The Scheduler diffs this against the <code class="inline">adaptors</code> table to
+compute its work list.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#digest_schema/1" data-no-tooltip="" translate="no">digest_schema(body)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Validate a schema body and pair it with its persisted digest.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:adaptor_record/0">
+
+  <div class="detail-header">
+    <a href="#t:adaptor_record/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">adaptor_record()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L49" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> adaptor_record() :: %{
+  name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  description: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  homepage: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  repository: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  license: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  latest_version: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  deprecated: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+  schema_data: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  schema_sha256: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  versions: [<a href="#t:version_record/0">version_record</a>()]
+}</pre>
+
+      </div>
+
+<p>The record returned by <a href="#c:fetch_adaptor/1"><code class="inline">fetch_adaptor/1</code></a>. Icon fields are not on it.
+The Scheduler persists them separately after joining <a href="#c:fetch_icons/1"><code class="inline">fetch_icons/1</code></a>.</p><p><code class="inline">schema_data</code> is the credential schema as a JSON binary. <code class="inline">nil</code> means
+the source sees no schema for this version; the Scheduler decides
+whether that replaces a stored one.</p>
+  </section>
+</section>
+<section class="detail" id="t:icon_entry/0">
+
+  <div class="detail-header">
+    <a href="#t:icon_entry/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">icon_entry()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L68" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> icon_entry() :: %{
+  :data =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(),
+  :ext =&gt; <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  :sha256 =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(),
+  optional(:etag) =&gt; <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil
+}</pre>
+
+      </div>
+
+<p>Fresh-fetch icon entry inside the <a href="#c:fetch_icons/1"><code class="inline">fetch_icons/1</code></a> result map. <code class="inline">:etag</code>
+is the upstream cache validator verbatim from the HTTP response, <code class="inline">nil</code>
+when upstream sent none. Strategies with no transport-level validator,
+such as <a href="Lightning.Adaptors.Local.html"><code class="inline">Lightning.Adaptors.Local</code></a>, omit the key entirely.</p>
+  </section>
+</section>
+<section class="detail" id="t:icon_shape_value/0">
+
+  <div class="detail-header">
+    <a href="#t:icon_shape_value/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">icon_shape_value()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L81" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> icon_shape_value() :: <a href="#t:icon_entry/0">icon_entry</a>() | :not_modified</pre>
+
+      </div>
+
+<p>Per-shape value inside the <a href="#c:fetch_icons/1"><code class="inline">fetch_icons/1</code></a> result map. Either a
+fresh <a href="#t:icon_entry/0"><code class="inline">icon_entry/0</code></a> (a 200) or <code class="inline">:not_modified</code> (a 304), which is
+only ever returned when the caller supplied a prior etag via
+<code class="inline">:prior_etags</code>.</p>
+  </section>
+</section>
+<section class="detail" id="t:icons_map/0">
+
+  <div class="detail-header">
+    <a href="#t:icons_map/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">icons_map()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L88" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> icons_map() :: %{
+  required(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) =&gt; %{
+    optional(:square) =&gt; <a href="#t:icon_shape_value/0">icon_shape_value</a>(),
+    optional(:rectangle) =&gt; <a href="#t:icon_shape_value/0">icon_shape_value</a>()
+  }
+}</pre>
+
+      </div>
+
+<p>Bulk icon map returned by <a href="#c:fetch_icons/1"><code class="inline">fetch_icons/1</code></a>. A shape that is absent
+means upstream has no such icon. <code class="inline">:not_modified</code> means it is unchanged
+since the prior etag. A map is a fresh fetch to apply.</p>
+  </section>
+</section>
+<section class="detail" id="t:version_record/0">
+
+  <div class="detail-header">
+    <a href="#t:version_record/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">version_record()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L30" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> version_record() :: %{
+  version: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  integrity: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  tarball_url: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  size_bytes: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
+  dependencies: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  peer_dependencies: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
+  published_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil,
+  deprecated: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()
+}</pre>
+
+      </div>
+
+<p>Per-version metadata extracted from an upstream packument or local
+<code class="inline">package.json</code>.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="callbacks" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#callbacks">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Callbacks</span>
+    </h1>
+
+    <div class="callbacks-list">
+<section class="detail" id="c:fetch_adaptor/1">
+
+  <div class="detail-header">
+    <a href="#c:fetch_adaptor/1" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch_adaptor(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L98" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> fetch_adaptor(name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: {:ok, <a href="#t:adaptor_record/0">adaptor_record</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Fetch the full structured record for a single adaptor package.</p>
+  </section>
+</section>
+<section class="detail" id="c:fetch_icon/2">
+
+  <div class="detail-header">
+    <a href="#c:fetch_icon/2" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch_icon(name, arg2)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L105" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> fetch_icon(name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), :square | :rectangle) ::
+  {:ok, %{data: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), ext: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Fetch the raw bytes for one icon variant (<code class="inline">:square</code> or <code class="inline">:rectangle</code>)
+of an adaptor package, together with the file extension.</p>
+  </section>
+</section>
+<section class="detail" id="c:fetch_icons/1">
+
+  <div class="detail-header">
+    <a href="#c:fetch_icons/1" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch_icons(opts)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L126" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> fetch_icons(opts :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: {:ok, <a href="#t:icons_map/0">icons_map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Bulk fetch every available icon for every adaptor known to the
+strategy.</p><p>Returns <code class="inline">{:ok, icons_map}</code> (see <a href="#t:icons_map/0"><code class="inline">icons_map/0</code></a>). A top-level
+<code class="inline">{:error, term()}</code> is only
+returned when the whole pipeline cannot proceed, for example when the
+<code class="inline">list_adaptors/0</code> call inside the bulk implementation fails.</p><h2 id="c:fetch_icons/1-options" class="section-heading"><a href="#c:fetch_icons/1-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><p><code class="inline">:prior_etags</code> - <code class="inline">%{name =&gt; %{optional(:square | :rectangle) =&gt; etag}}</code>,
+sent as <code class="inline">If-None-Match</code> per <code class="inline">(name, shape)</code>. Defaults to <code class="inline">%{}</code>.
+Strategies with no transport-level cache validator, such as
+<a href="Lightning.Adaptors.Local.html"><code class="inline">Lightning.Adaptors.Local</code></a>, ignore it and never return
+<code class="inline">:not_modified</code>.</p></li></ul>
+  </section>
+</section>
+<section class="detail" id="c:list_adaptors/0">
+
+  <div class="detail-header">
+    <a href="#c:list_adaptors/0" class="detail-link" data-no-tooltip="" aria-label="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_adaptors()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L141" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> list_adaptors() ::
+  {:ok, [%{name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), latest_version: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}]} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Cheap change signal: <code class="inline">name</code> and <code class="inline">latest_version</code> for every package the
+strategy knows. The Scheduler diffs this against the <code class="inline">adaptors</code> table to
+compute its work list.</p><p><code class="inline">{:ok, []}</code> means the strategy looked and there is genuinely nothing
+there, which settles the Store's first-load gate. A strategy that cannot
+tell an empty source from an unreadable one must return <code class="inline">{:error, _}</code>:
+<a href="Lightning.Adaptors.Local.html"><code class="inline">Lightning.Adaptors.Local</code></a> reports an empty checkout as <code class="inline">{:ok, []}</code>,
+<a href="Lightning.Adaptors.NPM.html"><code class="inline">Lightning.Adaptors.NPM</code></a> reports an empty org listing as
+<code class="inline">{:error, :empty_listing}</code>.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="digest_schema/1">
+
+  <div class="detail-header">
+    <a href="#digest_schema/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">digest_schema(body)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/strategy.ex#L154" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> digest_schema(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: {:ok, {<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Validate a schema body and pair it with its persisted digest.</p><p>Returns <code class="inline">{:ok, {body, sha256_hex}}</code> when <code class="inline">body</code> decodes as JSON, with
+<code class="inline">sha256_hex</code> lowercase hex, matching the <code class="inline">adaptors.schema_sha256</code>
+column format. <code class="inline">{:error, reason}</code> when it doesn't decode.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Lightning.Adaptors.NPM.Registry — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Adaptors.NPM.Registry</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/npm/registry.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>NPM registry HTTP client for <a href="Lightning.Adaptors.NPM.html"><code class="inline">Lightning.Adaptors.NPM</code></a>.</p><p>Talks to <code class="inline">registry.npmjs.org</code>. Responsible for the <a href="#list_adaptors/0"><code class="inline">list_adaptors/0</code></a>
+scope listing and the packument endpoint <code class="inline">fetch_adaptor/1</code> uses.</p><p><a href="#list_adaptors/0"><code class="inline">list_adaptors/0</code></a> deliberately merges two endpoints rather than calling
+one:</p><ul><li><code class="inline">/-/user/openfn/package</code> is the authoritative name list for the
+<code class="inline">@openfn</code> org and the trust boundary, since it cannot return a
+name Lightning does not already trust. It has no version data.</li><li><code class="inline">/-/v1/search</code> is only a cheap version lookup for whichever of those
+names it happens to cover. npm's relevance ranking demotes or
+excludes deprecated packages from search results even on an
+exact-name query, so search alone silently drops names. It is not a
+safe source of scope membership, only of version data for names
+already known to be in scope.</li></ul><p>Any authoritative name missing from the search results falls back to a
+per-name <a href="#get_packument/1"><code class="inline">get_packument/1</code></a> and <a href="#latest_version/1"><code class="inline">latest_version/1</code></a> call, bounded to the
+handful of names search does not cover. Do not &quot;simplify&quot; this back to
+a single search call or a pagination bump. Search's result count is
+capped by npm's relevance ranking regardless of <code class="inline">size</code> and <code class="inline">from</code>, and
+deprecated packages are excluded from ranking entirely, so no amount of
+paging recovers them.</p><p>Base URL via <code class="inline">Lightning.Adaptors.Config.strategy_opts(Lightning.Adaptors.NPM)[:registry_url]</code>,
+default <code class="inline">https://registry.npmjs.org</code>.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#build_versions/1" data-no-tooltip="" translate="no">build_versions(packument)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build the per-version <code class="inline">version_record</code> list from a packument.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#deprecated?/2" data-no-tooltip="" translate="no">deprecated?(packument, version)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Is the given <code class="inline">version</code> in <code class="inline">packument</code> flagged as deprecated?</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_packument/1" data-no-tooltip="" translate="no">get_packument(name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Fetch the full packument for a package.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#latest_version/1" data-no-tooltip="" translate="no">latest_version(packument)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Extract the <code class="inline">dist-tags.latest</code> version from a packument.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_adaptors/0" data-no-tooltip="" translate="no">list_adaptors()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Full <code class="inline">@openfn/language-*</code> scope listing, each with a real <code class="inline">latest_version</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#repository_url/1" data-no-tooltip="" translate="no">repository_url(url)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Normalise the packument's <code class="inline">repository</code> field to a plain URL string.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#require_tarball_url/2" data-no-tooltip="" translate="no">require_tarball_url(packument, version)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Resolve the tarball URL for <code class="inline">version</code> in <code class="inline">packument</code>.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="build_versions/1">
+
+  <div class="detail-header">
+    <a href="#build_versions/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">build_versions(packument)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/npm/registry.ex#L117" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> build_versions(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()]</pre>
+
+      </div>
+
+<p>Build the per-version <code class="inline">version_record</code> list from a packument.</p>
+  </section>
+</section>
+<section class="detail" id="deprecated?/2">
+
+  <div class="detail-header">
+    <a href="#deprecated?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">deprecated?(packument, version)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/npm/registry.ex#L139" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> deprecated?(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Is the given <code class="inline">version</code> in <code class="inline">packument</code> flagged as deprecated?</p>
+  </section>
+</section>
+<section class="detail" id="get_packument/1">
+
+  <div class="detail-header">
+    <a href="#get_packument/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_packument(name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/npm/registry.ex#L73" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_packument(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, :not_found} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Fetch the full packument for a package.</p>
+  </section>
+</section>
+<section class="detail" id="latest_version/1">
+
+  <div class="detail-header">
+    <a href="#latest_version/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">latest_version(packument)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/npm/registry.ex#L94" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> latest_version(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()} | {:error, :no_latest_version}</pre>
+
+      </div>
+
+<p>Extract the <code class="inline">dist-tags.latest</code> version from a packument.</p>
+  </section>
+</section>
+<section class="detail" id="list_adaptors/0">
+
+  <div class="detail-header">
+    <a href="#list_adaptors/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_adaptors()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/npm/registry.ex#L61" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_adaptors() ::
+  {:ok, [%{name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), latest_version: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}]} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Full <code class="inline">@openfn/language-*</code> scope listing, each with a real <code class="inline">latest_version</code>.</p><p>Merges <code class="inline">/-/user/openfn/package</code> (authoritative name list) with
+<code class="inline">/-/v1/search</code> (cheap version lookup), falling back to a per-name
+packument fetch for any name search doesn't cover. See the moduledoc for
+why this isn't a single call.</p><p>The <code class="inline">@openfn</code> org holds hundreds of packages, so a registry answering
+with none of them has not told us the adaptors are gone; it is a mirror
+that has not synced the scope, or a mistyped URL. Rather than report an
+empty catalogue and have the Scheduler act on it, an empty list is
+<code class="inline">{:error, :empty_listing}</code> and a 200 whose body is not a map is
+<code class="inline">{:error, :malformed_listing}</code>, both of which leave the stored rows alone.</p>
+  </section>
+</section>
+<section class="detail" id="repository_url/1">
+
+  <div class="detail-header">
+    <a href="#repository_url/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">repository_url(url)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/npm/registry.ex#L147" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> repository_url(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil</pre>
+
+      </div>
+
+<p>Normalise the packument's <code class="inline">repository</code> field to a plain URL string.</p>
+  </section>
+</section>
+<section class="detail" id="require_tarball_url/2">
+
+  <div class="detail-header">
+    <a href="#require_tarball_url/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">require_tarball_url(packument, version)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/npm/registry.ex#L106" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> require_tarball_url(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()} | {:error, :no_tarball_url}</pre>
+
+      </div>
+
+<p>Resolve the tarball URL for <code class="inline">version</code> in <code class="inline">packument</code>.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

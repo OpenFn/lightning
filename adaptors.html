@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Adaptors — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-extra" id="main" data-type="extras">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>Adaptors</h1>
+
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/ADAPTORS.md#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+<p>The adaptor registry catalogues adaptors, versions, credential schemas and icons
+for the workflow editor. Lightning fetches it from npm by default, cached in
+Postgres. For the Elixir side, start at <a href="Lightning.Adaptors.html"><code class="inline">Lightning.Adaptors</code></a>.</p><h2 id="using-local-adaptors" class="section-heading"><a href="#using-local-adaptors" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Using local adaptors</span></h2><p>Point Lightning at a checkout of the adaptors monorepo, not npm:</p><pre><code class="makeup sh" translate="no"><span class="">ADAPTORS_STRATEGY=local
+</span><span class="">ADAPTORS_LOCAL_REPO=/path/to/adaptors
+</span></code></pre><p>The path is the repo root, not <code class="inline">packages/</code>. Each subdirectory with a
+<code class="inline">package.json</code> becomes an adaptor, named and versioned from it. Lightning also
+reads <code class="inline">configuration-schema.json</code> for the credential form and
+<code class="inline">assets/square</code>/<code class="inline">assets/rectangle</code> (<code class="inline">.png</code>/<code class="inline">.svg</code>) for icons; a package without
+them still appears, minus the form or icon.</p><p>To layer a private checkout over the public one, comma-separate multiple roots:</p><pre><code class="makeup sh" translate="no"><span class="">ADAPTORS_LOCAL_REPO=/path/to/private-adaptors,/path/to/adaptors
+</span></code></pre><p>A package in multiple roots comes from the first. Lightning logs each shadowed
+package on every scan.</p><section role="note" class="admonition info"><h4 class="admonition-title info">Note</h4><p>The deprecated <code class="inline">LOCAL_ADAPTORS=true</code> and <code class="inline">OPENFN_ADAPTORS_REPO</code> still work.
+Lightning warns at boot only when it falls back to them: <code class="inline">LOCAL_ADAPTORS=true</code>
+when <code class="inline">ADAPTORS_STRATEGY</code> is unset, <code class="inline">OPENFN_ADAPTORS_REPO</code> when the strategy is
+local and <code class="inline">ADAPTORS_LOCAL_REPO</code> is unset.</p></section><h2 id="running-without-internet-access" class="section-heading"><a href="#running-without-internet-access" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Running without internet access</span></h2><p>On an internet-connected, refreshed instance, dump the catalogue. The dump holds
+icon metadata only, so archive the icons directory too:</p><pre><code class="makeup sh" translate="no"><span class="">mix lightning.adaptors.dump --path snapshot.json
+</span><span class="">tar czf icons.tar.gz -C &quot;$ADAPTORS_ICONS_PATH&quot; .
+</span></code></pre><p><code class="inline">ADAPTORS_ICONS_PATH</code> is <code class="inline">/app/priv/adaptor_icons</code> in the official image, and
+otherwise defaults to <code class="inline">lightning/adaptor_icons</code> under the temp directory. On a
+release image (no Mix), dump with:</p><pre><code class="makeup sh" translate="no"><span class="">bin/lightning eval &#39;Lightning.Release.dump_adaptors(&quot;/path/to/snapshot.json&quot;)&#39;
+</span></code></pre><p>Offline, unpack icons to <code class="inline">ADAPTORS_ICONS_PATH</code>, then import:</p><pre><code class="makeup sh" translate="no"><span class="">mkdir -p &quot;$ADAPTORS_ICONS_PATH&quot;
+</span><span class="">tar xzf icons.tar.gz -C &quot;$ADAPTORS_ICONS_PATH&quot;
+</span><span class="">mix lightning.adaptors.import --path snapshot.json --replace
+</span></code></pre><p>On a release image, import with:</p><pre><code class="makeup sh" translate="no"><span class="">bin/lightning eval &#39;Lightning.Release.seed_adaptors(&quot;/path/to/snapshot.json&quot;, replace: true)&#39;
+</span></code></pre><p>With no populated instance, build the snapshot from npm anywhere online (no
+database, no icons):</p><pre><code class="makeup sh" translate="no"><span class="">mix lightning.adaptors.snapshot --path snapshot.json
+</span></code></pre><p>Import as above.</p><p>Internal mirrors: any npm-compatible registry works. Set
+<code class="inline">ADAPTORS_NPM_REGISTRY_URL</code>, <code class="inline">ADAPTORS_NPM_JSDELIVR_URL</code> and
+<code class="inline">ADAPTORS_NPM_GITHUB_URL</code>, leave the strategy as npm, and set
+<code class="inline">ADAPTORS_NPM_GITHUB_REF</code> if the mirror serves a branch other than <code class="inline">main</code>.</p><p>A registry that answers but lists no <code class="inline">@openfn/language-*</code> packages counts as a
+failed listing: almost always a mistyped mirror URL, or a mirror that has not
+synced the <code class="inline">@openfn</code> scope. The rows already in Postgres stay as they are and
+the next refresh tries again.</p><p>An imported catalogue survives the hourly refresh; a failed one logs a warning
+and leaves rows alone.</p><p>The worker installs adaptor packages into <code class="inline">ADAPTORS_PATH</code> itself, a separate
+download not covered here.</p><h2 id="keeping-the-catalogue-fresh" class="section-heading"><a href="#keeping-the-catalogue-fresh" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Keeping the catalogue fresh</span></h2><p>Lightning refreshes the catalogue hourly. Set
+<code class="inline">ADAPTORS_REFRESH_INTERVAL_SECONDS</code> to change that interval, or to <code class="inline">0</code> to
+disable scheduled refreshes. Force one manually, on a source checkout:</p><pre><code class="makeup sh" translate="no"><span class="">mix lightning.adaptors.refresh
+</span><span class="">mix lightning.adaptors.refresh --name @openfn/language-http
+</span></code></pre><p>Without <code class="inline">--name</code> it runs a full refresh and waits; with <code class="inline">--name</code> it refetches
+that adaptor regardless of version change. A cycle that ran but wrote no rows
+exits <code class="inline">0</code>; a source that could not be listed at all exits <code class="inline">2</code>. The full list is
+in <a href="Mix.Tasks.Lightning.Adaptors.Refresh.html"><code class="inline">mix help lightning.adaptors.refresh</code></a>.</p><p>A release image has no Mix; run the same call against the node:</p><pre><code class="makeup sh" translate="no"><span class="">bin/lightning rpc &#39;Lightning.Adaptors.refresh(await: true)&#39;
+</span><span class="">bin/lightning rpc &#39;Lightning.Adaptors.refresh_package(&quot;@openfn/language-http&quot;)&#39;
+</span></code></pre><h2 id="while-the-catalogue-is-still-loading" class="section-heading"><a href="#while-the-catalogue-is-still-loading" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">While the catalogue is still loading</span></h2><p>A fresh instance has an empty catalogue until the first refresh lands. Reads do
+not wait for it: the adaptor picker and the credential form show &quot;Couldn't load
+adaptors&quot; with a Retry button, and <code class="inline">GET /adaptors/catalogue</code> replies 503 with a
+<code class="inline">retry-after</code> header. All three recover on their own once the load lands.</p><p>Saving a workflow is the exception. It waits for the first load, up to 90
+seconds, and rejects the save with &quot;adaptor catalogue is not ready yet&quot; if
+nothing has arrived. So an instance that cannot reach npm serves every page but
+cannot save a workflow until the catalogue has loaded once. Import a snapshot to
+give it one.</p><h2 id="troubleshooting" class="section-heading"><a href="#troubleshooting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Troubleshooting</span></h2><ul><li>Adaptor missing from the picker: find its <code class="inline">fetch_adaptor</code> warning in the log,
+then force a refresh with <code class="inline">--name</code>.</li><li>New version not showing: the hourly refresh hasn't run. Force one, or wait.</li><li>Icons missing after import: they never reached <code class="inline">ADAPTORS_ICONS_PATH</code> on this
+instance. Unpack the icons archive there, or redo the dump and copy the
+directory.</li><li>Local package ignored: an earlier <code class="inline">ADAPTORS_LOCAL_REPO</code> root has a package of
+the same name; the log names each shadowed package.</li><li>Deprecated-variable boot warning: rename <code class="inline">LOCAL_ADAPTORS=true</code> to
+<code class="inline">ADAPTORS_STRATEGY=local</code> and <code class="inline">OPENFN_ADAPTORS_REPO</code> to <code class="inline">ADAPTORS_LOCAL_REPO</code>.</li><li>Picker stuck on &quot;Couldn't load adaptors&quot;, or the catalogue endpoint answering
+503: the first load has not finished. See
+<a href="#while-the-catalogue-is-still-loading">While the catalogue is still loading</a>.</li><li>Workflow save rejected with &quot;adaptor catalogue is not ready yet&quot;: the same
+thing, after the save has waited out the first load. If the instance cannot
+reach npm, import a snapshot; see
+<a href="#running-without-internet-access">Running without internet access</a>.</li><li>Refresh exiting <code class="inline">2</code> with <code class="inline">:empty_listing</code>: the registry answered but served no
+<code class="inline">@openfn</code> packages. Check <code class="inline">ADAPTORS_NPM_REGISTRY_URL</code>.</li></ul>
+
+</div>
+
+<div class="bottom-actions" id="bottom-actions">
+  <div class="bottom-actions-item">
+
+      <a href="runninglocal.html" class="bottom-actions-button" rel="prev">
+        <span class="subheader">
+          ← Previous Page
+        </span>
+        <span class="title">
+Running Locally
+        </span>
+      </a>
+
+  </div>
+  <div class="bottom-actions-item">
+
+      <a href="deployment.html" class="bottom-actions-button" rel="next">
+        <span class="subheader">
+          Next Page →
+        </span>
+        <span class="title">
+Deployment
+        </span>
+      </a>
+
+  </div>
+</div>
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

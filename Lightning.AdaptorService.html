@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.AdaptorService — Lightning v2.19.0-pre</title>
+    <title>Lightning.AdaptorService — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.AdaptorService</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -113,11 +113,13 @@ Lightning
     <section id="moduledoc">
 <p>The Adaptor Service is use to query and install adaptors in order to run jobs.</p><p>On startup, it queries the filesystem for <code class="inline">package.json</code> files and builds up
 a list of available adaptors.</p><h2 id="module-configuration" class="section-heading"><a href="#module-configuration" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Configuration</span></h2><p>The service requires at least <code class="inline">:adaptors_path</code>, which is used to both query
-which adaptors are installed and when to install new adaptors.</p><p>Another optional setting is: <code class="inline">:repo</code>, which must point at a module that will be
-used to do the querying and installing.</p><h2 id="module-installing-adaptors" class="section-heading"><a href="#module-installing-adaptors" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Installing Adaptors</span></h2><p>Using the <a href="#install/2"><code class="inline">install/2</code></a> function an adaptor can be installed, which will also
+which adaptors are installed and when to install new adaptors.</p><p>Another optional setting is <code class="inline">:repo</code>, which must point at a module that
+does the actual querying and installing.</p><h2 id="module-installing-adaptors" class="section-heading"><a href="#module-installing-adaptors" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Installing Adaptors</span></h2><p>Using the <a href="#install/2"><code class="inline">install/2</code></a> function an adaptor can be installed, which will also
 add it to the list of available adaptors.</p><p>The adaptor is marked as <code class="inline">:installing</code>, to allow for conditional behaviour
 elsewhere such as delaying or rejecting processing until the adaptor becomes
-available.</p><h2 id="module-looking-up-adaptors" class="section-heading"><a href="#module-looking-up-adaptors" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Looking up adaptors</span></h2><p>The module leans on Elixir's built-in <a href="https://hexdocs.pm/elixir/Version.html"><code class="inline">Version</code></a> module to provide version
+available.</p><p><a href="#install/2"><code class="inline">install/2</code></a> checks the package name against the adaptor catalogue
+(<a href="Lightning.Adaptors.html"><code class="inline">Lightning.Adaptors</code></a>) and refuses to run <code class="inline">npm install</code> for a name it
+doesn't recognise.</p><h2 id="module-looking-up-adaptors" class="section-heading"><a href="#module-looking-up-adaptors" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Looking up adaptors</span></h2><p>The module leans on Elixir's built-in <a href="https://hexdocs.pm/elixir/Version.html"><code class="inline">Version</code></a> module to provide version
 lookups.</p><p>When looking up an adaptor, either a string or a tuple can be used.
 In the case of requesting the latest version, any one of these will return
 the latest version the service is aware of.</p><ul><li><code class="inline">@openfn/language-http</code></li><li><code class="inline">@openfn/language-http@latest</code></li><li><code class="inline">{&quot;@openfn/language-http&quot;, nil}</code></li><li><code class="inline">{&quot;@openfn/language-http&quot;, &quot;latest&quot;}</code></li><li><code class="inline">{~r/language-http/, &quot;latest&quot;}</code></li></ul><p>You can also request a specific version, or use a range specification:</p><ul><li><code class="inline">@openfn/language-http@1.2.3</code></li><li><code class="inline">{&quot;@openfn/language-http&quot;, &quot;~&gt; 1.2.0&quot;}</code></li><li><code class="inline">{&quot;@openfn/language-http&quot;, &quot;&lt; 2.0.0&quot;}</code></li></ul><blockquote><p><strong>NOTE</strong>
@@ -210,14 +212,6 @@ matching versions.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#resolve_package_name/1" data-no-tooltip="" translate="no">resolve_package_name(package_name)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#start_link/1" data-no-tooltip="" translate="no">start_link(opts)</a>
 
       </div>
@@ -248,7 +242,7 @@ matching versions.</p>
       <h1 class="signature" translate="no">package_spec()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L188" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L195" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -289,7 +283,7 @@ matching versions.</p>
       <h1 class="signature" translate="no">build_aliased_name(arg)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L377" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L389" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -313,7 +307,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">child_spec(arg)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L55" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L59" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -335,7 +329,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">find_adaptor(agent, package)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L239" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L245" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -347,10 +341,10 @@ to suit your particular naming strategy.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> find_adaptor(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), package :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
-  Lightning.AdaptorService.Adaptor.t() | nil</pre>
+  <a href="Lightning.AdaptorService.InstalledAdaptor.html#t:t/0">Lightning.AdaptorService.InstalledAdaptor.t</a>() | nil</pre>
 
           <pre translate="no"><span class="attribute">@spec</span> find_adaptor(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="#t:package_spec/0">package_spec</a>()) ::
-  Lightning.AdaptorService.Adaptor.t() | nil</pre>
+  <a href="Lightning.AdaptorService.InstalledAdaptor.html#t:t/0">Lightning.AdaptorService.InstalledAdaptor.t</a>() | nil</pre>
 
       </div>
 
@@ -367,7 +361,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">get_adaptors(agent)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L234" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L239" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -389,7 +383,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">install(agent, package)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L290" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L300" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -401,13 +395,15 @@ to suit your particular naming strategy.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> install(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) ::
-  {:ok, Lightning.AdaptorService.Adaptor.t()}
-  | {:error, :adaptor_not_permitted}
+  {:ok, <a href="Lightning.AdaptorService.InstalledAdaptor.html#t:t/0">Lightning.AdaptorService.InstalledAdaptor.t</a>()}
+  | {:error, :adaptor_not_permitted | :invalid_format}
+  | {:error, {:catalogue_unavailable, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}}
   | {:error, {<a href="https://hexdocs.pm/elixir/Collectable.html#t:t/0">Collectable.t</a>(), exit_status :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}</pre>
 
           <pre translate="no"><span class="attribute">@spec</span> install(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="#t:package_spec/0">package_spec</a>()) ::
-  {:ok, Lightning.AdaptorService.Adaptor.t()}
+  {:ok, <a href="Lightning.AdaptorService.InstalledAdaptor.html#t:t/0">Lightning.AdaptorService.InstalledAdaptor.t</a>()}
   | {:error, :adaptor_not_permitted}
+  | {:error, {:catalogue_unavailable, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}}
   | {:error, {<a href="https://hexdocs.pm/elixir/Collectable.html#t:t/0">Collectable.t</a>(), exit_status :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}</pre>
 
       </div>
@@ -425,29 +421,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">installed?(agent, package_spec)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L282" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="resolve_package_name/1">
-
-  <div class="detail-header">
-    <a href="#resolve_package_name/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">resolve_package_name(package_name)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L353" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L291" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -469,7 +443,7 @@ to suit your particular naming strategy.</p>
       <h1 class="signature" translate="no">start_link(opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L228" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L233" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

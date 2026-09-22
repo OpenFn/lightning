@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>mix lightning.download_adaptor_registry_cache — Lightning v2.19.0-pre</title>
+    <title>LightningWeb.MaintenanceLive.Index — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -51,7 +51,7 @@ Lightning
 
 <output role="status" id="toast"></output>
 
-<main class="content page-task" id="main" data-type="tasks">
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">mix lightning.download_adaptor_registry_cache</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <span translate="no">LightningWeb.MaintenanceLive.Index</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/download_adaptor_registry_cache.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/maintenance_live/index.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,8 +111,10 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Downloads the adaptor registry json cache
-Use --path to specify the location</p>
+<p>Superuser-only page for on-demand <a href="Lightning.Adaptors.html"><code class="inline">Lightning.Adaptors</code></a> maintenance.</p><p>Neither action blocks the LiveView. The registry refresh is queued on the
+scheduler and returns at once. The icon refresh can run for up to two
+minutes, so it goes through <code class="inline">start_async</code> and flashes its result when it
+completes.</p>
     </section>
 
 </div>
@@ -131,11 +133,11 @@ Use --path to specify the location</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#run/1" data-no-tooltip="" translate="no">run(args)</a>
+        <a href="#render/1" data-no-tooltip="" translate="no">render(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/mix/Mix.Task.html#c:run/1"><code class="inline">Mix.Task.run/1</code></a>.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/1.0.19/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p></div>
 
     </div>
 
@@ -153,17 +155,17 @@ Use --path to specify the location</p>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="run/1">
+<section class="detail" id="render/1">
 
   <div class="detail-header">
-    <a href="#run/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#render/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">run(args)</h1>
+      <h1 class="signature" translate="no">render(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/download_adaptor_registry_cache.ex#L13" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/maintenance_live/index.ex#L1" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -172,7 +174,7 @@ Use --path to specify the location</p>
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/mix/Mix.Task.html#c:run/1"><code class="inline">Mix.Task.run/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/1.0.19/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p>
   </section>
 </section>
 

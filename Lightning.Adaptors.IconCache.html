@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Lightning.Adaptors.IconCache — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Adaptors.IconCache</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/icon_cache.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Stateless filesystem functions over the on-disk adaptor icon cache,
+rooted at <a href="Lightning.Adaptors.Config.html#icon_path/0"><code class="inline">Lightning.Adaptors.Config.icon_path/0</code></a>.</p><p>Disk layout:</p><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="nc">Config</span><span class="o">.</span><span class="n">icon_path</span><span class="o">/</span><span class="mi">0</span><span class="o">&gt;</span><span class="o">/</span><span class="o">&lt;</span><span class="n">source</span><span class="o">&gt;</span><span class="o">/</span><span class="o">&lt;</span><span class="n">name</span><span class="o">&gt;</span><span class="o">/</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="o">.</span><span class="o">&lt;</span><span class="n">sha8</span><span class="o">&gt;</span><span class="o">.</span><span class="o">&lt;</span><span class="n">ext</span><span class="o">&gt;</span></code></pre><p>where <code class="inline">sha8</code> is the first 8 lowercase hex characters of the icon
+sha256 on the adaptor row. Partitioning by source means switching
+<code class="inline">ADAPTORS_STRATEGY</code> between restarts cannot serve <code class="inline">:npm</code> bytes for a
+row now resolved through <code class="inline">:local</code>, or the reverse. Putting the sha in
+the filename makes <a href="#cached?/5"><code class="inline">cached?/5</code></a> a plain existence check, and a node
+holding an earlier icon misses and refetches instead of serving it
+forever. <a href="#write!/6"><code class="inline">write!/6</code></a> removes the superseded siblings for that shape.</p><p>Concurrent first-request fetches are coalesced by
+<a href="Lightning.Adaptors.Store.html#icon/3"><code class="inline">Lightning.Adaptors.Store.icon/3</code></a>, not here.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:ext/0" data-no-tooltip="" translate="no">ext()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:name/0" data-no-tooltip="" translate="no">name()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:shape/0" data-no-tooltip="" translate="no">shape()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:source/0" data-no-tooltip="" translate="no">source()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#cached?/5" data-no-tooltip="" translate="no">cached?(source, name, shape, ext, sha256)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Whether the icon for <code class="inline">sha256</code> is on disk. The sha is part of the
+filename, so existence is the whole check.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#path/5" data-no-tooltip="" translate="no">path(source, name, shape, ext, sha256)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Disk path for an icon. Nothing is created.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#write!/6" data-no-tooltip="" translate="no">write!(source, name, shape, ext, bytes, sha256)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Atomically write <code class="inline">bytes</code> for <code class="inline">sha256</code> and return the path written.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:ext/0">
+
+  <div class="detail-header">
+    <a href="#t:ext/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">ext()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/icon_cache.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> ext() :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:name/0">
+
+  <div class="detail-header">
+    <a href="#t:name/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">name()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/icon_cache.ex#L26" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> name() :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:shape/0">
+
+  <div class="detail-header">
+    <a href="#t:shape/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">shape()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/icon_cache.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> shape() :: :square | :rectangle</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:source/0">
+
+  <div class="detail-header">
+    <a href="#t:source/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">source()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/icon_cache.ex#L25" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> source() :: :npm | :local</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="cached?/5">
+
+  <div class="detail-header">
+    <a href="#cached?/5" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">cached?(source, name, shape, ext, sha256)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/icon_cache.ex#L63" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> cached?(<a href="#t:source/0">source</a>(), <a href="#t:name/0">name</a>(), <a href="#t:shape/0">shape</a>(), <a href="#t:ext/0">ext</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Whether the icon for <code class="inline">sha256</code> is on disk. The sha is part of the
+filename, so existence is the whole check.</p>
+  </section>
+</section>
+<section class="detail" id="path/5">
+
+  <div class="detail-header">
+    <a href="#path/5" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">path(source, name, shape, ext, sha256)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/icon_cache.ex#L44" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> path(<a href="#t:source/0">source</a>(), <a href="#t:name/0">name</a>(), <a href="#t:shape/0">shape</a>(), <a href="#t:ext/0">ext</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: <a href="https://hexdocs.pm/elixir/Path.html#t:t/0">Path.t</a>()</pre>
+
+      </div>
+
+<p>Disk path for an icon. Nothing is created.</p><p><code class="inline">name</code> may contain a <code class="inline">/</code> (scoped npm packages like
+<code class="inline">@openfn/language-foo</code>); <a href="https://hexdocs.pm/elixir/Path.html#join/1"><code class="inline">Path.join/1</code></a> preserves the slash so the
+scope becomes a real subdirectory.</p><p>Raises <a href="https://hexdocs.pm/elixir/ArgumentError.html"><code class="inline">ArgumentError</code></a> on a name <code class="inline">PackageName</code> would reject. The
+Scheduler writes icons straight from a strategy's response, before the
+row reaches <a href="Lightning.Adaptors.Catalogue.Adaptor.html#changeset/2"><code class="inline">Lightning.Adaptors.Catalogue.Adaptor.changeset/2</code></a> and its
+name validation, so this is the only thing standing between a hostile
+registry entry and a write outside the cache root.</p>
+  </section>
+</section>
+<section class="detail" id="write!/6">
+
+  <div class="detail-header">
+    <a href="#write!/6" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">write!(source, name, shape, ext, bytes, sha256)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/icon_cache.ex#L81" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> write!(<a href="#t:source/0">source</a>(), <a href="#t:name/0">name</a>(), <a href="#t:shape/0">shape</a>(), <a href="#t:ext/0">ext</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: <a href="https://hexdocs.pm/elixir/Path.html#t:t/0">Path.t</a>()</pre>
+
+      </div>
+
+<p>Atomically write <code class="inline">bytes</code> for <code class="inline">sha256</code> and return the path written.</p><p>The write is staged in a sibling temp file and then renamed into
+place, so concurrent readers never observe a half-written file. Any
+superseded file for the same shape, whatever its extension or
+pre-sha naming, is removed first, so a rename never lands on a
+directory left empty by its own sweep.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Collaboration.Session — Lightning v2.19.0-pre</title>
+    <title>Lightning.Collaboration.Session — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Collaboration.Session</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -212,6 +212,19 @@ and SharedDoc observers.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#set_workflow_state/3" data-no-tooltip="" translate="no">set_workflow_state(session_pid, user, target_state)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Transitions the workflow's lifecycle state and persists it with the current
+document in a single save: going live enables triggers and sets <code class="inline">:live</code>,
+switching to draft disables triggers and sets <code class="inline">:draft</code>. Atomic and
+self-consistent with the collaborative document.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#start_link/2" data-no-tooltip="" translate="no">start_link(args, opt \\ [])</a>
 
       </div>
@@ -276,7 +289,7 @@ and SharedDoc observers.</p>
       <h1 class="signature" translate="no">start_opts()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L42" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L43" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -323,7 +336,7 @@ and SharedDoc observers.</p>
       <h1 class="signature" translate="no">child_spec(init_arg)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L74" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L75" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -345,7 +358,7 @@ and SharedDoc observers.</p>
       <h1 class="signature" translate="no">get_doc(session_pid)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L180" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L182" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -367,7 +380,7 @@ and SharedDoc observers.</p>
       <h1 class="signature" translate="no">initialize_workflow_document(doc, workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L495" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L483" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -391,7 +404,7 @@ and SharedDoc observers.</p>
       <h1 class="signature" translate="no">lookup_shared_doc(pg_scope \\ :workflow_collaboration, document_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L170" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L172" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -413,7 +426,7 @@ and SharedDoc observers.</p>
       <h1 class="signature" translate="no">reset_workflow(session_pid, user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L275" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L301" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -431,11 +444,11 @@ and SharedDoc observers.</p>
       </div>
 
 <p>Resets the workflow document to the latest snapshot from the database.</p><p>This operation:</p><ol><li>Fetches the latest workflow from the database</li><li>Clears all Y.Doc collections (jobs, edges, triggers arrays)</li><li>Re-serializes the workflow to the Y.Doc</li><li>Broadcasts updates to all connected clients via SharedDoc</li></ol><p>All collaborative editing history in the Y.Doc is preserved (operation log),
-but the document content is replaced with the database state.</p><h2 id="reset_workflow/2-parameters" class="section-heading"><a href="#reset_workflow/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">session_pid</code>: The Session process PID</li><li><code class="inline">user</code>: The user performing the reset (for authorization logging)</li></ul><h2 id="reset_workflow/2-returns" class="section-heading"><a href="#reset_workflow/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, workflow}</code> - Successfully reset with updated workflow</li><li><code class="inline">{:error, :workflow_deleted}</code> - Workflow has been deleted from database</li><li><code class="inline">{:error, :internal_error}</code> - SharedDoc not available</li></ul><h2 id="reset_workflow/2-examples" class="section-heading"><a href="#reset_workflow/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Session</span><span class="o">.</span><span class="n">reset_workflow</span><span class="p" data-group-id="5227288951-1">(</span><span class="n">session_pid</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="5227288951-1">)</span><span class="w">
-</span><span class="p" data-group-id="5227288951-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5227288951-3">%</span><span class="nc" data-group-id="5227288951-3">Workflow</span><span class="p" data-group-id="5227288951-3">{</span><span class="ss">lock_version</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="5227288951-3">}</span><span class="p" data-group-id="5227288951-2">}</span><span class="w">
+but the document content is replaced with the database state.</p><h2 id="reset_workflow/2-parameters" class="section-heading"><a href="#reset_workflow/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">session_pid</code>: The Session process PID</li><li><code class="inline">user</code>: The user performing the reset (for authorization logging)</li></ul><h2 id="reset_workflow/2-returns" class="section-heading"><a href="#reset_workflow/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, workflow}</code> - Successfully reset with updated workflow</li><li><code class="inline">{:error, :workflow_deleted}</code> - Workflow has been deleted from database</li><li><code class="inline">{:error, :internal_error}</code> - SharedDoc not available</li></ul><h2 id="reset_workflow/2-examples" class="section-heading"><a href="#reset_workflow/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Session</span><span class="o">.</span><span class="n">reset_workflow</span><span class="p" data-group-id="6298998054-1">(</span><span class="n">session_pid</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="6298998054-1">)</span><span class="w">
+</span><span class="p" data-group-id="6298998054-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6298998054-3">%</span><span class="nc" data-group-id="6298998054-3">Workflow</span><span class="p" data-group-id="6298998054-3">{</span><span class="ss">lock_version</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="6298998054-3">}</span><span class="p" data-group-id="6298998054-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Session</span><span class="o">.</span><span class="n">reset_workflow</span><span class="p" data-group-id="5227288951-4">(</span><span class="n">session_pid</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="5227288951-4">)</span><span class="w">
-</span><span class="p" data-group-id="5227288951-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:workflow_deleted</span><span class="p" data-group-id="5227288951-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Session</span><span class="o">.</span><span class="n">reset_workflow</span><span class="p" data-group-id="6298998054-4">(</span><span class="n">session_pid</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="6298998054-4">)</span><span class="w">
+</span><span class="p" data-group-id="6298998054-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:workflow_deleted</span><span class="p" data-group-id="6298998054-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="save_workflow/2">
@@ -448,7 +461,7 @@ but the document content is replaced with the database state.</p><h2 id="reset_w
       <h1 class="signature" translate="no">save_workflow(session_pid, user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L239" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L244" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -466,17 +479,19 @@ but the document content is replaced with the database state.</p><h2 id="reset_w
      | :snapshot_failed
      | :deserialization_failed
      | :internal_error
+     | :adaptor_catalogue_unavailable
      | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
 <p>Saves the current workflow state from the Y.Doc to the database.</p><p>This function:</p><ol><li>Extracts the current workflow data from the SharedDoc's Y.Doc</li><li>Converts Y.js types to Elixir maps suitable for Ecto</li><li>Calls Lightning.Workflows.save_workflow/3 for validation and persistence</li><li>Returns the saved workflow</li></ol><p>Note: This assumes all Y.js updates have been processed before this call,
 which is guaranteed by Phoenix Channel's synchronous message handling.</p><h2 id="save_workflow/2-parameters" class="section-heading"><a href="#save_workflow/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">session_pid</code>: The Session process PID</li><li><code class="inline">user</code>: The user performing the save (for authorization and auditing)</li></ul><h2 id="save_workflow/2-returns" class="section-heading"><a href="#save_workflow/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, workflow}</code> - Successfully saved</li><li><code class="inline">{:error, :workflow_deleted}</code> - Workflow has been deleted</li><li><code class="inline">{:error, :snapshot_failed}</code> - Snapshot creation failed; it shares the
-save's transaction, so the whole save rolled back and nothing persisted</li><li><code class="inline">{:error, changeset}</code> - Validation or persistence error</li></ul><h2 id="save_workflow/2-examples" class="section-heading"><a href="#save_workflow/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Session</span><span class="o">.</span><span class="n">save_workflow</span><span class="p" data-group-id="6426600737-1">(</span><span class="n">session_pid</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="6426600737-1">)</span><span class="w">
-</span><span class="p" data-group-id="6426600737-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6426600737-3">%</span><span class="nc" data-group-id="6426600737-3">Workflow</span><span class="p" data-group-id="6426600737-3">{</span><span class="p" data-group-id="6426600737-3">}</span><span class="p" data-group-id="6426600737-2">}</span><span class="w">
+save's transaction, so the whole save rolled back and nothing persisted</li><li><code class="inline">{:error, :adaptor_catalogue_unavailable}</code> - The adaptor catalogue's
+first load did not complete, so no validation could run</li><li><code class="inline">{:error, changeset}</code> - Validation or persistence error</li></ul><h2 id="save_workflow/2-examples" class="section-heading"><a href="#save_workflow/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Session</span><span class="o">.</span><span class="n">save_workflow</span><span class="p" data-group-id="4170836027-1">(</span><span class="n">session_pid</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="4170836027-1">)</span><span class="w">
+</span><span class="p" data-group-id="4170836027-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4170836027-3">%</span><span class="nc" data-group-id="4170836027-3">Workflow</span><span class="p" data-group-id="4170836027-3">{</span><span class="p" data-group-id="4170836027-3">}</span><span class="p" data-group-id="4170836027-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Session</span><span class="o">.</span><span class="n">save_workflow</span><span class="p" data-group-id="6426600737-4">(</span><span class="n">session_pid</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="6426600737-4">)</span><span class="w">
-</span><span class="p" data-group-id="6426600737-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6426600737-6">%</span><span class="nc" data-group-id="6426600737-6">Ecto.Changeset</span><span class="p" data-group-id="6426600737-6">{</span><span class="p" data-group-id="6426600737-6">}</span><span class="p" data-group-id="6426600737-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Session</span><span class="o">.</span><span class="n">save_workflow</span><span class="p" data-group-id="4170836027-4">(</span><span class="n">session_pid</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="4170836027-4">)</span><span class="w">
+</span><span class="p" data-group-id="4170836027-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4170836027-6">%</span><span class="nc" data-group-id="4170836027-6">Ecto.Changeset</span><span class="p" data-group-id="4170836027-6">{</span><span class="p" data-group-id="4170836027-6">}</span><span class="p" data-group-id="4170836027-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="send_yjs_message/2">
@@ -489,7 +504,7 @@ save's transaction, so the whole save rolled back and nothing persisted</li><li>
       <h1 class="signature" translate="no">send_yjs_message(session_pid, chunk)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L196" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L198" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -499,6 +514,38 @@ save's transaction, so the whole save rolled back and nothing persisted</li><li>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="set_workflow_state/3">
+
+  <div class="detail-header">
+    <a href="#set_workflow_state/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_workflow_state(session_pid, user, target_state)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L260" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> set_workflow_state(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>(), <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(), :draft | :live) ::
+  {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Transitions the workflow's lifecycle state and persists it with the current
+document in a single save: going live enables triggers and sets <code class="inline">:live</code>,
+switching to draft disables triggers and sets <code class="inline">:draft</code>. Atomic and
+self-consistent with the collaborative document.</p>
   </section>
 </section>
 <section class="detail" id="start_link/2">
@@ -513,7 +560,7 @@ save's transaction, so the whole save rolled back and nothing persisted</li><li>
       <h1 class="signature" translate="no">start_link(args, opt \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L88" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L89" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -535,7 +582,7 @@ save's transaction, so the whole save rolled back and nothing persisted</li><li>
       <h1 class="signature" translate="no">start_sync(session_pid, chunk)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L192" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L194" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -557,7 +604,7 @@ save's transaction, so the whole save rolled back and nothing persisted</li><li>
       <h1 class="signature" translate="no">stop(session_pid)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L70" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L71" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -580,7 +627,7 @@ save's transaction, so the whole save rolled back and nothing persisted</li><li>
       <h1 class="signature" translate="no">stop_shared_doc(session_pid)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L184" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L186" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -602,7 +649,7 @@ save's transaction, so the whole save rolled back and nothing persisted</li><li>
       <h1 class="signature" translate="no">update_doc(session_pid, fun)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L188" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/session.ex#L190" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

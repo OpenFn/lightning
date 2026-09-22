@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Workflows.Snapshot — Lightning v2.19.0-pre</title>
+    <title>Lightning.Workflows.Snapshot — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Workflows.Snapshot</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -160,6 +160,16 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#current_id_for/1" data-no-tooltip="" translate="no">current_id_for(workflow_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The id of the snapshot holding the workflow's current content.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#get_all_by_ids/2" data-no-tooltip="" translate="no">get_all_by_ids(ids, project_id)</a>
 
       </div>
@@ -207,6 +217,16 @@ Lightning
         <a href="#new/1" data-no-tooltip="" translate="no">new(workflow)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#to_workflow_attrs/1" data-no-tooltip="" translate="no">to_workflow_attrs(snapshot)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Turns a snapshot into attributes to write back as a workflow's content.</p></div>
 
     </div>
 
@@ -378,6 +398,37 @@ Lightning
 
   </section>
 </section>
+<section class="detail" id="current_id_for/1">
+
+  <div class="detail-header">
+    <a href="#current_id_for/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">current_id_for(workflow_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L264" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> current_id_for(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil</pre>
+
+      </div>
+
+<p>The id of the snapshot holding the workflow's current content.</p><p>Callers asking &quot;is this the content that is live right now?&quot; need identity.
+A lock version is a near-enough proxy until it isn't: nothing enforces one
+snapshot per <code class="inline">(workflow_id, lock_version)</code>, and a client comparing numbers
+cannot tell two snapshots apart.</p>
+  </section>
+</section>
 <section class="detail" id="get_all_by_ids/2">
 
   <div class="detail-header">
@@ -445,7 +496,7 @@ can't be used to read another project's snapshots.</p>
       <h1 class="signature" translate="no">get_by_version(workflow_id, version)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L264" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L284" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -498,7 +549,7 @@ workflow passed in.</p>
       <h1 class="signature" translate="no">include_latest_snapshot(multi, name \\ :snapshot, workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L275" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L295" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -541,6 +592,39 @@ workflow passed in.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="to_workflow_attrs/1">
+
+  <div class="detail-header">
+    <a href="#to_workflow_attrs/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">to_workflow_attrs(snapshot)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L344" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> to_workflow_attrs(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Turns a snapshot into attributes to write back as a workflow's content.</p><p><code class="inline">on_replace</code> deletes anything the snapshot does not hold, which is what makes
+a restore a revert rather than a merge.</p><p>Trigger <code class="inline">enabled</code> is left out: a restore publishes into a live workflow, and
+an old enabled flag would take production offline mid-rollback. A re-created
+trigger arrives off, because a snapshot does not record its webhook auth
+methods. <code class="inline">positions</code> is written only when the snapshot holds them, so an
+older snapshot cannot wipe a hand-arranged canvas.</p>
   </section>
 </section>
 

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Workflows.Workflow — Lightning v2.19.0-pre</title>
+    <title>Lightning.Workflows.Workflow — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Workflows.Workflow</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -146,6 +146,16 @@ column width can already be stored.</li></ul>
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#json_fields/0" data-no-tooltip="" translate="no">json_fields()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The fields this schema encodes to JSON.</p></div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -238,6 +248,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
   project_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   runs: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   snapshots: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  state: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   triggers: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   versions: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -262,6 +273,36 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="json_fields/0">
+
+  <div class="detail-header">
+    <a href="#json_fields/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">json_fields()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L57" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> json_fields() :: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()]</pre>
+
+      </div>
+
+<p>The fields this schema encodes to JSON.</p><p>Exposed so a caller can render a subset without restating the list and letting
+the two drift apart. The REST API uses it to leave <code class="inline">:state</code> out, which names a
+lifecycle we have not shipped.</p>
+  </section>
+</section>
 <section class="detail" id="request_deletion_changeset/2">
 
   <div class="detail-header">
@@ -272,7 +313,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
       <h1 class="signature" translate="no">request_deletion_changeset(workflow, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L124" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L138" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -294,7 +335,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
       <h1 class="signature" translate="no">touch(workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L154" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L168" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -324,7 +365,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
       <h1 class="signature" translate="no">validate(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L91" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L105" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -346,7 +387,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
       <h1 class="signature" translate="no">workflow_activated?(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L136" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L150" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

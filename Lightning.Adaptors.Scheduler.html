@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Lightning.Adaptors.Scheduler — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Adaptors.Scheduler</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/scheduler.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Cluster-singleton GenServer that refreshes the catalogue from the
+strategy, on a timer and on demand, persisting through
+<a href="Lightning.Adaptors.Catalogue.html"><code class="inline">Lightning.Adaptors.Catalogue</code></a> and broadcasting <code class="inline">{:changed, name, source}</code>
+on the source topic.</p><p>The first tick is due one <code class="inline">refresh_interval</code> after the catalogue's most
+recent check, so a restart does not refetch straight away; an empty
+catalogue ticks at once. An interval of <code class="inline">0</code> disables the timer and
+leaves only on-demand refreshes.</p><p>A tick lists the source and fetches every adaptor whose <code class="inline">latest_version</code>
+changed. It also refetches an adaptor whose stored row has no schema, for
+the grace period set by <code class="inline">@schema_grace_ms</code> after the row's <code class="inline">updated_at</code>.
+jsDelivr mirrors a new version with some lag, so a schema missing inside
+that window may still arrive. After it, a missing schema is taken as
+really missing. A refetch that still finds no schema counts as touched.
+Icons are fetched in parallel and each changed adaptor is upserted with
+its icons. <a href="#refresh_package/2"><code class="inline">refresh_package/2</code></a> refetches one adaptor without icons.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:refresh_counts/0" data-no-tooltip="" translate="no">refresh_counts()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>One refresh cycle's tallies: adaptors the upstream listing returned,
+how many of those had a changed <code class="inline">latest_version</code>, how many were
+fetched and persisted, and how many adaptors the cycle failed to fetch
+or to write.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#await_refresh/2" data-no-tooltip="" translate="no">await_refresh(scheduler_name, timeout)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Starts a refresh cycle, or joins the one in flight, and waits for it to
+complete.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#child_spec/1" data-no-tooltip="" translate="no">child_spec(init_arg)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#completed?/1" data-no-tooltip="" translate="no">completed?(scheduler_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Whether a cycle has completed against a source that listed no adaptors
+at all, since this Scheduler started.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#refresh_icons/1" data-no-tooltip="" translate="no">refresh_icons(scheduler_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Refetches every adaptor's icons and updates the rows whose icon bytes
+changed, leaving other fields untouched.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#refresh_now/1" data-no-tooltip="" translate="no">refresh_now(scheduler_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Starts a refresh tick, or lets one already in flight continue.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#refresh_package/2" data-no-tooltip="" translate="no">refresh_package(scheduler_name, name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Refetches and persists one adaptor whether or not its version changed.
+Waits up to 30 seconds.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#start_link/1" data-no-tooltip="" translate="no">start_link(opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Starts the Scheduler. Required opts: <code class="inline">:name</code>, <code class="inline">:sup</code>, <code class="inline">:lock_key</code>,
+<code class="inline">:cache</code>, <code class="inline">:tasks</code>, <code class="inline">:source_topic</code>, <code class="inline">:refresh_interval</code> (tick interval
+in milliseconds; <code class="inline">0</code> disables the timer) and <code class="inline">:warn_when_empty</code> (whether
+booting on an empty catalogue with the timer disabled logs a warning).
+<code class="inline">:checked_at</code> is optional. It is a 1-arity function, defaulting to
+<code class="inline">&amp;Catalogue.max_checked_at/1</code>, that reads the source's last-checked
+timestamp. It is called once at boot to work out the delay before the
+first tick.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:refresh_counts/0">
+
+  <div class="detail-header">
+    <a href="#t:refresh_counts/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">refresh_counts()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/scheduler.ex#L84" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> refresh_counts() :: %{
+  listed: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(),
+  changed: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(),
+  fetched: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(),
+  errors: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()
+}</pre>
+
+      </div>
+
+<p>One refresh cycle's tallies: adaptors the upstream listing returned,
+how many of those had a changed <code class="inline">latest_version</code>, how many were
+fetched and persisted, and how many adaptors the cycle failed to fetch
+or to write.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="await_refresh/2">
+
+  <div class="detail-header">
+    <a href="#await_refresh/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">await_refresh(scheduler_name, timeout)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/scheduler.ex#L106" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> await_refresh(<a href="https://hexdocs.pm/elixir/GenServer.html#t:server/0">GenServer.server</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">timeout</a>()) ::
+  {:ok, <a href="#t:refresh_counts/0">refresh_counts</a>()} | {:error, {:refresh_failed, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()} | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Starts a refresh cycle, or joins the one in flight, and waits for it to
+complete.</p><p>Returns <code class="inline">{:ok, counts}</code> when the listing succeeded (per-adaptor fetch
+and upsert failures are counted in <code class="inline">counts.errors</code>), <code class="inline">{:error, reason}</code>
+when it failed, or <code class="inline">{:error, {:refresh_failed, reason}}</code> when the cycle
+crashed.</p><p>A caller whose <code class="inline">timeout</code> expires before the cycle finishes is dropped
+rather than replied to, so a late result never lands in its mailbox.</p>
+  </section>
+</section>
+<section class="detail" id="child_spec/1">
+
+  <div class="detail-header">
+    <a href="#child_spec/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">child_spec(init_arg)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/scheduler.ex#L23" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="completed?/1">
+
+  <div class="detail-header">
+    <a href="#completed?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">completed?(scheduler_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/scheduler.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> completed?(<a href="https://hexdocs.pm/elixir/GenServer.html#t:server/0">GenServer.server</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Whether a cycle has completed against a source that listed no adaptors
+at all, since this Scheduler started.</p><p>That is the one outcome no row can record. An upstream answering with an
+empty list has told us there are no adaptors, and the empty catalogue it
+leaves behind is loaded rather than unloaded. Every other completed
+cycle leaves rows, which answer for themselves and keep answering after
+a restart. So this deliberately says nothing about them, and a source
+whose rows are later deleted reloads as it did before.</p><p>A cycle that failed to list, fetch or write is not a completed one. We
+cannot tell a source with nothing in it from one we could not read.</p><p>Answers <code class="inline">false</code> for a Scheduler that is unreachable.</p>
+  </section>
+</section>
+<section class="detail" id="refresh_icons/1">
+
+  <div class="detail-header">
+    <a href="#refresh_icons/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">refresh_icons(scheduler_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/scheduler.ex#L121" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> refresh_icons(<a href="https://hexdocs.pm/elixir/GenServer.html#t:server/0">GenServer.server</a>()) ::
+  {:ok, %{updated: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(), unchanged: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}
+  | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Refetches every adaptor's icons and updates the rows whose icon bytes
+changed, leaving other fields untouched.</p><p>Returns <code class="inline">{:ok, %{updated: n, unchanged: m}}</code>, <code class="inline">{:error, reason}</code> if the
+fetch fails, or <code class="inline">{:error, {:refresh_failed, reason}}</code> if the task
+crashed.</p>
+  </section>
+</section>
+<section class="detail" id="refresh_now/1">
+
+  <div class="detail-header">
+    <a href="#refresh_now/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">refresh_now(scheduler_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/scheduler.ex#L64" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> refresh_now(<a href="https://hexdocs.pm/elixir/GenServer.html#t:server/0">GenServer.server</a>()) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Starts a refresh tick, or lets one already in flight continue.</p>
+  </section>
+</section>
+<section class="detail" id="refresh_package/2">
+
+  <div class="detail-header">
+    <a href="#refresh_package/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">refresh_package(scheduler_name, name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/scheduler.ex#L74" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> refresh_package(<a href="https://hexdocs.pm/elixir/GenServer.html#t:server/0">GenServer.server</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  :ok | {:error, :not_found | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Refetches and persists one adaptor whether or not its version changed.
+Waits up to 30 seconds.</p>
+  </section>
+</section>
+<section class="detail" id="start_link/1">
+
+  <div class="detail-header">
+    <a href="#start_link/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">start_link(opts)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/scheduler.ex#L48" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> start_link(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/GenServer.html#t:on_start/0">GenServer.on_start</a>()</pre>
+
+      </div>
+
+<p>Starts the Scheduler. Required opts: <code class="inline">:name</code>, <code class="inline">:sup</code>, <code class="inline">:lock_key</code>,
+<code class="inline">:cache</code>, <code class="inline">:tasks</code>, <code class="inline">:source_topic</code>, <code class="inline">:refresh_interval</code> (tick interval
+in milliseconds; <code class="inline">0</code> disables the timer) and <code class="inline">:warn_when_empty</code> (whether
+booting on an empty catalogue with the timer disabled logs a warning).
+<code class="inline">:checked_at</code> is optional. It is a 1-arity function, defaulting to
+<code class="inline">&amp;Catalogue.max_checked_at/1</code>, that reads the source's last-checked
+timestamp. It is called once at boot to work out the delay before the
+first tick.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

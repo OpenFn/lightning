@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Invocation.Query — Lightning v2.19.0-pre</title>
+    <title>Lightning.Invocation.Query — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Invocation.Query</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -258,6 +258,17 @@ to access a previous run's state</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#selectable_for_job/3" data-no-tooltip="" translate="no">selectable_for_job(job_id, project_id, limit)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Dataclips a job can be run against: the ones it has consumed, plus every
+named dataclip in its project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#steps_for/1" data-no-tooltip="" translate="no">steps_for(user)</a>
 
       </div>
@@ -358,7 +369,7 @@ to access a previous run's state</p></div>
       <h1 class="signature" translate="no">dataclip_with_body()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L281" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L324" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -381,7 +392,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">filter_log_lines(query, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L488" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L531" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -465,7 +476,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">filter_work_orders(query, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L350" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L393" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -493,7 +504,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">filter_work_orders_by_date(query, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L338" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L381" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -521,7 +532,7 @@ the body specifically.</p>
       <h1 class="signature" translate="no">last_n_for_job(job_id, limit)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L283" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L326" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -600,7 +611,7 @@ to access a previous run's state</p>
       <h1 class="signature" translate="no">log_lines_for(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L467" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L510" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -686,7 +697,7 @@ to access a previous run's state</p>
       <h1 class="signature" translate="no">select_as_input_text(query)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L303" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L346" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -698,6 +709,32 @@ to access a previous run's state</p>
 <p>  Returns a dataclip formatted for use as an input state.</p><p>Only <code class="inline">http_request</code> dataclips are changed, their <code class="inline">body</code> is nested inside a
 <code class="inline">&quot;data&quot;</code> key and <code class="inline">request</code> data is added as a <code class="inline">&quot;request&quot;</code> key.</p><p>Like <code class="inline">select_as_input/1</code>, but returns body as JSON text string to avoid
 expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
+  </section>
+</section>
+<section class="detail" id="selectable_for_job/3">
+
+  <div class="detail-header">
+    <a href="#selectable_for_job/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">selectable_for_job(job_id, project_id, limit)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L286" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Dataclips a job can be run against: the ones it has consumed, plus every
+named dataclip in its project.</p><p>A named dataclip is a curated input rather than a trace of a past run, so the
+result is no longer bounded by the job. The two sources are unioned rather
+than ORed so each keeps its own index, instead of making dataclips the
+driving relation on every keystroke of the picker's search.</p>
   </section>
 </section>
 <section class="detail" id="steps_for/1">
@@ -822,7 +859,7 @@ expensive deserialization to Elixir map (saves ~38x memory amplification).</p>
       <h1 class="signature" translate="no">validate_state_param(arg1)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L406" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L449" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -881,7 +918,7 @@ flight is not yet a failure.</p>
       <h1 class="signature" translate="no">wipe_dataclips(query \\ Dataclip)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L322" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L365" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

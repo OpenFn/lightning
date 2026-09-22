@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>API Reference — Lightning v2.19.0-pre</title>
+    <title>API Reference — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -96,7 +96,7 @@ Lightning
 
 <div id="top-content">
   <div class="heading-with-actions top-heading">
-    <h1>API Reference <small class="app-vsn">Lightning v#2.19.0-pre</small></h1>
+    <h1>API Reference <small class="app-vsn">Lightning v#2.19.0</small></h1>
 
       <a href="https://github.com/OpenFn/lightning" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -199,30 +199,253 @@ and business logic.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Lightning.AdaptorRegistry.html" translate="no">Lightning.AdaptorRegistry</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Registry process to query and maintain a list of adaptors available for
-writing jobs.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.AdaptorRegistry.Npm.html" translate="no">Lightning.AdaptorRegistry.Npm</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>NPM API functions</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
     <a href="Lightning.AdaptorService.html" translate="no">Lightning.AdaptorService</a>
 
   </div>
 
     <div class="summary-synopsis"><p>The Adaptor Service is use to query and install adaptors in order to run jobs.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.AdaptorService.InstalledAdaptor.html" translate="no">Lightning.AdaptorService.InstalledAdaptor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>An adaptor installed on disk, as returned by <a href="Lightning.AdaptorService.html#find_adaptor/2"><code class="inline">Lightning.AdaptorService.find_adaptor/2</code></a>
+and <a href="Lightning.AdaptorService.html#install/2"><code class="inline">Lightning.AdaptorService.install/2</code></a>.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.html" translate="no">Lightning.Adaptors</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The adaptor catalogue: which npm adaptors exist, their versions, schemas
+and icons.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Catalogue.html" translate="no">Lightning.Adaptors.Catalogue</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Reads and writes for the <code class="inline">adaptors</code> and <code class="inline">adaptor_versions</code> tables.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Catalogue.Adaptor.html" translate="no">Lightning.Adaptors.Catalogue.Adaptor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto schema for one row of the <code class="inline">adaptors</code> table, unique on
+<code class="inline">[:name, :source]</code>. Versions live on
+<a href="Lightning.Adaptors.Catalogue.AdaptorVersion.html"><code class="inline">Lightning.Adaptors.Catalogue.AdaptorVersion</code></a>.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Catalogue.Adaptor.JSONBinary.html" translate="no">Lightning.Adaptors.Catalogue.Adaptor.JSONBinary</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto type for <code class="inline">schema_data</code>: a JSON binary in a <code class="inline">text</code> column.
+Accepts a binary or a map on write and always loads a binary, so the
+reader can decode with ordered objects.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Catalogue.AdaptorVersion.html" translate="no">Lightning.Adaptors.Catalogue.AdaptorVersion</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto schema for one row of the <code class="inline">adaptor_versions</code> table. Belongs to
+<a href="Lightning.Adaptors.Catalogue.Adaptor.html"><code class="inline">Lightning.Adaptors.Catalogue.Adaptor</code></a> and is deleted with it.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.ChannelBroadcaster.html" translate="no">Lightning.Adaptors.ChannelBroadcaster</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Fans adaptor changes out to connected sessions, coalescing bursts.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Config.html" translate="no">Lightning.Adaptors.Config</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Runtime configuration for the adaptors subsystem, read from
+<code class="inline">config :lightning, Lightning.Adaptors</code> on every call.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Dump.html" translate="no">Lightning.Adaptors.Dump</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Writes the adaptor catalogue to a JSON snapshot file, in the shape
+<a href="Lightning.Adaptors.Seed.html#seed_from_file/2"><code class="inline">Lightning.Adaptors.Seed.seed_from_file/2</code></a> reads back.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.IconCache.html" translate="no">Lightning.Adaptors.IconCache</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Stateless filesystem functions over the on-disk adaptor icon cache,
+rooted at <a href="Lightning.Adaptors.Config.html#icon_path/0"><code class="inline">Lightning.Adaptors.Config.icon_path/0</code></a>.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.IconField.html" translate="no">Lightning.Adaptors.IconField</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Schema column names for an icon shape.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Invalidator.html" translate="no">Lightning.Adaptors.Invalidator</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Subscribes to cluster adaptor-change broadcasts and evicts matching
+local Cachex entries, keeping each node coherent with Postgres.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Local.html" translate="no">Lightning.Adaptors.Local</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Filesystem implementation of <a href="Lightning.Adaptors.Strategy.html"><code class="inline">Lightning.Adaptors.Strategy</code></a>.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.NPM.html" translate="no">Lightning.Adaptors.NPM</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Production implementation of <a href="Lightning.Adaptors.Strategy.html"><code class="inline">Lightning.Adaptors.Strategy</code></a> that talks
+to the public NPM registry and the OpenFn adaptors monorepo on GitHub.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.NPM.GitHub.html" translate="no">Lightning.Adaptors.NPM.GitHub</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Raw <code class="inline">raw.githubusercontent.com</code> client for adaptor icons.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.NPM.Registry.html" translate="no">Lightning.Adaptors.NPM.Registry</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>NPM registry HTTP client for <a href="Lightning.Adaptors.NPM.html"><code class="inline">Lightning.Adaptors.NPM</code></a>.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.NPM.Schema.html" translate="no">Lightning.Adaptors.NPM.Schema</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>jsDelivr CDN client for adaptor configuration schemas.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.NodeMonitor.html" translate="no">Lightning.Adaptors.NodeMonitor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Partition-recovery companion to <a href="Lightning.Adaptors.Invalidator.html"><code class="inline">Lightning.Adaptors.Invalidator</code></a>.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Package.html" translate="no">Lightning.Adaptors.Package</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>One catalogue adaptor.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.PackageName.html" translate="no">Lightning.Adaptors.PackageName</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Parses <code class="inline">name@version</code> adaptor specs and renders them for the worker.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Scheduler.html" translate="no">Lightning.Adaptors.Scheduler</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Cluster-singleton GenServer that refreshes the catalogue from the
+strategy, on a timer and on demand, persisting through
+<a href="Lightning.Adaptors.Catalogue.html"><code class="inline">Lightning.Adaptors.Catalogue</code></a> and broadcasting <code class="inline">{:changed, name, source}</code>
+on the source topic.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Seed.html" translate="no">Lightning.Adaptors.Seed</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Populates the adaptor catalogue from a JSON snapshot file.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Store.html" translate="no">Lightning.Adaptors.Store</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Cached reads over <a href="Lightning.Adaptors.Catalogue.html"><code class="inline">Lightning.Adaptors.Catalogue</code></a>.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Strategy.html" translate="no">Lightning.Adaptors.Strategy</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Behaviour every adaptor strategy implements.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Adaptors.Supervisor.html" translate="no">Lightning.Adaptors.Supervisor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Supervises one instance of the adaptors subsystem: the cache, task
+supervisor, invalidator, node monitor, channel broadcaster and the
+<a href="https://hexdocs.pm/highlander_pg/1.0.8/HighlanderPG.html"><code class="inline">HighlanderPG</code></a>-wrapped scheduler.</p></div>
 
 </div>
 <div class="summary-row">
@@ -664,6 +887,17 @@ YDoc-compatible operations and applies them to any running SharedDoc.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Collaboration.WorkflowReconciler.ReconcileRequested.html" translate="no">Lightning.Collaboration.WorkflowReconciler.ReconcileRequested</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Broadcast on a workflow's collaboration topic to ask the process that owns
+the live SharedDoc to re-sync it from the database. Published by out-of-band
+writers (the provisioner import path) after their transaction commits.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Collaboration.WorkflowResolver.html" translate="no">Lightning.Collaboration.WorkflowResolver</a>
 
   </div>
@@ -866,6 +1100,17 @@ changesets for a given schema.</p></div>
 
     <div class="summary-synopsis"><p>Provides facilities to dynamically create and validate a changeset for a given
 <a href="Lightning.Credentials.Schema.html">Schema</a></p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Credentials.SchemaReconciler.html" translate="no">Lightning.Credentials.SchemaReconciler</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Sweeps legacy short-form credential <code class="inline">schema</code> names to their full npm
+package names whenever the adaptor catalogue might have grown enough to
+resolve one, via <a href="Lightning.Credentials.html#reconcile_legacy_schema_names/1"><code class="inline">Lightning.Credentials.reconcile_legacy_schema_names/1</code></a>.</p></div>
 
 </div>
 <div class="summary-row">
@@ -2572,6 +2817,24 @@ provisioning document.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Workflows.WorkflowRelease.html" translate="no">Lightning.Workflows.WorkflowRelease</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A published version of a workflow, recorded at each go-live and promote.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workflows.WorkflowReleases.html" translate="no">Lightning.Workflows.WorkflowReleases</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Records and reads <a href="Lightning.Workflows.WorkflowRelease.html"><code class="inline">Lightning.Workflows.WorkflowRelease</code></a> rows.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Workflows.WorkflowTemplate.html" translate="no">Lightning.Workflows.WorkflowTemplate</a>
 
   </div>
@@ -2711,6 +2974,33 @@ as controllers, views, channels and so on.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>API controller for workflow management.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.AdaptorController.html" translate="no">LightningWeb.AdaptorController</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Bulk adaptor catalogue for the workflow editor's picker.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.AdaptorIconController.html" translate="no">LightningWeb.AdaptorIconController</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Serves content-addressable adaptor icons.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.AdaptorIconURL.html" translate="no">LightningWeb.AdaptorIconURL</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Builds content-addressable adaptor icon URLs.</p></div>
 
 </div>
 <div class="summary-row">
@@ -3291,6 +3581,15 @@ maybe because of an existing form</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="LightningWeb.MaintenanceLive.Index.html" translate="no">LightningWeb.MaintenanceLive.Index</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Superuser-only page for on-demand <a href="Lightning.Adaptors.html"><code class="inline">Lightning.Adaptors</code></a> maintenance.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="LightningWeb.OauthController.html" translate="no">LightningWeb.OauthController</a>
 
   </div>
@@ -3831,7 +4130,7 @@ for common functionality.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>Phoenix Channel for handling binary Yjs collaboration messages.</p></div>
+    <div class="summary-synopsis"><p>Phoenix Channel for binary Yjs collaboration messages.</p></div>
 
 </div>
 <div class="summary-row">
@@ -3925,12 +4224,42 @@ It implements the backend API for the React frontend.</p></div>
       <div class="summary">
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Mix.Tasks.Lightning.DownloadAdaptorRegistryCache.html" translate="no">mix lightning.download_adaptor_registry_cache</a>
+    <a href="Mix.Tasks.Lightning.Adaptors.Dump.html" translate="no">mix lightning.adaptors.dump</a>
 
   </div>
 
-    <div class="summary-synopsis"><p>Downloads the adaptor registry json cache
-Use --path to specify the location</p></div>
+    <div class="summary-synopsis"><p>Write this instance's adaptor catalogue to a JSON file, in the shape
+<a href="Lightning.Adaptors.Catalogue.html#upsert_adaptor/1"><code class="inline">Lightning.Adaptors.Catalogue.upsert_adaptor/1</code></a> accepts and
+<a href="Mix.Tasks.Lightning.Adaptors.Import.html"><code class="inline">mix lightning.adaptors.import</code></a> reads back.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Mix.Tasks.Lightning.Adaptors.Import.html" translate="no">mix lightning.adaptors.import</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Populate the <code class="inline">adaptors</code> table from a JSON file, without reaching npm.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Mix.Tasks.Lightning.Adaptors.Refresh.html" translate="no">mix lightning.adaptors.refresh</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Trigger an adaptor catalogue refresh from the command line.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Mix.Tasks.Lightning.Adaptors.Snapshot.html" translate="no">mix lightning.adaptors.snapshot</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Fetches every <code class="inline">@openfn/language-*</code> adaptor straight from npm via
+<a href="Lightning.Adaptors.NPM.html"><code class="inline">Lightning.Adaptors.NPM</code></a> and writes the full records to a JSON file, in
+the shape <a href="Lightning.Adaptors.Catalogue.html#upsert_adaptor/1"><code class="inline">Lightning.Adaptors.Catalogue.upsert_adaptor/1</code></a> accepts.</p></div>
 
 </div>
 <div class="summary-row">
@@ -3962,30 +4291,11 @@ Use --path to specify the location</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Mix.Tasks.Lightning.InstallAdaptorIcons.html" translate="no">mix lightning.install_adaptor_icons</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Installs the adaptor icons</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
     <a href="Mix.Tasks.Lightning.InstallRuntime.html" translate="no">mix lightning.install_runtime</a>
 
   </div>
 
     <div class="summary-synopsis"><p>Installs the following NodeJS packages</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Mix.Tasks.Lightning.InstallSchemas.html" translate="no">mix lightning.install_schemas</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Install the credential json schemas
-Use --exclude language-package1, language-package2 to exclude specific packages</p></div>
 
 </div>
 <div class="summary-row">

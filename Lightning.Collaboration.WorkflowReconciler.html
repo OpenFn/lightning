@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Collaboration.WorkflowReconciler — Lightning v2.19.0-pre</title>
+    <title>Lightning.Collaboration.WorkflowReconciler — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Collaboration.WorkflowReconciler</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -141,6 +141,37 @@ the active SharedDocs for that workflow.</p></div>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#reconcile_workflow_document/1" data-no-tooltip="" translate="no">reconcile_workflow_document(workflow_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Reconcile a workflow's live collaborative document with the database.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#request_reconciliation/1" data-no-tooltip="" translate="no">request_reconciliation(workflow_ids)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Ask the owner of each workflow's live SharedDoc to reconcile from the
+database. A no-op for any workflow that has no live document.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#subscribe/1" data-no-tooltip="" translate="no">subscribe(workflow_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Subscribe the calling process to a workflow's collaboration topic.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -165,7 +196,7 @@ the active SharedDocs for that workflow.</p></div>
       <h1 class="signature" translate="no">reconcile_workflow_changes(changeset, workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_reconciler.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_reconciler.ex#L39" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -185,6 +216,100 @@ the active SharedDocs for that workflow.</p></div>
 the active SharedDocs for that workflow.</p><p>Note: This always reconciles to the latest (unversioned) document only.
 Versioned snapshots (e.g., &quot;workflow:123:v22&quot;) are read-only historical views
 and should never receive live updates from saves.</p>
+  </section>
+</section>
+<section class="detail" id="reconcile_workflow_document/1">
+
+  <div class="detail-header">
+    <a href="#reconcile_workflow_document/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">reconcile_workflow_document(workflow_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_reconciler.ex#L109" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> reconcile_workflow_document(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: :ok</pre>
+
+      </div>
+
+<p>Reconcile a workflow's live collaborative document with the database.</p><p>No-op when no live SharedDoc exists; a cold start self-heals through
+<code class="inline">Persistence.reconcile_or_reset/3</code>. Otherwise the document is reset in place,
+so connected clients get an incremental sync rather than a teardown. The
+mutation runs inside <code class="inline">SharedDoc.update_doc/2</code>, so no Y.Doc transaction is held
+across a process boundary.</p>
+  </section>
+</section>
+<section class="detail" id="request_reconciliation/1">
+
+  <div class="detail-header">
+    <a href="#request_reconciliation/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">request_reconciliation(workflow_ids)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_reconciler.ex#L86" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> request_reconciliation([<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()] | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: :ok</pre>
+
+      </div>
+
+<p>Ask the owner of each workflow's live SharedDoc to reconcile from the
+database. A no-op for any workflow that has no live document.</p><p>Must be called AFTER the writing transaction has committed: the subscriber
+reloads the workflow through its own database connection, so an event
+published mid-transaction would reconcile against pre-commit state.</p>
+  </section>
+</section>
+<section class="detail" id="subscribe/1">
+
+  <div class="detail-header">
+    <a href="#subscribe/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">subscribe(workflow_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/workflow_reconciler.ex#L73" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> subscribe(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Subscribe the calling process to a workflow's collaboration topic.</p><p>The <code class="inline">DocumentSupervisor</code> subscribes at start so it can reconcile in place when
+an out-of-band writer broadcasts a <code class="inline">ReconcileRequested</code>. Subscribes against
+<code class="inline">Lightning.PubSub</code> directly because the caller is a long-lived process and
+must not depend on the test-time mock, which is scoped to the test process.</p>
   </section>
 </section>
 

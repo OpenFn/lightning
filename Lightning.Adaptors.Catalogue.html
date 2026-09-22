@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Lightning.Adaptors.Catalogue — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Adaptors.Catalogue</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Reads and writes for the <code class="inline">adaptors</code> and <code class="inline">adaptor_versions</code> tables.</p><p>Every read takes the <code class="inline">:source</code> (<code class="inline">:npm | :local</code>) explicitly.
+<a href="#upsert_adaptor/1"><code class="inline">upsert_adaptor/1</code></a> is idempotent: <code class="inline">checked_at</code> advances on every call,
+<code class="inline">updated_at</code> only when a field actually changed, and version rows are
+replaced in the same transaction.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:catalogue_entry/0" data-no-tooltip="" translate="no">catalogue_entry()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:package_meta/0" data-no-tooltip="" translate="no">package_meta()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:source/0" data-no-tooltip="" translate="no">source()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#catalogue/1" data-no-tooltip="" translate="no">catalogue(source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Full catalogue projection for a source: every adaptor's <code class="inline">name</code>,
+<code class="inline">latest_version</code>, <code class="inline">repository</code>, icon fields, and full version list.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#catalogue_stamp/1" data-no-tooltip="" translate="no">catalogue_stamp(source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>ETag basis for the catalogue: <code class="inline">{timestamp, version_row_count}</code> for
+<code class="inline">source</code>, where <code class="inline">timestamp</code> is the later of
+<code class="inline">MAX(adaptors.updated_at)</code> and <code class="inline">MAX(adaptor_versions.inserted_at)</code>,
+or <code class="inline">nil</code> when the source has no rows.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete_all_for_source/1" data-no-tooltip="" translate="no">delete_all_for_source(source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Delete every row for <code class="inline">source</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_adaptor/2" data-no-tooltip="" translate="no">get_adaptor(name, source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Fetch a single adaptor by <code class="inline">name</code> within a <code class="inline">source</code>. Returns <code class="inline">nil</code>
+when no row matches.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_package_meta/2" data-no-tooltip="" translate="no">get_package_meta(name, source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The <a href="#t:package_meta/0"><code class="inline">package_meta/0</code></a> projection of one <code class="inline">(name, source)</code> row, or <code class="inline">nil</code>.
+Unlike <a href="#list_package_metas/1"><code class="inline">list_package_metas/1</code></a> this resolves excluded and deprecated
+adaptors too, so jobs already using one keep validating.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_adaptors/1" data-no-tooltip="" translate="no">list_adaptors(source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Full structs for a source, for callers that need the whole row, such as
+the Scheduler's diffing and the dump/seed tooling. Picker traffic uses
+the lighter <a href="#list_package_metas/1"><code class="inline">list_package_metas/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_package_metas/1" data-no-tooltip="" translate="no">list_package_metas(source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Picker-facing lean projection for a source. Avoids the heavy
+<code class="inline">schema_data</code> JSONB column and skips the version join entirely.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_versions/2" data-no-tooltip="" translate="no">list_versions(name, source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>All versions of an adaptor (<code class="inline">name</code>, <code class="inline">source</code>), in insertion order.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#max_checked_at/1" data-no-tooltip="" translate="no">max_checked_at(source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Maximum <code class="inline">checked_at</code> seen for <code class="inline">source</code>, or <code class="inline">nil</code> when the table is
+empty for that source. The Scheduler reads it at boot to time its first
+tick, and the Store reads it to tell whether the catalogue has ever
+loaded.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#touch_checked_at/2" data-no-tooltip="" translate="no">touch_checked_at(name, source)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Advance <code class="inline">checked_at</code> for a known <code class="inline">(name, source)</code> row without
+loading it. No-op when no row matches.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update_icons/3" data-no-tooltip="" translate="no">update_icons(name, source, attrs)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Update only the icon columns for a single <code class="inline">(name, source)</code> row.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#upsert_adaptor/1" data-no-tooltip="" translate="no">upsert_adaptor(record)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Upserts one adaptor record plus its version rows in one transaction.
+The source is read from the record, whose keys may be atoms or strings,
+as a decoded JSON snapshot gives them.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:catalogue_entry/0">
+
+  <div class="detail-header">
+    <a href="#t:catalogue_entry/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">catalogue_entry()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L34" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> catalogue_entry() :: %{
+  name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  latest_version: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  repository: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  versions: [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()],
+  icon_square_ext: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  icon_rectangle_ext: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  icon_square_sha256: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil,
+  icon_rectangle_sha256: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:package_meta/0">
+
+  <div class="detail-header">
+    <a href="#t:package_meta/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">package_meta()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L22" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> package_meta() :: %{
+  name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  latest_version: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  description: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  deprecated: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+  icon_square_ext: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  icon_rectangle_ext: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  icon_square_sha256: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil,
+  icon_rectangle_sha256: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil,
+  has_schema: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:source/0">
+
+  <div class="detail-header">
+    <a href="#t:source/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">source()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L20" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> source() :: :npm | :local</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="catalogue/1">
+
+  <div class="detail-header">
+    <a href="#catalogue/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">catalogue(source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L271" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> catalogue(<a href="#t:source/0">source</a>()) :: [<a href="#t:catalogue_entry/0">catalogue_entry</a>()]</pre>
+
+      </div>
+
+<p>Full catalogue projection for a source: every adaptor's <code class="inline">name</code>,
+<code class="inline">latest_version</code>, <code class="inline">repository</code>, icon fields, and full version list.</p><p>Excludes the packages listed in <code class="inline">@excluded_names</code> and any deprecated
+adaptor. A listed adaptor's deprecated versions are left out too.</p>
+  </section>
+</section>
+<section class="detail" id="catalogue_stamp/1">
+
+  <div class="detail-header">
+    <a href="#catalogue_stamp/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">catalogue_stamp(source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L315" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> catalogue_stamp(<a href="#t:source/0">source</a>()) :: {<a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}</pre>
+
+      </div>
+
+<p>ETag basis for the catalogue: <code class="inline">{timestamp, version_row_count}</code> for
+<code class="inline">source</code>, where <code class="inline">timestamp</code> is the later of
+<code class="inline">MAX(adaptors.updated_at)</code> and <code class="inline">MAX(adaptor_versions.inserted_at)</code>,
+or <code class="inline">nil</code> when the source has no rows.</p><p><code class="inline">version_row_count</code> rides alongside the timestamp because deleting a
+version row moves neither max. It does lower the count.</p>
+  </section>
+</section>
+<section class="detail" id="delete_all_for_source/1">
+
+  <div class="detail-header">
+    <a href="#delete_all_for_source/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_all_for_source(source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L191" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> delete_all_for_source(<a href="#t:source/0">source</a>()) :: :ok</pre>
+
+      </div>
+
+<p>Delete every row for <code class="inline">source</code>.</p>
+  </section>
+</section>
+<section class="detail" id="get_adaptor/2">
+
+  <div class="detail-header">
+    <a href="#get_adaptor/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_adaptor(name, source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L111" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_adaptor(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="#t:source/0">source</a>()) ::
+  <a href="Lightning.Adaptors.Catalogue.Adaptor.html#t:t/0">Lightning.Adaptors.Catalogue.Adaptor.t</a>() | nil</pre>
+
+      </div>
+
+<p>Fetch a single adaptor by <code class="inline">name</code> within a <code class="inline">source</code>. Returns <code class="inline">nil</code>
+when no row matches.</p>
+  </section>
+</section>
+<section class="detail" id="get_package_meta/2">
+
+  <div class="detail-header">
+    <a href="#get_package_meta/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_package_meta(name, source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L75" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_package_meta(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="#t:source/0">source</a>()) :: <a href="#t:package_meta/0">package_meta</a>() | nil</pre>
+
+      </div>
+
+<p>The <a href="#t:package_meta/0"><code class="inline">package_meta/0</code></a> projection of one <code class="inline">(name, source)</code> row, or <code class="inline">nil</code>.
+Unlike <a href="#list_package_metas/1"><code class="inline">list_package_metas/1</code></a> this resolves excluded and deprecated
+adaptors too, so jobs already using one keep validating.</p>
+  </section>
+</section>
+<section class="detail" id="list_adaptors/1">
+
+  <div class="detail-header">
+    <a href="#list_adaptors/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_adaptors(source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L102" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_adaptors(<a href="#t:source/0">source</a>()) :: [<a href="Lightning.Adaptors.Catalogue.Adaptor.html#t:t/0">Lightning.Adaptors.Catalogue.Adaptor.t</a>()]</pre>
+
+      </div>
+
+<p>Full structs for a source, for callers that need the whole row, such as
+the Scheduler's diffing and the dump/seed tooling. Picker traffic uses
+the lighter <a href="#list_package_metas/1"><code class="inline">list_package_metas/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="list_package_metas/1">
+
+  <div class="detail-header">
+    <a href="#list_package_metas/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_package_metas(source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L65" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_package_metas(<a href="#t:source/0">source</a>()) :: [<a href="#t:package_meta/0">package_meta</a>()]</pre>
+
+      </div>
+
+<p>Picker-facing lean projection for a source. Avoids the heavy
+<code class="inline">schema_data</code> JSONB column and skips the version join entirely.</p><p>Excludes the packages listed in <code class="inline">@excluded_names</code> and any deprecated
+adaptor.</p>
+  </section>
+</section>
+<section class="detail" id="list_versions/2">
+
+  <div class="detail-header">
+    <a href="#list_versions/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_versions(name, source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L119" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_versions(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="#t:source/0">source</a>()) :: [
+  <a href="Lightning.Adaptors.Catalogue.AdaptorVersion.html#t:t/0">Lightning.Adaptors.Catalogue.AdaptorVersion.t</a>()
+]</pre>
+
+      </div>
+
+<p>All versions of an adaptor (<code class="inline">name</code>, <code class="inline">source</code>), in insertion order.</p>
+  </section>
+</section>
+<section class="detail" id="max_checked_at/1">
+
+  <div class="detail-header">
+    <a href="#max_checked_at/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">max_checked_at(source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L255" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> max_checked_at(<a href="#t:source/0">source</a>()) :: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil</pre>
+
+      </div>
+
+<p>Maximum <code class="inline">checked_at</code> seen for <code class="inline">source</code>, or <code class="inline">nil</code> when the table is
+empty for that source. The Scheduler reads it at boot to time its first
+tick, and the Store reads it to tell whether the catalogue has ever
+loaded.</p>
+  </section>
+</section>
+<section class="detail" id="touch_checked_at/2">
+
+  <div class="detail-header">
+    <a href="#touch_checked_at/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">touch_checked_at(name, source)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L204" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> touch_checked_at(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="#t:source/0">source</a>()) :: :ok</pre>
+
+      </div>
+
+<p>Advance <code class="inline">checked_at</code> for a known <code class="inline">(name, source)</code> row without
+loading it. No-op when no row matches.</p><p>The Scheduler uses this when a poll finds nothing changed. It is
+cheaper than a full upsert and never bumps <code class="inline">updated_at</code>.</p>
+  </section>
+</section>
+<section class="detail" id="update_icons/3">
+
+  <div class="detail-header">
+    <a href="#update_icons/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">update_icons(name, source, attrs)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L228" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> update_icons(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="#t:source/0">source</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: {<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>(), nil}</pre>
+
+      </div>
+
+<p>Update only the icon columns for a single <code class="inline">(name, source)</code> row.</p><p><code class="inline">attrs</code> may include any subset of <code class="inline">:icon_square_ext</code>,
+<code class="inline">:icon_square_sha256</code>, <code class="inline">:icon_rectangle_ext</code>, <code class="inline">:icon_rectangle_sha256</code>,
+<code class="inline">:icon_square_etag</code>, <code class="inline">:icon_rectangle_etag</code>.
+<code class="inline">updated_at</code> is advanced so callers can observe the change.</p><p>Sidesteps <a href="#upsert_adaptor/1"><code class="inline">upsert_adaptor/1</code></a> deliberately: that helper rewrites the
+<code class="inline">adaptor_versions</code> rows in the same transaction, which is the wrong
+thing to do for an icon-only fix-up.</p>
+  </section>
+</section>
+<section class="detail" id="upsert_adaptor/1">
+
+  <div class="detail-header">
+    <a href="#upsert_adaptor/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">upsert_adaptor(record)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/catalogue.ex#L144" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> upsert_adaptor(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: {:ok, <a href="Lightning.Adaptors.Catalogue.Adaptor.html#t:t/0">Lightning.Adaptors.Catalogue.Adaptor.t</a>()}</pre>
+
+      </div>
+
+<p>Upserts one adaptor record plus its version rows in one transaction.
+The source is read from the record, whose keys may be atoms or strings,
+as a decoded JSON snapshot gives them.</p><p><code class="inline">checked_at</code> advances on every call. <code class="inline">updated_at</code> advances only when
+some other field of the adaptor row differs from the existing row.
+Version rows are deleted and reinserted. Every row goes through its
+schema changeset first, so a corrupt strategy response cannot reach
+the database.</p><p>Raises if the transaction fails, for example on invalid input from a
+misbehaving strategy. The Scheduler relies on the success type only.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

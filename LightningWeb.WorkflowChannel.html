@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>LightningWeb.WorkflowChannel — Lightning v2.19.0-pre</title>
+    <title>LightningWeb.WorkflowChannel — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.WorkflowChannel</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -111,8 +111,7 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Phoenix Channel for handling binary Yjs collaboration messages.</p><p>Unlike LiveView events, Phoenix Channels properly support binary data
-transmission without JSON serialization.</p>
+<p>Phoenix Channel for binary Yjs collaboration messages.</p>
     </section>
 
 </div>
@@ -139,11 +138,11 @@ transmission without JSON serialization.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#handle_in/3" data-no-tooltip="" translate="no">handle_in(binary, params, socket)</a>
+        <a href="#handle_in/3" data-no-tooltip="" translate="no">handle_in(event, params, socket)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Handles explicit workflow save requests from the collaborative editor.</p></div>
+        <div class="summary-synopsis"><p>Saves the current Y.Doc state through the Session.</p></div>
 
     </div>
 
@@ -179,7 +178,7 @@ transmission without JSON serialization.</p>
       <h1 class="signature" translate="no">child_spec(init_arg)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/workflow_channel.ex#L8" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/workflow_channel.ex#L5" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -198,10 +197,10 @@ transmission without JSON serialization.</p>
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">handle_in(binary, params, socket)</h1>
+      <h1 class="signature" translate="no">handle_in(event, params, socket)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/workflow_channel.ex#L111" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/workflow_channel.ex#L112" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -210,9 +209,10 @@ transmission without JSON serialization.</p>
 
   <section class="docstring">
 
-<p>Handles explicit workflow save requests from the collaborative editor.</p><p>The save operation:</p><ol><li>Asks Session to extract and save the current Y.Doc state</li><li>Session handles all Y.Doc interaction internally</li><li>Returns success/error to the client</li></ol><p>Note: By the time this message is processed, all prior Y.js sync messages
-have been processed due to Phoenix Channel's synchronous per-socket handling.</p><p>Success response: {:ok, %{saved_at: DateTime, lock_version: integer}}
-Error response: {:error, %{errors: map, type: string}}</p>
+<p>Saves the current Y.Doc state through the Session.</p><p>The reply is deferred. <code class="inline">Session.save_workflow/2</code> may wait on the adaptor
+catalogue's first load, so the call runs off the channel process and
+the reply goes out with <a href="https://hexdocs.pm/phoenix/1.7.24/Phoenix.Channel.html#reply/2"><code class="inline">Phoenix.Channel.reply/2</code></a> when it finishes.</p><p>Success: <code class="inline">{:ok, %{saved_at: DateTime, lock_version: integer}}</code>
+Error: <code class="inline">{:error, %{errors: map, type: string}}</code></p>
   </section>
 </section>
 <section class="detail" id="start_link/1">
@@ -225,7 +225,7 @@ Error response: {:error, %{errors: map, type: string}}</p>
       <h1 class="signature" translate="no">start_link(triplet)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/workflow_channel.ex#L8" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/workflow_channel.ex#L5" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Lightning.Workflows.WorkflowReleases — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Workflows.WorkflowReleases</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow_releases.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Records and reads <a href="Lightning.Workflows.WorkflowRelease.html"><code class="inline">Lightning.Workflows.WorkflowRelease</code></a> rows.</p><p>A release is recorded at each go-live and promote, in the same transaction as
+the snapshot it points at, and numbered <code class="inline">max(existing) + 1</code> per workflow.</p><p>That numbering is safe only because callers record a release exclusively when
+the save captured a snapshot: capturing one updates the workflow row, so the
+optimistic lock serialises concurrent publishes. The
+<code class="inline">(workflow_id, version_number)</code> unique index is the backstop.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_by_version_number/2" data-no-tooltip="" translate="no">get_by_version_number(workflow_or_id, version_number)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Fetches the release published as <code class="inline">version_number</code> for the workflow, preloaded
+with its snapshot so the caller can resolve the pinned content.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#insert_release/2" data-no-tooltip="" translate="no">insert_release(repo, attrs)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Inserts a single release with the next sequential <code class="inline">version_number</code>, using the
+given <code class="inline">repo</code> so it participates in the surrounding transaction.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_for_workflow/1" data-no-tooltip="" translate="no">list_for_workflow(workflow_or_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Lists a workflow's releases newest first, preloaded with the snapshot and the
+provenance associations the version list renders.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#next_version_number/2" data-no-tooltip="" translate="no">next_version_number(repo, map)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the next sequential version number for the workflow, computed against
+the given <code class="inline">repo</code> inside the current transaction.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#version_numbers_by_lock_version/1" data-no-tooltip="" translate="no">version_numbers_by_lock_version(workflow_or_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Maps each released snapshot <code class="inline">lock_version</code> to the <code class="inline">version_number</code> it was
+published as.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="get_by_version_number/2">
+
+  <div class="detail-header">
+    <a href="#get_by_version_number/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_by_version_number(workflow_or_id, version_number)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow_releases.ex#L74" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_by_version_number(
+  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()
+) ::
+  <a href="Lightning.Workflows.WorkflowRelease.html#t:t/0">Lightning.Workflows.WorkflowRelease.t</a>() | nil</pre>
+
+      </div>
+
+<p>Fetches the release published as <code class="inline">version_number</code> for the workflow, preloaded
+with its snapshot so the caller can resolve the pinned content.</p><p><code class="inline">version_number</code> is the human version the UI shows as vN and the value <code class="inline">?release=</code>
+carries. Returns nil when the workflow has no release with that number (a
+hand-typed number, or an old lock_version that was never published).</p>
+  </section>
+</section>
+<section class="detail" id="insert_release/2">
+
+  <div class="detail-header">
+    <a href="#insert_release/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">insert_release(repo, attrs)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow_releases.ex#L24" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> insert_release(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Repo.html#t:t/0">Ecto.Repo.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  {:ok, <a href="Lightning.Workflows.WorkflowRelease.html#t:t/0">Lightning.Workflows.WorkflowRelease.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+<p>Inserts a single release with the next sequential <code class="inline">version_number</code>, using the
+given <code class="inline">repo</code> so it participates in the surrounding transaction.</p>
+  </section>
+</section>
+<section class="detail" id="list_for_workflow/1">
+
+  <div class="detail-header">
+    <a href="#list_for_workflow/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_for_workflow(workflow_or_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow_releases.ex#L53" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_for_workflow(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: [
+  <a href="Lightning.Workflows.WorkflowRelease.html#t:t/0">Lightning.Workflows.WorkflowRelease.t</a>()
+]</pre>
+
+      </div>
+
+<p>Lists a workflow's releases newest first, preloaded with the snapshot and the
+provenance associations the version list renders.</p>
+  </section>
+</section>
+<section class="detail" id="next_version_number/2">
+
+  <div class="detail-header">
+    <a href="#next_version_number/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">next_version_number(repo, map)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow_releases.ex#L37" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> next_version_number(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Repo.html#t:t/0">Ecto.Repo.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>()</pre>
+
+      </div>
+
+<p>Returns the next sequential version number for the workflow, computed against
+the given <code class="inline">repo</code> inside the current transaction.</p>
+  </section>
+</section>
+<section class="detail" id="version_numbers_by_lock_version/1">
+
+  <div class="detail-header">
+    <a href="#version_numbers_by_lock_version/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">version_numbers_by_lock_version(workflow_or_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow_releases.ex#L95" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> version_numbers_by_lock_version(
+  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()
+  | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()
+) :: %{
+  required(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>()
+}</pre>
+
+      </div>
+
+<p>Maps each released snapshot <code class="inline">lock_version</code> to the <code class="inline">version_number</code> it was
+published as.</p><p>This is what attributes a run to a release: a run carries its snapshot's
+<code class="inline">lock_version</code>, and <a href="https://hexdocs.pm/elixir/Map.html#get/2"><code class="inline">Map.get/2</code></a> gives <code class="inline">nil</code> for one that was never released.
+Where two releases share a <code class="inline">lock_version</code> the newest wins.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Projects.Provisioner — Lightning v2.19.0-pre</title>
+    <title>Lightning.Projects.Provisioner — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Projects.Provisioner</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -161,6 +161,19 @@ ahead of time in the case of new records.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#reconcilable_workflow_ids/1" data-no-tooltip="" translate="no">reconcilable_workflow_ids(data)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Extracts the workflow ids carried by an import/merge document that a live
+collaborative document should reconcile against, excluding workflows the
+document marks for deletion. Only workflows present in the document are
+returned, so sibling workflows on the target are never touched.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#validate_extraneous_params/2" data-no-tooltip="" translate="no">validate_extraneous_params(changeset, opts \\ [])</a>
 
       </div>
@@ -195,7 +208,7 @@ ahead of time in the case of new records.</p>
       <h1 class="signature" translate="no">import_document(project, user_or_repo_connection, data, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L71" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L82" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -226,8 +239,14 @@ then fires audit, version-bump, and snapshot side effects.</p><p>Generic pipelin
 and sandbox merges. It only acts on what the document contains —
 sandbox-specific behaviours (credential cloning, dataclip copying,
 collection name sync) are composed around this call in
-<a href="Lightning.Projects.Sandboxes.html"><code class="inline">Lightning.Projects.Sandboxes</code></a>.</p><h2 id="import_document/4-options" class="section-heading"><a href="#import_document/4-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:allow_stale</code> - If true, allows stale operations during import (useful for
-merge operations where concurrent modifications are expected). Defaults to false.</li></ul>
+<a href="Lightning.Projects.Sandboxes.html"><code class="inline">Lightning.Projects.Sandboxes</code></a>.</p><h2 id="import_document/4-options" class="section-heading"><a href="#import_document/4-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><p><code class="inline">:allow_stale</code> - If true, allows stale operations during import (useful for
+merge operations where concurrent modifications are expected). Defaults to false.</p></li><li><p><code class="inline">:reconcile_collaboration</code> - If true, broadcasts a collaboration reconcile
+request for each affected workflow AFTER the import transaction commits,
+so any live collaborative document re-syncs from the database.</p><p>Defaults to FALSE, which is what a deploy did before this work: an editor
+that was open stayed as it was. Rebuilding someone's document under them
+mid-edit is a visible change, and it would reach every collaborator in the
+room whether or not they asked for any of this. Callers that need it ask
+for it, and none of them is a plain import.</p></li></ul>
   </section>
 </section>
 <section class="detail" id="parse_document/3">
@@ -242,7 +261,7 @@ merge operations where concurrent modifications are expected). Defaults to false
       <h1 class="signature" translate="no">parse_document(project, data, user_or_repo_connection \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L464" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L550" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -278,7 +297,7 @@ merge operations where concurrent modifications are expected). Defaults to false
       <h1 class="signature" translate="no">preload_dependencies(project, snapshots \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L612" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L698" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -297,6 +316,37 @@ merge operations where concurrent modifications are expected). Defaults to false
 <p>Preload all dependencies for a project.</p><p>Exclude deleted workflows.</p>
   </section>
 </section>
+<section class="detail" id="reconcilable_workflow_ids/1">
+
+  <div class="detail-header">
+    <a href="#reconcilable_workflow_ids/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">reconcilable_workflow_ids(data)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L166" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> reconcilable_workflow_ids(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: [<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()]</pre>
+
+      </div>
+
+<p>Extracts the workflow ids carried by an import/merge document that a live
+collaborative document should reconcile against, excluding workflows the
+document marks for deletion. Only workflows present in the document are
+returned, so sibling workflows on the target are never touched.</p>
+  </section>
+</section>
 <section class="detail" id="validate_extraneous_params/2">
 
     <span id="validate_extraneous_params/1"></span>
@@ -309,7 +359,7 @@ merge operations where concurrent modifications are expected). Defaults to false
       <h1 class="signature" translate="no">validate_extraneous_params(changeset, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L895" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L1008" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

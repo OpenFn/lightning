@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Release — Lightning v2.19.0-pre</title>
+    <title>Lightning.Release — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Release</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -139,6 +139,19 @@ installed.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#dump_adaptors/2" data-no-tooltip="" translate="no">dump_adaptors(path, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Write the adaptor catalogue to a JSON snapshot file, without the rest
+of the app running. It is the release equivalent of
+<a href="Mix.Tasks.Lightning.Adaptors.Dump.html"><code class="inline">mix lightning.adaptors.dump</code></a>. A release has no Mix, so run this
+through <code class="inline">bin/lightning eval</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#load_app/0" data-no-tooltip="" translate="no">load_app()</a>
 
       </div>
@@ -158,6 +171,19 @@ installed.</p>
         <a href="#rollback/2" data-no-tooltip="" translate="no">rollback(repo, version)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#seed_adaptors/2" data-no-tooltip="" translate="no">seed_adaptors(path, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Populate the adaptor catalogue from a JSON snapshot file, without
+reaching npm. It is the release equivalent of
+<a href="Mix.Tasks.Lightning.Adaptors.Import.html"><code class="inline">mix lightning.adaptors.import</code></a>. A release has no Mix, so run this
+through <code class="inline">bin/lightning eval</code>.</p></div>
 
     </div>
 
@@ -197,6 +223,34 @@ installed.</p>
 
   </section>
 </section>
+<section class="detail" id="dump_adaptors/2">
+
+    <span id="dump_adaptors/1"></span>
+
+  <div class="detail-header">
+    <a href="#dump_adaptors/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dump_adaptors(path, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/release.ex#L72" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Write the adaptor catalogue to a JSON snapshot file, without the rest
+of the app running. It is the release equivalent of
+<a href="Mix.Tasks.Lightning.Adaptors.Dump.html"><code class="inline">mix lightning.adaptors.dump</code></a>. A release has no Mix, so run this
+through <code class="inline">bin/lightning eval</code>.</p><h2 id="dump_adaptors/2-usage" class="section-heading"><a href="#dump_adaptors/2-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">bin</span><span class="o">/</span><span class="n">lightning</span><span class="w"> </span><span class="n">eval</span><span class="w"> </span><span class="sc">&#39;Lightning.Release.dump_adaptors(&quot;/path/to/snapshot.json&quot;)&#39;</span><span class="w">
+</span><span class="n">bin</span><span class="o">/</span><span class="n">lightning</span><span class="w"> </span><span class="n">eval</span><span class="w"> </span><span class="sc">&#39;Lightning.Release.dump_adaptors(&quot;/path/to/snapshot.json&quot;, source: :local)&#39;</span></code></pre>
+  </section>
+</section>
 <section class="detail" id="load_app/0">
 
   <div class="detail-header">
@@ -207,7 +261,7 @@ installed.</p>
       <h1 class="signature" translate="no">load_app()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/release.ex#L50" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/release.ex#L94" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -251,7 +305,7 @@ installed.</p>
       <h1 class="signature" translate="no">rollback(repo, version)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/release.ex#L39" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/release.ex#L83" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -261,6 +315,34 @@ installed.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="seed_adaptors/2">
+
+    <span id="seed_adaptors/1"></span>
+
+  <div class="detail-header">
+    <a href="#seed_adaptors/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">seed_adaptors(path, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/release.ex#L50" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Populate the adaptor catalogue from a JSON snapshot file, without
+reaching npm. It is the release equivalent of
+<a href="Mix.Tasks.Lightning.Adaptors.Import.html"><code class="inline">mix lightning.adaptors.import</code></a>. A release has no Mix, so run this
+through <code class="inline">bin/lightning eval</code>.</p><h2 id="seed_adaptors/2-usage" class="section-heading"><a href="#seed_adaptors/2-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">bin</span><span class="o">/</span><span class="n">lightning</span><span class="w"> </span><span class="n">eval</span><span class="w"> </span><span class="sc">&#39;Lightning.Release.seed_adaptors(&quot;/path/to/snapshot.json&quot;)&#39;</span><span class="w">
+</span><span class="n">bin</span><span class="o">/</span><span class="n">lightning</span><span class="w"> </span><span class="n">eval</span><span class="w"> </span><span class="sc">&#39;Lightning.Release.seed_adaptors(&quot;/path/to/snapshot.json&quot;, replace: true)&#39;</span></code></pre>
   </section>
 </section>
 

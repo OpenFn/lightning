@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Workflows.Query — Lightning v2.19.0-pre</title>
+    <title>Lightning.Workflows.Query — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Workflows.Query</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -156,7 +156,8 @@ or all jobs in a given project.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Returns snapshots that are no longer being used by any workflow, work order, run, or step.</p></div>
+        <div class="summary-synopsis"><p>Snapshots no longer referenced by a workflow, work order, run, step or
+release.</p></div>
 
     </div>
 
@@ -195,7 +196,7 @@ or all workflows in a given project.</p></div>
       <h1 class="signature" translate="no">enabled_cron_jobs_by_edge()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L65" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L66" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -224,7 +225,7 @@ service.</p>
       <h1 class="signature" translate="no">jobs_for(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L46" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L47" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -270,7 +271,10 @@ or all jobs in a given project.</p>
 
       </div>
 
-<p>Returns snapshots that are no longer being used by any workflow, work order, run, or step.</p><p>A snapshot is considered unused if:</p><ul><li>It's not the current version of any workflow (lock_version doesn't match workflow's lock_version)</li><li>It's not referenced by any work order</li><li>It's not referenced by any run</li><li>It's not referenced by any step</li></ul>
+<p>Snapshots no longer referenced by a workflow, work order, run, step or
+release.</p><p>Releases hold their snapshot with <code class="inline">on_delete: :restrict</code>, so a released
+snapshot that is otherwise unused would fail the retention purge rather than
+be skipped by it.</p>
   </section>
 </section>
 <section class="detail" id="workflows_for/1">
@@ -283,7 +287,7 @@ or all jobs in a given project.</p>
       <h1 class="signature" translate="no">workflows_for(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L22" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/query.ex#L23" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>Lightning.Projects.MergeProjects — Lightning v2.19.0-pre</title>
+    <title>Lightning.Projects.MergeProjects — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Projects.MergeProjects</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
@@ -169,6 +169,17 @@ sandbox workflows back onto their parent workflows.</p>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#workflow_diverged?/3" data-no-tooltip="" translate="no">workflow_diverged?(source_project, target_project, workflow_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Whether merging <code class="inline">workflow_name</code> from <code class="inline">source_project</code> into <code class="inline">target_project</code>
+would overwrite work the target has done since the source forked.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -193,7 +204,7 @@ sandbox workflows back onto their parent workflows.</p>
       <h1 class="signature" translate="no">diverged_workflows(source_project, target_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L1069" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L1067" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -213,11 +224,11 @@ sandbox workflows back onto their parent workflows.</p>
 
 <p>Returns the list of workflow names that have diverged between source and target projects.</p><p>A workflow is considered diverged when the target project (parent) has changed since the
 sandbox was forked. Specifically, a workflow has diverged if the target's current HEAD
-version is not present in the sandbox's version history.</p><p>Arguments can be reversed to get changes in a sandbox against main.</p><h2 id="diverged_workflows/2-parameters" class="section-heading"><a href="#diverged_workflows/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_project</code> - The sandbox project</li><li><code class="inline">target_project</code> - The target project to compare against</li></ul><h2 id="diverged_workflows/2-returns" class="section-heading"><a href="#diverged_workflows/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>List of workflow names (strings) that have diverged</li><li>Empty list if no workflows have diverged</li></ul><h2 id="diverged_workflows/2-examples" class="section-heading"><a href="#diverged_workflows/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">MergeProjects</span><span class="o">.</span><span class="n">diverged_workflows</span><span class="p" data-group-id="5244617821-1">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">parent</span><span class="p" data-group-id="5244617821-1">)</span><span class="w">
-</span><span class="p" data-group-id="5244617821-2">[</span><span class="s">&quot;Payment Processing&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Data Sync&quot;</span><span class="p" data-group-id="5244617821-2">]</span><span class="w">
+version is not present in the sandbox's version history.</p><p>Arguments can be reversed to get changes in a sandbox against main.</p><h2 id="diverged_workflows/2-parameters" class="section-heading"><a href="#diverged_workflows/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_project</code> - The sandbox project</li><li><code class="inline">target_project</code> - The target project to compare against</li></ul><h2 id="diverged_workflows/2-returns" class="section-heading"><a href="#diverged_workflows/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li>List of workflow names (strings) that have diverged</li><li>Empty list if no workflows have diverged</li></ul><h2 id="diverged_workflows/2-examples" class="section-heading"><a href="#diverged_workflows/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">MergeProjects</span><span class="o">.</span><span class="n">diverged_workflows</span><span class="p" data-group-id="6311634983-1">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">parent</span><span class="p" data-group-id="6311634983-1">)</span><span class="w">
+</span><span class="p" data-group-id="6311634983-2">[</span><span class="s">&quot;Payment Processing&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Data Sync&quot;</span><span class="p" data-group-id="6311634983-2">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">MergeProjects</span><span class="o">.</span><span class="n">diverged_workflows</span><span class="p" data-group-id="5244617821-3">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">parent</span><span class="p" data-group-id="5244617821-3">)</span><span class="w">
-</span><span class="p" data-group-id="5244617821-4">[</span><span class="p" data-group-id="5244617821-4">]</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">MergeProjects</span><span class="o">.</span><span class="n">diverged_workflows</span><span class="p" data-group-id="6311634983-3">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">parent</span><span class="p" data-group-id="6311634983-3">)</span><span class="w">
+</span><span class="p" data-group-id="6311634983-4">[</span><span class="p" data-group-id="6311634983-4">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="has_diverged?/2">
@@ -230,7 +241,7 @@ version is not present in the sandbox's version history.</p><p>Arguments can be 
       <h1 class="signature" translate="no">has_diverged?(source_project, target_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L1036" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L1034" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -264,7 +275,7 @@ which could lead to data loss during merge.</p><h2 id="has_diverged?/2-parameter
       <h1 class="signature" translate="no">merge_project(source, target, opts \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L47" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L54" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -309,7 +320,7 @@ workflows are processed and unmatched target workflows are deleted.</li></ul></l
       <h1 class="signature" translate="no">merge_workflow(source, target, new_uuid_map \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L149" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L156" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -331,6 +342,42 @@ workflows are processed and unmatched target workflows are deleted.</li></ul></l
 <p>Merges a sandbox workflow back onto its parent workflow using UUID mapping.</p><p>Maps nodes and edges from source to target workflow, preserving UUIDs where
 possible when merging two workflows (likely one is a fork of the other).</p><p>The algorithm follows these phases:</p><ol><li>Direct ID Matching - matches nodes with identical IDs</li><li>Root Node Mapping - always maps root nodes</li><li>Structural and Expression Matching - iterative matching using parents, children, and expression</li><li>Edge Mapping - maps edges based on node mappings</li></ol><h2 id="merge_workflow/3-parameters" class="section-heading"><a href="#merge_workflow/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source_workflow</code> - The sandbox workflow with modifications (i.e staging)</li><li><code class="inline">target_workflow</code> - The parent workflow to merge changes onto (i.e main)</li></ul><h2 id="merge_workflow/3-returns" class="section-heading"><a href="#merge_workflow/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>  A map with the merged workflow structure ready for import, containing
   UUID mappings and workflow data.</p>
+  </section>
+</section>
+<section class="detail" id="workflow_diverged?/3">
+
+  <div class="detail-header">
+    <a href="#workflow_diverged?/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">workflow_diverged?(source_project, target_project, workflow_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/merge_projects.ex#L1110" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> workflow_diverged?(
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) ::
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Whether merging <code class="inline">workflow_name</code> from <code class="inline">source_project</code> into <code class="inline">target_project</code>
+would overwrite work the target has done since the source forked.</p><p>Unlike <a href="#diverged_workflows/2"><code class="inline">diverged_workflows/2</code></a>, a name the source has no history for counts as
+divergence rather than being skipped, because a source workflow renamed onto a
+name the target already holds has never seen that target workflow.</p>
   </section>
 </section>
 

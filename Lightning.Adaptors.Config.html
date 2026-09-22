@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Lightning.Adaptors.Config — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Adaptors.Config</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Runtime configuration for the adaptors subsystem, read from
+<code class="inline">config :lightning, Lightning.Adaptors</code> on every call.</p><p>Strategy-specific options live under the strategy module's own key;
+see <a href="#strategy_opts/1"><code class="inline">strategy_opts/1</code></a>.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#cache_timeout_ms/0" data-no-tooltip="" translate="no">cache_timeout_ms()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>How long a read waits for a cache fill, in milliseconds. Defaults to
+15 seconds.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#default_instance/0" data-no-tooltip="" translate="no">default_instance()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The supervisor instance public <a href="Lightning.Adaptors.html"><code class="inline">Lightning.Adaptors</code></a> functions read
+through when called with no explicit instance. Defaults to
+<a href="Lightning.Adaptors.html"><code class="inline">Lightning.Adaptors</code></a>, the one started in <code class="inline">application.ex</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#first_load_timeout/0" data-no-tooltip="" translate="no">first_load_timeout()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Bound, in milliseconds, on how long <a href="Lightning.Adaptors.html#ensure_loaded/1"><code class="inline">Lightning.Adaptors.ensure_loaded/1</code></a>
+and <a href="Lightning.Adaptors.html#fetch_adaptor/2"><code class="inline">Lightning.Adaptors.fetch_adaptor/2</code></a> block waiting for the
+catalogue's first load. Defaults to 90 seconds.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#icon_path/0" data-no-tooltip="" translate="no">icon_path()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Filesystem path of the icon cache. A <code class="inline">{:tmp, suffix}</code> value is joined
+to <a href="https://hexdocs.pm/elixir/System.html#tmp_dir!/0"><code class="inline">System.tmp_dir!/0</code></a> at call time; a binary is returned as is.
+Defaults to <code class="inline">{:tmp, &quot;lightning/adaptor_icons&quot;}</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#refresh_interval/0" data-no-tooltip="" translate="no">refresh_interval()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Scheduler tick interval in milliseconds. Defaults to one hour.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#source_for/1" data-no-tooltip="" translate="no">source_for(strategy)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The catalogue <code class="inline">source</code> a strategy writes under.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#strategy/0" data-no-tooltip="" translate="no">strategy()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The active strategy module. Defaults to <a href="Lightning.Adaptors.NPM.html"><code class="inline">Lightning.Adaptors.NPM</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#strategy_opts/1" data-no-tooltip="" translate="no">strategy_opts(strategy_mod)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Options configured under the strategy module's own application key, or
+<code class="inline">[]</code> when unset.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#warn_when_empty?/0" data-no-tooltip="" translate="no">warn_when_empty?()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Whether a scheduler booting on an empty catalogue that no timer will
+fill should warn an operator. Defaults to true. Read once by
+<a href="Lightning.Adaptors.Supervisor.html"><code class="inline">Lightning.Adaptors.Supervisor</code></a> at boot and passed to the scheduler.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="cache_timeout_ms/0">
+
+  <div class="detail-header">
+    <a href="#cache_timeout_ms/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">cache_timeout_ms()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L85" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> cache_timeout_ms() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()</pre>
+
+      </div>
+
+<p>How long a read waits for a cache fill, in milliseconds. Defaults to
+15 seconds.</p>
+  </section>
+</section>
+<section class="detail" id="default_instance/0">
+
+  <div class="detail-header">
+    <a href="#default_instance/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">default_instance()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> default_instance() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()</pre>
+
+      </div>
+
+<p>The supervisor instance public <a href="Lightning.Adaptors.html"><code class="inline">Lightning.Adaptors</code></a> functions read
+through when called with no explicit instance. Defaults to
+<a href="Lightning.Adaptors.html"><code class="inline">Lightning.Adaptors</code></a>, the one started in <code class="inline">application.ex</code>.</p><p>Tests stub this to isolate reads to a private instance; see
+<code class="inline">Lightning.AdaptorTestHelpers.isolated_adaptors/1</code>.</p>
+  </section>
+</section>
+<section class="detail" id="first_load_timeout/0">
+
+  <div class="detail-header">
+    <a href="#first_load_timeout/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">first_load_timeout()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L108" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> first_load_timeout() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()</pre>
+
+      </div>
+
+<p>Bound, in milliseconds, on how long <a href="Lightning.Adaptors.html#ensure_loaded/1"><code class="inline">Lightning.Adaptors.ensure_loaded/1</code></a>
+and <a href="Lightning.Adaptors.html#fetch_adaptor/2"><code class="inline">Lightning.Adaptors.fetch_adaptor/2</code></a> block waiting for the
+catalogue's first load. Defaults to 90 seconds.</p>
+  </section>
+</section>
+<section class="detail" id="icon_path/0">
+
+  <div class="detail-header">
+    <a href="#icon_path/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">icon_path()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L95" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> icon_path() :: <a href="https://hexdocs.pm/elixir/Path.html#t:t/0">Path.t</a>()</pre>
+
+      </div>
+
+<p>Filesystem path of the icon cache. A <code class="inline">{:tmp, suffix}</code> value is joined
+to <a href="https://hexdocs.pm/elixir/System.html#tmp_dir!/0"><code class="inline">System.tmp_dir!/0</code></a> at call time; a binary is returned as is.
+Defaults to <code class="inline">{:tmp, &quot;lightning/adaptor_icons&quot;}</code>.</p>
+  </section>
+</section>
+<section class="detail" id="refresh_interval/0">
+
+  <div class="detail-header">
+    <a href="#refresh_interval/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">refresh_interval()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L66" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> refresh_interval() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()</pre>
+
+      </div>
+
+<p>Scheduler tick interval in milliseconds. Defaults to one hour.</p>
+  </section>
+</section>
+<section class="detail" id="source_for/1">
+
+  <div class="detail-header">
+    <a href="#source_for/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">source_for(strategy)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L46" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> source_for(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">module</a>()) :: :local | :npm</pre>
+
+      </div>
+
+<p>The catalogue <code class="inline">source</code> a strategy writes under.</p><p><a href="Lightning.Adaptors.Local.html"><code class="inline">Lightning.Adaptors.Local</code></a> and <a href="Lightning.Adaptors.NPM.html"><code class="inline">Lightning.Adaptors.NPM</code></a> are mapped
+here; any other strategy must declare a <code class="inline">:source</code> of <code class="inline">:npm</code> or
+<code class="inline">:local</code> under its own application key, or this raises rather than
+guessing at <code class="inline">:npm</code>.</p>
+  </section>
+</section>
+<section class="detail" id="strategy/0">
+
+  <div class="detail-header">
+    <a href="#strategy/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">strategy()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L33" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> strategy() :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">module</a>()</pre>
+
+      </div>
+
+<p>The active strategy module. Defaults to <a href="Lightning.Adaptors.NPM.html"><code class="inline">Lightning.Adaptors.NPM</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="strategy_opts/1">
+
+  <div class="detail-header">
+    <a href="#strategy_opts/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">strategy_opts(strategy_mod)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L117" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> strategy_opts(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">module</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()</pre>
+
+      </div>
+
+<p>Options configured under the strategy module's own application key, or
+<code class="inline">[]</code> when unset.</p>
+  </section>
+</section>
+<section class="detail" id="warn_when_empty?/0">
+
+  <div class="detail-header">
+    <a href="#warn_when_empty?/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">warn_when_empty?()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors/config.ex#L76" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> warn_when_empty?() :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Whether a scheduler booting on an empty catalogue that no timer will
+fill should warn an operator. Defaults to true. Read once by
+<a href="Lightning.Adaptors.Supervisor.html"><code class="inline">Lightning.Adaptors.Supervisor</code></a> at boot and passed to the scheduler.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

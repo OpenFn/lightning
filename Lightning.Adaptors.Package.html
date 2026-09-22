@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.19.0-pre">
+    <meta name="project" content="Lightning v2.19.0">
 
 
-    <title>mix lightning.install_adaptor_icons — Lightning v2.19.0-pre</title>
+    <title>Lightning.Adaptors.Package — Lightning v2.19.0</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AC3AF4A6.js"></script>
+    <script defer src="dist/sidebar_items-7C577CFB.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.19.0-pre
+          v2.19.0
         </div>
       </div>
     </div>
@@ -51,7 +51,7 @@ Lightning
 
 <output role="status" id="toast"></output>
 
-<main class="content page-task" id="main" data-type="tasks">
+<main class="content page-module" id="main" data-type="modules">
   <div id="content" class="content-inner">
     <div class="top-search">
       <div class="search-settings">
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">mix lightning.install_adaptor_icons</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.19.0-pre)</small>
+      <span translate="no">Lightning.Adaptors.Package</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_adaptor_icons.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors.ex#L51" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,11 +111,87 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Installs the adaptor icons</p>
+<p>One catalogue adaptor.</p>
     </section>
 
 </div>
 
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:t/0" data-no-tooltip="" translate="no">t()</a>
+
+      </div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:t/0">
+
+  <div class="detail-header">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">t()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptors.ex#L56" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Adaptors.Package{
+  deprecated: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+  description: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  has_schema: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+  icon_rectangle_ext: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  icon_rectangle_sha256: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil,
+  icon_square_ext: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  icon_square_sha256: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | nil,
+  latest_version: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  source: :npm | :local
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
 
     <footer class="footer">
 
