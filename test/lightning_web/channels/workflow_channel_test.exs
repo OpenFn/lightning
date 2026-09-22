@@ -6954,6 +6954,37 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "observability scope" do
+    test "the channel process carries user, project and workflow ids", %{
+      socket: socket,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      {:dictionary, dict} = Process.info(socket.channel_pid, :dictionary)
+      metadata = dict[:"$logger_metadata$"]
+
+      assert metadata.user_id == user.id
+      assert metadata.project_id == project.id
+      assert metadata.workflow_id == workflow.id
+    end
+
+    test "an unhandled event is reported to Sentry", %{socket: socket} do
+      Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
+
+      Mox.expect(Lightning.MockSentry, :capture_message, fn message, opts ->
+        assert message =~ "unhandled handle_in event: request_adaptors"
+        assert opts[:level] == :warning
+        :ok
+      end)
+
+      capture_log(fn ->
+        push(socket, "request_adaptors", %{})
+        Process.sleep(50)
+      end)
+    end
+  end
+
   describe "AI workflow apply coordination" do
     test "start_applying_workflow broadcasts workflow_applying event", %{
       socket: socket,
