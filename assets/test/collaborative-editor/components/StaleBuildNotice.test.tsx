@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { expect, test, vi } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 
 import { StaleBuildNotice } from '../../../js/collaborative-editor/components/StaleBuildNotice';
 import { notifications } from '../../../js/collaborative-editor/lib/notifications';
@@ -7,6 +7,10 @@ import { notifications } from '../../../js/collaborative-editor/lib/notification
 vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   notifications: { info: vi.fn(), dismiss: vi.fn() },
 }));
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 test('shows one info toast once the server reports a changed build', () => {
   const { rerender } = render(<StaleBuildNotice staticChanged={false} />);
@@ -23,7 +27,6 @@ test('shows one info toast once the server reports a changed build', () => {
 
 test('dismisses the toast when a later mount reports the build is current', () => {
   const { rerender } = render(<StaleBuildNotice staticChanged={true} />);
-  vi.mocked(notifications.dismiss).mockClear();
 
   rerender(<StaleBuildNotice staticChanged={false} />);
 

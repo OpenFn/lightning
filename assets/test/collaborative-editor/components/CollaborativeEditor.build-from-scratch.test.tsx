@@ -20,7 +20,9 @@ import {
   getURLStateMockValue,
 } from '../__helpers__/urlStateMocks';
 
-// --- Socket / channel plumbing (required for SocketProvider/SessionProvider to mount) ---
+// --- Socket / channel plumbing ---
+// window.userToken is unset, so SocketProvider never connects; this mock has
+// no onOpen/onClose/connect and would throw if it did.
 
 vi.mock('phoenix', () => ({
   Socket: vi.fn(() => ({
