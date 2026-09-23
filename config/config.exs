@@ -183,6 +183,11 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Without this every `DateTime.shift_zone/2` with a zone name returns
+# `{:error, :utc_only_time_zone_database}`. Needed by the workflow health
+# charts, which bucket on the reader's clock.
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+
 config :lightning, Lightning.Vault, json_library: Jason
 
 config :lightning, Lightning.FailureAlerter,

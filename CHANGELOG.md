@@ -21,8 +21,26 @@ and this project adheres to
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
   [#5200](https://github.com/OpenFn/lightning/pull/5200)
+- The workflow health charts now link into history. A donut wedge or legend row
+  opens the work orders it counted, filtered to those states and that window,
+  and a triage row opens the ones sharing its error signature.
+  [#5188](https://github.com/OpenFn/lightning/pull/5188)
+- A "Steps with failures" card on the workflow health page, ranking the jobs the
+  window's failures landed on, heaviest first.
 
 ### Changed
+
+- Failure alerts and project digests now link to the workflow health page, where
+  failures are grouped by error signature. The digest keeps its history link for
+  the runs behind its counts, and shows the health link only for workflows that
+  actually failed.
+- The runs volume chart on the workflow health page is now bucketed on your own
+  timezone rather than UTC, so a daily bar covers your day, the week view's bars
+  split at your noon, a day the clocks change is still one bar, and the card
+  names the clock it was drawn on. A browser that sends no timezone, or says it
+  does not know one, still gets UTC; one that sends a zone the tz database does
+  not know now gets an error.
+  [#5191](https://github.com/OpenFn/lightning/pull/5191)
 
 ### Removed
 

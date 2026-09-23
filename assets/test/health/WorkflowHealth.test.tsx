@@ -34,13 +34,15 @@ const errorSignatures = {
   ],
 };
 
-// Two buckets is the least the chart can measure its own width from. What the
-// bars look like is `VolumeBars`'s own test; the page only hands them through.
+// Bars as the server cuts them, on the reader's clock. What they look like
+// drawn is `VolumeBars`'s own test; the page only hands them through.
 const runVolume = {
   window: outcomes.window,
+  timezone: 'Africa/Nairobi',
+  bucket_hours: 2,
   buckets: [
     bucket('2026-08-30T00:00:00Z', { success: 40, failed: 3 }),
-    bucket('2026-08-31T00:00:00Z', { success: 60, failed: 1 }),
+    bucket('2026-08-30T01:00:00Z', { success: 60, failed: 1 }),
   ],
 };
 
@@ -127,14 +129,21 @@ describe('WorkflowHealth', () => {
     );
   });
 
-  test('moves the updated clock when the numbers arrive', async () => {
-    mount(both);
+  // Nothing server-side records a reader's timezone, so the request has to
+  // carry it or the chart's buckets are cut on UTC.
+  test("tells the server the reader's timezone", async () => {
+    const { fetchMock } = mount(both);
 
-    expect(
-      await screen.findByText(
-        `Last Updated ${new Date(outcomes.window.to).toLocaleTimeString()}`
-      )
-    ).toBeVisible();
+    await screen.findAllByText('Success');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/runs?days=30',
+      expect.objectContaining({
+        headers: {
+          'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      })
+    );
   });
 
   test('polls every 30 seconds while the tab is visible, and stops while hidden', async () => {
@@ -360,7 +369,7 @@ describe('WorkflowHealth', () => {
     mount({ outcomes: 404, failures: 404, runs: 404 });
 
     // Every slice refused takes every panel with it.
-    expect(await screen.findAllByText(ERROR)).toHaveLength(4);
+    expect(await screen.findAllByText(ERROR)).toHaveLength(5);
     expect(screen.queryByText(/404|Not Found/)).toBeNull();
   });
 
@@ -377,7 +386,9 @@ describe('WorkflowHealth', () => {
   test('keeps the donuts when only the triage query fails', async () => {
     mount({ ...both, failures: 500 });
 
-    expect(await screen.findByText(ERROR)).toBeVisible();
+    // Two panels read that one response — the triage table and the step bars
+    // folded from it — so both degrade together.
+    expect(await screen.findAllByText(ERROR)).toHaveLength(2);
     expect(screen.getAllByText('Success')[0]).toBeVisible();
     expect(screen.getByText('69.5%')).toBeVisible();
   });
@@ -397,6 +408,9 @@ describe('WorkflowHealth', () => {
       screen.getByRole('heading', { name: 'Failure breakdown' })
     ).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Triage' })).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'Steps with failures' })
+    ).toBeVisible();
   });
 
   test('aborts in-flight requests on unmount', async () => {
@@ -432,7 +446,7 @@ describe('WorkflowHealth', () => {
     expect(screen.queryAllByText('Success')).toHaveLength(0);
     // Each panel holds a placeholder, but only for a reader who lands inside
     // it. jsdom does no layout, so the reserved height needs a browser.
-    expect(screen.getAllByText('Loading…')).toHaveLength(4);
+    expect(screen.getAllByText('Loading…')).toHaveLength(5);
   });
 
   // Why the panels drop together rather than each keeping its own last answer:
@@ -446,7 +460,7 @@ describe('WorkflowHealth', () => {
     mount(responses);
 
     expect(
-      await screen.findByText('No failures in the last 30 days')
+      (await screen.findAllByText('No failures in the last 30 days'))[0]
     ).toBeVisible();
 
     // The cheap slice answers the new range; the heavy join never lands.
@@ -460,7 +474,9 @@ describe('WorkflowHealth', () => {
 
     await screen.findByText('1,287 work orders');
 
-    expect(screen.queryByText('No failures in the last 30 days')).toBeNull();
+    expect(
+      screen.queryAllByText('No failures in the last 30 days')
+    ).toHaveLength(0);
   });
 
   // The one case where the kept numbers are dropped: nothing is coming to

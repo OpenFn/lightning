@@ -115,10 +115,6 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "log" => true,
                "body" => false,
                "failed" => true,
-               "wo_date_after" => nil,
-               "wo_date_before" => nil,
-               "date_after" => nil,
-               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "dataclip_name" => true
              }
@@ -131,19 +127,28 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "failed" => true,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
              }) == %{
-               "id" => true,
-               "log" => true,
-               "body" => true,
                "failed" => true,
-               "wo_date_after" => nil,
-               "wo_date_before" => nil,
-               "date_after" => nil,
-               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "sort_direction" => "desc",
                "sort_by" => "inserted_at",
-               "dataclip_name" => true
+               "log" => true
              }
+    end
+
+    test "falls back to log alone when the caller names no search field" do
+      params =
+        SearchParams.to_uri_params(%{
+          "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
+        })
+
+      assert params == %{
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
+               "log" => true
+             }
+
+      # Reading the link back gives log alone, so the chip the reader sees is
+      # the field the search actually covers.
+      assert SearchParams.new(params).search_fields == [:log]
     end
 
     test "converts dates to string" do
@@ -162,10 +167,8 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "log" => false,
                "id" => false,
                "crashed" => true,
-               "wo_date_after" => nil,
                "wo_date_before" => now |> DateTime.to_string(),
                "date_after" => now |> DateTime.to_string(),
-               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "dataclip_name" => true
              }
