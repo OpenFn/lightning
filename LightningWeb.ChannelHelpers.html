@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-AAEED613.js"></script>
+    <script defer src="dist/sidebar_items-9D74D9E8.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -130,9 +130,11 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#reply_with/2" data-no-tooltip="" translate="no">reply_with(socket, reply)</a>
+        <a href="#reply_and_report/2" data-no-tooltip="" translate="no">reply_and_report(socket, reply)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Replies, and reports an error reply to Sentry.</p></div>
 
     </div>
 
@@ -150,17 +152,17 @@ Lightning
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="reply_with/2">
+<section class="detail" id="reply_and_report/2">
 
   <div class="detail-header">
-    <a href="#reply_with/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#reply_and_report/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">reply_with(socket, reply)</h1>
+      <h1 class="signature" translate="no">reply_and_report(socket, reply)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/channel_helpers.ex#L6" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/channels/channel_helpers.ex#L14" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -169,7 +171,9 @@ Lightning
 
   <section class="docstring">
 
-
+<p>Replies, and reports an error reply to Sentry.</p><p>Opt in only where an error means something unexpected happened, as on the
+worker-facing RunChannel. Errors a user can cause and act on belong in a
+plain <code class="inline">{:reply, {:error, ...}}</code>; see <code class="inline">.claude/rules/logging.md</code>.</p>
   </section>
 </section>
 
