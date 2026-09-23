@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
+    "test:e2e:sentry": "SENTRY_DSN=http://publickey@localhost:9911/1 SENTRY_FRONTEND_DSN=http://publickey@localhost:9911/1 PORT=4013 playwright test test/e2e/specs/smoke/sentry.spec.ts",
     "check": "tsc --build",
     "lint": "eslint -c eslint.config.js"
   },
