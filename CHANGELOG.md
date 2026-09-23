@@ -20,7 +20,7 @@ and this project adheres to
 - Report browser errors to Sentry when `SENTRY_FRONTEND_DSN` is set. Production
   builds now serve source maps, so Sentry shows original file names and lines.
   Browser events, server events and logs from the same tab share a `request_id`.
-  [#5196](https://github.com/OpenFn/lightning/pull/5196)
+  [#5203](https://github.com/OpenFn/lightning/pull/5203)
 
 ### Changed
 
