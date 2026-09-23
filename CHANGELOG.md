@@ -23,6 +23,9 @@ and this project adheres to
   [#5188](https://github.com/OpenFn/lightning/pull/5188)
 - A "Steps with failures" card on the workflow health page, ranking the jobs the
   window's failures landed on, heaviest first.
+- The workflow editor now tells you when Lightning has been updated since you
+  opened it, with a notice that stays until you reload or close it. Previously
+  an open editor could keep running the old version for hours after a deploy.
 
 ### Changed
 

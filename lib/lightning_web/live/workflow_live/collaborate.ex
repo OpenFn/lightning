@@ -82,6 +82,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        show_webhook_auth_modal: false,
        webhook_auth_method: nil,
        ai_assistant_enabled: AiAssistant.enabled?(),
+       static_changed: static_changed?(socket),
        experimental_features_enabled:
          Lightning.Accounts.experimental_features_enabled?(
            socket.assigns.current_user
@@ -239,6 +240,11 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       function={@banner.function}
       args={@banner.attrs}
     />
+    <link
+      rel="modulepreload"
+      phx-track-static
+      href={~p"/assets/js/collaborative-editor/CollaborativeEditor.js"}
+    />
     <div
       id="collaborative-editor-react"
       class="h-full"
@@ -268,6 +274,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-experimental-features={
         if @experimental_features_enabled, do: "true", else: "false"
       }
+      data-static-changed={if @static_changed, do: "true"}
       data-initial-run-data={
         if assigns[:initial_run_data],
           do: Jason.encode!(assigns[:initial_run_data]),
