@@ -10,7 +10,10 @@ export function StaleBuildNotice({
   staticChanged: boolean;
 }) {
   useEffect(() => {
-    if (!staticChanged) return;
+    if (!staticChanged) {
+      notifications.dismiss(TOAST_ID);
+      return;
+    }
 
     notifications.info({
       id: TOAST_ID,

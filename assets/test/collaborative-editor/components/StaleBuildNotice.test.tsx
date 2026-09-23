@@ -5,7 +5,7 @@ import { StaleBuildNotice } from '../../../js/collaborative-editor/components/St
 import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 
 vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
-  notifications: { info: vi.fn() },
+  notifications: { info: vi.fn(), dismiss: vi.fn() },
 }));
 
 test('shows one info toast once the server reports a changed build', () => {
@@ -19,4 +19,13 @@ test('shows one info toast once the server reports a changed build', () => {
   expect(options.id).toBe('stale-build');
   expect(options.duration).toBe(Infinity);
   expect(options.action).toMatchObject({ label: 'Reload' });
+});
+
+test('dismisses the toast when a later mount reports the build is current', () => {
+  const { rerender } = render(<StaleBuildNotice staticChanged={true} />);
+  vi.mocked(notifications.dismiss).mockClear();
+
+  rerender(<StaleBuildNotice staticChanged={false} />);
+
+  expect(notifications.dismiss).toHaveBeenCalledWith('stale-build');
 });
