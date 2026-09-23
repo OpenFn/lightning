@@ -26,6 +26,7 @@ and this project adheres to
 - The workflow editor now tells you when Lightning has been updated since you
   opened it, with a notice that stays until you reload or close it. Previously
   an open editor could keep running the old version for hours after a deploy.
+  [#5202](https://github.com/OpenFn/lightning/pull/5202)
 
 ### Changed
 
@@ -52,6 +53,7 @@ and this project adheres to
 
 - Leaving the workflow editor now closes its connection to the server. It used
   to stay open, reconnecting in the background, until the tab was closed.
+  [#5202](https://github.com/OpenFn/lightning/pull/5202)
 
 ### Security
 
