@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Channel joins now attach identity and resource scope (user, project, workflow,
+  run, worker) to both log lines and Sentry events, so an issue shows who and
+  what it affected rather than `Users Impacted: 0`.
+  [#5200](https://github.com/OpenFn/lightning/pull/5200)
 - The workflow health charts now link into history. A donut wedge or legend row
   opens the work orders it counted, filtered to those states and that window,
   and a triage row opens the ones sharing its error signature.
@@ -46,6 +50,11 @@ and this project adheres to
   plain markup.
 
 ### Fixed
+
+- The console logger and Sentry's logger handler had drifted to different
+  metadata allowlists, so keys such as `run_id` and `project_id` were logged but
+  never reached Sentry. Both now read one list from config.
+  [#5200](https://github.com/OpenFn/lightning/pull/5200)
 
 ### Security
 
