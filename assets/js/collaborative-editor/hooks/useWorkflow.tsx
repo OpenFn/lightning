@@ -376,6 +376,32 @@ export const useWorkflowEnabled = () => {
 // ACTION HOOKS (COMMANDS)
 // =============================================================================
 
+/**
+ * Switch the current workflow to draft, refreshing `contentLocked` so
+ * anything gated on it (e.g. the AI assistant) updates immediately.
+ *
+ * Split out from `useWorkflowActions` so callers that only need this one
+ * action - like the assistant panel's draft-mode banner - don't have to sit
+ * inside a `LiveViewActionsProvider`, which `useWorkflowActions` requires
+ * for its other, navigation-driving actions.
+ */
+export const useSwitchToDraft = () => {
+  const store = useWorkflowStoreContext();
+  const context = useContext(StoreContext);
+
+  if (!context) {
+    throw new Error('useSwitchToDraft must be used within StoreProvider');
+  }
+
+  const sessionContextStore = context.sessionContextStore;
+
+  return async () => {
+    const response = await store.switchToDraft();
+    await sessionContextStore.requestSessionContext();
+    return response;
+  };
+};
+
 export const useWorkflowActions = () => {
   const store = useWorkflowStoreContext();
   const context = useContext(StoreContext);

@@ -20,6 +20,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AIAssistantPanel } from '../../../js/collaborative-editor/components/AIAssistantPanel';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import { createAIAssistantStore } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
 import { createMockJobCodeContext } from '../__helpers__/aiAssistantHelpers';
 import {
@@ -28,6 +29,10 @@ import {
   defaultSessionContextState,
 } from '../__helpers__/storeMocks';
 
+// AIAssistantPanel now renders a "switch to draft" AlertDialog for the
+// draft-mode banner, and AlertDialog uses useKeyboardShortcut (Escape to
+// close) unconditionally - matching the real render tree in
+// CollaborativeEditor.tsx, which wraps everything in a KeyboardProvider.
 describe('AIAssistantPanel', () => {
   let mockStore: ReturnType<typeof createAIAssistantStore>;
   let mockHistoryStore: ReturnType<typeof createMockHistoryStore>;
@@ -50,7 +55,7 @@ describe('AIAssistantPanel', () => {
           } as any
         }
       >
-        {ui}
+        <KeyboardProvider>{ui}</KeyboardProvider>
       </StoreContext.Provider>
     );
   };
@@ -439,13 +444,15 @@ describe('AIAssistantPanel', () => {
             } as any
           }
         >
-          <AIAssistantPanel
-            isOpen={true}
-            onClose={mockOnClose}
-            sessionId="session-123"
-          >
-            <div>Chat Content</div>
-          </AIAssistantPanel>
+          <KeyboardProvider>
+            <AIAssistantPanel
+              isOpen={true}
+              onClose={mockOnClose}
+              sessionId="session-123"
+            >
+              <div>Chat Content</div>
+            </AIAssistantPanel>
+          </KeyboardProvider>
         </StoreContext.Provider>
       );
 
@@ -478,13 +485,15 @@ describe('AIAssistantPanel', () => {
             } as any
           }
         >
-          <AIAssistantPanel
-            isOpen={true}
-            onClose={mockOnClose}
-            sessionId={null}
-          >
-            <div>Chat Content</div>
-          </AIAssistantPanel>
+          <KeyboardProvider>
+            <AIAssistantPanel
+              isOpen={true}
+              onClose={mockOnClose}
+              sessionId={null}
+            >
+              <div>Chat Content</div>
+            </AIAssistantPanel>
+          </KeyboardProvider>
         </StoreContext.Provider>
       );
 
