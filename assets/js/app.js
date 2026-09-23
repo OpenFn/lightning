@@ -45,13 +45,25 @@ const metaContent = name =>
 // and sends nothing.
 const sentryDsn = metaContent('sentry-dsn');
 
+// localStorage throws when the browser blocks site data.
+const localFlag = key => {
+  try {
+    return localStorage.getItem(key) === 'true';
+  } catch {
+    return false;
+  }
+};
+
 Sentry.init({
   dsn: sentryDsn,
-  enabled: Boolean(sentryDsn),
   environment: metaContent('sentry-environment'),
   release: metaContent('sentry-release'),
-  // This app handles health data — never ship IPs/headers by default.
-  sendDefaultPii: false,
+  debug: localFlag('sentryDebug'),
+  beforeSend: event => {
+    if (!localFlag('sentryDryRun')) return event;
+    console.log('[sentry dry-run]', event);
+    return null;
+  },
   ignoreErrors: [
     // Benign, browser-generated, and not actionable.
     'ResizeObserver loop limit exceeded',
