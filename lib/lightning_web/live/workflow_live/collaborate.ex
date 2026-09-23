@@ -240,9 +240,13 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       function={@banner.function}
       args={@banner.attrs}
     />
+    <%!-- phx-update="ignore" stops a rejoin from patching href to the new
+    build's digest, so later reconnects still report the bundle this tab loaded. --%>
     <link
+      id="collaborative-editor-bundle"
       rel="modulepreload"
       phx-track-static
+      phx-update="ignore"
       href={~p"/assets/js/collaborative-editor/CollaborativeEditor.js"}
     />
     <div
