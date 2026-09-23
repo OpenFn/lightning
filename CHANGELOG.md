@@ -27,6 +27,9 @@ and this project adheres to
   [#5188](https://github.com/OpenFn/lightning/pull/5188)
 - A "Steps with failures" card on the workflow health page, ranking the jobs the
   window's failures landed on, heaviest first.
+- The workflow editor is read-only while the AI Assistant streams a workflow
+  response, so user edits can't collide with a reply rewriting the canvas.
+  [#5204](https://github.com/OpenFn/lightning/pull/5204)
 
 ### Changed
 
