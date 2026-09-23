@@ -26,6 +26,8 @@ and this project adheres to
 
 ### Changed
 
+- Update Project and Workflow yaml exports to match the v4 portability spec
+  [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - Failure alerts and project digests now link to the workflow health page, where
   failures are grouped by error signature. The digest keeps its history link for
   the runs behind its counts, and shows the health link only for workflows that
@@ -46,6 +48,10 @@ and this project adheres to
   plain markup.
 
 ### Fixed
+
+- GitHub sync now prevents two projects in the same project tree (root,
+  sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
+  pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
 
 ### Security
 
