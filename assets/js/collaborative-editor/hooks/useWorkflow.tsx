@@ -1019,6 +1019,8 @@ export const useCanRun = (
  *    switching to draft would not make an old version editable
  * 4. The lifecycle lock (content_locked), which is an editor's way out
  * 5. Template preview (new workflow with selected template)
+ * 6. AI Assistant streaming a workflow response, which may rewrite the
+ *    canvas mid-stream; user edits are locked until the reply completes
  *
  * Note: Connection state does not affect read-only status. Offline editing
  * is fully supported - Y.Doc buffers transactions locally and syncs when
@@ -1031,7 +1033,34 @@ export type WorkflowReadOnlyReason =
   | 'pinned_version'
   | 'as_run'
   | 'unsaved_new'
+  | 'ai_streaming'
   | null;
+
+const noopSubscribe = () => () => {};
+const returnFalse = () => false;
+
+/**
+ * Whether the AI Assistant is streaming a workflow_template response, during
+ * which it may rewrite the canvas and clobber concurrent user edits. job_code
+ * sessions don't touch the canvas.
+ */
+const useIsAIBuildingWorkflow = (): boolean => {
+  const aiAssistantStore = useContext(StoreContext)?.aiAssistantStore;
+  const getSnapshot = useMemo(
+    () =>
+      aiAssistantStore
+        ? aiAssistantStore.withSelector(
+            state =>
+              state.isLoading && state.sessionType === 'workflow_template'
+          )
+        : returnFalse,
+    [aiAssistantStore]
+  );
+  return useSyncExternalStore(
+    aiAssistantStore?.subscribe ?? noopSubscribe,
+    getSnapshot
+  );
+};
 
 export const useWorkflowReadOnly = (): {
   isReadOnly: boolean;
@@ -1047,6 +1076,8 @@ export const useWorkflowReadOnly = (): {
   const contentLocked = useContentLocked();
 
   const { isPinnedVersion, isViewingAsExecuted } = usePinnedView();
+
+  const isAIBuildingWorkflow = useIsAIBuildingWorkflow();
 
   // Check if this is a new workflow with content (from template or AI)
   // Users must click "Create" before they can edit
@@ -1106,6 +1137,14 @@ export const useWorkflowReadOnly = (): {
       tooltipMessage:
         'This workflow has not been saved yet and cannot be edited',
       reason: 'unsaved_new',
+    };
+  }
+  if (isAIBuildingWorkflow) {
+    return {
+      isReadOnly: true,
+      tooltipMessage:
+        'The AI Assistant is updating this workflow. You can edit it once the response is complete',
+      reason: 'ai_streaming',
     };
   }
 

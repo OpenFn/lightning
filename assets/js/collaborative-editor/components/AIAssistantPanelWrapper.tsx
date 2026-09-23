@@ -128,7 +128,7 @@ export function AIAssistantPanelWrapper({
   const isPinnedVersion = pinnedView.isPinnedView;
   const currentVersion = pinnedView.version ?? undefined;
 
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, reason: readOnlyReason } = useWorkflowReadOnly();
   const isNewWorkflow = useIsNewWorkflow();
 
   // Track IDE state changes to re-focus chat input when IDE closes
@@ -186,8 +186,9 @@ export function AIAssistantPanelWrapper({
   const workflow = useWorkflowState(state => state.workflow);
   const limits = useLimits();
 
-  // AI can apply changes if: not readonly OR is a new workflow (being created)
-  const canApplyChanges = !isReadOnly || isNewWorkflow;
+  // ai_streaming locks the canvas against user edits, not the assistant's own apply.
+  const canApplyChanges =
+    !isReadOnly || isNewWorkflow || readOnlyReason === 'ai_streaming';
   const isWriteDisabled = !canApplyChanges;
 
   const jobs = useWorkflowState(state => state.jobs);

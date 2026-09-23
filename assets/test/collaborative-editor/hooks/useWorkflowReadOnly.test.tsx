@@ -14,6 +14,8 @@ import { SessionContext } from '../../../js/collaborative-editor/contexts/Sessio
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { useWorkflowReadOnly } from '../../../js/collaborative-editor/hooks/useWorkflow';
+import type { AIAssistantStoreInstance } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
+import { createAIAssistantStore } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
 import type { SessionContextStoreInstance } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
@@ -63,6 +65,7 @@ function createWrapper(options: WrapperOptions = {}): [
   {
     sessionContextStore: SessionContextStoreInstance;
     workflowStore: WorkflowStoreInstance;
+    aiAssistantStore: AIAssistantStoreInstance;
     ydoc: Session.WorkflowDoc;
     mockChannel: any;
     emitSessionContext: () => void;
@@ -81,6 +84,7 @@ function createWrapper(options: WrapperOptions = {}): [
   const sessionStore = createTestSessionStore();
   const sessionContextStore = createSessionContextStore();
   const workflowStore = createWorkflowStore();
+  const aiAssistantStore = createAIAssistantStore();
 
   // Create Y.Doc and set up workflow data
   const ydoc = new Y.Doc() as Session.WorkflowDoc;
@@ -163,6 +167,7 @@ function createWrapper(options: WrapperOptions = {}): [
   const mockStoreValue: StoreContextValue = {
     sessionContextStore,
     workflowStore,
+    aiAssistantStore,
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
@@ -187,6 +192,7 @@ function createWrapper(options: WrapperOptions = {}): [
     {
       sessionContextStore,
       workflowStore,
+      aiAssistantStore,
       ydoc,
       mockChannel,
       emitSessionContext,
@@ -966,6 +972,102 @@ describe('useWorkflowReadOnly - what is on screen decides first', () => {
 
     await waitFor(() => {
       expect(result.current.reason).toBe('as_run');
+    });
+  });
+});
+
+// =============================================================================
+// AI ASSISTANT STREAMING TESTS
+// =============================================================================
+
+describe('useWorkflowReadOnly - AI Assistant Streaming', () => {
+  test('locks editing while a workflow_template response is streaming', async () => {
+    const [wrapper, { aiAssistantStore, emitSessionContext }] = createWrapper();
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+      aiAssistantStore.connect('workflow_template', {
+        project_id: 'project-1',
+        workflow_id: 'test-workflow-123',
+      });
+      aiAssistantStore._setProcessingState(true);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('ai_streaming');
+      expect(result.current.tooltipMessage).toBe(
+        'The AI Assistant is updating this workflow. You can edit it once the response is complete'
+      );
+    });
+  });
+
+  test('unlocks editing once the response completes', async () => {
+    const [wrapper, { aiAssistantStore, emitSessionContext }] = createWrapper();
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+      aiAssistantStore.connect('workflow_template', {
+        project_id: 'project-1',
+        workflow_id: 'test-workflow-123',
+      });
+      aiAssistantStore._setProcessingState(true);
+    });
+
+    await waitFor(() => {
+      expect(result.current.reason).toBe('ai_streaming');
+    });
+
+    act(() => {
+      aiAssistantStore._setProcessingState(false);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(false);
+      expect(result.current.reason).toBe(null);
+    });
+  });
+
+  test('does not lock the canvas for a streaming job_code session', async () => {
+    const [wrapper, { aiAssistantStore, emitSessionContext }] = createWrapper();
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+      aiAssistantStore.connect('job_code', { job_id: 'job-1' });
+      aiAssistantStore._setProcessingState(true);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(false);
+      expect(result.current.reason).toBe(null);
+    });
+  });
+
+  test('permanent read-only reasons take priority over ai_streaming', async () => {
+    const [wrapper, { aiAssistantStore, emitSessionContext }] = createWrapper({
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+      aiAssistantStore.connect('workflow_template', {
+        project_id: 'project-1',
+        workflow_id: 'test-workflow-123',
+      });
+      aiAssistantStore._setProcessingState(true);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('no_permission');
     });
   });
 });
