@@ -47,6 +47,9 @@ and this project adheres to
 
 ### Fixed
 
+- Leaving the workflow editor now closes its connection to the server. It used
+  to stay open, reconnecting in the background, until the tab was closed.
+
 ### Security
 
 - Bumped `mint` to 1.10.1, clearing

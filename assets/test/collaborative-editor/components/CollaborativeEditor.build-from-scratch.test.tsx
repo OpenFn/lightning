@@ -24,8 +24,6 @@ import {
 
 vi.mock('phoenix', () => ({
   Socket: vi.fn(() => ({
-    connect: vi.fn(),
-    disconnect: vi.fn(),
     channel: vi.fn(() => ({
       join: vi.fn(() => ({
         receive: vi.fn((status: string, callback: () => void) => {
