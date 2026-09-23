@@ -20,8 +20,7 @@ import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
 
 logger.ns('TemplatePublishPanel').seal();
 
-// Validation schema matching backend constraints, meaning
-// Lightning.Workflows.WorkflowTemplate.changeset/2.
+// Mirrors Lightning.Workflows.WorkflowTemplate.changeset/2.
 //
 // name is counted in codepoints (the unit the column is measured in) and
 // description in graphemes (the unit the server's product cap uses), because

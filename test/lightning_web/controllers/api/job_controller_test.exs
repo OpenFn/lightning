@@ -36,7 +36,7 @@ defmodule LightningWeb.API.JobControllerTest do
                  "attributes" => %{"name" => "some name"},
                  "id" => job.id,
                  "links" => %{
-                   "self" => "http://localhost:4002/api/jobs/#{job.id}"
+                   "self" => "#{LightningWeb.Endpoint.url()}/api/jobs/#{job.id}"
                  },
                  "relationships" => %{},
                  "type" => "jobs"
@@ -63,7 +63,7 @@ defmodule LightningWeb.API.JobControllerTest do
                  "attributes" => %{"name" => "some name"},
                  "id" => job.id,
                  "links" => %{
-                   "self" => "http://localhost:4002/api/jobs/#{job.id}"
+                   "self" => "#{LightningWeb.Endpoint.url()}/api/jobs/#{job.id}"
                  },
                  "relationships" => %{},
                  "type" => "jobs"
@@ -88,7 +88,7 @@ defmodule LightningWeb.API.JobControllerTest do
                "attributes" => %{"name" => "some name"},
                "id" => job.id,
                "links" => %{
-                 "self" => "http://localhost:4002/api/jobs/#{job.id}"
+                 "self" => "#{LightningWeb.Endpoint.url()}/api/jobs/#{job.id}"
                },
                "relationships" => %{},
                "type" => "jobs"

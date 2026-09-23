@@ -91,7 +91,7 @@ config :oauth2, adapter: Tesla.Adapter.Hackney
 # hackney 4 negotiates HTTP/2 via ALPN by default, where 1.x was HTTP/1.1 only.
 # Concurrent requests to one host then multiplex onto a single connection, so
 # retiring that connection fails every in-flight request at once -- around a
-# quarter of the fetches in `mix lightning.install_schemas`. Pinned to HTTP/1.1
+# quarter of a bulk schema fetch when this was first seen. Pinned to HTTP/1.1
 # to keep the transport hackney 1.25 used; revisit as a deliberate change if we
 # want h2 multiplexing.
 config :hackney, default_protocols: [:http1]
@@ -172,6 +172,11 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Without this every `DateTime.shift_zone/2` with a zone name returns
+# `{:error, :utc_only_time_zone_database}`. Needed by the workflow health
+# charts, which bucket on the reader's clock.
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 
 config :lightning, Lightning.Vault, json_library: Jason
 

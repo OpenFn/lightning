@@ -20,6 +20,27 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
   describe "index" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
+    test "does not publish the workflow lifecycle", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project, state: :live)
+      insert(:trigger, workflow: workflow)
+
+      index = get(conn, ~p"/api/workflows") |> json_response(200)
+
+      for rendered <- index["workflows"] do
+        refute Map.has_key?(rendered, "state")
+        assert Map.has_key?(rendered, "name")
+      end
+
+      show =
+        get(conn, ~p"/api/workflows/#{workflow.id}") |> json_response(200)
+
+      refute Map.has_key?(show["workflow"], "state")
+      assert Map.has_key?(show["workflow"], "name")
+    end
+
     test "lists workflows for projects I have access to", %{
       conn: conn,
       project: project
@@ -1909,7 +1930,13 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     item
     |> Jason.encode!()
     |> Jason.decode!()
+    |> drop_workflow_state()
   end
+
+  defp drop_workflow_state(%{"state" => _} = workflow),
+    do: Map.delete(workflow, "state")
+
+  defp drop_workflow_state(other), do: other
 
   defp remove_timestamps([%{"edges" => _el} | _workflows] = list)
        when is_list(list) do

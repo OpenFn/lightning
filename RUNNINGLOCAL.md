@@ -79,8 +79,6 @@ mix local.rebar --force
 [[ $(uname -m) == 'arm64' ]] && CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib mix deps.compile enacl # Force compile enacl if on M1
 [[ $(uname -m) == 'arm64' ]] && mix compile.rambo # Force compile rambo if on M1
 mix lightning.install_runtime
-mix lightning.install_schemas
-mix lightning.install_adaptor_icons
 mix ecto.create
 mix ecto.migrate
 npm install --prefix assets
@@ -142,72 +140,18 @@ you.
 
 [Learn more about configuring workers](WORKERS.md)
 
-### Using Local Adaptors
+### Using local adaptors
 
-You can force lightning to use adaptor builds from your local
-[adaptors](https://github.com/openfn/adaptors) repo.
+To run Lightning against your own checkout of the
+[adaptors](https://github.com/openfn/adaptors) repo, see
+[ADAPTORS.md](ADAPTORS.md).
 
-Note that this is a global toggle: ALL runs will use local adaptor versions, and
-the adaptor picklist in the Workflow Editor will only suggest adaptors present
-in the monorepo.
+### Caching the adaptor upstreams
 
-Remember to re-build your adaptors after making changes (use
-`pnpm build --watch` in the monorepo).
-
-To start, set up the following environment variables:
-
-- `LOCAL_ADAPTORS`: Used to enable or disable the local adaptors mode. Set it to
-  `true` to enable.
-- `OPENFN_ADAPTORS_REPO`: This should point to the adaptors monorepo. This is
-  the same variable used when you pass `-m` to the CLI. It also accepts a
-  comma-separated list of paths to merge multiple repos into the registry; the
-  first path wins on dirname collisions, with a warning logged for shadowed
-  entries. Both the registry view and the bundled `ws-worker` resolve `@local`
-  adaptors against the same list, so a workflow run picks up the same package
-  the picker shows.
-
-Example configuration:
-
-```sh
-export LOCAL_ADAPTORS=true
-export OPENFN_ADAPTORS_REPO=/path/to/repo/
-
-# Or, merge a private adaptor repo with the canonical one (first wins):
-export OPENFN_ADAPTORS_REPO=/path/to/private,/path/to/canonical
-```
-
-You can also run the server directly in local mode with:
-
-```sh
-LOCAL_ADAPTORS=true mix phx.server
-```
-
-Each path in `OPENFN_ADAPTORS_REPO` must contain a `packages` subdirectory.
-Paths that are missing or unreadable are logged and skipped, so the rest of the
-list still loads.
-
-#### Credential schemas in local mode
-
-Credential schemas (used by the credential form's type picker and validation)
-are installed separately from the adaptor registry, into `priv/schemas/`.
-
-By default `mix lightning.install_schemas` will download schemas from the npm
-registry.
-
-Set LOCAL_ADAPTORS to true and `install_schemas` will read each package's
-`configuration-schema.json` from the monorepo.
-
-```sh
-LOCAL_ADAPTORS=true mix lightning.install_schemas
-```
-
-This clears and repopulates `priv/schemas/` from the local repo(s) ONLY. Re-run
-it after adding or changing a `configuration-schema.json` to get the latest
-changes. Packages without a schema are skipped.
-
-Remember to re-generate the production schemas when you've finished, or else
-your local app will use the local schema versions until `install_schemas` is
-next run!
+For a record-and-replay proxy in front of npm, jsDelivr and GitHub while
+developing, see `tooling/adaptor_cache/README.md`. The `ADAPTORS_NPM_*`
+variables that point Lightning at it are described in
+[ADAPTORS.md](ADAPTORS.md).
 
 ### Problems with Apple Silicon
 

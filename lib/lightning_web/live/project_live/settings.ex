@@ -342,7 +342,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   # `can_edit_project`. Privileged fields (requires_mfa, scheduled_deletion,
   # retention, allow_support_access, parent_id) are deliberately excluded so a
   # crafted payload cannot set them past their own dedicated gates.
-  @project_settings_fields ~w(raw_name name description concurrency color env)
+  @project_settings_fields ~w(raw_name name description concurrency color)
 
   # Retention fields, gated by `can_edit_data_retention`.
   @retention_fields ~w(retention_policy history_retention_period

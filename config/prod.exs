@@ -28,8 +28,4 @@ config :phoenix, :filter_parameters, [
   "token"
 ]
 
-config :lightning,
-  schemas_path: "priv/schemas",
-  adaptor_icons_path: "priv/static/images/adaptors"
-
 config :lightning, :claim_work_mem, "32MB"

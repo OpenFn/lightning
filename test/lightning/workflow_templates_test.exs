@@ -26,7 +26,7 @@ defmodule Lightning.WorkflowTemplatesTest do
 
     test "a NUL in positions is a changeset error, not a 22P05" do
       # positions is a jsonb map, and Postgres refuses a NUL anywhere inside
-      # jsonb, keys included (#4893).
+      # jsonb, keys included.
       for positions <- [
             %{"node\u{0000}id" => %{"x" => 1}},
             %{"node" => %{"label" => "a\u{0000}b"}}

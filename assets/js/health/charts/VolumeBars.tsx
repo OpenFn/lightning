@@ -8,6 +8,7 @@ import {
   YAxis,
 } from 'recharts';
 
+import { historyUrl } from '../historyUrl';
 import type { FailureState } from '../types';
 import { FAILURE_STATES } from '../types';
 
@@ -20,8 +21,9 @@ import { CANCELLED, FAILED, SUCCESS } from './OutcomesDonut';
  *
  * Counts runs where the donuts beside it count work orders, so the two differ
  * on purpose and the card carries no total. Buckets arrive already counted and
- * zero-filled from `Stats.runs/2` — one row per bar, one key per run state,
- * which is the shape Recharts takes as `data`.
+ * zero-filled from `Stats.runs/3` — one row per bar, one key per run state,
+ * which is the shape Recharts takes as `data` — on a grid cut to the reader's
+ * calendar, so every label here follows `timezone` rather than the browser.
  */
 
 // A run has no `rejected` state — a work order rejected on arrival never
@@ -29,7 +31,7 @@ import { CANCELLED, FAILED, SUCCESS } from './OutcomesDonut';
 // both.
 type RunFailureState = Exclude<FailureState, 'rejected'>;
 
-const RUN_FAILURE_STATES = FAILURE_STATES.filter(
+export const RUN_FAILURE_STATES = FAILURE_STATES.filter(
   (state): state is RunFailureState => state !== 'rejected'
 );
 
@@ -47,23 +49,47 @@ export interface RunBucket {
 
 export interface RunVolume {
   window: { from: string; to: string };
+  /** The clock the server cut the grid on. Every label follows it. */
+  timezone: string;
+  /** Bar width, in wall-clock hours on that clock: 2, 12 or 24. */
+  bucket_hours: number;
   buckets: RunBucket[];
 }
 
 // Top to bottom, as the legend and the spoken totals read. The bars draw from
 // the reverse of it, since Recharts puts the first `Bar` on the axis.
+//
+// `states` is what the band actually stacked, and is what its history link
+// filters on — the red one folds five, and it is the only place those five can
+// be named.
 const SERIES = [
-  { key: 'success', label: 'Success', color: SUCCESS },
-  { key: 'cancelled', label: 'Cancelled', color: CANCELLED },
-  { key: 'failed', label: 'Failed', color: FAILED },
+  { key: 'success', label: 'Success', color: SUCCESS, states: ['success'] },
+  {
+    key: 'cancelled',
+    label: 'Cancelled',
+    color: CANCELLED,
+    states: ['cancelled'],
+  },
+  { key: 'failed', label: 'Failed', color: FAILED, states: RUN_FAILURE_STATES },
 ] as const;
 
 interface VolumeBarsProps {
   buckets: RunBucket[];
+  timezone: string;
+  hours: number;
   emptyMessage: string;
+  projectId: string;
+  workflowId: string;
 }
 
-export const VolumeBars = ({ buckets, emptyMessage }: VolumeBarsProps) => {
+export const VolumeBars = ({
+  buckets,
+  timezone,
+  hours,
+  emptyMessage,
+  projectId,
+  workflowId,
+}: VolumeBarsProps) => {
   const rows = buckets.map(bucket => ({
     at: bucket.at,
     success: bucket.success,
@@ -84,8 +110,6 @@ export const VolumeBars = ({ buckets, emptyMessage }: VolumeBarsProps) => {
     return <p className={EMPTY}>{emptyMessage}</p>;
   }
 
-  const hours = bucketHours(buckets);
-
   return (
     <>
       {/* The donut's `FRAME` is a fixed box and gains nothing from extra
@@ -104,7 +128,7 @@ export const VolumeBars = ({ buckets, emptyMessage }: VolumeBarsProps) => {
                 to thin the axis itself Recharts drops named bars too. */}
             <XAxis
               dataKey="at"
-              tickFormatter={at => tickLabel(at as string, hours)}
+              tickFormatter={at => tickLabel(at as string, hours, timezone)}
               tickLine={false}
               axisLine={false}
               interval={hours >= 12 && hours < 24 ? 0 : 'preserveEnd'}
@@ -132,22 +156,42 @@ export const VolumeBars = ({ buckets, emptyMessage }: VolumeBarsProps) => {
               content={
                 <ChartTooltip
                   reverse
-                  formatLabel={at => rangeLabel(at, hours)}
+                  formatLabel={at => rangeLabel(at, hours, timezone)}
                 />
               }
             />
             {/* Reversed, so failures land on the axis and can be read against
-                a fixed baseline day to day rather than judged by thickness. */}
-            {[...totals].reverse().map(({ key, label: name, color }) => (
-              <Bar
-                key={key}
-                dataKey={key}
-                name={name}
-                stackId="runs"
-                maxBarSize={64}
-                fill={color}
-              />
-            ))}
+                a fixed baseline day to day rather than judged by thickness.
+
+                Each band links to its own states rather than the chart
+                carrying one link for the whole column: the red band is the
+                answer most readers came for, and a column-wide link would
+                make them filter the failures out again on arrival. Clicking
+                is a mouse affordance only — the frame is `aria-hidden`, and
+                thirty bars times three bands is not a link list. */}
+            {[...totals]
+              .reverse()
+              .map(({ key, label: name, color, states }) => (
+                <Bar
+                  key={key}
+                  dataKey={key}
+                  name={name}
+                  stackId="runs"
+                  maxBarSize={64}
+                  fill={color}
+                  className="cursor-pointer"
+                  onClick={(_bar, index) => {
+                    const href = bucketUrl(
+                      projectId,
+                      workflowId,
+                      buckets,
+                      index,
+                      states
+                    );
+                    if (href) window.open(href, '_blank');
+                  }}
+                />
+              ))}
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -183,69 +227,103 @@ export const VolumeBars = ({ buckets, emptyMessage }: VolumeBarsProps) => {
   );
 };
 
-// Read off the data rather than passed in, so nothing naming the bucket width
-// can disagree with the bars under it. A window too short to measure reads as
-// daily, which only ever costs a coarser label.
-const bucketHours = (buckets: RunBucket[]) => {
-  const [first, second] = buckets;
-
-  return first && second
-    ? (Date.parse(second.at) - Date.parse(first.at)) / 3_600_000
-    : 24;
-};
+/**
+ * The card's meta line: the bar width this range draws, and the clock it is
+ * drawn on.
+ *
+ * Names the timezone because the grid is cut on the reader's own clock rather
+ * than UTC, and a bar labelled `Mar 3` is only unambiguous once the reader
+ * knows whose `Mar 3` it is.
+ */
+export const bucketMeta = ({ timezone, bucket_hours: hours }: RunVolume) =>
+  `${hours >= 24 ? 'daily' : `${hours}-hour`} buckets · ${timezone}`;
 
 /**
- * The card's meta line, measured off the same buckets the chart draws.
+ * The history link for one band of one bar: the work orders with a run
+ * created inside the bar's slot that settled in one of the band's states.
  *
- * Names the zone as well as the width: the axis and the tooltip are in UTC,
- * while the page's freshness stamp is in the reader's own clock, so a bar can
- * sit hours behind a "Last Updated" that looks current.
+ * Half-open, and the slot's end is the *next* bar's start rather than its own
+ * plus a width: no timezone arithmetic happens here, and a bar spanning a
+ * clock change is 11 or 13 real hours wide. The newest bar has no upper bound
+ * — it is still filling.
  */
-export const bucketMeta = (buckets: RunBucket[]) => {
-  const hours = bucketHours(buckets);
+export const bucketUrl = (
+  projectId: string,
+  workflowId: string,
+  buckets: RunBucket[],
+  index: number,
+  states: readonly string[]
+) => {
+  const bucket = buckets[index];
 
-  return `${hours >= 24 ? 'daily' : `${hours}-hour`} buckets · UTC`;
+  if (!bucket) return null;
+
+  return historyUrl(projectId, workflowId, {
+    run_date_after: bucket.at,
+    run_date_before: buckets[index + 1]?.at,
+    run_status: states,
+  });
 };
 
 const TICK_FILL = '#6b7280';
 
-// Rendered in UTC because that is where the buckets are: the server lays the
-// grid on the raw epoch, so a day starts at UTC midnight — 03:00 in Nairobi,
-// 05:30 in Delhi. The tooltip says UTC for the same reason.
-const dayLabel = (date: Date) =>
+// In the timezone the server cut the grid on, not the browser's own: a bar
+// starts at a local whole hour there, so a Delhi bar opening at UTC 18:30
+// labels as 00:00 and no label ever needs minutes.
+const dayLabel = (date: Date, timezone: string) =>
   date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
-    timeZone: 'UTC',
+    timeZone: timezone,
   });
 
-const hourLabel = (date: Date) => `${date.getUTCHours()}:00`;
+// `hourCycle` rather than `hour12: false` because it is the explicit way to
+// ask for 00-23 and does not depend on the locale's own preference. Every
+// boundary is a local whole hour, so no label ever needs minutes.
+const localHour = (date: Date, timezone: string) =>
+  Number(
+    date.toLocaleString('en-GB', {
+      hour: '2-digit',
+      hourCycle: 'h23',
+      timeZone: timezone,
+    })
+  );
 
-export const tickLabel = (at: string, hours: number) => {
+const hourLabel = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
+
+export const tickLabel = (at: string, hours: number, timezone: string) => {
   const date = new Date(at);
 
-  if (hours >= 24) return dayLabel(date);
+  if (hours >= 24) return dayLabel(date, timezone);
 
   // Two bars to a day at this width, so the date goes on the morning bar,
   // where the day starts, and the afternoon is left blank. A window opening
   // mid-day leaves that first bar unlabelled, which is honest — its morning
   // is outside the window — and keeps every date two bars from the last.
-  if (hours >= 12) return date.getUTCHours() < 12 ? dayLabel(date) : '';
+  if (hours >= 12) {
+    return localHour(date, timezone) < 12 ? dayLabel(date, timezone) : '';
+  }
 
-  return hourLabel(date);
+  return hourLabel(localHour(date, timezone));
 };
 
 // The axis is thinned and its labels name only where a bucket starts, so the
 // tooltip names the whole slot rather than leaving the reader to add the width
-// to the start.
-export const rangeLabel = (at: string, hours: number) => {
+// to the start. No timezone suffix: the card's meta line names it once, and
+// repeating it on every hover is noise.
+export const rangeLabel = (at: string, hours: number, timezone: string) => {
   const start = new Date(at);
 
-  // A daily bar is a whole UTC day, and `00:00 – 00:00` invites the question
-  // of whether the closing midnight is inside the bar or the next one.
-  if (hours >= 24) return `${dayLabel(start)} UTC`;
+  // A daily bar is a whole local day, and `00:00 – 00:00` invites the question
+  // of whether the closing midnight is inside the bar or the next one. It is
+  // also the branch that keeps a 25-hour clock-change day honest, by printing
+  // no end at all.
+  if (hours >= 24) return dayLabel(start, timezone);
 
-  const end = new Date(start.getTime() + hours * 3_600_000);
+  // The end hour is the start's plus the width on the wall clock, not
+  // `start + hours` in real time: a bar spanning a clock change is 11 or 13
+  // real hours, and only the wall clock closes it where the next bar opens.
+  const from = localHour(start, timezone);
 
-  return `${dayLabel(start)}, ${hourLabel(start)} – ${hourLabel(end)} UTC`;
+  return `${dayLabel(start, timezone)}, ${hourLabel(from)} – ${hourLabel((from + hours) % 24)}`;
 };

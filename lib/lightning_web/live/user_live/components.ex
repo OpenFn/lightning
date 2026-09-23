@@ -157,12 +157,12 @@ defmodule LightningWeb.UserLive.Components do
       </:body>
     </.table>
     <br />
-    <.p>
+    <p class="mb-2 leading-5 text-gray-700 dark:text-gray-300">
       *Note that a <code>superuser</code> can access <em>everything</em> in a
       Lightning installation across all projects, including this page. Most
       day-to-day user management (adding and removing collaborators) will be
       done by project "admins" via the project settings page.
-    </.p>
+    </p>
     """
   end
 

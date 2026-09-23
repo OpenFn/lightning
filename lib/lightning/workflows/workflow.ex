@@ -29,25 +29,39 @@ defmodule Lightning.Workflows.Workflow do
           project: nil | Project.t() | Ecto.Association.NotLoaded.t()
         }
 
-  @derive {Jason.Encoder,
-           only: [
-             :id,
-             :name,
-             :project_id,
-             :edges,
-             :jobs,
-             :triggers,
-             :positions,
-             :inserted_at,
-             :updated_at,
-             :concurrency,
-             :enable_job_logs
-           ]}
+  @json_fields [
+    :id,
+    :name,
+    :project_id,
+    :edges,
+    :jobs,
+    :triggers,
+    :positions,
+    :inserted_at,
+    :updated_at,
+    :concurrency,
+    :enable_job_logs,
+    :state
+  ]
+
+  @derive {Jason.Encoder, only: @json_fields}
+
+  @doc """
+  The fields this schema encodes to JSON.
+
+  Exposed so a caller can render a subset without restating the list and letting
+  the two drift apart. The REST API uses it to leave `:state` out, which names a
+  lifecycle we have not shipped.
+  """
+  @spec json_fields() :: [atom()]
+  def json_fields, do: @json_fields
+
   schema "workflows" do
     field :name, :string
     field :concurrency, :integer, default: nil
     field :enable_job_logs, :boolean, default: true
     field :positions, :map
+    field :state, Ecto.Enum, values: [:draft, :live], default: :draft
 
     # the ordering of edges, triggers and jobs are intentional
     # ecto reverses the relations when inserting. so jobs->triggers->edges
@@ -98,7 +112,7 @@ defmodule Lightning.Workflows.Workflow do
       "workflow name can't contain control characters"
     )
     # positions is written straight into the workflow_snapshots.positions jsonb,
-    # keys and all, and Postgres refuses a NUL anywhere inside jsonb (#4893).
+    # keys and all, and Postgres refuses a NUL anywhere inside jsonb.
     |> Validators.validate_no_null_bytes_deep(
       :positions,
       "positions can't contain a null byte"

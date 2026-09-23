@@ -8,7 +8,6 @@
 
 @source './js/**/*.{js,jsx,ts,tsx}';
 @source '../lib/**/*.{ex,exs}';
-@source '../deps/petal_components/**/*.{ex,exs}';
 
 @theme {
   --font-sans:
@@ -123,7 +122,6 @@
 
 @import '../js/monaco/styles.css' layer(utilities);
 @import '@xyflow/react/dist/style.css' layer(utilities);
-@import '../../deps/petal_components/assets/default.css';
 
 @layer base {
   /* Use the pointer for buttons */

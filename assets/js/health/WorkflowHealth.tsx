@@ -6,11 +6,12 @@ import { cn } from '#/utils/cn';
 import { FRAME } from './charts/Donut';
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
+import { StepFailureBars, stepFailureTotal } from './charts/StepFailureBars';
 import { TriageTable } from './charts/TriageTable';
 import type { RunVolume } from './charts/VolumeBars';
 import { bucketMeta, VolumeBars } from './charts/VolumeBars';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
-import type { ErrorSignature, ErrorSignatures, Outcomes } from './types';
+import type { ErrorSignatures, Outcomes } from './types';
 import { failureTotal } from './types';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
@@ -56,19 +57,24 @@ export const WorkflowHealth = ({
         <h1 className="min-w-0 text-2xl font-semibold break-words text-gray-900">
           {workflowName}
         </h1>
-        {/* The picker and the freshness stamp both belong to the whole page,
-            so they stack in the header rather than sitting on any one card. */}
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        {/* The picker sets the window for every card, so it belongs to the
+            header rather than to any one of them. */}
+        <div className="shrink-0">
           <RangePicker days={days} onChange={setDays} />
-          <UpdatedAt at={outcomes.data?.window.to ?? null} />
         </div>
       </div>
 
-      {/* Four columns: a narrow donut beside a wide time axis, then an even
-          split. Stacks in source order below `lg`. */}
-      <div className="grid gap-6 lg:grid-cols-4">
+      {/* One card wide by default. At `lg` twelve columns: the top row is the
+          two summaries either side of the time axis (3 + 6 + 3), and the
+          bottom row is the triage table with the breakdown donut beside it
+          (9 + 3). The axis takes half the row because it is the only card
+          whose reading gets better with width — thirty bars and their ticks —
+          where a donut past its `max-w-sm` just centres in more whitespace.
+          Always in source order. */}
+      <div className="grid gap-6 lg:grid-cols-12">
         <Card
           title="Outcomes"
+          className="lg:col-span-3"
           meta={outcomes.data && workOrders(outcomes.data.counts)}
         >
           <Panel data={outcomes.data} error={outcomes.error}>
@@ -76,6 +82,9 @@ export const WorkflowHealth = ({
               <OutcomesDonut
                 counts={counts}
                 emptyMessage={emptyMessage(window)}
+                projectId={projectId}
+                workflowId={workflowId}
+                from={window.from}
               />
             )}
           </Panel>
@@ -85,47 +94,66 @@ export const WorkflowHealth = ({
             names the bucket size rather than a total that won't reconcile. */}
         <Card
           title="Runs over time"
-          className="lg:col-span-3"
-          meta={volume.data && bucketMeta(volume.data.buckets)}
+          className="lg:col-span-6"
+          meta={volume.data && bucketMeta(volume.data)}
         >
           <Panel data={volume.data} error={volume.error}>
-            {({ buckets, window }) => (
+            {({ buckets, window, timezone, bucket_hours }) => (
               <VolumeBars
                 buckets={buckets}
+                timezone={timezone}
+                hours={bucket_hours}
                 emptyMessage={emptyMessage(window, 'runs')}
+                projectId={projectId}
+                workflowId={workflowId}
               />
             )}
           </Panel>
         </Card>
 
-        <Card title="Triage" className="lg:col-span-2">
+        {/* The same `failures` reply as Triage, folded from "what broke" down
+            to "where" — so it costs no request, and the two cannot disagree
+            about a step's weight. Top row, because "which step do I look at"
+            is a question to answer before reading the triage table, not after.
+            Not self-start: the three cards across this row read as one band, so
+            it takes the row's height rather than sitting short beside the time
+            axis. */}
+        <Card
+          title="Steps with failures"
+          className="lg:col-span-3"
+          meta={signatures.data && stepFailureTotal(signatures.data.signatures)}
+        >
           <Panel data={signatures.data} error={signatures.error}>
             {({ signatures, window }) => (
-              <>
-                <TriageTable
-                  signatures={signatures}
-                  emptyMessage={emptyMessage(window, 'failures')}
-                  projectId={projectId}
-                  workflowId={workflowId}
-                  from={window.from}
-                />
-                {outcomes.data &&
-                  overCounts(signatures, outcomes.data.counts) && (
-                    <p className="mt-3 text-xs text-gray-500">
-                      Some work orders failed on more than one branch, so they
-                      appear in more than one row.
-                    </p>
-                  )}
-              </>
+              <StepFailureBars
+                signatures={signatures}
+                emptyMessage={emptyMessage(window, 'failures')}
+              />
+            )}
+          </Panel>
+        </Card>
+
+        <Card title="Triage" className="lg:col-span-9">
+          <Panel data={signatures.data} error={signatures.error}>
+            {({ signatures, window }) => (
+              <TriageTable
+                signatures={signatures}
+                emptyMessage={emptyMessage(window, 'failures')}
+                projectId={projectId}
+                workflowId={workflowId}
+                from={window.from}
+              />
             )}
           </Panel>
         </Card>
 
         {/* Same reply as the Outcomes panel — one aggregate read two ways, so
-            the slices here and the red wedge there cannot disagree. */}
+            the slices here and the red wedge there cannot disagree. Self-start,
+            so the card is only as tall as a donut plus its legend rather than
+            stretching to the triage table beside it. */}
         <Card
           title="Failure breakdown"
-          className="lg:col-span-2"
+          className="self-start lg:col-span-3"
           meta={outcomes.data && failures(outcomes.data.counts)}
         >
           <Panel data={outcomes.data} error={outcomes.error}>
@@ -133,6 +161,9 @@ export const WorkflowHealth = ({
               <FailureBreakdownDonut
                 counts={counts}
                 emptyMessage={emptyMessage(window, 'failures')}
+                projectId={projectId}
+                workflowId={workflowId}
+                from={window.from}
               />
             )}
           </Panel>
@@ -201,17 +232,6 @@ const ChartLoading = () => (
   </div>
 );
 
-// The stamp is the server's compute time, not the moment the browser asked —
-// `window.to` is when the numbers were true, however long the round trip took.
-//
-// Holds its line while empty (`min-h-4` is one `text-xs` line) so the picker
-// above it doesn't move.
-const UpdatedAt = ({ at }: { at: string | null }) => (
-  <p role="status" className="min-h-4 text-xs text-gray-500">
-    {at && `Last Updated ${new Date(at).toLocaleTimeString()}`}
-  </p>
-);
-
 // "1 work order", "1,287 failed work orders".
 const count = (n: number, noun: string) =>
   `${n.toLocaleString()} ${noun}${n === 1 ? '' : 's'}`;
@@ -228,11 +248,6 @@ const workOrders = (counts: Outcomes['counts']) =>
 // than the drawn slices, which drop the states that never happened.
 const failures = (counts: Outcomes['counts']) =>
   count(failureTotal(counts), 'failed work order');
-
-// Rows count failed branches, so they can sum past the failure total.
-const overCounts = (signatures: ErrorSignature[], counts: Outcomes['counts']) =>
-  signatures.reduce((sum, signature) => sum + signature.count, 0) >
-  failureTotal(counts);
 
 const emptyMessage = (
   window: Outcomes['window'],

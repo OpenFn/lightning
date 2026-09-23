@@ -70,6 +70,7 @@ defmodule Lightning.Credentials.Credential do
 
   defp shared_validations(changeset) do
     changeset
+    |> resolve_schema_name()
     |> normalize_external_id()
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :user_id])
@@ -89,11 +90,10 @@ defmodule Lightning.Credentials.Credential do
       :name,
       "credential name is too long, please use a shorter one"
     )
-    # schema is varchar(40), not 255.
     |> Validators.validate_name_fits_column(
       :schema,
       "credential schema is too long, please use a shorter one",
-      40
+      100
     )
     |> Validators.validate_name_fits_column(
       :external_id,
@@ -106,5 +106,22 @@ defmodule Lightning.Credentials.Credential do
       "" -> put_change(changeset, :external_id, nil)
       _ -> changeset
     end
+  end
+
+  # Expanding a legacy short name needs a loaded catalogue. When it cannot
+  # answer, the name is stored as typed rather than failing the save. The
+  # short form is a supported legacy shape that `get_schema/1` resolves on
+  # read and `Credentials.reconcile_legacy_schema_names/1` rewrites later.
+  defp resolve_schema_name(changeset) do
+    update_change(changeset, :schema, fn
+      schema when is_binary(schema) ->
+        case Lightning.Adaptors.resolve_name(schema) do
+          {:ok, resolved} -> resolved
+          {:error, _catalogue_unavailable} -> schema
+        end
+
+      schema ->
+        schema
+    end)
   end
 end

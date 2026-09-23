@@ -37,6 +37,8 @@ defmodule Lightning.Projects.Project do
 
     field :raw_name, :string, virtual: true
 
+    field :starting_dataclip_id, :binary_id, virtual: true
+
     belongs_to :parent, __MODULE__, type: :binary_id
 
     has_many :project_users, ProjectUser

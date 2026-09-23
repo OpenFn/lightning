@@ -1,9 +1,6 @@
 defmodule LightningWeb.WorkflowChannel do
   @moduledoc """
-  Phoenix Channel for handling binary Yjs collaboration messages.
-
-  Unlike LiveView events, Phoenix Channels properly support binary data
-  transmission without JSON serialization.
+  Phoenix Channel for binary Yjs collaboration messages.
   """
   use LightningWeb, :channel
 
@@ -12,9 +9,11 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaborate
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
+  alias Lightning.Collaboration.WorkflowReconciler
   alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
   alias Lightning.Projects.Environment
   alias Lightning.Projects.Events.ProjectDeletionScheduled
   alias Lightning.Projects.Events.ProjectUserAdded
@@ -22,11 +21,17 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Projects.Events.ProjectUserRoleChanged
   alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Projects.Events.WorkflowDeleted
+  alias Lightning.Projects.MergeProjects
+  alias Lightning.Projects.ProjectLimiter
+  alias Lightning.Projects.Sandboxes
   alias Lightning.Projects.Scope
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
-  alias Lightning.Workflows.Job
+  alias Lightning.Workflows
+  alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.WorkflowRelease
+  alias Lightning.Workflows.WorkflowReleases
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders
   alias LightningWeb.Channels.WorkflowJSON
@@ -39,14 +44,7 @@ defmodule LightningWeb.WorkflowChannel do
         %{"project_id" => project_id, "action" => action},
         socket
       ) do
-    # Room formats:
-    # - "workflow_id" → latest (collaborative editing room)
-    # - "workflow_id:vN" → specific version N (isolated snapshot viewing)
-    {workflow_id, version} =
-      case String.split(rest, ":v", parts: 2) do
-        [wf_id, version] -> {wf_id, version}
-        [wf_id] -> {wf_id, nil}
-      end
+    {workflow_id, view} = parse_room_topic(rest)
 
     with {:user, user} when not is_nil(user) <-
            {:user, socket.assigns[:current_user]},
@@ -55,21 +53,21 @@ defmodule LightningWeb.WorkflowChannel do
          {:subscribed, :ok} <-
            {:subscribed, Lightning.Projects.Events.subscribe(project.id)},
          {:workflow, {:ok, workflow, workflow_kind}} <-
-           {:workflow,
-            load_workflow(action, workflow_id, project, user, version)} do
+           {:workflow, load_workflow(action, workflow_id, project, user, view)} do
       Logger.info("""
       Joining workflow collaboration:
         workflow_id: #{workflow_id}
-        version: #{inspect(version)}
+        view: #{inspect(view)}
         room: #{topic}
-        is_latest: #{is_nil(version)}
+        is_latest: #{view == :latest}
       """)
 
       {:ok, session_pid} =
         Collaborate.start(
           user: user,
           workflow: workflow,
-          room_topic: topic
+          room_topic: topic,
+          view_only?: view != :latest
         )
 
       project_user = Lightning.Projects.get_project_user(project, user)
@@ -84,6 +82,8 @@ defmodule LightningWeb.WorkflowChannel do
         "workflow:collaborate:#{workflow_id}"
       )
 
+      Lightning.Adaptors.subscribe_to_updates()
+
       {:ok,
        assign(socket,
          workflow_id: workflow_id,
@@ -92,7 +92,8 @@ defmodule LightningWeb.WorkflowChannel do
          project: project,
          session_pid: session_pid,
          project_user: project_user,
-         workflow_kind: workflow_kind
+         workflow_kind: workflow_kind,
+         content_locked: content_locked?(workflow, project, user)
        )
        |> assign(permissions)}
     else
@@ -105,46 +106,6 @@ defmodule LightningWeb.WorkflowChannel do
 
   def join("workflow:collaborate:" <> _workflow_id, _params, _socket) do
     {:error, %{reason: "invalid parameters. project_id and action are required"}}
-  end
-
-  @impl true
-  def handle_in("request_adaptors", _payload, socket) do
-    async_task(socket, "request_adaptors", fn ->
-      adaptors = Lightning.AdaptorRegistry.all()
-      %{adaptors: adaptors}
-    end)
-  end
-
-  @impl true
-  def handle_in("request_project_adaptors", _payload, socket) do
-    project = socket.assigns.project
-
-    async_task(socket, "request_project_adaptors", fn ->
-      project_adaptor_names =
-        from(j in Job,
-          join: w in assoc(j, :workflow),
-          where: w.project_id == ^project.id,
-          select: j.adaptor,
-          distinct: true
-        )
-        |> Lightning.Repo.all()
-        |> Enum.sort()
-
-      all_adaptors = Lightning.AdaptorRegistry.all()
-
-      project_adaptors =
-        all_adaptors
-        |> Enum.filter(fn adaptor ->
-          Enum.any?(project_adaptor_names, fn used_adaptor ->
-            String.starts_with?(used_adaptor, adaptor.name)
-          end)
-        end)
-
-      %{
-        project_adaptors: project_adaptors,
-        all_adaptors: all_adaptors
-      }
-    end)
   end
 
   @impl true
@@ -264,6 +225,24 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in(
+        "request_history",
+        %{"version_number" => version_number},
+        socket
+      )
+      when not is_nil(version_number) do
+    workflow =
+      Workflows.get_workflow(socket.assigns.workflow_id) ||
+        socket.assigns.workflow
+
+    filter = history_filter(version_number)
+
+    async_task(socket, "request_history", fn ->
+      %{history: get_filtered_run_history(workflow.id, filter)}
+    end)
+  end
+
+  @impl true
   def handle_in("request_history", %{"run_id" => run_id}, socket) do
     workflow = socket.assigns.workflow
 
@@ -301,49 +280,228 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @doc """
-  Handles explicit workflow save requests from the collaborative editor.
+  Saves the current Y.Doc state through the Session.
 
-  The save operation:
-  1. Asks Session to extract and save the current Y.Doc state
-  2. Session handles all Y.Doc interaction internally
-  3. Returns success/error to the client
+  The reply is deferred. `Session.save_workflow/2` may wait on the adaptor
+  catalogue's first load, so the call runs off the channel process and
+  the reply goes out with `Phoenix.Channel.reply/2` when it finishes.
 
-  Note: By the time this message is processed, all prior Y.js sync messages
-  have been processed due to Phoenix Channel's synchronous per-socket handling.
-
-  Success response: {:ok, %{saved_at: DateTime, lock_version: integer}}
-  Error response: {:error, %{errors: map, type: string}}
+  Success: `{:ok, %{saved_at: DateTime, lock_version: integer}}`
+  Error: `{:error, %{errors: map, type: string}}`
   """
   @impl true
   def handle_in("save_workflow", _params, socket) do
-    session_pid = socket.assigns.session_pid
+    case authorize_content_edit(socket) do
+      :ok ->
+        session_pid = socket.assigns.session_pid
+        user = socket.assigns.current_user
+
+        defer_reply(socket, :save_workflow_reply, fn ->
+          Session.save_workflow(session_pid, user)
+        end)
+
+      error ->
+        {:reply, workflow_error_reply(error), socket}
+    end
+  end
+
+  @impl true
+  def handle_in("go_live", _params, socket) do
+    transition_lifecycle_state(socket, :live)
+  end
+
+  @impl true
+  def handle_in("switch_to_draft", _params, socket) do
+    transition_lifecycle_state(socket, :draft)
+  end
+
+  @impl true
+  def handle_in(
+        "set_suppress_enable_trigger_warning",
+        %{"suppress" => suppress},
+        socket
+      )
+      when is_boolean(suppress) do
+    {:ok, _user} =
+      Lightning.Accounts.update_user_preference(
+        socket.assigns.current_user,
+        "suppress_enable_trigger_warning",
+        suppress
+      )
+
+    {:reply, {:ok, %{}}, socket}
+  end
+
+  @impl true
+  def handle_in("list_sandboxes", _params, socket) do
+    project = socket.assigns.project
     user = socket.assigns.current_user
 
-    with :ok <- authorize_edit_workflow(socket),
-         {:ok, workflow} <- Session.save_workflow(session_pid, user) do
-      # Broadcast the new lock_version to all users in the channel
-      # so they can update their latestSnapshotLockVersion in SessionContextStore
-      broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: workflow.lock_version,
-        workflow: workflow
-      })
+    case authorize_provision_sandbox(user, project) do
+      :ok ->
+        sandboxes =
+          project.id
+          |> Projects.list_active_sandboxes_for_editing(
+            current_workflow_name(socket)
+          )
+          |> Enum.reject(fn {_sandbox, joinable_workflow_id} ->
+            is_nil(joinable_workflow_id)
+          end)
+          |> Enum.map(&render_editable_sandbox/1)
 
-      # The workflow now has a DB row, so this channel is no longer editing a
-      # brand-new (:new) workflow. No client rejoin happens after a first save,
-      # so we must self-promote the cached kind + struct here; otherwise
-      # request_versions / get_context keep short-circuiting to empty for the
-      # rest of this session (until a full page refresh re-joins as :existing).
-      socket = assign(socket, workflow: workflow, workflow_kind: :existing)
+        {:reply, {:ok, %{sandboxes: sandboxes}}, socket}
 
+      error ->
+        {:reply, workflow_error_reply(error), socket}
+    end
+  end
+
+  @impl true
+  def handle_in("edit_in_sandbox", params, socket) do
+    parent = socket.assigns.project
+    user = socket.assigns.current_user
+
+    branch_from_name = current_workflow_name(socket)
+
+    attrs =
+      %{
+        name: sandbox_name(params, branch_from_name, parent),
+        env: "dev",
+        color: LightningWeb.SandboxLive.Components.random_color()
+      }
+      |> put_starting_data(params)
+
+    with :ok <- authorize_provision_sandbox(user, parent),
+         :ok <- limit_new_sandbox(parent),
+         :ok <- check_chosen_dataclip(parent, attrs),
+         {:ok,
+          %{
+            sandbox: sandbox,
+            workflow: cloned_workflow,
+            starting_dataclip_id: starting_dataclip_id
+          }} <-
+           Projects.provision_editing_sandbox(
+             parent,
+             user,
+             branch_from_name,
+             attrs
+           ) do
       {:reply,
        {:ok,
         %{
-          saved_at: workflow.updated_at,
-          lock_version: workflow.lock_version,
-          workflow: workflow
+          project_id: sandbox.id,
+          workflow_id: cloned_workflow.id,
+          dataclip_id: starting_dataclip_id
         }}, socket}
     else
-      error -> workflow_error_reply(socket, error)
+      error -> {:reply, workflow_error_reply(error), socket}
+    end
+  end
+
+  @impl true
+  def handle_in("request_promote_check", params, socket) do
+    sandbox = socket.assigns.project
+    user = socket.assigns.current_user
+
+    workflow_name =
+      case params do
+        %{"workflow_name" => name} when is_binary(name) and name != "" -> name
+        _ -> socket.assigns.workflow.name
+      end
+
+    async_task(socket, "request_promote_check", fn ->
+      with %_{} = parent <- fetch_parent_project(sandbox),
+           :ok <- authorize_merge_sandbox(user, parent) do
+        %{
+          diverged:
+            MergeProjects.workflow_diverged?(sandbox, parent, workflow_name),
+          parent_name: parent.name
+        }
+      else
+        _ -> %{diverged: false, parent_name: nil}
+      end
+    end)
+  end
+
+  @impl true
+  def handle_in("request_restore_check", %{"version_number" => number}, socket)
+      when is_integer(number) do
+    workflow = socket.assigns.workflow
+
+    async_task(socket, "request_restore_check", fn ->
+      with :ok <- authorize_edit_workflow(socket),
+           %WorkflowRelease{snapshot: %_{} = snapshot} <-
+             WorkflowReleases.get_by_version_number(workflow.id, number) do
+        %{
+          losing_triggers: render_losing_triggers(workflow, snapshot),
+          returning_triggers: render_returning_triggers(workflow, snapshot),
+          version_number: number
+        }
+      else
+        _ ->
+          %{losing_triggers: [], returning_triggers: [], version_number: number}
+      end
+    end)
+  end
+
+  @impl true
+  def handle_in("restore_version", %{"version_number" => number}, socket)
+      when is_integer(number) do
+    workflow = socket.assigns.workflow
+    user = socket.assigns.current_user
+
+    with :ok <- authorize_edit_workflow(socket),
+         %WorkflowRelease{snapshot: %_{}} = release <-
+           WorkflowReleases.get_by_version_number(workflow.id, number),
+         {:ok, restored} <- restore_or_conflict(workflow, release, user) do
+      WorkflowReconciler.request_reconciliation(workflow.id)
+
+      broadcast_workflow_saved(socket, restored)
+
+      socket =
+        if socket.assigns.workflow_kind == :version do
+          socket
+        else
+          assign(socket, :workflow, restored)
+        end
+
+      push(socket, "session_context_updated", build_session_context(socket))
+
+      {:reply, {:ok, %{lock_version: restored.lock_version}}, socket}
+    else
+      nil -> {:reply, workflow_error_reply({:error, :version_not_found}), socket}
+      error -> {:reply, workflow_error_reply(error), socket}
+    end
+  end
+
+  @impl true
+  def handle_in("promote", _params, socket) do
+    sandbox = socket.assigns.project
+    workflow = socket.assigns.workflow
+    user = socket.assigns.current_user
+
+    with %_{} = parent <- fetch_parent_project(sandbox),
+         :ok <- authorize_merge_sandbox(user, parent),
+         {:ok, result} <- Projects.promote_workflow(workflow, user) do
+      {:reply, {:ok, result}, socket}
+    else
+      nil -> {:reply, workflow_error_reply({:error, :not_a_sandbox}), socket}
+      error -> {:reply, workflow_error_reply(error), socket}
+    end
+  end
+
+  @impl true
+  def handle_in("archive_sandbox", _params, socket) do
+    sandbox = socket.assigns.project
+    user = socket.assigns.current_user
+
+    with %_{} = parent <- fetch_parent_project(sandbox),
+         :ok <- authorize_delete_sandbox(user, sandbox),
+         {:ok, _scheduled} <- Sandboxes.schedule_sandbox_deletion(sandbox, user) do
+      {:reply, {:ok, %{parent_project_id: parent.id}}, socket}
+    else
+      nil -> {:reply, workflow_error_reply({:error, :not_a_sandbox}), socket}
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -360,47 +518,24 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in("save_and_sync", %{"commit_message" => commit_message}, socket) do
-    session_pid = socket.assigns.session_pid
-    user = socket.assigns.current_user
-    project = socket.assigns.project
+    case authorize_content_edit(socket) do
+      :ok ->
+        session_pid = socket.assigns.session_pid
+        user = socket.assigns.current_user
+        project = socket.assigns.project
 
-    with :ok <- authorize_edit_workflow(socket),
-         {:ok, workflow} <- Session.save_workflow(session_pid, user),
-         repo_connection when not is_nil(repo_connection) <-
-           VersionControl.get_repo_connection_for_project(project.id),
-         :ok <- VersionControl.initiate_sync(repo_connection, commit_message) do
-      broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: workflow.lock_version,
-        workflow: workflow
-      })
-
-      {:reply,
-       {:ok,
-        %{
-          saved_at: workflow.updated_at,
-          lock_version: workflow.lock_version,
-          repo: repo_connection.repo,
-          workflow: workflow
-        }}, socket}
-    else
-      nil ->
-        {:reply,
-         {:error,
-          %{
-            errors: %{base: ["No GitHub connection configured for this project"]},
-            type: "github_sync_error"
-          }}, socket}
-
-      {:error, reason} when is_binary(reason) ->
-        {:reply,
-         {:error,
-          %{
-            errors: %{base: [reason]},
-            type: "github_sync_error"
-          }}, socket}
+        defer_reply(socket, :save_and_sync_reply, fn ->
+          with {:ok, workflow} <- Session.save_workflow(session_pid, user),
+               repo_connection when not is_nil(repo_connection) <-
+                 VersionControl.get_repo_connection_for_project(project.id),
+               :ok <-
+                 VersionControl.initiate_sync(repo_connection, commit_message) do
+            {:ok, workflow, repo_connection}
+          end
+        end)
 
       error ->
-        workflow_error_reply(socket, error)
+        {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -409,7 +544,7 @@ defmodule LightningWeb.WorkflowChannel do
     session_pid = socket.assigns.session_pid
     user = socket.assigns.current_user
 
-    with :ok <- authorize_edit_workflow(socket),
+    with :ok <- authorize_content_edit(socket),
          {:ok, workflow} <- Session.reset_workflow(session_pid, user) do
       {:reply,
        {:ok,
@@ -418,7 +553,7 @@ defmodule LightningWeb.WorkflowChannel do
           workflow_id: workflow.id
         }}, socket}
     else
-      error -> workflow_error_reply(socket, error)
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -449,33 +584,49 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
-  def handle_in("request_versions", _payload, socket) do
-    Logger.info("====== RECEIVED request_versions ======")
+  def handle_in("request_releases", _payload, socket) do
     workflow = socket.assigns.workflow
     workflow_kind = socket.assigns.workflow_kind
-    Logger.info("Workflow ID: #{workflow.id}")
+
+    async_task(socket, "request_releases", fn ->
+      if workflow_kind == :new do
+        %{releases: []}
+      else
+        releases =
+          case Lightning.Workflows.WorkflowReleases.list_for_workflow(
+                 workflow.id
+               ) do
+            [] ->
+              []
+
+            [latest | rest] ->
+              [
+                render_release(latest, true)
+                | Enum.map(rest, &render_release(&1, false))
+              ]
+          end
+
+        %{releases: releases}
+      end
+    end)
+  end
+
+  @impl true
+  def handle_in("request_versions", _payload, socket) do
+    workflow = socket.assigns.workflow
+    workflow_kind = socket.assigns.workflow_kind
 
     async_task(socket, "request_versions", fn ->
-      Logger.info("Inside async_task for request_versions")
-
-      # A genuinely-new workflow has no DB row and thus no versions, so
       # short-circuit to an empty list rather than reloading a nil row.
       if workflow_kind == :new do
-        Logger.info("Workflow is unsaved, returning empty versions list")
         %{versions: []}
       else
-        fresh_workflow = Lightning.Workflows.get_workflow(workflow.id)
-        latest_lock_version = fresh_workflow.lock_version
-
-        snapshots = Lightning.Workflows.Snapshot.get_all_for(workflow)
-
-        Logger.info("Fetching versions for workflow #{workflow.id}")
-        Logger.info("Found #{length(snapshots)} snapshots")
-        Logger.info("Socket workflow lock_version: #{workflow.lock_version}")
-        Logger.info("Fresh workflow lock_version: #{latest_lock_version}")
+        latest_lock_version =
+          Lightning.Workflows.get_workflow(workflow.id).lock_version
 
         versions =
-          snapshots
+          workflow
+          |> Snapshot.get_all_for()
           |> Enum.map(fn snapshot ->
             %{
               lock_version: snapshot.lock_version,
@@ -483,11 +634,9 @@ defmodule LightningWeb.WorkflowChannel do
               is_latest: snapshot.lock_version == latest_lock_version
             }
           end)
-          |> Enum.sort_by(fn v ->
-            {if(v.is_latest, do: 0, else: 1), -v.lock_version}
+          |> Enum.sort_by(fn version ->
+            {if(version.is_latest, do: 0, else: 1), -version.lock_version}
           end)
-
-        Logger.info("Mapped versions: #{inspect(versions)}")
 
         %{versions: versions}
       end
@@ -538,7 +687,8 @@ defmodule LightningWeb.WorkflowChannel do
       auth_method_ids: #{inspect(auth_method_ids)}
     """)
 
-    with :ok <- authorize_write_webhook_auth_method(socket),
+    with :ok <- authorize_content_edit(socket),
+         :ok <- authorize_write_webhook_auth_method(socket),
          %Lightning.Workflows.Trigger{} = trigger <-
            get_trigger_for_workflow(trigger_id, socket.assigns.workflow_id),
          auth_methods <-
@@ -596,7 +746,7 @@ defmodule LightningWeb.WorkflowChannel do
 
       {:reply, {:ok, %{template: render_workflow_template(template)}}, socket}
     else
-      error -> workflow_error_reply(socket, error)
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -670,6 +820,15 @@ defmodule LightningWeb.WorkflowChannel do
     {:reply, {:ok, %{}}, socket}
   end
 
+  # A stale client tab may still send an event removed in a later deploy.
+  # Replying with an error instead of raising FunctionClauseError keeps this
+  # client's channel process and connection alive.
+  @impl true
+  def handle_in(event, _payload, socket) do
+    warn_unhandled_message("handle_in", event)
+    {:reply, {:error, %{reason: "unknown event: #{event}"}}, socket}
+  end
+
   @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
@@ -683,6 +842,99 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_info({:save_workflow_reply, ref, {:ok, workflow}}, socket) do
+    # broadcast_from! skips the saving client, which already gets its
+    # lock_version through the reply below; everyone else needs this to
+    # update their latestSnapshotLockVersion in SessionContextStore.
+    broadcast_from!(socket, "workflow_saved", %{
+      latest_snapshot_lock_version: workflow.lock_version,
+      workflow: workflow
+    })
+
+    reply(
+      ref,
+      {:ok,
+       %{
+         saved_at: workflow.updated_at,
+         lock_version: workflow.lock_version,
+         workflow: workflow
+       }}
+    )
+
+    # The workflow now has a DB row, so this channel is no longer editing a
+    # brand-new (:new) workflow. No client rejoin happens after a first save,
+    # so we must self-promote the cached kind + struct here; otherwise
+    # request_versions / get_context keep short-circuiting to empty for the
+    # rest of this session (until a full page refresh re-joins as :existing).
+    {:noreply, assign(socket, workflow: workflow, workflow_kind: :existing)}
+  end
+
+  @impl true
+  def handle_info({:save_workflow_reply, ref, error}, socket) do
+    reply(ref, workflow_error_reply(error))
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        {:save_and_sync_reply, ref, {:ok, workflow, repo_connection}},
+        socket
+      ) do
+    broadcast_from!(socket, "workflow_saved", %{
+      latest_snapshot_lock_version: workflow.lock_version,
+      workflow: workflow
+    })
+
+    reply(
+      ref,
+      {:ok,
+       %{
+         saved_at: workflow.updated_at,
+         lock_version: workflow.lock_version,
+         repo: repo_connection.repo,
+         workflow: workflow
+       }}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:save_and_sync_reply, ref, nil}, socket) do
+    reply(
+      ref,
+      {:error,
+       %{
+         errors: %{base: ["No GitHub connection configured for this project"]},
+         type: "github_sync_error"
+       }}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:save_and_sync_reply, ref, {:error, reason}}, socket)
+      when is_binary(reason) do
+    reply(
+      ref,
+      {:error,
+       %{
+         errors: %{base: [reason]},
+         type: "github_sync_error"
+       }}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:save_and_sync_reply, ref, error}, socket) do
+    reply(ref, workflow_error_reply(error))
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
     {:noreply, socket}
   end
@@ -691,6 +943,12 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_info(%{event: "credentials_updated", payload: credentials}, socket) do
     # Forward credential updates from PubSub to connected channel clients
     push(socket, "credentials_updated", credentials)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(%{event: "adaptors_updated", payload: payload}, socket) do
+    push(socket, "adaptors_updated", payload)
     {:noreply, socket}
   end
 
@@ -720,7 +978,10 @@ defmodule LightningWeb.WorkflowChannel do
         socket
       ) do
     if wo.workflow_id == socket.assigns.workflow_id do
-      formatted_wo = format_work_order_for_history(wo)
+      version_numbers =
+        WorkflowReleases.version_numbers_by_lock_version(wo.workflow_id)
+
+      formatted_wo = format_work_order_for_history(wo, version_numbers)
 
       push(socket, "history_updated", %{
         work_order: formatted_wo,
@@ -737,7 +998,10 @@ defmodule LightningWeb.WorkflowChannel do
         socket
       ) do
     if wo.workflow_id == socket.assigns.workflow_id do
-      formatted_wo = format_work_order_for_history(wo)
+      version_numbers =
+        WorkflowReleases.version_numbers_by_lock_version(wo.workflow_id)
+
+      formatted_wo = format_work_order_for_history(wo, version_numbers)
 
       push(socket, "history_updated", %{
         work_order: formatted_wo,
@@ -756,7 +1020,10 @@ defmodule LightningWeb.WorkflowChannel do
     case WorkOrders.get(run.work_order_id, include: [:workflow]) do
       %{workflow_id: workflow_id}
       when workflow_id == socket.assigns.workflow_id ->
-        formatted_run = format_run_for_history(run)
+        version_numbers =
+          WorkflowReleases.version_numbers_by_lock_version(workflow_id)
+
+        formatted_run = format_run_for_history(run, version_numbers)
 
         push(socket, "history_updated", %{
           run: formatted_run,
@@ -779,7 +1046,10 @@ defmodule LightningWeb.WorkflowChannel do
     case WorkOrders.get(run.work_order_id, include: [:workflow]) do
       %{workflow_id: workflow_id}
       when workflow_id == socket.assigns.workflow_id ->
-        formatted_run = format_run_for_history(run)
+        version_numbers =
+          WorkflowReleases.version_numbers_by_lock_version(workflow_id)
+
+        formatted_run = format_run_for_history(run, version_numbers)
 
         push(socket, "history_updated", %{
           run: formatted_run,
@@ -846,6 +1116,7 @@ defmodule LightningWeb.WorkflowChannel do
       )
       when event in [ProjectUserAdded, ProjectUserRoleChanged] do
     project_user = Lightning.Projects.get_project_user(project, user)
+
     permissions = user_permissions(user, project_user, project)
 
     socket =
@@ -870,48 +1141,122 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
+  # A PubSub broadcast for an event type removed in a later deploy can still
+  # arrive here. Logging instead of raising FunctionClauseError keeps this
+  # client's channel process and connection alive.
   @impl true
-  def handle_info(message, socket) do
-    Logger.warning(fn ->
-      "WorkflowChannel: unhandled message #{inspect(message, limit: 5)} " <>
-        "on workflow #{socket.assigns[:workflow_id]}"
-    end)
-
+  def handle_info(
+        %Phoenix.Socket.Broadcast{event: "workflow_saved", payload: payload},
+        socket
+      ) do
+    push(socket, "workflow_saved", payload)
     {:noreply, socket}
   end
 
   @impl true
+  def handle_info(message, socket) do
+    warn_unhandled_message("handle_info", unhandled_message_type(message))
+
+    {:noreply, socket}
+  end
+
+  intercept ["workflow_saved"]
+
+  @impl true
+  def handle_out("workflow_saved", payload, socket) do
+    push(socket, "workflow_saved", payload)
+
+    {:noreply, refresh_lifecycle_from_broadcast(socket, payload)}
+  end
+
   def handle_out(event, payload, socket) do
     push(socket, event, payload)
     {:noreply, socket}
   end
 
+  defp refresh_lifecycle_from_broadcast(
+         %{assigns: %{workflow_kind: :existing, workflow: %{state: was}}} =
+           socket,
+         %{workflow: %{state: now} = workflow}
+       )
+       when was != now do
+    socket = refresh_lifecycle_lock(socket, workflow)
+    push(socket, "session_context_updated", build_session_context(socket))
+
+    push(socket, "lifecycle_changed", %{state: now})
+
+    socket
+  end
+
+  defp refresh_lifecycle_from_broadcast(socket, _payload), do: socket
+
+  # Unlinked on purpose. A GenServer.call timeout or dead target exits, and
+  # a linked task would take the channel down. `catch :exit` turns it into
+  # an error reply instead.
   defp async_task(socket, event, task_fn) do
     channel_pid = self()
     socket_ref = socket_ref(socket)
 
-    Task.start_link(fn ->
-      try do
-        result = task_fn.()
+    Task.start(fn ->
+      result =
+        try do
+          {:ok, task_fn.()}
+        rescue
+          error ->
+            Logger.error("Failed to handle #{event}: #{inspect(error)}")
+            {:error, %{reason: "failed to handle #{event}"}}
+        catch
+          :exit, reason ->
+            Logger.error("Failed to handle #{event}: #{inspect(reason)}")
+            {:error, %{reason: "failed to handle #{event}"}}
+        end
 
-        send(
-          channel_pid,
-          {:async_reply, socket_ref, event, {:ok, result}}
-        )
-      rescue
-        error ->
-          Logger.error("Failed to handle #{event}: #{inspect(error)}")
-
-          send(
-            channel_pid,
-            {:async_reply, socket_ref, event,
-             {:error, %{reason: "failed to handle #{event}"}}}
-          )
-      end
+      send(channel_pid, {:async_reply, socket_ref, event, result})
     end)
 
     {:noreply, socket}
   end
+
+  # As `async_task/3`, but the reply is post-processed by the `handle_info/2`
+  # clause for `tag`.
+  defp defer_reply(socket, tag, task_fn) do
+    channel_pid = self()
+    ref = socket_ref(socket)
+
+    Task.start(fn ->
+      result =
+        try do
+          task_fn.()
+        rescue
+          error ->
+            Logger.error("Failed to handle #{tag}: #{inspect(error)}")
+            {:error, :internal_error}
+        catch
+          :exit, reason ->
+            Logger.error("Failed to handle #{tag}: #{inspect(reason)}")
+            {:error, :internal_error}
+        end
+
+      send(channel_pid, {tag, ref, result})
+    end)
+
+    {:noreply, socket}
+  end
+
+  # Only the event name goes to the log and Sentry. The full message or
+  # payload may carry user or workflow data.
+  defp warn_unhandled_message(kind, event) do
+    Logger.warning("WorkflowChannel: unhandled #{kind} event: #{event}")
+
+    Sentry.capture_message(
+      "WorkflowChannel: unhandled #{kind} event: #{event}",
+      level: :warning
+    )
+  end
+
+  defp unhandled_message_type(%{event: event}), do: event
+  defp unhandled_message_type(%struct{}), do: inspect(struct)
+  defp unhandled_message_type(_msg), do: "unrecognised"
 
   defp handle_async_event("request_run_steps", socket_ref, reply) do
     unwrapped_reply = unwrap_run_steps_reply(reply)
@@ -920,14 +1265,15 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp handle_async_event(event, socket_ref, reply)
        when event in [
-              "request_adaptors",
-              "request_project_adaptors",
               "request_credentials",
               "request_metadata",
               "request_current_user",
               "get_context",
               "request_history",
+              "request_releases",
               "request_versions",
+              "request_promote_check",
+              "request_restore_check",
               "request_trigger_auth_methods",
               "get_limits"
             ] do
@@ -963,22 +1309,40 @@ defmodule LightningWeb.WorkflowChannel do
       Map.take(socket.assigns, [
         :can_edit_workflow,
         :can_run_workflow,
-        :can_write_webhook_auth_method
+        :can_write_webhook_auth_method,
+        :can_provision_sandbox,
+        :can_archive_sandbox
       ])
 
-    # A genuinely-new workflow has no DB row, so use the in-memory struct and
-    # report a nil latest version. Otherwise reload to get the current
-    # lock_version, since socket.assigns.workflow may be stale.
-    {fresh_workflow, latest_lock_version} =
-      if workflow_kind == :new do
-        {workflow, nil}
-      else
-        fresh =
-          Lightning.Workflows.get_workflow(workflow.id,
-            include: [:edges, :jobs, :triggers]
+    latest_row =
+      workflow_kind != :new &&
+        Lightning.Workflows.get_workflow(
+          workflow.id,
+          if(workflow_kind == :existing,
+            do: [include: [:edges, :jobs, :triggers]],
+            else: []
           )
+        )
 
-        {fresh, (fresh && fresh.lock_version) || workflow.lock_version}
+    latest_lock_version =
+      case latest_row do
+        %Lightning.Workflows.Workflow{lock_version: lock_version} ->
+          lock_version
+
+        _ ->
+          if workflow_kind == :new, do: nil, else: workflow.lock_version
+      end
+
+    fresh_workflow =
+      case {workflow_kind, latest_row} do
+        {:existing, %Lightning.Workflows.Workflow{} = row} ->
+          row
+
+        {:version, %Lightning.Workflows.Workflow{state: state}} ->
+          %{workflow | state: state}
+
+        _ ->
+          workflow
       end
 
     project_repo_connection =
@@ -994,14 +1358,21 @@ defmodule LightningWeb.WorkflowChannel do
       project: render_project_context(project),
       config: render_config_context(),
       permissions: permissions,
+      content_locked: socket.assigns.content_locked,
       latest_snapshot_lock_version: latest_lock_version,
+      latest_snapshot_id: Snapshot.current_id_for(workflow.id),
       project_repo_connection: render_repo_connection(project_repo_connection),
       webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
       workflow_template: render_workflow_template(workflow_template),
+      suppress_enable_trigger_warning:
+        Lightning.Accounts.get_preference(
+          user,
+          "suppress_enable_trigger_warning"
+        ) == true,
       experimental_features_enabled:
         Lightning.Accounts.experimental_features_enabled?(user),
       limits: render_limits(project.id),
-      workflow: fresh_workflow || %{}
+      workflow: fresh_workflow
     }
   end
 
@@ -1023,7 +1394,8 @@ defmodule LightningWeb.WorkflowChannel do
     %{
       id: project.id,
       name: project.name,
-      concurrency: project.concurrency
+      concurrency: project.concurrency,
+      is_sandbox: not is_nil(project.parent_id)
     }
   end
 
@@ -1045,6 +1417,61 @@ defmodule LightningWeb.WorkflowChannel do
       github_installation_id: repo_connection.github_installation_id
     }
   end
+
+  defp restore_or_conflict(workflow, release, user) do
+    Workflows.restore_version(workflow, release, user)
+  rescue
+    Ecto.StaleEntryError -> {:error, :workflow_moved_on}
+  end
+
+  defp render_losing_triggers(workflow, snapshot) do
+    kept = MapSet.new(snapshot.triggers, & &1.id)
+
+    workflow
+    |> Lightning.Repo.preload(:triggers, force: true)
+    |> Map.fetch!(:triggers)
+    |> Enum.reject(&MapSet.member?(kept, &1.id))
+    |> Enum.map(
+      &%{
+        id: &1.id,
+        type: &1.type,
+        custom_path: &1.custom_path,
+        enabled: &1.enabled
+      }
+    )
+  end
+
+  defp render_returning_triggers(workflow, snapshot) do
+    live =
+      workflow
+      |> Lightning.Repo.preload(:triggers, force: true)
+      |> Map.fetch!(:triggers)
+      |> MapSet.new(& &1.id)
+
+    snapshot.triggers
+    |> Enum.reject(&MapSet.member?(live, &1.id))
+    |> Enum.map(&%{id: &1.id, type: &1.type, custom_path: &1.custom_path})
+  end
+
+  defp render_release(release, is_latest) do
+    %{
+      version_number: release.version_number,
+      kind: release.kind,
+      inserted_at: release.inserted_at,
+      published_by: render_release_publisher(release.published_by),
+      source_project: render_release_source_project(release.source_project),
+      lock_version: release.snapshot && release.snapshot.lock_version,
+      snapshot_id: release.snapshot_id,
+      restored_from_version_number: release.restored_from_version_number,
+      is_latest: is_latest
+    }
+  end
+
+  defp render_release_publisher(nil), do: nil
+  defp render_release_publisher(%_{} = user), do: collaborator_name(user)
+
+  defp render_release_source_project(nil), do: nil
+  defp render_release_source_project(%_{name: name}), do: name
 
   defp render_webhook_auth_methods(methods) do
     Enum.map(methods, fn method ->
@@ -1070,6 +1497,11 @@ defmodule LightningWeb.WorkflowChannel do
     ])
   end
 
+  defp content_locked?(workflow, project, user) do
+    Lightning.Accounts.experimental_features_enabled?(user) and
+      not Lightning.Workflows.editable_state?(workflow, project)
+  end
+
   # Without a membership row the policy needs the project itself to weigh up
   # support access. Resolve the standing once and decide all three questions
   # against it — three `Permissions.can?/4` calls would resolve three Scopes for
@@ -1081,7 +1513,12 @@ defmodule LightningWeb.WorkflowChannel do
           can_edit_workflow: ProjectUsers.permitted?(:edit_workflow, scope),
           can_run_workflow: ProjectUsers.permitted?(:run_workflow, scope),
           can_write_webhook_auth_method:
-            ProjectUsers.permitted?(:write_webhook_auth_method, scope)
+            ProjectUsers.permitted?(:write_webhook_auth_method, scope),
+          can_provision_sandbox:
+            Permissions.can?(:sandboxes, :provision_sandbox, user, project),
+          can_archive_sandbox:
+            not is_nil(project.parent_id) and
+              Permissions.can?(:sandboxes, :delete_sandbox, user, project)
         }
 
       # No such project, or one scheduled for deletion.
@@ -1089,7 +1526,9 @@ defmodule LightningWeb.WorkflowChannel do
         %{
           can_edit_workflow: false,
           can_run_workflow: false,
-          can_write_webhook_auth_method: false
+          can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
+          can_archive_sandbox: false
         }
     end
   end
@@ -1104,72 +1543,171 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Private helper functions for save_workflow and reset_workflow
-
-  defp workflow_error_reply(socket, {:error, %{type: type, message: message}}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: [message]},
-        type: type
-      }}, socket}
+  # Returns the bare reply payload so both `handle_in` and the deferred
+  # `handle_info` clauses can use it.
+  defp workflow_error_reply({:error, %{type: type, message: message}}) do
+    {:error,
+     %{
+       errors: %{base: [message]},
+       type: type
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :workflow_deleted}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["This workflow has been deleted"]},
-        type: "workflow_deleted"
-      }}, socket}
+  defp workflow_error_reply({:error, :starting_dataclip_invalid_json}) do
+    starting_dataclip_error("The input you reviewed is not valid JSON.")
   end
 
-  defp workflow_error_reply(socket, {:error, :deserialization_failed}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["Failed to extract workflow data from editor"]},
-        type: "deserialization_error"
-      }}, socket}
+  defp workflow_error_reply({:error, :starting_dataclip_not_an_object}) do
+    starting_dataclip_error("The input you reviewed must be a JSON object.")
   end
 
-  defp workflow_error_reply(socket, {:error, :internal_error}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["An internal error occurred"]},
-        type: "internal_error"
-      }}, socket}
+  defp workflow_error_reply({:error, :starting_dataclip_too_large}) do
+    starting_dataclip_error(
+      "The input you reviewed is too large to copy into a sandbox."
+    )
   end
 
-  defp workflow_error_reply(socket, {:error, :snapshot_failed}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["An internal error occurred"]},
-        type: "internal_error"
-      }}, socket}
+  defp workflow_error_reply({:error, :invalid_starting_dataclip}) do
+    starting_dataclip_error("The input you reviewed could not be read.")
   end
 
-  defp workflow_error_reply(
-         socket,
-         {:error, %Lightning.Extensions.Message{text: text}}
-       ) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: [text]},
-        type: "limit_error"
-      }}, socket}
+  defp workflow_error_reply({:error, :starting_dataclip_not_found}) do
+    starting_dataclip_error(
+      "That saved input is no longer available in this project."
+    )
   end
 
-  defp workflow_error_reply(socket, {:error, %Ecto.Changeset{} = changeset}) do
-    {:reply,
-     {:error,
-      %{
-        errors: format_changeset_errors(changeset),
-        type: determine_error_type(changeset)
-      }}, socket}
+  defp workflow_error_reply({:error, :read_only_view}) do
+    {:error,
+     %{
+       errors: %{
+         base: [
+           "You are reading an older version of this workflow. " <>
+             "Go to the latest version to make changes."
+         ]
+       },
+       type: "read_only_view"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :workflow_deleted}) do
+    {:error,
+     %{
+       errors: %{base: ["This workflow has been deleted"]},
+       type: "workflow_deleted"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :deserialization_failed}) do
+    {:error,
+     %{
+       errors: %{base: ["Failed to extract workflow data from editor"]},
+       type: "deserialization_error"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :internal_error}) do
+    {:error,
+     %{
+       errors: %{base: ["An internal error occurred"]},
+       type: "internal_error"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :nesting_too_deep}) do
+    {:error,
+     %{
+       errors: %{
+         base: ["This project is nested too deeply to create another sandbox"]
+       },
+       type: "nesting_too_deep"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :merge_failed}) do
+    {:error,
+     %{
+       errors: %{base: ["Could not promote this workflow. Please try again."]},
+       type: "merge_error"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :not_a_sandbox}) do
+    {:error,
+     %{
+       errors: %{
+         base: ["This workflow is not in a sandbox and can't be promoted."]
+       },
+       type: "invalid_state"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :snapshot_failed}) do
+    {:error,
+     %{
+       errors: %{base: ["An internal error occurred"]},
+       type: "internal_error"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :adaptor_catalogue_unavailable}) do
+    {:error,
+     %{
+       errors: %{
+         base: ["The adaptor catalogue is still loading. Try again shortly."]
+       },
+       type: "adaptor_catalogue_unavailable"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :workflow_moved_on}) do
+    {:error,
+     %{
+       errors: %{
+         base: ["Someone else saved this workflow. Try the restore again."]
+       },
+       type: "workflow_moved_on"
+     }}
+  end
+
+  defp workflow_error_reply({:error, :version_not_found}) do
+    {:error,
+     %{
+       errors: %{base: ["That version no longer exists"]},
+       type: "version_not_found"
+     }}
+  end
+
+  defp workflow_error_reply({:error, %Lightning.Extensions.Message{text: text}}) do
+    {:error,
+     %{
+       errors: %{base: [text]},
+       type: "limit_error"
+     }}
+  end
+
+  defp workflow_error_reply({:error, %Ecto.Changeset{} = changeset}) do
+    {:error,
+     %{
+       errors: format_changeset_errors(changeset),
+       type: determine_error_type(changeset)
+     }}
+  end
+
+  # Last resort: never let an unexpected error reason crash the channel and drop
+  # the user's socket. Log it and reply with a generic internal error.
+  defp workflow_error_reply(error) do
+    Logger.warning("Unhandled workflow channel error: #{inspect(error)}")
+
+    {:error,
+     %{
+       errors: %{base: ["An internal error occurred"]},
+       type: "internal_error"
+     }}
+  end
+
+  defp starting_dataclip_error(message) do
+    {:error, %{errors: %{base: [message]}, type: "validation_error"}}
   end
 
   defp format_changeset_errors(changeset) do
@@ -1228,11 +1766,14 @@ defmodule LightningWeb.WorkflowChannel do
   # document update.
   @read_only_frame_types [:sync_step1, :awareness, :query_awareness]
 
-  # Decides whether an inbound Yjs frame may reach the shared document. A user
-  # who can edit the workflow may send anything; a user with view-only access
-  # may send only the read-safe frames above, so they cannot change the
-  # workflow that every collaborator in the room shares.
-  defp forward_yjs_message?(_chunk, %{assigns: %{can_edit_workflow: true}}) do
+  defp forward_yjs_message?(_chunk, %{
+         assigns: %{
+           can_edit_workflow: true,
+           content_locked: false,
+           workflow_kind: kind
+         }
+       })
+       when kind != :version do
     true
   end
 
@@ -1258,6 +1799,147 @@ defmodule LightningWeb.WorkflowChannel do
   # that permission changes made during an active session are enforced.
   #
   # Returns :ok if authorized, {:error, %{type: string, message: string}} if not.
+  defp apply_lifecycle_state(
+         %{assigns: %{workflow_kind: :version}} = socket,
+         target
+       ) do
+    %{current_user: user, workflow_id: workflow_id} = socket.assigns
+
+    case Workflows.get_workflow(workflow_id) do
+      nil ->
+        {:error, :workflow_deleted}
+
+      workflow ->
+        workflow = Lightning.Repo.preload(workflow, :triggers)
+
+        target
+        |> case do
+          :live -> go_live_within_limits(workflow, user)
+          :draft -> Workflows.switch_to_draft(workflow, user)
+        end
+        |> case do
+          {:ok, updated} ->
+            {:ok, Repo.preload(updated, [:jobs, :edges, :triggers], force: true)}
+
+          error ->
+            error
+        end
+    end
+  end
+
+  defp apply_lifecycle_state(socket, target) do
+    Session.set_workflow_state(
+      socket.assigns.session_pid,
+      socket.assigns.current_user,
+      target
+    )
+  end
+
+  defp go_live_within_limits(workflow, user) do
+    activating? =
+      Enum.any?(workflow.triggers, fn trigger -> !trigger.enabled end)
+
+    case WorkflowUsageLimiter.limit_workflow_activation(
+           activating?,
+           workflow.project_id
+         ) do
+      :ok ->
+        Workflows.go_live(workflow, user)
+
+      {:error, _reason, %Lightning.Extensions.Message{} = message} ->
+        {:error, message}
+    end
+  end
+
+  defp transition_lifecycle_state(socket, target_state) do
+    with :ok <- authorize_edit_workflow(socket),
+         {:ok, workflow} <- apply_lifecycle_state(socket, target_state) do
+      broadcast_workflow_saved(socket, workflow)
+
+      socket =
+        if socket.assigns.workflow_kind == :version do
+          assign(
+            socket,
+            :content_locked,
+            content_locked?(
+              workflow,
+              socket.assigns.project,
+              socket.assigns.current_user
+            )
+          )
+        else
+          refresh_lifecycle_lock(socket, workflow)
+        end
+
+      push(socket, "session_context_updated", build_session_context(socket))
+
+      {:reply, {:ok, %{lock_version: workflow.lock_version, workflow: workflow}},
+       socket}
+    else
+      error -> {:reply, workflow_error_reply(error), socket}
+    end
+  end
+
+  defp broadcast_workflow_saved(socket, workflow) do
+    LightningWeb.Endpoint.broadcast_from!(
+      self(),
+      "workflow:collaborate:#{socket.assigns.workflow_id}",
+      "workflow_saved",
+      %{
+        latest_snapshot_lock_version: workflow.lock_version,
+        workflow: workflow
+      }
+    )
+  end
+
+  defp refresh_lifecycle_lock(socket, workflow) do
+    socket
+    |> assign(:workflow, workflow)
+    |> assign(
+      :content_locked,
+      content_locked?(
+        workflow,
+        socket.assigns.project,
+        socket.assigns.current_user
+      )
+    )
+  end
+
+  defp authorize_content_edit(socket) do
+    case authorize_edit_workflow(socket) do
+      :ok -> ensure_editable_state(socket)
+      error -> error
+    end
+  end
+
+  defp ensure_editable_state(socket) do
+    if content_locked?(
+         current_workflow(socket),
+         socket.assigns.project,
+         socket.assigns.current_user
+       ) do
+      {:error,
+       %{
+         type: "unauthorized",
+         message:
+           "This workflow is live. Switch it to draft or edit it in a sandbox to make changes."
+       }}
+    else
+      :ok
+    end
+  end
+
+  defp current_workflow(socket) do
+    case socket.assigns.workflow_kind do
+      :new ->
+        socket.assigns.workflow
+
+      _ ->
+        Workflows.get_workflow(socket.assigns.workflow.id) ||
+          socket.assigns.workflow
+    end
+  end
+
   defp authorize_edit_workflow(socket) do
     authorize_project_user_action(
       socket,
@@ -1284,6 +1966,133 @@ defmodule LightningWeb.WorkflowChannel do
 
       {:error, :unauthorized} ->
         {:error, %{type: "unauthorized", message: unauthorized_message}}
+    end
+  end
+
+  defp authorize_provision_sandbox(user, parent) do
+    if Permissions.can?(:sandboxes, :provision_sandbox, user, parent) do
+      :ok
+    else
+      {:error,
+       %{
+         type: "unauthorized",
+         message: "You don't have permission to create a sandbox here"
+       }}
+    end
+  end
+
+  defp authorize_merge_sandbox(user, parent) do
+    if Permissions.can?(:sandboxes, :merge_sandbox, user, parent) do
+      :ok
+    else
+      {:error,
+       %{
+         type: "unauthorized",
+         message: "You don't have permission to promote this workflow"
+       }}
+    end
+  end
+
+  defp authorize_delete_sandbox(user, sandbox) do
+    if Permissions.can?(:sandboxes, :delete_sandbox, user, sandbox) do
+      :ok
+    else
+      {:error,
+       %{
+         type: "unauthorized",
+         message: "You don't have permission to archive this sandbox"
+       }}
+    end
+  end
+
+  defp fetch_parent_project(%{parent_id: nil}), do: nil
+
+  defp fetch_parent_project(%{parent_id: parent_id}),
+    do: Projects.get_project(parent_id)
+
+  defp limit_new_sandbox(parent) do
+    case ProjectLimiter.limit_new_sandbox(parent.id) do
+      :ok -> :ok
+      {:error, _reason, message} -> {:error, message}
+    end
+  end
+
+  defp check_chosen_dataclip(parent, %{dataclip_ids: ids}) do
+    if Sandboxes.copyable_dataclips?(parent, ids),
+      do: :ok,
+      else: {:error, :starting_dataclip_not_found}
+  end
+
+  defp check_chosen_dataclip(_parent, _attrs), do: :ok
+
+  defp put_starting_data(attrs, params) do
+    case params do
+      %{"starting_dataclip" => starting} ->
+        Map.put(attrs, :starting_dataclip, starting)
+
+      %{"dataclip_id" => dataclip_id} ->
+        Map.put(attrs, :dataclip_ids, [dataclip_id])
+
+      _ ->
+        attrs
+    end
+  end
+
+  defp sandbox_name(params, workflow_name, parent) do
+    raw =
+      case params do
+        %{"name" => name} when is_binary(name) and name != "" -> name
+        _ -> default_sandbox_name(workflow_name, parent)
+      end
+
+    Lightning.Helpers.url_safe_name(raw)
+  end
+
+  defp current_workflow_name(socket) do
+    case Workflows.get_workflow(socket.assigns.workflow_id) do
+      nil -> socket.assigns.workflow.name
+      workflow -> workflow.name
+    end
+  end
+
+  defp default_sandbox_name(workflow_name, parent) do
+    base = workflow_name || parent.name || "sandbox"
+    "#{base}-sandbox"
+  end
+
+  defp render_editable_sandbox({sandbox, joinable_workflow_id}) do
+    %{
+      id: sandbox.id,
+      name: sandbox.name,
+      color: sandbox.color,
+      inserted_at: sandbox.inserted_at,
+      updated_at: sandbox.updated_at,
+      owner: render_owner(sandbox.project_users),
+      workflow_id: joinable_workflow_id
+    }
+  end
+
+  defp render_owner(project_users) do
+    case Enum.find(project_users, &(&1.role == :owner)) do
+      %{user: user} ->
+        %{
+          id: user.id,
+          name: collaborator_name(user),
+          email: user.email
+        }
+
+      nil ->
+        nil
+    end
+  end
+
+  defp collaborator_name(user) do
+    [user.first_name, user.last_name]
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+    |> Enum.join(" ")
+    |> case do
+      "" -> user.email
+      name -> name
     end
   end
 
@@ -1333,44 +2142,51 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp fetch_auth_methods(_ids, _project), do: []
 
-  # Snapshot-version view. The channel owns version parsing (and the
-  # "invalid version format" error); the resolver hydrates from the snapshot.
-  # Authorise before resolving, so a non-member gets a uniform "unauthorized"
-  # and cannot learn which versions exist from the error.
-  defp load_workflow("edit", workflow_id, project, user, version)
-       when is_binary(version) do
-    Logger.info("Loading workflow snapshot version: #{version}")
+  defp parse_room_topic(rest) do
+    case String.split(rest, ":", parts: 2) do
+      [workflow_id, "release" <> version] -> {workflow_id, {:release, version}}
+      [workflow_id, "v" <> version] -> {workflow_id, {:version, version}}
+      [workflow_id, "run:" <> run_id] -> {workflow_id, {:as_executed, run_id}}
+      [workflow_id] -> {workflow_id, :latest}
+      [workflow_id, suffix] -> {workflow_id, {:unknown, suffix}}
+    end
+  end
+
+  defp load_workflow("edit", workflow_id, project, user, {:release, version}) do
+    Logger.info("Loading workflow release version: #{version}")
 
     case Integer.parse(version) do
-      {lock_version, ""} ->
-        with :ok <- Permissions.can(:workflows, :access_read, user, project),
-             {:ok, workflow, kind} <-
-               WorkflowResolver.resolve(workflow_id, :edit,
-                 version: lock_version,
-                 project: project
-               ) do
-          {:ok, workflow, kind}
-        else
-          {:error, :unauthorized} ->
-            {:error, "unauthorized"}
-
-          {:error, :snapshot_not_found} ->
-            {:error, "snapshot version #{version} not found"}
-
-          # Foreign and deleted workflows both surface as "workflow not found",
-          # so the channel never reveals that an id exists in another project.
-          {:error, reason} when reason in [:wrong_project, :workflow_not_found] ->
-            {:error, "workflow not found"}
-        end
+      {version_number, ""} ->
+        resolve_release(workflow_id, version_number, version, project, user)
 
       _ ->
         {:error, "invalid version format"}
     end
   end
 
-  # Edit latest. Authorise before resolving, so a non-member gets a uniform
-  # "unauthorized" and cannot learn whether the workflow exists from the error.
-  defp load_workflow("edit", workflow_id, project, user, _version) do
+  defp load_workflow("edit", workflow_id, project, user, {:version, version}) do
+    Logger.info("Loading workflow snapshot version: #{version}")
+
+    case Integer.parse(version) do
+      {lock_version, ""} ->
+        resolve_snapshot(workflow_id, lock_version, version, project, user)
+
+      _ ->
+        {:error, "invalid version format"}
+    end
+  end
+
+  defp load_workflow(
+         "edit",
+         workflow_id,
+         project,
+         user,
+         {:as_executed, run_id}
+       ) do
+    resolve_as_executed(workflow_id, run_id, project, user)
+  end
+
+  defp load_workflow("edit", workflow_id, project, user, :latest) do
     with :ok <- Permissions.can(:workflows, :access_read, user, project),
          {:ok, workflow, kind} <-
            WorkflowResolver.resolve(workflow_id, :edit, project: project) do
@@ -1389,7 +2205,16 @@ defmodule LightningWeb.WorkflowChannel do
   # The resolver reconciles by id, so a "new" join for an id owned by another
   # project returns {:error, :wrong_project}, mapped to the same client-facing
   # string as the "edit" path.
-  defp load_workflow("new", workflow_id, project, user, _version) do
+  defp load_workflow(_action, _workflow_id, _project, _user, {:unknown, suffix}) do
+    {:error, "invalid room suffix '#{suffix}'"}
+  end
+
+  defp load_workflow("new", _workflow_id, _project, _user, view)
+       when view != :latest do
+    {:error, "invalid parameters. a new workflow has no version to pin"}
+  end
+
+  defp load_workflow("new", workflow_id, project, user, _view) do
     case Permissions.can(:project_users, :create_workflow, user, project) do
       :ok ->
         case WorkflowResolver.resolve(workflow_id, :new, project: project) do
@@ -1405,33 +2230,127 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  defp load_workflow(action, _workflow_id, _project, _user, _version) do
+  defp load_workflow(action, _workflow_id, _project, _user, _view) do
     {:error, "invalid action '#{action}', must be 'new' or 'edit'"}
   end
 
-  defp get_workflow_run_history(workflow_id, includes_run_id) do
-    Lightning.WorkOrders.get_workorders_with_runs(workflow_id, includes_run_id)
-    |> Enum.map(fn worder ->
-      %{
-        id: worder.id,
-        state: worder.state,
-        last_activity: worder.last_activity,
-        runs:
-          Enum.map(worder.runs, fn run ->
-            %{
-              id: run.id,
-              state: run.state,
-              error_type: run.error_type,
-              started_at: run.started_at,
-              finished_at: run.finished_at,
-              version: run.snapshot.lock_version
-            }
-          end)
-      }
-    end)
+  defp resolve_release(workflow_id, version_number, version, project, user) do
+    with :ok <- Permissions.can(:workflows, :access_read, user, project),
+         %Workflows.Workflow{} <-
+           Workflows.get_workflow_for_project(project, workflow_id) do
+      resolve_released_snapshot(workflow_id, version_number, version, project)
+    else
+      {:error, :unauthorized} -> {:error, "unauthorized"}
+      _ -> {:error, "workflow not found"}
+    end
   end
 
-  defp format_work_order_for_history(wo) do
+  defp resolve_snapshot(workflow_id, lock_version, version, project, user) do
+    with :ok <- Permissions.can(:workflows, :access_read, user, project),
+         {:ok, workflow, kind} <-
+           WorkflowResolver.resolve(workflow_id, :edit,
+             version: lock_version,
+             project: project
+           ) do
+      {:ok, workflow, kind}
+    else
+      {:error, :unauthorized} ->
+        {:error, "unauthorized"}
+
+      {:error, :snapshot_not_found} ->
+        {:error, "snapshot version #{version} not found"}
+
+      {:error, reason} when reason in [:wrong_project, :workflow_not_found] ->
+        {:error, "workflow not found"}
+    end
+  end
+
+  defp resolve_released_snapshot(workflow_id, version_number, version, project) do
+    with %WorkflowRelease{snapshot: %{lock_version: lock_version}} <-
+           WorkflowReleases.get_by_version_number(workflow_id, version_number),
+         {:ok, workflow, kind} <-
+           WorkflowResolver.resolve(workflow_id, :edit,
+             version: lock_version,
+             project: project
+           ) do
+      {:ok, workflow, kind}
+    else
+      _ -> {:error, "snapshot version #{version} not found"}
+    end
+  end
+
+  defp resolve_as_executed(workflow_id, run_id, project, user) do
+    with :ok <- Permissions.can(:workflows, :access_read, user, project),
+         {:ok, run_id} <- cast_run_id(run_id),
+         lock_version when is_integer(lock_version) <-
+           run_snapshot_lock_version(workflow_id, run_id),
+         {:ok, workflow, kind} <-
+           WorkflowResolver.resolve(workflow_id, :edit,
+             version: lock_version,
+             project: project
+           ) do
+      {:ok, workflow, kind}
+    else
+      {:error, :unauthorized} -> {:error, "unauthorized"}
+      {:error, :snapshot_not_found} -> {:error, "run snapshot not found"}
+      _ -> {:error, "run not found"}
+    end
+  end
+
+  defp cast_run_id(run_id) do
+    case Ecto.UUID.cast(run_id) do
+      {:ok, run_id} -> {:ok, run_id}
+      :error -> :error
+    end
+  end
+
+  defp run_snapshot_lock_version(workflow_id, run_id) do
+    from(r in Lightning.Run,
+      join: s in assoc(r, :snapshot),
+      where: r.id == ^run_id and s.workflow_id == ^workflow_id,
+      select: s.lock_version
+    )
+    |> Repo.one()
+  end
+
+  defp history_filter(v) when v in ["draft", "unversioned"], do: :draft
+  defp history_filter(v) when is_integer(v), do: {:release, v}
+
+  defp history_filter(v) when is_binary(v) do
+    case Integer.parse(v) do
+      {n, ""} -> {:release, n}
+      _ -> :draft
+    end
+  end
+
+  defp get_filtered_run_history(workflow_id, {:release, version_number}) do
+    version_numbers =
+      WorkflowReleases.version_numbers_by_lock_version(workflow_id)
+
+    workflow_id
+    |> WorkOrders.get_workorders_for_version(version_number)
+    |> Enum.map(&format_work_order_for_history(&1, version_numbers))
+  end
+
+  defp get_filtered_run_history(workflow_id, :draft) do
+    version_numbers =
+      WorkflowReleases.version_numbers_by_lock_version(workflow_id)
+
+    workflow_id
+    |> WorkOrders.get_workorders_unversioned()
+    |> Enum.map(&format_work_order_for_history(&1, version_numbers))
+  end
+
+  defp get_workflow_run_history(workflow_id, includes_run_id) do
+    version_numbers =
+      WorkflowReleases.version_numbers_by_lock_version(workflow_id)
+
+    workflow_id
+    |> Lightning.WorkOrders.get_workorders_with_runs(includes_run_id)
+    |> Enum.map(&format_work_order_for_history(&1, version_numbers))
+  end
+
+  defp format_work_order_for_history(wo, version_numbers) do
     # Preload if needed
     wo = Repo.preload(wo, runs: :snapshot)
 
@@ -1439,13 +2358,14 @@ defmodule LightningWeb.WorkflowChannel do
       id: wo.id,
       state: wo.state,
       last_activity: wo.last_activity,
-      runs: Enum.map(wo.runs, &format_run_for_history/1)
+      runs: Enum.map(wo.runs, &format_run_for_history(&1, version_numbers))
     }
   end
 
-  defp format_run_for_history(run) do
+  defp format_run_for_history(run, version_numbers) do
     # Preload snapshot if not already loaded
     run = Repo.preload(run, :snapshot)
+    lock_version = run.snapshot && run.snapshot.lock_version
 
     %{
       id: run.id,
@@ -1453,7 +2373,9 @@ defmodule LightningWeb.WorkflowChannel do
       error_type: run.error_type,
       started_at: run.started_at,
       finished_at: run.finished_at,
-      version: if(run.snapshot, do: run.snapshot.lock_version, else: 0)
+      version: lock_version,
+      version_number: lock_version && Map.get(version_numbers, lock_version),
+      snapshot_id: run.snapshot_id
     }
   end
 
@@ -1501,18 +2423,24 @@ defmodule LightningWeb.WorkflowChannel do
     Lightning.AiAssistant.Limiter.validate_quota(project_id)
   end
 
+  defp check_action_limit("new_sandbox", project_id) do
+    ProjectLimiter.limit_new_sandbox(project_id)
+  end
+
   defp render_limits(project_id) do
     # Check run limit for initial context
     run_limit_result = check_action_limit("new_run", project_id)
     workflow_activation = check_action_limit("activate_workflow", project_id)
     github_sync = check_action_limit("github_sync", project_id)
     ai_assistant = check_action_limit("ai_assistant", project_id)
+    new_sandbox = check_action_limit("new_sandbox", project_id)
 
     %{
       runs: render_limit_result(run_limit_result),
       workflow_activation: render_limit_result(workflow_activation),
       github_sync: render_limit_result(github_sync),
-      ai_assistant: render_limit_result(ai_assistant)
+      ai_assistant: render_limit_result(ai_assistant),
+      new_sandbox: render_limit_result(new_sandbox)
     }
   end
 

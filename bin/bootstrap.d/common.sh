@@ -148,6 +148,41 @@ detect_stale_native_caches() {
   fi
 }
 
+# Removes everything bootstrap can regenerate, so a broken tree can be rebuilt
+# without reaching for git clean. Never touches .env files, .context, the
+# database or anything else carrying local state.
+clean_project_artifacts() {
+  step "Cleaning regenerable artifacts"
+
+  # Kafka trigger tests leave directories deliberately chmod'd unreadable, so
+  # tmp/ has to be made traversable before it can be removed.
+  chmod -R u+rwx tmp 2>/dev/null || true
+
+  rm -rf \
+    _build \
+    deps/*/c_build deps/*/build deps/*/cmake-build deps/*/_build deps/*/priv/*.so \
+    assets/node_modules \
+    assets/*.tsbuildinfo \
+    priv/plts \
+    priv/openfn \
+    priv/schemas \
+    priv/static/assets \
+    priv/static/cache_manifest.json \
+    priv/static/images/adaptors \
+    priv/adaptor_registry_cache.json \
+    .elixir_ls .elixir-tools \
+    tmp \
+    cover test/reports excoveralls.json ./*.coverdata \
+    assets/test-results assets/playwright-report assets/coverage \
+    erl_crash.dump Mnesia.* \
+    2>/dev/null || true
+
+  find . -name .DS_Store -not -path './deps/*' -delete 2>/dev/null || true
+
+  ok "Cleaned"
+  echo ""
+}
+
 ensure_tool_versions() {
   if [[ ! -f .tool-versions ]]; then return; fi
 
@@ -192,8 +227,6 @@ setup_project_directory() {
 
   step "Installing Lightning components"
   mix lightning.install_runtime
-  mix lightning.install_schemas
-  mix lightning.install_adaptor_icons
 }
 
 setup_project_database() {
@@ -202,6 +235,31 @@ setup_project_database() {
 }
 
 run_bootstrap() {
+  local clean=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --clean)
+      clean=true
+      shift
+      ;;
+    -h | --help)
+      printf '%s\n' \
+        "Usage: bin/bootstrap [--clean]" \
+        "" \
+        "  --clean  Remove regenerable artifacts (build output, node_modules," \
+        "           installed runtime/schemas/icons, caches, test leftovers)" \
+        "           before installing. Leaves .env files and the database alone."
+      exit 0
+      ;;
+    *)
+      err "Unknown option: $1"
+      hint "See bin/bootstrap --help"
+      exit 1
+      ;;
+    esac
+  done
+
   step "Gathering environment information"
   echo "Platform: $OS $ARCH"
   echo ""
@@ -231,6 +289,10 @@ run_bootstrap() {
   step "Setting up Elixir environment"
   mix local.hex --if-missing --force
   mix local.rebar --if-missing --force
+
+  if [[ "$clean" == true ]]; then
+    clean_project_artifacts
+  fi
 
   setup_project_directory
 

@@ -43,8 +43,6 @@ defmodule Lightning.Collections.Item do
       "value is too long, please use a shorter one",
       1_000_000
     )
-    # Width, not a null byte, so this is separate from the Collections jsonb
-    # work still outstanding.
     |> Lightning.Validators.validate_name_fits_column(
       :key,
       "key is too long, please use a shorter one"

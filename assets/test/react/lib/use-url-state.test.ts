@@ -887,6 +887,34 @@ describe('useURLState', () => {
       expect(window.location.search).toBe('?panel=');
     });
 
+    test('replaces the entry instead of pushing when asked', () => {
+      history.replaceState({}, '', '/w/x?v=5');
+      const before = history.length;
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.updateSearchParams({ v: null }, { replace: true });
+      });
+
+      expect(window.location.search).toBe('');
+      expect(history.length).toBe(before);
+    });
+
+    test('still pushes by default, so a user-driven switch can be undone', () => {
+      history.replaceState({}, '', '/w/x');
+      const before = history.length;
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.updateSearchParams({ v: '5' });
+      });
+
+      expect(window.location.search).toBe('?v=5');
+      expect(history.length).toBe(before + 1);
+    });
+
     test('preserves pathname when updating params and hash', () => {
       history.replaceState({}, '', '/workflow/123/edit');
 

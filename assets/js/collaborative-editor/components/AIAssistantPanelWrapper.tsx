@@ -70,6 +70,7 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
+import { usePinnedView } from '../lib/pinnedView';
 import type { JobCodeContext, Message } from '../types/ai-assistant';
 import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
 import { Z_INDEX } from '../utils/constants';
@@ -122,11 +123,10 @@ export function AIAssistantPanelWrapper({
     clearAIAssistantInitialMessage,
   } = useUICommands();
   const { updateSearchParams, params } = useURLState();
-  const currentVersion = params['v'];
 
-  // Check if viewing a pinned version (not latest) to disable AI Assistant
-  const isPinnedVersion =
-    currentVersion !== undefined && currentVersion !== null;
+  const pinnedView = usePinnedView();
+  const isPinnedVersion = pinnedView.isPinnedView;
+  const currentVersion = pinnedView.version ?? undefined;
 
   const { isReadOnly } = useWorkflowReadOnly();
   const isNewWorkflow = useIsNewWorkflow();

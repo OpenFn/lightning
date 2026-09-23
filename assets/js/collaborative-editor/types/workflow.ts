@@ -81,9 +81,26 @@ export const BaseWorkflowSchema = z.object({
     .refine(val => !isNameTooWideForColumn(val)),
   concurrency: z.number().nullable().optional(),
   enable_job_logs: z.boolean().default(false),
+  state: z.enum(['draft', 'live']).optional(),
 });
 
 export type BaseWorkflow = z.infer<typeof BaseWorkflowSchema>;
+
+export interface SandboxOwner {
+  id: string;
+  name?: string;
+  email?: string;
+}
+
+export interface Sandbox {
+  id: string;
+  name: string;
+  color: string | null;
+  inserted_at: string;
+  updated_at: string;
+  owner: SandboxOwner | null;
+  workflow_id: string | null;
+}
 
 /**
  * Creates a workflow schema with dynamic project concurrency validation
@@ -163,7 +180,7 @@ export namespace Workflow {
     selectedEdgeId: string | null;
 
     // Computed/derived state
-    enabled: boolean | null; // Computed from triggers
+    enabled: boolean | null;
     selectedNode: Workflow.Job | Workflow.Trigger | null;
     selectedEdge: Workflow.Edge | null;
 

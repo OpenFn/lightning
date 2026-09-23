@@ -16,6 +16,9 @@ defmodule Lightning.WorkOrders.SearchParams do
     :date_before,
     :wo_date_after,
     :wo_date_before,
+    :run_date_after,
+    :run_date_before,
+    :run_status,
     :sort_by,
     :sort_direction,
     :error_signature_exit_reason,
@@ -30,6 +33,9 @@ defmodule Lightning.WorkOrders.SearchParams do
   @derive {JSON.Encoder, only: @fields}
 
   @status_values Lightning.WorkOrder.states()
+  # Run states, not work order states: the workflow health page's runs chart
+  # counts runs, and only a *final* run has an outcome to have been counted.
+  @run_status_values Lightning.Run.final_states()
   @search_field_values [:id, :body, :log, :dataclip_name]
 
   # String forms for the URI/flag params new/1 receives from the UI.
@@ -53,6 +59,9 @@ defmodule Lightning.WorkOrders.SearchParams do
           date_before: DateTime.t(),
           wo_date_after: DateTime.t(),
           wo_date_before: DateTime.t(),
+          run_date_after: DateTime.t(),
+          run_date_before: DateTime.t(),
+          run_status: [atom()],
           sort_by: String.t(),
           sort_direction: String.t(),
           error_signature_exit_reason: String.t(),
@@ -78,6 +87,15 @@ defmodule Lightning.WorkOrders.SearchParams do
     field(:wo_date_before, :utc_datetime_usec)
     field(:sort_by, :string)
     field(:sort_direction, :string)
+
+    # Workflow health page filters
+    field(:run_date_after, :utc_datetime_usec)
+    field(:run_date_before, :utc_datetime_usec)
+
+    field(:run_status, {:array, Ecto.Enum},
+      values: @run_status_values,
+      default: []
+    )
 
     # The error signature the workflow health page's triage row draws its
     # "View" button from. `error_signature_exit_reason` switches the
@@ -142,27 +160,30 @@ defmodule Lightning.WorkOrders.SearchParams do
     |> dates_to_string()
   end
 
+  # Naming none of the four search-field flags is ambiguous. The schema reads
+  # that URL as "search all four", but the history page paints its toggles from
+  # the raw params and shows them all off, so the next search from that page
+  # finds nothing. `log` alone agrees with both, and is what a bare visit sets.
   defp merge_fields(search_params, defaults) do
-    (defaults -- Map.keys(search_params))
-    |> Enum.map(fn x -> {x, true} end)
-    |> Enum.into(%{})
-    |> Map.merge(search_params)
+    if Enum.any?(defaults, &Map.has_key?(search_params, &1)) do
+      (defaults -- Map.keys(search_params))
+      |> Map.new(fn x -> {x, true} end)
+      |> Map.merge(search_params)
+    else
+      Map.put(search_params, "log", true)
+    end
   end
 
   defp dates_to_string(search_params) do
     ~w(date_after date_before wo_date_after wo_date_before)a
-    |> Enum.map(fn key ->
+    |> Enum.reduce(search_params, fn key, params ->
       key = Atom.to_string(key)
-      value = Map.get(search_params, key)
 
-      if value do
-        {key, DateTime.to_string(value)}
-      else
-        {key, value}
+      case Map.get(params, key) do
+        nil -> Map.delete(params, key)
+        value -> Map.put(params, key, DateTime.to_string(value))
       end
     end)
-    |> Enum.into(%{})
-    |> Map.merge(search_params, fn _key, v1, _v2 -> v1 end)
   end
 
   # Oban args (JSON): rebuilds the struct new/1 validated before enqueue. Runs

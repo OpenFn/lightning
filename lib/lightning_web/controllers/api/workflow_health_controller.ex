@@ -19,6 +19,7 @@ defmodule LightningWeb.API.WorkflowHealthController do
   plug :authorize_workflow
   # After :authorize_workflow so a 404 wins over a 400.
   plug :validate_days
+  plug :validate_timezone when action in [:runs]
 
   def outcomes(conn, _params) do
     json(
@@ -37,16 +38,29 @@ defmodule LightningWeb.API.WorkflowHealthController do
     )
   end
 
+  # `vary` because this is the one action whose body depends on a request
+  # header, and nothing between the browser and here would guess that.
   def runs(conn, _params) do
-    json(
-      conn,
-      Workflows.Stats.runs(conn.assigns.workflow, conn.assigns.days_back)
+    conn
+    |> put_resp_header("vary", "x-timezone")
+    |> json(
+      Workflows.Stats.runs(
+        conn.assigns.workflow,
+        conn.assigns.days_back,
+        conn.assigns.timezone
+      )
     )
   end
 
   # Closed set, string-matched — no free integer, no parse to defend.
   @days %{"1" => 1, "7" => 7, "30" => 30}
   @default_days "30"
+  @default_timezone "Etc/UTC"
+
+  # CLDR's sentinel for a host clock it could not map to an IANA zone. A
+  # browser sending it is telling us it does not know, which is the same thing
+  # as not telling us.
+  @unknown_timezone "Etc/Unknown"
 
   defp validate_days(conn, _opts) do
     case Map.fetch(@days, conn.params["days"] || @default_days) do
@@ -59,6 +73,38 @@ defmodule LightningWeb.API.WorkflowHealthController do
         |> json(%{error: "days must be one of 1, 7, 30"})
         |> halt()
     end
+  end
+
+  # The reader's timezone, because nothing in Lightning records one. The only
+  # place a default is chosen: a browser that sends no header, or says it does
+  # not know, gets UTC; anything else that is not a zone is a 400, because the
+  # browser picked it and drawing someone else's clock would hide that.
+  #
+  # Validated before it reaches the cache key, so `:workflow_stats` is keyed on
+  # the tz database rather than on anything a header can carry.
+  defp validate_timezone(conn, _opts) do
+    case get_req_header(conn, "x-timezone") do
+      [] ->
+        assign(conn, :timezone, @default_timezone)
+
+      [@unknown_timezone] ->
+        assign(conn, :timezone, @default_timezone)
+
+      [timezone] ->
+        if Tzdata.zone_exists?(timezone),
+          do: assign(conn, :timezone, timezone),
+          else: reject_timezone(conn)
+
+      _ ->
+        reject_timezone(conn)
+    end
+  end
+
+  defp reject_timezone(conn) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: "x-timezone must be an IANA timezone name"})
+    |> halt()
   end
 
   defp authorize_workflow(conn, _opts) do

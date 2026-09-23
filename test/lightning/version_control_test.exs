@@ -748,7 +748,7 @@ defmodule Lightning.VersionControlTest do
       repo_connection: repo_connection
     } do
       # The pre-flight generates the spec and throws it away, so a project
-      # without a collision has to reach GitHub exactly as before.
+      # without a collision has to reach GitHub as normal.
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
       expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")

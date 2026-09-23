@@ -31,6 +31,8 @@ defmodule Lightning.Config.Bootstrap do
 
   alias Lightning.Config.Utils
 
+  require Logger
+
   def source_envs do
     {:ok, _} =
       source([
@@ -233,48 +235,33 @@ defmodule Lightning.Config.Bootstrap do
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
     # Comma-separated to match the ws-worker parser, so the picker view and
-    # @local resolution agree on the same repo list. See RUNNINGLOCAL.md.
+    # @local resolution agree on the same repo list. See ADAPTORS.md.
     local_adaptors_repos =
-      env!("OPENFN_ADAPTORS_REPO", :string, nil)
-      |> case do
-        nil ->
-          []
-
-        value when is_binary(value) ->
-          value
-          |> String.split(",", trim: true)
-          |> Enum.map(&String.trim/1)
-          |> Enum.reject(&(&1 == ""))
-          |> Enum.map(&Path.expand/1)
-      end
+      parse_repo_list(env!("OPENFN_ADAPTORS_REPO", :string, nil))
 
     use_local_adaptors_repos? =
       env!("LOCAL_ADAPTORS", &Utils.ensure_boolean/1, false)
-      |> tap(fn v ->
-        if v && local_adaptors_repos == [] do
-          raise """
-          LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set.
-          """
-        end
-      end)
 
-    config :lightning, Lightning.AdaptorRegistry,
-      use_cache:
-        env!(
-          "ADAPTORS_REGISTRY_JSON_PATH",
-          :string,
-          Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
-        ),
-      local_adaptors_repos:
-        if(use_local_adaptors_repos?, do: local_adaptors_repos, else: [])
+    configure_adaptors_strategy(local_adaptors_repos, use_local_adaptors_repos?)
 
+    # Upstreams for the NPM strategy. registry_url is the npm search and
+    # packument endpoint, jsdelivr_url serves configuration schemas, and
+    # github_url plus github_ref locate the raw icon files under
+    # OpenFn/adaptors. Defaults live on the Lightning.Adaptors.NPM.* modules,
+    # and an unset env var leaves the default alone.
+    #
+    # Point all of them at `bin/adaptor_cache` to serve from a local disk
+    # cache while working on adaptors.
     config :lightning,
-      schemas_path:
-        env!(
-          "SCHEMAS_PATH",
-          :string,
-          Utils.get_env([:lightning, :schemas_path], "./priv")
-        )
+           Lightning.Adaptors.NPM,
+           [
+             registry_url: env!("ADAPTORS_NPM_REGISTRY_URL", :string, nil),
+             jsdelivr_url: env!("ADAPTORS_NPM_JSDELIVR_URL", :string, nil),
+             github_url: env!("ADAPTORS_NPM_GITHUB_URL", :string, nil),
+             github_ref: env!("ADAPTORS_NPM_GITHUB_REF", :string, nil),
+             http_timeout: env!("ADAPTORS_NPM_HTTP_TIMEOUT", :integer?, nil)
+           ]
+           |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
     config :lightning,
            :purge_deleted_after_days,
@@ -999,6 +986,122 @@ defmodule Lightning.Config.Bootstrap do
       commit: env!("COMMIT", :string, nil)
     ]
   end
+
+  defp configure_adaptors_strategy(
+         local_adaptors_repos,
+         use_local_adaptors_repos?
+       ) do
+    adaptors_strategy_value =
+      case env!("ADAPTORS_STRATEGY", :string, nil) do
+        nil -> nil
+        value -> String.trim(value)
+      end
+
+    adaptors_strategy =
+      case adaptors_strategy_value do
+        blank when blank in [nil, ""] ->
+          local_adaptors_back_compat_strategy(use_local_adaptors_repos?)
+
+        "npm" ->
+          Lightning.Adaptors.NPM
+
+        "local" ->
+          Lightning.Adaptors.Local
+
+        unknown ->
+          raise """
+          Unknown ADAPTORS_STRATEGY: #{unknown}
+
+          Currently supported strategies are:
+
+          - npm (default)
+          - local
+          """
+      end
+
+    local_strategy_paths =
+      resolve_local_strategy_paths(local_adaptors_repos, adaptors_strategy)
+
+    if adaptors_strategy == Lightning.Adaptors.Local and
+         local_strategy_paths == [] do
+      raise """
+      ADAPTORS_STRATEGY is set to local, but neither ADAPTORS_LOCAL_REPO nor the deprecated OPENFN_ADAPTORS_REPO is set.
+      """
+    end
+
+    config :lightning,
+           Lightning.Adaptors,
+           [
+             # config/test.exs pins :strategy to StrategyMock so the
+             # application-level supervisor never hits the network during the
+             # test suite. config/runtime.exs deep-merges this config over
+             # test.exs on every boot (including :test), so writing a real
+             # strategy here unconditionally would silently replace the mock.
+             strategy:
+               if(config_env() == :test, do: nil, else: adaptors_strategy),
+             # An operator-supplied path is expanded once at boot, unlike
+             # Config.icon_path/0's {:tmp, ...} default, which is deliberately
+             # resolved at call time (see its doc) so a compiled release
+             # doesn't bake in a build-time tmp path. An explicit override has
+             # no such concern.
+             icon_path:
+               env!("ADAPTORS_ICONS_PATH", :string, nil) |> expand_or_nil(),
+             refresh_interval:
+               env!("ADAPTORS_REFRESH_INTERVAL_SECONDS", :integer?, nil)
+               |> seconds_to_ms()
+           ]
+           |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+
+    config :lightning, Lightning.Adaptors.Local, paths: local_strategy_paths
+  end
+
+  defp local_adaptors_back_compat_strategy(use_local_adaptors_repos?) do
+    if use_local_adaptors_repos? do
+      Logger.warning(
+        "LOCAL_ADAPTORS is deprecated, use ADAPTORS_STRATEGY=local instead."
+      )
+
+      Lightning.Adaptors.Local
+    else
+      Lightning.Adaptors.NPM
+    end
+  end
+
+  # The deprecation warning only fires under the Local strategy. An operator
+  # on the npm strategy can leave OPENFN_ADAPTORS_REPO set for the ws-worker
+  # and should not be told to drop a var they still need.
+  defp resolve_local_strategy_paths(local_adaptors_repos, adaptors_strategy) do
+    case env!("ADAPTORS_LOCAL_REPO", :string, nil) |> parse_repo_list() do
+      [] ->
+        if local_adaptors_repos != [] and
+             adaptors_strategy == Lightning.Adaptors.Local do
+          Logger.warning(
+            "OPENFN_ADAPTORS_REPO is deprecated, use ADAPTORS_LOCAL_REPO instead."
+          )
+        end
+
+        local_adaptors_repos
+
+      paths ->
+        paths
+    end
+  end
+
+  defp parse_repo_list(nil), do: []
+
+  defp parse_repo_list(value) when is_binary(value) do
+    value
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.map(&Path.expand/1)
+  end
+
+  defp seconds_to_ms(nil), do: nil
+  defp seconds_to_ms(seconds) when is_integer(seconds), do: seconds * 1000
+
+  defp expand_or_nil(nil), do: nil
+  defp expand_or_nil(path) when is_binary(path), do: Path.expand(path)
 
   defp get_env(app) do
     Process.get({Config, :config})

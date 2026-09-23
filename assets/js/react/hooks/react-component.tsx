@@ -77,6 +77,13 @@ export const ReactComponent = {
             JSON.stringify([['patch', { replace, href: path }]])
           );
         },
+        redirect: (path, options) => {
+          const replace = options?.replace ?? false;
+          this.liveSocket.execJS(
+            this.el,
+            JSON.stringify([['navigate', { replace, href: path }]])
+          );
+        },
       },
       /* eslint-enable */
       this.__view(),

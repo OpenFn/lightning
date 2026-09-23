@@ -12,6 +12,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   alias Phoenix.LiveView.JS
 
   attr :period, :string, default: "last 30 days"
+  attr :lifecycle, :boolean, default: false
   attr :can_delete_workflow, :boolean
   attr :workflows_stats, :list
   attr :project, :map
@@ -24,6 +25,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <div class="w-full mt-8">
       <.workflows_table
         id="workflows-table"
+        lifecycle={@lifecycle}
         period={@period}
         workflows_stats={@workflows_stats}
         can_delete_workflow={@can_delete_workflow}
@@ -103,6 +105,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   attr :workflows_stats, :list, required: true
   attr :period, :string, required: true
   attr :project, :map, required: true
+  attr :lifecycle, :boolean, default: false
   attr :can_delete_workflow, :boolean, default: false
   attr :sort_key, :string, default: "name"
   attr :sort_direction, :string, default: "asc"
@@ -168,7 +171,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 active={@sort_key == "enabled"}
                 sort_direction={@sort_direction}
               >
-                Enabled
+                {lifecycle_column_heading(@lifecycle, @project)}
               </.th>
               <.th>Actions</.th>
             </.tr>
@@ -259,15 +262,20 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                   </div>
                 </.td>
                 <.td>
-                  <.input
-                    id={workflow.id}
-                    type="toggle"
-                    name="workflow_state"
-                    value={Helpers.workflow_enabled?(workflow)}
-                    tooltip={Helpers.workflow_state_tooltip(workflow)}
-                    on_click="toggle_workflow_state"
-                    value_key={workflow.id}
-                  />
+                  <%= cond do %>
+                    <% @lifecycle and not Project.sandbox?(@project) -> %>
+                      <.lifecycle_badge state={workflow.state} />
+                    <% true -> %>
+                      <.input
+                        id={workflow.id}
+                        type="toggle"
+                        name="workflow_state"
+                        value={Helpers.workflow_enabled?(workflow)}
+                        tooltip={lifecycle_toggle_tooltip(@lifecycle, workflow)}
+                        on_click="toggle_workflow_state"
+                        value_key={workflow.id}
+                      />
+                  <% end %>
                 </.td>
                 <.td>
                   <div class="flex items-center gap-4">
@@ -561,10 +569,11 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   slot :suffix, required: false
   slot :link, required: false
+  attr :rest, :global
 
   def metric_card(assigns) do
     ~H"""
-    <div class="bg-white rounded-lg ring-1 ring-gray-200 shadow-xs py-4 px-5">
+    <div class="bg-white rounded-lg ring-1 ring-gray-200 shadow-xs py-4 px-5" {@rest}>
       <h2 class="text-[13px] font-medium text-gray-500 truncate">{@title}</h2>
       <div class="mt-2 text-3xl font-bold text-gray-800">
         {render_slot(@value)}
@@ -574,6 +583,39 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         <div>{render_slot(@link)}</div>
       </div>
     </div>
+    """
+  end
+
+  defp lifecycle_column_heading(false, _project), do: "Enabled"
+
+  defp lifecycle_column_heading(true, project) do
+    if Project.sandbox?(project), do: "Turn on", else: "State"
+  end
+
+  defp lifecycle_toggle_tooltip(false, workflow),
+    do: Helpers.workflow_state_tooltip(workflow)
+
+  defp lifecycle_toggle_tooltip(true, workflow) do
+    if workflow.state == :live do
+      "On. Its triggers are answering."
+    else
+      "Off. Its triggers are not answering."
+    end
+  end
+
+  attr :state, :atom, required: true
+
+  defp lifecycle_badge(assigns) do
+    ~H"""
+    <span class={[
+      "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium",
+      if(@state == :live,
+        do: "bg-green-100 text-green-800",
+        else: "bg-gray-100 text-gray-600"
+      )
+    ]}>
+      {if @state == :live, do: "Live", else: "Draft"}
+    </span>
     """
   end
 end

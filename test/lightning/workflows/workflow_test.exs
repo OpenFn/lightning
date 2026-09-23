@@ -22,6 +22,16 @@ defmodule Lightning.Workflows.WorkflowTest do
     end
   end
 
+  describe "lifecycle state" do
+    test "defaults to :draft and round-trips :live" do
+      draft = insert(:workflow)
+      assert draft.state == :draft
+
+      live = insert(:workflow, state: :live)
+      assert Repo.reload!(live).state == :live
+    end
+  end
+
   describe "changeset/2 basic validations" do
     test "requires name and valid concurrency" do
       p = insert(:project)
@@ -181,8 +191,8 @@ defmodule Lightning.Workflows.WorkflowTest do
 
     test "a name past the width of the column is a changeset error, not a 500",
          %{project: project} do
-      # This used to reach the database and come back as Postgrex 22001
-      # (string_data_right_truncation), which the user saw as a 500.
+      # Without the guard this reaches the database and comes back as Postgrex
+      # 22001 (string_data_right_truncation), which the user sees as a 500.
       name = String.duplicate("a", 300)
 
       changeset =
@@ -271,7 +281,7 @@ defmodule Lightning.Workflows.WorkflowTest do
       project: project
     } do
       # positions goes straight into the workflow_snapshots.positions jsonb,
-      # keys and all, and Postgres refuses a NUL anywhere inside jsonb (#4893).
+      # keys and all, and Postgres refuses a NUL anywhere inside jsonb.
       for positions <- [
             %{"node\u{0000}id" => %{"x" => 1, "y" => 2}},
             %{"node" => %{"x" => 1, "label" => "a\u{0000}b"}},

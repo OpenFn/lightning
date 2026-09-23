@@ -5,6 +5,7 @@ defmodule LightningWeb.ProjectLiveTest do
   import Phoenix.Component
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import LightningWeb.CredentialLiveHelpers
 
@@ -884,6 +885,12 @@ defmodule LightningWeb.ProjectLiveTest do
   describe "projects settings page" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
+    setup :isolated_adaptors
+
+    setup do
+      Lightning.AdaptorTestHelpers.seed_credential_schema("http")
+      :ok
+    end
 
     test "access project settings page", %{conn: conn, project: project} do
       {:ok, _view, html} =
@@ -1003,7 +1010,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         view |> element("#new-credential-option-menu-item") |> render_click()
 
-        view |> select_credential_type("http")
+        view |> select_credential_type("@openfn/language-http")
         view |> click_continue()
 
         assert view
@@ -1051,7 +1058,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       view |> element("#new-credential-option-menu-item") |> render_click()
-      view |> select_credential_type("http")
+      view |> select_credential_type("@openfn/language-http")
       view |> click_continue()
 
       # Only the active sandbox is pre-selected. Ancestors are attached at
@@ -1101,7 +1108,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       view |> element("#new-credential-option-menu-item") |> render_click()
 
-      view |> select_credential_type("http")
+      view |> select_credential_type("@openfn/language-http")
       view |> click_continue()
 
       assert view
@@ -1794,6 +1801,34 @@ defmodule LightningWeb.ProjectLiveTest do
                name: "somename",
                description: "some description"
              } = Repo.get!(Project, project.id)
+    end
+
+    test "project settings form cannot change the environment", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          name: "project-1",
+          env: "staging",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, html} = live(conn, ~p"/projects/#{project}/settings")
+
+      assert html =~ "Project environment"
+
+      assert_raise ArgumentError, ~r/could not find non-disabled input/, fn ->
+        view
+        |> form("#project-settings-form", project: %{env: "main"})
+        |> render_submit()
+      end
+
+      assert render_submit(view, "save", %{
+               "project" => %{"raw_name" => "project-1", "env" => "main"}
+             }) =~ "Project updated successfully"
+
+      assert %{env: "staging"} = Repo.get!(Project, project.id)
     end
 
     test "project settings form converts uppercase name to url-safe format",
@@ -6726,7 +6761,7 @@ defmodule LightningWeb.ProjectLiveTest do
       )
 
       # Both hyphenate to `My-Flow`. The export pre-flight refuses before any
-      # GitHub call, so no sync mocks are set: the stub below only carries the
+      # GitHub call, so no sync mocks are set. The stub below only carries the
       # page-load connection check, and it is halted.
       for name <- ["My Flow", "My-Flow"] do
         {:ok, _} =

@@ -2,6 +2,7 @@ defmodule Lightning.SessionTest do
   use Lightning.DataCase, async: true
 
   import Eventually
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.CollaborationHelpers
   import Mox
@@ -22,9 +23,14 @@ defmodule Lightning.SessionTest do
   # and `start_supervised!`, so the DB-writing SharedDoc/PersistenceWriter
   # children are flushed and stopped — via DocumentSupervisor.terminate/2 — before
   # this test process (the sandbox owner) exits, even if an assertion raises.
+  setup :isolated_adaptors
+
   setup do
     instance = start_collaboration_instance()
     user = insert(:user)
+
+    seed_ready_catalogue()
+
     {:ok, instance: instance, user: user}
   end
 
@@ -905,6 +911,58 @@ defmodule Lightning.SessionTest do
       assert saved_from_db.lock_version == workflow.lock_version + 1
 
       drain_document(instance, document_name)
+    end
+
+    test "set_workflow_state/3 transitions :live then back to :draft", %{
+      session: session,
+      user: user,
+      workflow: workflow
+    } do
+      assert {:ok, live} = Session.set_workflow_state(session, user, :live)
+      assert live.state == :live
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+
+      assert {:ok, draft} = Session.set_workflow_state(session, user, :draft)
+      assert draft.state == :draft
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+
+      assert [
+               %Lightning.Workflows.WorkflowRelease{
+                 version_number: 1,
+                 kind: :go_live,
+                 published_by_id: published_by_id
+               }
+             ] =
+               Lightning.Workflows.WorkflowReleases.list_for_workflow(
+                 workflow.id
+               )
+
+      assert published_by_id == user.id
+    end
+
+    test "set_workflow_state returns an internal error with no shared doc", %{
+      session: session,
+      user: user
+    } do
+      GenServer.call(session, :stop_shared_doc)
+
+      assert {:error, :internal_error} =
+               Session.set_workflow_state(session, user, :live)
+    end
+
+    test "surfaces interpolated changeset errors", %{
+      session: session,
+      user: user
+    } do
+      doc = Session.get_doc(session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "concurrency", 0)
+      end)
+
+      assert {:error, changeset} = Session.save_workflow(session, user)
+      assert changeset.errors[:concurrency]
     end
 
     test "handles validation errors", %{

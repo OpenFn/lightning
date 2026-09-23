@@ -143,7 +143,11 @@ defmodule LightningWeb.DataclipController do
                    project,
                    query_string,
                    limit,
-                   0
+                   0,
+                   named_dataclips:
+                     Lightning.Accounts.experimental_features_enabled?(
+                       conn.assigns.current_user
+                     )
                  ) do
               {:ok,
                %{

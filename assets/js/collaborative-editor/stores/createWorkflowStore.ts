@@ -144,7 +144,7 @@ import { notifications } from '../lib/notifications';
 import { EdgeSchema } from '../types/edge';
 import { JobSchema } from '../types/job';
 import type { Session } from '../types/session';
-import type { BaseWorkflow, Workflow } from '../types/workflow';
+import type { BaseWorkflow, Sandbox, Workflow } from '../types/workflow';
 import { getIncomingEdgeIndices } from '../utils/workflowGraph';
 
 import { createWithSelector } from './common';
@@ -154,10 +154,10 @@ const logger = _logger.ns('WorkflowStore').seal();
 
 const JobShape = JobSchema.shape;
 const EdgeShape = EdgeSchema.shape;
+const SAVE_TIMEOUT_MS = 75_000;
 
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
-  // Compute enabled from triggers
   draft.enabled =
     draft.triggers.length > 0 ? draft.triggers.some(t => t.enabled) : null;
 
@@ -241,6 +241,32 @@ export interface CreateWorkflowStoreOptions {
   getCanEdit?: () => boolean;
 }
 
+export interface EditInSandboxStart {
+  body?: string;
+  bodyName?: string | null;
+  dataclipId?: string;
+}
+
+export interface EditInSandboxResult {
+  project_id: string;
+  workflow_id: string;
+  dataclip_id: string | null;
+}
+
+function startingDataPayload(start?: EditInSandboxStart) {
+  if (start?.body !== undefined) {
+    return {
+      starting_dataclip: { body: start.body, name: start.bodyName ?? null },
+    };
+  }
+
+  if (start?.dataclipId) {
+    return { dataclip_id: start.dataclipId };
+  }
+
+  return {};
+}
+
 export const createWorkflowStore = (
   options: CreateWorkflowStoreOptions = {}
 ) => {
@@ -315,7 +341,7 @@ export const createWorkflowStore = (
    * @returns Object containing ydoc and provider instances
    */
   const ensureConnected = () => {
-    if (!ydoc || !provider) {
+    if (!ydoc || !provider || !provider.channel) {
       throw new Error(
         'Cannot save workflow: Connection lost. Please wait for reconnection.'
       );
@@ -1542,13 +1568,159 @@ export const createWorkflowStore = (
         saved_at: string;
         lock_version: number;
         workflow: BaseWorkflow;
-      }>(provider.channel, 'save_workflow', payload);
+      }>(provider.channel, 'save_workflow', payload, SAVE_TIMEOUT_MS);
 
       logger.debug('Saved workflow', response);
 
       return response;
     } catch (error) {
       logger.error('Failed to save workflow', error);
+      throw error;
+    }
+  };
+
+  const setLifecycleState = async (
+    event: 'go_live' | 'switch_to_draft'
+  ): Promise<{ lock_version?: number; workflow?: BaseWorkflow }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{
+        lock_version: number;
+        workflow: BaseWorkflow;
+      }>(provider.channel, event, {});
+    } catch (error) {
+      logger.error(`Failed to ${event}`, error);
+      throw error;
+    }
+  };
+
+  const goLive = async () => setLifecycleState('go_live');
+  const switchToDraft = async () => setLifecycleState('switch_to_draft');
+
+  const listSandboxes = async (): Promise<Sandbox[]> => {
+    const { provider } = ensureConnected();
+
+    try {
+      const response = await channelRequest<{ sandboxes: Sandbox[] }>(
+        provider.channel,
+        'list_sandboxes',
+        {}
+      );
+      return response.sandboxes;
+    } catch (error) {
+      logger.error('Failed to list sandboxes', error);
+      throw error;
+    }
+  };
+
+  const editInSandbox = async (
+    name?: string,
+    start?: EditInSandboxStart
+  ): Promise<EditInSandboxResult> => {
+    const { provider } = ensureConnected();
+
+    const payload = {
+      ...(name ? { name } : {}),
+      ...startingDataPayload(start),
+    };
+
+    try {
+      return await channelRequest<EditInSandboxResult>(
+        provider.channel,
+        'edit_in_sandbox',
+        payload
+      );
+    } catch (error) {
+      logger.error('Failed to edit in sandbox', error);
+      throw error;
+    }
+  };
+
+  const promote = async (): Promise<{
+    parent_project_id: string;
+    workflow_id: string | null;
+  }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{
+        parent_project_id: string;
+        workflow_id: string | null;
+      }>(provider.channel, 'promote', {});
+    } catch (error) {
+      logger.error('Failed to promote workflow', error);
+      throw error;
+    }
+  };
+
+  const checkPromote = async (): Promise<{
+    diverged: boolean;
+    parent_name: string | null;
+  }> => {
+    const { ydoc, provider } = ensureConnected();
+
+    const { name } = ydoc.getMap('workflow').toJSON() as { name?: string };
+
+    return await channelRequest<{
+      diverged: boolean;
+      parent_name: string | null;
+    }>(provider.channel, 'request_promote_check', { workflow_name: name });
+  };
+
+  const restoreVersion = async (
+    versionNumber: number
+  ): Promise<{ lock_version: number }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{ lock_version: number }>(
+        provider.channel,
+        'restore_version',
+        { version_number: versionNumber }
+      );
+    } catch (error) {
+      logger.error('Failed to restore version', error);
+      throw error;
+    }
+  };
+
+  const checkRestore = async (
+    versionNumber: number
+  ): Promise<{
+    losing_triggers: {
+      id: string;
+      type: string;
+      custom_path: string | null;
+      enabled: boolean;
+    }[];
+    returning_triggers: {
+      id: string;
+      type: string;
+      custom_path: string | null;
+    }[];
+    version_number: number;
+  }> => {
+    const { provider } = ensureConnected();
+
+    return await channelRequest(provider.channel, 'request_restore_check', {
+      version_number: versionNumber,
+    });
+  };
+
+  const archiveSandbox = async (): Promise<{
+    parent_project_id: string;
+  }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{ parent_project_id: string }>(
+        provider.channel,
+        'archive_sandbox',
+        {}
+      );
+    } catch (error) {
+      logger.error('Failed to archive sandbox', error);
       throw error;
     }
   };
@@ -1587,7 +1759,7 @@ export const createWorkflowStore = (
         lock_version: number;
         repo: string;
         workflow: BaseWorkflow;
-      }>(provider.channel, 'save_and_sync', payload);
+      }>(provider.channel, 'save_and_sync', payload, SAVE_TIMEOUT_MS);
 
       logger.debug('Saved and synced workflow to GitHub', response);
 
@@ -2053,6 +2225,15 @@ export const createWorkflowStore = (
     selectEdge,
     clearSelection,
     saveWorkflow,
+    goLive,
+    switchToDraft,
+    listSandboxes,
+    editInSandbox,
+    promote,
+    archiveSandbox,
+    checkPromote,
+    restoreVersion,
+    checkRestore,
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,

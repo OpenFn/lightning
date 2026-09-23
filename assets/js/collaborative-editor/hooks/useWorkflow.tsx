@@ -45,6 +45,7 @@ import { useLiveViewActions } from '../contexts/LiveViewActionsContext';
 import { StoreContext } from '../contexts/StoreProvider';
 import { isChannelRequestError } from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import { usePinnedView } from '../lib/pinnedView';
 import type { WorkflowStoreInstance } from '../stores/createWorkflowStore';
 import type { Workflow } from '../types/workflow';
 
@@ -54,6 +55,8 @@ import {
   useSession,
 } from './useSession';
 import {
+  useContentLocked,
+  useExperimentalFeatures,
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
@@ -71,6 +74,9 @@ const logger = _logger.ns('useWorkflow').seal();
 const SAVE_WORKFLOW_ERROR_TOAST_ID = 'save-workflow-error';
 
 export type SaveNotifyLevel = 'all' | 'error-only' | 'none';
+
+export const CONTENT_LOCKED_MESSAGE =
+  'This workflow is live. Switch to draft or edit in a sandbox to make changes.';
 
 export interface SaveWorkflowOptions {
   /**
@@ -178,7 +184,6 @@ export const useWorkflowSelector = <T,>(
  * @example
  * // Simple state selections - ideal use cases
  * const jobs = useWorkflowState(state => state.jobs);
- * const enabled = useWorkflowState(state => state.enabled);
  * const triggers = useWorkflowState(state => state.triggers);
  *
  * @example
@@ -235,16 +240,6 @@ export const usePositions = () => {
 // =============================================================================
 // SPECIALIZED HOOKS
 // =============================================================================
-
-export const useWorkflowEnabled = () => {
-  return useWorkflowSelector(
-    (state, store) => ({
-      enabled: state.enabled,
-      setEnabled: store.setEnabled,
-    }),
-    []
-  );
-};
 
 /**
  * Hook for accessing current selected job with YText body.
@@ -367,6 +362,16 @@ export const useNodeSelection = () => {
   };
 };
 
+export const useWorkflowEnabled = () => {
+  return useWorkflowSelector(
+    (state, store) => ({
+      enabled: state.enabled,
+      setEnabled: store.setEnabled,
+    }),
+    []
+  );
+};
+
 // =============================================================================
 // ACTION HOOKS (COMMANDS)
 // =============================================================================
@@ -396,7 +401,6 @@ export const useWorkflowActions = () => {
     removeEdge: store.removeEdge,
 
     updateTrigger: store.updateTrigger,
-    setEnabled: store.setEnabled,
 
     updatePositions: store.updatePositions,
     updatePosition: store.updatePosition,
@@ -582,6 +586,18 @@ export const useWorkflowActions = () => {
       return wrappedSaveWorkflow;
     })(),
 
+    goLive: async () => {
+      const response = await store.goLive();
+      await sessionContextStore.requestSessionContext();
+      return response;
+    },
+
+    switchToDraft: async () => {
+      const response = await store.switchToDraft();
+      await sessionContextStore.requestSessionContext();
+      return response;
+    },
+
     // GitHub save and sync action - wrapped to handle lock version updates and errors
     saveAndSyncWorkflow: (commitMessage: string) => {
       // Helper: Handle successful save and sync operations
@@ -696,6 +712,16 @@ export const useWorkflowActions = () => {
 
       return wrappedSaveAndSyncWorkflow();
     },
+
+    listSandboxes: store.listSandboxes,
+    editInSandbox: store.editInSandbox,
+
+    promote: store.promote,
+    checkPromote: store.checkPromote,
+    archiveSandbox: store.archiveSandbox,
+
+    restoreVersion: store.restoreVersion,
+    checkRestore: store.checkRestore,
 
     resetWorkflow: store.resetWorkflow,
     importWorkflow: store.importWorkflow,
@@ -817,7 +843,7 @@ export function useCreateWorkflowFlow() {
  * - hasPermission: User has can_edit_workflow permission
  * - isConnected: Session is synced with backend
  * - isDeleted: Workflow has been deleted
- * - isPinnedVersion: Viewing a pinned version (any ?v parameter in URL)
+ * - isPinnedView: Reading the past rather than the live workflow
  *
  * @internal This is shared logic between useCanSave and useCanRun
  */
@@ -825,22 +851,22 @@ const useWorkflowConditions = () => {
   const { isSynced } = useSession();
   const permissions = usePermissions();
   const workflow = useWorkflowState(state => state.workflow);
-  const { params } = useURLState();
 
   const hasEditPermission = permissions?.can_edit_workflow ?? false;
   const hasRunPermission = permissions?.can_run_workflow ?? false;
+  const contentLocked = useContentLocked();
   const isConnected = isSynced;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
 
-  // Check if version is pinned via URL parameter
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+  const { isPinnedView } = usePinnedView();
 
   return {
     hasEditPermission,
     hasRunPermission,
     isConnected,
     isDeleted,
-    isPinnedVersion,
+    isPinnedView,
+    contentLocked,
   };
 };
 
@@ -854,12 +880,17 @@ const useWorkflowConditions = () => {
  * Checks:
  * 1. User permissions (can_edit_workflow)
  * 2. Connection state (isSynced)
- * 3. Version pinning (any ?v parameter in URL)
+ * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view)
  * 4. Workflow deletion state (deleted_at)
  */
 export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
-  const { hasEditPermission, isConnected, isDeleted, isPinnedVersion } =
-    useWorkflowConditions();
+  const {
+    hasEditPermission,
+    isConnected,
+    isDeleted,
+    isPinnedView,
+    contentLocked,
+  } = useWorkflowConditions();
 
   // Check if any apply operation in progress
   const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
@@ -880,9 +911,12 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canSave = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isPinnedVersion) {
+  } else if (isPinnedView) {
     canSave = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
+  } else if (contentLocked) {
+    canSave = false;
+    tooltipMessage = CONTENT_LOCKED_MESSAGE;
   } else if (isApplyingJobCode) {
     canSave = false;
     tooltipMessage = 'Applying AI-generated code...';
@@ -904,22 +938,40 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  * Checks:
  * 1. User permissions (can_edit_workflow or can_run_workflow)
  * 2. Connection state (isSynced)
- * 3. Version pinning (any ?v parameter in URL)
+ * 3. Reading the past, unless the control retries a loaded run
  * 4. Workflow deletion state (deleted_at)
  * 5. Run limits (from session context)
+ *
+ * Deliberately not the read-only lock: running is not editing.
  */
-export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
+export interface CanRunOptions {
+  forRetry?: boolean;
+}
+
+export const useCanRun = (
+  options: CanRunOptions = {}
+): { canRun: boolean; tooltipMessage: string } => {
+  const { forRetry = false } = options;
   const {
     hasEditPermission,
     hasRunPermission,
     isConnected,
     isDeleted,
-    isPinnedVersion,
+    isPinnedView,
   } = useWorkflowConditions();
 
   // Get run limits from session context (defaults to allowed if missing)
   const limits = useLimits();
   const runLimits = limits.runs ?? { allowed: true, message: null };
+
+  const isNewWorkflow = useIsNewWorkflow();
+  const experimentalFeatures = useExperimentalFeatures();
+  const jobs = useWorkflowState(state => state.jobs);
+  const triggers = useWorkflowState(state => state.triggers);
+  // Not behind the flag: the base refused this through the read-only lock that
+  // this hook no longer consults.
+  const isUnsavedNewWorkflow =
+    isNewWorkflow && (jobs.length > 0 || triggers.length > 0);
 
   // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
   const hasPermission = hasEditPermission || hasRunPermission;
@@ -937,9 +989,12 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canRun = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isPinnedVersion) {
+  } else if (isPinnedView && !(forRetry && experimentalFeatures)) {
     canRun = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
+  } else if (isUnsavedNewWorkflow) {
+    canRun = false;
+    tooltipMessage = 'Create this workflow before running it';
   } else if (!runLimits.allowed && runLimits.message) {
     canRun = false;
     tooltipMessage = runLimits.message;
@@ -957,27 +1012,41 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  *
  * Checks (in priority order):
  * 1. Workflow deletion state (deleted_at)
- * 2. User permissions (can_edit_workflow)
- * 3. Version pinning (any ?v parameter in URL)
- * 4. Template preview (new workflow with selected template)
+ * 2. User permissions (can_edit_workflow), asked before the lock so a viewer is
+ *    never pointed at actions only an editor can take
+ * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view),
+ *    which is about the document on screen and so answers before the lifecycle:
+ *    switching to draft would not make an old version editable
+ * 4. The lifecycle lock (content_locked), which is an editor's way out
+ * 5. Template preview (new workflow with selected template)
  *
  * Note: Connection state does not affect read-only status. Offline editing
  * is fully supported - Y.Doc buffers transactions locally and syncs when
  * reconnected.
  */
+export type WorkflowReadOnlyReason =
+  | 'deleted'
+  | 'live'
+  | 'no_permission'
+  | 'pinned_version'
+  | 'as_run'
+  | 'unsaved_new'
+  | null;
+
 export const useWorkflowReadOnly = (): {
   isReadOnly: boolean;
   tooltipMessage: string;
+  reason: WorkflowReadOnlyReason;
 } => {
   // Get permissions and workflow state
   const permissions = usePermissions();
   const workflow = useWorkflowState(state => state.workflow);
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
-  const { params } = useURLState();
 
-  // Check if version is pinned via URL parameter
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+  const contentLocked = useContentLocked();
+
+  const { isPinnedVersion, isViewingAsExecuted } = usePinnedView();
 
   // Check if this is a new workflow with content (from template or AI)
   // Users must click "Create" before they can edit
@@ -988,7 +1057,7 @@ export const useWorkflowReadOnly = (): {
   // Don't show read-only state until permissions are loaded
   // This prevents flickering during initial load
   if (permissions === null) {
-    return { isReadOnly: false, tooltipMessage: '' };
+    return { isReadOnly: false, tooltipMessage: '', reason: null };
   }
 
   // Compute read-only conditions
@@ -1000,18 +1069,35 @@ export const useWorkflowReadOnly = (): {
     return {
       isReadOnly: true,
       tooltipMessage: 'This workflow has been deleted and cannot be edited',
+      reason: 'deleted',
     };
   }
   if (!hasPermission) {
     return {
       isReadOnly: true,
       tooltipMessage: 'You do not have permission to edit this workflow',
+      reason: 'no_permission',
+    };
+  }
+  if (isViewingAsExecuted) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: 'You are viewing this workflow as a past run executed it',
+      reason: 'as_run',
     };
   }
   if (isPinnedVersion) {
     return {
       isReadOnly: true,
       tooltipMessage: 'You are viewing a pinned version of this workflow',
+      reason: 'pinned_version',
+    };
+  }
+  if (contentLocked) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: CONTENT_LOCKED_MESSAGE,
+      reason: 'live',
     };
   }
   if (isUnsavedNewWorkflow) {
@@ -1019,10 +1105,11 @@ export const useWorkflowReadOnly = (): {
       isReadOnly: true,
       tooltipMessage:
         'This workflow has not been saved yet and cannot be edited',
+      reason: 'unsaved_new',
     };
   }
 
-  return { isReadOnly: false, tooltipMessage: '' };
+  return { isReadOnly: false, tooltipMessage: '', reason: null };
 };
 
 /**

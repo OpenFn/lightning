@@ -15,6 +15,7 @@ defmodule LightningWeb.LayoutComponents do
   """
   attr :first_name, :string, required: true
   attr :last_name, :string, default: nil
+  attr :size, :string, default: "xs", values: ~w(xs sm)
   attr :class, :string, default: nil
 
   def user_avatar(assigns) do
@@ -22,11 +23,21 @@ defmodule LightningWeb.LayoutComponents do
       String.at(assigns.first_name, 0) <>
         if assigns.last_name, do: String.at(assigns.last_name, 0), else: ""
 
-    assigns = assign(assigns, :initials, String.upcase(initials))
+    assigns =
+      assigns
+      |> assign(:initials, String.upcase(initials))
+      |> assign(
+        :size_class,
+        case assigns.size do
+          "xs" -> "h-5 w-5 text-[10px]"
+          "sm" -> "h-8 w-8 text-sm"
+        end
+      )
 
     ~H"""
     <div class={[
-      "h-5 w-5 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-semibold text-gray-500",
+      "rounded-full bg-gray-100 flex items-center justify-center font-semibold text-gray-500",
+      @size_class,
       @class
     ]}>
       {@initials}
@@ -96,6 +107,29 @@ defmodule LightningWeb.LayoutComponents do
           <p class="text-sm text-gray-700">Signed in as</p>
           <p class="truncate text-sm font-medium text-gray-900">
             {@current_user.email}
+          </p>
+        </div>
+        <div
+          :if={Lightning.Accounts.experimental_features_enabled?(@current_user)}
+          class="px-4 py-3 bg-amber-50"
+        >
+          <p class="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+            <.icon
+              name="hero-wrench-screwdriver-mini"
+              class="h-4 w-4 text-amber-600"
+            /> Experimental features on
+          </p>
+          <p class="mt-0.5 text-xs text-gray-600">
+            You're using features that are still being built. Things may work
+            differently for you than for your teammates.
+          </p>
+          <p class="mt-1.5 text-xs">
+            <.link
+              navigate={~p"/profile"}
+              class="font-medium text-amber-700 underline underline-offset-2"
+            >
+              Turn off in your profile
+            </.link>
           </p>
         </div>
         <%= if @custom_user_menu_items do %>

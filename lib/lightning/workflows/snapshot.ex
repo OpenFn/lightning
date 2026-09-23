@@ -252,6 +252,26 @@ defmodule Lightning.Workflows.Snapshot do
     |> Repo.one()
   end
 
+  @doc """
+  The id of the snapshot holding the workflow's current content.
+
+  Callers asking "is this the content that is live right now?" need identity.
+  A lock version is a near-enough proxy until it isn't: nothing enforces one
+  snapshot per `(workflow_id, lock_version)`, and a client comparing numbers
+  cannot tell two snapshots apart.
+  """
+  @spec current_id_for(Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def current_id_for(workflow_id) when is_binary(workflow_id) do
+    from(s in __MODULE__,
+      join: w in assoc(s, :workflow),
+      where: s.workflow_id == ^workflow_id and s.lock_version == w.lock_version,
+      order_by: [desc: s.inserted_at],
+      limit: 1,
+      select: s.id
+    )
+    |> Repo.one()
+  end
+
   defp get_current_query(workflow) do
     from(s in __MODULE__,
       join: w in assoc(s, :workflow),
@@ -276,5 +296,79 @@ defmodule Lightning.Workflows.Snapshot do
     Multi.run(multi, name, fn repo, _changes ->
       {:ok, get_current_query(workflow) |> repo.one()}
     end)
+  end
+
+  @job_write_fields [
+    :id,
+    :name,
+    :body,
+    :adaptor,
+    :project_credential_id,
+    :keychain_credential_id
+  ]
+
+  @trigger_write_fields [
+    :id,
+    :comment,
+    :custom_path,
+    :cron_expression,
+    :cron_cursor_job_id,
+    :type,
+    :webhook_reply
+  ]
+
+  @edge_write_fields [
+    :id,
+    :source_job_id,
+    :source_trigger_id,
+    :target_job_id,
+    :condition_type,
+    :condition_expression,
+    :condition_label,
+    :enabled
+  ]
+
+  @doc """
+  Turns a snapshot into attributes to write back as a workflow's content.
+
+  `on_replace` deletes anything the snapshot does not hold, which is what makes
+  a restore a revert rather than a merge.
+
+  Trigger `enabled` is left out: a restore publishes into a live workflow, and
+  an old enabled flag would take production offline mid-rollback. A re-created
+  trigger arrives off, because a snapshot does not record its webhook auth
+  methods. `positions` is written only when the snapshot holds them, so an
+  older snapshot cannot wipe a hand-arranged canvas.
+  """
+  @spec to_workflow_attrs(t()) :: map()
+  def to_workflow_attrs(%__MODULE__{} = snapshot) do
+    %{
+      name: snapshot.name,
+      jobs: Enum.map(snapshot.jobs, &child_attrs(&1, @job_write_fields)),
+      triggers: Enum.map(snapshot.triggers, &trigger_attrs/1),
+      edges: Enum.map(snapshot.edges, &child_attrs(&1, @edge_write_fields))
+    }
+    |> maybe_put_positions(snapshot.positions)
+  end
+
+  defp maybe_put_positions(attrs, nil), do: attrs
+
+  defp maybe_put_positions(attrs, positions),
+    do: Map.put(attrs, :positions, positions)
+
+  defp trigger_attrs(trigger) do
+    trigger
+    |> child_attrs(@trigger_write_fields)
+    |> Map.put(
+      :webhook_response_config,
+      embed_attrs(trigger.webhook_response_config)
+    )
+  end
+
+  defp embed_attrs(nil), do: nil
+  defp embed_attrs(embed), do: Map.from_struct(embed)
+
+  defp child_attrs(child, fields) do
+    child |> Map.from_struct() |> Map.take(fields)
   end
 end

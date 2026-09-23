@@ -1,6 +1,7 @@
-import useAdaptorIcons from '#/workflow-diagram/useAdaptorIcons';
+import { useContext, useMemo, useSyncExternalStore } from 'react';
 
-import { extractAdaptorName } from '../utils/adaptorUtils';
+import { StoreContext } from '../contexts/StoreProvider';
+import { extractAdaptorName, extractPackageName } from '../utils/adaptorUtils';
 
 interface AdaptorIconProps {
   name: string;
@@ -13,11 +14,36 @@ const sizeClasses = {
   lg: 'h-12 w-12',
 };
 
-export function AdaptorIcon({ name, size = 'md' }: AdaptorIconProps) {
-  const adaptorIconsData = useAdaptorIcons();
-  const displayName = extractAdaptorName(name) ?? null;
+// Reads the icon URL directly from StoreContext instead of via the
+// useAdaptorIconUrl hook in hooks/useAdaptors, so tests that mock that whole
+// module (e.g. FullScreenIDE) fall back to the placeholder instead of
+// crashing on a missing export.
+function useStoreIconUrl(name: string): string | null {
+  const context = useContext(StoreContext);
+  const adaptorStore = context?.adaptorStore ?? null;
+  const packageName = extractPackageName(name);
 
-  if (!adaptorIconsData || !displayName) {
+  const selectIconUrl = useMemo(() => {
+    if (!adaptorStore) return () => null;
+    return adaptorStore.withSelector(state => {
+      const found = state.adaptors.find(a => a.name === packageName);
+      return found?.icon_urls?.square ?? null;
+    });
+  }, [adaptorStore, packageName]);
+
+  const noopSubscribe = useMemo(() => () => () => {}, []);
+
+  return useSyncExternalStore(
+    adaptorStore?.subscribe ?? noopSubscribe,
+    selectIconUrl
+  );
+}
+
+export function AdaptorIcon({ name, size = 'md' }: AdaptorIconProps) {
+  const displayName = extractAdaptorName(name) ?? null;
+  const iconUrl = useStoreIconUrl(name);
+
+  if (!displayName) {
     return (
       <div
         className={`${sizeClasses[size]} rounded-md bg-gray-200
@@ -30,9 +56,7 @@ export function AdaptorIcon({ name, size = 'md' }: AdaptorIconProps) {
     );
   }
 
-  const iconData = adaptorIconsData[displayName];
-
-  if (!iconData || !iconData.square) {
+  if (!iconUrl) {
     return (
       <div
         className={`${sizeClasses[size]} rounded-md bg-gray-200
@@ -47,7 +71,7 @@ export function AdaptorIcon({ name, size = 'md' }: AdaptorIconProps) {
 
   return (
     <img
-      src={iconData.square}
+      src={iconUrl}
       alt={displayName}
       className={`${sizeClasses[size]} object-cover`}
     />

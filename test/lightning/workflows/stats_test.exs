@@ -129,9 +129,9 @@ defmodule Lightning.Workflows.StatsTest do
     assert %{signatures: []} = Stats.error_signatures(workflow)
   end
 
-  # The review comment this whole unit change is for: retrying a failure until
-  # it works has to make the page's failure count fall, and only a work order's
-  # state can fall — the failed run stays failed forever.
+  # Retrying a failure until it works has to make the page's failure count
+  # fall, and only a work order's state can fall — the failed run stays failed
+  # forever.
   test "counts a work order retried to success once, as a success", %{
     workflow: workflow,
     trigger: trigger
@@ -636,7 +636,7 @@ defmodule Lightning.Workflows.StatsTest do
       assert %{signatures: []} = Stats.error_signatures(workflow)
     end
 
-    # Both render as `unknown`, so ungrouped the table drew two rows under one
+    # Both render as `unknown`, so ungrouped they are two table rows under one
     # React key.
     test "groups an empty error type with a missing one", %{
       workflow: workflow,
@@ -656,7 +656,7 @@ defmodule Lightning.Workflows.StatsTest do
       assert %{count: 2, error_type: nil} = signature
     end
 
-    # `""` is truthy, so it won the `||` in `to_signature/2`.
+    # `""` is truthy, so it wins the `||` in `to_signature/2`.
     test "does not let an empty step error type mask the run's", %{
       workflow: workflow,
       trigger: trigger
@@ -685,7 +685,7 @@ defmodule Lightning.Workflows.StatsTest do
     end
   end
 
-  describe "runs/2" do
+  describe "runs/3" do
     # A run whose `inserted_at` we choose, on a work order active at the same
     # moment — the shape the window needs and `insert_run/4` can't give.
     defp run_at(workflow, trigger, state, at) do
@@ -710,14 +710,23 @@ defmodule Lightning.Workflows.StatsTest do
       |> div(DateTime.diff(b.at, a.at, :second))
     end
 
+    # Every run in the window lands in some bar. A grid whose edges don't line
+    # up with the tally drops runs silently, and no per-bar assertion catches
+    # that, so the total is asserted everywhere the bars are.
+    defp total(buckets) do
+      Enum.sum_by(buckets, fn bucket ->
+        bucket |> Map.delete(:at) |> Map.values() |> Enum.sum()
+      end)
+    end
+
     test "counts each state into the bucket its run started in", ctx do
       %{workflow: workflow, trigger: trigger} = ctx
 
       older = DateTime.add(DateTime.utc_now(), -5, :hour)
       newer = DateTime.add(DateTime.utc_now(), -90, :minute)
 
-      # A hair inside a bucket, not in the next one: `extract(epoch ...)` is
-      # `numeric` and casting it rounds, so the query has to floor first.
+      # A hair inside a bucket, so it stays there rather than opening the next
+      # one.
       edge =
         DateTime.utc_now()
         |> DateTime.to_unix()
@@ -732,7 +741,7 @@ defmodule Lightning.Workflows.StatsTest do
       run_at(workflow, trigger, :success, older)
       run_at(workflow, trigger, :crashed, edge)
 
-      assert %{buckets: buckets} = result = Stats.runs(workflow, 1)
+      assert %{buckets: buckets} = result = Stats.runs(workflow, 1, "Etc/UTC")
 
       assert %{success: 2, failed: 0} =
                Enum.at(buckets, bucket_of(result, older))
@@ -741,39 +750,113 @@ defmodule Lightning.Workflows.StatsTest do
                Enum.at(buckets, bucket_of(result, newer))
 
       assert %{crashed: 1} = Enum.at(buckets, bucket_of(result, edge))
+      assert total(buckets) == 4
     end
 
-    # Boundaries on the clock, so the chart can label a bar "2am" or "Tuesday"
-    # and be telling the truth. And a bar chart with holes in it is a different
-    # chart, so every bucket carries every final state, zero-filled.
+    # `width_bucket` takes the lower edge, so a run at the boundary instant
+    # opens that bar. The slot below the oldest boundary is drawn by no bar at
+    # all, so a run falling into it would leave the chart without a trace.
+    test "counts a run landing exactly on a boundary into that bar", ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+
+      [from | _] = Stats.boundaries(DateTime.utc_now(), 1, "Etc/UTC")
+
+      run_at(workflow, trigger, :success, from)
+
+      assert %{buckets: [first | _] = buckets} =
+               Stats.runs(workflow, 1, "Etc/UTC")
+
+      assert %{success: 1} = first
+      assert total(buckets) == 1
+    end
+
+    # Boundaries on the reader's clock, so the chart can label a bar with an
+    # hour or a date and be telling the truth. And a bar chart with holes in it
+    # is a different chart, so every bucket carries every final state,
+    # zero-filled.
+    #
+    # Kolkata and Kathmandu are the zones that prove the grid really moved:
+    # their local whole hour is UTC :30 and :15. Europe/London is here because
+    # a 30 day window may straddle a clock change, and every boundary has to
+    # stay on a local midnight when it does.
     test "cuts each window into clock-aligned, zero-filled buckets", ctx do
       %{workflow: workflow} = ctx
 
       zeroed = Map.new(Run.final_states(), &{&1, 0})
 
-      for {days, seconds, count} <- [
-            {1, 7_200, 13},
-            {7, 43_200, 15},
-            {30, 86_400, 31}
-          ] do
-        assert %{buckets: buckets, window: window} = Stats.runs(workflow, days)
+      for timezone <- [
+            "Etc/UTC",
+            "Africa/Nairobi",
+            "Asia/Kolkata",
+            "Asia/Kathmandu",
+            "Europe/London"
+          ],
+          {days, hours, count} <- [{1, 2, 13}, {7, 12, 15}, {30, 24, 31}] do
+        assert %{buckets: buckets, window: window} =
+                 Stats.runs(workflow, days, timezone)
 
         assert length(buckets) == count
-        assert rem(DateTime.to_unix(window.from), seconds) == 0
+        assert DateTime.compare(window.from, hd(buckets).at) == :eq
 
+        # Every bar opens on a local whole hour that the width divides — local
+        # midnight for a daily bar, local noon or midnight for a half-day.
+        for bucket <- buckets do
+          local = DateTime.shift_zone!(bucket.at, timezone)
+
+          assert local.minute == 0 and local.second == 0
+          assert rem(local.hour, hours) == 0
+        end
+
+        # An hour's grace: the grid is `count` wall-clock steps wide, and a
+        # spring-forward day makes that an hour less in real time.
         assert DateTime.compare(
                  window.from,
-                 DateTime.add(window.to, -days, :day)
+                 window.to |> DateTime.add(-days, :day) |> DateTime.add(1, :hour)
                ) != :gt
-
-        assert DateTime.diff(Enum.at(buckets, 1).at, hd(buckets).at) == seconds
 
         for bucket <- buckets, do: assert(Map.delete(bucket, :at) == zeroed)
 
         # The window ends inside the last bucket, which is still filling.
         last = List.last(buckets).at
         assert DateTime.compare(last, window.to) == :lt
-        assert DateTime.diff(window.to, last, :second) < seconds
+        assert DateTime.diff(window.to, last, :second) < hours * 3_600
+      end
+    end
+
+    # The half- and quarter-hour timezones. A whole-hour one cannot prove the
+    # grid moved, because at these widths its boundaries are the same list of
+    # instants as UTC's — the offset cancels out of the arithmetic. These two
+    # can: a local whole hour is not a UTC whole hour.
+    test "anchors the grid off the hour for offsets that are", ctx do
+      %{workflow: workflow} = ctx
+
+      for {timezone, minute} <- [{"Asia/Kolkata", 30}, {"Asia/Kathmandu", 15}] do
+        assert %{window: window} = Stats.runs(workflow, 1, timezone)
+
+        assert window.from.minute == minute
+        assert window.from.second == 0
+      end
+    end
+
+    # Without the timezone in the key, the first reader to load the page would
+    # pin their grid on every other timezone for the TTL — and on one machine
+    # that is invisible.
+    test "caches each timezone's grid separately", ctx do
+      %{workflow: workflow} = ctx
+
+      utc = Stats.runs(workflow, 1, "Etc/UTC")
+      kolkata = Stats.runs(workflow, 1, "Asia/Kolkata")
+
+      assert utc.window.from != kolkata.window.from
+      assert utc.timezone == "Etc/UTC"
+      assert kolkata.timezone == "Asia/Kolkata"
+
+      for timezone <- ["Etc/UTC", "Asia/Kolkata"] do
+        assert {:ok, true} =
+                 Cachex.exists?(
+                   :workflow_stats,
+                   {:runs, workflow.id, 1, timezone}
+                 )
       end
     end
 
@@ -782,14 +865,17 @@ defmodule Lightning.Workflows.StatsTest do
       %{workflow: workflow, trigger: trigger} = ctx
 
       run_at(workflow, trigger, :success, DateTime.utc_now())
-      first = Stats.runs(workflow, 1)
+      first = Stats.runs(workflow, 1, "Etc/UTC")
 
       run_at(workflow, trigger, :failed, DateTime.utc_now())
 
-      assert Stats.runs(workflow, 1) == first
+      assert Stats.runs(workflow, 1, "Etc/UTC") == first
 
       assert {:ok, true} =
-               Cachex.exists?(:workflow_stats, {:runs, workflow.id, 1})
+               Cachex.exists?(
+                 :workflow_stats,
+                 {:runs, workflow.id, 1, "Etc/UTC"}
+               )
     end
 
     test "skips runs outside the window, in flight, or on another workflow",
@@ -802,11 +888,103 @@ defmodule Lightning.Workflows.StatsTest do
       other = insert(:simple_workflow)
       run_at(other, hd(other.triggers), :success, DateTime.utc_now())
 
-      assert %{buckets: buckets} = Stats.runs(workflow, 1)
+      assert %{buckets: buckets} = Stats.runs(workflow, 1, "Etc/UTC")
 
-      assert Enum.sum_by(buckets, fn bucket ->
-               bucket |> Map.delete(:at) |> Map.values() |> Enum.sum()
-             end) == 0
+      assert total(buckets) == 0
+    end
+
+    # Tzdata knows this zone and PG 15 does not. Nothing sends a zone name to
+    # Postgres, so the two databases disagreeing about it cannot reach the
+    # chart.
+    test "draws a zone this Postgres has never heard of", ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+
+      run_at(workflow, trigger, :success, DateTime.utc_now())
+
+      run_at(
+        workflow,
+        trigger,
+        :failed,
+        DateTime.add(DateTime.utc_now(), -5, :hour)
+      )
+
+      assert %{buckets: buckets, timezone: "America/Coyhaique"} =
+               Stats.runs(workflow, 1, "America/Coyhaique")
+
+      assert total(buckets) == 2
+    end
+  end
+
+  # `runs/3` always ends its window at `DateTime.utc_now()` and nothing here can
+  # move that clock, so the clock changes are exercised against the grid itself
+  # at fixed dates.
+  describe "boundaries/3" do
+    defp spans(boundaries) do
+      boundaries
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.map(fn [a, b] -> DateTime.diff(b, a, :hour) end)
+    end
+
+    # The claim the local-calendar grid rests on, and the one a UTC grid gets
+    # wrong: London's October Sunday is 25 hours long, and both sides of the
+    # change belong to the same bar.
+    test "gives a 25-hour day one 24-hour-labelled bar" do
+      boundaries =
+        Stats.boundaries(~U[2025-10-27 12:00:00Z], 30, "Europe/London")
+
+      assert Enum.count(spans(boundaries), &(&1 == 25)) == 1
+      assert Enum.all?(spans(boundaries), &(&1 in [24, 25]))
+      assert ~U[2025-10-25 23:00:00Z] in boundaries
+      assert ~U[2025-10-27 00:00:00Z] in boundaries
+    end
+
+    # Havana springs forward at local midnight, so the daily boundary itself is
+    # the hour that never happened. It opens when the clock reaches 01:00.
+    test "opens a bar whose local start never happened at the jump" do
+      boundaries =
+        Stats.boundaries(~U[2026-03-09 12:00:00Z], 30, "America/Havana")
+
+      assert Enum.count(spans(boundaries), &(&1 == 23)) == 1
+      assert ~U[2026-03-08 05:00:00Z] in boundaries
+    end
+
+    # The same midnight twice in November. The bar opens at the first, so it
+    # opens when its label says it does.
+    test "opens a bar on the first of two identical local starts" do
+      boundaries =
+        Stats.boundaries(~U[2025-11-02 12:00:00Z], 30, "America/Havana")
+
+      assert ~U[2025-11-02 04:00:00Z] in boundaries
+      refute ~U[2025-11-02 05:00:00Z] in boundaries
+    end
+
+    # `width_bucket` reads an unsorted array without complaining and returns a
+    # plausible slot for every row, so a clock change that moved a boundary past
+    # its neighbour would be silently wrong counts rather than an error. Troll
+    # shifts two hours, Lord Howe thirty minutes, and Havana's daily boundary
+    # lands in the change itself.
+    test "never places a boundary at or before the one before it" do
+      dates =
+        for day <- 0..364,
+            do: DateTime.add(~U[2026-01-01 12:00:00Z], day, :day)
+
+      for zone <- [
+            "Europe/London",
+            "America/Havana",
+            "Antarctica/Troll",
+            "Australia/Lord_Howe",
+            "Pacific/Chatham"
+          ],
+          days <- [1, 7, 30],
+          to <- dates do
+        boundaries = Stats.boundaries(to, days, zone)
+        where = "#{zone}, #{days}d, ending #{to}"
+
+        assert boundaries == Enum.sort(boundaries, DateTime),
+               "out of order: #{where}"
+
+        assert boundaries == Enum.uniq(boundaries), "repeated boundary: #{where}"
+      end
     end
   end
 end

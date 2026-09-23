@@ -27,7 +27,7 @@ defmodule LightningWeb.ProjectLive.DeletionTeardownTest do
       & &1
     )
 
-    owner = insert(:user)
+    owner = insert(:user, preferences: %{"experimental_features" => true})
 
     project =
       insert(:project, project_users: [%{user: owner, role: :owner}])
@@ -68,6 +68,143 @@ defmodule LightningWeb.ProjectLive.DeletionTeardownTest do
 
         assert flash["info"] == "Project deleted."
       end
+    end
+
+    test "an archived sandbox lands on the parent's copy of the open workflow",
+         %{
+           conn: conn,
+           owner: owner
+         } do
+      parent = insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      parent_workflow = insert(:workflow, project: parent, name: "Cat Facts")
+      sandbox_workflow = insert(:workflow, project: sandbox, name: "Cat Facts")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/w/#{sandbox_workflow}",
+          on_error: :raise
+        )
+
+      {:ok, _project} = Projects.schedule_project_deletion(sandbox)
+
+      flash =
+        assert_redirect(
+          view,
+          ~p"/projects/#{parent.id}/w/#{parent_workflow.id}?archived=1",
+          @teardown_timeout
+        )
+
+      assert flash == %{}
+    end
+
+    test "without the flag, an archived sandbox reads as a deleted project", %{
+      conn: conn
+    } do
+      plain = insert(:user)
+      parent = insert(:project, project_users: [%{user: plain, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: plain, role: :owner}]
+        )
+
+      conn = log_in_user(conn, plain)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{sandbox.id}/w")
+
+      {:ok, _} = Lightning.Projects.schedule_project_deletion(sandbox)
+
+      assert_redirect(view, ~p"/projects")
+    end
+
+    test "an archived sandbox falls back to the parent's workflow list", %{
+      conn: conn,
+      owner: owner
+    } do
+      parent = insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      sandbox_workflow =
+        insert(:workflow, project: sandbox, name: "Only in the sandbox")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/w/#{sandbox_workflow}",
+          on_error: :raise
+        )
+
+      {:ok, _project} = Projects.schedule_project_deletion(sandbox)
+
+      flash =
+        assert_redirect(view, ~p"/projects/#{parent.id}/w", @teardown_timeout)
+
+      assert flash["info"] == "Sandbox archived."
+    end
+
+    test "sends a sandbox-only member to the projects list, not the parent", %{
+      conn: conn,
+      owner: owner
+    } do
+      parent =
+        insert(:project, project_users: [%{user: insert(:user), role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/w", on_error: :raise)
+
+      {:ok, _project} = Projects.schedule_project_deletion(sandbox)
+
+      flash = assert_redirect(view, ~p"/projects", @teardown_timeout)
+      assert flash["info"] == "Project deleted."
+    end
+
+    test "still sends support staff to the parent they can open", %{conn: _conn} do
+      support =
+        insert(:user,
+          support_user: true,
+          preferences: %{"experimental_features" => true}
+        )
+
+      parent =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: insert(:user), role: :owner}]
+        )
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          allow_support_access: true,
+          project_users: [%{user: insert(:user), role: :owner}]
+        )
+
+      conn = log_in_user(build_conn(), support)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/w", on_error: :raise)
+
+      {:ok, _project} = Projects.schedule_project_deletion(sandbox)
+
+      flash =
+        assert_redirect(view, ~p"/projects/#{parent.id}/w", @teardown_timeout)
+
+      assert flash["info"] == "Sandbox archived."
     end
 
     test "leaves a view on another project mounted", %{

@@ -20,13 +20,14 @@ import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
+import { Tooltip } from '../../../components/Tooltip';
 import Metadata from '../../../metadata-explorer/Explorer';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
 import { useCredentialModal } from '../../contexts/CredentialModalContext';
 import { useMonacoRef } from '../../contexts/MonacoRefContext';
-import { useProjectAdaptors } from '../../hooks/useAdaptors';
+import { useAdaptorsInUse } from '../../hooks/useAdaptors';
 import {
   useCredentials,
   useCredentialsCommands,
@@ -40,13 +41,14 @@ import {
   useHistoryLoading,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
-import { useRunRetry } from '../../hooks/useRunRetry';
 import { useMetadata } from '../../hooks/useMetadata';
+import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
-import { useProject } from '../../hooks/useSessionContext';
+import { useContentLocked, useProject } from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
 import {
   useCanRun,
   useCanSave,
@@ -64,6 +66,7 @@ import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import MiniHistory from '../diagram/MiniHistory';
 import { VersionMismatchBanner } from '../diagram/VersionMismatchBanner';
+import { DiscardChangesDialog } from '../DiscardChangesDialog';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
@@ -74,7 +77,6 @@ import { RunRetryButton } from '../RunRetryButton';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
-import { Tooltip } from '../../../components/Tooltip';
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -395,7 +397,7 @@ export function FullScreenIDE({
 
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { requestCredentials } = useCredentialsCommands();
-  const { projectAdaptors, allAdaptors } = useProjectAdaptors();
+  const { adaptorsInUse, allAdaptors } = useAdaptorsInUse();
   const { updateJob } = useWorkflowActions();
 
   // Credential modal is managed by the context
@@ -410,23 +412,26 @@ export function FullScreenIDE({
   // to be used by components that can't make use of 'latest'
   const currJobAdaptor = useMemo(() => {
     if (!currentJob?.adaptor) {
-      const latestCommon = projectAdaptors.find(
+      const latestCommon = adaptorsInUse.find(
         a => a.name === '@openfn/language-common'
-      )?.versions?.[0]?.version;
+      )?.latest_version;
       return `@openfn/language-common@${latestCommon || 'latest'}`;
     }
     const resolved = resolveAdaptor(currentJob.adaptor);
     if (resolved.version !== 'latest') return currentJob?.adaptor;
-    const latestVersion = projectAdaptors.find(a => a.name === resolved.package)
-      ?.versions?.[0]?.version;
+    const latestVersion = adaptorsInUse.find(
+      a => a.name === resolved.package
+    )?.latest_version;
     // If version not found, return original adaptor string
     if (!latestVersion) return currentJob.adaptor;
     return `${resolved.package}@${latestVersion}`;
-  }, [projectAdaptors, currentJob?.adaptor]);
+  }, [adaptorsInUse, currentJob?.adaptor]);
 
   // Run/Retry functionality for IDE Header
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
+  const { canRun: canRetrySnapshot, tooltipMessage: retryTooltipMessage } =
+    useCanRun({ forRetry: true });
   const runContext = jobIdFromURL
     ? { type: 'job' as const, id: jobIdFromURL }
     : { type: 'trigger' as const, id: workflow?.triggers[0]?.id || '' };
@@ -438,6 +443,7 @@ export function FullScreenIDE({
     isRetryable,
     runIsProcessing,
     canRun: canRunFromHook,
+    canRetry: canRetryFromHook,
   } = useRunRetry({
     projectId: projectId || '',
     workflowId: workflowId || '',
@@ -447,6 +453,8 @@ export function FullScreenIDE({
     customBody,
     canRunWorkflow: canRunSnapshot,
     workflowRunTooltipMessage: runTooltipMessage,
+    canRetryWorkflow: canRetrySnapshot,
+    retryTooltipMessage,
     saveWorkflow,
     onRunSubmitted: handleRunSubmitted,
     edgeId: null,
@@ -467,8 +475,7 @@ export function FullScreenIDE({
       void handleRetry();
     },
     canRun:
-      canRunSnapshot &&
-      canRunFromHook &&
+      (isRetryable ? canRetryFromHook : canRunSnapshot && canRunFromHook) &&
       !isSubmitting &&
       !runIsProcessing &&
       jobMatchesRun,
@@ -570,7 +577,6 @@ export function FullScreenIDE({
     }
   }, [jobIdFromURL, currentRun, runIdFromURL, updateSearchParams]);
 
-  // Request history when entering history state
   useEffect(() => {
     if (rightPanelSubState === 'history') {
       void requestHistory();
@@ -731,16 +737,28 @@ export function FullScreenIDE({
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
 
-  // Detect version mismatch between run and current workflow
-  const run = useActiveRun();
-  const versionMismatch = useVersionMismatch(run?.id ?? null);
-  const handleVersionSelect = useVersionSelect();
+  const activeRun = useActiveRun();
+  const versionMismatch = useVersionMismatch(activeRun?.id ?? null);
+  const { handleVersionSelect, prompt: versionPrompt } = useVersionSelect();
+  const { viewAsExecuted, prompt: runPinPrompt } = useViewAsExecuted();
+  const contentLocked = useContentLocked();
 
   const handleGoToVersion = useCallback(() => {
-    if (versionMismatch) {
-      handleVersionSelect(versionMismatch.runVersion);
+    if (!versionMismatch) return;
+
+    if (contentLocked && activeRun?.id) {
+      viewAsExecuted(activeRun.id);
+      return;
     }
-  }, [versionMismatch, handleVersionSelect]);
+
+    handleVersionSelect(versionMismatch.runVersion);
+  }, [
+    activeRun?.id,
+    contentLocked,
+    handleVersionSelect,
+    versionMismatch,
+    viewAsExecuted,
+  ]);
 
   // Check loading state but don't use early return (violates rules of hooks)
   // Only check for job existence, not ytext/awareness
@@ -903,19 +921,26 @@ export function FullScreenIDE({
               </button>
             </Tooltip>
 
-            {/* New Run button - shown when no panel or viewing history */}
+            {/* New Run button - shown when no panel or viewing history. It
+                stays on a read-only workflow: running is not editing, and the
+                run hook refuses the ones that genuinely cannot run. */}
             {(panelState === undefined || panelState === 'history') && (
               <NewRunButton onClick={handleNavigateToCreateRun} />
             )}
 
-            {/* Run/Retry button - shown when creating new run or viewing existing run */}
+            {/* Run/Retry, while creating a run or reading one. Running is not
+                editing: reading the failing step's code is exactly where you
+                want to run it again, and a live workflow is the case that
+                matters most. Whether it can run is the hook's answer, not the
+                editing lock's. */}
             {(panelState === 'run-viewer' || panelState === 'create-run') && (
               <RunRetryButton
                 isRetryable={isRetryable}
                 isDisabled={
                   !(
-                    canRunSnapshot &&
-                    canRunFromHook &&
+                    (isRetryable
+                      ? canRetryFromHook
+                      : canRunSnapshot && canRunFromHook) &&
                     !isSubmitting &&
                     !runIsProcessing &&
                     jobMatchesRun
@@ -930,7 +955,7 @@ export function FullScreenIDE({
                 }}
                 buttonText={{
                   run: 'Run',
-                  retry: 'Run (Retry)',
+                  retry: 'Retry',
                   processing: 'Processing',
                 }}
                 variant="primary"
@@ -1044,9 +1069,7 @@ export function FullScreenIDE({
                             <div className="flex-1">
                               <Tabs
                                 value={selectedDocsTab}
-                                onChange={tab =>
-                                  setSelectedDocsTab(tab as 'docs' | 'metadata')
-                                }
+                                onChange={tab => setSelectedDocsTab(tab)}
                                 variant="pills"
                                 options={[
                                   {
@@ -1194,7 +1217,11 @@ export function FullScreenIDE({
                 </div>
               ) : (
                 <div className="h-full flex flex-col">
-                  {/* Version mismatch banner - shown when viewing a run from different version */}
+                  {/* The run on screen executed different content, so the
+                      shape being read is not the shape that ran. Only ever set
+                      without experimental features: with them, opening a run of
+                      older content loads that content instead of painting the
+                      run onto a document it never touched. */}
                   {panelState === 'run-viewer' && versionMismatch && (
                     <VersionMismatchBanner
                       runVersion={versionMismatch.runVersion}
@@ -1356,10 +1383,25 @@ export function FullScreenIDE({
             job={currentJob}
             updateJob={updateJob}
             setIsConfigureModalOpen={setIsConfigureModalOpen}
-            projectAdaptors={projectAdaptors}
+            adaptorsInUse={adaptorsInUse}
           />
         </>
       )}
+
+      <DiscardChangesDialog
+        isOpen={versionPrompt.isAsking}
+        onSaveAndContinue={versionPrompt.saveAndRunPending}
+        onDiscardAndContinue={versionPrompt.runPending}
+        onCancel={versionPrompt.cancel}
+        description="Switching to the version this run executed against loads that version, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
+      <DiscardChangesDialog
+        isOpen={runPinPrompt.isAsking}
+        onSaveAndContinue={runPinPrompt.saveAndRunPending}
+        onDiscardAndContinue={runPinPrompt.runPending}
+        onCancel={runPinPrompt.cancel}
+        description="Opening this run loads the version it executed against, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
     </div>
   );
 }

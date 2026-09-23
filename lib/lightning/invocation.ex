@@ -88,12 +88,35 @@ defmodule Lightning.Invocation do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
-    Query.last_n_for_job(job_id, limit)
+    base =
+      if Keyword.get(opts, :named_dataclips, false) do
+        Query.selectable_for_job(job_id, project_id_for_job(job_id, opts), limit)
+      else
+        Query.last_n_for_job(job_id, limit)
+      end
+
+    base
     |> where([d], is_nil(d.wiped_at))
     |> where([d], ^dataclip_where_filter(user_filters))
-    |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
+    |> then(fn query -> if offset, do: offset(query, ^offset), else: query end)
     |> Repo.all()
     |> maybe_filter_uuid_prefix(user_filters)
+  end
+
+  defp project_id_for_job(job_id, opts) do
+    case Keyword.get(opts, :project_id) do
+      nil ->
+        from(j in Lightning.Workflows.Job,
+          join: w in Lightning.Workflows.Workflow,
+          on: w.id == j.workflow_id,
+          where: j.id == ^job_id,
+          select: w.project_id
+        )
+        |> Repo.one()
+
+      project_id ->
+        project_id
+    end
   end
 
   @spec get_dataclip_with_body!(id :: Ecto.UUID.t()) :: %{
@@ -634,6 +657,7 @@ defmodule Lightning.Invocation do
     |> filter_by_wo_date_before(search_params.wo_date_before)
     |> filter_by_date_after(search_params.date_after)
     |> filter_by_date_before(search_params.date_before)
+    |> filter_by_runs(search_params)
     |> filter_by_error_signature(search_params)
     |> filter_by_body_or_log_or_id(
       search_params.search_fields,
@@ -729,6 +753,42 @@ defmodule Lightning.Invocation do
       where: workorder.last_activity <= ^date_before
     )
   end
+
+  defp filter_by_runs(query, %SearchParams{
+         run_date_after: nil,
+         run_date_before: nil,
+         run_status: []
+       }),
+       do: query
+
+  defp filter_by_runs(query, %SearchParams{
+         run_date_after: run_date_after,
+         run_date_before: run_date_before,
+         run_status: run_status
+       }) do
+    runs =
+      from(r in Run, where: r.work_order_id == parent_as(:workorder).id)
+      |> filter_run_inserted_after(run_date_after)
+      |> filter_run_inserted_before(run_date_before)
+      |> filter_run_statuses(run_status)
+
+    from([workorder: _workorder] in query, where: exists(runs))
+  end
+
+  defp filter_run_inserted_after(query, nil), do: query
+
+  defp filter_run_inserted_after(query, run_date_after),
+    do: where(query, [r], r.inserted_at >= ^run_date_after)
+
+  defp filter_run_inserted_before(query, nil), do: query
+
+  defp filter_run_inserted_before(query, run_date_before),
+    do: where(query, [r], r.inserted_at < ^run_date_before)
+
+  defp filter_run_statuses(query, []), do: query
+
+  defp filter_run_statuses(query, states),
+    do: where(query, [r], r.state in ^states)
 
   # The inverse of `Run.state_reasons/0`, for reading a run-level signature's
   # `exit_reason` back into the state it came from. `"rejected"` is not a

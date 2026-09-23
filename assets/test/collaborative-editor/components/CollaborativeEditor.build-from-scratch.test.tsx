@@ -57,6 +57,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // --- Heavy child components stubbed out — not under test here ---
@@ -150,13 +151,22 @@ vi.mock(
 // --- Session context ---
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useContentLocked: () => false,
   useIsNewWorkflow: () => false,
   useProjectRepoConnection: () => undefined,
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useLatestSnapshotId: () => null,
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
   useLatestSnapshotLockVersion: () => 1,
   useUser: () => ({
     id: 'user-1',
@@ -171,6 +181,14 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   }),
   useSessionContext: () => ({
     workflow: { jobs: [], triggers: [], edges: [], name: 'wf', positions: {} },
+  }),
+  useSessionWorkflow: () => undefined,
+  useExperimentalFeatures: () => true,
+  usePermissions: () => ({
+    can_edit_workflow: true,
+    can_run_workflow: true,
+    can_write_webhook_auth_method: true,
+    can_provision_sandbox: true,
   }),
 }));
 
