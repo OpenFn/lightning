@@ -52,7 +52,12 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     // Create new socket
     const newSocket = new PhoenixSocket('/socket', {
-      params: { token: userToken },
+      params: {
+        token: userToken,
+        request_id: document
+          .querySelector("meta[name='request-id']")
+          ?.getAttribute('content'),
+      },
       logger: (kind: any, msg: any, data: any) => {
         // Follow the LiveView debug mode
         if (sessionStorage.getItem(PHX_LV_DEBUG) === 'true') {

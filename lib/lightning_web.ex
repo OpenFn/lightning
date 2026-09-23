@@ -78,6 +78,7 @@ defmodule LightningWeb do
 
       unquote(html_helpers())
       on_mount Sentry.LiveViewHook
+      on_mount LightningWeb.RequestId
     end
   end
 

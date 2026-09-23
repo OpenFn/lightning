@@ -21,6 +21,7 @@ defmodule Lightning.Application do
       :logger.add_handler(:sentry_error_handler, Sentry.LoggerHandler, %{
         config: %{
           metadata: [:file, :line, :prompt_size, :session_id],
+          tags_from_metadata: [:request_id],
           rate_limiting: [max_events: 10, interval: _1_second = 1_000],
           capture_log_messages: true,
           level: :error

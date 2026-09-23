@@ -39,6 +39,8 @@ defmodule LightningWeb.WorkflowChannel do
         %{"project_id" => project_id, "action" => action},
         socket
       ) do
+    Logger.metadata(request_id: socket.assigns[:request_id])
+
     # Room formats:
     # - "workflow_id" → latest (collaborative editing room)
     # - "workflow_id:vN" → specific version N (isolated snapshot viewing)

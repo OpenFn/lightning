@@ -66,7 +66,7 @@ defmodule LightningWeb.Endpoint do
     param_key: "request_logger",
     cookie_key: "request_logger"
 
-  plug Plug.RequestId
+  plug Plug.RequestId, assign_as: :request_id
 
   plug CORSPlug, origin: &Lightning.Config.cors_origin/0
 

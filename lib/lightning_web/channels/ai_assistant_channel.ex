@@ -35,6 +35,8 @@ defmodule LightningWeb.AiAssistantChannel do
         params,
         socket
       ) do
+    Logger.metadata(request_id: socket.assigns[:request_id])
+
     with {:user, user} when not is_nil(user) <-
            {:user, socket.assigns[:current_user]},
          {:parse_topic, {:ok, session_type, session_id}} <-

@@ -59,8 +59,30 @@ test('browser and server errors reach Sentry', async ({ page }) => {
     expect(browserEvent.release).toBe(release);
     expect(serverEvent.request?.url).toContain(marker);
 
-    // request_id: assert browserEvent and serverEvent share the same
-    // request_id tag here once both sides set it.
+    const requestId = await meta('request-id');
+    expect(requestId).toBeTruthy();
+    expect(browserEvent.tags?.request_id).toBe(requestId);
+
+    // An event the LiveView has no handle_event clause for crashes its
+    // process, and Sentry.LoggerHandler reports the crash.
+    await page.evaluate(event => {
+      const el = document.querySelector('[data-phx-main]');
+      (window as any).liveSocket.execJS(
+        el,
+        JSON.stringify([['push', { event }]])
+      );
+    }, `${marker}-unhandled`);
+
+    const liveViewEvent = () =>
+      listener
+        .events()
+        .find(
+          e =>
+            e.platform === 'elixir' &&
+            JSON.stringify(e).includes(`${marker}-unhandled`)
+        );
+    await expect.poll(liveViewEvent, { timeout: 15_000 }).toBeTruthy();
+    expect(liveViewEvent()!.tags?.request_id).toBe(requestId);
   } finally {
     await listener.close();
   }

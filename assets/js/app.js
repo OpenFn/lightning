@@ -44,6 +44,7 @@ const metaContent = name =>
 // deployment sets SENTRY_FRONTEND_DSN; without a DSN the SDK stays disabled
 // and sends nothing.
 const sentryDsn = metaContent('sentry-dsn');
+const requestId = metaContent('request-id');
 
 // localStorage throws when the browser blocks site data.
 const localFlag = key => {
@@ -58,6 +59,7 @@ Sentry.init({
   dsn: sentryDsn,
   environment: metaContent('sentry-environment'),
   release: metaContent('sentry-release'),
+  initialScope: { tags: { request_id: requestId } },
   debug: localFlag('sentryDebug'),
   beforeSend: event => {
     if (!localFlag('sentryDryRun')) return event;
@@ -88,7 +90,7 @@ const csrfToken = document
   .getAttribute('content');
 
 const liveSocket = new LiveSocket('/live', Socket, {
-  params: { _csrf_token: csrfToken },
+  params: { _csrf_token: csrfToken, request_id: requestId },
   hooks,
   dom: {
     onBeforeElUpdated(from, to) {

@@ -67,6 +67,8 @@ defmodule LightningWeb.RunChannel do
   def join("run:" <> run_id, _params, socket)
       when is_map_key(socket.assigns, :current_user) do
     # Browser client join (from UserSocket)
+    Logger.metadata(request_id: socket.assigns[:request_id])
+
     user = socket.assigns.current_user
 
     with run when is_map(run) <-

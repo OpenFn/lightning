@@ -13,6 +13,7 @@
     <meta name="msapplication-TileColor" content="#603cba" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="csrf-token" content={get_csrf_token()} />
+    <meta name="request-id" content={@conn.assigns[:request_id]} />
     <.sentry_frontend_tags />
     <.live_title suffix=" · OpenFn Lightning">
       {assigns[:page_title] || "Lightning"}

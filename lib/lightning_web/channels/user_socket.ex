@@ -27,7 +27,7 @@ defmodule LightningWeb.UserSocket do
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
   @impl true
-  def connect(%{"token" => token}, socket, _connect_info) do
+  def connect(%{"token" => token} = params, socket, _connect_info) do
     # max_age: 1209600 is equivalent to two weeks in seconds. The token wraps the
     # user's DB session token, so a deleted session (logout, password reset,
     # disabled account) makes get_user_by_session_token return nil and the
@@ -43,7 +43,11 @@ defmodule LightningWeb.UserSocket do
          %Lightning.Accounts.User{} = user <-
            Lightning.Accounts.get_user_by_session_token(session_token),
          false <- Lightning.Accounts.locked_out?(user) do
-      {:ok, assign(socket, :current_user, user)}
+      {:ok,
+       assign(socket,
+         current_user: user,
+         request_id: LightningWeb.RequestId.parse(params)
+       )}
     else
       _ -> :error
     end
