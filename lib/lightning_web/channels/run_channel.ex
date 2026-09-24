@@ -21,6 +21,7 @@ defmodule LightningWeb.RunChannel do
   alias Lightning.Scrubber
   alias Lightning.Workers
   alias Lightning.Workflows.WebhookAuthMethod
+  alias LightningWeb.Observability
   alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
@@ -42,8 +43,7 @@ defmodule LightningWeb.RunChannel do
          run when is_map(run) <- Runs.get_for_worker(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
            Runs.get_project_id_for_run(run) do
-      Logger.metadata(run_id: id, project_id: project_id)
-      Sentry.Context.set_extra_context(%{run_id: id})
+      Observability.put_scope(run_id: id, project_id: project_id)
 
       {:ok,
        socket
@@ -102,20 +102,20 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:plan", _payload, socket) do
     case RunWithOptions.render(socket.assigns.run) do
       {:ok, plan} ->
-        reply_with(socket, {:ok, plan})
+        reply_and_report(socket, {:ok, plan})
 
       {:error, reason} ->
-        reply_with(socket, {:error, %{reason: "adaptor_#{reason}"}})
+        reply_and_report(socket, {:error, %{reason: "adaptor_#{reason}"}})
     end
   end
 
   def handle_in("run:start", payload, socket) do
     case Runs.start_run(socket.assigns.run, payload) do
       {:ok, run} ->
-        socket |> assign(run: run) |> reply_with({:ok, nil})
+        socket |> assign(run: run) |> reply_and_report({:ok, nil})
 
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
     end
   end
 
@@ -134,10 +134,10 @@ defmodule LightningWeb.RunChannel do
         socket
         |> assign(run: run)
         |> maybe_send_after_completion_response(payload["final_state"])
-        |> reply_with({:ok, nil})
+        |> reply_and_report({:ok, nil})
 
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
     end
   end
 
@@ -148,13 +148,16 @@ defmodule LightningWeb.RunChannel do
 
     case Resolver.resolve_credential(run, id) do
       {:ok, nil} ->
-        reply_with(socket, {:ok, nil})
+        reply_and_report(socket, {:ok, nil})
 
       {:ok, resolved_credential} ->
         handle_resolved_credential(socket, resolved_credential)
 
       {:error, :not_found} ->
-        reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
+        reply_and_report(
+          socket,
+          {:error, %{errors: %{id: ["Credential not found!"]}}}
+        )
 
       {:error, error_tuple} ->
         handle_credential_error(socket, error_tuple, id, project_id, run.id)
@@ -162,7 +165,7 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("fetch:credential", _payload, socket) do
-    reply_with(
+    reply_and_report(
       socket,
       {:error, %{errors: %{id: ["This field can't be blank."]}}}
     )
@@ -184,7 +187,7 @@ defmodule LightningWeb.RunChannel do
     if !socket.assigns.run.options.save_dataclips,
       do: Runs.wipe_dataclips(socket.assigns.run)
 
-    reply_with(socket, {:ok, {:binary, body || "null"}})
+    reply_and_report(socket, {:ok, {:binary, body || "null"}})
   end
 
   def handle_in("step:start", payload, socket) do
@@ -192,20 +195,23 @@ defmodule LightningWeb.RunChannel do
       job_id when is_binary(job_id) ->
         case Runs.start_step(socket.assigns.run, payload) do
           {:error, changeset} ->
-            reply_with(socket, {:error, changeset})
+            reply_and_report(socket, {:error, changeset})
 
           {:ok, step} ->
-            reply_with(socket, {:ok, %{step_id: step.id}})
+            reply_and_report(socket, {:ok, %{step_id: step.id}})
         end
 
       :missing_job_id ->
-        reply_with(
+        reply_and_report(
           socket,
           {:error, %{errors: %{job_id: ["This field can't be blank."]}}}
         )
 
       nil ->
-        reply_with(socket, {:error, %{errors: %{job_id: ["Job not found!"]}}})
+        reply_and_report(
+          socket,
+          {:error, %{errors: %{job_id: ["Job not found!"]}}}
+        )
     end
   end
 
@@ -218,12 +224,12 @@ defmodule LightningWeb.RunChannel do
     |> Runs.complete_step(socket.assigns.run.options)
     |> case do
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
 
       {:ok, step} ->
         socket
         |> put_webhook_response(payload)
-        |> reply_with({:ok, %{step_id: step.id}})
+        |> reply_and_report({:ok, %{step_id: step.id}})
     end
   end
 
@@ -232,10 +238,10 @@ defmodule LightningWeb.RunChannel do
 
     case Runs.append_run_log(run, payload, scrubber) do
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
 
       {:ok, log_line} ->
-        reply_with(socket, {:ok, %{log_line_id: log_line.id}})
+        reply_and_report(socket, {:ok, %{log_line_id: log_line.id}})
     end
   end
 
@@ -244,10 +250,10 @@ defmodule LightningWeb.RunChannel do
 
     case Runs.append_run_logs_batch(run, payload, scrubber) do
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
 
       {:ok, _} ->
-        reply_with(socket, :ok)
+        reply_and_report(socket, :ok)
     end
   end
 
@@ -265,7 +271,7 @@ defmodule LightningWeb.RunChannel do
         ]
       )
 
-    reply_with(socket, {:ok, %{run: run}})
+    reply_and_report(socket, {:ok, %{run: run}})
   end
 
   def handle_in("fetch:logs", _payload, socket) do
@@ -283,7 +289,7 @@ defmodule LightningWeb.RunChannel do
         {:error, _} -> []
       end
 
-    reply_with(socket, {:ok, %{logs: log_lines}})
+    reply_and_report(socket, {:ok, %{logs: log_lines}})
   end
 
   # Forward PubSub events to browser clients
@@ -546,7 +552,7 @@ defmodule LightningWeb.RunChannel do
 
     socket
     |> assign(scrubber: scrubber)
-    |> reply_with({:ok, resolved_credential.body})
+    |> reply_and_report({:ok, resolved_credential.body})
   end
 
   defp handle_credential_error(

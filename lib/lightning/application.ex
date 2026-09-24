@@ -20,7 +20,9 @@ defmodule Lightning.Application do
     if Application.get_env(:sentry, :dsn) do
       :logger.add_handler(:sentry_error_handler, Sentry.LoggerHandler, %{
         config: %{
-          metadata: [:file, :line, :prompt_size, :session_id],
+          metadata:
+            [:file, :line] ++
+              Application.fetch_env!(:lightning, :log_metadata),
           rate_limiting: [max_events: 10, interval: _1_second = 1_000],
           capture_log_messages: true,
           level: :error
