@@ -14,6 +14,8 @@ defmodule LightningWeb.Components.DataTables do
   attr :title, :string, required: true
   attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
+  attr :page, :map, default: nil
+  attr :url, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -30,7 +32,7 @@ defmodule LightningWeb.Components.DataTables do
       <%= if Enum.empty?(@credentials) do %>
         {render_slot(@empty_state)}
       <% else %>
-        <.table id={"#{@id}-table"}>
+        <.table id={"#{@id}-table"} page={@page} url={@url}>
           <:header>
             <.tr>
               <.th>Name</.th>
@@ -125,6 +127,8 @@ defmodule LightningWeb.Components.DataTables do
   attr :title, :string, required: true
   attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
+  attr :page, :map, default: nil
+  attr :url, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -141,7 +145,7 @@ defmodule LightningWeb.Components.DataTables do
       <%= if Enum.empty?(@keychain_credentials) do %>
         {render_slot(@empty_state)}
       <% else %>
-        <.table id={"#{@id}-table"}>
+        <.table id={"#{@id}-table"} page={@page} url={@url}>
           <:header>
             <.tr>
               <.th>Name</.th>
@@ -198,7 +202,10 @@ defmodule LightningWeb.Components.DataTables do
   attr :id, :string, required: true
   attr :clients, :list, required: true
   attr :title, :string, required: true
+  attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
+  attr :page, :map, default: nil
+  attr :url, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -209,13 +216,13 @@ defmodule LightningWeb.Components.DataTables do
   def oauth_clients_table(assigns) do
     ~H"""
     <div id={"#{@id}-table-container"}>
-      <div class="leading-loose pb-2">
+      <div :if={@display_table_title} class="leading-loose pb-2">
         <h6 class="font-normal text-black">{@title}</h6>
       </div>
       <%= if Enum.empty?(@clients) do %>
         {render_slot(@empty_state)}
       <% else %>
-        <.table id={"#{@id}-table"}>
+        <.table id={"#{@id}-table"} page={@page} url={@url}>
           <:header>
             <.tr>
               <.th>Name</.th>
