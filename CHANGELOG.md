@@ -27,6 +27,10 @@ and this project adheres to
   [#5188](https://github.com/OpenFn/lightning/pull/5188)
 - A "Steps with failures" card on the workflow health page, ranking the jobs the
   window's failures landed on, heaviest first.
+- The workflow editor now tells you when Lightning has been updated since you
+  opened it, with a notice that stays until you reload or close it. Previously
+  an open editor could keep running the old version for hours after a deploy.
+  [#5202](https://github.com/OpenFn/lightning/pull/5202)
 
 ### Changed
 
@@ -51,6 +55,9 @@ and this project adheres to
 
 ### Fixed
 
+- Leaving the workflow editor now closes its connection to the server. It used
+  to stay open, reconnecting in the background, until the tab was closed.
+  [#5202](https://github.com/OpenFn/lightning/pull/5202)
 - The console logger and Sentry's logger handler had drifted to different
   metadata allowlists, so keys such as `run_id` and `project_id` were logged but
   never reached Sentry. Both now read one list from config.

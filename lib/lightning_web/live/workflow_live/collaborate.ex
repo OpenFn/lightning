@@ -82,6 +82,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        show_webhook_auth_modal: false,
        webhook_auth_method: nil,
        ai_assistant_enabled: AiAssistant.enabled?(),
+       static_changed: static_changed?(socket),
        experimental_features_enabled:
          Lightning.Accounts.experimental_features_enabled?(
            socket.assigns.current_user
@@ -239,6 +240,15 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       function={@banner.function}
       args={@banner.attrs}
     />
+    <%!-- phx-update="ignore" stops a rejoin from patching href to the new
+    build's digest, so later reconnects still report the bundle this tab loaded. --%>
+    <link
+      id="collaborative-editor-bundle"
+      rel="modulepreload"
+      phx-track-static
+      phx-update="ignore"
+      href={~p"/assets/js/collaborative-editor/CollaborativeEditor.js"}
+    />
     <div
       id="collaborative-editor-react"
       class="h-full"
@@ -268,6 +278,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-experimental-features={
         if @experimental_features_enabled, do: "true", else: "false"
       }
+      data-static-changed={if @static_changed, do: "true"}
       data-initial-run-data={
         if assigns[:initial_run_data],
           do: Jason.encode!(assigns[:initial_run_data]),

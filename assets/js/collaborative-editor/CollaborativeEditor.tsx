@@ -21,6 +21,7 @@ import { RestoreVersionDialog } from './components/RestoreVersionDialog';
 import type { RestoreCost } from './components/RestoreVersionDialog';
 import { SnapshotVersionDropdown } from './components/SnapshotVersionDropdown';
 import { TemplateBrowserModalWrapper } from './components/TemplateBrowserModalWrapper';
+import { StaleBuildNotice } from './components/StaleBuildNotice';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
 import { VersionDropdown } from './components/VersionDropdown';
@@ -74,6 +75,7 @@ export interface CollaborativeEditorDataProps {
   'data-experimental-features'?: string;
   'data-workflow-state'?: string;
   'data-first-trigger-id'?: string;
+  'data-static-changed'?: string;
   // Initial run data from server to avoid client-side race conditions
   'data-initial-run-data'?: string; // JSON-encoded RunStepsData
 }
@@ -423,6 +425,7 @@ export const CollaborativeEditor: WithActionProps<
   const workflowState = props['data-workflow-state'];
   const firstTriggerId = props['data-first-trigger-id'];
   const initialRunData = props['data-initial-run-data'];
+  const staticChanged = props['data-static-changed'] === 'true';
 
   const liveViewActions = {
     pushEvent: props.pushEvent,
@@ -455,6 +458,7 @@ export const CollaborativeEditor: WithActionProps<
                   <MonacoRefProvider monacoRef={monacoRef}>
                     <VersionDebugLogger />
                     <Toaster />
+                    <StaleBuildNotice staticChanged={staticChanged} />
                     <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
                       <BreadcrumbContent
                         workflowId={workflowId}
