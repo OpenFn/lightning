@@ -437,7 +437,7 @@ export function AIAssistantPanel({
       {!isNewWorkflow && contentLocked && (
         <div
           className="flex-none bg-amber-50 border-t border-amber-200 px-4 py-3"
-          role="alert"
+          role="status"
           data-testid="ai-draft-mode-banner"
         >
           <div className="flex items-start gap-3">
