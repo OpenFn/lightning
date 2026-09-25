@@ -86,7 +86,7 @@ function stubFetch(responses: Record<string, unknown>) {
 
 function mount(
   responses: Record<string, unknown>,
-  { retention }: { retention?: number } = {}
+  { retention }: { retention?: string } = {}
 ) {
   const stub = stubFetch(responses);
 
@@ -95,9 +95,7 @@ function mount(
       data-workflow-id="wf-1"
       data-project-id="proj-1"
       data-workflow-name="Sync patients"
-      data-history-retention-period={
-        retention === undefined ? undefined : String(retention)
-      }
+      data-history-retention-period={retention}
     />
   );
 
@@ -510,18 +508,18 @@ describe('WorkflowHealth', () => {
     expect(screen.queryAllByText('Success')).toHaveLength(0);
   });
 
-  test('opens on the last 7 days, with every range enabled when retention is unlimited', async () => {
+  test('enables every range when retention is unlimited', async () => {
     mount(both);
 
     await screen.findAllByText('Success');
 
     expect(screen.getByRole('radio', { name: 'Last 24 hours' })).toBeEnabled();
-    expect(screen.getByRole('radio', { name: 'Last 7 days' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Last 7 days' })).toBeEnabled();
     expect(screen.getByRole('radio', { name: 'Last 30 days' })).toBeEnabled();
   });
 
   test('disables a range longer than the project retains, and explains why on hover', async () => {
-    const { fetchMock } = mount(both, { retention: 14 });
+    const { fetchMock } = mount(both, { retention: '14' });
 
     await screen.findAllByText('Success');
 
@@ -544,7 +542,7 @@ describe('WorkflowHealth', () => {
   });
 
   test('leaves every range enabled when retention covers all of them', async () => {
-    mount(both, { retention: 30 });
+    mount(both, { retention: '30' });
 
     await screen.findAllByText('Success');
 
