@@ -415,6 +415,33 @@ defmodule Lightning.AuditingTest do
                  insert(:trigger),
                  changes
                )
+
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      uuid = account.uuid
+
+      assert %{changes: %{actor_type: :service_account, actor_id: ^uuid}} =
+               Audit.event("user", "created", item_id, account, changes)
+    end
+
+    test "displays a service account actor" do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      Audit.event("user", "created", Ecto.UUID.generate(), account, %{
+        after: %{email: "someone@example.com"}
+      })
+      |> Repo.insert!()
+
+      assert %{
+               entries: [
+                 %{
+                   actor_type: :service_account,
+                   actor_display: %{label: "Service account", identifier: nil}
+                 }
+               ]
+             } = Auditing.list_all()
     end
 
     test "'created' event sets before changes to nil", %{actor: actor} do
