@@ -25,7 +25,8 @@ and this project adheres to
   assertion signed with its private key to `POST /api/oauth/token` and gets back
   a five-minute access token. `/.well-known/oauth-authorization-server`
   describes the exchange, so any OAuth library can drive it. Each assertion
-  works once.
+  works once. Changing or removing the key stops tokens already issued from
+  working.
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.

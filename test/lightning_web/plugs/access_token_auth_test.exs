@@ -9,6 +9,7 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
 
   setup do
     {account, _private_key} = service_account_with_key()
+    Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
     %{account: account}
   end
 
@@ -28,10 +29,8 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
   end
 
   describe "call/2" do
-    test "lets an access token through with its claims", %{
-      conn: conn,
-      account: account
-    } do
+    test "lets an access token through with its claims and service account",
+         %{conn: conn, account: account} do
       conn = authenticate(conn, AccessToken.issue(account, ["users:read"]))
 
       refute conn.halted
@@ -40,6 +39,20 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
                conn.assigns.access_token
 
       assert sub == account.id
+      assert conn.assigns.service_account == account
+    end
+
+    test "refuses a token for a service account that is no longer registered",
+         %{conn: conn, account: account} do
+      token = AccessToken.issue(account, ["users:read"])
+      {replacement, _private_key} = service_account_with_key()
+      Mox.stub(Lightning.MockConfig, :service_account, fn -> replacement end)
+
+      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+
+      Mox.stub(Lightning.MockConfig, :service_account, fn -> nil end)
+
+      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
     end
 
     test "refuses a missing token", %{conn: conn} do
