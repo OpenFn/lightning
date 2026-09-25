@@ -168,7 +168,7 @@ export const VolumeBars = ({
                 answer most readers came for, and a column-wide link would
                 make them filter the failures out again on arrival. Clicking
                 is a mouse affordance only — the frame is `aria-hidden`, and
-                thirty bars times three bands is not a link list. */}
+                up to a month of bars times three bands is not a link list. */}
             {[...totals]
               .reverse()
               .map(({ key, label: name, color, states }) => (

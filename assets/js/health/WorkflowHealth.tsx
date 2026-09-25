@@ -78,8 +78,9 @@ export const WorkflowHealth = ({
           two summaries either side of the time axis (3 + 6 + 3), and the
           bottom row is the triage table with the breakdown donut beside it
           (9 + 3). The axis takes half the row because it is the only card
-          whose reading gets better with width — thirty bars and their ticks —
-          where a donut past its `max-w-sm` just centres in more whitespace.
+          whose reading gets better with width — up to a month of daily bars
+          and their ticks — where a donut past its `max-w-sm` just centres in
+          more whitespace.
           Always in source order. */}
       <div className="grid gap-6 lg:grid-cols-12">
         <Card
