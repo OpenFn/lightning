@@ -77,13 +77,10 @@ case "$MODE" in
   *)
     [ "$MODE" = changed ] && FILES=$(changed_files) || FILES=$(all_files)
 
-    if [ -z "$FILES" ]; then
-      echo "✓ Nothing to format"
-      exit 0
+    if [ -n "$FILES" ]; then
+      echo "Running Prettier..."
+      echo "$FILES" | xargs "${PRETTIER[@]}" --write | grep -v '(unchanged)$' || true
     fi
-
-    echo "Running Prettier..."
-    echo "$FILES" | xargs "${PRETTIER[@]}" --write | grep -v '(unchanged)$' || true
 
     echo "Running ESLint..."
     JS=$(echo "$FILES" | grep -E '^assets/.*\.(js|jsx|ts|tsx)$' | sed 's|^assets/||' || true)
