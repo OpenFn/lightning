@@ -11,6 +11,7 @@ defmodule Lightning.Accounts do
 
   alias Ecto.Changeset
   alias Ecto.Multi
+  alias Lightning.Accounts.Audit
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
@@ -20,6 +21,7 @@ defmodule Lightning.Accounts do
   alias Lightning.Credentials
   alias Lightning.Projects
   alias Lightning.Repo
+  alias Lightning.ServiceAccount
   alias Lightning.Services.AccountHook
 
   require Logger
@@ -139,6 +141,61 @@ defmodule Lightning.Accounts do
     Repo.transact(fn ->
       AccountHook.handle_create_user(attrs)
     end)
+  end
+
+  @doc """
+  Creates a user on behalf of a service account, and records the audit event
+  in the same transaction.
+
+  Answers `{:error, :email_taken, user}` with the user already holding the
+  email, in any case.
+  """
+  @spec create_user_as_service_account(map(), ServiceAccount.t()) ::
+          {:ok, User.t()}
+          | {:error, :email_taken, User.t()}
+          | {:error, Changeset.t()}
+  def create_user_as_service_account(attrs, %ServiceAccount{} = service_account) do
+    changeset = User.service_account_changeset(attrs)
+
+    Repo.transact(fn ->
+      with {:ok, user} <- Repo.insert(changeset),
+           {:ok, _audit} <-
+             user |> Audit.user_created(service_account) |> Repo.insert() do
+        {:ok, user}
+      end
+    end)
+    |> case do
+      {:error, %Changeset{} = failed} -> taken_or_invalid(failed)
+      created -> created
+    end
+  end
+
+  defp taken_or_invalid(changeset) do
+    with {_message, opts} <- changeset.errors[:email],
+         :unique <- opts[:constraint],
+         %User{} = user <-
+           get_user_by_email(Changeset.get_field(changeset, :email)) do
+      {:error, :email_taken, user}
+    else
+      _ -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  A page of users, optionally only the one whose email matches `"email"` in
+  any case.
+  """
+  @spec paginate_users(map()) :: Scrivener.Page.t()
+  def paginate_users(params) do
+    User
+    |> then(fn query ->
+      case params do
+        %{"email" => email} when is_binary(email) -> where(query, email: ^email)
+        _all -> query
+      end
+    end)
+    |> order_by([:inserted_at, :id])
+    |> Repo.paginate(Map.take(params, ["page", "page_size"]))
   end
 
   @doc """

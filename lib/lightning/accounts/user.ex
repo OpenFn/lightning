@@ -320,6 +320,37 @@ defmodule Lightning.Accounts.User do
   end
 
   @doc """
+  A user a service account creates through `/api/users`.
+
+  The names are optional for either role, and `confirmed: true` confirms the
+  email. A taken email is left to the unique index rather than checked first,
+  so two requests for the same email can't both succeed.
+  """
+  @spec service_account_changeset(map()) :: Ecto.Changeset.t()
+  def service_account_changeset(attrs) do
+    %User{}
+    |> cast(attrs, [:email, :password, :first_name, :last_name, :role])
+    |> Lightning.Validators.validate_email_format()
+    |> unique_constraint(:email)
+    |> trim_name()
+    |> validate_length(:first_name, max: 255)
+    |> validate_length(:last_name, max: 255)
+    |> confirm_if_asked(attrs)
+    |> validate_password([])
+  end
+
+  defp confirm_if_asked(changeset, attrs) do
+    {%{}, %{confirmed: :boolean}}
+    |> cast(attrs, [:confirmed])
+    |> apply_action(:insert)
+    |> case do
+      {:ok, %{confirmed: true}} -> confirm_changeset(changeset)
+      {:ok, _unconfirmed} -> changeset
+      {:error, _invalid} -> add_error(changeset, :confirmed, "is invalid")
+    end
+  end
+
+  @doc """
   Confirms the account by setting `confirmed_at`.
   """
   def confirm_changeset(user) do
