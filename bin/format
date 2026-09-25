@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-set -e
+set -eo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
@@ -78,7 +78,7 @@ case "$MODE" in
 
     if [ -n "$FILES" ]; then
       echo "Running Prettier..."
-      echo "$FILES" | xargs "${PRETTIER[@]}" --write | grep -v '(unchanged)$' || true
+      echo "$FILES" | xargs "${PRETTIER[@]}" --write | { grep -v '(unchanged)$' || true; }
     fi
 
     echo "Running ESLint..."
