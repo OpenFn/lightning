@@ -227,6 +227,12 @@ defmodule Lightning.Config.Bootstrap do
           end
         end)
 
+    service_account =
+      env!("SERVICE_ACCOUNT_PUBLIC_KEY", &decode_service_account!/1, nil)
+
+    config :lightning, :service_account, service_account
+    config :lightning, :allow_first_setup, is_nil(service_account)
+
     release = release_info()
 
     config :lightning, :release, release
@@ -1118,6 +1124,19 @@ defmodule Lightning.Config.Bootstrap do
     case get_env(app) |> get_in(keys) do
       nil -> Application.get_all_env(app) |> get_in(keys)
       value -> value
+    end
+  end
+
+  defp decode_service_account!(encoded) do
+    with {:ok, pem} <- Base.decode64(encoded, padding: false),
+         {:ok, service_account} <- Lightning.ServiceAccount.from_pem(pem) do
+      service_account
+    else
+      :error ->
+        raise "SERVICE_ACCOUNT_PUBLIC_KEY is not unpadded base64"
+
+      {:error, reason} ->
+        raise "SERVICE_ACCOUNT_PUBLIC_KEY #{reason}"
     end
   end
 

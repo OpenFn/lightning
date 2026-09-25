@@ -59,4 +59,40 @@ defmodule LightningWeb.FirstSetupLiveTest do
                )
     end
   end
+
+  describe "while a service account is registered" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :allow_first_setup -> false
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      :ok
+    end
+
+    @tag create_initial_user: false
+    test "does not redirect to first setup", %{conn: conn} do
+      refute get(conn, "/") |> redirected_to() == "/first_setup"
+    end
+
+    @tag create_initial_user: false
+    test "refuses first setup when there is no superuser", %{conn: conn} do
+      assert get(conn, "/first_setup") |> response(404) =~
+               "First setup is disabled"
+    end
+
+    @tag create_initial_user: false
+    test "refuses first setup reached by live navigation", context do
+      %{conn: conn} = register_and_log_in_user(context)
+      {:ok, view, _html} = live(conn, "/credentials")
+
+      assert {:error, {:redirect, %{to: "/projects"}}} =
+               live_redirect(view, to: "/first_setup")
+    end
+
+    test "refuses first setup when a superuser exists", %{conn: conn} do
+      assert get(conn, "/first_setup") |> response(404) =~
+               "First setup is disabled"
+    end
+  end
 end

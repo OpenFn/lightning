@@ -12,7 +12,13 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(:is_first_setup, true)}
+    # BlockRoutes refuses the HTTP request, but a live navigation from another
+    # LiveView in the :default live_session reaches this without any plug.
+    if Lightning.Config.check_flag?(:allow_first_setup) do
+      {:ok, socket |> assign(:is_first_setup, true)}
+    else
+      {:ok, redirect(socket, to: ~p"/projects")}
+    end
   end
 
   @impl true

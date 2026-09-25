@@ -33,6 +33,11 @@ defmodule LightningWeb.Router do
         "/users/register",
         :allow_signup,
         "Self-signup has been disabled for this instance. Please contact the administrator."
+      },
+      {
+        "/first_setup",
+        :allow_first_setup,
+        "First setup is disabled for this instance."
       }
     ]
   end
