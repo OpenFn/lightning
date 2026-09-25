@@ -50,7 +50,7 @@ projects:
         jobs:
           transform-data:
             name: Transform data
-            adaptor: "@openfn/language-common@latest"
+            adaptor: '@openfn/language-common@latest'
             credential: example-raw
             body: |
               fn(state => {
@@ -59,7 +59,7 @@ projects:
               });
           upload-result:
             name: Upload result
-            adaptor: "@openfn/language-common@latest"
+            adaptor: '@openfn/language-common@latest'
             body: fn(state => state);
         edges:
           webhook->transform-data:
