@@ -213,7 +213,7 @@ export function AIAssistantPanel({
   const handleConfirmSwitchToDraft = () => {
     void switchToDraft().catch((error: unknown) => {
       notifications.alert({
-        title: 'Could not enable draft mode',
+        title: 'Could not switch to draft',
         description: describeLifecycleError(error),
       });
     });
