@@ -13,7 +13,6 @@ import {
 } from '../hooks/useAIAssistant';
 import { useSelectedRunId } from '../hooks/useHistory';
 import { useContentLocked, useIsNewWorkflow } from '../hooks/useSessionContext';
-import { useSwitchToDraft } from '../hooks/useWorkflow';
 import { describeLifecycleError } from '../lib/errors';
 import { notifications } from '../lib/notifications';
 
@@ -58,6 +57,10 @@ interface AIAssistantPanelProps {
    * AI assistant limit information
    */
   aiLimit?: { allowed: boolean; message: string | null } | null;
+  /**
+   * Switch the current workflow to draft mode, for the draft-mode banner
+   */
+  switchToDraft?: () => Promise<unknown>;
 }
 
 interface MessageOptions {
@@ -96,6 +99,7 @@ export function AIAssistantPanel({
   focusTrigger,
   connectionState = 'connected',
   aiLimit = null,
+  switchToDraft = () => Promise.resolve(undefined),
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -117,7 +121,6 @@ export function AIAssistantPanel({
   const selectedRunId = useSelectedRunId();
   const isNewWorkflow = useIsNewWorkflow();
   const contentLocked = useContentLocked();
-  const switchToDraft = useSwitchToDraft();
 
   useEffect(() => {
     if (prevViewRef.current !== view) {
