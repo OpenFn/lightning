@@ -86,9 +86,11 @@ case "$MODE" in
     JS=$(echo "$FILES" | grep -E '^assets/.*\.(js|jsx|ts|tsx)$' | sed 's|^assets/||' || true)
     if [ -n "$JS" ]; then
       # ESLint is not clean yet, so warnings and lint errors must not stop the
-      # run. Only a crash (exit 2) is fatal.
-      echo "$JS" | xargs npm --prefix assets run lint -- --fix --exit-on-fatal-error || {
-        [ $? -le 1 ] || exit $?
+      # run. Only a crash (exit 2) is fatal. No xargs, which would replace
+      # ESLint's exit code with its own.
+      npm --prefix assets run lint -- --fix --exit-on-fatal-error $JS || {
+        code=$?
+        [ $code -le 1 ] || exit $code
       }
     fi
 
