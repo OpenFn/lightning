@@ -127,7 +127,7 @@ defmodule Lightning.Auditing.Audit do
     field :actor_id, Ecto.UUID
 
     field :actor_type, Ecto.Enum,
-      values: [:project_repo_connection, :trigger, :user]
+      values: [:project_repo_connection, :service_account, :trigger, :user]
 
     field :actor_display, :string, virtual: true
     field :metadata, :map, default: %{}
@@ -196,6 +196,7 @@ defmodule Lightning.Auditing.Audit do
           String.t(),
           Ecto.UUID.t(),
           Lightning.Accounts.User.t()
+          | Lightning.ServiceAccount.t()
           | Lightning.VersionControl.ProjectRepoConnection.t()
           | Lightning.Workflows.Trigger.t(),
           Ecto.Changeset.t() | map() | nil,
@@ -282,11 +283,13 @@ defmodule Lightning.Auditing.Audit do
          item_type,
          event,
          item_id,
-         %actor_struct{id: actor_id},
+         actor,
          changes,
          metadata,
          update_fun
        ) do
+    {actor_id, actor_type} = actor_identity(actor)
+
     changeset(
       %__MODULE__{},
       %{
@@ -294,13 +297,20 @@ defmodule Lightning.Auditing.Audit do
         event: event,
         item_id: item_id,
         actor_id: actor_id,
-        actor_type: extract_actor_type(actor_struct),
+        actor_type: actor_type,
         changes: changes,
         metadata: metadata
       },
       update_fun
     )
   end
+
+  # A service account's id is its key thumbprint; its uuid is what fits actor_id.
+  defp actor_identity(%Lightning.ServiceAccount{uuid: uuid}),
+    do: {uuid, :service_account}
+
+  defp actor_identity(%actor_struct{id: actor_id}),
+    do: {actor_id, extract_actor_type(actor_struct)}
 
   defp extract_actor_type(struct_name) do
     struct_name |> Module.split() |> List.last() |> Macro.underscore()

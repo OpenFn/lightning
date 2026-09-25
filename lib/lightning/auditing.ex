@@ -58,6 +58,12 @@ defmodule Lightning.Auditing do
           label: Atom.to_string(type) |> String.capitalize()
         }
 
+      {nil, :service_account} ->
+        %{
+          identifier: nil,
+          label: "Service account"
+        }
+
       {nil, :user} ->
         %{
           identifier: nil,
