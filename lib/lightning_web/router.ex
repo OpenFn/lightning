@@ -78,6 +78,14 @@ defmodule LightningWeb.Router do
         :show
   end
 
+  scope "/", LightningWeb do
+    get "/.well-known/oauth-authorization-server",
+        TokenExchangeController,
+        :metadata
+
+    post "/api/oauth/token", TokenExchangeController, :token
+  end
+
   ## JSON API
 
   scope "/api", LightningWeb, as: :api do
