@@ -320,28 +320,26 @@ In addition to our test suite, you can run the following commands:
 
 ### Formatting
 
-`bin/format` formats Elixir with `mix format` and everything else (JavaScript,
-TypeScript, CSS, JSON, YAML and Markdown) with Prettier. It is the only place
-that decides which files are formatted:
+`bin/format` runs Prettier on JavaScript, TypeScript, CSS, HTML, JSON, YAML and
+Markdown, and `mix format` on Elixir:
 
 ```bash
-bin/format            # format everything
-bin/format --check    # check without writing; this is what CI runs
-bin/format --staged   # format staged files only; this is what the hook runs
+bin/format            # format everything, and run eslint --fix
+bin/format --changed  # the same, for files changed on your branch
+bin/format --check    # check Prettier files without writing; CI runs this
+bin/format --staged   # format staged files; the pre-commit hook runs this
 ```
 
-A pre-commit hook runs `bin/format --staged` and re-stages what it changed, so
-in normal use you never run any of this by hand. The hook installs itself when
-you compile in dev; if you have only ever built in Docker you may not have it,
-and CI is what will tell you.
+The pre-commit hook installs itself when you compile in dev, so you rarely need
+to run this by hand. If you only build in Docker you won't have the hook, and CI
+will catch what it would have fixed.
 
-Exclusions live in `.prettierignore`, each with a reason. Test fixtures and
-build output are excluded on purpose: `test/fixtures/unicode_project.yaml` is
-asserted byte for byte by the export tests.
+To stop Prettier formatting a file, add it to `.prettierignore` with a comment
+saying why.
 
-ESLint (`cd assets && npm run lint`) and TypeScript (`npx tsc --build`) are not
-yet checked by CI. Both currently report errors on `main`, so run them on the
-code you touch rather than expecting a clean tree.
+CI doesn't run ESLint or TypeScript yet, because neither passes on the whole
+tree. Run them on the code you touch: `cd assets && npm run lint` and
+`cd assets && npx tsc --build`.
 
 For more guidance on security best practices for workflow automation
 implementations, check out OpenFn Docs:
