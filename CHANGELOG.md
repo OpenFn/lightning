@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- `SERVICE_ACCOUNT_PUBLIC_KEY` registers a service account at boot, an identity
+  for configuring the instance through its API rather than as a person. While it
+  is set, first setup is turned off, so nobody can claim a fresh instance before
+  the service account does.
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
