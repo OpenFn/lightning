@@ -447,7 +447,7 @@ export function AIAssistantPanel({
                   className="font-semibold underline hover:no-underline"
                   onClick={() => setShowSwitchToDraftDialog(true)}
                 >
-                  Enable draft mode
+                  Switch to draft
                 </button>
               </p>
             </div>
