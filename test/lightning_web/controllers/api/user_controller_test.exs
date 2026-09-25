@@ -159,6 +159,20 @@ defmodule LightningWeb.API.UserControllerTest do
                }
              }
 
+      assert json_response(
+               post(conn, ~p"/api/users", %{
+                 email: "nul@example.com",
+                 password: "abcdefghijkl\0anything",
+                 last_name: "a\0b"
+               }),
+               422
+             ) == %{
+               "errors" => %{
+                 "password" => ["can't contain a NUL character"],
+                 "last_name" => ["can't contain control characters"]
+               }
+             }
+
       assert json_response(post(conn, ~p"/api/users", %{}), 422) == %{
                "errors" => %{
                  "email" => ["This field can't be blank."],
