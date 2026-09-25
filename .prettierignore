@@ -1,3 +1,17 @@
 assets/vendor
+
 CLAUDE.md
 .claude
+
+# Asserted byte for byte by test/lightning/export_utils_test.exs, and several
+# are generated from the server. Formatting them breaks or churns tests.
+test/fixtures
+
+# Build output. Also covers workflow-api.yaml, which prettier cannot parse.
+priv/static
+
+# Rewritten by npm on every install.
+assets/package-lock.json
+
+# Exported from Grafana, which rewrites it on every dashboard save.
+tooling/observability/channel-proxy-dashboard.json

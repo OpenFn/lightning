@@ -13,21 +13,21 @@ coverage:
 
 ignore:
   # Mirrors coveralls.json skip_files (Codecov doesn't read that file)
-  - "lib/lightning_web/router.ex"
-  - "lib/lightning/release.ex"
-  - "lib/lightning/sentry_event_filter.ex"
-  - "test/support/**"
+  - 'lib/lightning_web/router.ex'
+  - 'lib/lightning/release.ex'
+  - 'lib/lightning/sentry_event_filter.ex'
+  - 'test/support/**'
 
   # Phoenix declarative scaffolding — boot-only or pure DSL
-  - "lib/lightning_web.ex"
-  - "lib/lightning_web/endpoint.ex"
-  - "lib/lightning_web/telemetry.ex"
-  - "lib/lightning/application.ex"
+  - 'lib/lightning_web.ex'
+  - 'lib/lightning_web/endpoint.ex'
+  - 'lib/lightning_web/telemetry.ex'
+  - 'lib/lightning/application.ex'
 
   # Mix tasks — one-shot CLI utilities, not exercised by the suite
-  - "lib/mix/tasks/**"
+  - 'lib/mix/tasks/**'
 
   # A copy of Tesla's Finch adapter, carried until we bump to 1.21.1 or later,
   # which carries the fix (tesla#912). Upstream owns and tests these branches; the
   # deviations we made have tests of our own.
-  - "lib/lightning/tesla/adapter/finch.ex"
+  - 'lib/lightning/tesla/adapter/finch.ex'

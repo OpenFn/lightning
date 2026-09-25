@@ -318,6 +318,29 @@ In addition to our test suite, you can run the following commands:
 > For convenience there is a `verify` mix task that runs all of the above and
 > defaults the `MIX_ENV` to `test`.
 
+### Formatting
+
+`bin/format` runs Prettier on JavaScript, TypeScript, CSS, HTML, JSON, YAML and
+Markdown, and `mix format` on Elixir:
+
+```bash
+bin/format            # format everything, and run eslint --fix
+bin/format --changed  # the same, for files changed on your branch
+bin/format --check    # check Prettier files without writing; CI runs this
+bin/format --staged   # format staged files; the pre-commit hook runs this
+```
+
+The pre-commit hook installs itself when you compile in dev, so you rarely need
+to run this by hand. If you only build in Docker you won't have the hook, and CI
+will catch what it would have fixed.
+
+To stop Prettier formatting a file, add it to `.prettierignore` with a comment
+saying why.
+
+CI doesn't run ESLint or TypeScript yet, because neither passes on the whole
+tree. Run them on the code you touch: `cd assets && npm run lint` and
+`cd assets && npx tsc --build`.
+
 For more guidance on security best practices for workflow automation
 implementations, check out OpenFn Docs:
 [docs.openfn.org/documentation/getting-started/security](https://docs.openfn.org/documentation/getting-started/security)

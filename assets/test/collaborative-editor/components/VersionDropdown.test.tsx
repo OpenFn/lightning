@@ -792,9 +792,7 @@ describe('VersionDropdown', () => {
 
       // Wait for loading to complete
       await waitFor(() => {
-        expect(
-          screen.getByText('No published versions')
-        ).toBeInTheDocument();
+        expect(screen.getByText('No published versions')).toBeInTheDocument();
       });
     });
 

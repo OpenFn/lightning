@@ -248,7 +248,8 @@ defmodule Lightning.MixProject do
         "format --check-formatted",
         "dialyzer",
         "credo --strict --all",
-        "sobelow"
+        "sobelow",
+        "cmd bin/format --check"
       ],
       compile: [
         "compile --warnings-as-errors"

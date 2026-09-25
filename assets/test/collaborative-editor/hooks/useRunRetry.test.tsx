@@ -94,7 +94,8 @@ function createWrapper(): React.ComponentType<{ children: React.ReactNode }> {
   const mockStoreValue: StoreContextValue = {
     workflowStore: {} as any,
     sessionContextStore: createMockSessionContextStore({
-      withSelector: <T,>(selector: (state: SessionContextState) => T) =>
+      withSelector:
+        <T,>(selector: (state: SessionContextState) => T) =>
         () =>
           selector({
             ...defaultSessionContextState,

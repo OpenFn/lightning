@@ -1,4 +1,3 @@
-
 import { describe, expect, test } from 'vitest';
 
 import { selectCanEditContent } from '../../../js/collaborative-editor/stores/createSessionContextStore';
