@@ -30,7 +30,7 @@ import {
 } from '../__helpers__/storeMocks';
 
 // AIAssistantPanel now renders a "switch to draft" AlertDialog for the
-// draft-mode banner, and AlertDialog uses useKeyboardShortcut (Escape to
+// live workflow notice, and AlertDialog uses useKeyboardShortcut (Escape to
 // close) unconditionally - matching the real render tree in
 // CollaborativeEditor.tsx, which wraps everything in a KeyboardProvider.
 describe('AIAssistantPanel', () => {

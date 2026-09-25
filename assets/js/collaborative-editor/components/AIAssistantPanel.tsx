@@ -58,7 +58,7 @@ interface AIAssistantPanelProps {
    */
   aiLimit?: { allowed: boolean; message: string | null } | null;
   /**
-   * Switch the current workflow to draft mode, for the draft-mode banner
+   * Switch the current workflow to draft, for the live workflow notice
    */
   switchToDraft?: () => Promise<unknown>;
 }
