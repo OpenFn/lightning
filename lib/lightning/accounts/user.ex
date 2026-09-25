@@ -212,6 +212,10 @@ defmodule Lightning.Accounts.User do
     changeset
     |> validate_required(:password, message: "can't be blank")
     |> validate_length(:password, min: 12, max: 72)
+    |> Lightning.Validators.validate_no_null_bytes(
+      :password,
+      "can't contain a NUL character"
+    )
     |> maybe_hash_password(opts)
   end
 
@@ -332,7 +336,8 @@ defmodule Lightning.Accounts.User do
     |> cast(attrs, [:email, :password, :first_name, :last_name, :role])
     |> Lightning.Validators.validate_email_format()
     |> unique_constraint(:email)
-    |> trim_name()
+    |> Lightning.Validators.validate_name(:first_name)
+    |> Lightning.Validators.validate_name(:last_name)
     |> validate_length(:first_name, max: 255)
     |> validate_length(:last_name, max: 255)
     |> confirm_if_asked(attrs)
