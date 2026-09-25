@@ -180,6 +180,8 @@ jobs:
     steps:
       - setup_lightning_user
       - attach_built_workspace
+      - install_node:
+          version: *nodejs_version
       - run:
           name: 'Check code formatting'
           command: |
