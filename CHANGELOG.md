@@ -32,6 +32,12 @@ and this project adheres to
   working. A refused assertion emits the
   `[:lightning, :service_account, :assertion_refused]` telemetry event and logs
   a warning, at most once a minute for each reason.
+- The service account can create users with `POST /api/users` and find them by
+  email with `GET /api/users?email=`, needing the `users:write` and `users:read`
+  scopes. Names are optional, `confirmed: true` skips email verification, and an
+  email that's already taken answers 409 with the existing user. Each user it
+  creates shows in the audit log with the service account as the actor. Personal
+  access tokens can't reach these routes.
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
@@ -82,6 +88,8 @@ and this project adheres to
 
 ### Fixed
 
+- A password containing a NUL character is now refused. Only the part before the
+  NUL was being checked at login, so any password starting the same way worked.
 - Leaving the workflow editor now closes its connection to the server. It used
   to stay open, reconnecting in the background, until the tab was closed.
   [#5202](https://github.com/OpenFn/lightning/pull/5202)
