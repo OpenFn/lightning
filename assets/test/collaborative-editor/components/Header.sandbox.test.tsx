@@ -1,4 +1,3 @@
-
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -536,7 +535,7 @@ describe('Header - lifecycle actions', () => {
     });
   });
 
-  test("switching to draft from a run carries the run and its input", async () => {
+  test('switching to draft from a run carries the run and its input', async () => {
     const user = userEvent.setup();
     lifecycleState = 'live';
     urlParams = { run: 'run-1', as_run: 'run-1' };
@@ -1381,9 +1380,7 @@ describe('Header - retry from a run view', () => {
     renderHeader({ isSandbox: false });
 
     expect(screen.getByTestId('new-run-button')).toHaveTextContent('Run');
-    expect(screen.getByTestId('new-run-button')).not.toHaveTextContent(
-      'Retry'
-    );
+    expect(screen.getByTestId('new-run-button')).not.toHaveTextContent('Retry');
   });
 
   test('does not offer a retry with no run loaded', () => {
@@ -1397,8 +1394,6 @@ describe('Header - retry from a run view', () => {
     renderHeader({ isSandbox: false });
 
     expect(screen.getByTestId('new-run-button')).toHaveTextContent('Run');
-    expect(screen.getByTestId('new-run-button')).not.toHaveTextContent(
-      'Retry'
-    );
+    expect(screen.getByTestId('new-run-button')).not.toHaveTextContent('Retry');
   });
 });

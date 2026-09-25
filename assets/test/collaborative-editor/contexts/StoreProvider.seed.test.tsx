@@ -1,4 +1,3 @@
-
 import { render } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, test, vi } from 'vitest';
@@ -17,8 +16,8 @@ function flagSeenByTheStore(experimentalFeatures: boolean) {
   const Probe = () => (
     <StoreContext.Consumer>
       {stores => {
-        seen = stores?.sessionContextStore.getSnapshot()
-          .experimentalFeaturesEnabled;
+        seen =
+          stores?.sessionContextStore.getSnapshot().experimentalFeaturesEnabled;
         return null;
       }}
     </StoreContext.Consumer>
