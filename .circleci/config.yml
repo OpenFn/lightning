@@ -188,6 +188,14 @@ jobs:
               || echo "format" >> /tmp/lint_failed
             cat /tmp/lint/format.log
       - run:
+          name: 'Check formatting with Prettier'
+          when: always
+          command: |
+            mkdir -p /tmp/lint
+            sudo -u lightning bin/format --check > /tmp/lint/prettier.log 2>&1 \
+              || echo "prettier" >> /tmp/lint_failed
+            cat /tmp/lint/prettier.log
+      - run:
           name: 'Check code style with Credo'
           when: always
           command: |
