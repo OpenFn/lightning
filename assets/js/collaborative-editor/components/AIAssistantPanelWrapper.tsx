@@ -573,6 +573,7 @@ export function AIAssistantPanelWrapper({
     doneApplyingJobCode,
     updateJob,
     saveWorkflow,
+    switchToDraft,
   } = useWorkflowActions();
 
   // Get applying state from workflow store for disabling Apply button across all users
@@ -800,6 +801,7 @@ export function AIAssistantPanelWrapper({
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
               aiLimit={limits.ai_assistant ?? null}
+              switchToDraft={switchToDraft}
             >
               <MessageList
                 messages={messages}
