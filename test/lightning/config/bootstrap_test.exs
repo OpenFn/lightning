@@ -1350,6 +1350,68 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "service account" do
+    @service_account_pem """
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0vx7agoebGcQSuuPiLJX
+    ZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tS
+    oc/BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ/2W+5JsGY4Hc5n9yBXArwl93lqt
+    7/RN5w6Cf0h4QyQ5v+65YGjQR0/FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0
+    zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt+bFTWhAI4vMQFh6WeZu0f
+    M4lFd2NcRwr3XPksINHaQ+G/xBniIqbw0Ls1jF44+csFCur+kEgU8awapJzKnqDK
+    gwIDAQAB
+    -----END PUBLIC KEY-----
+    """
+
+    test "registers one service account and turns off first setup" do
+      reconfigure(%{
+        "SERVICE_ACCOUNT_PUBLIC_KEY" =>
+          Base.encode64(@service_account_pem, padding: false)
+      })
+
+      assert %Lightning.ServiceAccount{
+               id: "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
+             } = get_env(:lightning, :service_account)
+
+      assert get_env(:lightning, :allow_first_setup) == false
+    end
+
+    test "registers none and leaves first setup on when unset" do
+      reconfigure(%{})
+
+      assert get_env(:lightning, :service_account) == nil
+      assert get_env(:lightning, :allow_first_setup) == true
+    end
+
+    test "stops the boot on a value that is not base64" do
+      value = "not base64!"
+
+      error =
+        assert_raise RuntimeError, fn ->
+          reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
+        end
+
+      assert error.message =~
+               "SERVICE_ACCOUNT_PUBLIC_KEY is not unpadded base64"
+
+      refute error.message =~ value
+    end
+
+    test "stops the boot on a value that holds no RSA public key" do
+      value = Base.encode64("not a key", padding: false)
+
+      error =
+        assert_raise RuntimeError, fn ->
+          reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
+        end
+
+      assert error.message =~
+               "SERVICE_ACCOUNT_PUBLIC_KEY is not an RSA public key"
+
+      refute error.message =~ value
+    end
+  end
+
   describe "live debugger (dev)" do
     test "does not set :ip or :external_url by default" do
       Dotenvy.source([%{}])
