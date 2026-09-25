@@ -4,9 +4,9 @@ set -e
 
 cd "$(git rev-parse --show-toplevel)"
 
-# The one definition of which files prettier owns. The pre-commit hook and CI
-# both reach it through this script, so there is nowhere else to change it.
-# Exclusions live in .prettierignore.
+# The file types prettier formats. The pre-commit hook, CI and mix verify all
+# call this script, so this is the place to change them. Exclusions live in
+# .prettierignore.
 EXTS='\.(js|jsx|ts|tsx|md|css|json|yml|yaml|html)$'
 
 show_help() {
@@ -30,7 +30,6 @@ EOF
 PRETTIER=(npm --prefix assets exec prettier --
   --config .prettierrc --ignore-path .prettierignore)
 
-# Modes are just different file lists, so each one is a single command.
 all_files() { git ls-files | grep -E "$EXTS" || true; }
 staged_files() {
   git diff --cached --name-only --diff-filter=ACMR | grep -E "$EXTS" || true
@@ -55,8 +54,8 @@ esac
 
 case "$MODE" in
   check)
-    # No eslint or mix format here: mix format is already checked by its own CI
-    # step, and eslint is not yet clean enough to gate on.
+    # This skips eslint and mix format. CI checks mix format in its own step,
+    # and eslint still reports errors, so it can't gate yet.
     all_files | xargs "${PRETTIER[@]}" --check
     ;;
 

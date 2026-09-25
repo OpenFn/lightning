@@ -166,8 +166,6 @@ config :git_hooks,
          "git diff --cached | grep -E '^[+](<<<<<<<\\s|=======$|>>>>>>>\\s)' && " <>
            "echo 'ERROR: Unresolved merge conflict markers found in staged files' && " <>
            "exit 1 || exit 0"},
-        # bin/format owns the file list and the prettier invocation. CI runs
-        # the same script with --check, so the two cannot drift apart.
         {:cmd, "bin/format --staged"},
         {:cmd,
          "git diff --cached --quiet && echo 'No changes to commit after formatting' && exit 1 || exit 0"}
