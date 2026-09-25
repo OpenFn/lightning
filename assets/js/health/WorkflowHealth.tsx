@@ -17,7 +17,7 @@ import { healthBase, useHealthQuery } from './useHealthQuery';
 
 /**
  * Workflow health page: one workflow's work orders over the window the reader
- * picks, defaulting to the last 7 days.
+ * picks.
  *
  * Work orders, not runs — the page exists to drive failures down, and only a
  * work order's state can fall. A run's state is immutable, so a retried

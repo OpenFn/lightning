@@ -2,8 +2,8 @@ import { Radio, RadioGroup } from '@headlessui/react';
 
 import { Tooltip } from '#/components/Tooltip';
 
-// The server validates its own copy of this list — add to both. Its own
-// default matches `DEFAULT_DAYS` below too.
+// The server keeps its own copy of this list and of `DEFAULT_DAYS`, in
+// `WorkflowHealthController`. Change both together.
 export const RANGES = [
   { days: '1', label: 'Last 24 hours' },
   { days: '7', label: 'Last 7 days' },
