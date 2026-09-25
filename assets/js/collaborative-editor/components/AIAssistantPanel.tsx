@@ -431,9 +431,9 @@ export function AIAssistantPanel({
         )}
       </div>
 
-      {/* Draft Mode Notice - the assistant can only edit a workflow that is
-          in draft mode; contentLocked is only ever true for a live workflow
-          outside a sandbox, so "enable draft mode" is always the right fix */}
+      {/* Live workflow notice - the assistant can only edit a draft workflow;
+          contentLocked is only ever true for a live workflow outside a
+          sandbox, so "switch to draft" is always the right fix */}
       {!isNewWorkflow && contentLocked && (
         <div
           className="flex-none bg-amber-50 border-t border-amber-200 px-4 py-3"
