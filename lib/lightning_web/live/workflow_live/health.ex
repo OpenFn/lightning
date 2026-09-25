@@ -56,6 +56,7 @@ defmodule LightningWeb.WorkflowLive.Health do
           data-workflow-id={@workflow.id}
           data-project-id={@project.id}
           data-workflow-name={@workflow.name}
+          data-history-retention-period={@project.history_retention_period}
         >
         </div>
       </div>

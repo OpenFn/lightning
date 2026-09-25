@@ -17,7 +17,7 @@ import { healthBase, useHealthQuery } from './useHealthQuery';
 
 /**
  * Workflow health page: one workflow's work orders over the window the reader
- * picks, defaulting to the last 30 days.
+ * picks, defaulting to the last 7 days.
  *
  * Work orders, not runs — the page exists to drive failures down, and only a
  * work order's state can fall. A run's state is immutable, so a retried
@@ -32,14 +32,20 @@ interface WorkflowHealthProps {
   'data-workflow-id': string;
   'data-project-id': string;
   'data-workflow-name': string;
+  'data-history-retention-period'?: string;
 }
 
 export const WorkflowHealth = ({
   'data-workflow-id': workflowId,
   'data-project-id': projectId,
   'data-workflow-name': workflowName,
+  'data-history-retention-period': historyRetentionPeriod,
 }: WorkflowHealthProps) => {
   const [days, setDays] = useState<string>(DEFAULT_DAYS);
+
+  const retentionDays = historyRetentionPeriod
+    ? Number(historyRetentionPeriod)
+    : null;
 
   const base = healthBase(projectId, workflowId);
 
@@ -60,7 +66,11 @@ export const WorkflowHealth = ({
         {/* The picker sets the window for every card, so it belongs to the
             header rather than to any one of them. */}
         <div className="shrink-0">
-          <RangePicker days={days} onChange={setDays} />
+          <RangePicker
+            days={days}
+            onChange={setDays}
+            retentionDays={retentionDays}
+          />
         </div>
       </div>
 

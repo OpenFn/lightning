@@ -230,7 +230,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
   end
 
   describe "GET /health/outcomes" do
-    test "counts work orders from the last 30 days, grouped by state", %{
+    test "counts work orders from the last 7 days, grouped by state", %{
       conn: conn,
       user: user,
       project: project,
@@ -260,7 +260,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       # Outside the window — must not be counted.
       work_order.(
         state: :success,
-        last_activity: Timex.shift(Timex.now(), days: -31)
+        last_activity: Timex.shift(Timex.now(), days: -8)
       )
 
       outcomes =
@@ -269,7 +269,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       assert %{"from" => from, "to" => to} = outcomes["window"]
       assert {:ok, from, _} = DateTime.from_iso8601(from)
       assert {:ok, to, _} = DateTime.from_iso8601(to)
-      assert DateTime.diff(to, from, :day) == 30
+      assert DateTime.diff(to, from, :day) == 7
 
       assert %{"success" => 2, "crashed" => 1, "failed" => 0} =
                outcomes["counts"]
@@ -335,7 +335,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       assert %{"from" => from, "to" => to} = body["window"]
       assert {:ok, from, _} = DateTime.from_iso8601(from)
       assert {:ok, to, _} = DateTime.from_iso8601(to)
-      assert DateTime.diff(to, from, :day) == 30
+      assert DateTime.diff(to, from, :day) == 7
 
       assert [
                %{
