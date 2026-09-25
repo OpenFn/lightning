@@ -1376,6 +1376,17 @@ defmodule Lightning.Config.BootstrapTest do
       assert get_env(:lightning, :allow_first_setup) == false
     end
 
+    test "schedules the pruning of seen assertions" do
+      reconfigure(%{})
+
+      crontab = get_env(:lightning, Oban)[:plugins][Oban.Plugins.Cron][:crontab]
+
+      assert Enum.any?(
+               crontab,
+               &match?({_, Lightning.ServiceAccount.Assertion}, &1)
+             )
+    end
+
     test "registers none and leaves first setup on when unset" do
       reconfigure(%{})
 

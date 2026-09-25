@@ -375,6 +375,11 @@ defmodule Lightning.Config do
       |> Keyword.get(:max_credential_sensitive_values, 50)
     end
 
+    @impl true
+    def service_account do
+      Application.get_env(:lightning, :service_account)
+    end
+
     defp default_webhook_retry do
       [
         max_attempts: 5,
@@ -465,6 +470,7 @@ defmodule Lightning.Config do
   @callback webhook_response_timeout_ms() :: integer()
   @callback runtime_manager_port() :: integer()
   @callback max_credential_sensitive_values() :: pos_integer()
+  @callback service_account() :: Lightning.ServiceAccount.t() | nil
 
   @doc """
   Returns the Apollo server configuration.
@@ -735,6 +741,14 @@ defmodule Lightning.Config do
   """
   def max_credential_sensitive_values do
     impl().max_credential_sensitive_values()
+  end
+
+  @doc """
+  The service account registered at boot from `SERVICE_ACCOUNT_PUBLIC_KEY`, or
+  nil when none is.
+  """
+  def service_account do
+    impl().service_account()
   end
 
   defp impl do
