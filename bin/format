@@ -33,7 +33,7 @@ PRETTIER=(npm --prefix assets exec prettier --
 # Modes are just different file lists, so each one is a single command.
 all_files() { git ls-files | grep -E "$EXTS" || true; }
 staged_files() {
-  git diff --cached --name-only --diff-filter=ACM | grep -E "$EXTS" || true
+  git diff --cached --name-only --diff-filter=ACMR | grep -E "$EXTS" || true
 }
 changed_files() {
   git diff --name-only --diff-filter=ACMR main...HEAD | grep -E "$EXTS" || true
@@ -67,7 +67,7 @@ case "$MODE" in
       echo "$FILES" | xargs git add
     fi
 
-    EX=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ex|exs|heex)$' || true)
+    EX=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ex|exs|heex)$' || true)
     if [ -n "$EX" ]; then
       echo "$EX" | xargs mix format
       echo "$EX" | xargs git add
