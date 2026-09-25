@@ -88,7 +88,7 @@ case "$MODE" in
       # ESLint is not clean yet, so warnings and lint errors must not stop the
       # run. Only a crash (exit 2) is fatal. No xargs, which would replace
       # ESLint's exit code with its own.
-      npm --prefix assets run lint -- --fix --exit-on-fatal-error $JS || {
+      npm --prefix assets run lint -- --concurrency 4 --fix --exit-on-fatal-error $JS || {
         code=$?
         [ $code -le 1 ] || exit $code
       }
