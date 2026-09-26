@@ -436,7 +436,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <%= if is_nil(@state) do %>
         <div class="flex items-center gap-x-2">
           <span class="inline-block h-2 w-2 bg-gray-200 rounded-full"></span>
-          <span class="text-grey-200 italic">Nothing {@period}</span>
+          <span class="italic">Nothing {@period}</span>
         </div>
       <% else %>
         <.status_card state={@state} time={@timestamp} />

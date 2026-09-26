@@ -47,7 +47,6 @@ export function StepIcon({ exitReason, errorType }: StepIconProps) {
     colorClass = 'text-yellow-800';
   } else if (exitReason === 'exception') {
     // Note: Elixir checks for empty string errorType, but this matches the behavior
-    // text-black-800 in Elixir is invalid; using text-black to match visual intent
     IconComponent = 'hero-exclamation-triangle-solid';
     colorClass = 'text-black';
   } else if (exitReason === 'lost') {

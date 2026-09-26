@@ -88,6 +88,55 @@ defmodule LightningWeb.Components.Common do
     end
   end
 
+  # Each class is written out in full so Tailwind's scanner can see it.
+  defp alert_classes("success") do
+    %{
+      bg: "bg-green-50",
+      icon: "text-green-400",
+      header: "text-green-800",
+      text: "text-green-700",
+      link: "text-green-700 hover:text-green-600",
+      button:
+        "rounded-md bg-green-50 px-2 py-1.5 text-sm font-medium text-green-800 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50"
+    }
+  end
+
+  defp alert_classes("warning") do
+    %{
+      bg: "bg-yellow-50",
+      icon: "text-yellow-400",
+      header: "text-yellow-800",
+      text: "text-yellow-700",
+      link: "text-yellow-700 hover:text-yellow-600",
+      button:
+        "rounded-md bg-yellow-50 px-2 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:ring-offset-2 focus:ring-offset-yellow-50"
+    }
+  end
+
+  defp alert_classes("danger") do
+    %{
+      bg: "bg-red-50",
+      icon: "text-red-400",
+      header: "text-red-800",
+      text: "text-red-700",
+      link: "text-red-700 hover:text-red-600",
+      button:
+        "rounded-md bg-red-50 px-2 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+    }
+  end
+
+  defp alert_classes(_info) do
+    %{
+      bg: "bg-blue-50",
+      icon: "text-blue-400",
+      header: "text-blue-800",
+      text: "text-blue-700",
+      link: "text-blue-700 hover:text-blue-600",
+      button:
+        "rounded-md bg-blue-50 px-2 py-1.5 text-sm font-medium text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:ring-offset-blue-50"
+    }
+  end
+
   attr :id, :string, default: "alert"
   attr :type, :string, required: true
   attr :class, :string, default: ""
@@ -104,40 +153,29 @@ defmodule LightningWeb.Components.Common do
   to indicate whether the alert is info, success, warning, or error.
   """
   def alert(assigns) do
-    color =
-      case assigns.type do
-        "success" -> "green"
-        "warning" -> "yellow"
-        "danger" -> "red"
-        _info -> "blue"
-      end
-
-    icon = select_icon(assigns.type)
-
     assigns =
       assign(assigns,
-        color: color,
-        icon: icon,
-        class: assigns.class
+        classes: alert_classes(assigns.type),
+        icon: select_icon(assigns.type)
       )
 
     ~H"""
-    <div id={@id} class={"rounded-md bg-#{@color}-50 p-4 text-wrap #{@class}"}>
+    <div id={@id} class={"rounded-md #{@classes.bg} p-4 text-wrap #{@class}"}>
       <div class={["flex", if(@header, do: "items-start", else: "items-center")]}>
         <div class="shrink-0">
-          <.icon name={@icon} class={"block h-5 w-5 text-#{@color}-400"} />
+          <.icon name={@icon} class={"block h-5 w-5 #{@classes.icon}"} />
         </div>
         <div class={[
           "ml-3 min-w-0 flex-1",
           assigns[:link_right] && "md:flex md:justify-between"
         ]}>
           <%= if @header do %>
-            <h3 class={"text-sm font-medium text-#{@color}-800"}>{@header}</h3>
-            <div class={"mt-2 text-sm text-#{@color}-700"}>
+            <h3 class={"text-sm font-medium #{@classes.header}"}>{@header}</h3>
+            <div class={"mt-2 text-sm #{@classes.text}"}>
               {render_slot(@message)}
             </div>
           <% else %>
-            <div class={"text-sm text-#{@color}-700"}>
+            <div class={"text-sm #{@classes.text}"}>
               {render_slot(@message)}
             </div>
           <% end %>
@@ -145,7 +183,7 @@ defmodule LightningWeb.Components.Common do
             <p class="mt-3 text-sm md:ml-6 md:mt-0">
               <a
                 href={@link_right.target}
-                class={"whitespace-nowrap font-medium text-#{@color}-700 hover:text-#{@color}-600"}
+                class={"whitespace-nowrap font-medium #{@classes.link}"}
               >
                 {@link_right.text}
                 <span aria-hidden="true"> &rarr;</span>
@@ -163,7 +201,7 @@ defmodule LightningWeb.Components.Common do
                         type="button"
                         phx-click={click}
                         phx-target={target}
-                        class={"rounded-md bg-#{@color}-50 px-2 py-1.5 text-sm font-medium text-#{@color}-800 hover:bg-#{@color}-100 focus:outline-none focus:ring-2 focus:ring-#{@color}-600 focus:ring-offset-2 focus:ring-offset-#{@color}-50"}
+                        class={@classes.button}
                       >
                         {text}
                       </button>
@@ -525,10 +563,7 @@ defmodule LightningWeb.Components.Common do
           type="button"
           class="inline-flex bg-red-200 rounded-md p-1.5 text-red-500 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-800"
         >
-          <.icon
-            name="hero-x-mark-solid"
-            class="w-4 h-4 ml-1 mr-1 text-white-400 dark:text-white-100"
-          />
+          <.icon name="hero-x-mark-solid" class="w-4 h-4 ml-1 mr-1" />
         </button>
       </div>
     </div>
@@ -570,10 +605,7 @@ defmodule LightningWeb.Components.Common do
           type="button"
           class="inline-flex bg-blue-200 rounded-md p-1.5 text-blue-500 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-blue-200 focus:ring-blue-800"
         >
-          <.icon
-            name="hero-x-mark-solid"
-            class="w-4 h-4 ml-1 mr-1 text-white-400 dark:text-white-100"
-          />
+          <.icon name="hero-x-mark-solid" class="w-4 h-4 ml-1 mr-1" />
         </button>
       </div>
     </div>

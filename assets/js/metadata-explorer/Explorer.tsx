@@ -8,7 +8,7 @@ import mapChildren from './map-children';
 
 const PERSIST_KEY = 'lightning.metadata-explorer.settings';
 
-const iconStyle = 'h-4 w-4 text-grey-400 mr-1';
+const iconStyle = 'h-4 w-4 text-gray-400 mr-1';
 
 type MetadataExplorerProps = {
   metadata?: true | null | any;

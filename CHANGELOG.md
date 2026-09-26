@@ -65,6 +65,11 @@ and this project adheres to
   metadata allowlists, so keys such as `run_id` and `project_id` were logged but
   never reached Sentry. Both now read one list from config.
   [#5200](https://github.com/OpenFn/lightning/pull/5200)
+- Step icons for cancelled, lost and exception runs now show their intended grey
+  and black, as do a few muted icons and the editor tips border. Their colour
+  classes were misspelt or didn't exist, so they took the text colour around
+  them. Buttons in the OAuth credential alerts also now show their hover and
+  focus colours. [#5212](https://github.com/OpenFn/lightning/pull/5212)
 
 ### Security
 
