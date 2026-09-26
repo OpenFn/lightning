@@ -51,6 +51,7 @@ and this project adheres to
 - Some greys on the health charts, the workflow diagram's run-state and
   drop-target colours, and the danger alert red now use the app's Tailwind
   colours, so a few shift slightly to match the rest of the UI.
+  [#5213](https://github.com/OpenFn/lightning/pull/5213)
 
 ### Removed
 
