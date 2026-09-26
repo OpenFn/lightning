@@ -68,7 +68,8 @@ and this project adheres to
 - Step icons for cancelled, lost and exception runs now show their intended grey
   and black, as do a few muted icons and the editor tips border. Their colour
   classes were misspelt or didn't exist, so they took the text colour around
-  them.
+  them. Buttons in the OAuth credential alerts also now show their hover and
+  focus colours.
 
 ### Security
 
