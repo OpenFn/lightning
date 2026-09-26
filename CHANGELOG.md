@@ -69,7 +69,7 @@ and this project adheres to
   and black, as do a few muted icons and the editor tips border. Their colour
   classes were misspelt or didn't exist, so they took the text colour around
   them. Buttons in the OAuth credential alerts also now show their hover and
-  focus colours.
+  focus colours. [#5212](https://github.com/OpenFn/lightning/pull/5212)
 
 ### Security
 
