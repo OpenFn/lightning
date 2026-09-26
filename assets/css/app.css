@@ -751,7 +751,7 @@
     border-color: #faebcc;
   }
   .alert-danger {
-    color: #dc2626;
+    color: var(--color-red-600);
     background-color: #fdebeb;
     border-color: #fdebeb;
   }
