@@ -97,42 +97,6 @@ defmodule LightningWeb.Components.Tabbed do
     """
   end
 
-  attr :id, :string, required: true
-  attr :class, :string, default: "flex flex-row space-x-4"
-  attr :default_hash, :string, default: nil
-
-  slot :tab, required: true do
-    attr :hash, :string, required: true
-    attr :disabled, :boolean
-    attr :disabled_msg, :string
-  end
-
-  def tabs(assigns) do
-    assigns =
-      assigns
-      |> update(:class, fn class -> List.wrap(class) ++ ~w[tabbed-selector] end)
-
-    ~H"""
-    <div
-      data-default-hash={@default_hash}
-      phx-hook="TabbedSelector"
-      role="tablist"
-      class={@class}
-      id={@id}
-    >
-      <%= for tab <- @tab do %>
-        <.tab
-          hash={tab[:hash]}
-          disabled={tab[:disabled]}
-          disabled_msg={tab[:disabled_msg]}
-        >
-          {render_slot(tab)}
-        </.tab>
-      <% end %>
-    </div>
-    """
-  end
-
   attr :hash, :string, required: true
   attr :class, :string, default: nil
   attr :disabled, :boolean, default: false
@@ -192,32 +156,6 @@ defmodule LightningWeb.Components.Tabbed do
       lv-keep-class
     >
       {render_slot(@inner_block)}
-    </div>
-    """
-  end
-
-  attr :id, :string, required: true
-  attr :default_hash, :string, default: nil
-  attr :class, :string, default: "flex"
-
-  slot :panel, required: true do
-    attr :hash, :string, required: true
-    attr :class, :string
-  end
-
-  def panels(assigns) do
-    ~H"""
-    <div
-      id={@id}
-      class={@class}
-      phx-hook="TabbedPanels"
-      data-default-hash={@default_hash}
-    >
-      <%= for panel <- @panel do %>
-        <.panel hash={panel[:hash]} class={panel[:class]}>
-          {render_slot(panel)}
-        </.panel>
-      <% end %>
     </div>
     """
   end
