@@ -33,7 +33,7 @@ import { FAILED } from './OutcomesDonut';
 // one more step to go and look at. Not `CANCELLED`'s grey by reference — that
 // one means "stopped on purpose", and sharing the constant would tie two
 // unrelated meanings to one value.
-const UNATTRIBUTED = '#9ca3af';
+const UNATTRIBUTED = 'var(--color-gray-400)';
 
 const NO_STEP = 'no-step';
 
