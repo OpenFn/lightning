@@ -40,53 +40,6 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  attr :form, :any, required: true
-  attr :field, :atom, required: true
-  attr :label, :string, required: false
-  attr :rest, :global, include: ~w(disabled), default: %{class: ~w[
-      rounded-md
-      w-full
-      font-mono
-      bg-slate-800
-      text-slate-50
-      h-96
-    ] |> Enum.join(" ")}
-
-  def text_area(assigns) do
-    label_classes = ~w[
-      block
-      text-sm
-      font-medium
-      text-secondary-700
-    ]
-
-    assigns =
-      assigns
-      |> assign(
-        label_classes: label_classes,
-        opts: assigns.rest |> Enum.into([])
-      )
-      |> assign_new(:label, fn -> false end)
-
-    ~H"""
-    <div class="flex">
-      <div class="shrink">
-        <%= if @label do %>
-          {PhoenixHTMLHelpers.Form.label(@form, @field, @label,
-            class: @label_classes
-          )}
-        <% else %>
-          {PhoenixHTMLHelpers.Form.label(@form, @field, class: @label_classes)}
-        <% end %>
-      </div>
-      <div class="grow text-right">
-        <.old_error field={@form[@field]} />
-      </div>
-    </div>
-    {PhoenixHTMLHelpers.Form.textarea(@form, @field, @opts)}
-    """
-  end
-
   attr :id, :any, required: false
   attr :form, :map, required: true
   attr :field, :any, required: false
@@ -406,63 +359,6 @@ defmodule LightningWeb.Components.Form do
         </div>
       <% end %>
     <% end %>
-    """
-  end
-
-  attr :form, :any
-  attr :name, :any
-  attr :values, :list
-  attr :value, :any, required: false
-  attr :rest, :global, include: ~w(selected disabled prompt)
-
-  def select_field(assigns) do
-    select_classes = ~w[
-      mt-1
-      block
-      w-full
-      rounded-md
-      border-secondary-300
-      shadow-xs
-      sm:text-sm
-      focus:border-primary-300
-      focus:ring
-      focus:ring-primary-200/50
-      disabled:cursor-not-allowed
-    ]
-
-    opts =
-      assigns_to_attributes(assigns.rest, [:class, :form, :name, :values]) ++
-        [class: select_classes]
-
-    assigns = assign(assigns, opts: opts)
-
-    ~H"""
-    {PhoenixHTMLHelpers.Form.select(@form, @name, @values, @opts)}
-    """
-  end
-
-  def select(assigns) do
-    select_classes = ~w[
-      block
-      w-full
-      rounded-md
-      border-secondary-300
-      sm:text-sm
-      shadow-xs
-      focus:border-primary-300
-      focus:ring
-      focus:ring-primary-200/50
-      disabled:cursor-not-allowed
-    ]
-
-    opts = assigns_to_attributes(assigns) ++ [class: select_classes]
-
-    assigns = assigns |> assign(opts: opts)
-
-    ~H"""
-    <select {@opts}>
-      {render_slot(@inner_block)}
-    </select>
     """
   end
 
