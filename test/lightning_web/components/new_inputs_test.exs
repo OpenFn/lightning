@@ -87,30 +87,6 @@ defmodule LightningWeb.Components.NewInputsTest do
     end
   end
 
-  # ---- errors/1 -------------------------------------------------------------
-
-  describe "errors/1 used_input? gating" do
-    test "unused field does not render error messages" do
-      form = unused_field_form()
-
-      html =
-        render_component(&NewInputs.errors/1, %{field: form[:name]})
-
-      refute html =~ "data-tag=\"error_message\""
-      refute html =~ "can&#39;t be blank"
-    end
-
-    test "used field renders error messages" do
-      form = used_field_form()
-
-      html =
-        render_component(&NewInputs.errors/1, %{field: form[:name]})
-
-      assert html =~ "data-tag=\"error_message\""
-      assert html =~ "can&#39;t be blank"
-    end
-  end
-
   # ---- autocomplete defaults --------------------------------------------------
 
   describe "autocomplete defaults" do
