@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-9D74D9E8.js"></script>
+    <script defer src="dist/sidebar_items-169C3668.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -1509,6 +1509,18 @@ their associations with projects and handling audit trails for changes.</p></div
   </div>
 
     <div class="summary-synopsis"><p>The Oban Manager</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.OsProcess.html" translate="no">Lightning.OsProcess</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Runs external programs through <code class="inline">priv/runtime/port_wrapper</code>, which SIGKILLs
+the program's whole process group when its stdin closes. Closing the port,
+or the owning process exiting, takes the program and anything it spawned
+down with it, so nothing outlives its owner.</p></div>
 
 </div>
 <div class="summary-row">

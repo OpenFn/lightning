@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.19.0">
+
+
+    <title>Lightning.OsProcess — Lightning v2.19.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-169C3668.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.19.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.OsProcess</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.19.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/os_process.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Runs external programs through <code class="inline">priv/runtime/port_wrapper</code>, which SIGKILLs
+the program's whole process group when its stdin closes. Closing the port,
+or the owning process exiting, takes the program and anything it spawned
+down with it, so nothing outlives its owner.</p><p>Arguments are passed straight to the program; there is no shell. The
+program's stdout is the port's output and nothing else: stderr stays
+separate unless <code class="inline">:stderr_to_stdout</code> is given.</p><p>Options:</p><ul><li><code class="inline">:cd</code> - working directory</li><li><code class="inline">:env</code> - map or list of <code class="inline">{name, value}</code> string pairs; a <code class="inline">nil</code> value
+unsets the variable</li><li><code class="inline">:cleanup_paths</code> - paths the wrapper deletes if the owner goes away
+before the program finishes. On a normal exit the owner is still
+around and removes them itself.</li><li><p><code class="inline">:line</code> - deliver output as <code class="inline">{:eol | :noeol, data}</code> lines of at most
+this many bytes (<a href="#open/3"><code class="inline">open/3</code></a> only)</p></li><li><code class="inline">:stderr</code> - file to write the program's stderr to (<a href="#open/3"><code class="inline">open/3</code></a> only;
+<a href="#run/3"><code class="inline">run/3</code></a> captures it into <code class="inline">err</code>). Without it or <code class="inline">:stderr_to_stdout</code>,
+stderr goes to the BEAM's own stderr.</li><li><code class="inline">:stderr_to_stdout</code> - merge stderr into the output</li><li><code class="inline">:timeout</code> - milliseconds before <a href="#run/3"><code class="inline">run/3</code></a> kills the program (default
+<code class="inline">:infinity</code>)</li></ul>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:result/0" data-no-tooltip="" translate="no">result()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#make_tmp_dir!/0" data-no-tooltip="" translate="no">make_tmp_dir!()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Creates a new directory only this OS user can enter, for files that belong
+to one program run. Pass it in <code class="inline">:cleanup_paths</code> and remove it when done;
+<a href="#sweep_tmp_dirs/1"><code class="inline">sweep_tmp_dirs/1</code></a> catches any left behind by a crash.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#open/3" data-no-tooltip="" translate="no">open(cmd, args, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Starts the program and returns the port, which the caller owns and receives
+<code class="inline">{port, {:data, _}}</code> and <code class="inline">{port, {:exit_status, _}}</code> messages from.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#run/3" data-no-tooltip="" translate="no">run(cmd, args, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Runs the program to completion and returns its exit status, stdout and
+stderr. On timeout the program is killed and the output so far is returned.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#sweep_tmp_dirs/1" data-no-tooltip="" translate="no">sweep_tmp_dirs(max_age_seconds \\ 3600)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Removes directories made by <a href="#make_tmp_dir!/0"><code class="inline">make_tmp_dir!/0</code></a> that are older than
+<code class="inline">max_age_seconds</code>. They are only left behind when the wrapper itself was
+SIGKILLed or the host went down, so this runs once at boot.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:result/0">
+
+  <div class="detail-header">
+    <a href="#t:result/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">result()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/os_process.ex#L30" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> result() :: %{status: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(), out: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), err: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="make_tmp_dir!/0">
+
+  <div class="detail-header">
+    <a href="#make_tmp_dir!/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">make_tmp_dir!()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/os_process.ex#L91" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> make_tmp_dir!() :: <a href="https://hexdocs.pm/elixir/Path.html#t:t/0">Path.t</a>()</pre>
+
+      </div>
+
+<p>Creates a new directory only this OS user can enter, for files that belong
+to one program run. Pass it in <code class="inline">:cleanup_paths</code> and remove it when done;
+<a href="#sweep_tmp_dirs/1"><code class="inline">sweep_tmp_dirs/1</code></a> catches any left behind by a crash.</p>
+  </section>
+</section>
+<section class="detail" id="open/3">
+
+    <span id="open/2"></span>
+
+  <div class="detail-header">
+    <a href="#open/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">open(cmd, args, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/os_process.ex#L40" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> open(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()], <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) ::
+  {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">port</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()} | {:error, :enoent | :exited}</pre>
+
+      </div>
+
+<p>Starts the program and returns the port, which the caller owns and receives
+<code class="inline">{port, {:data, _}}</code> and <code class="inline">{port, {:exit_status, _}}</code> messages from.</p>
+  </section>
+</section>
+<section class="detail" id="run/3">
+
+    <span id="run/2"></span>
+
+  <div class="detail-header">
+    <a href="#run/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">run(cmd, args, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/os_process.ex#L58" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> run(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()], <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) ::
+  {:ok, <a href="#t:result/0">result</a>()}
+  | {:error, :enoent}
+  | {:error, {:timeout, %{out: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), err: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}}}</pre>
+
+      </div>
+
+<p>Runs the program to completion and returns its exit status, stdout and
+stderr. On timeout the program is killed and the output so far is returned.</p>
+  </section>
+</section>
+<section class="detail" id="sweep_tmp_dirs/1">
+
+    <span id="sweep_tmp_dirs/0"></span>
+
+  <div class="detail-header">
+    <a href="#sweep_tmp_dirs/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">sweep_tmp_dirs(max_age_seconds \\ 3600)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/os_process.ex#L120" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> sweep_tmp_dirs(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()) :: :ok</pre>
+
+      </div>
+
+<p>Removes directories made by <a href="#make_tmp_dir!/0"><code class="inline">make_tmp_dir!/0</code></a> that are older than
+<code class="inline">max_age_seconds</code>. They are only left behind when the wrapper itself was
+SIGKILLed or the host went down, so this runs once at boot.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

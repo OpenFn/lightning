@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-9D74D9E8.js"></script>
+    <script defer src="dist/sidebar_items-169C3668.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -162,7 +162,7 @@ Lightning
       <h1 class="signature" translate="no">metadata(state, adaptor_path)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L106" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L148" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -173,11 +173,15 @@ Lightning
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> metadata(state :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), adaptor_path :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="Lightning.CLI.Result.html#t:t/0">Lightning.CLI.Result.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> metadata(state :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), adaptor_path :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, <a href="Lightning.CLI.Result.html#t:t/0">Lightning.CLI.Result.t</a>()} | {:error, :enoent | :timeout}</pre>
 
       </div>
 
-<p>Retrieve metadata for a given adaptor and configuration.</p>
+<p>Retrieve metadata for a given adaptor and configuration.</p><p>The state is handed to the CLI in a file inside a directory only this user
+can enter, rather than on the command line, where other processes could
+read it. The directory is private before the file exists, so there is no
+window where the file is readable by others.</p>
   </section>
 </section>
 

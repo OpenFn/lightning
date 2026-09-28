@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-9D74D9E8.js"></script>
+    <script defer src="dist/sidebar_items-169C3668.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -139,7 +139,6 @@ You'll need to install <code class="inline">libsodium</code> in order for the ap
 </span><span class="">mix deps.get
 </span><span class="">mix local.rebar --force
 </span><span class="">[[ $(uname -m) == &#39;arm64&#39; ]] &amp;&amp; CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib mix deps.compile enacl # Force compile enacl if on M1
-</span><span class="">[[ $(uname -m) == &#39;arm64&#39; ]] &amp;&amp; mix compile.rambo # Force compile rambo if on M1
 </span><span class="">mix lightning.install_runtime
 </span><span class="">mix ecto.create
 </span><span class="">mix ecto.migrate
