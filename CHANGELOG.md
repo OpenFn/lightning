@@ -70,6 +70,14 @@ and this project adheres to
 
 ### Fixed
 
+- `RTM=true` now works in the Docker image. The image never contained
+  `ws-worker`, so the runtime manager crash-looped until the node halted; the
+  worker now ships inside the release, and a missing worker stops boot once with
+  `{:worker_not_found, path}`.
+  [#5216](https://github.com/OpenFn/lightning/pull/5216)
+- Without `ORIGINS` set, every websocket upgrade (LiveView, user and worker
+  sockets) crashed because `check_origin` was `nil`. It now defaults to checking
+  against `URL_HOST`. [#5216](https://github.com/OpenFn/lightning/pull/5216)
 - Leaving the workflow editor now closes its connection to the server. It used
   to stay open, reconnecting in the background, until the tab was closed.
   [#5202](https://github.com/OpenFn/lightning/pull/5202)
