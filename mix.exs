@@ -160,7 +160,6 @@ defmodule Lightning.MixProject do
       # locks, so override rather than hold the app back.
       {:postgrex, ">= 0.0.0", override: true},
       {:prom_ex, "~> 1.11.0"},
-      {:rambo, "~> 0.3.4"},
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
       {:sentry, "~> 13.2.0"},
