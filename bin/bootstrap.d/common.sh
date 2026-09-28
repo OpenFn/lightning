@@ -217,8 +217,6 @@ setup_project_directory() {
     rm -f ./-.o
   fi
 
-  platform_post_compile_hooks
-
   step "Installing Node.js dependencies"
   npm install --prefix assets
 

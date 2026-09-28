@@ -54,7 +54,6 @@ integration at all levels.
   - [Problems with Postgres](#problems-with-postgres)
   - [Problems with Debian](#problems-with-debian)
   - [Problems with Docker](#problems-with-docker)
-  - [Problems with Rambo](#problems-with-rambo)
 - [Support](#support)
 
 ## Demo
@@ -517,29 +516,6 @@ the following error:
 You can resolve this by setting `ERL_FLAGS="+JPperf true"` env to the failing
 stage. You can follow this thread on our community forum for more info:
 [no matching manifest for linux/arm64/v8 in the manifest list entries](https://community.openfn.org/t/lightning-prebuilt-images-throw-no-matching-manifest-for-linux-arm64-v8-in-the-manifest-list-entries/465/15)
-
-### Problems with Rambo
-
-When running `mix compile.rambo` on Apple Silicon (an Apple M1/M2, `macarm`,
-`aarch64-apple-darwin`) and encountering the following error:
-
-```
-** (RuntimeError) Rambo does not ship with binaries for your environment.
-
-    aarch64-apple-darwin22.3.0 detected
-
-Install the Rust compiler so a binary can be prepared for you.
-
-    lib/mix/tasks/compile.rambo.ex:89: Mix.Tasks.Compile.Rambo.compile!/0
-    lib/mix/tasks/compile.rambo.ex:51: Mix.Tasks.Compile.Rambo.run/1
-    (mix 1.14.2) lib/mix/task.ex:421: anonymous fn/3 in Mix.Task.run_task/4
-    (mix 1.14.2) lib/mix/cli.ex:84: Mix.CLI.run_task/2
-```
-
-You can resolve this error by installing the Rust compiler using Homebrew. Run
-the following command in your terminal: `brew install rust`
-
-If neither of the approaches above work, please raise an issue.
 
 ## Support
 

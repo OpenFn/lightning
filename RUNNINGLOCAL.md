@@ -77,7 +77,6 @@ mix local.hex
 mix deps.get
 mix local.rebar --force
 [[ $(uname -m) == 'arm64' ]] && CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib mix deps.compile enacl # Force compile enacl if on M1
-[[ $(uname -m) == 'arm64' ]] && mix compile.rambo # Force compile rambo if on M1
 mix lightning.install_runtime
 mix ecto.create
 mix ecto.migrate
