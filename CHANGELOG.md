@@ -65,6 +65,8 @@ and this project adheres to
   the app's own: the re-authenticate page's avatar uses `user_avatar`, the audit
   log's event badge uses `pill`, and the superuser note on the users page is
   plain markup.
+- The `rambo` dependency, so Lightning builds on arm64 without Rust.
+  [#5215](https://github.com/OpenFn/lightning/pull/5215)
 
 ### Fixed
 
