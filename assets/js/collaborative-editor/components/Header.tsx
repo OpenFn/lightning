@@ -33,6 +33,7 @@ import {
 import { useKeyboardShortcut } from '../keyboard';
 import { getCsrfToken } from '../lib/csrf';
 import {
+  describeLifecycleError,
   formatChannelErrorMessage,
   isChannelRequestError,
 } from '../lib/errors';
@@ -201,17 +202,6 @@ export function SaveButton({
   );
 }
 SaveButton.displayName = 'SaveButton';
-
-function describeLifecycleError(error: unknown): string {
-  if (isChannelRequestError(error)) {
-    return formatChannelErrorMessage({
-      errors: error.errors as { base?: string[] } & Record<string, string[]>,
-      type: error.type,
-    });
-  }
-
-  return error instanceof Error ? error.message : 'Please try again.';
-}
 
 export function Header({
   children,

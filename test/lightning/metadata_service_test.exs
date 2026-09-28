@@ -1,5 +1,6 @@
 defmodule Lightning.MetadataServiceTest do
-  use Lightning.DataCase, async: false
+  use Lightning.DataCase, async: true
+  use Mimic
 
   import Lightning.AdaptorTestHelpers
 
@@ -11,6 +12,7 @@ defmodule Lightning.MetadataServiceTest do
   # registry" cases rely on their name staying unseeded.
   setup do
     ensure_adaptor("@openfn/language-common")
+    stub_cli({:ok, %{status: 0, out: "", err: ""}})
     :ok
   end
 
@@ -30,7 +32,7 @@ defmodule Lightning.MetadataServiceTest do
       {"message":["#{path}"]}
       """
 
-      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
+      stub_cli({:ok, %{status: 0, out: stdout, err: ""}})
 
       credential =
         insert(:credential)
@@ -52,7 +54,7 @@ defmodule Lightning.MetadataServiceTest do
       {"level":"info","name":"CLI","message":["Metadata function found. Generating metadata..."]}
       """
 
-      FakeRambo.Helpers.stub_run({:error, %{status: 1, out: stdout, err: ""}})
+      stub_cli({:ok, %{status: 1, out: stdout, err: ""}})
 
       credential =
         insert(:credential)
@@ -73,6 +75,21 @@ defmodule Lightning.MetadataServiceTest do
                    __exception__: true
                  }
                }
+    end
+
+    test "returns an error when the cli times out" do
+      stub_cli({:error, {:timeout, %{out: "", err: ""}}})
+
+      credential =
+        insert(:credential)
+        |> with_body(%{name: "main", body: %{"username" => "user"}})
+
+      assert {:error, %Lightning.MetadataService.Error{type: "timeout"}} =
+               MetadataService.fetch(
+                 "@openfn/language-common",
+                 credential,
+                 "main"
+               )
     end
 
     test "returns an error when the adaptor doesn't exist" do
@@ -104,7 +121,7 @@ defmodule Lightning.MetadataServiceTest do
       {"level":"error","name":"CLI","message":["No metadata helper found"],"time":"1751556807394005966"}
       """
 
-      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
+      stub_cli({:ok, %{status: 0, out: stdout, err: ""}})
 
       credential =
         insert(:credential)
@@ -133,7 +150,7 @@ defmodule Lightning.MetadataServiceTest do
       {"level":"error","name":"CLI","message":[{"request":{"transitional":{"silentJSONParsing":true,"forcedJSONParsing":true,"clarifyTimeoutError":false},"adapter":["xhr","http","fetch"],"transformRequest":[null],"transformResponse":[null],"timeout":0,"xsrfCookieName":"XSRF-TOKEN","xsrfHeaderName":"X-XSRF-TOKEN","maxContentLength":-1,"maxBodyLength":-1,"env":{},"headers":{"Accept":"application/json, text/plain, */*","Content-Type":"application/json","User-Agent":"axios/1.10.0","Accept-Encoding":"gzip, compress, deflate, br"},"url":"https://play.im.dhis2.org/stble-2-42-0/api/organisationUnits","responseType":"json","auth":"--REDACTED--","params":{"paging":false},"allowAbsoluteUrls":true,"method":"get"},"message":"Request failed with status code 404","response":"<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx</center>\\r\\n</body>\\r\\n</html>\\r\\n"}],"time":"1751622145725163375"}
       """
 
-      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
+      stub_cli({:ok, %{status: 0, out: stdout, err: ""}})
 
       credential =
         insert(:credential)
@@ -162,7 +179,7 @@ defmodule Lightning.MetadataServiceTest do
       {"level":"error","name":"CLI","message":[{"request":{"transitional":{"silentJSONParsing":true,"forcedJSONParsing":true,"clarifyTimeoutError":false},"adapter":["xhr","http","fetch"],"transformRequest":[null],"transformResponse":[null],"timeout":0,"xsrfCookieName":"XSRF-TOKEN","xsrfHeaderName":"X-XSRF-TOKEN","maxContentLength":-1,"maxBodyLength":-1,"env":{},"headers":{"Accept":"application/json, text/plain, */*","Conteient-Type":"application/json","User-Agent":"axios/1.10.0","Accept-Encoding":"gzip, compress, deflate, br"},"url":"https://play.im.dhis2.org/stable-2-42-0/api/organisationUnits","responseType":"json","auth":"--REDACTED--","params":{"paging":false},"allowAbsoluteUrls":true,"method":"get"},"message":"Request failed with status code 401","response":{"httpStatus":"Unauthorized","httpStatusCode":401,"status":"ERROR","message":"Unauthorized"}}],"time":"1751895555813789521"}
       """
 
-      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
+      stub_cli({:ok, %{status: 0, out: stdout, err: ""}})
 
       credential =
         insert(:credential)
@@ -205,9 +222,7 @@ defmodule Lightning.MetadataServiceTest do
         Briefly.create!(extname: ".json")
         |> tap(fn path -> File.write!(path, ~s({"secret": "leaked"})) end)
 
-      FakeRambo.Helpers.stub_run(
-        {:ok, %{status: 0, out: ~s({"message":["#{path}"]}\n), err: ""}}
-      )
+      stub_cli({:ok, %{status: 0, out: ~s({"message":["#{path}"]}\n), err: ""}})
 
       credential =
         insert(:credential)
@@ -232,5 +247,9 @@ defmodule Lightning.MetadataServiceTest do
       assert log =~ "Refusing to install non-permitted adaptor"
       assert log =~ "@openfn/language-notreal"
     end
+  end
+
+  defp stub_cli(result) do
+    stub(Lightning.OsProcess, :run, fn _cmd, _args, _opts -> result end)
   end
 end

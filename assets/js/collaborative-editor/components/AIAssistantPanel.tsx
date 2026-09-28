@@ -12,8 +12,11 @@ import {
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
 import { useSelectedRunId } from '../hooks/useHistory';
-import { useIsNewWorkflow } from '../hooks/useSessionContext';
+import { useContentLocked, useIsNewWorkflow } from '../hooks/useSessionContext';
+import { describeLifecycleError } from '../lib/errors';
+import { notifications } from '../lib/notifications';
 
+import { AlertDialog } from './AlertDialog';
 import { ChatInput } from './ChatInput';
 import { SessionList } from './SessionList';
 
@@ -54,6 +57,10 @@ interface AIAssistantPanelProps {
    * AI assistant limit information
    */
   aiLimit?: { allowed: boolean; message: string | null } | null;
+  /**
+   * Switch the current workflow to draft, for the live workflow notice
+   */
+  switchToDraft?: () => Promise<unknown>;
 }
 
 interface MessageOptions {
@@ -92,6 +99,7 @@ export function AIAssistantPanel({
   focusTrigger,
   connectionState = 'connected',
   aiLimit = null,
+  switchToDraft = () => Promise.resolve(undefined),
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -100,6 +108,7 @@ export function AIAssistantPanel({
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   const [internalFocusTrigger, setInternalFocusTrigger] = useState(0);
+  const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
   const prevViewRef = useRef(view);
 
   // Use hooks to get state from AI Assistant store
@@ -111,6 +120,7 @@ export function AIAssistantPanel({
   const { loadSessionList } = useAISessionListCommands();
   const selectedRunId = useSelectedRunId();
   const isNewWorkflow = useIsNewWorkflow();
+  const contentLocked = useContentLocked();
 
   useEffect(() => {
     if (prevViewRef.current !== view) {
@@ -198,6 +208,15 @@ export function AIAssistantPanel({
   const handleOpenAbout = () => {
     setIsAboutOpen(true);
     setIsMenuOpen(false);
+  };
+
+  const handleConfirmSwitchToDraft = () => {
+    void switchToDraft().catch((error: unknown) => {
+      notifications.alert({
+        title: 'Could not switch to draft',
+        description: describeLifecycleError(error),
+      });
+    });
   };
 
   const handleSessionSelect = (selectedSessionId: string) => {
@@ -412,6 +431,33 @@ export function AIAssistantPanel({
         )}
       </div>
 
+      {/* Live workflow notice - the assistant can only edit a draft workflow;
+          contentLocked is only ever true for a live workflow outside a
+          sandbox, so "switch to draft" is always the right fix */}
+      {!isNewWorkflow && contentLocked && (
+        <div
+          className="flex-none bg-amber-50 border-t border-amber-200 px-4 py-3"
+          role="status"
+          data-testid="ai-draft-mode-banner"
+        >
+          <div className="flex items-start gap-3">
+            <span className="hero-lock-closed h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-amber-800">
+                The Assistant cannot make changes while this workflow is live.{' '}
+                <button
+                  type="button"
+                  className="font-semibold underline hover:no-underline"
+                  onClick={() => setShowSwitchToDraftDialog(true)}
+                >
+                  Switch to draft
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ChatInput
         onSendMessage={onSendMessage}
         isLoading={isLoading}
@@ -620,6 +666,18 @@ export function AIAssistantPanel({
           </div>
         </div>
       )}
+
+      <AlertDialog
+        isOpen={showSwitchToDraftDialog}
+        onClose={() => {
+          setShowSwitchToDraftDialog(false);
+        }}
+        onConfirm={handleConfirmSwitchToDraft}
+        title="Switch to draft"
+        description="This takes the workflow out of production. Its triggers will be turned off and it will stop processing data until you go live again."
+        confirmLabel="Switch to draft"
+        variant="primary"
+      />
     </aside>
   );
 }

@@ -1,4 +1,3 @@
-
 import { describe, expect, test } from 'vitest';
 
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';

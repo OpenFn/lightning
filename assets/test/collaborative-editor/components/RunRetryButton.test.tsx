@@ -144,8 +144,7 @@ describe('RunRetryButton', () => {
       );
 
       // Use helper to get visible button text in CSS Grid layout
-      const retryButton =
-        getVisibleButtonText('Retry').closest('button')!;
+      const retryButton = getVisibleButtonText('Retry').closest('button')!;
       await user.click(retryButton);
 
       expect(onRetry).toHaveBeenCalledTimes(1);
@@ -773,8 +772,7 @@ describe('RunRetryButton', () => {
       );
 
       // 1. Main button works (retry) - use helper for CSS Grid layout
-      const retryButton =
-        getVisibleButtonText('Retry').closest('button')!;
+      const retryButton = getVisibleButtonText('Retry').closest('button')!;
       await user.click(retryButton);
       expect(onRetry).toHaveBeenCalledTimes(1);
 

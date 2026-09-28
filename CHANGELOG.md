@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- The AI assistant now shows a warning banner above its chat input when the
+  current workflow is live.
+  [#5205](https://github.com/OpenFn/lightning/pull/5205)
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
@@ -37,6 +40,13 @@ and this project adheres to
 
 ### Changed
 
+- On Linux, database connections now detect a silently dead network path (e.g. a
+  node drain during a node-pool upgrade) within about 20s, including queries run
+  with no timeout, which previously could hang indefinitely. Connections use TCP
+  keepalive with `DATABASE_TCP_USER_TIMEOUT` (ms, defaults to
+  `DATABASE_TIMEOUT + 5s`) as the cut-off; set it to `0` to restore the previous
+  behaviour. Lightning only applies these options on Linux hosts.
+  [#4855](https://github.com/OpenFn/lightning/pull/4855)
 - Failure alerts and project digests now link to the workflow health page, where
   failures are grouped by error signature. The digest keeps its history link for
   the runs behind its counts, and shows the health link only for workflows that
@@ -55,6 +65,8 @@ and this project adheres to
   the app's own: the re-authenticate page's avatar uses `user_avatar`, the audit
   log's event badge uses `pill`, and the superuser note on the users page is
   plain markup.
+- The `rambo` dependency, so Lightning builds on arm64 without Rust.
+  [#5215](https://github.com/OpenFn/lightning/pull/5215)
 
 ### Fixed
 
@@ -75,6 +87,18 @@ and this project adheres to
   proxy in front of it to disagree about where one response ends and the next
   begins. Mint is the HTTP client Lightning uses to call other systems, so the
   risk is in what those systems send back, not in requests made to Lightning.
+- Bumped `mint` to 1.11.0, clearing
+  [CVE-2026-91043](https://osv.dev/vulnerability/EEF-CVE-2026-91043),
+  [CVE-2026-92103](https://osv.dev/vulnerability/EEF-CVE-2026-92103) and
+  [CVE-2026-94194](https://osv.dev/vulnerability/EEF-CVE-2026-94194). A
+  malicious server could exhaust Lightning's memory with oversized HTTP/2
+  headers or frames, or smuggle a second response past a proxy using mislabelled
+  HTTP/1 chunked encoding. As above, the risk is in responses from the systems
+  Lightning calls. [#5218](https://github.com/OpenFn/lightning/pull/5218)
+- Bumped `cowlib` to 2.20.0, clearing
+  [CVE-2026-43971](https://osv.dev/vulnerability/EEF-CVE-2026-43971). Lightning
+  never called the affected function.
+  [#5218](https://github.com/OpenFn/lightning/pull/5218)
 
 ## [2.19.0] - 2026-09-21
 

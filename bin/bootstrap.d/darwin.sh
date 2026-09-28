@@ -23,13 +23,6 @@ platform_check_dependencies() {
     echo "  Homebrew: not installed"
   fi
 
-  # Check Rust
-  if command -v rustc &>/dev/null; then
-    echo "  Rust: $(rustc --version)"
-  else
-    MISSING_BREW_PACKAGES+=("rust")
-  fi
-
   # Check required Homebrew packages
   if [[ "$HAS_HOMEBREW" == true ]]; then
     local required_brew_packages=(libsodium cmake)
@@ -41,21 +34,6 @@ platform_check_dependencies() {
         MISSING_BREW_PACKAGES+=("$package")
       fi
     done
-
-    # Check if Rust is available via Homebrew even if not in PATH
-    if ! command -v rustc &>/dev/null; then
-      if echo "$HOMEBREW_PACKAGES_INSTALLED" | grep -q "^rust$"; then
-        echo "  Rust (via Homebrew)"
-        # Remove rust from missing packages
-        local new_missing=()
-        for pkg in "${MISSING_BREW_PACKAGES[@]}"; do
-          if [[ "$pkg" != "rust" ]]; then
-            new_missing+=("$pkg")
-          fi
-        done
-        MISSING_BREW_PACKAGES=("${new_missing[@]}")
-      fi
-    fi
   fi
 
   # Check Xcode Command Line Tools
@@ -159,19 +137,4 @@ platform_setup_environment() {
       echo "Set SDKROOT to $SDKROOT"
     fi
   fi
-}
-
-platform_post_compile_hooks() {
-  # If you have already compiled Rambo explicitly via `mix compile.rambo`, and you
-  # are still seeing the following error:
-  #
-  # ```
-  # sh: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: No such file or directory
-  # sh: line 0: exec: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: cannot execute: No such file or directory
-  # ```
-  #
-  # You can try renaming `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`.
-
-  step "Compiling platform-specific dependencies"
-  mix compile.rambo
 }
