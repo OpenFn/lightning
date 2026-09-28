@@ -29,6 +29,21 @@ export class ChannelRequestError extends Error {
 }
 
 /**
+ * Describe an error thrown by a workflow lifecycle transition
+ * (`goLive`/`switchToDraft`) for display in a toast or banner.
+ */
+export function describeLifecycleError(error: unknown): string {
+  if (isChannelRequestError(error)) {
+    return formatChannelErrorMessage({
+      errors: error.errors as { base?: string[] } & Record<string, string[]>,
+      type: error.type,
+    });
+  }
+
+  return error instanceof Error ? error.message : 'Please try again.';
+}
+
+/**
  * Type guard to check if an error is a ChannelRequestError
  */
 export function isChannelRequestError(

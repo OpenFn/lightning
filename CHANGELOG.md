@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- The AI assistant now shows a warning banner above its chat input when the
+  current workflow is live.
+  [#5205](https://github.com/OpenFn/lightning/pull/5205)
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
