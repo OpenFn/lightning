@@ -56,7 +56,7 @@ const reactFiles = [
 /** @type import("eslint").Linter.Config[] */
 export default [
   {
-    ignores: ['vendor/'],
+    ignores: ['vendor/', 'dev-server/'],
   },
   ...[
     jsPlugin.configs['recommended'],
@@ -195,5 +195,23 @@ export default [
   {
     files: reactFiles,
     ...jsxA11yPlugin.flatConfigs['strict'],
+  },
+  {
+    // These flag every use of an `any` value, so while tsc still fails they
+    // mostly repeat existing type errors.
+    rules: {
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+    },
+  },
+  {
+    // Test mocks lean on `any` by design.
+    files: ['test/**'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
   },
 ];

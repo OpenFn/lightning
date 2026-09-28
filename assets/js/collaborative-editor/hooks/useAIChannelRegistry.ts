@@ -73,7 +73,7 @@ function getOrCreateRegistry(
   }
 
   // Create new registry (socket or store changed)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   registryInstance = new AIChannelRegistry(socket as any, store as any);
   registrySocket = socket;
   registryStore = store;
@@ -151,7 +151,6 @@ export const useAISessionCommands = () => {
       console.warn('Cannot send message: registry or topic not available');
       return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     registry.sendMessage(topic, content, options);
   };
 
