@@ -92,7 +92,7 @@ and this project adheres to
   malicious server could exhaust Lightning's memory with oversized HTTP/2
   headers or frames, or smuggle a second response past a proxy using mislabelled
   HTTP/1 chunked encoding. As above, the risk is in responses from the systems
-  Lightning calls.
+  Lightning calls. [#5218](https://github.com/OpenFn/lightning/pull/5218)
 - Bumped `cowlib` to 2.20.0, clearing
   [CVE-2026-43971](https://osv.dev/vulnerability/EEF-CVE-2026-43971). Lightning
   never called the affected function.
