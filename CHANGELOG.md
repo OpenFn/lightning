@@ -96,6 +96,7 @@ and this project adheres to
 - Bumped `cowlib` to 2.20.0, clearing
   [CVE-2026-43971](https://osv.dev/vulnerability/EEF-CVE-2026-43971). Lightning
   never called the affected function.
+  [#5218](https://github.com/OpenFn/lightning/pull/5218)
 
 ## [2.19.0] - 2026-09-21
 
