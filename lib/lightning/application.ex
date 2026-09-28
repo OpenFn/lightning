@@ -9,6 +9,8 @@ defmodule Lightning.Application do
 
   @impl true
   def start(_type, _args) do
+    Lightning.OsProcess.sweep_tmp_dirs()
+
     # mnesia startup
     :mnesia.stop()
     :mnesia.create_schema([node()])
