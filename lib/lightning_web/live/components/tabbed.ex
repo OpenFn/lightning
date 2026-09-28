@@ -103,7 +103,7 @@ defmodule LightningWeb.Components.Tabbed do
   attr :disabled_msg, :string
   slot :inner_block, required: true
 
-  def tab(assigns) do
+  defp tab(assigns) do
     ~H"""
     <%= if @disabled do %>
       <span
@@ -142,7 +142,7 @@ defmodule LightningWeb.Components.Tabbed do
   attr :class, :string, default: "flex"
   slot :inner_block, required: true
 
-  def panel(assigns) do
+  defp panel(assigns) do
     assigns =
       assigns |> update(:class, fn class -> List.wrap(class) ++ ~w[hidden] end)
 
