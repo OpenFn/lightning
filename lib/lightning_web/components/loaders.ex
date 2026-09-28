@@ -1,6 +1,6 @@
 defmodule LightningWeb.Components.Loaders do
   @moduledoc """
-  UI component to render a pill to create tags.
+  Loading indicators.
   """
   use Phoenix.Component
 

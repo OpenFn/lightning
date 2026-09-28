@@ -9,32 +9,6 @@ defmodule LightningWeb.Components.Icon do
 
   use LightningWeb, :component
 
-  @spec dataclip_icon_color(atom) :: String.t() | nil
-  def dataclip_icon_color(type) do
-    case type do
-      :step_result -> "bg-purple-500 text-purple-900"
-      :http_request -> "bg-green-500 text-green-900"
-      :global -> "bg-blue-500 text-blue-900"
-      :saved_input -> "bg-yellow-500 text-yellow-900"
-      :kafka -> "bg-green-500 text-green-900"
-      _ -> nil
-    end
-  end
-
-  @spec dataclip_icon_class(atom) :: String.t() | nil
-  def dataclip_icon_class(type) do
-    case type do
-      :saved_input -> "hero-pencil-square"
-      :global -> "hero-globe-alt"
-      :step_result -> "hero-document-text"
-      :http_request -> "hero-document-arrow-down"
-      # Dataclips stored by the removed Kafka trigger keep their type and are
-      # still displayed, here and in the pill in Components.Common.
-      :kafka -> "hero-document-arrow-down"
-      _ -> nil
-    end
-  end
-
   def workflows(assigns), do: Heroicons.square_3_stack_3d(assigns)
 
   def sandboxes(assigns), do: Heroicons.beaker(assigns)
@@ -62,15 +36,7 @@ defmodule LightningWeb.Components.Icon do
 
   def runs(assigns), do: Heroicons.rectangle_stack(assigns)
 
-  def pencil(assigns), do: Heroicons.pencil(assigns)
-
-  def exclamation_circle(assigns), do: Heroicons.exclamation_circle(assigns)
-
   def settings(assigns), do: Heroicons.cog_8_tooth(assigns)
-
-  def dataclips(assigns), do: Heroicons.cube(assigns)
-
-  def info(assigns), do: Heroicons.information_circle(assigns)
 
   def left(assigns) do
     ~H"""
