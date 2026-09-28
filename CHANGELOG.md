@@ -85,6 +85,17 @@ and this project adheres to
   proxy in front of it to disagree about where one response ends and the next
   begins. Mint is the HTTP client Lightning uses to call other systems, so the
   risk is in what those systems send back, not in requests made to Lightning.
+- Bumped `mint` to 1.11.0, clearing
+  [CVE-2026-91043](https://osv.dev/vulnerability/EEF-CVE-2026-91043),
+  [CVE-2026-92103](https://osv.dev/vulnerability/EEF-CVE-2026-92103) and
+  [CVE-2026-94194](https://osv.dev/vulnerability/EEF-CVE-2026-94194). A
+  malicious server could exhaust Lightning's memory with oversized HTTP/2
+  headers or frames, or smuggle a second response past a proxy using mislabelled
+  HTTP/1 chunked encoding. As above, the risk is in responses from the systems
+  Lightning calls.
+- Bumped `cowlib` to 2.20.0, clearing
+  [CVE-2026-43971](https://osv.dev/vulnerability/EEF-CVE-2026-43971). Lightning
+  never called the affected function.
 
 ## [2.19.0] - 2026-09-21
 
