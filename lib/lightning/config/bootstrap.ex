@@ -495,13 +495,59 @@ defmodule Lightning.Config.Bootstrap do
     end
 
     database_url = env!("DATABASE_URL", :string, nil)
+    database_timeout = env!("DATABASE_TIMEOUT", :integer, 15_000)
+
+    # Drops a connection whose network path has died silently, including one
+    # checked out with `timeout: :infinity` that DBConnection would never time
+    # out. TCP_USER_TIMEOUT (IPPROTO_TCP=6, opt 18, ms) only fires on
+    # unacknowledged sent data, and a connection blocked waiting on a reply has
+    # none, so keepalive probes (TCP_KEEPIDLE=4, TCP_KEEPINTVL=5, seconds) supply
+    # it. With both set the kernel gives up after the user timeout rather than
+    # after TCP_KEEPCNT probes. A live peer acks the probes, so long-running
+    # queries are unaffected. The option numbers are Linux's.
+    linux? = match?({:unix, :linux}, :os.type())
+
+    tcp_user_timeout =
+      case env!("DATABASE_TCP_USER_TIMEOUT", :integer, database_timeout + 5_000) do
+        0 ->
+          nil
+
+        ms when ms in 1..2_147_483_647 ->
+          ms
+
+        ms ->
+          raise "DATABASE_TCP_USER_TIMEOUT must be 0 (disabled) or between 1 " <>
+                  "and 2147483647 ms, got #{ms}"
+      end
+
+    db_socket_options =
+      if linux? && tcp_user_timeout do
+        if tcp_user_timeout < database_timeout do
+          Logger.warning(
+            "DATABASE_TCP_USER_TIMEOUT (#{tcp_user_timeout}ms) is below " <>
+              "DATABASE_TIMEOUT (#{database_timeout}ms), so a large write that " <>
+              "is slow to be acknowledged can be dropped before the query " <>
+              "timeout fires. Set it above DATABASE_TIMEOUT."
+          )
+        end
+
+        [
+          {:keepalive, true},
+          {:raw, 6, 4, <<5::32-native>>},
+          {:raw, 6, 5, <<5::32-native>>},
+          {:raw, 6, 18, <<tcp_user_timeout::32-native>>}
+        ]
+      else
+        []
+      end
 
     config :lightning, Lightning.Repo,
       url: database_url,
       pool_size: env!("DATABASE_POOL_SIZE", :integer, 10),
-      timeout: env!("DATABASE_TIMEOUT", :integer, 15_000),
+      timeout: database_timeout,
       queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 50),
-      queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
+      queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000),
+      socket_options: db_socket_options
 
     port =
       env!(
@@ -576,9 +622,11 @@ defmodule Lightning.Config.Bootstrap do
 
       disable_db_ssl = env!("DISABLE_DB_SSL", &Utils.ensure_boolean/1, false)
 
+      # appends rather than overwrites db_socket_options, so the IPv6 toggle and
+      # the socket timeout both apply
       config :lightning, Lightning.Repo,
         url: database_url,
-        socket_options: maybe_ipv6
+        socket_options: maybe_ipv6 ++ db_socket_options
 
       if disable_db_ssl do
         config :lightning, Lightning.Repo, ssl: false

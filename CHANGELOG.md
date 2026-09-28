@@ -40,6 +40,13 @@ and this project adheres to
 
 ### Changed
 
+- On Linux, database connections now detect a silently dead network path (e.g. a
+  node drain during a node-pool upgrade) within about 20s, including queries run
+  with no timeout, which previously could hang indefinitely. Connections use TCP
+  keepalive with `DATABASE_TCP_USER_TIMEOUT` (ms, defaults to
+  `DATABASE_TIMEOUT + 5s`) as the cut-off; set it to `0` to restore the previous
+  behaviour. Lightning only applies these options on Linux hosts.
+  [#4855](https://github.com/OpenFn/lightning/pull/4855)
 - Failure alerts and project digests now link to the workflow health page, where
   failures are grouped by error signature. The digest keeps its history link for
   the runs behind its counts, and shows the health link only for workflows that
