@@ -84,9 +84,7 @@ defmodule Lightning.MixProject do
         # cow_http_struct_hd:escape_string/2
         "CVE-2026-43966",
         # cow_cookie:cookie/1
-        "CVE-2026-43969",
-        # cow_link:link/1
-        "CVE-2026-43971"
+        "CVE-2026-43969"
       ]
     ]
   end
@@ -139,7 +137,7 @@ defmodule Lightning.MixProject do
       {:libcluster_postgres, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
-      {:mint, "~> 1.0"},
+      {:mint, "~> 1.11"},
       {:mix_test_watch, "~> 1.3", only: [:test, :dev], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
