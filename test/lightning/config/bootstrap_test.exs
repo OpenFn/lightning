@@ -84,6 +84,24 @@ defmodule Lightning.Config.BootstrapTest do
              )
     end
 
+    test "LightningWeb.Endpoint check_origin" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      assert get_env(:lightning, LightningWeb.Endpoint)[:check_origin] == true
+
+      reconfigure(%{
+        "ORIGINS" => "//a.example.com,//b.example.com",
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      assert get_env(:lightning, LightningWeb.Endpoint)[:check_origin] ==
+               ["//a.example.com", "//b.example.com"]
+    end
+
     test "LightningWeb.Endpoint idle_timeout" do
       # 1) default (no IDLE_TIMEOUT provided) -> 60_000
       reconfigure(%{

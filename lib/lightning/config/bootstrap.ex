@@ -669,17 +669,7 @@ defmodule Lightning.Config.Bootstrap do
           {127, 0, 0, 1}
         )
 
-      origins =
-        env!(
-          "ORIGINS",
-          fn str ->
-            case str do
-              nil -> true
-              _ -> String.split(str, ",")
-            end
-          end,
-          nil
-        )
+      origins = env!("ORIGINS", &String.split(&1, ","), true)
 
       retry_timeout_ms = Lightning.Config.webhook_retry(:timeout_ms)
 
