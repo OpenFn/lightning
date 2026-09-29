@@ -1160,30 +1160,6 @@ defmodule LightningWeb.Components.NewInputs do
   defp maybe_assign_radio_checked(assigns), do: assigns
 
   @doc """
-  Generates hidden inputs for a form.
-  Adapted from [PhoenixHTMLHelpers.Form.html#hidden_inputs_for/1](https://github.com/phoenixframework/phoenix_html_helpers/blob/v1.0.1/lib/phoenix_html_helpers/form.ex#L406)
-  """
-  attr :form, Phoenix.HTML.Form, required: true
-
-  def form_hidden_inputs(assigns) do
-    ~H"""
-    <%= for {key, value} <- @form.hidden do %>
-      <%= if is_list(value) do %>
-        <.input
-          :for={{v, index} <- Enum.with_index(value)}
-          type="hidden"
-          id={@form[key].id <> "_#{index}"}
-          name={@form[key].name <> "[]"}
-          value={v}
-        />
-      <% else %>
-        <.input type="hidden" field={@form[key]} value={value} />
-      <% end %>
-    <% end %>
-    """
-  end
-
-  @doc """
   Renders a label.
   """
   attr :for, :any, default: nil

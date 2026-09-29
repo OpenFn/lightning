@@ -304,21 +304,6 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :id, :string, required: true
-
-  def beta_chip(assigns) do
-    ~H"""
-    <div id={"#{@id}-container"} class="flex items-middle text-sm font-normal ml-1">
-      <span
-        id={@id}
-        class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800"
-      >
-        BETA
-      </span>
-    </div>
-    """
-  end
-
   attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
 
   def version_chip(assigns) do
@@ -638,6 +623,8 @@ defmodule LightningWeb.Components.Common do
           :http_request -> ~w[bg-green-500 text-green-900]
           :global -> ~w[bg-blue-500 text-blue-900]
           :saved_input -> ~w[bg-yellow-500 text-yellow-900]
+          # Dataclips stored by the removed Kafka trigger keep their type and are
+          # still displayed.
           :kafka -> ~w[bg-green-500 text-green-900]
           _other -> []
         end
