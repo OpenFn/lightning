@@ -126,8 +126,8 @@ function SandboxRow({
         <span className="flex min-w-0 items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="h-8 w-1 shrink-0 rounded-full"
-            style={{ backgroundColor: sandbox.color ?? '#e5e7eb' }}
+            className="h-8 w-1 shrink-0 rounded-full bg-gray-200"
+            style={{ backgroundColor: sandbox.color ?? undefined }}
           />
           <span className="block min-w-0">
             <span className="block truncate text-sm font-semibold text-gray-900">

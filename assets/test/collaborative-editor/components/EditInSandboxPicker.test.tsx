@@ -959,13 +959,13 @@ describe('EditInSandboxPicker', () => {
     expect(alphaRow).toHaveTextContent(/Created .+ ago/);
     expect(within(alphaRow!).getByText('by')).toBeInTheDocument();
     expect(alphaRow).toHaveTextContent('Ada Lovelace');
-    expect(alphaRow!.querySelector('span[style]')).toHaveStyle({
-      backgroundColor: '#e5e7eb',
-    });
+    expect(alphaRow!.querySelector('span[aria-hidden="true"]')).toHaveClass(
+      'bg-gray-200'
+    );
 
     const betaRow = screen.getByText('Beta sandbox').closest('li');
     expect(betaRow).not.toBeNull();
-    expect(betaRow!.querySelector('span[style]')).toHaveStyle({
+    expect(betaRow!.querySelector('span[aria-hidden="true"]')).toHaveStyle({
       backgroundColor: '#ff0000',
     });
 
@@ -1000,9 +1000,9 @@ describe('EditInSandboxPicker', () => {
     const row = screen.getByText('Gamma sandbox').closest('li');
     expect(row).not.toBeNull();
     expect(row).toHaveTextContent(/Created .+ ago/);
-    expect(row!.querySelector('span[style]')).toHaveStyle({
-      backgroundColor: '#e5e7eb',
-    });
+    expect(row!.querySelector('span[aria-hidden="true"]')).toHaveClass(
+      'bg-gray-200'
+    );
 
     await user.hover(row!.querySelector('[data-state]') as Element);
     expect(

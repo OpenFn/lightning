@@ -29,7 +29,7 @@ import { Donut } from './Donut';
 // wedge on one screen have to mean the same thing.
 export const SUCCESS = '#0ca30c';
 export const FAILED = '#d03b3b';
-export const CANCELLED = '#6b7280';
+export const CANCELLED = 'var(--color-gray-500)';
 
 interface OutcomesDonutProps {
   counts: WorkOrderStateCounts;

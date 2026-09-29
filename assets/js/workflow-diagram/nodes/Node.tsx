@@ -163,9 +163,9 @@ const Node = ({
                   height: '128px',
                   zIndex: 1000,
                   backgroundColor: data.isActiveDropTarget
-                    ? 'rgba(79, 70, 229, 0.2)'
+                    ? 'color-mix(in oklab, var(--color-indigo-600) 20%, transparent)'
                     : 'transparent',
-                  borderColor: 'rgb(79, 70, 229)',
+                  borderColor: 'var(--color-indigo-600)',
                   borderWidth: '4px',
                   borderStyle: data.isActiveDropTarget ? 'solid' : 'dashed',
                   borderRadius: '20%',

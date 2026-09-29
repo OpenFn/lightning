@@ -16,26 +16,26 @@ describe('nodeIconStyles', () => {
 
   test('returns green for success', () => {
     const result = nodeIconStyles(false, false, 'success');
-    expect(result.style.stroke).toBe('#00a63e');
-    expect(result.style.fill).toBe('#dcfce7');
+    expect(result.style.stroke).toBe('var(--color-green-600)');
+    expect(result.style.fill).toBe('var(--color-green-100)');
   });
 
   test('returns red for fail', () => {
     const result = nodeIconStyles(false, false, 'fail');
-    expect(result.style.stroke).toBe('#e7000b');
-    expect(result.style.fill).toBe('#ffe2e2');
+    expect(result.style.stroke).toBe('var(--color-red-600)');
+    expect(result.style.fill).toBe('var(--color-red-100)');
   });
 
   test('returns orange for crash', () => {
     const result = nodeIconStyles(false, false, 'crash');
-    expect(result.style.stroke).toBe('#f54a00');
-    expect(result.style.fill).toBe('#ffedd4');
+    expect(result.style.stroke).toBe('var(--color-orange-600)');
+    expect(result.style.fill).toBe('var(--color-orange-100)');
   });
 
   test('returns blue for running state', () => {
     const result = nodeIconStyles(false, false, 'running');
-    expect(result.style.stroke).toBe('#3b82f6');
-    expect(result.style.fill).toBe('#dbeafe');
+    expect(result.style.stroke).toBe('var(--color-blue-500)');
+    expect(result.style.fill).toBe('var(--color-blue-100)');
   });
 
   test('selected state overrides run state border color', () => {
@@ -50,7 +50,7 @@ describe('nodeIconStyles', () => {
     const result = nodeIconStyles(false, true, 'running');
     expect(result.style.stroke).toBe('#ef4444'); // ERROR_COLOR
     // Fill still reflects run state
-    expect(result.style.fill).toBe('#dbeafe');
+    expect(result.style.fill).toBe('var(--color-blue-100)');
   });
 
   test('returns default colors when run state is undefined (via default param)', () => {

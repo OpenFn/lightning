@@ -163,14 +163,14 @@ export const styleEdge = (edge: Flow.Edge) => {
   return edge;
 };
 
-const BG_GREEN_100 = '#dcfce7';
-const BG_RED_100 = '#ffe2e2';
-const BG_ORANGE_100 = '#ffedd4';
-const BG_BLUE_100 = '#dbeafe';
-const BORDER_GREEN_600 = '#00a63e';
-const BORDER_RED_600 = '#e7000b';
-const BORDER_ORANGE_600 = '#f54a00';
-const BORDER_BLUE_500 = '#3b82f6';
+const BG_GREEN_100 = 'var(--color-green-100)';
+const BG_RED_100 = 'var(--color-red-100)';
+const BG_ORANGE_100 = 'var(--color-orange-100)';
+const BG_BLUE_100 = 'var(--color-blue-100)';
+const BORDER_GREEN_600 = 'var(--color-green-600)';
+const BORDER_RED_600 = 'var(--color-red-600)';
+const BORDER_ORANGE_600 = 'var(--color-orange-600)';
+const BORDER_BLUE_500 = 'var(--color-blue-500)';
 
 export type NodeRunState = RunStep['exit_reason'] | 'running';
 

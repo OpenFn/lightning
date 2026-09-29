@@ -123,7 +123,7 @@ export const VolumeBars = ({
             accessibilityLayer={false}
             margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
           >
-            <CartesianGrid vertical={false} stroke="#f3f4f6" />
+            <CartesianGrid vertical={false} stroke="var(--color-gray-100)" />
             {/* The blank afternoon labels count against the gap rule, so left
                 to thin the axis itself Recharts drops named bars too. */}
             <XAxis
@@ -152,7 +152,7 @@ export const VolumeBars = ({
                 stack, so the panel is flipped back into `SERIES` order. */}
             <Tooltip
               isAnimationActive={false}
-              cursor={{ fill: '#f9fafb' }}
+              cursor={{ fill: 'var(--color-gray-50)' }}
               content={
                 <ChartTooltip
                   reverse
@@ -265,7 +265,7 @@ export const bucketUrl = (
   });
 };
 
-const TICK_FILL = '#6b7280';
+const TICK_FILL = 'var(--color-gray-500)';
 
 // In the timezone the server cut the grid on, not the browser's own: a bar
 // starts at a local whole hour there, so a Delhi bar opening at UTC 18:30
