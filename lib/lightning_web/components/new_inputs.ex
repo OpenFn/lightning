@@ -1180,6 +1180,34 @@ defmodule LightningWeb.Components.NewInputs do
   end
 
   @doc """
+  Generic wrapper for rendering error messages in custom input components.
+  """
+  attr :field, Phoenix.HTML.FormField, required: true
+
+  def errors(assigns) do
+    errors =
+      if Phoenix.Component.used_input?(assigns.field),
+        do: assigns.field.errors,
+        else: []
+
+    assigns =
+      assigns
+      |> assign(
+        :errors,
+        Enum.map(
+          errors,
+          &LightningWeb.CoreComponents.translate_error(&1)
+        )
+      )
+
+    ~H"""
+    <div :if={Enum.any?(@errors)} class="error-space">
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
+  @doc """
   Generates a generic error message.
   """
   slot :inner_block, required: true
