@@ -121,4 +121,25 @@ defmodule LightningWeb.Components.CommonTest do
       assert html =~ "No image tag found."
     end
   end
+
+  describe "alert/1" do
+    test "each type renders its own colour classes" do
+      for {type, colour} <- [
+            {"success", "green"},
+            {"warning", "yellow"},
+            {"danger", "red"},
+            {"info", "blue"}
+          ] do
+        html =
+          render_component(&LightningWeb.Components.Common.alert/1,
+            type: type,
+            message: [],
+            actions: [%{id: "act", text: "Go", click: "go", target: nil}]
+          )
+
+        assert html =~ "bg-#{colour}-50"
+        assert html =~ "hover:bg-#{colour}-100"
+      end
+    end
+  end
 end
