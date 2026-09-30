@@ -46,7 +46,7 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorker do
     SELECT id FROM dataclips
     WHERE search_vector IS NULL
     ORDER BY inserted_at DESC
-    LIMIT $1 FOR UPDATE SKIP LOCKED
+    LIMIT $1 FOR NO KEY UPDATE SKIP LOCKED
   )
   UPDATE dataclips d
   SET search_vector =
