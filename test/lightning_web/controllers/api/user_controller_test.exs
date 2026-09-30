@@ -265,6 +265,273 @@ defmodule LightningWeb.API.UserControllerTest do
     end
   end
 
+  describe "PATCH /api/users/:id" do
+    setup %{conn: conn, account: account} do
+      user =
+        insert(:user,
+          email: "patched@example.com",
+          first_name: "Ada",
+          last_name: "Lovelace"
+        )
+
+      %{conn: with_scopes(conn, account, ["users:write"]), user: user}
+    end
+
+    test "changes the names and role and answers 200 as a create would", %{
+      conn: conn,
+      user: user
+    } do
+      conn =
+        patch(conn, ~p"/api/users/#{user.id}", %{
+          first_name: "Grace",
+          last_name: "Hopper",
+          role: "superuser"
+        })
+
+      assert json_response(conn, 200) == %{
+               "data" => %{
+                 "type" => "users",
+                 "id" => user.id,
+                 "attributes" => %{
+                   "email" => "patched@example.com",
+                   "first_name" => "Grace",
+                   "last_name" => "Hopper",
+                   "role" => "superuser"
+                 },
+                 "links" => %{"self" => user_url(user.id)}
+               }
+             }
+
+      assert %User{first_name: "Grace", last_name: "Hopper", role: :superuser} =
+               Accounts.get_user(user.id)
+    end
+
+    test "leaves the password alone unless one is given", %{
+      conn: conn,
+      user: user
+    } do
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{first_name: "Grace"})
+             |> json_response(200)
+
+      assert Accounts.get_user_by_email_and_password(user.email, "hello world!")
+    end
+
+    test "changes the password and signs the user out of its sessions only", %{
+      conn: conn,
+      user: user
+    } do
+      session = Accounts.generate_user_session_token(user)
+      api_token = Accounts.generate_api_token(user)
+
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{password: @password})
+             |> json_response(200)
+
+      assert Accounts.get_user_by_email_and_password(user.email, @password)
+      refute Accounts.get_user_by_email_and_password(user.email, "hello world!")
+      refute Accounts.get_user_by_session_token(session)
+      assert Accounts.get_user_by_api_token(api_token)
+    end
+
+    test "signs the user out when its role changes", %{conn: conn, user: user} do
+      session = Accounts.generate_user_session_token(user)
+
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{role: "superuser"})
+             |> json_response(200)
+
+      refute Accounts.get_user_by_session_token(session)
+    end
+
+    test "keeps the sessions when only the names change", %{
+      conn: conn,
+      user: user
+    } do
+      session = Accounts.generate_user_session_token(user)
+
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{
+               first_name: "Grace",
+               role: "user"
+             })
+             |> json_response(200)
+
+      assert Accounts.get_user_by_session_token(session)
+    end
+
+    test "confirms an unconfirmed user and never unconfirms one", %{
+      conn: conn,
+      user: user
+    } do
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{confirmed: false})
+             |> json_response(200)
+
+      refute Accounts.get_user(user.id).confirmed_at
+
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{confirmed: true})
+             |> json_response(200)
+
+      assert %{confirmed_at: confirmed_at} = Accounts.get_user(user.id)
+      assert confirmed_at
+
+      confirmed =
+        insert(:user, confirmed_at: ~U[2020-01-01 00:00:00Z])
+
+      for confirmed_param <- [true, false] do
+        assert conn
+               |> patch(~p"/api/users/#{confirmed.id}", %{
+                 confirmed: confirmed_param
+               })
+               |> json_response(200)
+
+        assert Accounts.get_user(confirmed.id).confirmed_at ==
+                 ~U[2020-01-01 00:00:00Z]
+      end
+    end
+
+    test "ignores the email and keys it doesn't take", %{conn: conn, user: user} do
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{
+               email: "moved@example.com",
+               support_user: true,
+               disabled: true,
+               hashed_password: "not-a-hash",
+               confirmed_at: "2020-01-01T00:00:00Z"
+             })
+             |> json_response(200)
+
+      assert %User{
+               email: "patched@example.com",
+               support_user: false,
+               disabled: false,
+               confirmed_at: nil
+             } = Accounts.get_user(user.id)
+
+      assert Accounts.get_user_by_email_and_password(user.email, "hello world!")
+    end
+
+    test "answers 422 keyed by the request's field names", %{
+      conn: conn,
+      user: user
+    } do
+      assert json_response(
+               patch(conn, ~p"/api/users/#{user.id}", %{
+                 first_name: "  ",
+                 last_name: "a\0b",
+                 password: "short",
+                 role: "admin",
+                 confirmed: "perhaps"
+               }),
+               422
+             ) == %{
+               "errors" => %{
+                 "first_name" => ["This field can't be blank."],
+                 "last_name" => ["can't contain control characters"],
+                 "password" => ["Password minimum length is 12 characters."],
+                 "role" => ["is invalid"],
+                 "confirmed" => ["is invalid"]
+               }
+             }
+
+      assert json_response(
+               patch(conn, ~p"/api/users/#{user.id}", %{
+                 last_name: "",
+                 password: "abcdefghijkl\0anything"
+               }),
+               422
+             ) == %{
+               "errors" => %{
+                 "last_name" => ["This field can't be blank."],
+                 "password" => ["can't contain a NUL character"]
+               }
+             }
+
+      assert %User{first_name: "Ada", last_name: "Lovelace", role: :user} =
+               Accounts.get_user(user.id)
+
+      assert Accounts.get_user_by_email_and_password(user.email, "hello world!")
+      assert %{entries: []} = Lightning.Auditing.list_all()
+    end
+
+    test "answers 404 for a user that doesn't exist", %{conn: conn} do
+      assert conn
+             |> patch(~p"/api/users/#{Ecto.UUID.generate()}", %{first_name: "A"})
+             |> json_response(404)
+
+      assert conn
+             |> patch(~p"/api/users/not-a-uuid", %{first_name: "A"})
+             |> json_response(404)
+    end
+
+    test "records what changed, with the service account as the actor", %{
+      conn: conn,
+      account: account,
+      user: user
+    } do
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{
+               first_name: "Grace",
+               last_name: "Lovelace",
+               password: @password
+             })
+             |> json_response(200)
+
+      assert %{entries: [audit]} = Lightning.Auditing.list_all()
+
+      assert %{
+               item_type: "user",
+               event: "updated",
+               item_id: item_id,
+               actor_type: :service_account,
+               metadata: %{"password_changed" => true}
+             } = audit
+
+      assert item_id == user.id
+      assert audit.actor_id == account.uuid
+      assert audit.changes.before == %{"first_name" => "Ada"}
+      assert audit.changes.after == %{"first_name" => "Grace"}
+      refute inspect(audit) =~ @password
+      refute inspect(audit) =~ "$2b$"
+    end
+
+    test "records nothing when nothing changes", %{conn: conn, user: user} do
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{
+               first_name: "Ada",
+               role: "user",
+               confirmed: false
+             })
+             |> json_response(200)
+
+      assert %{entries: []} = Lightning.Auditing.list_all()
+    end
+
+    test "needs users:write", %{conn: conn, account: account, user: user} do
+      conn =
+        conn
+        |> with_scopes(account, ["users:read"])
+        |> patch(~p"/api/users/#{user.id}", %{first_name: "Grace"})
+
+      assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+      assert %User{first_name: "Ada"} = Accounts.get_user(user.id)
+    end
+
+    test "refuses a personal access token", %{conn: conn, user: user} do
+      token = insert(:user, role: :superuser) |> Accounts.generate_api_token()
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer " <> token)
+        |> patch(~p"/api/users/#{user.id}", %{first_name: "Grace"})
+
+      assert json_response(conn, 401) == %{"error" => "invalid_token"}
+      assert %User{first_name: "Ada"} = Accounts.get_user(user.id)
+    end
+  end
+
   describe "GET /api/users" do
     setup %{conn: conn, account: account} do
       %{conn: with_scopes(conn, account, ["users:read"])}

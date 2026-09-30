@@ -339,13 +339,34 @@ defmodule Lightning.Accounts.User do
     |> cast(attrs, [:email, :password, :first_name, :last_name, :role])
     |> Lightning.Validators.validate_email_format()
     |> unique_constraint(:email)
+    |> validate_service_account_fields(attrs)
+    |> validate_password([])
+  end
+
+  @doc """
+  Changes to a user a service account makes through `PATCH /api/users/:id`.
+
+  Takes the same fields as `service_account_changeset/1` except the email,
+  with the same rules for any that are present. The password is only checked
+  and hashed when one is given, and `confirmed: true` confirms an unconfirmed
+  email but nothing unconfirms one.
+  """
+  @spec service_account_update_changeset(t(), map()) :: Ecto.Changeset.t()
+  def service_account_update_changeset(%User{} = user, attrs) do
+    user
+    |> cast(attrs, [:password, :first_name, :last_name, :role])
+    |> validate_service_account_fields(attrs)
+    |> maybe_validate_password([])
+  end
+
+  defp validate_service_account_fields(changeset, attrs) do
+    changeset
     |> Lightning.Validators.validate_name(:first_name)
     |> Lightning.Validators.validate_name(:last_name)
     |> validate_name()
     |> validate_length(:first_name, max: 255)
     |> validate_length(:last_name, max: 255)
     |> confirm_if_asked(attrs)
-    |> validate_password([])
   end
 
   defp confirm_if_asked(changeset, attrs) do
@@ -353,9 +374,16 @@ defmodule Lightning.Accounts.User do
     |> cast(attrs, [:confirmed])
     |> apply_action(:insert)
     |> case do
-      {:ok, %{confirmed: true}} -> confirm_changeset(changeset)
-      {:ok, _unconfirmed} -> changeset
-      {:error, _invalid} -> add_error(changeset, :confirmed, "is invalid")
+      {:ok, %{confirmed: true}} ->
+        if get_field(changeset, :confirmed_at),
+          do: changeset,
+          else: confirm_changeset(changeset)
+
+      {:ok, _unconfirmed} ->
+        changeset
+
+      {:error, _invalid} ->
+        add_error(changeset, :confirmed, "is invalid")
     end
   end
 

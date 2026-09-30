@@ -98,6 +98,7 @@ defmodule LightningWeb.Router do
     pipe_through [:access_token_api]
 
     resources "/users", API.UserController, only: [:index, :show, :create]
+    patch "/users/:id", API.UserController, :update
   end
 
   scope "/api", LightningWeb, as: :api do

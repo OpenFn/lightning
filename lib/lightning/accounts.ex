@@ -170,6 +170,50 @@ defmodule Lightning.Accounts do
     end
   end
 
+  @doc """
+  Changes a user on behalf of a service account, and records the audit event
+  in the same transaction when anything changed.
+
+  A new password or role signs the user out of every session, as it does when
+  a superuser changes them in the UI.
+  """
+  @spec update_user_as_service_account(User.t(), map(), ServiceAccount.t()) ::
+          {:ok, User.t()} | {:error, Changeset.t()}
+  def update_user_as_service_account(
+        %User{} = user,
+        attrs,
+        %ServiceAccount{} = service_account
+      ) do
+    changeset = User.service_account_update_changeset(user, attrs)
+
+    revoke_contexts =
+      if Enum.any?(
+           [:hashed_password, :role],
+           &Changeset.changed?(changeset, &1)
+         ),
+         do: ["session"]
+
+    Multi.new()
+    |> Multi.update(:user, changeset)
+    |> Multi.run(:audit, fn repo, _changes ->
+      changeset
+      |> Audit.user_updated(service_account)
+      |> Lightning.Auditing.Audit.save(repo)
+    end)
+    |> maybe_revoke_tokens(user, revoke_contexts)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} ->
+        if revoke_contexts,
+          do: LightningWeb.UserAuth.disconnect_user_sockets(user)
+
+        {:ok, user}
+
+      {:error, _step, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
   defp taken_or_invalid(changeset) do
     with {_message, opts} <- changeset.errors[:email],
          :unique <- opts[:constraint],
