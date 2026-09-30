@@ -7,7 +7,7 @@ import { MonacoEditor } from '../../monaco';
 import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
 import FileUploader from '../FileUploader';
 
-const iconStyle = 'h-4 w-4 text-grey-400';
+const iconStyle = 'h-4 w-4 text-gray-400';
 
 export const DEFAULT_MAX_DATACLIP_SIZE_BYTES = 10_000_000; // 10mb fallback when nothing comes from liveview
 

@@ -583,15 +583,15 @@ defmodule LightningWeb.RunLive.Components do
         {"success", _any} -> [:success, "text-green-500"]
         {"fail", _any} -> [:fail, "text-red-500"]
         {"crash", _any} -> [:crash, "text-orange-800"]
-        {"cancel", _any} -> [:cancel, "text-grey-600"]
+        {"cancel", _any} -> [:cancel, "text-gray-600"]
         {"kill", "SecurityError"} -> [:shield, "text-yellow-800"]
         {"kill", "ImportError"} -> [:shield, "text-yellow-800"]
         {"kill", "TimeoutError"} -> [:clock, "text-yellow-800"]
         {"kill", "OOMError"} -> [:circle_ex, "text-yellow-800"]
         {"kill", "StateTooLargeError"} -> [:circle_ex, "text-yellow-800"]
         {"kill", unknown} -> unknown_kill_icon(unknown)
-        {"exception", ""} -> [:triangle_ex, "text-black-800"]
-        {"lost", _nil} -> [:triangle_ex, "text-black-800"]
+        {"exception", ""} -> [:triangle_ex, "text-black"]
+        {"lost", _nil} -> [:triangle_ex, "text-black"]
       end
 
     assigns =

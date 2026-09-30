@@ -35,6 +35,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders
   alias LightningWeb.Channels.WorkflowJSON
+  alias LightningWeb.Observability
 
   require Logger
 
@@ -83,6 +84,12 @@ defmodule LightningWeb.WorkflowChannel do
       )
 
       Lightning.Adaptors.subscribe_to_updates()
+
+      Observability.put_scope(
+        user_id: user.id,
+        project_id: project.id,
+        workflow_id: workflow_id
+      )
 
       {:ok,
        assign(socket,
@@ -1248,7 +1255,7 @@ defmodule LightningWeb.WorkflowChannel do
   defp warn_unhandled_message(kind, event) do
     Logger.warning("WorkflowChannel: unhandled #{kind} event: #{event}")
 
-    Sentry.capture_message(
+    Lightning.Sentry.capture_message(
       "WorkflowChannel: unhandled #{kind} event: #{event}",
       level: :warning
     )

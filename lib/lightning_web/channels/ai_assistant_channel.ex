@@ -26,6 +26,7 @@ defmodule LightningWeb.AiAssistantChannel do
   alias Lightning.Runs
   alias Lightning.Workflows
   alias LightningWeb.Channels.AiAssistantJSON
+  alias LightningWeb.Observability
 
   require Logger
 
@@ -45,6 +46,12 @@ defmodule LightningWeb.AiAssistantChannel do
          :ok <- authorize_session_access(session, user) do
       # Deferred until after authorization so a denied join never writes.
       session = finalize_session_load(session, session_id, params)
+
+      Observability.put_scope(
+        user_id: user.id,
+        session_id: session.id,
+        workflow_id: get_workflow_id_for_session(session)
+      )
 
       Lightning.subscribe("ai_session:#{session.id}")
       subscribe_to_project_events(session)

@@ -66,7 +66,7 @@ defmodule Lightning.MetadataService do
     with {:ok, {adaptor, state}} <-
            assemble_args(adaptor, credential, environment),
          {:ok, adaptor_path} <- get_adaptor_path(adaptor),
-         res <- CLI.metadata(state, adaptor_path),
+         {:ok, res} <- CLI.metadata(state, adaptor_path),
          {:ok, path} <- get_output_path(res) do
       path
       |> File.read()

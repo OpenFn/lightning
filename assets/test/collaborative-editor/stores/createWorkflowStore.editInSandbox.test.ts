@@ -1,4 +1,3 @@
-
 import type { Channel } from 'phoenix';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 import * as Y from 'yjs';

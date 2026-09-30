@@ -54,7 +54,7 @@ defmodule LightningWeb.API.WorkflowHealthController do
 
   # Closed set, string-matched — no free integer, no parse to defend.
   @days %{"1" => 1, "7" => 7, "30" => 30}
-  @default_days "30"
+  @default_days "7"
   @default_timezone "Etc/UTC"
 
   # CLDR's sentinel for a host clock it could not map to an IANA zone. A

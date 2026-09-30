@@ -157,8 +157,6 @@ config :lightning, Oban, testing: :inline
 # Enables / Displays the credential features for LightningWeb.CredentialLiveTest
 config :lightning, LightningWeb, allow_credential_transfer: true
 
-config :lightning, CLI, child_process_mod: FakeRambo
-
 config :lightning, :is_resettable_demo, true
 
 # Tiny budget so a handful of pending rows fills multiple full batches and trips

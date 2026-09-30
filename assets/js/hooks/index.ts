@@ -25,11 +25,7 @@ import {
 } from './KeyHandlers';
 import LogLineHighlight from './LogLineHighlight';
 import type { PhoenixHook } from './PhoenixHook';
-import {
-  TabbedContainer,
-  TabbedSelector,
-  TabbedPanels,
-} from './TabbedContainer';
+import { TabbedContainer } from './TabbedContainer';
 
 export {
   LogLineHighlight,
@@ -38,8 +34,6 @@ export {
   TemplateToWorkflow,
   ElapsedIndicator,
   TabbedContainer,
-  TabbedSelector,
-  TabbedPanels,
   SaveViaCtrlS,
   InspectorSaveViaCtrlS,
   OpenSyncModalViaCtrlShiftS,

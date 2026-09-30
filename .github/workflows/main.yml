@@ -10,13 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: erlef/setup-elixir@v1
+      - uses: erlef/setup-beam@v1
         with:
-          otp-version: 26
-          elixir-version: '1.18.3'
+          version-file: .tool-versions
+          version-type: strict
       - run: sudo apt-get install -y libsodium-dev
-      - run: mix deps.get
-      - run: mix docs
 
       - name: Generate docs 🔧
         run: |

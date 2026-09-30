@@ -157,18 +157,28 @@ config :tailwind,
     cd: Path.expand("..", __DIR__)
   ]
 
+# Every key the app attaches with Logger.metadata/1, mostly via
+# LightningWeb.Observability.put_scope/1. Defined once so the console and
+# Sentry can't drift; a new key has to be added here to reach either.
+log_metadata = [
+  :request_id,
+  :session_id,
+  :prompt_size,
+  :credential_id,
+  :run_id,
+  :project_id,
+  :project_env,
+  :user_id,
+  :workflow_id,
+  :worker_id
+]
+
+config :lightning, :log_metadata, log_metadata
+
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: [
-    :request_id,
-    :session_id,
-    :prompt_size,
-    :credential_id,
-    :run_id,
-    :project_id,
-    :project_env
-  ]
+  metadata: log_metadata
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

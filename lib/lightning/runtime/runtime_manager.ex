@@ -80,14 +80,7 @@ defmodule Lightning.Runtime.RuntimeManager do
     end
 
     def to_env(config) do
-      (config.env ++ [{"WORKER_SECRET", config.worker_secret}])
-      |> Enum.map(fn
-        {k, nil} ->
-          {String.to_charlist(k), false}
-
-        {k, v} ->
-          {String.to_charlist(k), String.to_charlist(v)}
-      end)
+      config.env ++ [{"WORKER_SECRET", config.worker_secret}]
     end
 
     defp to_arg({:backoff, v}), do: ~w(--backoff #{v[:min]}/#{v[:max]})
@@ -253,25 +246,19 @@ defmodule Lightning.Runtime.RuntimeManager do
     # Source: https://stackoverflow.com/questions/75594758/sigterm-not-intercepted-by-the-handler-in-nodejs-app
     # System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
 
-    wrapper = Application.app_dir(:lightning, "priv/runtime/port_wrapper")
-    init_cmd = port_init(wrapper)
+    [cmd | args] = Config.to_args(state.config)
 
-    opts =
-      [
-        :use_stdio,
-        :exit_status,
-        :binary,
-        :hide,
+    Logger.debug(
+      "Starting runtime: #{inspect([cmd | args])} in #{state.config.cd}"
+    )
+
+    {:ok, port, os_pid} =
+      Lightning.OsProcess.open(cmd, args,
         cd: state.config.cd,
-        args: state.config |> Config.to_args(),
         line: 1024,
-        env: state.config |> Config.to_env()
-      ]
+        env: Config.to_env(state.config)
+      )
 
-    Logger.debug("Starting runtime with opts: #{inspect(opts)}")
-
-    port = Port.open(init_cmd, opts)
-    {:os_pid, os_pid} = Port.info(port, :os_pid)
     :persistent_term.put(:runtime_os_pid, os_pid)
 
     %{state | runtime_port: port, runtime_os_pid: os_pid}
@@ -311,18 +298,5 @@ defmodule Lightning.Runtime.RuntimeManager do
 
   defp log_buffer(buffer) do
     buffer |> Enum.reverse() |> IO.iodata_to_binary() |> Logger.info()
-  end
-
-  defp port_init(command) when is_binary(command) do
-    cmd = String.to_charlist(command)
-
-    cmd =
-      if Path.type(cmd) == :absolute do
-        cmd
-      else
-        :os.find_executable(cmd) || :erlang.error(:enoent, [command])
-      end
-
-    {:spawn_executable, cmd}
   end
 end

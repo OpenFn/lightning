@@ -84,7 +84,10 @@ function stubFetch(responses: Record<string, unknown>) {
   return { fetchMock, signals };
 }
 
-function mount(responses: Record<string, unknown>) {
+function mount(
+  responses: Record<string, unknown>,
+  { retention }: { retention?: string } = {}
+) {
   const stub = stubFetch(responses);
 
   const rendered = render(
@@ -92,6 +95,7 @@ function mount(responses: Record<string, unknown>) {
       data-workflow-id="wf-1"
       data-project-id="proj-1"
       data-workflow-name="Sync patients"
+      data-history-retention-period={retention}
     />
   );
 
@@ -116,15 +120,15 @@ describe('WorkflowHealth', () => {
     await screen.findAllByText('Success');
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/outcomes?days=30',
+      '/api/projects/proj-1/workflows/wf-1/health/outcomes?days=7',
       expect.objectContaining({ credentials: 'same-origin' })
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/failures?days=30',
+      '/api/projects/proj-1/workflows/wf-1/health/failures?days=7',
       expect.objectContaining({ credentials: 'same-origin' })
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/runs?days=30',
+      '/api/projects/proj-1/workflows/wf-1/health/runs?days=7',
       expect.objectContaining({ credentials: 'same-origin' })
     );
   });
@@ -137,7 +141,7 @@ describe('WorkflowHealth', () => {
     await screen.findAllByText('Success');
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/runs?days=30',
+      '/api/projects/proj-1/workflows/wf-1/health/runs?days=7',
       expect.objectContaining({
         headers: {
           'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -299,18 +303,18 @@ describe('WorkflowHealth', () => {
 
     await screen.findAllByText('Success');
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Last 24 hours' }));
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/outcomes?days=7',
+      '/api/projects/proj-1/workflows/wf-1/health/outcomes?days=1',
       expect.objectContaining({ credentials: 'same-origin' })
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/failures?days=7',
+      '/api/projects/proj-1/workflows/wf-1/health/failures?days=1',
       expect.objectContaining({ credentials: 'same-origin' })
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/runs?days=7',
+      '/api/projects/proj-1/workflows/wf-1/health/runs?days=1',
       expect.objectContaining({ credentials: 'same-origin' })
     );
   });
@@ -441,7 +445,7 @@ describe('WorkflowHealth', () => {
     responses['failures'] = new Promise(() => {});
     responses['runs'] = new Promise(() => {});
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Last 30 days' }));
 
     expect(screen.queryAllByText('Success')).toHaveLength(0);
     // Each panel holds a placeholder, but only for a reader who lands inside
@@ -470,7 +474,7 @@ describe('WorkflowHealth', () => {
     };
     responses['failures'] = new Promise(() => {});
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Last 30 days' }));
 
     await screen.findByText('1,287 work orders');
 
@@ -492,7 +496,7 @@ describe('WorkflowHealth', () => {
     responses['outcomes'] = 500;
     responses['runs'] = 500;
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Last 30 days' }));
 
     // An `alert`, so the failure is read out at once.
     const alerts = await screen.findAllByRole('alert');
@@ -502,5 +506,47 @@ describe('WorkflowHealth', () => {
       ERROR,
     ]);
     expect(screen.queryAllByText('Success')).toHaveLength(0);
+  });
+
+  test('enables every range when retention is unlimited', async () => {
+    mount(both);
+
+    await screen.findAllByText('Success');
+
+    expect(screen.getByRole('radio', { name: 'Last 24 hours' })).toBeEnabled();
+    expect(screen.getByRole('radio', { name: 'Last 7 days' })).toBeEnabled();
+    expect(screen.getByRole('radio', { name: 'Last 30 days' })).toBeEnabled();
+  });
+
+  test('disables a range longer than the project retains, and explains why on hover', async () => {
+    const { fetchMock } = mount(both, { retention: '14' });
+
+    await screen.findAllByText('Success');
+
+    const month = screen.getByRole('radio', { name: 'Last 30 days' });
+    expect(month).toHaveAttribute('aria-disabled', 'true');
+
+    await userEvent.hover(month);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Only 14 days of history are kept for this project.'
+    );
+
+    await userEvent.click(month);
+
+    expect(screen.getByRole('radio', { name: 'Last 7 days' })).toBeChecked();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('days=30'),
+      expect.anything()
+    );
+  });
+
+  test('leaves every range enabled when retention covers all of them', async () => {
+    mount(both, { retention: '30' });
+
+    await screen.findAllByText('Success');
+
+    const month = screen.getByRole('radio', { name: 'Last 30 days' });
+    expect(month).not.toHaveAttribute('aria-disabled');
   });
 });

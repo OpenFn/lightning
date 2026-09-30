@@ -14,8 +14,8 @@ jobs:
   security-review:
     # Run on: non-draft PR open/ready, OR a PR comment starting with "/security-review".
     if: >-
-      (github.event_name == 'pull_request' && !github.event.pull_request.draft) ||
-      (github.event_name == 'issue_comment' &&
+      (github.event_name == 'pull_request' && !github.event.pull_request.draft)
+      || (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request != null &&
        startsWith(github.event.comment.body, '/security-review'))
     runs-on: ubuntu-latest

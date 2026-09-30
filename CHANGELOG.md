@@ -17,17 +17,38 @@ and this project adheres to
 
 ### Added
 
+- The AI assistant now shows a warning banner above its chat input when the
+  current workflow is live.
+  [#5205](https://github.com/OpenFn/lightning/pull/5205)
+- Channel joins now attach identity and resource scope (user, project, workflow,
+  run, worker) to both log lines and Sentry events, so an issue shows who and
+  what it affected rather than `Users Impacted: 0`.
+  [#5200](https://github.com/OpenFn/lightning/pull/5200)
 - The workflow health charts now link into history. A donut wedge or legend row
   opens the work orders it counted, filtered to those states and that window,
   and a triage row opens the ones sharing its error signature.
   [#5188](https://github.com/OpenFn/lightning/pull/5188)
 - A "Steps with failures" card on the workflow health page, ranking the jobs the
   window's failures landed on, heaviest first.
+- The workflow health page now defaults to the last 7 days, and disables any
+  range longer than the project's history retention, with a tooltip saying why.
+  [#5209](https://github.com/OpenFn/lightning/pull/5209)
+- The workflow editor now tells you when Lightning has been updated since you
+  opened it, with a notice that stays until you reload or close it. Previously
+  an open editor could keep running the old version for hours after a deploy.
+  [#5202](https://github.com/OpenFn/lightning/pull/5202)
 
 ### Changed
 
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
+- On Linux, database connections now detect a silently dead network path (e.g. a
+  node drain during a node-pool upgrade) within about 20s, including queries run
+  with no timeout, which previously could hang indefinitely. Connections use TCP
+  keepalive with `DATABASE_TCP_USER_TIMEOUT` (ms, defaults to
+  `DATABASE_TIMEOUT + 5s`) as the cut-off; set it to `0` to restore the previous
+  behaviour. Lightning only applies these options on Linux hosts.
+  [#4855](https://github.com/OpenFn/lightning/pull/4855)
 - Failure alerts and project digests now link to the workflow health page, where
   failures are grouped by error signature. The digest keeps its history link for
   the runs behind its counts, and shows the health link only for workflows that
@@ -46,12 +67,26 @@ and this project adheres to
   the app's own: the re-authenticate page's avatar uses `user_avatar`, the audit
   log's event badge uses `pill`, and the superuser note on the users page is
   plain markup.
+- The `rambo` dependency, so Lightning builds on arm64 without Rust.
+  [#5215](https://github.com/OpenFn/lightning/pull/5215)
 
 ### Fixed
 
 - GitHub sync now prevents two projects in the same project tree (root,
   sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
   pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+- Leaving the workflow editor now closes its connection to the server. It used
+  to stay open, reconnecting in the background, until the tab was closed.
+  [#5202](https://github.com/OpenFn/lightning/pull/5202)
+- The console logger and Sentry's logger handler had drifted to different
+  metadata allowlists, so keys such as `run_id` and `project_id` were logged but
+  never reached Sentry. Both now read one list from config.
+  [#5200](https://github.com/OpenFn/lightning/pull/5200)
+- Step icons for cancelled, lost and exception runs now show their intended grey
+  and black, as do a few muted icons and the editor tips border. Their colour
+  classes were misspelt or didn't exist, so they took the text colour around
+  them. Buttons in the OAuth credential alerts also now show their hover and
+  focus colours. [#5212](https://github.com/OpenFn/lightning/pull/5212)
 
 ### Security
 
@@ -62,6 +97,18 @@ and this project adheres to
   proxy in front of it to disagree about where one response ends and the next
   begins. Mint is the HTTP client Lightning uses to call other systems, so the
   risk is in what those systems send back, not in requests made to Lightning.
+- Bumped `mint` to 1.11.0, clearing
+  [CVE-2026-91043](https://osv.dev/vulnerability/EEF-CVE-2026-91043),
+  [CVE-2026-92103](https://osv.dev/vulnerability/EEF-CVE-2026-92103) and
+  [CVE-2026-94194](https://osv.dev/vulnerability/EEF-CVE-2026-94194). A
+  malicious server could exhaust Lightning's memory with oversized HTTP/2
+  headers or frames, or smuggle a second response past a proxy using mislabelled
+  HTTP/1 chunked encoding. As above, the risk is in responses from the systems
+  Lightning calls. [#5218](https://github.com/OpenFn/lightning/pull/5218)
+- Bumped `cowlib` to 2.20.0, clearing
+  [CVE-2026-43971](https://osv.dev/vulnerability/EEF-CVE-2026-43971). Lightning
+  never called the affected function.
+  [#5218](https://github.com/OpenFn/lightning/pull/5218)
 
 ## [2.19.0] - 2026-09-21
 

@@ -180,8 +180,6 @@ function ConnectedSocket({
         socket: socket as never,
         isConnected: true,
         connectionError: null,
-        connect: () => {},
-        disconnect: () => {},
       }}
     >
       {children}
