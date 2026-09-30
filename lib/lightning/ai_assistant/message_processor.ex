@@ -167,9 +167,23 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
       page: page,
-      attachments: build_attachments(session)
+      attachments: build_attachments(session),
+      skill: detect_skill(message.content)
     )
   end
+
+  # One skill per message, named by a slash command at the very start of it.
+  # The command stays in the content: Apollo strips it itself.
+  @spec detect_skill(String.t()) :: String.t() | nil
+  defp detect_skill("/" <> rest) do
+    name = rest |> String.split(~r/\s/, parts: 2) |> hd()
+
+    if name in known_skills(), do: name
+  end
+
+  defp detect_skill(_content), do: nil
+
+  defp known_skills, do: ~w(diagnose qa)
 
   # Run context the user ticked on the chat input; an unresolvable source is
   # omitted rather than sent as an empty attachment.

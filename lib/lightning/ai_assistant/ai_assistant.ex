@@ -985,6 +985,7 @@ defmodule Lightning.AiAssistant do
     workflow_yaml = Keyword.get(opts, :workflow_yaml)
     page = Keyword.get(opts, :page)
     attachments = Keyword.get(opts, :attachments, [])
+    skill = Keyword.get(opts, :skill)
     history = build_history(session)
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
@@ -997,7 +998,8 @@ defmodule Lightning.AiAssistant do
            history: history,
            meta: meta,
            metrics_opt_in: metrics_opt_in,
-           attachments: attachments
+           attachments: attachments,
+           skill: skill
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->

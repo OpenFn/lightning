@@ -152,6 +152,8 @@ defmodule Lightning.ApolloClient do
       on the Apollo side. Omitted from the wire payload when not supplied.
     - `:attachments` - Run context the user chose to send, as a list of
       `%{"type" => type, "content" => content}` maps (default: `[]`)
+    - `:skill` - Name of the skill the user invoked by slash command
+      (optional). `content` still carries the command; Apollo strips it.
   """
   @spec global_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def global_chat_stream(content, opts \\ []) do
@@ -161,6 +163,7 @@ defmodule Lightning.ApolloClient do
     meta = Keyword.get(opts, :meta)
     metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
     attachments = Keyword.get(opts, :attachments, [])
+    skill = Keyword.get(opts, :skill)
 
     payload =
       %{
@@ -172,6 +175,7 @@ defmodule Lightning.ApolloClient do
         "meta" => meta,
         "metrics_opt_in" => metrics_opt_in,
         "attachments" => attachments,
+        "skill" => skill && %{"name" => skill},
         "options" => %{"stream" => true}
       }
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
