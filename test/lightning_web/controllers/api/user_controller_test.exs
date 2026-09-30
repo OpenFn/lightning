@@ -7,6 +7,7 @@ defmodule LightningWeb.API.UserControllerTest do
   alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.ServiceAccount.AccessToken
+  alias LightningWeb.UserAuth
 
   @password "a long enough password"
 
@@ -29,6 +30,11 @@ defmodule LightningWeb.API.UserControllerTest do
   end
 
   defp user_url(id), do: "#{LightningWeb.Endpoint.url()}/api/users/#{id}"
+
+  defp watch_sockets(user) do
+    LightningWeb.Endpoint.subscribe(UserAuth.user_socket_topic(user))
+    LightningWeb.Endpoint.subscribe(UserAuth.live_socket_topic(user))
+  end
 
   describe "POST /api/users" do
     setup %{conn: conn, account: account} do
@@ -323,6 +329,7 @@ defmodule LightningWeb.API.UserControllerTest do
     } do
       session = Accounts.generate_user_session_token(user)
       api_token = Accounts.generate_api_token(user)
+      watch_sockets(user)
 
       assert conn
              |> patch(~p"/api/users/#{user.id}", %{password: @password})
@@ -332,6 +339,51 @@ defmodule LightningWeb.API.UserControllerTest do
       refute Accounts.get_user_by_email_and_password(user.email, "hello world!")
       refute Accounts.get_user_by_session_token(session)
       assert Accounts.get_user_by_api_token(api_token)
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+
+    test "changes nothing when given the password the user already has", %{
+      conn: conn,
+      user: user
+    } do
+      session = Accounts.generate_user_session_token(user)
+      watch_sockets(user)
+
+      for _ <- 1..2 do
+        assert conn
+               |> patch(~p"/api/users/#{user.id}", %{password: "hello world!"})
+               |> json_response(200)
+      end
+
+      assert Accounts.get_user_by_session_token(session)
+      assert Accounts.get_user(user.id).hashed_password == user.hashed_password
+      assert %{entries: []} = Lightning.Auditing.list_all()
+      refute_received %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+
+    test "refuses a password bcrypt would read as the current one", %{
+      conn: conn,
+      user: user
+    } do
+      assert json_response(
+               patch(conn, ~p"/api/users/#{user.id}", %{
+                 password: "hello world!\0anything"
+               }),
+               422
+             ) == %{
+               "errors" => %{"password" => ["can't contain a NUL character"]}
+             }
+    end
+
+    test "needs no names for a user stored without them", %{conn: conn} do
+      user = insert(:user, first_name: nil, last_name: nil)
+
+      assert conn
+             |> patch(~p"/api/users/#{user.id}", %{role: "superuser"})
+             |> json_response(200)
+
+      assert %User{role: :superuser} = Accounts.get_user(user.id)
     end
 
     test "signs the user out when its role changes", %{conn: conn, user: user} do
@@ -349,6 +401,7 @@ defmodule LightningWeb.API.UserControllerTest do
       user: user
     } do
       session = Accounts.generate_user_session_token(user)
+      watch_sockets(user)
 
       assert conn
              |> patch(~p"/api/users/#{user.id}", %{
@@ -358,6 +411,7 @@ defmodule LightningWeb.API.UserControllerTest do
              |> json_response(200)
 
       assert Accounts.get_user_by_session_token(session)
+      refute_received %Phoenix.Socket.Broadcast{event: "disconnect"}
     end
 
     test "confirms an unconfirmed user and never unconfirms one", %{
