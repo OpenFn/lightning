@@ -52,6 +52,32 @@ defmodule LightningWeb.FirstSetupLiveTest do
       assert html =~ "Projects"
     end
 
+    @tag create_initial_user: false
+    test "refuses a superuser without a first and last name", %{conn: conn} do
+      {:ok, show_live, _html} =
+        live(conn, Routes.first_setup_superuser_path(conn, :show),
+          on_error: :raise
+        )
+
+      form =
+        form(show_live, "#superuser-registration-form",
+          superuser_registration: %{
+            password: "1234567890ab",
+            password_confirmation: "1234567890ab",
+            first_name: " ",
+            last_name: "",
+            email: "nameless@example.com"
+          }
+        )
+
+      assert render_change(form) =~ "can&#39;t be blank"
+      assert has_element?(show_live, "button[type=submit][disabled]")
+
+      assert render_submit(form) =~ "can&#39;t be blank"
+      refute Lightning.Accounts.get_user_by_email("nameless@example.com")
+      refute Lightning.Accounts.has_one_superuser?()
+    end
+
     test "will redirect with a warning when a user already exists", %{conn: conn} do
       assert {:error, {:redirect, %{flash: %{}, to: "/projects"}}} ==
                live(conn, Routes.first_setup_superuser_path(conn, :show),

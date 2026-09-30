@@ -62,11 +62,13 @@ defmodule LightningWeb.API.UserControllerTest do
                Accounts.get_user_by_email("ada@example.com")
     end
 
-    test "creates a confirmed superuser without names", %{conn: conn} do
+    test "creates a confirmed superuser", %{conn: conn} do
       conn =
         post(conn, ~p"/api/users", %{
           email: "root@example.com",
           password: @password,
+          first_name: "Root",
+          last_name: "Admin",
           role: "superuser",
           confirmed: true
         })
@@ -75,15 +77,13 @@ defmodule LightningWeb.API.UserControllerTest do
                "data" => %{
                  "attributes" => %{
                    "email" => "root@example.com",
-                   "first_name" => nil,
-                   "last_name" => nil,
                    "role" => "superuser"
                  }
                }
              } = json_response(conn, 201)
 
       user = Accounts.get_user_by_email("root@example.com")
-      assert %User{role: :superuser, first_name: nil} = user
+      assert %User{role: :superuser} = user
       assert user.confirmed_at
       assert Accounts.get_user_by_email_and_password(user.email, @password)
     end
@@ -93,6 +93,8 @@ defmodule LightningWeb.API.UserControllerTest do
         post(conn, ~p"/api/users", %{
           email: "sneaky@example.com",
           password: @password,
+          first_name: "Sneaky",
+          last_name: "User",
           support_user: true,
           disabled: true,
           hashed_password: "not-a-hash",
@@ -121,6 +123,8 @@ defmodule LightningWeb.API.UserControllerTest do
         post(conn, ~p"/api/users", %{
           email: "TAKEN@example.com",
           password: @password,
+          first_name: "Other",
+          last_name: "Person",
           role: "user"
         })
 
@@ -146,7 +150,8 @@ defmodule LightningWeb.API.UserControllerTest do
                  password: "short",
                  role: "admin",
                  confirmed: "perhaps",
-                 first_name: String.duplicate("a", 256)
+                 first_name: String.duplicate("a", 256),
+                 last_name: "Long"
                }),
                422
              ) == %{
@@ -163,6 +168,7 @@ defmodule LightningWeb.API.UserControllerTest do
                post(conn, ~p"/api/users", %{
                  email: "nul@example.com",
                  password: "abcdefghijkl\0anything",
+                 first_name: "Nul",
                  last_name: "a\0b"
                }),
                422
@@ -176,9 +182,36 @@ defmodule LightningWeb.API.UserControllerTest do
       assert json_response(post(conn, ~p"/api/users", %{}), 422) == %{
                "errors" => %{
                  "email" => ["This field can't be blank."],
-                 "password" => ["This field can't be blank."]
+                 "password" => ["This field can't be blank."],
+                 "first_name" => ["This field can't be blank."],
+                 "last_name" => ["This field can't be blank."]
                }
              }
+    end
+
+    test "answers 422 for a user without both names, for either role", %{
+      conn: conn
+    } do
+      for role <- ["user", "superuser"],
+          {names, blank} <- [
+            {%{}, ["first_name", "last_name"]},
+            {%{first_name: "", last_name: "  "}, ["first_name", "last_name"]},
+            {%{first_name: "Ada"}, ["last_name"]},
+            {%{first_name: "\u200B", last_name: "Lovelace"}, ["first_name"]}
+          ] do
+        email = "nameless-#{System.unique_integer([:positive])}@example.com"
+
+        conn =
+          post(
+            conn,
+            ~p"/api/users",
+            Map.merge(%{email: email, password: @password, role: role}, names)
+          )
+
+        assert %{"errors" => errors} = json_response(conn, 422)
+        assert errors |> Map.keys() |> Enum.sort() == blank
+        refute Accounts.get_user_by_email(email)
+      end
     end
 
     test "records an audit event whose actor is the service account", %{
@@ -188,7 +221,9 @@ defmodule LightningWeb.API.UserControllerTest do
       conn =
         post(conn, ~p"/api/users", %{
           email: "audited@example.com",
-          password: @password
+          password: @password,
+          first_name: "Audi",
+          last_name: "Ted"
         })
 
       assert %{"data" => %{"id" => id}} = json_response(conn, 201)

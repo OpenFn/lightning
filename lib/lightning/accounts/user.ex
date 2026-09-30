@@ -187,6 +187,8 @@ defmodule Lightning.Accounts.User do
     {%{}, registration_fields}
     |> cast(attrs, Map.keys(registration_fields))
     |> validate_email()
+    |> validate_name()
+    |> trim_name()
     |> validate_password(opts)
     |> put_change(:role, :superuser)
   end
@@ -326,9 +328,10 @@ defmodule Lightning.Accounts.User do
   @doc """
   A user a service account creates through `/api/users`.
 
-  The names are optional for either role, and `confirmed: true` confirms the
-  email. A taken email is left to the unique index rather than checked first,
-  so two requests for the same email can't both succeed.
+  Both names are required, as they are on every other path that creates a
+  user, and `confirmed: true` confirms the email. A taken email is left to the
+  unique index rather than checked first, so two requests for the same email
+  can't both succeed.
   """
   @spec service_account_changeset(map()) :: Ecto.Changeset.t()
   def service_account_changeset(attrs) do
@@ -338,6 +341,7 @@ defmodule Lightning.Accounts.User do
     |> unique_constraint(:email)
     |> Lightning.Validators.validate_name(:first_name)
     |> Lightning.Validators.validate_name(:last_name)
+    |> validate_name()
     |> validate_length(:first_name, max: 255)
     |> validate_length(:last_name, max: 255)
     |> confirm_if_asked(attrs)

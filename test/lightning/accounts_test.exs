@@ -651,13 +651,26 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "register_superuser/1" do
-    test "requires email and password to be set" do
+    test "requires email, password and both names to be set" do
       {:error, changeset} = Accounts.register_superuser(%{})
 
       assert %{
                password: ["can't be blank"],
-               email: ["can't be blank"]
+               email: ["can't be blank"],
+               first_name: ["can't be blank"],
+               last_name: ["can't be blank"]
              } = errors_on(changeset)
+    end
+
+    test "refuses names that are only whitespace" do
+      attrs = valid_user_attributes(first_name: "  ", last_name: "\t")
+
+      {:error, changeset} = Accounts.register_superuser(attrs)
+
+      assert %{first_name: ["can't be blank"], last_name: ["can't be blank"]} =
+               errors_on(changeset)
+
+      refute Accounts.get_user_by_email(attrs.email)
     end
 
     test "validates email and password when given" do
@@ -687,6 +700,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_superuser(%{
           email: email,
           first_name: "Sizwe",
+          last_name: "Super",
           password: valid_user_password()
         })
 
@@ -726,7 +740,7 @@ defmodule Lightning.AccountsTest do
       assert %Ecto.Changeset{} =
                changeset = Accounts.change_superuser_registration()
 
-      assert changeset.required == [:password, :email]
+      assert changeset.required == [:password, :first_name, :last_name, :email]
     end
 
     test "allows fields to be set" do
