@@ -34,11 +34,12 @@ and this project adheres to
   a warning, at most once a minute for each reason.
 - The service account can create users with `POST /api/users`, change them with
   `PATCH /api/users/:id` and find them by email with `GET /api/users?email=`,
-  needing the `users:write` and `users:read` scopes. Both names are required,
-  `confirmed: true` skips email verification, and an email that's already taken
-  answers 409 with the existing user. A changed password or role signs the user
-  out. Each user it creates or changes shows in the audit log with the service
-  account as the actor. Personal access tokens can't reach these routes.
+  needing the `users:write` and `users:read` scopes. Creating a user needs both
+  names and a change can't blank one, `confirmed: true` skips email
+  verification, and an email that's already taken answers 409 with the existing
+  user. A changed password or role signs the user out. Each user it creates or
+  changes shows in the audit log with the service account as the actor. Personal
+  access tokens can't reach these routes.
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
@@ -77,6 +78,10 @@ and this project adheres to
   does not know one, still gets UTC; one that sends a zone the tz database does
   not know now gets an error.
   [#5191](https://github.com/OpenFn/lightning/pull/5191)
+- Registering a superuser now requires a first and last name, as every other way
+  of creating a user does, because pages that show a user's name crashed without
+  them. First setup refuses a blank name, and `Lightning.Setup.setup_user` for a
+  superuser without both names now fails rather than creating one.
 
 ### Removed
 
@@ -89,9 +94,6 @@ and this project adheres to
 
 ### Fixed
 
-- First setup now requires the superuser's first and last name, as every other
-  way of creating a user does. Without them, pages that show a user's name
-  crashed.
 - A password containing a NUL character is now refused. Only the part before the
   NUL was being checked at login, so any password starting the same way worked.
 - Leaving the workflow editor now closes its connection to the server. It used
