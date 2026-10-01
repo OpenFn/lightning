@@ -36,7 +36,6 @@ describe('AIChannelRegistry streaming', () => {
       isConnected: () => true,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     registry = new AIChannelRegistry(socket as any, store as any);
 
     // Subscribe wires up the channel event handlers (streaming_chunk, etc.)
