@@ -1559,6 +1559,93 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "configuring OpenTelemetry" do
+    test "enabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED false" do
+      reconfigure(%{
+        "OTEL_SDK_DISABLED" => "false"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "disabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED true" do
+      reconfigure(%{
+        "OTEL_SDK_DISABLED" => "true"
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "disabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED not set" do
+      reconfigure(%{})
+
+      refute get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "enabled if TRACING_ENABLED true, OTEL_SDK_DISABLED false" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_SDK_DISABLED" => "false"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "disabled if TRACING_ENABLED true, OTEL_SDK_DISABLED true" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_SDK_DISABLED" => "true"
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "enabled if TRACING_ENABLED true, OTEL_SDK_DISABLED not set" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "enabled if TRACING_ENABLED false, OTEL_SDK_DISABLED false" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_SDK_DISABLED" => "false"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "disabled if TRACING_ENABLED false, OTEL_SDK_DISABLED true" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_SDK_DISABLED" => "true"
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "disabled if TRACING_ENABLED false, OTEL_SDK_DISABLED not set" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no"
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "raises if OTEL_SDK_DISABLED is set to an invalid value" do
+      message_regexp =
+        ~r/OTEL_SDK_DISABLED must be "true" or "false"/
+
+      assert_raise ArgumentError, message_regexp, fn ->
+        reconfigure(%{
+          "OTEL_SDK_DISABLED" => "invalid"
+        })
+      end
+    end
+  end
+
   # Helpers to read the in-process config that Config writes
   defp get_env(app) do
     Process.get(@config_key)

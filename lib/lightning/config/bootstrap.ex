@@ -876,19 +876,21 @@ defmodule Lightning.Config.Bootstrap do
           "lightning-cluster"
         )
 
-    config :opentelemetry,
-      span_processor: :batch,
-      traces_exporter: :otlp,
-      sampler: :always_on,
-      resource: %{service: %{name: "lightning"}}
-
-    config :opentelemetry_exporter,
-      otlp_protocol: :http_protobuf,
-      otlp_endpoint: "http://tempo:4318"
+    # config :opentelemetry,
+    #   span_processor: :batch,
+    #   traces_exporter: :otlp,
+    #   sampler: :always_on,
+    #   resource: %{service: %{name: "lightning"}}
+    #
+    # config :opentelemetry_exporter,
+    #   otlp_protocol: :http_protobuf,
+    #   otlp_endpoint: "http://tempo:4318"
 
     # ==============================================================================
 
     setup_storage()
+
+    setup_opentelemetry()
 
     config :lightning, :env, config_env()
 
@@ -1234,5 +1236,23 @@ defmodule Lightning.Config.Bootstrap do
 
     You can generate new worker keys using: mix lightning.gen_worker_keys
     """
+  end
+
+  defp setup_opentelemetry() do
+    disabled? =
+      case env!("OTEL_SDK_DISABLED", &otel_parse_sdk_disabled/1, nil) do
+        nil -> not env!("TRACING_ENABLED", &Utils.ensure_boolean/1, false)
+        sdk_disabled_set -> sdk_disabled_set
+      end
+
+    config :lightning, :otel, enabled: not disabled?
+  end
+
+  defp otel_parse_sdk_disabled("true"), do: true
+  defp otel_parse_sdk_disabled("false"), do: false
+
+  defp otel_parse_sdk_disabled(other) do
+    raise ArgumentError,
+          ~s(OTEL_SDK_DISABLED must be "true" or "false", got: #{inspect(other)})
   end
 end
