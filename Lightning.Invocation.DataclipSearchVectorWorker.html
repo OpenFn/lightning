@@ -130,7 +130,10 @@ tick keeps pace. The worker shares the <code class="inline">search_indexing</cod
 <a href="Lightning.LogLines.SearchVectorWorker.html"><code class="inline">Lightning.LogLines.SearchVectorWorker</code></a>; that queue runs at concurrency 2, so
 the two workers each get a slot and their snowball chains never starve one
 another. The cron tick and the snowball carry distinct <code class="inline">trigger</code> args, so job
-uniqueness allows one of each to queue but never a duplicate.</p>
+uniqueness allows one of each to queue but never a duplicate.</p><p>We lock rows with <code class="inline">FOR NO KEY UPDATE</code> because saving a step needs a
+<code class="inline">FOR KEY SHARE</code> lock on its dataclip, and a plain <code class="inline">FOR UPDATE</code> would make it
+wait for the whole batch. We only ever change <code class="inline">search_vector</code>, so the lighter
+lock is all we need.</p>
     </section>
 
 </div>
