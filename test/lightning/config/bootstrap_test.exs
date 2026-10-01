@@ -1566,6 +1566,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
     end
 
     test "disabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED true" do
@@ -1574,12 +1575,14 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       refute get_env(:lightning, :otel)[:enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
     test "disabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED not set" do
       reconfigure(%{})
 
       refute get_env(:lightning, :otel)[:enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
     test "enabled if TRACING_ENABLED true, OTEL_SDK_DISABLED false" do
@@ -1589,6 +1592,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
     end
 
     test "disabled if TRACING_ENABLED true, OTEL_SDK_DISABLED true" do
@@ -1598,6 +1602,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       refute get_env(:lightning, :otel)[:enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
     test "enabled if TRACING_ENABLED true, OTEL_SDK_DISABLED not set" do
@@ -1606,6 +1611,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
     end
 
     test "enabled if TRACING_ENABLED false, OTEL_SDK_DISABLED false" do
@@ -1615,6 +1621,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
     end
 
     test "disabled if TRACING_ENABLED false, OTEL_SDK_DISABLED true" do
@@ -1624,6 +1631,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       refute get_env(:lightning, :otel)[:enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
     test "disabled if TRACING_ENABLED false, OTEL_SDK_DISABLED not set" do
@@ -1632,6 +1640,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       refute get_env(:lightning, :otel)[:enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
     test "raises if OTEL_SDK_DISABLED is set to an invalid value" do
