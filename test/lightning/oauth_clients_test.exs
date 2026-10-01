@@ -110,6 +110,57 @@ defmodule Lightning.OauthClientsTest do
     end
   end
 
+  describe "list_clients/2" do
+    test "returns a paginated page of oauth clients for a user" do
+      user = insert(:user)
+      for _i <- 1..12, do: insert(:oauth_client, user: user)
+
+      page =
+        OauthClients.list_clients(user, %{"page" => "1", "page_size" => "10"})
+
+      assert %Scrivener.Page{} = page
+      assert page.page_size == 10
+      assert page.total_entries >= 12
+      assert length(page.entries) == 10
+
+      page2 =
+        OauthClients.list_clients(user, %{"page" => "2", "page_size" => "10"})
+
+      assert page2.page_number == 2
+      assert length(page2.entries) > 0
+    end
+
+    test "returns a paginated page of oauth clients for a project, including globals" do
+      user = insert(:user)
+      project = insert(:project)
+      other_project = insert(:project)
+
+      project_clients =
+        for _i <- 1..3,
+            do:
+              insert(:oauth_client,
+                user: user,
+                project_oauth_clients: [%{project: project}]
+              )
+
+      new_global = insert(:oauth_client, global: true, user: user)
+
+      other_client =
+        insert(:oauth_client,
+          user: user,
+          project_oauth_clients: [%{project: other_project}]
+        )
+
+      page =
+        OauthClients.list_clients(project, %{"page" => "1", "page_size" => "100"})
+
+      assert %Scrivener.Page{} = page
+      assert client_id_in_list?(new_global, page.entries)
+      assert Enum.all?(project_clients, &client_id_in_list?(&1, page.entries))
+      refute client_id_in_list?(other_client, page.entries)
+    end
+  end
+
   describe "create_client/1 with project association" do
     test "successfully creates a client and associates with a project" do
       user = insert(:user)
