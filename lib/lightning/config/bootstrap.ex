@@ -491,7 +491,7 @@ defmodule Lightning.Config.Bootstrap do
       )
 
     if log_level do
-      config :logger, level: log_level
+      config :logger, :level, log_level
     end
 
     database_url = env!("DATABASE_URL", :string, nil)
@@ -872,7 +872,6 @@ defmodule Lightning.Config.Bootstrap do
     config :opentelemetry,
       span_processor: :batch,
       traces_exporter: :otlp,
-      # traces_exporter: {:otel_exporter_stdout, []},
       sampler: :always_on,
       resource: %{service: %{name: "lightning"}}
 
