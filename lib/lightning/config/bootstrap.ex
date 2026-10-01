@@ -1226,6 +1226,9 @@ defmodule Lightning.Config.Bootstrap do
       end
 
     config :lightning, :otel, enabled: not disabled?
+
+    config :opentelemetry,
+      sdk_disabled: disabled?
   end
 
   defp otel_parse_sdk_disabled("true"), do: true
