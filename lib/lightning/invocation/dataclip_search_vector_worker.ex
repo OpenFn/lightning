@@ -26,6 +26,12 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorker do
   the two workers each get a slot and their snowball chains never starve one
   another. The cron tick and the snowball carry distinct `trigger` args, so job
   uniqueness allows one of each to queue but never a duplicate.
+
+  In production environments, it was observed that inserts that reference
+  a locked dataclip record would be blocked unitl the search vector query
+  completes. As we are only updating the search vector and not the primary key
+  we can use `FOR NO KEY UPDATE` which will allow the `FOR KEY SHARE` lock to
+  be acquired by the insert and avoid blocking.
   """
 
   use Oban.Worker,

@@ -58,11 +58,6 @@ and this project adheres to
   does not know one, still gets UTC; one that sends a zone the tz database does
   not know now gets an error.
   [#5191](https://github.com/OpenFn/lightning/pull/5191)
-- When the DataclipSearchVectorWorker locks dataclip tables for updates, it now
-  does so using `FOR NO KEY UPDATE` - this will allow inserts into `steps` to
-  apply a `FOR KEY SHARE` lock on the dataclip table, and these inserts will not
-  be blockd by a long-running search vector update.
-  [#5221](https://github.com/OpenFn/lightning/issues/5221)
 
 ### Removed
 
@@ -87,6 +82,14 @@ and this project adheres to
   classes were misspelt or didn't exist, so they took the text colour around
   them. Buttons in the OAuth credential alerts also now show their hover and
   focus colours. [#5212](https://github.com/OpenFn/lightning/pull/5212)
+- When the DataclipSearchVectorWorker locks dataclip records for updates, it now
+  does so using `FOR NO KEY UPDATE` - this will allow inserts into `steps` to
+  apply a `FOR KEY SHARE` lock on the dataclip record, and these inserts will
+  not be blocked by a long-running search vector update. Claude would also like
+  to add that there is a search-freshness benefit in the case where a dataclip
+  record is subject to a `FOR KEY SHARE` lock. Previously these would have been
+  skipped by the search vector update and only picked up a subsequent update.
+  [#5221](https://github.com/OpenFn/lightning/issues/5221)
 
 ### Security
 
