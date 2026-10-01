@@ -82,6 +82,9 @@ and this project adheres to
   classes were misspelt or didn't exist, so they took the text colour around
   them. Buttons in the OAuth credential alerts also now show their hover and
   focus colours. [#5212](https://github.com/OpenFn/lightning/pull/5212)
+- Indexing dataclips for search no longer blocks new steps from being saved
+  while a batch is running.
+  [#5221](https://github.com/OpenFn/lightning/issues/5221)
 
 ### Security
 

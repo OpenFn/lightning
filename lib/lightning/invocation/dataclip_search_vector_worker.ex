@@ -26,6 +26,11 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorker do
   the two workers each get a slot and their snowball chains never starve one
   another. The cron tick and the snowball carry distinct `trigger` args, so job
   uniqueness allows one of each to queue but never a duplicate.
+
+  We lock rows with `FOR NO KEY UPDATE` because saving a step needs a
+  `FOR KEY SHARE` lock on its dataclip, and a plain `FOR UPDATE` would make it
+  wait for the whole batch. We only ever change `search_vector`, so the lighter
+  lock is all we need.
   """
 
   use Oban.Worker,
@@ -46,7 +51,7 @@ defmodule Lightning.Invocation.DataclipSearchVectorWorker do
     SELECT id FROM dataclips
     WHERE search_vector IS NULL
     ORDER BY inserted_at DESC
-    LIMIT $1 FOR UPDATE SKIP LOCKED
+    LIMIT $1 FOR NO KEY UPDATE SKIP LOCKED
   )
   UPDATE dataclips d
   SET search_vector =
