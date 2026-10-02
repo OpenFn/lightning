@@ -112,7 +112,7 @@ defmodule Lightning.MixProject do
       {:ecto_psql_extras, "~> 0.8.2"},
       {:ecto_sql, "~> 3.13"},
       {:esbuild, "~> 0.9", runtime: Mix.env() == :dev},
-      {:ex_doc, "~> 0.39", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.11.2"},
       {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
@@ -266,7 +266,7 @@ defmodule Lightning.MixProject do
         "DEPLOYMENT.md": [title: "Deployment"],
         "tooling/benchmarking/README.md": [
           title: "Benchmarking",
-          filename: "benchmarking.md"
+          filename: "benchmarking"
         ],
         "WORKERS.md": [title: "Workers"],
         "PROVISIONING.md": [title: "Provisioning"],
