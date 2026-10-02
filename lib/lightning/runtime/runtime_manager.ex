@@ -38,7 +38,7 @@ defmodule Lightning.Runtime.RuntimeManager do
 
     defstruct backoff: [min: 0.5, max: 5],
               capacity: nil,
-              cd: Path.expand("../../../assets", __DIR__),
+              cd: nil,
               cmd: ~w(node ./node_modules/.bin/worker),
               env: [],
               port: Lightning.Config.runtime_manager_port(),
@@ -61,6 +61,9 @@ defmodule Lightning.Runtime.RuntimeManager do
           __MODULE__,
           Application.get_env(:lightning, __MODULE__, [])
           |> Keyword.merge(args)
+          |> Keyword.put_new_lazy(:cd, fn ->
+            Application.app_dir(:lightning, "priv/worker")
+          end)
         )
         |> maybe_put_urls()
 
@@ -152,12 +155,26 @@ defmodule Lightning.Runtime.RuntimeManager do
     {start, args} = Keyword.pop(args, :start, false)
 
     if start do
-      Process.flag(:trap_exit, true)
       state = struct(__MODULE__, args)
 
-      {:ok, state, {:continue, :start_runtime}}
+      with :ok <- check_worker(state.config) do
+        Process.flag(:trap_exit, true)
+        {:ok, state, {:continue, :start_runtime}}
+      end
     else
       :ignore
+    end
+  end
+
+  # Stopping in init fails the supervisor's start outright; a worker that
+  # can't be found would otherwise crash-loop until the node halts.
+  defp check_worker(%Config{cd: cd, cmd: [_exe | args]}) do
+    scripts =
+      for arg <- args, String.contains?(arg, "/"), do: Path.expand(arg, cd)
+
+    case Enum.find([cd | scripts], &(not File.exists?(&1))) do
+      nil -> :ok
+      path -> {:stop, {:worker_not_found, path}}
     end
   end
 
