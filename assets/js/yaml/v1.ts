@@ -1,16 +1,19 @@
-// v1 (Lightning legacy) YAML format — PARSE-ONLY.
+// v1 (Lightning legacy) YAML format.
 //
 // This module owns the v1 parse path so existing v1 YAML files (canvas Code
 // panel exports, customer YAML files, legacy WorkflowTemplate rows) continue
-// to import. **There is no v1 serializer in this codebase**: per Phase 4 of
-// #4718, all outbound YAML emits v2 via `./v2.ts` (use `./format.ts` for the
-// public API).
+// to import. Per Phase 4 of #4718, outbound YAML emits v2 via `./v2.ts` (use
+// `./format.ts` for the public API).
+//
+// The one exception is `convertWorkflowStateToSpec` at the bottom of this
+// file, kept for the AI Assistant payload because Apollo still speaks v1.
 //
 // See plan #4718.
 
 import Ajv, { type ErrorObject } from 'ajv';
 import YAML from 'yaml';
 
+import { isValidCustomPath } from '../collaborative-editor/types/trigger';
 import type { Workflow } from '../collaborative-editor/types/workflow';
 import { randomUUID } from '../common';
 
@@ -18,6 +21,10 @@ import workflowV1Schema from './schema/workflow-spec.json';
 import type {
   JobCredentials,
   Position,
+  SpecEdge,
+  SpecJob,
+  SpecTrigger,
+  SpecWebhookTrigger,
   StateEdge,
   StateJob,
   StateTrigger,
@@ -288,4 +295,187 @@ const findActionableAjvError = (
     typeError ||
     errors[0]
   );
+};
+
+// ---------------------------------------------------------------------------
+// Serializer — used ONLY for the AI Assistant payload.
+// ---------------------------------------------------------------------------
+
+const roundPosition = (pos: Position): Position => {
+  return {
+    x: Math.round(pos.x),
+    y: Math.round(pos.y),
+  };
+};
+
+// An edge key is a label. Nothing parses it, and the edge body carries its own
+// identity in source_job, source_trigger and target_job. That matters because
+// the key joins two job keys with `->` and a job name may legally hold a `>`.
+// Jobs named `a` and `b->c` produce the same key as `a->b` and `c`.
+//
+// Mirrors `disambiguate_edge_keys/1` in lib/lightning/export_utils.ex.
+const disambiguateEdgeKeys = (
+  entries: [string, SpecEdge][]
+): { [key: string]: SpecEdge } => {
+  const taken = new Set(entries.map(([key]) => key));
+  const used = new Set<string>();
+  const edges = Object.create(null) as { [key: string]: SpecEdge };
+
+  for (const [key, edge] of entries) {
+    let free = key;
+    if (used.has(free)) {
+      let suffix = 2;
+      while (
+        taken.has(`${key}-${String(suffix)}`) ||
+        used.has(`${key}-${String(suffix)}`)
+      ) {
+        suffix += 1;
+      }
+      free = `${key}-${String(suffix)}`;
+    }
+    used.add(free);
+    edges[free] = edge;
+  }
+
+  return edges;
+};
+
+// Note that we don't serialize the project_credential_id or the
+// keychain_credential_id here... Should we? See discussion in
+// https://github.com/OpenFn/lightning/pull/4297
+export const convertWorkflowStateToSpec = (
+  workflowState: WorkflowState,
+  includeIds: boolean = true
+): WorkflowSpec => {
+  // Null-prototype: a job named `__proto__` assigned onto a plain object runs
+  // the prototype setter instead of adding a key, so the job never reaches the
+  // spec and hasOwnProperty never sees the collision. Same for `constructor`
+  // and `toString` in the seenNames check below.
+  const jobs = Object.create(null) as { [key: string]: SpecJob };
+  workflowState.jobs.forEach(job => {
+    const pos = workflowState.positions?.[job.id];
+    const jobDetails: SpecJob = {
+      ...(includeIds && { id: job.id }),
+      name: job.name,
+      adaptor: job.adaptor,
+      body: job.body,
+      pos: pos ? roundPosition(pos) : undefined,
+    };
+    const key = hyphenate(job.name);
+    // The server refuses this pair rather than dropping one
+    // (Lightning.ExportUtils.DuplicateKeyError), so this side says so too.
+    if (key in jobs) {
+      throw new DuplicateJobNameError(job.name, key);
+    }
+    jobs[key] = jobDetails;
+  });
+
+  const triggers: { [key: string]: SpecTrigger } = {};
+  workflowState.triggers.forEach(trigger => {
+    const pos = workflowState.positions?.[trigger.id];
+    const base = {
+      ...(includeIds && { id: trigger.id }),
+      enabled: trigger.enabled,
+      pos: pos ? roundPosition(pos) : undefined,
+    };
+
+    if (trigger.type === 'cron') {
+      const cursorJob = trigger.cron_cursor_job_id
+        ? workflowState.jobs.find(job => job.id === trigger.cron_cursor_job_id)
+        : null;
+
+      triggers[trigger.type] = {
+        ...base,
+        type: 'cron',
+        cron_expression: trigger.cron_expression ?? '',
+        cron_cursor_job: cursorJob ? hyphenate(cursorJob.name) : null,
+      };
+      return;
+    }
+
+    const webhookDetails: SpecWebhookTrigger = {
+      ...base,
+      type: 'webhook',
+      webhook_reply: trigger.webhook_reply ?? null,
+    };
+
+    // Per-project identity, so it goes with the ids when stripped for a
+    // template. And only one the server would accept, or the import fails.
+    if (
+      includeIds &&
+      trigger.custom_path &&
+      isValidCustomPath(trigger.custom_path)
+    ) {
+      webhookDetails.custom_path = trigger.custom_path;
+    }
+
+    const config = trigger.webhook_response_config;
+    if (config && (config.success_code != null || config.error_code != null)) {
+      webhookDetails.webhook_response_config = {
+        ...(config.success_code != null && {
+          success_code: config.success_code,
+        }),
+        ...(config.error_code != null && { error_code: config.error_code }),
+      };
+    }
+
+    triggers[trigger.type] = webhookDetails;
+  });
+
+  // Collected in order first, then disambiguated, because a suffix has to be
+  // checked against every original key and not just the ones seen so far.
+  const edgeEntries: [string, SpecEdge][] = [];
+  workflowState.edges.forEach(edge => {
+    const edgeDetails: SpecEdge = {
+      ...(includeIds && { id: edge.id }),
+      condition_type: edge.condition_type,
+      enabled: edge.enabled,
+      target_job: '',
+    };
+
+    if (edge.source_trigger_id) {
+      const trigger = workflowState.triggers.find(
+        trigger => trigger.id === edge.source_trigger_id
+      );
+      if (trigger) {
+        edgeDetails.source_trigger = trigger.type;
+      }
+    }
+    if (edge.source_job_id) {
+      const job = workflowState.jobs.find(job => job.id === edge.source_job_id);
+      if (job) {
+        edgeDetails.source_job = hyphenate(job.name);
+      }
+    }
+    const targetJob = workflowState.jobs.find(
+      job => job.id === edge.target_job_id
+    );
+    if (targetJob) {
+      edgeDetails.target_job = hyphenate(targetJob.name);
+    }
+
+    if (edge.condition_label) {
+      edgeDetails.condition_label = edge.condition_label;
+    }
+    if (edge.condition_expression) {
+      edgeDetails.condition_expression = edge.condition_expression;
+    }
+
+    const source_name = edgeDetails.source_trigger || edgeDetails.source_job;
+    const target_name = edgeDetails.target_job;
+
+    edgeEntries.push([`${source_name}->${target_name}`, edgeDetails]);
+  });
+
+  const edges = disambiguateEdgeKeys(edgeEntries);
+
+  const workflowSpec: WorkflowSpec = {
+    ...(includeIds && { id: workflowState.id }),
+    name: workflowState.name,
+    jobs: jobs,
+    triggers: triggers,
+    edges: edges,
+  };
+
+  return workflowSpec;
 };

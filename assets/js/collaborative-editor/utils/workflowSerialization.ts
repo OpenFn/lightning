@@ -1,5 +1,7 @@
-import { serializeWorkflow } from '../../yaml/format';
+import YAML from 'yaml';
+
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import { convertWorkflowStateToSpec } from '../../yaml/v1';
 
 interface WorkflowMetadata {
   id: string;
@@ -131,17 +133,17 @@ export function serializeCanvasForComparison(canvas: {
 /**
  * Serializes a workflow to YAML format for AI Assistant context.
  *
- * This utility converts the workflow state from the store into the v2
- * (CLI-aligned portability format) YAML that can be sent to the AI Assistant
- * as context. It's used in multiple places:
+ * Emits the **v1** format (top-level `jobs`/`triggers`/`edges`, with ids), not
+ * the v2 portability format used everywhere else. Apollo's workflow_chat
+ * service still reads and writes v1: it swaps job bodies and ids for
+ * placeholders so the model cannot mangle them, and that only works on v1.
+ * Switch this to v2 only once Apollo supports it.
+ *
+ * Used in multiple places:
  * - Initial session connection with workflow context
  * - Sending messages with updated workflow state
  * - Creating new conversations
  * - Switching between sessions
- *
- * The v2 format is a stateless interoperability format; UUIDs are not preserved. Steps
- * are referenced by hyphenated name; the AI Assistant correlates back to
- * persisted records by name.
  *
  * @param workflow - The workflow data including jobs, triggers, edges, and positions
  * @returns YAML string representation of the workflow, or undefined if serialization fails
@@ -179,7 +181,8 @@ export function serializeWorkflowToYAML(
       positions: workflow.positions,
     };
 
-    return serializeWorkflow(state);
+    // Include IDs so AI responses preserve them
+    return YAML.stringify(convertWorkflowStateToSpec(state, true));
   } catch (error) {
     console.error('Failed to serialize workflow to YAML:', error);
     return undefined;
