@@ -28,6 +28,16 @@ defmodule Lightning.Auditing do
     end)
   end
 
+  defp assign_actor_display(%{audit: %{actor_type: :service_account} = audit}) do
+    %{
+      audit
+      | actor_display: %{
+          identifier: audit.metadata["service_account_id"],
+          label: "Service account"
+        }
+    }
+  end
+
   defp assign_actor_display(%{audit: %{actor_type: actor_type} = audit} = entry) do
     %{audit | actor_display: actor_display_for(entry[actor_type], actor_type)}
   end
@@ -56,12 +66,6 @@ defmodule Lightning.Auditing do
         %{
           identifier: nil,
           label: Atom.to_string(type) |> String.capitalize()
-        }
-
-      {nil, :service_account} ->
-        %{
-          identifier: nil,
-          label: "Service account"
         }
 
       {nil, :user} ->

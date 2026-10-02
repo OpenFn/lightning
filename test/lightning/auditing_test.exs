@@ -438,10 +438,15 @@ defmodule Lightning.AuditingTest do
                entries: [
                  %{
                    actor_type: :service_account,
-                   actor_display: %{label: "Service account", identifier: nil}
+                   actor_display: %{
+                     label: "Service account",
+                     identifier: identifier
+                   }
                  }
                ]
              } = Auditing.list_all()
+
+      assert identifier == account.id
     end
 
     test "'created' event sets before changes to nil", %{actor: actor} do

@@ -6,8 +6,10 @@ defmodule LightningWeb.TokenExchangeController do
   """
   use LightningWeb, :controller
 
+  alias Lightning.Repo
   alias Lightning.ServiceAccount.AccessToken
   alias Lightning.ServiceAccount.Assertion
+  alias Lightning.ServiceAccount.Audit
 
   require Logger
 
@@ -34,6 +36,8 @@ defmodule LightningWeb.TokenExchangeController do
          {:ok, assertion} <- client_assertion(params),
          {:ok, scopes} <- requested_scopes(params),
          {:ok, account} <- authenticate(assertion, params) do
+      account |> Audit.token_issued(scopes) |> Repo.insert!()
+
       conn
       |> put_resp_header("cache-control", "no-store")
       |> put_resp_header("pragma", "no-cache")

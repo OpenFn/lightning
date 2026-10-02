@@ -288,7 +288,7 @@ defmodule Lightning.Auditing.Audit do
          metadata,
          update_fun
        ) do
-    {actor_id, actor_type} = actor_identity(actor)
+    {actor_id, actor_type, actor_metadata} = actor_identity(actor)
 
     changeset(
       %__MODULE__{},
@@ -299,18 +299,19 @@ defmodule Lightning.Auditing.Audit do
         actor_id: actor_id,
         actor_type: actor_type,
         changes: changes,
-        metadata: metadata
+        metadata: Map.merge(metadata, actor_metadata)
       },
       update_fun
     )
   end
 
-  # A service account's id is its key thumbprint; its uuid is what fits actor_id.
-  defp actor_identity(%Lightning.ServiceAccount{uuid: uuid}),
-    do: {uuid, :service_account}
+  # A service account's id is its key thumbprint, which no table holds and its
+  # uuid can't be turned back into, so the event keeps it to name the actor.
+  defp actor_identity(%Lightning.ServiceAccount{id: id, uuid: uuid}),
+    do: {uuid, :service_account, %{service_account_id: id}}
 
   defp actor_identity(%actor_struct{id: actor_id}),
-    do: {actor_id, extract_actor_type(actor_struct)}
+    do: {actor_id, extract_actor_type(actor_struct), %{}}
 
   defp extract_actor_type(struct_name) do
     struct_name |> Module.split() |> List.last() |> Macro.underscore()

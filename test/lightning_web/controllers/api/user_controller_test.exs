@@ -241,8 +241,10 @@ defmodule LightningWeb.API.UserControllerTest do
                event: "created",
                item_id: ^id,
                actor_type: :service_account,
-               actor_display: %{label: "Service account", identifier: nil}
+               actor_display: %{label: "Service account", identifier: identifier}
              } = audit
+
+      assert identifier == account.id
 
       assert audit.actor_id == account.uuid
       refute Map.has_key?(audit.changes.after, "hashed_password")
