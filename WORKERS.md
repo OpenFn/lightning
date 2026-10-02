@@ -66,9 +66,10 @@ A Base64 encoded private key in PEM format, used to generate JWTs granting
 workers permission to access a specific Run, the related Workflow and
 credentials.
 
-> [!IMPORTANT] This key should never be shared. If you suspect it has been
-> compromised, generate a new one and reconfigure both Lightning and your
-> workers.
+> #### Never share this key {: .warning}
+>
+> This key should never be shared. If you suspect it has been compromised,
+> generate a new one and reconfigure both Lightning and your workers.
 
 **`WORKER_SECRET`**
 

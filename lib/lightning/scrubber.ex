@@ -26,7 +26,7 @@ defmodule Lightning.Scrubber do
   @max_key_length 200
 
   defmodule State do
-    @moduledoc false
+    @moduledoc "The sensitive samples a scrubber replaces, longest first."
     @typep samples :: [String.t()]
     @type t :: {samples()}
 

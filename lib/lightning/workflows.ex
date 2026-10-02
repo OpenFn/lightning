@@ -28,6 +28,7 @@ defmodule Lightning.Workflows do
   alias Lightning.WorkflowVersions
   alias Lightning.WorkOrder
 
+  @doc "Subscribes to the workflow events of a single project."
   defdelegate subscribe(project_id), to: Events
 
   require Logger

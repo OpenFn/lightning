@@ -729,10 +729,13 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:error, changeset}` - Validation error
 
   ## Example
-    {:ok, updated} = Sandboxes.update_sandbox(sandbox, user, %{
-      name: "new-name",
-      color: "#ff6b35"
-    })
+
+  ```elixir
+  {:ok, updated} = Sandboxes.update_sandbox(sandbox, user, %{
+    name: "new-name",
+    color: "#ff6b35"
+  })
+  ```
   """
   @spec update_sandbox(Project.t() | Ecto.UUID.t(), User.t(), map()) ::
           {:ok, Project.t()}
