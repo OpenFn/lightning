@@ -23,6 +23,7 @@ defmodule Lightning.VersionControl do
 
   require Logger
 
+  @doc "Subscribes to a user's version control events, such as a failed OAuth token refresh."
   defdelegate subscribe(user), to: Events
 
   @doc """

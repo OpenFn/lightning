@@ -73,7 +73,10 @@ defmodule Lightning.WorkOrders do
 
   @retry_many_chunk_size 100
 
+  @doc "Subscribes to work order events across all projects."
   defdelegate subscribe, to: Events
+
+  @doc "Subscribes to the work order events of a single project."
   defdelegate subscribe(project_id), to: Events
 
   @spec limit_run_creation(Ecto.UUID.t(), non_neg_integer()) ::

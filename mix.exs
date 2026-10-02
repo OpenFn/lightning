@@ -112,7 +112,7 @@ defmodule Lightning.MixProject do
       {:ecto_psql_extras, "~> 0.8.2"},
       {:ecto_sql, "~> 3.13"},
       {:esbuild, "~> 0.9", runtime: Mix.env() == :dev},
-      {:ex_doc, "~> 0.39", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.11.2"},
       {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
@@ -266,13 +266,27 @@ defmodule Lightning.MixProject do
         "DEPLOYMENT.md": [title: "Deployment"],
         "tooling/benchmarking/README.md": [
           title: "Benchmarking",
-          filename: "benchmarking.md"
+          filename: "benchmarking"
         ],
         "WORKERS.md": [title: "Workers"],
         "PROVISIONING.md": [title: "Provisioning"],
         "CHANGELOG.md": [title: "Changelog"]
       ],
       source_url: "https://github.com/OpenFn/lightning",
+      # Docs name these internals for code readers; they are hidden from the
+      # published docs, so there is nothing to link to.
+      skip_code_autolink_to: [
+        "Lightning.Application",
+        "Lightning.DigestEmailWorker",
+        "Lightning.Workflows.Events",
+        "LightningWeb.ConfirmationLockout",
+        "LightningWeb.Components.UserDeletionModal",
+        "LightningWeb.Hooks.handle_project_user_event/2",
+        "LightningWeb.RunChannel.maybe_send_after_completion_response/2",
+        "LightningWeb.WorkflowLive.DashboardComponents"
+      ],
+      # Changelog entries describe the API as it was at the time.
+      skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       homepage_url: "https://openfn.github.io/lightning",
       groups_for_modules: [
         API: [
