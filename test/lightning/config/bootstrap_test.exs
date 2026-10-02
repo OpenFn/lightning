@@ -1466,6 +1466,29 @@ defmodule Lightning.Config.BootstrapTest do
       refute error.message =~ value
     end
 
+    test "stops the boot on an RSA key shorter than 2048 bits" do
+      error =
+        assert_raise RuntimeError, fn ->
+          reconfigure(%{
+            "SERVICE_ACCOUNT_PUBLIC_KEY" => encoded_public_key(1024)
+          })
+        end
+
+      assert error.message ==
+               "SERVICE_ACCOUNT_PUBLIC_KEY is a 1024-bit RSA key; it must be at least 2048 bits"
+    end
+
+    for bits <- [2048, 4096] do
+      test "accepts a #{bits}-bit RSA key" do
+        reconfigure(%{
+          "SERVICE_ACCOUNT_PUBLIC_KEY" => encoded_public_key(unquote(bits))
+        })
+
+        assert %Lightning.ServiceAccount{} =
+                 get_env(:lightning, :service_account)
+      end
+    end
+
     test "stops the boot on a value that holds no RSA public key" do
       value = Base.encode64("not a key", padding: false)
 
@@ -1559,6 +1582,16 @@ defmodule Lightning.Config.BootstrapTest do
     :lightning
     |> get_env(Lightning.Repo)
     |> Keyword.get(key)
+  end
+
+  defp encoded_public_key(bits) do
+    {_, pem} =
+      {:rsa, bits}
+      |> JOSE.JWK.generate_key()
+      |> JOSE.JWK.to_public()
+      |> JOSE.JWK.to_pem()
+
+    Base.encode64(pem, padding: false)
   end
 
   defp reconfigure(envs) do

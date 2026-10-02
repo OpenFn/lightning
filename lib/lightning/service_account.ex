@@ -18,13 +18,21 @@ defmodule Lightning.ServiceAccount do
         }
 
   @url_namespace <<0x6BA7B8119DAD11D180B400C04FD430C8::128>>
+  @min_modulus_bits 2048
 
   @spec from_pem(String.t()) :: {:ok, t()} | {:error, String.t()}
   def from_pem(pem) do
     case JOSE.JWK.from_pem(pem) do
-      %JOSE.JWK{kty: {:jose_jwk_kty_rsa, {:RSAPublicKey, _, _}}} = jwk ->
-        id = JOSE.JWK.thumbprint(jwk)
-        {:ok, %__MODULE__{id: id, uuid: uuid(id), public_key: jwk}}
+      %JOSE.JWK{kty: {:jose_jwk_kty_rsa, {:RSAPublicKey, n, _}}} = jwk ->
+        bits = n |> Integer.digits(2) |> length()
+
+        if bits >= @min_modulus_bits do
+          id = JOSE.JWK.thumbprint(jwk)
+          {:ok, %__MODULE__{id: id, uuid: uuid(id), public_key: jwk}}
+        else
+          {:error,
+           "is a #{bits}-bit RSA key; it must be at least #{@min_modulus_bits} bits"}
+        end
 
       %JOSE.JWK{kty: {:jose_jwk_kty_rsa, _}} ->
         {:error, "holds a private key, not a public one"}
