@@ -165,8 +165,15 @@ defmodule Lightning.Accounts do
       end
     end)
     |> case do
-      {:error, %Changeset{} = failed} -> taken_or_invalid(failed)
-      created -> created
+      {:ok, %User{role: :superuser} = user} = created ->
+        warn_of_superuser_change(:created, user, service_account)
+        created
+
+      {:error, %Changeset{} = failed} ->
+        taken_or_invalid(failed)
+
+      created ->
+        created
     end
   end
 
@@ -193,6 +200,13 @@ defmodule Lightning.Accounts do
          ),
          do: ["session"]
 
+    superuser_changes = [
+      granted: Changeset.get_change(changeset, :role) == :superuser,
+      password_changed:
+        Changeset.changed?(changeset, :hashed_password) and
+          :superuser in [user.role, Changeset.get_field(changeset, :role)]
+    ]
+
     Multi.new()
     |> Multi.update(:user, changeset)
     |> Multi.run(:audit, fn repo, _changes ->
@@ -207,11 +221,31 @@ defmodule Lightning.Accounts do
         if revoke_contexts,
           do: LightningWeb.UserAuth.disconnect_user_sockets(user)
 
+        for {change, true} <- superuser_changes,
+            do: warn_of_superuser_change(change, user, service_account)
+
         {:ok, user}
 
       {:error, _step, changeset, _} ->
         {:error, changeset}
     end
+  end
+
+  defp warn_of_superuser_change(change, user, service_account) do
+    action =
+      case change do
+        :created -> "created superuser #{user.id}"
+        :granted -> "made user #{user.id} a superuser"
+        :password_changed -> "changed the password of superuser #{user.id}"
+      end
+
+    Logger.warning("Service account #{service_account.id} #{action}")
+
+    :telemetry.execute(
+      [:lightning, :service_account, :superuser_changed],
+      %{count: 1},
+      %{change: change, user_id: user.id, service_account_id: service_account.id}
+    )
   end
 
   defp taken_or_invalid(changeset) do

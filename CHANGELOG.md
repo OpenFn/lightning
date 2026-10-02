@@ -38,8 +38,11 @@ and this project adheres to
   names and a change can't blank one, `confirmed: true` skips email
   verification, and an email that's already taken answers 409 with the existing
   user. A changed password or role signs the user out. Each user it creates or
-  changes shows in the audit log with the service account as the actor. Personal
-  access tokens can't reach these routes.
+  changes shows in the audit log with the service account as the actor, named by
+  its key's thumbprint, as does each access token it's issued. Creating a
+  superuser, making a user one or changing a superuser's password logs a warning
+  and emits the `[:lightning, :service_account, :superuser_changed]` telemetry
+  event. Personal access tokens can't reach these routes.
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
