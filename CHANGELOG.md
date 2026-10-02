@@ -282,6 +282,11 @@ and this project adheres to
 
 ### Fixed
 
+- Cmd/Ctrl+E now closes the IDE while the code editor has focus. Monaco claimed
+  the combination for "Use Selection for Find", so the shortcut that opened the
+  IDE could not close it again. Cmd/Ctrl+F still opens Monaco's find widget.
+  [#4959](https://github.com/OpenFn/lightning/issues/4959)
+
 - The editor now asks before throwing away unsaved changes, and offers to save
   them first. Switching to an older version, opening a run that is pinned to
   one, or leaving for a sandbox all used to wipe out uncommitted edits without a
