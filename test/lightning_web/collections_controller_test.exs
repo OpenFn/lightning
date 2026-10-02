@@ -114,7 +114,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       token = Lightning.Accounts.generate_api_token(user)
 
       {:ok, _user} =
-        Lightning.Accounts.update_user_details(user, %{disabled: true})
+        Lightning.Accounts.update_user(user, %{disabled: true})
 
       conn =
         conn

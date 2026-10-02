@@ -24,6 +24,9 @@ defmodule LightningWeb.API.UserController do
 
   action_fallback LightningWeb.FallbackController
 
+  @create_fields ~w(email password first_name last_name role confirmed)
+  @update_fields ~w(first_name last_name role password confirmed)
+
   plug :require_scope, "users:read" when action in [:index, :show]
   plug :require_scope, "users:write" when action in [:create, :update]
 
@@ -40,9 +43,9 @@ defmodule LightningWeb.API.UserController do
   def update(conn, %{"id" => id} = params) do
     with {:ok, user} <- fetch_user(id),
          {:ok, user} <-
-           Accounts.update_user_as_service_account(
+           Accounts.update_user(
              user,
-             params,
+             Map.take(params, @update_fields),
              conn.assigns.service_account
            ) do
       render(conn, "show.json", user: user, conn: conn)
@@ -50,8 +53,8 @@ defmodule LightningWeb.API.UserController do
   end
 
   def create(conn, params) do
-    case Accounts.create_user_as_service_account(
-           params,
+    case Accounts.create_user(
+           Map.take(params, @create_fields),
            conn.assigns.service_account
          ) do
       {:ok, user} ->
@@ -59,14 +62,29 @@ defmodule LightningWeb.API.UserController do
         |> put_status(:created)
         |> render("show.json", user: user, conn: conn)
 
-      {:error, :email_taken, user} ->
-        conn
-        |> put_status(:conflict)
-        |> render("show.json", user: user, conn: conn)
-
       {:error, changeset} ->
-        {:error, changeset}
+        case holder_of_taken_email(changeset) do
+          %User{} = user ->
+            conn
+            |> put_status(:conflict)
+            |> render("show.json", user: user, conn: conn)
+
+          nil ->
+            {:error, changeset}
+        end
     end
+  end
+
+  defp holder_of_taken_email(changeset) do
+    taken? =
+      changeset.errors
+      |> Keyword.get_values(:email)
+      |> Enum.any?(fn {_message, opts} ->
+        opts[:validation] == :unsafe_unique or opts[:constraint] == :unique
+      end)
+
+    if taken?,
+      do: Accounts.get_user_by_email(Ecto.Changeset.get_field(changeset, :email))
   end
 
   defp fetch_user(id) do

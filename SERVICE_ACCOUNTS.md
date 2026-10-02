@@ -214,16 +214,7 @@ there as "Service account", named by its key's thumbprint. It records:
 
 ### Logs
 
-Lightning logs a warning whenever the service account gives someone superuser
-rights or changes a superuser's password:
-
-```
-Service account <thumbprint> created superuser <user id>
-Service account <thumbprint> made user <user id> a superuser
-Service account <thumbprint> changed the password of superuser <user id>
-```
-
-It also logs a warning when it refuses an assertion, at most once a minute for
+Lightning logs a warning when it refuses an assertion, at most once a minute for
 each reason on each node:
 
 ```
@@ -251,10 +242,12 @@ The reasons are:
 Lightning emits two [`:telemetry`](https://hexdocs.pm/telemetry) events you can
 attach a handler to:
 
-| Event                                                | Measurements | Metadata                                                                                  |
-| ---------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------- |
-| `[:lightning, :service_account, :assertion_refused]` | `count: 1`   | `reason`, one of the reasons above                                                        |
-| `[:lightning, :service_account, :superuser_changed]` | `count: 1`   | `change` (`:created`, `:granted` or `:password_changed`), `user_id`, `service_account_id` |
+| Event                                                | Measurements | Metadata                                                                                                                                        |
+| ---------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[:lightning, :service_account, :assertion_refused]` | `count: 1`   | `reason`, one of the reasons above                                                                                                              |
+| `[:lightning, :accounts, :superuser_changed]`        | `count: 1`   | `change` (`:created`, `:granted` or `:password_changed`), `user_id`, `actor_type` and `actor_id` (both `nil` when no one is named as the actor) |
 
 Unlike the log line, `assertion_refused` fires for every refusal, so it is the
 one to count if you want to alert on someone guessing at the token endpoint.
+`superuser_changed` fires whoever makes the change, so it also counts superusers
+created or changed from the users page, where `actor_type` is `:user`.

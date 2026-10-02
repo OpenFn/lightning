@@ -34,7 +34,7 @@ defmodule LightningWeb.Live.AccountRevocationTeardownTest do
 
       {:ok, _view, _html} = live(conn, ~p"/projects", on_error: :raise)
 
-      {:ok, _user} = Accounts.update_user_details(user, %{"disabled" => true})
+      {:ok, _user} = Accounts.update_user(user, %{"disabled" => true})
 
       # Pins the database half of the revocation, so the assertion below is only
       # ever about the other half: the page that was already open.
@@ -60,7 +60,7 @@ defmodule LightningWeb.Live.AccountRevocationTeardownTest do
       {:ok, _view_a, _html} = live(conn_a, ~p"/projects", on_error: :raise)
       {:ok, _view_b, _html} = live(conn_b, ~p"/projects", on_error: :raise)
 
-      {:ok, _user} = Accounts.update_user_details(user, %{"disabled" => true})
+      {:ok, _user} = Accounts.update_user(user, %{"disabled" => true})
 
       assert_transport_told_to_disconnect(live_socket_id)
     end
@@ -81,7 +81,7 @@ defmodule LightningWeb.Live.AccountRevocationTeardownTest do
 
       {:ok, _view, _html} = live(conn, ~p"/projects", on_error: :raise)
 
-      {:ok, _user} = Accounts.update_user_details(user, %{"disabled" => true})
+      {:ok, _user} = Accounts.update_user(user, %{"disabled" => true})
 
       assert {:error, {redirect, %{to: "/users/log_in"}}} =
                live(conn, ~p"/projects")

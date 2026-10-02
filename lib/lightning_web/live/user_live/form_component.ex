@@ -55,7 +55,11 @@ defmodule LightningWeb.UserLive.FormComponent do
   end
 
   defp save_user(socket, :edit, user_params) do
-    case Accounts.update_user_details(socket.assigns.user, user_params) do
+    case Accounts.update_user(
+           socket.assigns.user,
+           user_params,
+           socket.assigns.current_user
+         ) do
       {:ok, user} ->
         {:noreply,
          socket
@@ -69,7 +73,7 @@ defmodule LightningWeb.UserLive.FormComponent do
   end
 
   defp save_user(socket, :new, user_params) do
-    case Accounts.create_user(user_params) do
+    case Accounts.create_user(user_params, socket.assigns.current_user) do
       {:ok, user} ->
         {level, message} =
           case Accounts.deliver_user_confirmation_instructions(

@@ -1,7 +1,6 @@
 defmodule LightningWeb.API.UserControllerTest do
   use LightningWeb.ConnCase, async: true
 
-  import ExUnit.CaptureLog
   import Lightning.Factories
   import Lightning.ServiceAccountHelpers
 
@@ -379,16 +378,6 @@ defmodule LightningWeb.API.UserControllerTest do
              }
     end
 
-    test "needs no names for a user stored without them", %{conn: conn} do
-      user = insert(:user, first_name: nil, last_name: nil)
-
-      assert conn
-             |> patch(~p"/api/users/#{user.id}", %{role: "superuser"})
-             |> json_response(200)
-
-      assert %User{role: :superuser} = Accounts.get_user(user.id)
-    end
-
     test "signs the user out when its role changes", %{conn: conn, user: user} do
       session = Accounts.generate_user_session_token(user)
 
@@ -455,6 +444,7 @@ defmodule LightningWeb.API.UserControllerTest do
                email: "moved@example.com",
                support_user: true,
                disabled: true,
+               scheduled_deletion: "2030-01-01T00:00:00Z",
                hashed_password: "not-a-hash",
                confirmed_at: "2020-01-01T00:00:00Z"
              })
@@ -464,6 +454,7 @@ defmodule LightningWeb.API.UserControllerTest do
                email: "patched@example.com",
                support_user: false,
                disabled: false,
+               scheduled_deletion: nil,
                confirmed_at: nil
              } = Accounts.get_user(user.id)
 
@@ -593,7 +584,7 @@ defmodule LightningWeb.API.UserControllerTest do
     setup %{conn: conn, account: account} do
       ref =
         :telemetry_test.attach_event_handlers(self(), [
-          [:lightning, :service_account, :superuser_changed]
+          [:lightning, :accounts, :superuser_changed]
         ])
 
       %{conn: with_scopes(conn, account, ["users:write"]), ref: ref}
@@ -613,65 +604,48 @@ defmodule LightningWeb.API.UserControllerTest do
     end
 
     defp assert_superuser_change(ref, change, user_id, account) do
-      assert_receive {[:lightning, :service_account, :superuser_changed], ^ref,
+      assert_receive {[:lightning, :accounts, :superuser_changed], ^ref,
                       %{count: 1},
                       %{
                         change: ^change,
                         user_id: ^user_id,
-                        service_account_id: service_account_id
+                        actor_type: :service_account,
+                        actor_id: actor_id
                       }}
 
-      assert service_account_id == account.id
+      assert actor_id == account.id
     end
 
-    test "warn when a superuser is created", %{
-      conn: conn,
-      account: account,
-      ref: ref
-    } do
-      {id, log} =
-        with_log([level: :warning], fn -> create_user(conn, "superuser") end)
+    test "report a superuser created", %{conn: conn, account: account, ref: ref} do
+      id = create_user(conn, "superuser")
 
-      assert log =~ "Service account #{account.id} created superuser #{id}"
       assert_superuser_change(ref, :created, id, account)
     end
 
-    test "warn when a user is made a superuser", %{
+    test "report a user made a superuser", %{
       conn: conn,
       account: account,
       ref: ref
     } do
       user = insert(:user)
 
-      log =
-        capture_log([level: :warning], fn ->
-          conn
-          |> patch(~p"/api/users/#{user.id}", %{role: "superuser"})
-          |> json_response(200)
-        end)
-
-      assert log =~
-               "Service account #{account.id} made user #{user.id} a superuser"
+      conn
+      |> patch(~p"/api/users/#{user.id}", %{role: "superuser"})
+      |> json_response(200)
 
       assert_superuser_change(ref, :granted, user.id, account)
     end
 
-    test "warn when a superuser's password changes", %{
+    test "report a superuser's password changing", %{
       conn: conn,
       account: account,
       ref: ref
     } do
       user = insert(:user, role: :superuser)
 
-      log =
-        capture_log([level: :warning], fn ->
-          conn
-          |> patch(~p"/api/users/#{user.id}", %{password: @password})
-          |> json_response(200)
-        end)
-
-      assert log =~
-               "Service account #{account.id} changed the password of superuser #{user.id}"
+      conn
+      |> patch(~p"/api/users/#{user.id}", %{password: @password})
+      |> json_response(200)
 
       assert_superuser_change(ref, :password_changed, user.id, account)
     end
@@ -683,23 +657,17 @@ defmodule LightningWeb.API.UserControllerTest do
       user = insert(:user)
       superuser = insert(:user, role: :superuser)
 
-      log =
-        capture_log([level: :warning], fn ->
-          create_user(conn, "user")
+      create_user(conn, "user")
 
-          conn
-          |> patch(~p"/api/users/#{user.id}", %{password: @password})
-          |> json_response(200)
+      conn
+      |> patch(~p"/api/users/#{user.id}", %{password: @password})
+      |> json_response(200)
 
-          conn
-          |> patch(~p"/api/users/#{superuser.id}", %{first_name: "Renamed"})
-          |> json_response(200)
-        end)
+      conn
+      |> patch(~p"/api/users/#{superuser.id}", %{first_name: "Renamed"})
+      |> json_response(200)
 
-      refute log =~ "Service account"
-
-      refute_received {[:lightning, :service_account, :superuser_changed], ^ref,
-                       _, _}
+      refute_received {[:lightning, :accounts, :superuser_changed], ^ref, _, _}
     end
   end
 

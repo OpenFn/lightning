@@ -8,10 +8,11 @@ defmodule Lightning.Accounts.Audit do
     events: ["created", "updated"]
 
   alias Lightning.Accounts.User
+  alias Lightning.ServiceAccount
 
-  @recorded ~w(email first_name last_name role confirmed_at)a
+  @recorded ~w(email first_name last_name role confirmed_at disabled support_user scheduled_deletion)a
 
-  @spec user_created(User.t(), Lightning.ServiceAccount.t()) ::
+  @spec user_created(User.t(), User.t() | ServiceAccount.t()) ::
           Ecto.Changeset.t()
   def user_created(%User{} = user, actor) do
     event("created", user.id, actor, %{after: Map.take(user, @recorded)})
@@ -22,7 +23,7 @@ defmodule Lightning.Accounts.Audit do
   changes nothing. A new password shows only as `password_changed` in the
   metadata, never as its hash.
   """
-  @spec user_updated(Ecto.Changeset.t(), Lightning.ServiceAccount.t()) ::
+  @spec user_updated(Ecto.Changeset.t(), User.t() | ServiceAccount.t()) ::
           Ecto.Changeset.t() | :no_changes
   def user_updated(%Ecto.Changeset{data: %User{} = user} = changeset, actor) do
     changed = Enum.filter(@recorded, &Map.has_key?(changeset.changes, &1))

@@ -116,6 +116,22 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       assert response =~ "Email address not valid."
     end
 
+    test "refuses a name with a control character", %{conn: conn} do
+      conn =
+        post(conn, Routes.user_registration_path(conn, :create), %{
+          "user" => %{
+            "first_name" => "Ann\u0007",
+            "last_name" => "Smith",
+            "email" => "bell@example.com",
+            "password" => valid_user_password(),
+            "terms_accepted" => true
+          }
+        })
+
+      assert html_response(conn, 200) =~ "can&#39;t contain control characters"
+      refute Lightning.Accounts.get_user_by_email("bell@example.com")
+    end
+
     test "render errors for terms and conditions not accepted", %{conn: conn} do
       conn =
         post(conn, Routes.user_registration_path(conn, :create), %{

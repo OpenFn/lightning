@@ -78,6 +78,31 @@ defmodule LightningWeb.FirstSetupLiveTest do
       refute Lightning.Accounts.has_one_superuser?()
     end
 
+    @tag create_initial_user: false
+    test "refuses a superuser with a control character in their name", %{
+      conn: conn
+    } do
+      {:ok, show_live, _html} =
+        live(conn, Routes.first_setup_superuser_path(conn, :show),
+          on_error: :raise
+        )
+
+      form =
+        form(show_live, "#superuser-registration-form",
+          superuser_registration: %{
+            password: "1234567890ab",
+            password_confirmation: "1234567890ab",
+            first_name: "Ann\u0007",
+            last_name: "Smith",
+            email: "bell@example.com"
+          }
+        )
+
+      assert render_submit(form) =~ "can&#39;t contain control characters"
+      refute Lightning.Accounts.get_user_by_email("bell@example.com")
+      refute Lightning.Accounts.has_one_superuser?()
+    end
+
     test "will redirect with a warning when a user already exists", %{conn: conn} do
       assert {:error, {:redirect, %{flash: %{}, to: "/projects"}}} ==
                live(conn, Routes.first_setup_superuser_path(conn, :show),

@@ -26,6 +26,9 @@ and this project adheres to
   creates, changes and finds users with `/api/users`. First setup is turned off
   while it is set. See [SERVICE_ACCOUNTS.md](SERVICE_ACCOUNTS.md).
   [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- The audit log now records users that superusers create, change, disable or
+  schedule for deletion from the users page.
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
@@ -66,6 +69,10 @@ and this project adheres to
   [#5191](https://github.com/OpenFn/lightning/pull/5191)
 - Superusers now need a first and last name, like every other user.
   [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- Signup, first setup and the profile page now refuse names with control
+  characters or no visible characters, and names over 255 characters, as admin
+  and API changes already do.
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
 
 ### Removed
 
@@ -99,6 +106,8 @@ and this project adheres to
 - Passwords containing a NUL character are now refused. Only the part before the
   NUL was checked at login.
   [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- Signup no longer accepts a password hash, a disabled flag or a deletion date
+  from the form. [#5206](https://github.com/OpenFn/lightning/pull/5206)
 - Bumped `mint` to 1.10.1, clearing
   [CVE-2026-82672](https://github.com/elixir-mint/mint/security/advisories/GHSA-rj5m-69wp-cxq9).
   Mint accepted any bytes between a chunk's size and the line ending in an
