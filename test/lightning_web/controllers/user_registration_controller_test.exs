@@ -11,6 +11,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       :allow_signup -> true
       :init_project_for_new_user -> false
       :require_email_verification -> true
+      other -> Lightning.Config.API.check_flag?(other)
     end)
 
     :ok
@@ -62,12 +63,12 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       conn: conn
     } do
       # Modify the env so that we created new projects for new users
-      Lightning.MockConfig
-      |> expect(:check_flag?, fn :allow_signup -> true end)
-      |> expect(:check_flag?, fn :init_project_for_new_user -> true end)
-      # The follow-up request checks the lockout twice: once to refuse it, once
-      # in put_user_token/2.
-      |> expect(:check_flag?, 2, fn :require_email_verification -> true end)
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :allow_signup -> true
+        :init_project_for_new_user -> true
+        :require_email_verification -> true
+        other -> Lightning.Config.API.check_flag?(other)
+      end)
 
       conn =
         conn
