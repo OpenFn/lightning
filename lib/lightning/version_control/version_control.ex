@@ -26,17 +26,27 @@ defmodule Lightning.VersionControl do
   defdelegate subscribe(user), to: Events
 
   @doc """
-  Creates a connection between a project and a github repo
+  Creates a connection between a project and a github repo.
+
+  The `(root_project_id, repo, branch)` uniqueness constraint on
+  `project_repo_connections` is the source of truth: two concurrent inserts
+  for the same project family + (repo, branch) cannot both succeed even at
+  READ COMMITTED isolation. The constraint violation is translated back into
+  `:branch_used_in_project_tree` for callers.
   """
   @spec create_github_connection(map(), User.t()) ::
           {:ok, ProjectRepoConnection.t()}
-          | {:error, Ecto.Changeset.t() | UsageLimiting.message() | binary()}
+          | {:error,
+             Ecto.Changeset.t()
+             | UsageLimiting.message()
+             | :branch_used_in_project_tree
+             | binary()}
   def create_github_connection(attrs, user) do
     changeset =
       ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
 
     Repo.transact(fn ->
-      with {:ok, repo_connection} <- Repo.insert(changeset),
+      with {:ok, repo_connection} <- insert_repo_connection(changeset),
            {:ok, _audit} <-
              repo_connection
              |> Audit.repo_connection(:created, user)
@@ -49,6 +59,20 @@ defmodule Lightning.VersionControl do
         {:ok, repo_connection}
       end
     end)
+  end
+
+  defp insert_repo_connection(changeset) do
+    case Repo.insert(changeset) do
+      {:ok, repo_connection} ->
+        {:ok, repo_connection}
+
+      {:error, %Ecto.Changeset{} = failed} ->
+        if ProjectRepoConnection.tree_unique_violation?(failed) do
+          {:error, :branch_used_in_project_tree}
+        else
+          {:error, failed}
+        end
+    end
   end
 
   # `binary()` because this reaches `initiate_sync/2`, whose export pre-flight
@@ -161,7 +185,8 @@ defmodule Lightning.VersionControl do
            Projects.export_project(
              :yaml,
              repo_connection.project_id,
-             snapshot_ids_for_export(snapshots)
+             snapshot_ids_for_export(snapshots),
+             :v1
            ),
          {:ok, client} <-
            GithubClient.build_installation_client(
@@ -215,7 +240,8 @@ defmodule Lightning.VersionControl do
       repo_connection.project_id,
       repo_connection
       |> list_snapshots_for_project()
-      |> snapshot_ids_for_export()
+      |> snapshot_ids_for_export(),
+      :v1
     )
   end
 
