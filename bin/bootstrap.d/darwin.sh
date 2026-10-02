@@ -104,6 +104,17 @@ platform_install_dependencies() {
   fi
 }
 
+platform_setup_tool_build_environment() {
+  # Erlang's build only looks for `wx-config`, but Homebrew's wxwidgets@3.2
+  # installs it as `wx-config-3.2`, so Erlang silently builds without wx
+  # (and so without Observer).
+  if ! command -v wx-config &>/dev/null && command -v wx-config-3.2 &>/dev/null; then
+    WX_CONFIG_NAME="$(command -v wx-config-3.2)"
+    export WX_CONFIG_NAME
+    echo "Set WX_CONFIG_NAME to $WX_CONFIG_NAME"
+  fi
+}
+
 platform_setup_environment() {
   if [[ -z "$HOMEBREW_PREFIX" ]] && command -v brew &>/dev/null; then
     HOMEBREW_PREFIX="$(brew --prefix)"

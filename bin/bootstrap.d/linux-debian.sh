@@ -49,6 +49,10 @@ platform_install_dependencies() {
   :
 }
 
+platform_setup_tool_build_environment() {
+  :
+}
+
 platform_setup_environment() {
   # Set compilers if not already set
   if [[ -z "${CC:-}" ]] && command -v gcc &>/dev/null; then
