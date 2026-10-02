@@ -12,6 +12,7 @@ defmodule LightningWeb.TokenExchangeController do
   require Logger
 
   @assertion_type "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+  @refusal_log_window :timer.minutes(1)
 
   def metadata(conn, _params) do
     json(conn, %{
@@ -103,7 +104,25 @@ defmodule LightningWeb.TokenExchangeController do
   end
 
   defp refuse(reason) do
-    Logger.info("Refused a service account assertion: #{reason}")
+    :telemetry.execute(
+      [:lightning, :service_account, :assertion_refused],
+      %{count: 1},
+      %{reason: reason}
+    )
+
+    # One line per reason per minute per node, so a caller hammering the
+    # endpoint can't flood the logs; telemetry still counts every refusal.
+    case Hammer.check_rate(refusal_log_bucket(reason), @refusal_log_window, 1) do
+      {:allow, _count} ->
+        Logger.warning("Refused a service account assertion: #{reason}")
+
+      {:deny, _limit} ->
+        :ok
+    end
+
     {:error, :invalid_client}
   end
+
+  @doc false
+  def refusal_log_bucket(reason), do: "service_account_refusal_log:#{reason}"
 end

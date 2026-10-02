@@ -1,6 +1,7 @@
 defmodule LightningWeb.TokenExchangeControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import ExUnit.CaptureLog
   import Lightning.ServiceAccountHelpers
 
   @assertion_type "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
@@ -166,6 +167,42 @@ defmodule LightningWeb.TokenExchangeControllerTest do
 
       assert %{"error" => "invalid_client"} =
                conn |> exchange(params) |> json_response(401)
+    end
+
+    # No other test module refuses with :wrong_client_id, so no test running
+    # alongside this one shares its log bucket.
+    test "warns of refusals at most once a minute and counts every one", %{
+      conn: conn,
+      account: account,
+      private_key: private_key
+    } do
+      Hammer.delete_buckets(
+        LightningWeb.TokenExchangeController.refusal_log_bucket(:wrong_client_id)
+      )
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:lightning, :service_account, :assertion_refused]
+        ])
+
+      refuse = fn ->
+        params =
+          valid_params(account, private_key, token_endpoint(conn), %{
+            "client_id" => "someone-else"
+          })
+
+        conn |> exchange(params) |> json_response(401)
+      end
+
+      assert capture_log([level: :warning], refuse) =~
+               "Refused a service account assertion: wrong_client_id"
+
+      refute capture_log([level: :warning], refuse) =~ "wrong_client_id"
+
+      for _ <- 1..2 do
+        assert_receive {[:lightning, :service_account, :assertion_refused], ^ref,
+                        %{count: 1}, %{reason: :wrong_client_id}}
+      end
     end
 
     test "refuses another grant type with unsupported_grant_type", %{

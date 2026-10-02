@@ -29,7 +29,9 @@ and this project adheres to
   a five-minute access token. `/.well-known/oauth-authorization-server`
   describes the exchange, so any OAuth library can drive it. Each assertion
   works once. Changing or removing the key stops tokens already issued from
-  working.
+  working. A refused assertion emits the
+  `[:lightning, :service_account, :assertion_refused]` telemetry event and logs
+  a warning, at most once a minute for each reason.
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
