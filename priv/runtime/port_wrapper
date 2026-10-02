@@ -2,6 +2,9 @@
 
 # Usage: port_wrapper [--stderr FILE] [--remove PATH]... -- program [args...]
 #
+# The program doesn't start until a line arrives on stdin, so a program that
+# exits straight away can't close the port before the owner reads its pid.
+#
 #   --stderr FILE  write the program's stderr to FILE
 #   --remove PATH  delete PATH if the owner goes away (stdin closes) or the
 #                  wrapper is sent SIGTERM; on a normal exit the owner is still
@@ -37,6 +40,12 @@ handle_sigterm() {
   kill -TERM $pid1
 }
 trap 'handle_sigterm' SIGTERM
+
+# Stdin closing first means the owner is already gone.
+if ! read -r; then
+  cleanup
+  exit 1
+fi
 
 # Start the program in the background
 if [ -n "$stderr" ]; then
