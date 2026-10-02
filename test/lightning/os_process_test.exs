@@ -86,6 +86,12 @@ defmodule Lightning.OsProcessTest do
   end
 
   describe "open/3" do
+    test "returns the pid of a program that exits straight away" do
+      assert {:ok, port, os_pid} = OsProcess.open("sh", ["-c", "exit 3"])
+      assert is_integer(os_pid)
+      assert_receive {^port, {:exit_status, 3}}, 2_000
+    end
+
     test "kills the program when the owning process dies" do
       test_pid = self()
 
@@ -166,6 +172,23 @@ defmodule Lightning.OsProcessTest do
       # give a wrongly surviving watcher time to act.
       Process.sleep(200)
       assert File.dir?(dir)
+    end
+  end
+
+  describe "port_wrapper" do
+    test "holds the program back until the owner sends a line" do
+      port =
+        Port.open(
+          {:spawn_executable, OsProcess.wrapper()},
+          [:binary, :exit_status, args: ["--", "/bin/sh", "-c", "echo started"]]
+        )
+
+      refute_receive {^port, _}, 500
+      assert {:os_pid, _} = Port.info(port, :os_pid)
+
+      Port.command(port, "\n")
+      assert_receive {^port, {:data, "started\n"}}, 2_000
+      assert_receive {^port, {:exit_status, 0}}, 2_000
     end
   end
 

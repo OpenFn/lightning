@@ -38,13 +38,40 @@ defmodule Lightning.OsProcess do
   @spec open(String.t(), [String.t()], keyword()) ::
           {:ok, port(), non_neg_integer()} | {:error, :enoent | :exited}
   def open(cmd, args, opts \\ []) do
-    with {:ok, port} <- open_port(cmd, args, opts) do
-      # A program that exits straight away can close the port before we ask.
-      case Port.info(port, :os_pid) do
-        {:os_pid, os_pid} -> {:ok, port, os_pid}
-        nil -> {:error, :exited}
-      end
+    {wrapper_opts, opts} = Keyword.split(opts, [:cleanup_paths, :stderr])
+
+    with {:ok, exe} <- find_executable(cmd, opts) do
+      port =
+        Port.open(
+          {:spawn_executable, wrapper()},
+          [
+            :binary,
+            :exit_status,
+            :use_stdio,
+            :hide,
+            args:
+              Enum.flat_map(wrapper_opts, &wrapper_arg/1) ++ ["--", exe | args]
+          ] ++ Enum.flat_map(opts, &port_opt/1)
+        )
+
+      release(port)
     end
+  end
+
+  # The wrapper holds the program back until it reads a newline, so a program
+  # that exits straight away can't close the port before its pid is read. The
+  # wrapper itself can still die first (bash missing, killed from outside).
+  defp release(port) do
+    case Port.info(port, :os_pid) do
+      {:os_pid, os_pid} ->
+        Port.command(port, "\n")
+        {:ok, port, os_pid}
+
+      nil ->
+        {:error, :exited}
+    end
+  rescue
+    ArgumentError -> {:error, :exited}
   end
 
   @doc """
@@ -53,14 +80,14 @@ defmodule Lightning.OsProcess do
   """
   @spec run(String.t(), [String.t()], keyword()) ::
           {:ok, result()}
-          | {:error, :enoent}
+          | {:error, :enoent | :exited}
           | {:error, {:timeout, %{out: binary(), err: binary()}}}
   def run(cmd, args, opts \\ []) do
     {timeout, opts} = Keyword.pop(opts, :timeout, :infinity)
     opts = Keyword.drop(opts, [:line, :stderr])
 
     if opts[:stderr_to_stdout] do
-      with {:ok, port} <- open_port(cmd, args, opts) do
+      with {:ok, port, _os_pid} <- open(cmd, args, opts) do
         collect(port, [], deadline(timeout), nil)
       end
     else
@@ -73,7 +100,7 @@ defmodule Lightning.OsProcess do
         |> Keyword.update(:cleanup_paths, [dir], &[dir | &1])
 
       try do
-        with {:ok, port} <- open_port(cmd, args, opts) do
+        with {:ok, port, _os_pid} <- open(cmd, args, opts) do
           collect(port, [], deadline(timeout), err_path)
         end
       after
@@ -137,25 +164,6 @@ defmodule Lightning.OsProcess do
     end
 
     :ok
-  end
-
-  defp open_port(cmd, args, opts) do
-    {wrapper_opts, opts} = Keyword.split(opts, [:cleanup_paths, :stderr])
-
-    with {:ok, exe} <- find_executable(cmd, opts) do
-      {:ok,
-       Port.open(
-         {:spawn_executable, wrapper()},
-         [
-           :binary,
-           :exit_status,
-           :use_stdio,
-           :hide,
-           args:
-             Enum.flat_map(wrapper_opts, &wrapper_arg/1) ++ ["--", exe | args]
-         ] ++ Enum.flat_map(opts, &port_opt/1)
-       )}
-    end
   end
 
   defp collect(port, out, deadline, err_path) do
@@ -241,7 +249,8 @@ defmodule Lightning.OsProcess do
     end)
   end
 
-  defp wrapper, do: Application.app_dir(:lightning, "priv/runtime/port_wrapper")
+  @doc false
+  def wrapper, do: Application.app_dir(:lightning, "priv/runtime/port_wrapper")
 
   defp wrapper_arg({:stderr, path}), do: ["--stderr", path]
 

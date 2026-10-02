@@ -9,7 +9,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
     @impl true
     def start_runtime(state) do
       port = Port.open({:spawn, "cat"}, [:binary])
-      %{state | runtime_port: port}
+      {:ok, %{state | runtime_port: port}}
     end
 
     @impl true
@@ -26,7 +26,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
     def start_runtime(state) do
       port = Port.open({:spawn, "cat"}, [:binary])
-      %{state | runtime_port: port}
+      {:ok, %{state | runtime_port: port}}
     end
 
     def stop_runtime(state) do
@@ -63,6 +63,22 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
     send(server, :timeout)
 
     assert_receive {:DOWN, _ref, :process, ^server, :premature_termination}
+  end
+
+  test "the runtime manager stops with the reason when the runtime can't start",
+       %{test: test} do
+    # It stops in handle_continue, which can beat a monitor set up after
+    # start, so link instead.
+    Process.flag(:trap_exit, true)
+
+    {:ok, server} =
+      RuntimeManager.start_link(
+        name: Module.concat([__MODULE__, test]),
+        start: true,
+        cmd: ["no-such-runtime"]
+      )
+
+    assert_receive {:EXIT, ^server, {:runtime_not_started, :enoent}}
   end
 
   test "the runtime manager stops if the runtime exits", %{test: test} do
