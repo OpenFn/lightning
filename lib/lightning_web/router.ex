@@ -46,6 +46,11 @@ defmodule LightningWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :access_token_api do
+    plug :accepts, ["json"]
+    plug LightningWeb.Plugs.AccessTokenAuth
+  end
+
   pipeline :authenticated_api do
     plug :accepts, ["json"]
     plug LightningWeb.Plugs.ApiAuth
@@ -87,6 +92,14 @@ defmodule LightningWeb.Router do
   end
 
   ## JSON API
+
+  ## Service account access tokens only, never a personal access token
+  scope "/api", LightningWeb, as: :api do
+    pipe_through [:access_token_api]
+
+    resources "/users", API.UserController, only: [:index, :show, :create]
+    patch "/users/:id", API.UserController, :update
+  end
 
   scope "/api", LightningWeb, as: :api do
     pipe_through [:api]

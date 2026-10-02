@@ -11,6 +11,7 @@ defmodule Lightning.Accounts do
 
   alias Ecto.Changeset
   alias Ecto.Multi
+  alias Lightning.Accounts.Audit
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
@@ -20,6 +21,7 @@ defmodule Lightning.Accounts do
   alias Lightning.Credentials
   alias Lightning.Projects
   alias Lightning.Repo
+  alias Lightning.ServiceAccount
   alias Lightning.Services.AccountHook
 
   require Logger
@@ -139,6 +141,139 @@ defmodule Lightning.Accounts do
     Repo.transact(fn ->
       AccountHook.handle_create_user(attrs)
     end)
+  end
+
+  @doc """
+  Creates a user on behalf of a service account, and records the audit event
+  in the same transaction.
+
+  Answers `{:error, :email_taken, user}` with the user already holding the
+  email, in any case.
+  """
+  @spec create_user_as_service_account(map(), ServiceAccount.t()) ::
+          {:ok, User.t()}
+          | {:error, :email_taken, User.t()}
+          | {:error, Changeset.t()}
+  def create_user_as_service_account(attrs, %ServiceAccount{} = service_account) do
+    changeset = User.service_account_changeset(attrs)
+
+    Repo.transact(fn ->
+      with {:ok, user} <- Repo.insert(changeset),
+           {:ok, _audit} <-
+             user |> Audit.user_created(service_account) |> Repo.insert() do
+        {:ok, user}
+      end
+    end)
+    |> case do
+      {:ok, %User{role: :superuser} = user} = created ->
+        warn_of_superuser_change(:created, user, service_account)
+        created
+
+      {:error, %Changeset{} = failed} ->
+        taken_or_invalid(failed)
+
+      created ->
+        created
+    end
+  end
+
+  @doc """
+  Changes a user on behalf of a service account, and records the audit event
+  in the same transaction when anything changed.
+
+  A new password or role signs the user out of every session, as it does when
+  a superuser changes them in the UI.
+  """
+  @spec update_user_as_service_account(User.t(), map(), ServiceAccount.t()) ::
+          {:ok, User.t()} | {:error, Changeset.t()}
+  def update_user_as_service_account(
+        %User{} = user,
+        attrs,
+        %ServiceAccount{} = service_account
+      ) do
+    changeset = User.service_account_update_changeset(user, attrs)
+
+    revoke_contexts =
+      if Enum.any?(
+           [:hashed_password, :role],
+           &Changeset.changed?(changeset, &1)
+         ),
+         do: ["session"]
+
+    superuser_changes = [
+      granted: Changeset.get_change(changeset, :role) == :superuser,
+      password_changed:
+        Changeset.changed?(changeset, :hashed_password) and
+          :superuser in [user.role, Changeset.get_field(changeset, :role)]
+    ]
+
+    Multi.new()
+    |> Multi.update(:user, changeset)
+    |> Multi.run(:audit, fn repo, _changes ->
+      changeset
+      |> Audit.user_updated(service_account)
+      |> Lightning.Auditing.Audit.save(repo)
+    end)
+    |> maybe_revoke_tokens(user, revoke_contexts)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} ->
+        if revoke_contexts,
+          do: LightningWeb.UserAuth.disconnect_user_sockets(user)
+
+        for {change, true} <- superuser_changes,
+            do: warn_of_superuser_change(change, user, service_account)
+
+        {:ok, user}
+
+      {:error, _step, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  defp warn_of_superuser_change(change, user, service_account) do
+    action =
+      case change do
+        :created -> "created superuser #{user.id}"
+        :granted -> "made user #{user.id} a superuser"
+        :password_changed -> "changed the password of superuser #{user.id}"
+      end
+
+    Logger.warning("Service account #{service_account.id} #{action}")
+
+    :telemetry.execute(
+      [:lightning, :service_account, :superuser_changed],
+      %{count: 1},
+      %{change: change, user_id: user.id, service_account_id: service_account.id}
+    )
+  end
+
+  defp taken_or_invalid(changeset) do
+    with {_message, opts} <- changeset.errors[:email],
+         :unique <- opts[:constraint],
+         %User{} = user <-
+           get_user_by_email(Changeset.get_field(changeset, :email)) do
+      {:error, :email_taken, user}
+    else
+      _ -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  A page of users, optionally only the one whose email matches `"email"` in
+  any case.
+  """
+  @spec paginate_users(map()) :: Scrivener.Page.t()
+  def paginate_users(params) do
+    User
+    |> then(fn query ->
+      case params do
+        %{"email" => email} when is_binary(email) -> where(query, email: ^email)
+        _all -> query
+      end
+    end)
+    |> order_by([:inserted_at, :id])
+    |> Repo.paginate(Map.take(params, ["page", "page_size"]))
   end
 
   @doc """

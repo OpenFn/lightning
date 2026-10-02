@@ -20,18 +20,12 @@ and this project adheres to
 - The AI assistant now shows a warning banner above its chat input when the
   current workflow is live.
   [#5205](https://github.com/OpenFn/lightning/pull/5205)
-- `SERVICE_ACCOUNT_PUBLIC_KEY` registers a service account at boot, an identity
-  for configuring the instance through its API rather than as a person. While it
-  is set, first setup is turned off, so nobody can claim a fresh instance before
-  the service account does.
-- The service account can sign in with plain OAuth 2.0. It sends a short-lived
-  assertion signed with its private key to `POST /api/oauth/token` and gets back
-  a five-minute access token. `/.well-known/oauth-authorization-server`
-  describes the exchange, so any OAuth library can drive it. Each assertion
-  works once. Changing or removing the key stops tokens already issued from
-  working. A refused assertion emits the
-  `[:lightning, :service_account, :assertion_refused]` telemetry event and logs
-  a warning, at most once a minute for each reason.
+- Service accounts, for configuring an instance through its API rather than as a
+  person. Set `SERVICE_ACCOUNT_PUBLIC_KEY` and the service account gets
+  short-lived OAuth 2.0 access tokens from `POST /api/oauth/token`, then
+  creates, changes and finds users with `/api/users`. First setup is turned off
+  while it is set. See [SERVICE_ACCOUNTS.md](SERVICE_ACCOUNTS.md).
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
@@ -70,6 +64,8 @@ and this project adheres to
   does not know one, still gets UTC; one that sends a zone the tz database does
   not know now gets an error.
   [#5191](https://github.com/OpenFn/lightning/pull/5191)
+- Superusers now need a first and last name, like every other user.
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
 
 ### Removed
 
@@ -100,6 +96,9 @@ and this project adheres to
 
 ### Security
 
+- Passwords containing a NUL character are now refused. Only the part before the
+  NUL was checked at login.
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
 - Bumped `mint` to 1.10.1, clearing
   [CVE-2026-82672](https://github.com/elixir-mint/mint/security/advisories/GHSA-rj5m-69wp-cxq9).
   Mint accepted any bytes between a chunk's size and the line ending in an

@@ -107,6 +107,37 @@ defmodule LightningWeb.TokenExchangeControllerTest do
       assert is_binary(jti)
     end
 
+    test "records each token it issues, and no refusal", %{
+      conn: conn,
+      account: account,
+      private_key: private_key
+    } do
+      params =
+        valid_params(account, private_key, token_endpoint(conn), %{
+          "scope" => "users:read"
+        })
+
+      assert conn |> exchange(params) |> json_response(200)
+      assert conn |> exchange(params) |> json_response(401)
+
+      uuid = account.uuid
+
+      assert %{
+               entries: [
+                 %{
+                   item_type: "service_account",
+                   event: "token_issued",
+                   item_id: ^uuid,
+                   actor_type: :service_account,
+                   actor_id: ^uuid,
+                   metadata: %{"scopes" => ["users:read"]}
+                 } = audit
+               ]
+             } = Lightning.Auditing.list_all()
+
+      assert audit.actor_display.identifier == account.id
+    end
+
     test "grants only the scope asked for", %{
       conn: conn,
       account: account,

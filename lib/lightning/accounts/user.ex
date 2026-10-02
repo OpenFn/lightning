@@ -187,6 +187,8 @@ defmodule Lightning.Accounts.User do
     {%{}, registration_fields}
     |> cast(attrs, Map.keys(registration_fields))
     |> validate_email()
+    |> validate_name()
+    |> trim_name()
     |> validate_password(opts)
     |> put_change(:role, :superuser)
   end
@@ -212,6 +214,10 @@ defmodule Lightning.Accounts.User do
     changeset
     |> validate_required(:password, message: "can't be blank")
     |> validate_length(:password, min: 12, max: 72)
+    |> Lightning.Validators.validate_no_null_bytes(
+      :password,
+      "can't contain a NUL character"
+    )
     |> maybe_hash_password(opts)
   end
 
@@ -317,6 +323,92 @@ defmodule Lightning.Accounts.User do
     |> cast(attrs, [:password])
     |> validate_confirmation(:password, message: "does not match password")
     |> validate_password(opts)
+  end
+
+  @doc """
+  A user a service account creates through `/api/users`.
+
+  Both names are required, as they are on every other path that creates a
+  user, and `confirmed: true` confirms the email. A taken email is left to the
+  unique index rather than checked first, so two requests for the same email
+  can't both succeed.
+  """
+  @spec service_account_changeset(map()) :: Ecto.Changeset.t()
+  def service_account_changeset(attrs) do
+    %User{}
+    |> cast(attrs, [:email, :password, :first_name, :last_name, :role])
+    |> Lightning.Validators.validate_email_format()
+    |> unique_constraint(:email)
+    |> validate_service_account_fields(attrs, [:first_name, :last_name])
+    |> validate_password([])
+  end
+
+  @doc """
+  Changes to a user a service account makes through `PATCH /api/users/:id`.
+
+  Takes the same fields as `service_account_changeset/1` except the email,
+  with the same rules for any that are present, so a user stored without names
+  can be changed without giving them. The password is only checked and hashed
+  when one is given that isn't already the user's, so repeating the current
+  password changes nothing and signs no one out. `confirmed: true` confirms an
+  unconfirmed email but nothing unconfirms one.
+  """
+  @spec service_account_update_changeset(t(), map()) :: Ecto.Changeset.t()
+  def service_account_update_changeset(%User{} = user, attrs) do
+    given_names =
+      Enum.filter(
+        [:first_name, :last_name],
+        &(Map.has_key?(attrs, &1) or Map.has_key?(attrs, Atom.to_string(&1)))
+      )
+
+    user
+    |> cast(attrs, [:password, :first_name, :last_name, :role])
+    |> validate_service_account_fields(attrs, given_names)
+    |> keep_current_password(user)
+    |> maybe_validate_password([])
+  end
+
+  defp validate_service_account_fields(changeset, attrs, required_names) do
+    changeset
+    |> Lightning.Validators.validate_name(:first_name)
+    |> Lightning.Validators.validate_name(:last_name)
+    |> validate_required(required_names, message: "can't be blank")
+    |> validate_length(:first_name, max: 255)
+    |> validate_length(:last_name, max: 255)
+    |> confirm_if_asked(attrs)
+  end
+
+  # Checked against the password rules first: bcrypt ignores a NUL and
+  # anything past 72 bytes, so an invalid password can verify as the current
+  # one and must still be refused.
+  defp keep_current_password(changeset, user) do
+    with password when is_binary(password) <- get_change(changeset, :password),
+         true <- byte_size(password) <= 72,
+         [] <-
+           password_changeset(user, %{password: password}, hash_password: false).errors,
+         true <- valid_password?(user, password) do
+      delete_change(changeset, :password)
+    else
+      _ -> changeset
+    end
+  end
+
+  defp confirm_if_asked(changeset, attrs) do
+    {%{}, %{confirmed: :boolean}}
+    |> cast(attrs, [:confirmed])
+    |> apply_action(:insert)
+    |> case do
+      {:ok, %{confirmed: true}} ->
+        if get_field(changeset, :confirmed_at),
+          do: changeset,
+          else: confirm_changeset(changeset)
+
+      {:ok, _unconfirmed} ->
+        changeset
+
+      {:error, _invalid} ->
+        add_error(changeset, :confirmed, "is invalid")
+    end
   end
 
   @doc """
