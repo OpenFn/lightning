@@ -28,7 +28,7 @@ export const RangePicker = ({
     value={days}
     onChange={onChange}
     aria-label="Time range"
-    className="flex gap-1"
+    className="flex gap-1 rounded-lg bg-gray-50 p-1"
   >
     {RANGES.map(range => {
       const disabled =
@@ -48,7 +48,7 @@ export const RangePicker = ({
             <Radio
               value={range.days}
               disabled={disabled}
-              className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 data-hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 data-checked:bg-white data-checked:text-primary-700 data-checked:shadow-xs data-checked:inset-ring data-checked:inset-ring-gray-200 data-disabled:cursor-not-allowed data-disabled:text-gray-300"
+              className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 not-data-checked:data-hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 data-checked:bg-white data-checked:text-primary-700 data-checked:shadow-xs data-disabled:cursor-not-allowed data-disabled:text-gray-300"
             >
               {range.label}
             </Radio>
