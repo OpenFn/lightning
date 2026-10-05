@@ -81,14 +81,16 @@ export const WorkflowHealth = ({
       <TabGroup className="flex flex-col gap-6">
         <TabList
           aria-label="Count by"
-          className="tabbed-selector flex flex-row space-x-4"
+          className="tabbed-selector flex space-x-4"
         >
-          <Tab className="!font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:rounded-md focus-visible:outline-primary-600 data-selected:!border-b-primary-600">
-            Work orders
-          </Tab>
-          <Tab className="!font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:rounded-md focus-visible:outline-primary-600 data-selected:!border-b-primary-600">
-            Runs
-          </Tab>
+          {['Work orders', 'Runs'].map(label => (
+            <Tab
+              key={label}
+              className="!font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:rounded-md focus-visible:outline-primary-600 data-selected:!border-b-primary-600"
+            >
+              {label}
+            </Tab>
+          ))}
         </TabList>
 
         <TabPanels>
