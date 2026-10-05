@@ -32,7 +32,7 @@ describe('TriageTable', () => {
     );
     expect(screen.getByRole('cell', { name: '62' })).toBeVisible();
     expect(
-      screen.getByRole('columnheader', { name: 'Work orders' })
+      screen.getByRole('columnheader', { name: 'Work orders affected' })
     ).toBeVisible();
   });
 
@@ -117,7 +117,7 @@ describe('TriageTable', () => {
 
   // A worker can report the type as an empty string rather than omitting it.
   // `??` let that through, rendering the signature as a bare `fail:` and a
-  // "Tip: " with no sentence after it.
+  // suggestion with no sentence in it.
   test('treats an empty error type as a missing one', () => {
     table([signature({ error_type: '' })]);
 

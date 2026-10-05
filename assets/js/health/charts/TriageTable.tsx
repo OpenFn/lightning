@@ -83,75 +83,58 @@ export const TriageTable = ({
   }
 
   return (
-    // Capped in height rather than in rows: the tail is still worth reading,
-    // just not worth pushing the rest of the page down for. `max-h` over a
-    // row count so a short list keeps the card short.
-    //
-    // `-mr-6 pr-4` bleeds the scroll region out to the card's own edge (the
-    // card is `p-6`), so the scrollbar sits flush against it instead of
-    // floating in the middle of the card's padding.
-    //
-    // `relative` is load-bearing, not decoration: every row holds an
-    // `sr-only` span, which Tailwind implements as `position: absolute`. An
-    // absolutely positioned box is not clipped by a static ancestor's
-    // `overflow`, so without a containing block here those spans resolve
-    // against the page's own scroll container and stretch it to the last
-    // row's static position — a screenful of blank space under the page, one
-    // row per failure signature.
-    <div className="relative -mr-6 max-h-96 overflow-y-auto pr-4">
-      <table className="w-full text-left text-sm">
-        <thead className="sticky top-0 z-10 bg-white">
-          <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-            <th scope="col" className="w-28 py-2 pr-4 font-medium">
-              Work orders
-            </th>
-            <th scope="col" className="py-2 font-medium">
-              Failure type
-            </th>
-            <th scope="col" className="w-24 py-2 pl-4 font-medium">
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {signatures.map(signature => (
-            // job_id joins the key: a job deleted and recreated with the same
-            // name reads as two identical-looking signatures otherwise.
-            <tr
-              key={[
-                signature.exit_reason,
-                signature.error_type,
-                signature.step_name,
-                signature.adaptor,
-                signature.job_id,
-              ].join('|')}
-              className="border-b border-gray-100 last:border-0"
-            >
-              <td className="py-3 pr-4 tabular-nums text-gray-900">
-                {signature.count.toLocaleString()}
-              </td>
-              <td className="py-3 align-top">
-                <Signature signature={signature} />
-                <p className="mt-1">
-                  <span className="font-medium text-gray-500">Tip: </span>
-                  <span className="text-gray-600">{tipFor(signature)}</span>
-                </p>
-              </td>
-              {/* Nothing to link on a row whose `exit_reason` never resolved:
+    <table className="w-full text-left text-sm">
+      <thead>
+        <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
+          <th scope="col" className="w-28 py-2 pr-4 font-medium">
+            Work orders affected
+          </th>
+          <th scope="col" className="py-2 pr-4 font-medium">
+            Signature
+          </th>
+          <th scope="col" className="py-2 font-medium">
+            Suggestion
+          </th>
+          <th scope="col" className="w-24 py-2 pl-4 font-medium">
+            <span className="sr-only">Actions</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {signatures.map(signature => (
+          // job_id joins the key: a job deleted and recreated with the same
+          // name reads as two identical-looking signatures otherwise.
+          <tr
+            key={[
+              signature.exit_reason,
+              signature.error_type,
+              signature.step_name,
+              signature.adaptor,
+              signature.job_id,
+            ].join('|')}
+            className="border-b border-gray-100 last:border-0"
+          >
+            <td className="py-3 pr-4 tabular-nums text-gray-900">
+              {signature.count.toLocaleString()}
+            </td>
+            <td className="py-3 pr-4">
+              <Signature signature={signature} />
+            </td>
+            <td className="py-3 text-gray-600">{tipFor(signature)}</td>
+            {/* Nothing to link on a row whose `exit_reason` never resolved:
                   that leaves neither a step nor a mappable run state to filter
                   history on. */}
-              <td className="py-3 pl-4 text-right">
-                {signature.exit_reason && (
-                  <ViewButton
-                    href={signatureUrl(projectId, workflowId, from, signature)}
-                  />
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+            <td className="py-3 pl-4 text-right">
+              {signature.exit_reason && (
+                <ViewButton
+                  href={signatureUrl(projectId, workflowId, from, signature)}
+                />
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 };
 
@@ -165,10 +148,9 @@ const ViewButton = ({ href }: { href: string }) => (
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="inline-flex items-center gap-x-1 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+    className="inline-block whitespace-nowrap rounded-md bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:inset-ring-gray-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
   >
     View <span className="sr-only">(opens in a new tab)</span>
-    <span className="hero-arrow-right-micro h-3 w-3" />
   </a>
 );
 
