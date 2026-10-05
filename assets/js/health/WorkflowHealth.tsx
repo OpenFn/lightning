@@ -177,19 +177,27 @@ export const WorkflowHealth = ({
         </TabPanels>
       </TabGroup>
 
-      <Card title="Triage">
-        <Panel data={signatures.data} error={signatures.error}>
-          {({ signatures, window }) => (
-            <TriageTable
-              signatures={signatures}
-              emptyMessage={emptyMessage(window, 'failures')}
-              projectId={projectId}
-              workflowId={workflowId}
-              from={window.from}
-            />
-          )}
-        </Panel>
-      </Card>
+      {/* Titled above the card rather than inside it, so the table's header
+          band is the top of the card. The card padding is for the loading,
+          empty and error states; the table itself runs to the edges. */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-medium tracking-wide text-gray-500 uppercase">
+          Triage - grouped by failure type
+        </h2>
+        <div className="flex flex-col rounded-lg bg-white p-6 shadow">
+          <Panel data={signatures.data} error={signatures.error}>
+            {({ signatures, window }) => (
+              <TriageTable
+                signatures={signatures}
+                emptyMessage={emptyMessage(window, 'failures')}
+                projectId={projectId}
+                workflowId={workflowId}
+                from={window.from}
+              />
+            )}
+          </Panel>
+        </div>
+      </section>
     </div>
   );
 };

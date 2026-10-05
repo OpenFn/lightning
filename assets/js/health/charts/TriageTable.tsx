@@ -83,60 +83,73 @@ export const TriageTable = ({
   }
 
   return (
-    <table className="w-full text-left text-sm">
-      <thead>
-        <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-          <th scope="col" className="w-28 py-2 pr-4 font-medium">
-            Work orders affected
-          </th>
-          <th scope="col" className="py-2 pr-4 font-medium">
-            Signature
-          </th>
-          <th scope="col" className="py-2 font-medium">
-            Suggestion
-          </th>
-          <th scope="col" className="w-24 py-2 pl-4 font-medium">
-            <span className="sr-only">Actions</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {signatures.map(signature => (
-          // job_id joins the key: a job deleted and recreated with the same
-          // name reads as two identical-looking signatures otherwise.
-          <tr
-            key={[
-              signature.exit_reason,
-              signature.error_type,
-              signature.step_name,
-              signature.adaptor,
-              signature.job_id,
-            ].join('|')}
-            className="border-b border-gray-100 last:border-0"
-          >
-            <td className="py-3 pr-4 tabular-nums text-gray-900">
-              {signature.count.toLocaleString()}
-            </td>
-            <td className="py-3 pr-4">
-              <Signature signature={signature} />
-            </td>
-            <td className="py-3 text-gray-600">{tipFor(signature)}</td>
-            {/* Nothing to link on a row whose `exit_reason` never resolved:
+    // Cancels the card's `p-6`, so the header band and row dividers run to its
+    // edges the way they do on the LiveView tables.
+    <div className="-m-6 overflow-hidden rounded-lg">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th scope="col" className={TH}>
+              Work orders
+            </th>
+            <th scope="col" className={TH}>
+              Signature
+            </th>
+            <th scope="col" className={TH}>
+              Suggestion
+            </th>
+            <th scope="col" className={TH}>
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200 bg-white">
+          {signatures.map(signature => (
+            // job_id joins the key: a job deleted and recreated with the same
+            // name reads as two identical-looking signatures otherwise.
+            <tr
+              key={[
+                signature.exit_reason,
+                signature.error_type,
+                signature.step_name,
+                signature.adaptor,
+                signature.job_id,
+              ].join('|')}
+              className="transition-colors duration-150 hover:bg-gray-50"
+            >
+              <td className={TD}>
+                <span className="inline-block rounded-full bg-slate-200 px-4 py-1.5 text-xs font-medium tabular-nums text-gray-700">
+                  {signature.count.toLocaleString()}
+                </span>
+              </td>
+              <td className={TD}>
+                <Signature signature={signature} />
+              </td>
+              <td className={TD}>{tipFor(signature)}</td>
+              {/* Nothing to link on a row whose `exit_reason` never resolved:
                   that leaves neither a step nor a mappable run state to filter
                   history on. */}
-            <td className="py-3 pl-4 text-right">
-              {signature.exit_reason && (
-                <ViewButton
-                  href={signatureUrl(projectId, workflowId, from, signature)}
-                />
-              )}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+              <td className={TD}>
+                {signature.exit_reason && (
+                  <ViewButton
+                    href={signatureUrl(projectId, workflowId, from, signature)}
+                  />
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
+
+// Cell classes from the LiveView `table` component (`components/table.ex`),
+// with the outer padding at the card's `p-6` so the columns line up with the
+// cards above.
+const TH =
+  'px-3 py-3.5 first:pl-6 last:pr-6 text-left text-sm font-medium whitespace-nowrap text-gray-800';
+const TD = 'px-3 py-4 first:pl-6 last:pr-6 text-sm text-gray-500';
 
 /**
  * Lands on history filtered to exactly the work orders this row counts, where
@@ -148,7 +161,7 @@ const ViewButton = ({ href }: { href: string }) => (
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="inline-block whitespace-nowrap rounded-md bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:inset-ring-gray-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+    className="inline-block whitespace-nowrap rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:inset-ring-gray-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
   >
     View <span className="sr-only">(opens in a new tab)</span>
   </a>

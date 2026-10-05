@@ -359,7 +359,9 @@ describe('WorkflowHealth', () => {
     mount(both);
 
     expect(
-      await screen.findByRole('heading', { name: 'Triage' })
+      await screen.findByRole('heading', {
+        name: 'Triage - grouped by failure type',
+      })
     ).toBeVisible();
     expect(screen.getByRole('cell', { name: '98' })).toBeVisible();
     expect(
@@ -411,7 +413,9 @@ describe('WorkflowHealth', () => {
     expect(
       screen.getByRole('heading', { name: 'Failure breakdown' })
     ).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Triage' })).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'Triage - grouped by failure type' })
+    ).toBeVisible();
     expect(
       screen.getByRole('heading', { name: 'Steps with failures' })
     ).toBeVisible();

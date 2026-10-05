@@ -32,7 +32,7 @@ describe('TriageTable', () => {
     );
     expect(screen.getByRole('cell', { name: '62' })).toBeVisible();
     expect(
-      screen.getByRole('columnheader', { name: 'Work orders affected' })
+      screen.getByRole('columnheader', { name: 'Work orders' })
     ).toBeVisible();
   });
 
