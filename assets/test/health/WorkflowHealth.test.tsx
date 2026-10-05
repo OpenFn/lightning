@@ -372,9 +372,12 @@ describe('WorkflowHealth', () => {
   test('reports a refused request without echoing the server', async () => {
     mount({ outcomes: 404, failures: 404, runs: 404 });
 
-    // Every slice refused takes every panel with it.
-    expect(await screen.findAllByText(ERROR)).toHaveLength(5);
+    // Every slice refused takes every panel with it, on both tabs.
+    expect(await screen.findAllByText(ERROR)).toHaveLength(4);
     expect(screen.queryByText(/404|Not Found/)).toBeNull();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Runs' }));
+    expect(screen.getAllByText(ERROR)).toHaveLength(2);
   });
 
   test('degrades both donuts when the outcomes request fails', async () => {
@@ -406,14 +409,16 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Outcomes' })).toBeVisible();
     expect(
-      screen.getByRole('heading', { name: 'Runs over time' })
-    ).toBeVisible();
-    expect(
       screen.getByRole('heading', { name: 'Failure breakdown' })
     ).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Triage' })).toBeVisible();
     expect(
       screen.getByRole('heading', { name: 'Steps with failures' })
+    ).toBeVisible();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Runs' }));
+    expect(
+      screen.getByRole('heading', { name: 'Runs over time' })
     ).toBeVisible();
   });
 
@@ -450,7 +455,7 @@ describe('WorkflowHealth', () => {
     expect(screen.queryAllByText('Success')).toHaveLength(0);
     // Each panel holds a placeholder, but only for a reader who lands inside
     // it. jsdom does no layout, so the reserved height needs a browser.
-    expect(screen.getAllByText('Loading…')).toHaveLength(5);
+    expect(screen.getAllByText('Loading…')).toHaveLength(4);
   });
 
   // Why the panels drop together rather than each keeping its own last answer:
@@ -500,11 +505,7 @@ describe('WorkflowHealth', () => {
 
     // An `alert`, so the failure is read out at once.
     const alerts = await screen.findAllByRole('alert');
-    expect(alerts.map(alert => alert.textContent)).toEqual([
-      ERROR,
-      ERROR,
-      ERROR,
-    ]);
+    expect(alerts.map(alert => alert.textContent)).toEqual([ERROR, ERROR]);
     expect(screen.queryAllByText('Success')).toHaveLength(0);
   });
 

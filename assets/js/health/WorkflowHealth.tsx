@@ -1,3 +1,4 @@
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -74,112 +75,119 @@ export const WorkflowHealth = ({
         </div>
       </div>
 
-      {/* One card wide by default. At `lg` twelve columns: the top row is the
-          two summaries either side of the time axis (3 + 6 + 3), and the
-          bottom row is the triage table with the breakdown donut beside it
-          (9 + 3). The axis takes half the row because it is the only card
-          whose reading gets better with width — up to a month of daily bars
-          and their ticks — where a donut past its `max-w-sm` just centres in
-          more whitespace.
-          Always in source order. */}
-      <div className="grid gap-6 lg:grid-cols-12">
-        <Card
-          title="Outcomes"
-          className="lg:col-span-3"
-          meta={outcomes.data && workOrders(outcomes.data.counts)}
+      {/* The tabs swap the top row between what the work orders came to and
+          how many runs it took. Both queries keep polling whichever tab is
+          open, so switching never waits on a load. */}
+      <TabGroup className="flex flex-col gap-6">
+        <TabList
+          aria-label="Count by"
+          className="tabbed-selector flex flex-row space-x-4"
         >
-          <Panel data={outcomes.data} error={outcomes.error}>
-            {({ counts, window }) => (
-              <OutcomesDonut
-                counts={counts}
-                emptyMessage={emptyMessage(window)}
-                projectId={projectId}
-                workflowId={workflowId}
-                from={window.from}
-              />
-            )}
-          </Panel>
-        </Card>
+          <Tab className="!font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:rounded-md focus-visible:outline-primary-600 data-selected:!border-b-primary-600">
+            Work orders
+          </Tab>
+          <Tab className="!font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:rounded-md focus-visible:outline-primary-600 data-selected:!border-b-primary-600">
+            Runs
+          </Tab>
+        </TabList>
 
-        {/* Runs, where the donut beside it counts work orders — so the meta
-            names the bucket size rather than a total that won't reconcile. */}
-        <Card
-          title="Runs over time"
-          className="lg:col-span-6"
-          meta={volume.data && bucketMeta(volume.data)}
-        >
-          <Panel data={volume.data} error={volume.error}>
-            {({ buckets, window, timezone, bucket_hours }) => (
-              <VolumeBars
-                buckets={buckets}
-                timezone={timezone}
-                hours={bucket_hours}
-                emptyMessage={emptyMessage(window, 'runs')}
-                projectId={projectId}
-                workflowId={workflowId}
-              />
-            )}
-          </Panel>
-        </Card>
+        <TabPanels>
+          {/* One card wide by default, three across at `lg`. The cards stretch
+              to the row's height so the band reads as one. */}
+          <TabPanel className="grid gap-6 lg:grid-cols-3">
+            <Card
+              title="Outcomes"
+              meta={outcomes.data && workOrders(outcomes.data.counts)}
+            >
+              <Panel data={outcomes.data} error={outcomes.error}>
+                {({ counts, window }) => (
+                  <OutcomesDonut
+                    counts={counts}
+                    emptyMessage={emptyMessage(window)}
+                    projectId={projectId}
+                    workflowId={workflowId}
+                    from={window.from}
+                  />
+                )}
+              </Panel>
+            </Card>
 
-        {/* The same `failures` reply as Triage, folded from "what broke" down
-            to "where" — so it costs no request, and the two cannot disagree
-            about a step's weight. Top row, because "which step do I look at"
-            is a question to answer before reading the triage table, not after.
-            Not self-start: the three cards across this row read as one band, so
-            it takes the row's height rather than sitting short beside the time
-            axis. */}
-        <Card
-          title="Steps with failures"
-          className="lg:col-span-3"
-          meta={signatures.data && stepFailureTotal(signatures.data.signatures)}
-        >
-          <Panel data={signatures.data} error={signatures.error}>
-            {({ signatures, window }) => (
-              <StepFailureBars
-                signatures={signatures}
-                emptyMessage={emptyMessage(window, 'failures')}
-              />
-            )}
-          </Panel>
-        </Card>
+            {/* Same reply as the Outcomes panel — one aggregate read two ways,
+                so the slices here and the red wedge there cannot disagree. */}
+            <Card
+              title="Failure breakdown"
+              meta={outcomes.data && failures(outcomes.data.counts)}
+            >
+              <Panel data={outcomes.data} error={outcomes.error}>
+                {({ counts, window }) => (
+                  <FailureBreakdownDonut
+                    counts={counts}
+                    emptyMessage={emptyMessage(window, 'failures')}
+                    projectId={projectId}
+                    workflowId={workflowId}
+                    from={window.from}
+                  />
+                )}
+              </Panel>
+            </Card>
 
-        <Card title="Triage" className="lg:col-span-9">
-          <Panel data={signatures.data} error={signatures.error}>
-            {({ signatures, window }) => (
-              <TriageTable
-                signatures={signatures}
-                emptyMessage={emptyMessage(window, 'failures')}
-                projectId={projectId}
-                workflowId={workflowId}
-                from={window.from}
-              />
-            )}
-          </Panel>
-        </Card>
+            {/* The same `failures` reply as Triage, folded from "what broke"
+                down to "where" — so it costs no request, and the two cannot
+                disagree about a step's weight. */}
+            <Card
+              title="Steps with failures"
+              meta={
+                signatures.data && stepFailureTotal(signatures.data.signatures)
+              }
+            >
+              <Panel data={signatures.data} error={signatures.error}>
+                {({ signatures, window }) => (
+                  <StepFailureBars
+                    signatures={signatures}
+                    emptyMessage={emptyMessage(window, 'failures')}
+                  />
+                )}
+              </Panel>
+            </Card>
+          </TabPanel>
 
-        {/* Same reply as the Outcomes panel — one aggregate read two ways, so
-            the slices here and the red wedge there cannot disagree. Self-start,
-            so the card is only as tall as a donut plus its legend rather than
-            stretching to the triage table beside it. */}
-        <Card
-          title="Failure breakdown"
-          className="self-start lg:col-span-3"
-          meta={outcomes.data && failures(outcomes.data.counts)}
-        >
-          <Panel data={outcomes.data} error={outcomes.error}>
-            {({ counts, window }) => (
-              <FailureBreakdownDonut
-                counts={counts}
-                emptyMessage={emptyMessage(window, 'failures')}
-                projectId={projectId}
-                workflowId={workflowId}
-                from={window.from}
-              />
-            )}
-          </Panel>
-        </Card>
-      </div>
+          {/* Runs, where the other tab counts work orders — so the meta names
+              the bucket size rather than a total that won't reconcile. */}
+          <TabPanel>
+            <Card
+              title="Runs over time"
+              meta={volume.data && bucketMeta(volume.data)}
+            >
+              <Panel data={volume.data} error={volume.error}>
+                {({ buckets, window, timezone, bucket_hours }) => (
+                  <VolumeBars
+                    buckets={buckets}
+                    timezone={timezone}
+                    hours={bucket_hours}
+                    emptyMessage={emptyMessage(window, 'runs')}
+                    projectId={projectId}
+                    workflowId={workflowId}
+                  />
+                )}
+              </Panel>
+            </Card>
+          </TabPanel>
+        </TabPanels>
+      </TabGroup>
+
+      <Card title="Triage">
+        <Panel data={signatures.data} error={signatures.error}>
+          {({ signatures, window }) => (
+            <TriageTable
+              signatures={signatures}
+              emptyMessage={emptyMessage(window, 'failures')}
+              projectId={projectId}
+              workflowId={workflowId}
+              from={window.from}
+            />
+          )}
+        </Panel>
+      </Card>
     </div>
   );
 };
