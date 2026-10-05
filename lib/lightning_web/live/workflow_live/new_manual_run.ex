@@ -5,13 +5,17 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   """
   alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Jobs
+  alias Lightning.Projects.Project
   alias Lightning.Workflows.Job
 
   @spec search_selectable_dataclips(
           job_id :: Ecto.UUID.t(),
+          project :: Project.t(),
           search_text :: String.t(),
           limit :: integer(),
-          offset :: integer()
+          offset :: integer(),
+          opts :: Keyword.t()
         ) ::
           {:ok,
            %{
@@ -19,21 +23,37 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
              next_cron_run_dataclip_id: Ecto.UUID.t() | nil
            }}
           | {:error, Ecto.Changeset.t()}
-  def search_selectable_dataclips(job_id, search_text, limit, offset) do
-    with {:ok, filters} <-
-           get_dataclips_filters(search_text),
-         {dataclips, next_cron_run_dataclip_id} <-
-           Invocation.list_dataclips_for_job_with_cron_state(
-             %Job{id: job_id},
-             filters,
-             limit: limit,
-             offset: offset
-           ) do
-      {:ok,
-       %{
-         dataclips: dataclips,
-         next_cron_run_dataclip_id: next_cron_run_dataclip_id
-       }}
+  def search_selectable_dataclips(
+        job_id,
+        project,
+        search_text,
+        limit,
+        offset,
+        opts \\ []
+      ) do
+    # A job outside the caller's project (or missing/malformed) yields an empty
+    # result, never another project's dataclips and never an error the client
+    # can distinguish from "no dataclips".
+    if Jobs.job_in_project?(job_id, project) do
+      with {:ok, filters} <- get_dataclips_filters(search_text) do
+        {dataclips, next_cron_run_dataclip_id} =
+          Invocation.list_dataclips_for_job_with_cron_state(
+            %Job{id: job_id},
+            filters,
+            limit: limit,
+            offset: offset,
+            project_id: project.id,
+            named_dataclips: Keyword.get(opts, :named_dataclips, false)
+          )
+
+        {:ok,
+         %{
+           dataclips: dataclips,
+           next_cron_run_dataclip_id: next_cron_run_dataclip_id
+         }}
+      end
+    else
+      {:ok, %{dataclips: [], next_cron_run_dataclip_id: nil}}
     end
   end
 

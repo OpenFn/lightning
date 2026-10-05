@@ -18,18 +18,13 @@ export function AIButton({
   disabledMessage,
   className = '',
 }: AIButtonProps) {
-  const { toggleAIAssistantPanel, collapseCreateWorkflowPanel } =
-    useUICommands();
+  const { toggleAIAssistantPanel } = useUICommands();
   const isOpen = useIsAIAssistantPanelOpen();
 
   const handleClick = () => {
     if (onClick) {
       onClick();
     } else {
-      // Close create workflow panel when opening AI Assistant
-      if (!isOpen) {
-        collapseCreateWorkflowPanel();
-      }
       toggleAIAssistantPanel();
     }
   };

@@ -40,11 +40,6 @@ import {
 } from '../../__helpers__/channelMocks';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 
-// Mock useAdaptorIcons to avoid fetching icon manifest
-vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
-  default: () => null,
-}));
-
 /**
  * Helper to create and connect a workflow store with Y.Doc
  */
@@ -82,6 +77,7 @@ function createWrapper(
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   const mockSessionValue = {
@@ -211,12 +207,12 @@ describe('JobForm - Adaptor Display Section', () => {
     // Phase 2R: Version is NO LONGER displayed in inspector
     // Version selection moved to ConfigureAdaptorModal (Phase 3R)
 
-    // Check "Connect" button exists (no credential set yet)
+    // Check "Edit" button exists (no credential set yet)
     const connectButton = screen.getByRole('button', {
-      name: /connect credential/i,
+      name: /edit adaptor/i,
     });
     expect(connectButton).toBeInTheDocument();
-    expect(connectButton).toHaveTextContent('Connect');
+    expect(connectButton).toHaveTextContent('Edit');
   });
 
   test("opens ConfigureAdaptorModal when 'Connect' clicked (Phase 3R)", async () => {
@@ -233,9 +229,9 @@ describe('JobForm - Adaptor Display Section', () => {
       ),
     });
 
-    // Click "Connect" button to open ConfigureAdaptorModal
+    // Click "Edit" button to open ConfigureAdaptorModal
     const connectButton = screen.getByRole('button', {
-      name: /connect credential/i,
+      name: /edit adaptor/i,
     });
     await user.click(connectButton);
 
@@ -265,9 +261,9 @@ describe('JobForm - Adaptor Display Section', () => {
     // Verify initial adaptor
     expect(screen.getByText('Http')).toBeInTheDocument();
 
-    // Open modal with "Connect" button
+    // Open modal with "Edit" button
     const connectButton = screen.getByRole('button', {
-      name: /connect credential/i,
+      name: /edit adaptor/i,
     });
     await user.click(connectButton);
 
@@ -324,6 +320,86 @@ describe('JobForm - Adaptor Display Section', () => {
     await waitFor(() => {
       expect(screen.getByText('Salesforce')).toBeInTheDocument();
     });
+  });
+
+  test("shows 'Edit' button for adaptors that don't need credentials (no credential set)", async () => {
+    const ydocWithCommon = createWorkflowYDoc({
+      jobs: {
+        'job-1': {
+          id: 'job-1',
+          name: 'Common Job',
+          adaptor: '@openfn/language-common@2.0.0',
+          body: 'fn(state => state)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      },
+    });
+
+    const commonStore = createConnectedWorkflowStore(ydocWithCommon);
+    const job = commonStore.getSnapshot().jobs[0];
+
+    render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        commonStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // language-common doesn't need credentials — button should say "Edit" even without a credential
+    await waitFor(() => {
+      const editButton = screen.getByRole('button', { name: /edit adaptor/i });
+      expect(editButton).toBeInTheDocument();
+      expect(editButton).toHaveTextContent('Edit');
+    });
+
+    expect(
+      screen.queryByRole('button', { name: /connect credential/i })
+    ).not.toBeInTheDocument();
+  });
+
+  test("shows 'Connect' button for adaptors that need credentials (no credential set)", async () => {
+    const ydocWithSalesforce = createWorkflowYDoc({
+      jobs: {
+        'job-1': {
+          id: 'job-1',
+          name: 'Salesforce Job',
+          adaptor: '@openfn/language-salesforce@2.0.0',
+          body: 'fn(state => state)',
+          project_credential_id: null,
+          keychain_credential_id: null,
+        },
+      },
+    });
+
+    const sfStore = createConnectedWorkflowStore(ydocWithSalesforce);
+    const job = sfStore.getSnapshot().jobs[0];
+
+    render(<JobForm job={job} />, {
+      wrapper: createWrapper(
+        sfStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // language-salesforce needs credentials — button should say "Connect" when no credential is set
+    await waitFor(() => {
+      const connectButton = screen.getByRole('button', {
+        name: /connect credential/i,
+      });
+      expect(connectButton).toBeInTheDocument();
+      expect(connectButton).toHaveTextContent('Connect');
+    });
+
+    expect(
+      screen.queryByRole('button', { name: /edit adaptor/i })
+    ).not.toBeInTheDocument();
   });
 
   // REMOVED (Phase 2R): Version dropdown no longer in inspector
@@ -1206,7 +1282,7 @@ describe('JobForm - Credential Configuration', () => {
 
     // Open ConfigureAdaptorModal
     const connectButton = screen.getByRole('button', {
-      name: /connect credential/i,
+      name: /edit adaptor/i,
     });
     await user.click(connectButton);
 

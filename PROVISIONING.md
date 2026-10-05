@@ -46,29 +46,29 @@ The provisioning document is a JSON document with the project at the root.
           "name": "<<job-name>>",
           "body": "<<job-body>>",
           "adaptor": "<<adaptor-name>>",
-          "enabled": true
-        }
+          "enabled": true,
+        },
         // ... more jobs
       ],
       "triggers": [
         {
           "id": "<<trigger-id>>",
           "name": "<<trigger-name>>",
-          "type": "webhook"
-        }
+          "type": "webhook",
+        },
         // ... more triggers
       ],
       "edges": [
         {
           "id": "<<edge-id>>",
           "source_trigger_id": "<<trigger-id>>",
-          "target_job_id": "<<job-id>>"
-        }
+          "target_job_id": "<<job-id>>",
+        },
         // ... more edges
-      ]
-    }
+      ],
+    },
     // ... more workflows
-  ]
+  ],
 }
 ```
 
@@ -96,11 +96,11 @@ Example:
       "jobs": [
         {
           "id": "<<job-id>>",
-          "delete": true // <== delete this job
-        }
-      ]
-    }
-  ]
+          "delete": true, // <== delete this job
+        },
+      ],
+    },
+  ],
 }
 ```
 
@@ -149,9 +149,9 @@ Using the example above a state file might look like this:
     "workflow-one": {
       "id": "f206aa85-4fce-492e-94eb-ffd32c75d178",
       "jobs": {},
-      "triggers": {}
-    }
-  }
+      "triggers": {},
+    },
+  },
 }
 ```
 

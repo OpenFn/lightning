@@ -49,4 +49,43 @@ defmodule Lightning.WorkOrderTest do
              "work_order should still be assigned to the trigger"
     end
   end
+
+  describe "outcome/1" do
+    test "buckets every state in states()" do
+      for state <- WorkOrder.states() do
+        assert WorkOrder.outcome(state) in [
+                 :success,
+                 :cancelled,
+                 :pending,
+                 :failed
+               ]
+      end
+    end
+
+    test "success and cancelled are their own outcome, not failed" do
+      assert WorkOrder.outcome(:success) == :success
+      assert WorkOrder.outcome(:cancelled) == :cancelled
+    end
+
+    test "active states are pending" do
+      for state <- WorkOrder.active_states() do
+        assert WorkOrder.outcome(state) == :pending
+      end
+    end
+  end
+
+  describe "failure_states/0" do
+    test "is every final state except success and cancelled" do
+      # If this fails because a state was added or removed, also update
+      # assets/js/health/types.ts's FAILURE_STATES to match.
+      assert WorkOrder.failure_states() == [
+               :rejected,
+               :failed,
+               :crashed,
+               :killed,
+               :exception,
+               :lost
+             ]
+    end
+  end
 end

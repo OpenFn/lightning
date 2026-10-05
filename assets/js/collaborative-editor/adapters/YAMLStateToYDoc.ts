@@ -8,6 +8,8 @@ import type {
 } from '../../yaml/types';
 import type { Session } from '../types/session';
 
+import { reconcileDanglingReferences } from './reconcileDanglingReferences';
+
 /**
  * YAMLStateToYDoc
  *
@@ -55,7 +57,7 @@ export class YAMLStateToYDoc {
    *
    * Handles union type transformation:
    * - CronTrigger: has cron_expression
-   * - WebhookTrigger/KafkaTrigger: must default cron_expression to ""
+   * - WebhookTrigger: must default cron_expression to ""
    */
   static transformTrigger(trigger: YAMLStateTrigger): Y.Map<unknown> {
     const triggerMap = new Y.Map();
@@ -76,7 +78,18 @@ export class YAMLStateToYDoc {
     }
 
     if (trigger.type === 'webhook') {
+      // Only when the spec said something. An absent key means "leave it
+      // alone", matching the provisioner, so applying a spec that never
+      // mentions the path cannot clear a live URL.
+      if (trigger.custom_path !== undefined) {
+        triggerMap.set('custom_path', trigger.custom_path);
+      }
+
       triggerMap.set('webhook_reply', trigger.webhook_reply ?? null);
+      triggerMap.set(
+        'webhook_response_config',
+        trigger.webhook_response_config ?? null
+      );
     }
 
     return triggerMap;
@@ -130,10 +143,36 @@ export class YAMLStateToYDoc {
 
       // 3. Clear and populate triggers array
       const triggersArray = ydoc.getArray('triggers');
+
+      // What each trigger currently holds, so a spec that never mentions the
+      // path keeps it rather than blanking a live URL on the next edit.
+      const existingPaths = new Map<string, unknown>();
+      triggersArray.toArray().forEach(entry => {
+        const map = entry as Y.Map<unknown>;
+        const id = map.get('id');
+        if (typeof id === 'string' && map.has('custom_path')) {
+          existingPaths.set(id, map.get('custom_path'));
+        }
+      });
+
       triggersArray.delete(0, triggersArray.length);
-      const transformedTriggers = workflowState.triggers.map(trigger =>
-        this.transformTrigger(trigger)
-      );
+      const transformedTriggers = workflowState.triggers.map(trigger => {
+        const map = this.transformTrigger(trigger);
+
+        // Asks the source, not the map. `map` is not in the document yet, so
+        // `set` writes to prelim content while `has` reads the still-empty
+        // `_map` and always answers false, which would let an existing path
+        // beat the one the spec just stated.
+        if (
+          trigger.type === 'webhook' &&
+          trigger.custom_path === undefined &&
+          existingPaths.has(trigger.id)
+        ) {
+          map.set('custom_path', existingPaths.get(trigger.id));
+        }
+
+        return map;
+      });
       triggersArray.push(transformedTriggers);
 
       // 4. Clear and populate edges array
@@ -152,6 +191,14 @@ export class YAMLStateToYDoc {
           positionsMap.set(id, pos);
         });
       }
+
+      // 6. Reconcile dangling references introduced by the bulk replace.
+      // transformTrigger copies cron_cursor_job_id verbatim, so an imported /
+      // AI-applied workflow whose cron cursor references a job absent from the
+      // new jobs set would land dangling. Runs inside this single transaction —
+      // do NOT open a new one (Yjs forbids nesting). This is advisory; the
+      // server FK + save_workflow/3 rescue remain authoritative.
+      reconcileDanglingReferences(ydoc, { inTransaction: true });
     });
   }
 }

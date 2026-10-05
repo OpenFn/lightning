@@ -21,7 +21,9 @@ defmodule Lightning.Collaboration.Session do
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   alias Lightning.Accounts.User
+  alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Collaboration.WorkflowSerializer
+  alias Lightning.Projects.Project
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Yex.Sync.SharedDoc
@@ -34,15 +36,16 @@ defmodule Lightning.Collaboration.Session do
     :shared_doc_pid,
     :user,
     :workflow,
-    :document_name
+    :document_name,
+    :view_only?
   ]
-
-  @pg_scope :workflow_collaboration
 
   @type start_opts :: [
           workflow: Lightning.Workflows.Workflow.t(),
           user: User.t(),
-          parent_pid: pid()
+          document_name: String.t(),
+          parent_pid: pid(),
+          pg_scope: atom()
         ]
 
   @doc """
@@ -94,6 +97,7 @@ defmodule Lightning.Collaboration.Session do
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
     document_name = Keyword.fetch!(opts, :document_name)
+    pg_scope = Keyword.get(opts, :pg_scope, :workflow_collaboration)
 
     Logger.info("Starting session for document #{document_name}")
 
@@ -105,10 +109,11 @@ defmodule Lightning.Collaboration.Session do
       shared_doc_pid: nil,
       user: user,
       workflow: workflow,
-      document_name: document_name
+      document_name: document_name,
+      view_only?: Keyword.get(opts, :view_only?, false)
     }
 
-    lookup_shared_doc(document_name)
+    lookup_shared_doc(pg_scope, document_name)
     |> case do
       nil ->
         {:stop, {:error, :shared_doc_not_found}}
@@ -117,8 +122,8 @@ defmodule Lightning.Collaboration.Session do
         SharedDoc.observe(shared_doc_pid)
         Logger.info("Joined SharedDoc for #{document_name}")
 
-        # We track the user presence here so the the original WorkflowLive.Edit
-        # can be stopped from editing the workflow when someone else is editing it.
+        # We track the user presence here so editors can see when someone else
+        # is editing the workflow.
         # Note: Presence tracking uses workflow.id, not document_name, because
         # presence is about showing who is editing the workflow, not which version
         Presence.track_user_presence(
@@ -137,11 +142,11 @@ defmodule Lightning.Collaboration.Session do
       Process.demonitor(state.parent_ref)
     end
 
-    # Don't check Process.alive? - it only works for local PIDs
-    # and shared_doc_pid can be on another node in a distributed cluster.
-    # Sending to a dead process is safe (message is discarded).
+    # Don't check Process.alive? - it only works for local PIDs and
+    # shared_doc_pid can be on another node in a distributed cluster.
+    # safe_unobserve/1 tolerates the remote being slow or gone (see #4817).
     if shared_doc_pid do
-      SharedDoc.unobserve(shared_doc_pid)
+      safe_unobserve(shared_doc_pid)
     end
 
     Presence.untrack_user_presence(
@@ -153,8 +158,19 @@ defmodule Lightning.Collaboration.Session do
     :ok
   end
 
-  def lookup_shared_doc(document_name) do
-    case :pg.get_members(@pg_scope, document_name) do
+  defp safe_unobserve(shared_doc_pid) do
+    SharedDoc.unobserve(shared_doc_pid)
+  catch
+    :exit, reason ->
+      Logger.warning(
+        "SharedDoc.unobserve skipped during session cleanup: #{inspect(reason)}"
+      )
+
+      :ok
+  end
+
+  def lookup_shared_doc(pg_scope \\ :workflow_collaboration, document_name) do
+    case :pg.get_members(pg_scope, document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end
@@ -202,6 +218,10 @@ defmodule Lightning.Collaboration.Session do
   ## Returns
   - `{:ok, workflow}` - Successfully saved
   - `{:error, :workflow_deleted}` - Workflow has been deleted
+  - `{:error, :snapshot_failed}` - Snapshot creation failed; it shares the
+    save's transaction, so the whole save rolled back and nothing persisted
+  - `{:error, :adaptor_catalogue_unavailable}` - The adaptor catalogue's
+    first load did not complete, so no validation could run
   - `{:error, changeset}` - Validation or persistence error
 
   ## Examples
@@ -216,11 +236,34 @@ defmodule Lightning.Collaboration.Session do
           {:ok, Lightning.Workflows.Workflow.t()}
           | {:error,
              :workflow_deleted
+             | :snapshot_failed
              | :deserialization_failed
              | :internal_error
+             | :adaptor_catalogue_unavailable
              | Ecto.Changeset.t()}
   def save_workflow(session_pid, user) do
-    GenServer.call(session_pid, {:save_workflow, user}, 10_000)
+    GenServer.call(
+      session_pid,
+      {:save_workflow, user},
+      Lightning.Adaptors.Config.first_load_timeout() + 10_000
+    )
+  end
+
+  @doc """
+  Transitions the workflow's lifecycle state and persists it with the current
+  document in a single save: going live enables triggers and sets `:live`,
+  switching to draft disables triggers and sets `:draft`. Atomic and
+  self-consistent with the collaborative document.
+  """
+  @spec set_workflow_state(pid(), Lightning.Accounts.User.t(), :draft | :live) ::
+          {:ok, Lightning.Workflows.Workflow.t()} | {:error, term()}
+  def set_workflow_state(session_pid, user, target_state)
+      when target_state in [:draft, :live] do
+    GenServer.call(
+      session_pid,
+      {:set_workflow_state, target_state, user},
+      10_000
+    )
   end
 
   @doc """
@@ -306,84 +349,62 @@ defmodule Lightning.Collaboration.Session do
   end
 
   @impl true
-  def handle_call({:save_workflow, user}, _from, state) do
-    Logger.info("Saving workflow #{state.workflow.id} for user #{user.id}")
+  def handle_call({:save_workflow, user}, from, state) do
+    session = self()
 
-    with {:ok, doc} <- get_document(state),
-         {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow.id),
-         {:ok, workflow} <- fetch_workflow(state.workflow),
-         changeset <-
-           Lightning.Workflows.change_workflow(workflow, workflow_data),
-         {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
-         {:ok, saved_workflow} <-
-           Lightning.Workflows.save_workflow(changeset, user,
-             skip_reconcile: true
-           ),
-         :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow),
-         {:ok, _job_cleanup_count} <-
-           Lightning.AiAssistant.cleanup_unsaved_job_sessions(saved_workflow),
-         {:ok, _workflow_cleanup_count} <-
-           Lightning.AiAssistant.cleanup_unsaved_workflow_sessions(
-             saved_workflow
-           ) do
-      Logger.info("Successfully saved workflow #{state.workflow.id}")
-      {:reply, {:ok, saved_workflow}, %{state | workflow: saved_workflow}}
-    else
-      {:error, :no_shared_doc} ->
-        Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
-        {:reply, {:error, :internal_error}, state}
+    Task.start(fn ->
+      case ensure_catalogue_loaded() do
+        :ok ->
+          send(session, {:resume_save, from, user})
 
-      {:error, :deserialization_failed, reason} ->
-        Logger.error(
-          "Failed to deserialize workflow #{state.workflow.id}: #{inspect(reason)}"
-        )
+        {:error, reason} ->
+          Logger.info("Adaptor catalogue not ready for save: #{inspect(reason)}")
 
-        {:reply, {:error, :deserialization_failed}, state}
+          GenServer.reply(from, {:error, :adaptor_catalogue_unavailable})
+      end
+    end)
 
-      {:error, _, %Lightning.Extensions.Message{} = message} ->
-        {:reply, {:error, message}, state}
+    {:noreply, state}
+  end
 
-      {:error, :workflow_deleted} ->
-        Logger.warning(
-          "Cannot save workflow #{state.workflow.id}: workflow deleted"
-        )
+  @impl true
+  def handle_call({:set_workflow_state, target_state, user}, _from, state)
+      when target_state in [:draft, :live] do
+    do_save_workflow(state, user, {:set_state, target_state})
+  end
 
-        {:reply, {:error, :workflow_deleted}, state}
+  @impl true
+  def handle_call({:reset_workflow, user}, _from, %{view_only?: true} = state) do
+    Logger.warning(
+      "Refusing to reset workflow #{state.workflow.id} from a read-only view " <>
+        "(document #{state.document_name}, user #{user.id})"
+    )
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        all_errors =
-          Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-            Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
-              opts
-              |> Keyword.get(String.to_existing_atom(key), key)
-              |> to_string()
-            end)
-          end)
-
-        Logger.warning(fn ->
-          """
-          Failed to save workflow #{state.workflow.id}
-          Top-level errors: #{inspect(changeset.errors)}
-          All validation errors: #{inspect(all_errors)}
-          """
-        end)
-
-        # Write validation errors to Y.Doc
-        write_validation_errors_to_ydoc(state, changeset)
-
-        {:reply, {:error, changeset}, state}
-    end
+    {:reply, {:error, :read_only_view}, state}
   end
 
   @impl true
   def handle_call({:reset_workflow, user}, _from, state) do
     Logger.info("Resetting workflow #{state.workflow.id} for user #{user.id}")
 
-    with {:ok, workflow} <- fetch_workflow(state.workflow),
+    with {:ok, workflow, _kind} <-
+           WorkflowResolver.resolve(state.workflow.id, :new,
+             project: %Project{id: state.workflow.project_id}
+           ),
+         :ok <- ensure_not_deleted(workflow),
          :ok <- clear_and_reset_doc(state, workflow) do
       Logger.info("Successfully reset workflow #{state.workflow.id}")
       {:reply, {:ok, workflow}, state}
     else
+      # Unreachable in practice (see save_workflow), guarded against a
+      # WithClauseError since the resolver is supplied a :project opt.
+      {:error, :wrong_project} ->
+        Logger.error(
+          "Cannot reset workflow #{state.workflow.id}: resolved to wrong project"
+        )
+
+        {:reply, {:error, :internal_error}, state}
+
       {:error, :workflow_deleted} ->
         Logger.warning(
           "Cannot reset workflow #{state.workflow.id}: workflow deleted"
@@ -395,6 +416,23 @@ defmodule Lightning.Collaboration.Session do
         Logger.error("Cannot reset workflow #{state.workflow.id}: no shared doc")
         {:reply, {:error, :internal_error}, state}
     end
+  end
+
+  defp ensure_catalogue_loaded do
+    Lightning.Adaptors.ensure_loaded()
+  rescue
+    error ->
+      {:error, error}
+  catch
+    :exit, reason ->
+      {:error, {:exit, reason}}
+  end
+
+  @impl true
+  def handle_info({:resume_save, from, user}, state) do
+    {:reply, reply, state} = do_save_workflow(state, user, :save)
+    GenServer.reply(from, reply)
+    {:noreply, state}
   end
 
   @impl true
@@ -423,10 +461,11 @@ defmodule Lightning.Collaboration.Session do
     if ref == parent_ref do
       Process.demonitor(parent_ref)
 
-      # Don't check Process.alive? - it only works for local PIDs
-      # and shared_doc_pid can be on another node in a distributed cluster.
+      # Don't check Process.alive? - it only works for local PIDs and
+      # shared_doc_pid can be on another node in a distributed cluster.
+      # safe_unobserve/1 tolerates the remote being slow or gone (see #4817).
       if shared_doc_pid do
-        SharedDoc.unobserve(shared_doc_pid)
+        safe_unobserve(shared_doc_pid)
       end
 
       {:stop, :normal, %{state | parent_ref: nil, shared_doc_pid: nil}}
@@ -456,56 +495,127 @@ defmodule Lightning.Collaboration.Session do
     {:ok, SharedDoc.get_doc(pid)}
   end
 
+  defp do_save_workflow(%{view_only?: true} = state, user, mode) do
+    Logger.warning(
+      "Refusing to save workflow #{state.workflow.id} from a read-only view " <>
+        "(document #{state.document_name}, user #{user.id}, mode #{inspect(mode)})"
+    )
+
+    {:reply, {:error, :read_only_view}, state}
+  end
+
+  defp do_save_workflow(state, user, mode) do
+    Logger.info("Saving workflow #{state.workflow.id} for user #{user.id}")
+
+    with {:ok, doc} <- get_document(state),
+         {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow.id),
+         {:ok, workflow, _kind} <-
+           WorkflowResolver.resolve(state.workflow.id, :new,
+             project: %Project{id: state.workflow.project_id}
+           ),
+         changeset <-
+           workflow
+           |> Lightning.Workflows.change_workflow(workflow_data)
+           |> apply_state_transition(mode),
+         {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
+         {:ok, saved_workflow} <-
+           Lightning.Workflows.save_workflow(
+             changeset,
+             user,
+             [skip_reconcile: true] ++ release_save_opts(mode)
+           ),
+         :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow),
+         {:ok, _job_cleanup_count} <-
+           Lightning.AiAssistant.cleanup_unsaved_job_sessions(saved_workflow),
+         {:ok, _workflow_cleanup_count} <-
+           Lightning.AiAssistant.cleanup_unsaved_workflow_sessions(
+             saved_workflow
+           ) do
+      Logger.info("Successfully saved workflow #{state.workflow.id}")
+      {:reply, {:ok, saved_workflow}, %{state | workflow: saved_workflow}}
+    else
+      {:error, :no_shared_doc} ->
+        Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
+        {:reply, {:error, :internal_error}, state}
+
+      {:error, :wrong_project} ->
+        Logger.error(
+          "Cannot save workflow #{state.workflow.id}: resolved to wrong project"
+        )
+
+        {:reply, {:error, :internal_error}, state}
+
+      {:error, :deserialization_failed, reason} ->
+        Logger.error(
+          "Failed to deserialize workflow #{state.workflow.id}: #{inspect(reason)}"
+        )
+
+        {:reply, {:error, :deserialization_failed}, state}
+
+      {:error, _, %Lightning.Extensions.Message{} = message} ->
+        {:reply, {:error, message}, state}
+
+      {:error, :workflow_deleted} ->
+        Logger.warning(
+          "Cannot save workflow #{state.workflow.id}: workflow deleted"
+        )
+
+        {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, :snapshot_failed} ->
+        Logger.warning(
+          "Failed to save snapshot for workflow #{state.workflow.id}"
+        )
+
+        {:reply, {:error, :snapshot_failed}, state}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        all_errors =
+          Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+            Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+              opts
+              |> Keyword.get(String.to_existing_atom(key), key)
+              |> to_string()
+            end)
+          end)
+
+        Logger.warning(fn ->
+          """
+          Failed to save workflow #{state.workflow.id}
+          Top-level errors: #{inspect(changeset.errors)}
+          All validation errors: #{inspect(all_errors)}
+          """
+        end)
+
+        write_validation_errors_to_ydoc(state, changeset)
+
+        {:reply, {:error, changeset}, state}
+    end
+  end
+
+  defp release_save_opts({:set_state, :live}), do: [record_release: :go_live]
+  defp release_save_opts(_mode), do: []
+
+  defp apply_state_transition(changeset, :save), do: changeset
+
+  defp apply_state_transition(changeset, {:set_state, :live}) do
+    changeset
+    |> Lightning.Workflows.update_triggers_enabled_state(true)
+    |> Ecto.Changeset.put_change(:state, :live)
+  end
+
+  defp apply_state_transition(changeset, {:set_state, :draft}) do
+    changeset
+    |> Lightning.Workflows.update_triggers_enabled_state(false)
+    |> Ecto.Changeset.put_change(:state, :draft)
+  end
+
   defp deserialize_workflow(doc, workflow_id) do
     data = WorkflowSerializer.deserialize_from_ydoc(doc, workflow_id)
     {:ok, data}
   rescue
     e ->
       {:error, :deserialization_failed, Exception.message(e)}
-  end
-
-  # :built state with positive lock_version means it was saved before - reload from DB
-  defp fetch_workflow(
-         %{__meta__: %{state: :built}, lock_version: lock_version} = workflow
-       )
-       when is_integer(lock_version) and lock_version > 0 do
-    case Lightning.Workflows.get_workflow(workflow.id,
-           include: [:jobs, :edges, :triggers]
-         ) do
-      nil -> {:error, :workflow_deleted}
-      workflow -> {:ok, workflow}
-    end
-  end
-
-  defp fetch_workflow(%{__meta__: %{state: :built}} = workflow) do
-    workflow =
-      workflow
-      |> Map.put(:edges, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :edges,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:jobs, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :jobs,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:triggers, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :triggers,
-        __owner__: Lightning.Workflows.Workflow
-      })
-
-    {:ok, workflow}
-  end
-
-  defp fetch_workflow(workflow) do
-    case Lightning.Workflows.get_workflow(workflow.id,
-           include: [:jobs, :edges, :triggers]
-         ) do
-      nil -> {:error, :workflow_deleted}
-      workflow -> {:ok, workflow}
-    end
   end
 
   defp merge_saved_workflow_into_ydoc(
@@ -552,6 +662,9 @@ defmodule Lightning.Collaboration.Session do
       end
     end)
   end
+
+  defp ensure_not_deleted(%{deleted_at: nil}), do: :ok
+  defp ensure_not_deleted(_workflow), do: {:error, :workflow_deleted}
 
   defp clear_and_reset_doc(%{shared_doc_pid: nil}, _workflow),
     do: {:error, :no_shared_doc}

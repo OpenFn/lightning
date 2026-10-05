@@ -14,6 +14,7 @@ defmodule LightningWeb.RunLive.Show do
   alias Phoenix.LiveView.AsyncResult
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :ensure_run_belongs_to_project}
   on_mount {LightningWeb.Hooks, :check_limits}
 
   attr :run, :map, required: true
@@ -64,7 +65,10 @@ defmodule LightningWeb.RunLive.Show do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker project={@project} />
+              <LayoutComponents.breadcrumb_project_picker
+                project={@project}
+                label={@project_label}
+              />
               <LayoutComponents.breadcrumb_items items={[
                 {"History", ~p"/projects/#{@project}/history"}
               ]} />
@@ -106,12 +110,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:value>
                     <.link
                       navigate={
-                        # Only include version param if snapshot differs from current workflow version
-                        if run.snapshot.lock_version == @workflow.lock_version do
-                          ~p"/projects/#{@project}/w/#{@workflow.id}?run=#{run.id}"
-                        else
-                          ~p"/projects/#{@project}/w/#{@workflow.id}?run=#{run.id}&v=#{run.snapshot.lock_version}"
-                        end
+                        ~p"/projects/#{@project}/w/#{@workflow.id}?#{maybe_add_snapshot_version(%{run: run.id}, run.snapshot.lock_version, @workflow.lock_version, @experimental_features)}"
                       }
                       class="link text-ellipsis"
                     >
@@ -214,6 +213,7 @@ defmodule LightningWeb.RunLive.Show do
                   <.step_item
                     step={step}
                     workflow_version={@workflow.lock_version}
+                    experimental_features={@experimental_features}
                     is_clone={
                       DateTime.compare(step.inserted_at, run.inserted_at) == :lt
                     }
@@ -323,7 +323,9 @@ defmodule LightningWeb.RunLive.Show do
        page_title: "Run",
        id: id,
        selected_step_id: nil,
-       steps: []
+       steps: [],
+       experimental_features:
+         Lightning.Accounts.experimental_features_enabled?(user)
      )
      |> assign(:input_dataclip, nil)
      |> assign(:output_dataclip, nil)
@@ -341,7 +343,7 @@ defmodule LightningWeb.RunLive.Show do
      )
      |> assign(can_run_workflow: can_run_workflow)
      |> assign(admin_contacts: Projects.list_project_admin_emails(project.id))
-     |> get_run_async(id)}
+     |> get_run_async(id, project.id)}
   end
 
   def handle_steps_change(socket) do

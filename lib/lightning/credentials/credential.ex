@@ -8,6 +8,7 @@ defmodule Lightning.Credentials.Credential do
   alias Lightning.Accounts.User
   alias Lightning.Credentials.OauthClient
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Validators
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -39,12 +40,37 @@ defmodule Lightning.Credentials.Credential do
     |> cast(attrs, [
       :name,
       :external_id,
-      :user_id,
+      :oauth_client_id,
+      :schema,
+      :scheduled_deletion
+    ])
+    |> shared_validations()
+  end
+
+  @doc "Changeset for creating a credential; owner (:user_id) is settable only at creation."
+  def create_changeset(credential, attrs) do
+    credential
+    |> cast(attrs, [
+      :name,
+      :external_id,
       :oauth_client_id,
       :schema,
       :scheduled_deletion,
-      :transfer_status
+      :user_id
     ])
+    |> shared_validations()
+  end
+
+  @doc "Changeset for the guarded credential-transfer flow. Wraps the generic changeset so it keeps all validations/constraints, and additionally allows :user_id and :transfer_status."
+  def transfer_changeset(credential, attrs) do
+    credential
+    |> changeset(attrs)
+    |> cast(attrs, [:user_id, :transfer_status])
+  end
+
+  defp shared_validations(changeset) do
+    changeset
+    |> resolve_schema_name()
     |> normalize_external_id()
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :user_id])
@@ -56,8 +82,22 @@ defmodule Lightning.Credentials.Credential do
     )
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
-    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
-      message: "credential name has invalid format"
+    |> Validators.validate_name(
+      :name,
+      "credential name can't contain control characters"
+    )
+    |> Validators.validate_name_fits_column(
+      :name,
+      "credential name is too long, please use a shorter one"
+    )
+    |> Validators.validate_name_fits_column(
+      :schema,
+      "credential schema is too long, please use a shorter one",
+      100
+    )
+    |> Validators.validate_name_fits_column(
+      :external_id,
+      "credential external ID is too long, please use a shorter one"
     )
   end
 
@@ -66,5 +106,22 @@ defmodule Lightning.Credentials.Credential do
       "" -> put_change(changeset, :external_id, nil)
       _ -> changeset
     end
+  end
+
+  # Expanding a legacy short name needs a loaded catalogue. When it cannot
+  # answer, the name is stored as typed rather than failing the save. The
+  # short form is a supported legacy shape that `get_schema/1` resolves on
+  # read and `Credentials.reconcile_legacy_schema_names/1` rewrites later.
+  defp resolve_schema_name(changeset) do
+    update_change(changeset, :schema, fn
+      schema when is_binary(schema) ->
+        case Lightning.Adaptors.resolve_name(schema) do
+          {:ok, resolved} -> resolved
+          {:error, _catalogue_unavailable} -> schema
+        end
+
+      schema ->
+        schema
+    end)
   end
 end

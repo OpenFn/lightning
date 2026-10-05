@@ -73,7 +73,7 @@ function getOrCreateRegistry(
   }
 
   // Create new registry (socket or store changed)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   registryInstance = new AIChannelRegistry(socket as any, store as any);
   registrySocket = socket;
   registryStore = store;
@@ -125,7 +125,7 @@ export const buildChannelTopic = (
  * const { sendMessage, retryMessage, isConnected } = useAISessionCommands();
  *
  * const handleSend = () => {
- *   sendMessage('Hello AI!', { attach_code: true });
+ *   sendMessage('Hello AI!', { attach_logs: true });
  * };
  * ```
  */
@@ -151,7 +151,6 @@ export const useAISessionCommands = () => {
       console.warn('Cannot send message: registry or topic not available');
       return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     registry.sendMessage(topic, content, options);
   };
 
@@ -163,12 +162,20 @@ export const useAISessionCommands = () => {
     registry.retryMessage(topic, messageId);
   };
 
-  const markDisclaimerRead = () => {
-    if (!registry || !topic) {
-      console.warn('Cannot mark disclaimer: registry or topic not available');
-      return;
-    }
-    registry.markDisclaimerRead(topic);
+  const reportApplyFailure = (details: {
+    messageId: string;
+    stage: 'parse' | 'validate_ids' | 'import' | 'save';
+    isNewWorkflow: boolean;
+  }) => {
+    // Best effort: no channel means no report, and never a second problem
+    // on top of the failure the user is already seeing.
+    if (!registry || !topic) return;
+    registry.reportApplyFailure(topic, details);
+  };
+
+  const reportApplyApplied = (messageId: string) => {
+    if (!registry || !topic) return;
+    registry.reportApplyApplied(topic, messageId);
   };
 
   const loadSessions = (offset = 0, limit = 20) => {
@@ -198,7 +205,8 @@ export const useAISessionCommands = () => {
   return {
     sendMessage,
     retryMessage,
-    markDisclaimerRead,
+    reportApplyFailure,
+    reportApplyApplied,
     loadSessions,
     updateContext,
     isConnected,

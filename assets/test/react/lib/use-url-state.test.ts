@@ -11,7 +11,7 @@
  */
 
 import { renderHook, act } from '@testing-library/react';
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { useURLState } from '../../../js/react/lib/use-url-state';
 
@@ -198,6 +198,151 @@ describe('useURLState', () => {
       expect(result.current.params.active).toBe('true');
       expect(result.current.params.old).toBe('value');
       expect(result.current.params.remove).toBeUndefined();
+    });
+  });
+
+  describe('updateSearchParams - no-op writes', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test('does not push a history entry when params are unchanged', () => {
+      history.replaceState({}, '', '/workflow?panel=run&job=abc');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        // Same values that are already in the URL -> a no-op
+        result.current.updateSearchParams({ panel: 'run', job: 'abc' });
+      });
+
+      expect(pushSpy).not.toHaveBeenCalled();
+      expect(window.location.search).toBe('?panel=run&job=abc');
+    });
+
+    test('still pushes a history entry when a param actually changes', () => {
+      history.replaceState({}, '', '/workflow?panel=run');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.updateSearchParams({ panel: 'inspector' });
+      });
+
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(result.current.params.panel).toBe('inspector');
+    });
+  });
+
+  describe('replaceSearchParams - no-op writes', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test('does not push a history entry when params are unchanged', () => {
+      history.replaceState({}, '', '/workflow?panel=run');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.replaceSearchParams({ panel: 'run' });
+      });
+
+      expect(pushSpy).not.toHaveBeenCalled();
+      expect(window.location.search).toBe('?panel=run');
+    });
+
+    test('still pushes a history entry when a param actually changes', () => {
+      history.replaceState({}, '', '/workflow?panel=run');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.replaceSearchParams({ panel: 'inspector' });
+      });
+
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(result.current.params.panel).toBe('inspector');
+    });
+
+    test('does not push when params are reordered but unchanged', () => {
+      history.replaceState({}, '', '/workflow?job=abc&panel=run');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        // Same params, different object-key order — semantically identical URL
+        result.current.replaceSearchParams({ panel: 'run', job: 'abc' });
+      });
+
+      expect(pushSpy).not.toHaveBeenCalled();
+      expect(window.location.search).toBe('?job=abc&panel=run');
+    });
+  });
+
+  describe('updateHash - no-op writes', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test('does not push a history entry when hash is unchanged', () => {
+      history.replaceState({}, '', '/workflow#step-2');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.updateHash('step-2');
+      });
+
+      expect(pushSpy).not.toHaveBeenCalled();
+      expect(window.location.hash).toBe('#step-2');
+    });
+
+    test('does not push when clearing an already-absent hash', () => {
+      history.replaceState({}, '', '/workflow');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.updateHash(null);
+      });
+
+      expect(pushSpy).not.toHaveBeenCalled();
+    });
+
+    test('still pushes when adding a hash', () => {
+      history.replaceState({}, '', '/workflow');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.updateHash('step-5');
+      });
+
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(window.location.hash).toBe('#step-5');
+    });
+
+    test('still pushes when removing an existing hash', () => {
+      history.replaceState({}, '', '/workflow#a');
+
+      const { result } = renderHook(() => useURLState());
+      const pushSpy = vi.spyOn(history, 'pushState');
+
+      act(() => {
+        result.current.updateHash(null);
+      });
+
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(window.location.hash).toBe('');
     });
   });
 
@@ -740,6 +885,34 @@ describe('useURLState', () => {
       // URLSearchParams treats empty string as a valid value
       expect(result.current.params.panel).toBe('');
       expect(window.location.search).toBe('?panel=');
+    });
+
+    test('replaces the entry instead of pushing when asked', () => {
+      history.replaceState({}, '', '/w/x?v=5');
+      const before = history.length;
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.updateSearchParams({ v: null }, { replace: true });
+      });
+
+      expect(window.location.search).toBe('');
+      expect(history.length).toBe(before);
+    });
+
+    test('still pushes by default, so a user-driven switch can be undone', () => {
+      history.replaceState({}, '', '/w/x');
+      const before = history.length;
+
+      const { result } = renderHook(() => useURLState());
+
+      act(() => {
+        result.current.updateSearchParams({ v: '5' });
+      });
+
+      expect(window.location.search).toBe('?v=5');
+      expect(history.length).toBe(before + 1);
     });
 
     test('preserves pathname when updating params and hash', () => {

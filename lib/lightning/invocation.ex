@@ -8,12 +8,15 @@ defmodule Lightning.Invocation do
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.DataclipAudit
+  alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Query
   alias Lightning.Invocation.Step
   alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
+  alias Lightning.RunStep
+  alias Lightning.Scrubber
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -21,6 +24,21 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.ExportAudit
   alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
+
+  # Comfortably above Apollo's own 250,000-character attachment limit, so a
+  # payload that would have been accepted is never shortened here.
+  @logs_byte_budget 300_000
+  @logs_line_overhead 150
+
+  # On the scrubbed output, and the step that crosses it is read whole.
+  @io_byte_budget 100_000
+
+  # Past this a body is described rather than read.
+  @io_dataclip_byte_cap 1_000_000
+
+  @io_erased "[erased by this project's retention policy]"
+  @io_too_large "[too large to summarise]"
+  @io_over_budget "[not read, the run's data ran past what can be sent]"
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
@@ -70,12 +88,35 @@ defmodule Lightning.Invocation do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
-    Query.last_n_for_job(job_id, limit)
+    base =
+      if Keyword.get(opts, :named_dataclips, false) do
+        Query.selectable_for_job(job_id, project_id_for_job(job_id, opts), limit)
+      else
+        Query.last_n_for_job(job_id, limit)
+      end
+
+    base
     |> where([d], is_nil(d.wiped_at))
     |> where([d], ^dataclip_where_filter(user_filters))
-    |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
+    |> then(fn query -> if offset, do: offset(query, ^offset), else: query end)
     |> Repo.all()
     |> maybe_filter_uuid_prefix(user_filters)
+  end
+
+  defp project_id_for_job(job_id, opts) do
+    case Keyword.get(opts, :project_id) do
+      nil ->
+        from(j in Lightning.Workflows.Job,
+          join: w in Lightning.Workflows.Workflow,
+          on: w.id == j.workflow_id,
+          where: j.id == ^job_id,
+          select: w.project_id
+        )
+        |> Repo.one()
+
+      project_id ->
+        project_id
+    end
   end
 
   @spec get_dataclip_with_body!(id :: Ecto.UUID.t()) :: %{
@@ -87,7 +128,7 @@ defmodule Lightning.Invocation do
   def get_dataclip_with_body!(id) do
     # Query body as pretty-printed JSON text directly from PostgreSQL, avoiding expensive
     # deserialization to Elixir map (saves ~38x memory amplification!)
-    # For http_request/kafka types, wraps body in {"data": ..., "request": ...} structure
+    # For http_request types, wraps body in {"data": ..., "request": ...} structure
     dataclip =
       from(d in Lightning.Invocation.Dataclip, where: d.id == ^id)
       |> Query.select_as_input_text()
@@ -176,6 +217,24 @@ defmodule Lightning.Invocation do
   def get_dataclip!(id), do: Repo.get!(Dataclip, id)
 
   @doc """
+  Returns whether a dataclip with the given id belongs to the given project.
+
+  `false` for a malformed id or a dataclip in another project.
+  """
+  @spec dataclip_in_project?(Ecto.UUID.t(), Ecto.UUID.t()) :: boolean()
+  def dataclip_in_project?(id, project_id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} ->
+        Repo.exists?(
+          from(d in Dataclip, where: d.id == ^id and d.project_id == ^project_id)
+        )
+
+      :error ->
+        false
+    end
+  end
+
+  @doc """
   Gets a single dataclip given one of:
 
   - a Dataclip uuid
@@ -235,6 +294,12 @@ defmodule Lightning.Invocation do
   Scopes by workflow (not trigger) so that manual runs are also considered.
   """
   def last_run_final_dataclip(%Trigger{workflow_id: workflow_id}) do
+    # `prepare: :unnamed` forces a custom plan per workflow_id. With named
+    # prepared statements, Postgres flips to a generic plan after 5
+    # executions which scans `runs_finished_at_index` backward and
+    # post-filters on state — catastrophic for workflows with sparse
+    # successes (full backward scan looking for nothing). The custom plan
+    # bounds via the workflow's work_orders.
     from(r in Run,
       join: wo in assoc(r, :work_order),
       join: d in assoc(r, :final_dataclip),
@@ -245,7 +310,7 @@ defmodule Lightning.Invocation do
       limit: 1,
       select: d
     )
-    |> Repo.one()
+    |> Repo.one(prepare: :unnamed)
   end
 
   @doc """
@@ -253,6 +318,9 @@ defmodule Lightning.Invocation do
   Used when cron_cursor_job_id is set to a specific job.
   """
   def last_successful_step_dataclip(job_id) do
+    # `prepare: :unnamed` for the same reason as `last_run_final_dataclip/1`:
+    # LIMIT 1 + ORDER BY DESC queries are vulnerable to generic-plan flips
+    # that degrade into full-table scans. Custom plans guarantee selectivity.
     from(d in Dataclip,
       join: s in Step,
       on: s.output_dataclip_id == d.id,
@@ -262,7 +330,7 @@ defmodule Lightning.Invocation do
       order_by: [desc: s.finished_at],
       limit: 1
     )
-    |> Repo.one()
+    |> Repo.one(prepare: :unnamed)
   end
 
   @doc """
@@ -436,14 +504,19 @@ defmodule Lightning.Invocation do
   Note: Dataclip body fields have `load_in_query: false` for performance,
   so we use a custom preload query to explicitly select the body field.
   """
-  @spec get_step_with_dataclips(Ecto.UUID.t()) :: Step.t() | nil
-  def get_step_with_dataclips(step_id) do
+  @spec get_step_with_dataclips(Ecto.UUID.t(), Ecto.UUID.t() | nil) ::
+          Step.t() | nil
+  def get_step_with_dataclips(_step_id, nil), do: nil
+
+  def get_step_with_dataclips(step_id, project_id) do
     # Dataclip.body has load_in_query: false, so we need to explicitly select it
     dataclip_with_body_query =
       from(d in Dataclip, select: %{d | body: d.body})
 
     Step
-    |> where([s], s.id == ^step_id)
+    |> join(:inner, [s], j in assoc(s, :job))
+    |> join(:inner, [s, j], p in assoc(j, :project))
+    |> where([s, j, p], s.id == ^step_id and p.id == ^project_id)
     |> preload(input_dataclip: ^dataclip_with_body_query)
     |> preload(output_dataclip: ^dataclip_with_body_query)
     |> Repo.one()
@@ -584,6 +657,8 @@ defmodule Lightning.Invocation do
     |> filter_by_wo_date_before(search_params.wo_date_before)
     |> filter_by_date_after(search_params.date_after)
     |> filter_by_date_before(search_params.date_before)
+    |> filter_by_runs(search_params)
+    |> filter_by_error_signature(search_params)
     |> filter_by_body_or_log_or_id(
       search_params.search_fields,
       search_params.search_term
@@ -677,6 +752,150 @@ defmodule Lightning.Invocation do
     from([workorder: workorder] in query,
       where: workorder.last_activity <= ^date_before
     )
+  end
+
+  defp filter_by_runs(query, %SearchParams{
+         run_date_after: nil,
+         run_date_before: nil,
+         run_status: []
+       }),
+       do: query
+
+  defp filter_by_runs(query, %SearchParams{
+         run_date_after: run_date_after,
+         run_date_before: run_date_before,
+         run_status: run_status
+       }) do
+    runs =
+      from(r in Run, where: r.work_order_id == parent_as(:workorder).id)
+      |> filter_run_inserted_after(run_date_after)
+      |> filter_run_inserted_before(run_date_before)
+      |> filter_run_statuses(run_status)
+
+    from([workorder: _workorder] in query, where: exists(runs))
+  end
+
+  defp filter_run_inserted_after(query, nil), do: query
+
+  defp filter_run_inserted_after(query, run_date_after),
+    do: where(query, [r], r.inserted_at >= ^run_date_after)
+
+  defp filter_run_inserted_before(query, nil), do: query
+
+  defp filter_run_inserted_before(query, run_date_before),
+    do: where(query, [r], r.inserted_at < ^run_date_before)
+
+  defp filter_run_statuses(query, []), do: query
+
+  defp filter_run_statuses(query, states),
+    do: where(query, [r], r.state in ^states)
+
+  # The inverse of `Run.state_reasons/0`, for reading a run-level signature's
+  # `exit_reason` back into the state it came from. `"rejected"` is not a
+  # value in that map — it is `to_signature/2`'s own literal for a work order
+  # that never got a run — so it naturally misses here and falls through to
+  # `filter_by_error_signature/2`'s fail-closed branch, exactly like any
+  # other exit_reason no run can actually be in.
+  @reason_states Run.states_by_reason()
+
+  # A triage row's "View" button, scoped to exactly the work orders it
+  # counted. `error_signature_exit_reason` switches the filter on; a
+  # present `error_signature_job_id` reads as the step-level row, an
+  # absent one as the run-level row (no failing step) — safe because
+  # `steps.job_id` is `NOT NULL`.
+  #
+  # Carries `wo.state in failure_states()` itself: a *successful* work order
+  # can still hold a `fail` step in its latest run (an `on_job_failure`
+  # handler that ran fine), so without this a signature filter would match
+  # work orders the triage row never counted, and bulk retry would follow.
+  defp filter_by_error_signature(query, %SearchParams{
+         error_signature_exit_reason: nil
+       }),
+       do: query
+
+  defp filter_by_error_signature(query, %SearchParams{
+         error_signature_exit_reason: exit_reason,
+         error_signature_error_type: error_type,
+         error_signature_job_id: job_id
+       })
+       when is_binary(job_id) do
+    step_match =
+      from(s in failing_steps_of_latest_run(),
+        where: s.job_id == ^job_id and s.exit_reason == ^exit_reason,
+        where:
+          fragment(
+            "coalesce(nullif(?, ''), nullif(?, '')) IS NOT DISTINCT FROM ?",
+            s.error_type,
+            parent_as(:latest_run).error_type,
+            type(^error_type, :string)
+          )
+      )
+
+    from([workorder: wo] in query,
+      where: wo.state in ^WorkOrder.failure_states(),
+      where:
+        exists(
+          from(r in subquery(latest_run_for_workorder()),
+            as: :latest_run,
+            where: exists(subquery(step_match))
+          )
+        )
+    )
+  end
+
+  defp filter_by_error_signature(query, %SearchParams{
+         error_signature_exit_reason: exit_reason,
+         error_signature_error_type: error_type,
+         error_signature_job_id: nil
+       }) do
+    case Map.fetch(@reason_states, exit_reason) do
+      {:ok, state} ->
+        from([workorder: wo] in query,
+          where: wo.state in ^WorkOrder.failure_states(),
+          where:
+            exists(
+              from(r in subquery(latest_run_for_workorder()),
+                as: :latest_run,
+                where: r.state == ^state,
+                where:
+                  fragment(
+                    "nullif(?, '') IS NOT DISTINCT FROM ?",
+                    r.error_type,
+                    type(^error_type, :string)
+                  ),
+                where: not exists(subquery(failing_steps_of_latest_run()))
+              )
+            )
+        )
+
+      # An `exit_reason` no run can actually be in — fail closed rather than
+      # drop the filter, which would widen a bulk retry to every failure.
+      :error ->
+        from([workorder: wo] in query, where: false)
+    end
+  end
+
+  # The run that speaks for a work order: most recently finished first, ties
+  # broken by id. Correlated on the outer query's `:workorder` binding.
+  defp latest_run_for_workorder do
+    from(r in Run,
+      as: :run,
+      where: r.work_order_id == parent_as(:workorder).id
+    )
+    |> Query.order_by_run_recency()
+    |> limit(1)
+  end
+
+  # Every step of the `:latest_run` binding's run that did not succeed.
+  # Correlated on `:latest_run`, so it only makes sense nested inside a query
+  # that introduces that binding.
+  defp failing_steps_of_latest_run do
+    from(s in Step,
+      join: rs in RunStep,
+      on: rs.step_id == s.id,
+      where: rs.run_id == parent_as(:latest_run).id
+    )
+    |> Query.where_step_failed()
   end
 
   defp filter_by_body_or_log_or_id(query, _search_fields, nil), do: query
@@ -868,6 +1087,186 @@ defmodule Lightning.Invocation do
     query
     |> Repo.all()
     |> Enum.join("\n")
+  end
+
+  @doc """
+  Return every log line for a run in `project_id`, oldest first, as maps.
+
+  Unlike the `assemble_logs_*` functions this keeps the columns needed to tell
+  the lines apart: `job_id` for attribution, `level`, and `step_id` to separate
+  retries. Run-level lines have no step, so both ids are nil for them.
+  """
+  @spec logs_for_run(Ecto.UUID.t(), Ecto.UUID.t()) :: [map()]
+  def logs_for_run(_run_id, nil), do: []
+
+  def logs_for_run(run_id, project_id) do
+    case Ecto.UUID.cast(run_id) do
+      {:ok, uuid} -> logs_for_run_id(uuid, project_id)
+      :error -> []
+    end
+  end
+
+  defp logs_for_run_id(run_id, project_id) do
+    query =
+      from(l in LogLine,
+        join: r in assoc(l, :run),
+        join: wo in assoc(r, :work_order),
+        join: w in assoc(wo, :workflow),
+        left_join: s in assoc(l, :step),
+        where: l.run_id == ^run_id and w.project_id == ^project_id,
+        order_by: [asc: l.timestamp],
+        select: %{
+          step_id: l.step_id,
+          job_id: s.job_id,
+          level: l.level,
+          message: l.message
+        }
+      )
+
+    {:ok, lines} =
+      Repo.transaction(fn ->
+        query
+        |> Repo.stream()
+        |> Enum.reduce_while({[], 0}, &take_until_over_budget/2)
+        |> then(fn {lines, _size} -> Enum.reverse(lines) end)
+      end)
+
+    lines
+  end
+
+  # A job that logs per record produces hundreds of thousands of rows.
+  defp take_until_over_budget(line, {lines, size}) do
+    # The ids and level ride along with every line, so a run of short messages
+    # costs far more on the wire than its text suggests.
+    size = size + byte_size(line.message || "") + @logs_line_overhead
+    lines = [line | lines]
+
+    if size > @logs_byte_budget do
+      {:halt, {lines, size}}
+    else
+      {:cont, {lines, size}}
+    end
+  end
+
+  @doc """
+  Return the input and output of every step in a run, oldest first, with the
+  values replaced by their types.
+
+  What comes back is the shape of the data rather than the data: every leaf
+  becomes `"string"`, `"number"`, `"boolean"`, `"null"` or `"unknown"`, and
+  long lists keep two samples. Field names survive as they are, capped in
+  number. See `Lightning.Scrubber.scrub_values/2`.
+
+  Every step in the run comes back, in the order it ran. A dataclip that was
+  never set comes back as nil; one that is erased, too large to read, or past
+  the point where the run stopped fitting comes back as a short sentence saying
+  so, because a reader that is told nothing assumes it saw everything.
+  """
+  @spec scrubbed_io_for_run(Ecto.UUID.t() | String.t(), Ecto.UUID.t() | nil) ::
+          [map()]
+  def scrubbed_io_for_run(_run_id, nil), do: []
+
+  def scrubbed_io_for_run(run_id, project_id) do
+    case Ecto.UUID.cast(run_id) do
+      {:ok, uuid} -> scrubbed_io_for_run_id(uuid, project_id)
+      :error -> []
+    end
+  end
+
+  defp scrubbed_io_for_run_id(run_id, project_id) do
+    run_id
+    |> io_steps_for_run(project_id)
+    |> Enum.map_reduce(0, &take_io_within_budget/2)
+    |> elem(0)
+  end
+
+  defp io_steps_for_run(run_id, project_id) do
+    from(rs in RunStep,
+      join: s in assoc(rs, :step),
+      join: r in assoc(rs, :run),
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      left_join: j in assoc(s, :job),
+      where: rs.run_id == ^run_id and w.project_id == ^project_id,
+      # A step that never started has no start time, so age breaks the tie.
+      order_by: [asc_nulls_last: s.started_at, asc: s.inserted_at, asc: s.id],
+      select: %{
+        step_name: j.name,
+        input_dataclip_id: s.input_dataclip_id,
+        output_dataclip_id: s.output_dataclip_id
+      }
+    )
+    |> Repo.all()
+  end
+
+  # Past the budget a step still appears, saying why it was not read.
+  defp take_io_within_budget(step, size) when size > @io_byte_budget do
+    entry = %{
+      step_name: step.step_name,
+      input: over_budget(step.input_dataclip_id),
+      output: over_budget(step.output_dataclip_id)
+    }
+
+    {entry, size + io_entry_size(entry)}
+  end
+
+  defp take_io_within_budget(step, size) do
+    entry = %{
+      step_name: step.step_name,
+      input: scrubbed_body(step.input_dataclip_id),
+      output: scrubbed_body(step.output_dataclip_id)
+    }
+
+    {entry, size + io_entry_size(entry)}
+  end
+
+  defp scrubbed_body(nil), do: nil
+
+  # One body at a time, and sized in Postgres so an oversized one never reaches
+  # the BEAM. octet_length measures the JSON; pg_column_size would measure the
+  # compressed datum, which on this data is smaller by a factor of tens.
+  defp scrubbed_body(dataclip_id) do
+    query =
+      from(d in Dataclip,
+        where: d.id == ^dataclip_id,
+        select: %{
+          wiped: not is_nil(d.wiped_at),
+          empty: is_nil(d.body),
+          too_large:
+            fragment(
+              "? IS NULL AND octet_length(?::text) > ?",
+              d.wiped_at,
+              d.body,
+              ^@io_dataclip_byte_cap
+            ),
+          body:
+            fragment(
+              "CASE WHEN ? IS NULL AND octet_length(?::text) <= ? THEN ? END",
+              d.wiped_at,
+              d.body,
+              ^@io_dataclip_byte_cap,
+              d.body
+            )
+        }
+      )
+
+    # A body of JSON null decodes to the same nil as an absent one, so which it
+    # was has to be asked of Postgres rather than inferred here.
+    case Repo.one(query) do
+      nil -> nil
+      %{wiped: true} -> @io_erased
+      %{empty: true} -> nil
+      %{too_large: true} -> @io_too_large
+      %{body: body} -> Scrubber.scrub_values(body)
+    end
+  end
+
+  defp over_budget(nil), do: nil
+  defp over_budget(_dataclip_id), do: @io_over_budget
+
+  defp io_entry_size(entry) do
+    # Scrubbed output is always encodable.
+    entry |> Jason.encode!() |> byte_size()
   end
 
   def assemble_logs_for_step(nil), do: nil

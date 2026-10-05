@@ -10,6 +10,11 @@ MISSING_SYSTEM_DEPS=()
 # Get the directory where bootstrap.d lives
 BOOTSTRAP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Terminal styling helpers (step/ok/warn/err + colour vars). Sourced here so
+# every consumer of common.sh - bootstrap, worktree, the platform files - gets
+# them without its own source line.
+source "$BOOTSTRAP_DIR/style.sh"
+
 detect_and_source_platform() {
   OS="$(uname)"
   ARCH="$(uname -m)"
@@ -35,16 +40,20 @@ detect_and_source_platform() {
       if command -v apt-get &>/dev/null; then
         source "$BOOTSTRAP_DIR/linux-debian.sh"
       else
-        echo "Unsupported Linux distribution: $distro"
-        echo "Currently supported: Debian, Ubuntu (or any distro with apt-get)"
+        {
+          err "Unsupported Linux distribution: $distro"
+          echo "Currently supported: Debian, Ubuntu (or any distro with apt-get)"
+        } >&2
         exit 1
       fi
       ;;
     esac
     ;;
   *)
-    echo "Unsupported operating system: $OS"
-    echo "Currently supported: macOS (Darwin), Linux (Debian/Ubuntu)"
+    {
+      err "Unsupported operating system: $OS"
+      echo "Currently supported: macOS (Darwin), Linux (Debian/Ubuntu)"
+    } >&2
     exit 1
     ;;
   esac
@@ -70,16 +79,19 @@ check_critical_dependencies() {
   local has_critical_missing=false
 
   if [[ ${#MISSING_SYSTEM_DEPS[@]} -gt 0 ]]; then
-    echo "Missing critical system dependencies:"
-    for dep in "${MISSING_SYSTEM_DEPS[@]}"; do
-      echo "   - $dep"
-    done
+    {
+      err "Missing critical system dependencies:"
+      printf '   - %s\n' "${MISSING_SYSTEM_DEPS[@]}"
+    } >&2
     has_critical_missing=true
   fi
 
   if [[ "$has_critical_missing" == true ]]; then
-    echo ""
-    echo "Please install the missing dependencies and re-run this script."
+    {
+      printf '%s\n' \
+        "" \
+        "Please install the missing dependencies and re-run this script."
+    } >&2
     exit 1
   fi
 }
@@ -136,58 +148,66 @@ detect_stale_native_caches() {
   fi
 }
 
+# Removes everything bootstrap can regenerate, so a broken tree can be rebuilt
+# without reaching for git clean. Never touches .env files, .context, the
+# database or anything else carrying local state.
+clean_project_artifacts() {
+  step "Cleaning regenerable artifacts"
+
+  # Kafka trigger tests leave directories deliberately chmod'd unreadable, so
+  # tmp/ has to be made traversable before it can be removed.
+  chmod -R u+rwx tmp 2>/dev/null || true
+
+  rm -rf \
+    _build \
+    deps/*/c_build deps/*/build deps/*/cmake-build deps/*/_build deps/*/priv/*.so \
+    assets/node_modules \
+    assets/*.tsbuildinfo \
+    priv/plts \
+    priv/openfn \
+    priv/schemas \
+    priv/static/assets \
+    priv/static/cache_manifest.json \
+    priv/static/images/adaptors \
+    priv/adaptor_registry_cache.json \
+    .elixir_ls .elixir-tools \
+    tmp \
+    cover test/reports excoveralls.json ./*.coverdata \
+    assets/test-results assets/playwright-report assets/coverage \
+    erl_crash.dump Mnesia.* \
+    2>/dev/null || true
+
+  find . -name .DS_Store -not -path './deps/*' -delete 2>/dev/null || true
+
+  ok "Cleaned"
+  echo ""
+}
+
 ensure_tool_versions() {
   if [[ ! -f .tool-versions ]]; then return; fi
 
   if command -v mise &>/dev/null; then
-    echo "Installing tool versions via mise..."
+    step "Installing tool versions via mise"
     mise install
   elif command -v asdf &>/dev/null; then
-    echo "Installing tool versions via asdf..."
+    step "Installing tool versions via asdf"
     asdf install
   else
-    echo "Warning: No version manager found (mise/asdf)."
-    echo "Ensure versions in .tool-versions are installed manually."
+    {
+      warn "No version manager found (mise/asdf)."
+      echo "Ensure versions in .tool-versions are installed manually."
+    } >&2
   fi
 }
 
-run_bootstrap() {
-  echo "Gathering environment information..."
-  echo "Platform: $OS $ARCH"
-  echo ""
-
-  ensure_tool_versions
-  echo ""
-
-  echo "Checking common dependencies..."
-  check_common_dependencies
-  echo ""
-
-  echo "Checking platform dependencies..."
-  platform_check_dependencies
-  echo ""
-
-  echo "Environment Status Summary:"
-  check_critical_dependencies
-  platform_check_status
-  echo ""
-
-  platform_install_dependencies
-
-  echo "Setting up environment..."
-  platform_setup_environment
-  echo ""
-
-  echo "Setting up Elixir environment..."
-  mix local.hex --if-missing --force
-  mix local.rebar --if-missing --force
-
-  echo "Installing Elixir dependencies..."
+# Assumes platform_setup_environment has already been called by the caller.
+setup_project_directory() {
+  step "Installing Elixir dependencies"
   mix deps.get
 
   detect_stale_native_caches
 
-  echo "Compiling Elixir dependencies..."
+  step "Compiling Elixir dependencies"
   mix deps.compile
 
   # Clean up stray object file created by crc32cer cmake compilation
@@ -197,24 +217,88 @@ run_bootstrap() {
     rm -f ./-.o
   fi
 
-  platform_post_compile_hooks
-
-  echo "Installing Node.js dependencies..."
+  step "Installing Node.js dependencies"
   npm install --prefix assets
 
-  echo "Installing Playwright browsers..."
-  npx --prefix assets playwright install
-
-  echo "Setting up assets..."
+  step "Setting up assets"
   mix assets.setup
 
-  echo "Setting up database..."
-  mix "do" ecto.create, ecto.migrate
-
-  echo "Installing Lightning components..."
+  step "Installing Lightning components"
   mix lightning.install_runtime
-  mix lightning.install_schemas
-  mix lightning.install_adaptor_icons
+}
 
-  echo "All dependencies installed successfully!"
+setup_project_database() {
+  step "Setting up database"
+  mix "do" ecto.create, ecto.migrate
+}
+
+run_bootstrap() {
+  local clean=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --clean)
+      clean=true
+      shift
+      ;;
+    -h | --help)
+      printf '%s\n' \
+        "Usage: bin/bootstrap [--clean]" \
+        "" \
+        "  --clean  Remove regenerable artifacts (build output, node_modules," \
+        "           installed runtime/schemas/icons, caches, test leftovers)" \
+        "           before installing. Leaves .env files and the database alone."
+      exit 0
+      ;;
+    *)
+      err "Unknown option: $1"
+      hint "See bin/bootstrap --help"
+      exit 1
+      ;;
+    esac
+  done
+
+  step "Gathering environment information"
+  echo "Platform: $OS $ARCH"
+  echo ""
+
+  platform_setup_tool_build_environment
+  ensure_tool_versions
+  echo ""
+
+  step "Checking common dependencies"
+  check_common_dependencies
+  echo ""
+
+  step "Checking platform dependencies"
+  platform_check_dependencies
+  echo ""
+
+  step "Environment Status Summary"
+  check_critical_dependencies
+  platform_check_status
+  echo ""
+
+  platform_install_dependencies
+
+  step "Setting up environment"
+  platform_setup_environment
+  echo ""
+
+  step "Setting up Elixir environment"
+  mix local.hex --if-missing --force
+  mix local.rebar --if-missing --force
+
+  if [[ "$clean" == true ]]; then
+    clean_project_artifacts
+  fi
+
+  setup_project_directory
+
+  step "Installing Playwright browsers"
+  npx --prefix assets playwright install
+
+  setup_project_database
+
+  ok "All dependencies installed successfully!"
 }

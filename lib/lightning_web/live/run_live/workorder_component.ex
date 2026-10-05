@@ -5,7 +5,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   use LightningWeb, :live_component
 
   import LightningWeb.RunLive.Components
+  alias Lightning.WorkOrder
   alias Phoenix.LiveView.JS
+
+  defp default_experimental_features(socket) do
+    assign_new(socket, :experimental_features, fn -> false end)
+  end
 
   @impl true
   def update(
@@ -21,11 +26,16 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
      socket
      |> assign(assigns)
      |> assign(project: project, can_run_workflow: can_run_workflow)
+     |> default_experimental_features()
      |> set_details(work_order)}
   end
 
   def update(%{work_order: work_order} = assigns, socket) do
-    {:ok, socket |> assign(assigns) |> set_details(work_order)}
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> default_experimental_features()
+     |> set_details(work_order)}
   end
 
   def update(assigns, socket) do
@@ -180,19 +190,14 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           <%= if @last_run do %>
             <.link
               navigate={
-                # Only include version param if snapshot differs from current workflow version
-                if @work_order.workflow.lock_version ==
-                     @work_order.snapshot.lock_version do
-                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}"
-                else
-                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}&v=#{@work_order.snapshot.lock_version}"
-                end
+                ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?#{maybe_add_snapshot_version(%{run: @last_run.id}, @work_order.snapshot.lock_version, @work_order.workflow.lock_version, @experimental_features)}"
               }
               class="inline-block"
             >
               <Common.wrapper_tooltip
                 id={"workflow-name-#{@work_order.id}"}
-                tooltip={"#{@workflow_name}<br/><span class=\"text-xs text-gray-500\">Click to view</span>"}
+                tooltip={@workflow_name}
+                subtitle="Click to view"
               >
                 <span
                   class="truncate text-gray-900 workflow-name hover:text-primary-600 cursor-pointer"
@@ -261,7 +266,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   <.icon name="hero-x-mark-mini" class="h-4 w-4" />
                 </button>
               <% end %>
-              <%= if @work_order.state not in [:pending, :running] do %>
+              <%= if @work_order.state not in WorkOrder.active_states() do %>
                 <%= if wo_dataclip_available?(@work_order) and @can_run_workflow do %>
                   <button
                     type="button"
@@ -426,6 +431,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       can_run_workflow={@can_run_workflow}
                       run={run}
                       workflow_version={@work_order.workflow.lock_version}
+                      experimental_features={@experimental_features}
                       project={@project}
                     />
                   </div>

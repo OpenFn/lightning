@@ -41,6 +41,27 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
+  Appends `exit_reason != "success"` to a query of `Step`.
+
+  A step that never finished carries a `nil` `exit_reason`, and `NULL !=
+  'success'` is false in SQL, so it is excluded here too: a step still in
+  flight is not yet a failure.
+  """
+  @spec where_step_failed(Ecto.Queryable.t()) :: Ecto.Queryable.t()
+  def where_step_failed(query) do
+    from(s in query, where: s.exit_reason != "success")
+  end
+
+  # Shared so the health page's bulk `DISTINCT ON` and the history filter's
+  # correlated per-work-order lookup can't drift apart on what "latest" means.
+  @spec order_by_run_recency(Ecto.Queryable.t()) :: Ecto.Queryable.t()
+  def order_by_run_recency(query) do
+    from([run: r] in query,
+      order_by: [desc_nulls_last: r.finished_at, desc: r.id]
+    )
+  end
+
+  @doc """
   Runs for a specific project, or all runs available to the requesting user
   """
   @spec runs_for(User.t()) :: Ecto.Queryable.t()
@@ -236,21 +257,6 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
-  To be used in preloads for `workflow > job > step` when the presence of any
-  step is all the information we need. As in, "Does this job have any steps?"
-  """
-  def any_step do
-    by_job =
-      from s in Step,
-        select: %{id: s.id, row_number: over(row_number(), :jobs_partition)},
-        windows: [jobs_partition: [partition_by: :job_id]]
-
-    from s in Step,
-      join: r in subquery(by_job),
-      on: s.id == r.id and r.row_number == 1
-  end
-
-  @doc """
   The last step for a job for a particular exit reason, used in scheduler
   """
   @spec steps_with_reason(Ecto.Queryable.t(), String.t()) :: Ecto.Queryable.t()
@@ -266,6 +272,49 @@ defmodule Lightning.Invocation.Query do
   def last_successful_step_for_job(%Job{id: id}) do
     last_step_for_job(%Job{id: id})
     |> steps_with_reason("success")
+  end
+
+  @doc """
+  Dataclips a job can be run against: the ones it has consumed, plus every
+  named dataclip in its project.
+
+  A named dataclip is a curated input rather than a trace of a past run, so the
+  result is no longer bounded by the job. The two sources are unioned rather
+  than ORed so each keeps its own index, instead of making dataclips the
+  driving relation on every keystroke of the picker's search.
+  """
+  def selectable_for_job(job_id, project_id, limit) do
+    consumed = job_input_dataclip_ids(job_id)
+
+    selectable =
+      if project_id do
+        union(consumed, ^named_dataclip_ids(project_id))
+      else
+        consumed
+      end
+
+    from(d in Dataclip,
+      where: d.id in subquery(selectable),
+      order_by: [
+        desc: d.id in subquery(consumed),
+        desc: d.inserted_at
+      ],
+      limit: ^limit
+    )
+  end
+
+  defp job_input_dataclip_ids(job_id) do
+    from(s in Step,
+      where: s.job_id == ^job_id and not is_nil(s.input_dataclip_id),
+      select: s.input_dataclip_id
+    )
+  end
+
+  defp named_dataclip_ids(project_id) do
+    from(d in Dataclip,
+      where: d.project_id == ^project_id and not is_nil(d.name),
+      select: d.id
+    )
   end
 
   @doc """
@@ -315,8 +364,9 @@ defmodule Lightning.Invocation.Query do
 
   def wipe_dataclips(query \\ Dataclip) do
     from(d in query,
-      where: d.type in [:http_request, :step_result, :saved_input],
+      where: d.type in [:http_request, :step_result, :saved_input, :kafka],
       where: is_nil(d.name),
+      where: is_nil(d.wiped_at),
       update: [
         set: [request: nil, body: nil, wiped_at: ^Lightning.current_time()]
       ]

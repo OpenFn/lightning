@@ -1,54 +1,80 @@
+import { format } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 
-import { useURLState } from '#/react/lib/use-url-state';
-
+import { Tooltip } from '../../components/Tooltip';
 import { cn } from '../../utils/cn';
+import { useRunSummary } from '../hooks/useHistory';
 import {
-  useRequestVersions,
-  useVersions,
-  useVersionsError,
-  useVersionsLoading,
+  useLatestSnapshotId,
+  useRequestReleases,
+  useReleases,
+  useReleasesError,
+  useReleasesLoaded,
+  useReleasesLoading,
 } from '../hooks/useSessionContext';
 import { notifications } from '../lib/notifications';
-import type { Version } from '../types/sessionContext';
+import { usePinnedView } from '../lib/pinnedView';
+import type { Release } from '../types/sessionContext';
+import { releaseActionLabel } from '../utils/releaseLabel';
 
 interface VersionDropdownProps {
   currentVersion: number | null;
   latestVersion: number | null;
   onVersionSelect: (version: number | 'latest') => void;
+  onVersionRestore?: (version: number) => void;
 }
 
 export function VersionDropdown({
   currentVersion,
   latestVersion,
   onVersionSelect,
+  onVersionRestore,
 }: VersionDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get versions state from SessionContextStore
-  const versions = useVersions();
-  const isLoading = useVersionsLoading();
-  const versionsError = useVersionsError();
-  const requestVersions = useRequestVersions();
+  const releases = useReleases();
+  const latestSnapshotId = useLatestSnapshotId();
+  const isLoaded = useReleasesLoaded();
+  const isLoading = useReleasesLoading();
+  const releasesError = useReleasesError();
+  const requestReleases = useRequestReleases();
 
-  // Check if version is pinned via URL parameter
-  const { params } = useURLState();
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+  const {
+    release: pinnedParam,
+    isPinnedRelease,
+    asRun: asRunParam,
+    isViewingAsExecuted: isAsRun,
+  } = usePinnedView();
+  const pinnedVersionNumber = isPinnedRelease ? Number(pinnedParam) : null;
+
+  const asRun = useRunSummary(asRunParam);
+  const asRunVersionNumber =
+    asRun === undefined ? undefined : (asRun.version_number ?? null);
 
   // Show placeholder while loading version information
   const isLoadingVersion = currentVersion === null || latestVersion === null;
 
-  // Determine if viewing latest version (only when we have both values AND no pinned version)
-  const isLatestVersion =
-    !isLoadingVersion && currentVersion === latestVersion && !isPinnedVersion;
+  const isLatestVersion = !isLoadingVersion && !isPinnedRelease && !isAsRun;
 
-  // Format version display
+  const viewedSnapshotId = isPinnedRelease
+    ? (releases.find(version => version.version_number === pinnedVersionNumber)
+        ?.snapshot_id ?? null)
+    : isAsRun
+      ? (asRun?.snapshot_id ?? null)
+      : latestSnapshotId;
+
   const currentVersionDisplay = isLoadingVersion
     ? '•'
-    : isLatestVersion
-      ? 'latest'
-      : `v${String(currentVersion).substring(0, 7)}`;
+    : isPinnedRelease
+      ? `v${pinnedParam}`
+      : isAsRun
+        ? asRunVersionNumber === undefined
+          ? '•'
+          : asRunVersionNumber === null
+            ? 'unpublished'
+            : `v${asRunVersionNumber}`
+        : 'latest';
 
   // Style based on version (matching snapshot_version_chip)
   const buttonStyles = isLoadingVersion
@@ -85,28 +111,42 @@ export function VersionDropdown({
     }
   }, [isOpen]);
 
-  // Fetch versions when dropdown opens
-  useEffect(() => {
-    if (isOpen && versions.length === 0 && !isLoading) {
-      void requestVersions();
-    }
-  }, [isOpen, versions.length, isLoading, requestVersions]);
+  const wasOpen = useRef(false);
 
-  // Show error notification when versionsError is set
   useEffect(() => {
-    if (versionsError) {
+    const justOpened = isOpen && !wasOpen.current;
+
+    if (!isOpen) {
+      wasOpen.current = false;
+      return;
+    }
+
+    if (isLoading) return;
+
+    wasOpen.current = true;
+
+    if (!isLoaded) {
+      void requestReleases();
+      return;
+    }
+
+    if (justOpened && releasesError) void requestReleases();
+  }, [isOpen, isLoaded, isLoading, releasesError, requestReleases]);
+
+  useEffect(() => {
+    if (releasesError) {
       notifications.alert({
         title: 'Failed to load versions',
         description: 'Please try again',
       });
     }
-  }, [versionsError]);
+  }, [releasesError]);
 
-  const handleVersionClick = (version: Version | 'latest') => {
-    if (version === 'latest') {
+  const handleVersionClick = (version: Release) => {
+    if (version.is_latest) {
       onVersionSelect('latest');
     } else {
-      onVersionSelect(version.lock_version);
+      onVersionSelect(version.version_number);
     }
     setIsOpen(false);
   };
@@ -133,83 +173,141 @@ export function VersionDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-56 rounded-md bg-white shadow-lg outline-1 outline-black/5 z-50 max-h-80 overflow-y-auto">
+        <div className="absolute left-0 mt-2 w-72 rounded-md bg-white shadow-lg outline-1 outline-black/5 z-50 max-h-80 overflow-y-auto">
           <div
             className="py-1"
             role="menu"
             aria-orientation="vertical"
             aria-labelledby="options-menu"
           >
+            {/* Always first, and always clickable when you are reading
+                something else. Without it a workflow that has published
+                nothing offers no way back to its editable content, which is
+                every draft and every workflow read through a run. */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="version-latest"
+              onClick={() => {
+                setIsOpen(false);
+                onVersionSelect('latest');
+              }}
+              className={cn(
+                'flex w-full items-center gap-2 px-4 py-2 text-left text-sm',
+                isLatestVersion
+                  ? 'bg-primary-50 text-primary-900'
+                  : 'text-gray-700 hover:bg-gray-50'
+              )}
+            >
+              <span className="flex-1 font-medium">Latest</span>
+              {isLatestVersion && (
+                <span className="hero-check-mini h-4 w-4 text-primary-600" />
+              )}
+            </button>
+
             {isLoading ? (
               <div className="px-4 py-2 text-sm text-gray-500">
                 Loading versions...
               </div>
-            ) : versionsError ? (
+            ) : releasesError ? (
               <div className="px-4 py-2 text-sm text-red-600">
-                {versionsError}
+                {releasesError}
               </div>
-            ) : versions.length === 0 ? (
+            ) : releases.length === 0 ? (
               <div className="px-4 py-2 text-sm text-gray-500">
-                No versions available
+                No published versions
               </div>
             ) : (
               <>
-                {/* First, show "latest" option that removes version parameter */}
-                {versions.length > 0 && versions[0].is_latest && (
-                  <button
-                    key="latest"
-                    type="button"
-                    onClick={() => handleVersionClick('latest')}
-                    className={cn(
-                      'w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between',
-                      isLatestVersion
-                        ? 'bg-primary-50 text-primary-900'
-                        : 'text-gray-700'
-                    )}
-                    role="menuitem"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">latest</span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(versions[0].inserted_at).toLocaleString()}
-                      </span>
-                    </div>
-                    {isLatestVersion && (
-                      <span className="hero-check h-4 w-4 text-primary-600" />
-                    )}
-                  </button>
-                )}
+                <p className="px-4 pt-1 pb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Version history
+                </p>
 
-                {/* Then show all versions with version numbers (including latest) */}
-                {versions.map(version => {
-                  const isSelected =
-                    !isLatestVersion && version.lock_version === currentVersion;
+                {releases.map(version => {
+                  const isActive =
+                    version.snapshot_id != null &&
+                    version.snapshot_id === viewedSnapshotId;
 
-                  const displayText = `v${String(version.lock_version).substring(0, 7)}`;
+                  const date = new Date(version.inserted_at);
+                  const validDate = !Number.isNaN(date.getTime());
+                  const absolute = validDate ? format(date, 'd MMM yyyy') : '';
+                  const exact = validDate
+                    ? format(date, 'd MMM yyyy, HH:mm')
+                    : '';
 
                   return (
-                    <button
+                    <div
                       key={version.lock_version}
-                      type="button"
-                      onClick={() => handleVersionClick(version)}
                       className={cn(
-                        'w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between',
-                        isSelected
-                          ? 'bg-primary-50 text-primary-900'
-                          : 'text-gray-700'
+                        'group flex items-start hover:bg-gray-100',
+                        isActive ? 'bg-primary-50' : ''
                       )}
-                      role="menuitem"
                     >
-                      <div className="flex flex-col">
-                        <span className="font-medium">{displayText}</span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(version.inserted_at).toLocaleString()}
+                      <button
+                        type="button"
+                        onClick={() => handleVersionClick(version)}
+                        className={cn(
+                          'min-w-0 flex-1 text-left px-4 py-2.5 text-sm flex items-start gap-3',
+                          isActive ? 'text-primary-900' : 'text-gray-700'
+                        )}
+                        role="menuitem"
+                      >
+                        <span
+                          className={cn(
+                            'mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset',
+                            version.is_latest
+                              ? 'bg-green-100 text-green-800 ring-green-600/20'
+                              : 'bg-gray-100 text-gray-600 ring-gray-500/10'
+                          )}
+                        >
+                          v{version.version_number}
                         </span>
-                      </div>
-                      {isSelected && (
-                        <span className="hero-check h-4 w-4 text-primary-600" />
+
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate">
+                            {releaseActionLabel(version)}
+                          </span>
+                          <span className="flex min-w-0 items-center gap-1 text-xs text-gray-500">
+                            {version.published_by && (
+                              <>
+                                <span className="min-w-0 truncate">
+                                  {version.published_by}
+                                </span>
+                                <span aria-hidden="true">·</span>
+                              </>
+                            )}
+                            <Tooltip content={exact} side="top">
+                              <span className="whitespace-nowrap">
+                                {absolute}
+                              </span>
+                            </Tooltip>
+                          </span>
+                        </span>
+
+                        {isActive && (
+                          <span className="hero-check mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                        )}
+                      </button>
+
+                      {/* The newest release is what is live, so there is nothing
+                        to put back. */}
+                      {onVersionRestore && !version.is_latest && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onVersionRestore(version.version_number);
+                            setIsOpen(false);
+                          }}
+                          className="shrink-0 self-center px-3 py-2.5 text-xs
+                          font-medium text-primary-700 opacity-0
+                          hover:underline focus:opacity-100
+                          group-hover:opacity-100"
+                          data-testid={`restore-version-${version.version_number}`}
+                        >
+                          Restore
+                        </button>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </>

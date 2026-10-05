@@ -140,7 +140,7 @@ describe('LogTabPanel', () => {
 
     mockUseSelectedStepId.mockReturnValue(null);
 
-    // Mock history commands (used by StepViewerLayout)
+    // Mock history commands
     mockUseHistoryCommands.mockReturnValue({
       selectStep: vi.fn(),
     } as any);

@@ -1,14 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { getTestData } from '../../test-data';
+
 import { enableExperimentalFeatures } from '../../e2e-helper';
-import {
-  LoginPage,
-  ProjectsPage,
-  WorkflowsPage,
-  WorkflowEditPage,
-  WorkflowCollaborativePage,
-} from '../../pages';
+import { LoginPage, WorkflowCollaborativePage } from '../../pages';
 import { WorkflowDiagramPage } from '../../pages/components/workflow-diagram.page';
+import { getTestData } from '../../test-data';
 
 /**
  * Edge Validation in Collaborative Editor
@@ -42,23 +37,12 @@ test.describe('Edge Validation in Collaborative Editor @collaborative', () => {
       testData.users.editor.password
     );
 
-    // Navigate to project and workflow
-    const projectsPage = new ProjectsPage(page);
-    await projectsPage.navigateToProject(testData.projects.openhie.name);
-
-    const workflowsPage = new WorkflowsPage(page);
-    await workflowsPage.navigateToWorkflow(testData.workflows.openhie.name);
-
-    // Wait for workflow edit page to load
-    const workflowEdit = new WorkflowEditPage(page);
-    await workflowEdit.waitForConnected();
-
-    // Switch to collaborative editor
-    await workflowEdit.clickCollaborativeEditorToggle();
-
+    // Navigate directly to the collaborative editor (the only editor)
     const collabEditor = new WorkflowCollaborativePage(page);
-    await collabEditor.waitForReactComponentLoaded();
-    await collabEditor.waitForSynced();
+    await collabEditor.open({
+      projectId: testData.projects.openhie.id,
+      workflowId: testData.workflows.openhie.id,
+    });
 
     // Wait for workflow diagram to be ready
     const diagram = new WorkflowDiagramPage(page);

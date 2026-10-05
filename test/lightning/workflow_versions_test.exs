@@ -7,6 +7,7 @@ defmodule Lightning.WorkflowVersionsTest do
   alias Lightning.Repo
   alias Lightning.WorkflowVersions
   alias Lightning.Workflows.WorkflowVersion
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
 
   @a "aaaaaaaaaaaa"
   @b "bbbbbbbbbbbb"
@@ -400,6 +401,88 @@ defmodule Lightning.WorkflowVersionsTest do
       assert Regex.match?(~r/^[a-f0-9]{12}$/, hash1)
     end
 
+    test "a webhook custom path moves the hash, and no path leaves it alone" do
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, custom_path: nil)
+
+      insert(:job, workflow: workflow, name: "Job A", body: "code")
+
+      without_path =
+        workflow |> Repo.preload([:triggers, :jobs, :edges], force: true)
+
+      # A nil serialises to "" and the parts are concatenated, so hashing the
+      # key costs nothing for the workflows that have no path. @openfn/project
+      # skips undefined for the same reason, which keeps the two sides equal.
+      assert WorkflowVersions.canonical_form(without_path) ==
+               "Testtruewebhookbefore_start@openfn/language-common@latestcodeJob A"
+
+      Repo.update_all(
+        from(x in Lightning.Workflows.Trigger, where: x.id == ^trigger.id),
+        set: [custom_path: "facility-001"]
+      )
+
+      with_path =
+        workflow |> Repo.preload([:triggers, :jobs, :edges], force: true)
+
+      assert WorkflowVersions.canonical_form(with_path) =~ "facility-001"
+
+      refute WorkflowVersions.generate_hash(without_path) ==
+               WorkflowVersions.generate_hash(with_path)
+    end
+
+    test "a path the app would not export is not hashed" do
+      # `ProvisioningJSON` drops a pre-migration path, so the CLI never sees
+      # one. Hashing it would leave the two disagreeing on every pull, forever,
+      # for exactly the rows the grandfathering exists to keep working.
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, custom_path: nil)
+
+      insert(:job, workflow: workflow, name: "Job A", body: "code")
+
+      pathless = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      expected = WorkflowVersions.generate_hash(pathless)
+
+      Repo.update_all(
+        from(x in Lightning.Workflows.Trigger, where: x.id == ^trigger.id),
+        set: [custom_path: "Fhir.Patient"]
+      )
+
+      legacy = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+
+      assert WorkflowVersions.generate_hash(legacy) == expected
+    end
+
+    test "a path on a cron trigger is not hashed" do
+      # It never served a URL, so it is not workflow content. Left over from
+      # before the column was validated.
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          cron_expression: "0 0 * * *"
+        )
+
+      insert(:job, workflow: workflow, name: "Job A", body: "code")
+
+      pathless = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      expected = WorkflowVersions.generate_hash(pathless)
+
+      Repo.update_all(
+        from(x in Lightning.Workflows.Trigger, where: x.id == ^trigger.id),
+        set: [custom_path: "old-name"]
+      )
+
+      stale = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+
+      assert WorkflowVersions.generate_hash(stale) == expected
+    end
+
     test "generates different hashes for different workflow structures" do
       project = insert(:project)
 
@@ -416,39 +499,6 @@ defmodule Lightning.WorkflowVersionsTest do
       hash2 = WorkflowVersions.generate_hash(workflow2)
 
       refute hash1 == hash2
-    end
-
-    test "ignores kafka configuration changes" do
-      workflow = insert(:workflow, name: "Test")
-
-      trigger =
-        insert(:trigger,
-          workflow: workflow,
-          type: :kafka,
-          kafka_configuration:
-            build(:triggers_kafka_configuration, topics: ["1"])
-        )
-
-      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges])
-      hash1 = WorkflowVersions.generate_hash(workflow)
-
-      # Update kafka config
-      updated_trigger =
-        trigger
-        |> Lightning.Workflows.Trigger.changeset(%{
-          kafka_configuration: %{topics: ["22"]}
-        })
-        |> Repo.update!()
-
-      assert updated_trigger.kafka_configuration.topics == ["22"]
-
-      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
-      hash2 = WorkflowVersions.generate_hash(workflow)
-
-      refute updated_trigger.kafka_configuration.topics ==
-               trigger.kafka_configuration.topics
-
-      assert hash1 == hash2
     end
 
     test "hash changes when job body changes" do
@@ -493,12 +543,101 @@ defmodule Lightning.WorkflowVersionsTest do
       refute hash1 == hash2
     end
 
+    test "hash changes when webhook_reply changes" do
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook,
+          webhook_reply: :before_start
+        )
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges])
+      hash1 = WorkflowVersions.generate_hash(workflow)
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash2 = WorkflowVersions.generate_hash(workflow)
+
+      refute hash1 == hash2
+    end
+
+    test "hash changes when webhook_response_config changes" do
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook,
+          webhook_reply: :before_start
+        )
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges])
+      hash1 = WorkflowVersions.generate_hash(workflow)
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(
+          webhook_response_config: %WebhookResponseConfig{success_code: 200}
+        )
+        |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash2 = WorkflowVersions.generate_hash(workflow)
+
+      trigger
+      |> Ecto.Changeset.change(
+        webhook_response_config: %{
+          success_code: 200,
+          error_code: 502
+        }
+      )
+      |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash3 = WorkflowVersions.generate_hash(workflow)
+
+      refute hash1 == hash2
+      refute hash2 == hash3
+    end
+
+    test "hash changes when cron_cursor_job_id changes" do
+      workflow = insert(:workflow, name: "Test")
+      job1 = insert(:job, workflow: workflow, name: "Job A")
+      job2 = insert(:job, workflow: workflow, name: "Job B")
+
+      insert(:trigger,
+        workflow: workflow,
+        type: :cron,
+        cron_expression: "0 * * * *",
+        cron_cursor_job: job1
+      )
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges])
+      hash1 = WorkflowVersions.generate_hash(workflow)
+
+      # Change the cron cursor job
+      [trigger] = workflow.triggers
+
+      trigger
+      |> Ecto.Changeset.change(cron_cursor_job_id: job2.id)
+      |> Repo.update!()
+
+      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      hash2 = WorkflowVersions.generate_hash(workflow)
+
+      refute hash1 == hash2
+    end
+
     test "properly orders triggers by type" do
       workflow = insert(:workflow, name: "Test")
 
       # Insert triggers in reverse order
       insert(:trigger, workflow: workflow, type: :webhook)
-      insert(:trigger, workflow: workflow, type: :kafka)
 
       insert(:trigger,
         workflow: workflow,

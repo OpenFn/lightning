@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.Factories
   import Lightning.ApplicationHelpers, only: [dynamically_absorb_delay: 1]
+  import Lightning.TestUtils, only: [flush_dataclip_search_index: 0]
 
   alias Lightning.Runs
   alias Lightning.WorkOrders.Events
@@ -183,6 +184,50 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert rendered =~ work_order.dataclip_id
       assert rendered =~ "toggle_details_for_#{work_order.id}"
+    end
+
+    test "workflow name links to the version the run executed", %{
+      project: project
+    } do
+      {work_order, _dataclip} = setup_work_order(project)
+
+      work_order =
+        Lightning.Repo.preload(work_order, [:workflow, :snapshot, :runs])
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(work_order.workflow, lock_version: 99)
+      )
+
+      work_order =
+        put_in(work_order.workflow.lock_version, 99)
+
+      [run] = work_order.runs
+
+      classic =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          project: project,
+          can_run_workflow: true,
+          can_edit_data_retention: true
+        )
+
+      assert classic =~ ~r/[?;]run=#{run.id}/
+      assert classic =~ ~r/[?;]v=#{work_order.snapshot.lock_version}/
+      refute classic =~ "as_run="
+
+      experimental =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          project: project,
+          can_run_workflow: true,
+          can_edit_data_retention: true,
+          experimental_features: true
+        )
+
+      assert experimental =~ ~r/[?;]run=#{run.id}/
+      assert experimental =~ ~r/[?;]as_run=#{run.id}/
     end
 
     test "WorkOrderComponent renders steps when details are toggled", %{
@@ -723,7 +768,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       job = insert(:job, workflow: workflow)
 
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, project: project)
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
 
@@ -834,7 +879,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       job = insert(:job, workflow: workflow)
 
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, project: project)
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
 
@@ -1033,7 +1078,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
       dataclip =
         insert(:dataclip,
           type: :http_request,
-          body: %{"username" => "eliaswalyba"}
+          body: %{"username" => "eliaswalyba"},
+          project: project
         )
 
       %{runs: [run_one]} =
@@ -1069,7 +1115,11 @@ defmodule LightningWeb.WorkOrderLiveTest do
       {:ok, snapshot_two} = Workflows.Snapshot.create(workflow_two)
 
       dataclip =
-        insert(:dataclip, type: :http_request, body: %{"username" => "qassim"})
+        insert(:dataclip,
+          type: :http_request,
+          body: %{"username" => "qassim"},
+          project: project
+        )
 
       work_order_two =
         insert(:workorder,
@@ -1104,6 +1154,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
           ],
           "step_id" => Ecto.UUID.generate()
         })
+
+      flush_dataclip_search_index()
 
       {:ok, view, _html} =
         live_async(conn, Routes.project_run_index_path(conn, :index, project.id))

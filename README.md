@@ -54,7 +54,6 @@ integration at all levels.
   - [Problems with Postgres](#problems-with-postgres)
   - [Problems with Debian](#problems-with-debian)
   - [Problems with Docker](#problems-with-docker)
-  - [Problems with Rambo](#problems-with-rambo)
 - [Support](#support)
 
 ## Demo
@@ -275,6 +274,26 @@ MIX_ENV=test mix test
 We also have `test.watch` installed which can be used to rerun the tests on file
 changes.
 
+##### Chasing flaky tests
+
+`bin/repeat_mix_test` runs the suite (or given files) repeatedly and records
+each run's first-pass result — unlike `bin/ci_tests`, it never retries, so a
+flake shows up instead of being papered over.
+
+```sh
+bin/repeat_mix_test 30 test/lightning/workflows_test.exs
+CI_TIMING=1 bin/repeat_mix_test 11   # cap schedulers and shorten assert_receive
+                                     # timeouts to match CircleCI
+```
+
+It uses its own test database (`MIX_TEST_PARTITION=flaky`) so a long loop can't
+collide with another checkout, and writes logs plus a `summary.tsv` to
+`.scratch/runs/<timestamp>/`.
+
+`bin/gather_ci_logs [N]` pulls the "Run Elixir tests" output from the last N
+`test_elixir` CircleCI jobs on `main` into `.scratch/ci-logs/`, flagging the
+builds that went green only because the retry pass saved them. Needs `jq`.
+
 ## Security and Standards
 
 We use a host of common Elixir static analysis tools to help us avoid common
@@ -297,6 +316,29 @@ In addition to our test suite, you can run the following commands:
 
 > For convenience there is a `verify` mix task that runs all of the above and
 > defaults the `MIX_ENV` to `test`.
+
+### Formatting
+
+`bin/format` runs Prettier on JavaScript, TypeScript, CSS, HTML, JSON, YAML and
+Markdown, and `mix format` on Elixir:
+
+```bash
+bin/format            # format everything, and run eslint --fix
+bin/format --changed  # the same, for files changed on your branch
+bin/format --check    # check Prettier files without writing; CI runs this
+bin/format --staged   # format staged files; the pre-commit hook runs this
+```
+
+The pre-commit hook installs itself when you compile in dev, so you rarely need
+to run this by hand. If you only build in Docker you won't have the hook, and CI
+will catch what it would have fixed.
+
+To stop Prettier formatting a file, add it to `.prettierignore` with a comment
+saying why.
+
+CI doesn't run ESLint or TypeScript yet, because neither passes on the whole
+tree. Run them on the code you touch: `cd assets && npm run lint` and
+`cd assets && npx tsc --build`.
 
 For more guidance on security best practices for workflow automation
 implementations, check out OpenFn Docs:
@@ -364,10 +406,12 @@ on our community forum.
 
 ## Benchmarking
 
-We are using [k6](https://k6.io/) to benchmark Lightning. Under `benchmarking`
-folder you can find a script for benchmarking Webhook Workflows.
+We are using [k6](https://k6.io/) to benchmark Lightning. Under
+`tooling/benchmarking` folder you can find a script for benchmarking Webhook
+Workflows.
 
-See [Benchmarking](benchmarking/README.md) for more detailed information.
+See [Benchmarking](tooling/benchmarking/README.md) for more detailed
+information.
 
 ## Troubleshooting
 
@@ -472,29 +516,6 @@ the following error:
 You can resolve this by setting `ERL_FLAGS="+JPperf true"` env to the failing
 stage. You can follow this thread on our community forum for more info:
 [no matching manifest for linux/arm64/v8 in the manifest list entries](https://community.openfn.org/t/lightning-prebuilt-images-throw-no-matching-manifest-for-linux-arm64-v8-in-the-manifest-list-entries/465/15)
-
-### Problems with Rambo
-
-When running `mix compile.rambo` on Apple Silicon (an Apple M1/M2, `macarm`,
-`aarch64-apple-darwin`) and encountering the following error:
-
-```
-** (RuntimeError) Rambo does not ship with binaries for your environment.
-
-    aarch64-apple-darwin22.3.0 detected
-
-Install the Rust compiler so a binary can be prepared for you.
-
-    lib/mix/tasks/compile.rambo.ex:89: Mix.Tasks.Compile.Rambo.compile!/0
-    lib/mix/tasks/compile.rambo.ex:51: Mix.Tasks.Compile.Rambo.run/1
-    (mix 1.14.2) lib/mix/task.ex:421: anonymous fn/3 in Mix.Task.run_task/4
-    (mix 1.14.2) lib/mix/cli.ex:84: Mix.CLI.run_task/2
-```
-
-You can resolve this error by installing the Rust compiler using Homebrew. Run
-the following command in your terminal: `brew install rust`
-
-If neither of the approaches above work, please raise an issue.
 
 ## Support
 

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { ADAPTORS_WITHOUT_CREDENTIALS } from '../../constants/adaptors';
 import { useJobDeleteValidation } from '../../hooks/useJobDeleteValidation';
 import { usePermissions } from '../../hooks/useSessionContext';
 import {
@@ -10,6 +11,7 @@ import {
   useWorkflowReadOnly,
 } from '../../hooks/useWorkflow';
 import type { Workflow } from '../../types/workflow';
+import { extractAdaptorName } from '../../utils/adaptorUtils';
 import { AlertDialog } from '../AlertDialog';
 import { Button } from '../Button';
 import { NewRunButton } from '../NewRunButton';
@@ -41,6 +43,7 @@ export function JobInspector({
   const { removeJobAndClearSelection } = useWorkflowActions();
   const permissions = usePermissions();
   const { isReadOnly } = useWorkflowReadOnly();
+
   const validation = useJobDeleteValidation(job.id);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -73,6 +76,15 @@ export function JobInspector({
   // Determine if Delete should be disabled
   const canEdit = permissions?.can_edit_workflow && !isReadOnly;
 
+  const hasCredential = !!(
+    job.project_credential_id || job.keychain_credential_id
+  );
+  const needsConnect =
+    !hasCredential &&
+    !ADAPTORS_WITHOUT_CREDENTIALS.includes(
+      extractAdaptorName(job.adaptor) ?? ''
+    );
+
   // Build footer with edit, run, and delete buttons
   const footer = (
     <InspectorFooter
@@ -90,33 +102,40 @@ export function JobInspector({
           >
             <span className="inline-block">
               <Button
-                variant="primary"
+                aria-label="Code"
+                variant="secondary"
                 onClick={() => updateSearchParams({ panel: 'editor' })}
                 disabled={isIDEOpen}
               >
-                Code
+                <span className="hero-arrows-pointing-out"></span>
               </Button>
             </span>
           </Tooltip>
-          <NewRunButton
-            onClick={() => onOpenRunPanel({ jobId: job.id })}
-            tooltipSide="top"
-            disabled={isReadOnly}
-          />
+          <Tooltip content={deleteTooltipMessage}>
+            <span className="inline-block">
+              <Button
+                aria-label="Delete"
+                variant="secondary"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={!canDelete || !canEdit || isDeleting}
+              >
+                {isDeleting ? (
+                  <span className="hero-arrow-path animate-spin"></span>
+                ) : (
+                  <span className="hero-trash"></span>
+                )}
+              </Button>
+            </span>
+          </Tooltip>
         </>
       }
       rightButtons={
-        <Tooltip content={deleteTooltipMessage}>
-          <span className="inline-block">
-            <Button
-              variant="danger"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              disabled={!canDelete || !canEdit}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </span>
-        </Tooltip>
+        <NewRunButton
+          onClick={() => onOpenRunPanel({ jobId: job.id })}
+          tooltipSide="top"
+          text="Run From Here"
+          variant={needsConnect ? 'secondary' : 'primary'}
+        />
       }
     />
   );

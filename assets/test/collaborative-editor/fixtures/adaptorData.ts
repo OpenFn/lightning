@@ -9,18 +9,17 @@ import { sortAdaptors } from '#/collaborative-editor/stores/createAdaptorStore';
 
 import type {
   Adaptor,
-  AdaptorVersion,
   AdaptorsList,
 } from '../../../js/collaborative-editor/types/adaptor';
 
 /**
  * Sample adaptor versions for testing
  */
-export const mockAdaptorVersions: AdaptorVersion[] = [
-  { version: '2.1.0' },
-  { version: '2.0.5' },
-  { version: '2.0.0' },
-  { version: '1.9.5' },
+export const mockAdaptorVersions: string[] = [
+  '2.1.0',
+  '2.0.5',
+  '2.0.0',
+  '1.9.5',
 ];
 
 /**
@@ -29,8 +28,9 @@ export const mockAdaptorVersions: AdaptorVersion[] = [
 export const mockAdaptor: Adaptor = {
   name: '@openfn/language-http',
   versions: mockAdaptorVersions,
-  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/http',
-  latest: '2.1.0',
+  repository: 'https://github.com/OpenFn/adaptors/tree/main/packages/http',
+  latest_version: '2.1.0',
+  icon_urls: { square: null, rectangle: null },
 };
 
 /**
@@ -38,39 +38,35 @@ export const mockAdaptor: Adaptor = {
  */
 export const mockAdaptorDhis2: Adaptor = {
   name: '@openfn/language-dhis2',
-  versions: [{ version: '4.2.1' }, { version: '4.2.0' }, { version: '4.1.3' }],
-  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/dhis2',
-  latest: '4.2.1',
+  versions: ['4.2.1', '4.2.0', '4.1.3'],
+  repository: 'https://github.com/OpenFn/adaptors/tree/main/packages/dhis2',
+  latest_version: '4.2.1',
+  icon_urls: { square: null, rectangle: null },
 };
 
 export const mockAdaptorSalesforce: Adaptor = {
   name: '@openfn/language-salesforce',
-  versions: [
-    { version: '3.5.2' },
-    { version: '3.5.1' },
-    { version: '3.5.0' },
-    { version: '3.4.9' },
-  ],
-  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/salesforce',
-  latest: '3.5.2',
+  versions: ['3.5.2', '3.5.1', '3.5.0', '3.4.9'],
+  repository:
+    'https://github.com/OpenFn/adaptors/tree/main/packages/salesforce',
+  latest_version: '3.5.2',
+  icon_urls: { square: null, rectangle: null },
 };
 
 export const mockAdaptorGmail: Adaptor = {
   name: '@openfn/language-gmail',
-  versions: [{ version: '1.2.0' }, { version: '1.1.0' }, { version: '1.0.0' }],
-  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/gmail',
-  latest: '1.2.0',
+  versions: ['1.2.0', '1.1.0', '1.0.0'],
+  repository: 'https://github.com/OpenFn/adaptors/tree/main/packages/gmail',
+  latest_version: '1.2.0',
+  icon_urls: { square: null, rectangle: null },
 };
 
 export const mockAdaptorCommon: Adaptor = {
   name: '@openfn/language-common',
-  versions: [
-    { version: '2.0.0' },
-    { version: '1.15.0' },
-    { version: '1.14.0' },
-  ],
-  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/common',
-  latest: '2.0.0',
+  versions: ['2.0.0', '1.15.0', '1.14.0'],
+  repository: 'https://github.com/OpenFn/adaptors/tree/main/packages/common',
+  latest_version: '2.0.0',
+  icon_urls: { square: null, rectangle: null },
 };
 
 /**
@@ -94,32 +90,29 @@ export const invalidAdaptorData = {
   missingName: {
     // name missing
     versions: mockAdaptorVersions,
-    repo: 'https://github.com/test',
-    latest: '1.0.0',
+    repository: 'https://github.com/test',
+    latest_version: '1.0.0',
   },
 
   invalidVersions: {
     name: '@openfn/language-test',
     versions: 'invalid', // should be array
-    repo: 'https://github.com/test',
-    latest: '1.0.0',
+    repository: 'https://github.com/test',
+    latest_version: '1.0.0',
   },
 
   missingLatest: {
     name: '@openfn/language-test',
     versions: mockAdaptorVersions,
-    repo: 'https://github.com/test',
-    // latest missing
+    repository: 'https://github.com/test',
+    // latest_version missing
   },
 
   invalidVersionStructure: {
     name: '@openfn/language-test',
-    versions: [
-      { version: '1.0.0' },
-      { invalidField: 'invalid' }, // wrong structure
-    ],
-    repo: 'https://github.com/test',
-    latest: '1.0.0',
+    versions: ['1.0.0', { invalidField: 'invalid' }], // wrong structure
+    repository: 'https://github.com/test',
+    latest_version: '1.0.0',
   },
 };
 
@@ -136,13 +129,12 @@ export function createMockAdaptor(overrides: Partial<Adaptor> = {}): Adaptor {
 /**
  * Helper to create adaptors list with specific number of items
  */
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
 export function createMockAdaptorsList(count: number): AdaptorsList {
   return Array.from({ length: count }, (_, i) => ({
     name: `@openfn/language-test-${i}`,
-    versions: [{ version: `${i}.1.0` }, { version: `${i}.0.0` }],
-    repo: `https://github.com/test/adaptor-${i}`,
-    latest: `${i}.1.0`,
+    versions: [`${i}.1.0`, `${i}.0.0`],
+    repository: `https://github.com/test/adaptor-${i}`,
+    latest_version: `${i}.1.0`,
+    icon_urls: { square: null, rectangle: null },
   }));
 }
-/* eslint-enable @typescript-eslint/restrict-template-expressions */

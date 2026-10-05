@@ -55,7 +55,6 @@ export const mockProjectContext: ProjectContext = {
  */
 export const mockAppConfig: AppConfig = {
   require_email_verification: false,
-  kafka_triggers_enabled: false,
 };
 
 /**
@@ -65,6 +64,8 @@ export const mockPermissions: Permissions = {
   can_edit_workflow: true,
   can_run_workflow: true,
   can_write_webhook_auth_method: true,
+  can_provision_sandbox: true,
+  can_archive_sandbox: true,
 };
 
 /**
@@ -126,7 +127,7 @@ export interface SessionContextResponse {
   project_repo_connection: ProjectRepoConnection | null;
   webhook_auth_methods: WebhookAuthMethod[];
   workflow_template: any | null;
-  has_read_ai_disclaimer: boolean;
+  suppress_enable_trigger_warning?: boolean;
   limits?: Limits;
 }
 
@@ -143,7 +144,7 @@ export const mockSessionContextResponse: SessionContextResponse = {
   project_repo_connection: null,
   webhook_auth_methods: [],
   workflow_template: null,
-  has_read_ai_disclaimer: true,
+  suppress_enable_trigger_warning: false,
 };
 
 /**
@@ -159,7 +160,6 @@ export const mockUnauthenticatedSessionContext: SessionContextResponse = {
   project_repo_connection: null,
   webhook_auth_methods: [],
   workflow_template: null,
-  has_read_ai_disclaimer: false,
 };
 
 /**
@@ -171,14 +171,12 @@ export const mockUpdatedSessionContext: SessionContextResponse = {
   project: mockAlternativeProjectContext,
   config: {
     require_email_verification: true,
-    kafka_triggers_enabled: true,
   },
   permissions: mockPermissions,
   latest_snapshot_lock_version: 2,
   project_repo_connection: null,
   webhook_auth_methods: [],
   workflow_template: null,
-  has_read_ai_disclaimer: true,
 };
 
 // =============================================================================
@@ -287,11 +285,13 @@ export interface CreateSessionContextOptions {
   project?: Partial<ProjectContext> | null;
   config?: Partial<AppConfig>;
   permissions?: Partial<Permissions>;
+  content_locked?: boolean;
+  experimental_features_enabled?: boolean;
   latest_snapshot_lock_version?: number;
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
   webhook_auth_methods?: WebhookAuthMethod[];
   workflow_template?: WorkflowTemplate | null;
-  has_read_ai_disclaimer?: boolean;
+  suppress_enable_trigger_warning?: boolean;
   limits?: Partial<Limits>;
   workflow?: any | null;
 }
@@ -358,7 +358,6 @@ export function createSessionContext(
   // Handle config - always present, merge with defaults
   const config: AppConfig = {
     require_email_verification: false,
-    kafka_triggers_enabled: false,
     ...options.config,
   };
 
@@ -367,6 +366,8 @@ export function createSessionContext(
     can_edit_workflow: true,
     can_run_workflow: true,
     can_write_webhook_auth_method: true,
+    can_provision_sandbox: true,
+    can_archive_sandbox: true,
     ...options.permissions,
   };
 
@@ -402,13 +403,23 @@ export function createSessionContext(
     project_repo_connection,
     webhook_auth_methods: options.webhook_auth_methods ?? [],
     workflow_template: options.workflow_template ?? null,
-    has_read_ai_disclaimer: options.has_read_ai_disclaimer ?? true,
+    suppress_enable_trigger_warning:
+      options.suppress_enable_trigger_warning ?? false,
     workflow: options.workflow,
   };
 
   // Only add limits if provided
   if (limits !== undefined) {
     response.limits = limits;
+  }
+
+  if (options.content_locked !== undefined) {
+    response.content_locked = options.content_locked;
+  }
+
+  if (options.experimental_features_enabled !== undefined) {
+    response.experimental_features_enabled =
+      options.experimental_features_enabled;
   }
 
   return response;
@@ -549,7 +560,6 @@ export function createMockConfig(
 ): AppConfig {
   return {
     require_email_verification: false,
-    kafka_triggers_enabled: false,
     ...overrides,
   };
 }

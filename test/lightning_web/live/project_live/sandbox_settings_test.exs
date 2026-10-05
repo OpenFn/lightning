@@ -57,6 +57,37 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       assert html =~ "Delete project"
     end
 
+    test "an admin cannot hard-delete the project through the sandbox confirm event",
+         %{conn: conn, user: user} do
+      # The page renders the soft-delete modal here, not the sandbox one, so
+      # this event is only reachable by crafting it. It used to land on the
+      # sandbox policy, which admits admins, and hard-delete the workspace
+      # outright - the capability `:delete_project` reserves for owners.
+      root =
+        insert(:project,
+          name: "root-project",
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      workflow = insert(:workflow, project: root)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{root.id}/settings")
+
+      # The name has to match, or the typo guard refuses it before the
+      # authorisation question is ever asked.
+      render_hook(view, "confirm-delete", %{"confirm" => %{"name" => root.name}})
+
+      # Assert the refusal itself, not just that the project survived. The
+      # handler also leaves it intact when the typed name does not match, so
+      # without this the test passes whether or not authorisation ever ran.
+      assert {_path, %{"error" => error}} = assert_redirect(view)
+      assert error =~ "permission to delete this sandbox"
+
+      assert Lightning.Repo.reload(root)
+      assert Lightning.Repo.reload(workflow)
+      assert is_nil(Lightning.Repo.reload!(root).scheduled_deletion)
+    end
+
     test "shows webhook auth methods table on webhook_security tab", %{
       conn: conn,
       parent: parent
@@ -341,7 +372,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       assert_raise ArgumentError,
                    ~r/Cannot remove a parent project admin/,
                    fn ->
-                     Projects.delete_project_user!(sandbox_pu)
+                     Projects.delete_project_user!(sandbox_pu, insert(:user))
                    end
     end
 
@@ -364,7 +395,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       sandbox_pu = Projects.get_project_user(sandbox, regular)
 
       assert %Lightning.Projects.ProjectUser{} =
-               Projects.delete_project_user!(sandbox_pu)
+               Projects.delete_project_user!(sandbox_pu, insert(:user))
     end
 
     test "allows removing any user from a non-sandbox project" do
@@ -382,7 +413,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       pu = Projects.get_project_user(project, admin)
 
       assert %Lightning.Projects.ProjectUser{} =
-               Projects.delete_project_user!(pu)
+               Projects.delete_project_user!(pu, insert(:user))
     end
   end
 

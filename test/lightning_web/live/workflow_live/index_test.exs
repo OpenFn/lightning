@@ -8,6 +8,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   import Lightning.WorkflowsFixtures
   import Lightning.WorkflowLive.Helpers
 
+  alias Lightning.DashboardStats
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
   setup :create_workflow
@@ -20,6 +22,27 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       assert view
              |> element("#workflows-#{project.id}", "No workflows yet")
+    end
+
+    test "does not intern arbitrary sort params as atoms", %{
+      conn: conn,
+      project: project
+    } do
+      # Unknown sort/dir values must not be turned into atoms, otherwise a
+      # crafted URL could exhaust the BEAM atom table. Unique so no earlier test
+      # could have interned them.
+      bogus_key = "bogus_sort_#{System.unique_integer([:positive])}"
+      bogus_dir = "bogus_dir_#{System.unique_integer([:positive])}"
+
+      {:ok, _view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w?sort=#{bogus_key}&dir=#{bogus_dir}"
+        )
+
+      # The page loaded (defaulting to name/asc) without interning either value.
+      assert_raise ArgumentError, fn -> String.to_existing_atom(bogus_key) end
+      assert_raise ArgumentError, fn -> String.to_existing_atom(bogus_dir) end
     end
 
     test "renders a component when run limit has been reached", %{
@@ -113,14 +136,16 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # 10 total runs (4 pending)
       # 2 successful runs out of 4 completed
       # 2 work orders failed out of 10
-      assert Regex.match?(~r/Work Orders.*?<div>\s*10.*\(6 pending\)/s, html)
+      assert Regex.match?(
+               ~r|Work Orders\s*</h2>\s*<div[^>]*>\s*10\s*</div>.*?6 pending|s,
+               html
+             )
 
       pending_and_date_filter =
-        Timex.now()
-        |> Timex.shift(months: -1)
+        DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=#{date}.*&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true"
         end)
 
       assert html
@@ -130,20 +155,27 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                "6 pending"
              )
 
-      assert Regex.match?(~r/Runs.*?<div>\s*10.*">\s*\(6 pending\)/s, html)
-
       assert Regex.match?(
-               ~r/Successful Runs.*<div>\s*2.*">\s*\(50.0%\)/s,
+               ~r|Runs\s*</h2>\s*<div[^>]*>\s*10\s*</div>.*?6 pending|s,
                html
              )
 
       assert Regex.match?(
-               ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(20.0%\)/s,
+               ~r|Successful Runs\s*</h2>\s*<div[^>]*>\s*2\s*</div>.*?50\.0%|s,
+               html
+             )
+
+      assert Regex.match?(
+               ~r|Work Orders in failed state\s*</h2>\s*<div[^>]*>\s*2\s*</div>.*?20\.0%|s,
                html
              )
 
       failed_filter_pattern =
-        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
+        DashboardStats.window_start()
+        |> Date.to_string()
+        |> then(fn date ->
+          "filters[crashed]=true&amp;filters[date_after]=#{date}.*&amp;filters[exception]=true&amp;filters[failed]=true&amp;filters[killed]=true&amp;filters[log]=true&amp;filters[lost]=true&amp;filters[rejected]=true"
+        end)
 
       assert html
              |> has_history_link_pattern?(
@@ -189,24 +221,23 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       # work order date filter without status filter
       date_filter =
-        Timex.now()
-        |> Timex.shift(months: -1)
+        DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=#{date}.*&amp;filters[log]=true"
         end)
 
       assert html
              |> has_history_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow1.id}.*#{date_filter}",
+               "filters[workflow_id]=#{workflow1.id}&amp;#{date_filter}",
                workorders_count
              )
 
       assert html
              |> has_history_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow2.id}.*#{date_filter}",
+               "filters[workflow_id]=#{workflow2.id}&amp;#{date_filter}",
                workorders_count
              )
 
@@ -216,14 +247,14 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert html
              |> has_history_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow1.id}.*#{failed_filter_pattern}",
+               "filters[workflow_id]=#{workflow1.id}&amp;#{failed_filter_pattern}",
                failed_runs_count
              )
 
       assert html
              |> has_history_link_pattern?(
                project,
-               "filters[workflow_id]=#{workflow2.id}.*#{failed_filter_pattern}",
+               "filters[workflow_id]=#{workflow2.id}&amp;#{failed_filter_pattern}",
                failed_runs_count
              )
 
@@ -315,6 +346,276 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       assert view |> has_element?("#new-workflow-button[type=button]")
       refute view |> has_element?("#new-workflow-button[type=button][disabled]")
     end
+
+    test "the toggle, its tooltip and its sort all read the triggers", %{
+      conn: conn,
+      project: project
+    } do
+      on_trigger = build(:trigger, type: :webhook, enabled: true)
+      off_trigger = build(:trigger, type: :cron, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project, state: :live)
+        |> with_job(job)
+        |> with_trigger(on_trigger)
+        |> with_trigger(off_trigger)
+        |> with_edge({on_trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+    end
+
+    test "toggling a workflow keeps state and triggers coherent", %{
+      conn: conn,
+      project: project
+    } do
+      trigger = build(:trigger, type: :webhook, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project, state: :draft)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+
+      assert view
+             |> element("#toggle-control-#{workflow.id}")
+             |> render_click() =~ "Workflow updated"
+
+      assert %Lightning.Workflows.Workflow{
+               state: :live,
+               triggers: [%{enabled: true}]
+             } =
+               Lightning.Repo.get!(Lightning.Workflows.Workflow, workflow.id)
+               |> Lightning.Repo.preload(:triggers)
+
+      assert view |> has_element?("##{workflow.id}[checked]")
+
+      assert view
+             |> element("#toggle-control-#{workflow.id}")
+             |> render_click() =~ "Workflow updated"
+
+      assert %Lightning.Workflows.Workflow{
+               state: :draft,
+               triggers: [%{enabled: false}]
+             } =
+               Lightning.Repo.get!(Lightning.Workflows.Workflow, workflow.id)
+               |> Lightning.Repo.preload(:triggers)
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+    end
+
+    @tag role: :editor
+    test "does not toggle a workflow outside the project", %{
+      conn: conn,
+      project: project
+    } do
+      # A workflow with an enabled trigger, in a project the user isn't in.
+      other_project = insert(:project)
+      trigger = build(:trigger, type: :webhook, enabled: true)
+      job = build(:job)
+
+      foreign_workflow =
+        build(:workflow, project: other_project)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      # A foreign id, and a malformed one, are both refused without acting.
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "false",
+               "value_key" => foreign_workflow.id
+             }) =~ "Workflow not found."
+
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "false",
+               "value_key" => "not-a-uuid"
+             }) =~ "Workflow not found."
+
+      # The foreign workflow's trigger stays enabled.
+      assert Lightning.Workflows.get_workflow!(foreign_workflow.id,
+               include: [:triggers]
+             ).triggers
+             |> Enum.all?(& &1.enabled)
+    end
+
+    test "the limiter can refuse an enable, and is not asked for a no-op one", %{
+      conn: conn,
+      project: project
+    } do
+      off_trigger = build(:trigger, type: :webhook, enabled: false)
+      off_job = build(:job)
+
+      off_workflow =
+        build(:workflow, project: project)
+        |> with_job(off_job)
+        |> with_trigger(off_trigger)
+        |> with_edge({off_trigger, off_job})
+        |> insert()
+
+      on_trigger = build(:trigger, type: :webhook, enabled: true)
+      on_job = build(:job)
+
+      on_workflow =
+        build(:workflow, project: project, state: :live)
+        |> with_job(on_job)
+        |> with_trigger(on_trigger)
+        |> with_edge({on_trigger, on_job})
+        |> insert()
+
+      asked = :counters.new(1, [:atomics])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :activate_workflow}, _context ->
+          :counters.add(asked, 1, 1)
+
+          {:error, :too_many_workflows,
+           %Lightning.Extensions.Message{text: "No more workflows"}}
+        end
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "true",
+               "value_key" => off_workflow.id
+             }) =~ "No more workflows"
+
+      assert :counters.get(asked, 1) == 1
+
+      refute Lightning.Workflows.get_workflow!(off_workflow.id,
+               include: [:triggers]
+             ).triggers
+             |> Enum.any?(& &1.enabled)
+
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "true",
+               "value_key" => on_workflow.id
+             }) =~ "Workflow updated"
+
+      assert :counters.get(asked, 1) == 1
+    end
+
+    @tag role: :viewer
+    test "viewers cannot toggle a workflow's state", %{
+      conn: conn,
+      project: project
+    } do
+      # A workflow with a disabled trigger in the viewer's own project. The
+      # toggle control renders for viewers too, so they can click it.
+      trigger = build(:trigger, type: :webhook, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      view |> element("#toggle-control-#{workflow.id}") |> render_click()
+
+      # The click has no effect; the trigger stays disabled.
+      refute Lightning.Workflows.get_workflow!(workflow.id, include: [:triggers]).triggers
+             |> Enum.any?(& &1.enabled)
+    end
+
+    test "each workflow row links to its health page", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> has_element?(
+               ~s{tr#workflow-#{workflow.id} a#health-#{workflow.id}[href="/projects/#{project.id}/w/#{workflow.id}/health"]},
+               "Health"
+             )
+    end
+  end
+
+  describe "the lifecycle column" do
+    setup %{user: user} do
+      user =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Lightning.Repo.update!()
+
+      %{user: user}
+    end
+
+    test "reports the state and offers no switch on an ordinary project", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: workflow
+    } do
+      {:ok, _workflow} =
+        Lightning.Workflows.go_live(
+          Lightning.Repo.preload(workflow, :triggers),
+          user
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "State"
+      assert html =~ "Live"
+      refute html =~ ~s(name="workflow_state")
+    end
+
+    test "keeps the switch inside a sandbox", %{conn: conn, user: user} do
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/w")
+
+      assert html =~ "Turn on"
+      assert html =~ ~s(name="workflow_state")
+    end
+
+    test "is the list from before the lifecycle without the flag", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      user
+      |> Ecto.Changeset.change(%{preferences: %{}})
+      |> Lightning.Repo.update!()
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "Enabled"
+      assert html =~ ~s(name="workflow_state")
+    end
   end
 
   describe "creating workflows" do
@@ -332,13 +633,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                    fn ->
                      view |> element("#new-workflow-button") |> render_click()
                    end
-
-      # visit page directly
-      {:ok, _, html} =
-        live(conn, ~p"/projects/#{project.id}/w/new/legacy")
-        |> follow_redirect(conn)
-
-      assert html =~ "You are not authorized to perform this action."
     end
 
     @tag role: :editor
@@ -351,22 +645,11 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       refute has_element?(view, "#new-workflow-button:disabled")
       assert has_element?(view, "#new-workflow-button")
 
-      # go directly
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project.id}/w/new/legacy")
+      # the collaborative editor mounts for new workflows
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/new")
 
-      assert html =~ "Describe your workflow"
-      assert has_element?(view, "form#search-templates-form")
-
-      select_template(view, "base-webhook-template")
-
-      view |> element("button#create_workflow_btn") |> render_click()
-
-      # the panel disappears
-      html = render(view)
-
-      refute html =~ "Describe your workflow"
-      refute has_element?(view, "form#search-templates-form")
+      assert html =~ "collaborative-editor-react"
     end
 
     test "only users with MFA enabled can create workflows for a project with MFA requirement",
@@ -449,6 +732,30 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                item_id: ^workflow_id,
                actor_id: ^user_id
              } = audit
+    end
+
+    @tag role: :editor
+    test "does not delete a workflow outside the project", %{
+      conn: conn,
+      project: project
+    } do
+      # A workflow in a project the user isn't in, even though they can delete
+      # in their own project.
+      other_project = insert(:project)
+      foreign_workflow = insert(:workflow, project: other_project)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      # A foreign id, and a malformed one, are both refused without acting.
+      assert view
+             |> render_click("delete_workflow", %{"id" => foreign_workflow.id}) =~
+               "Workflow not found."
+
+      assert view |> render_click("delete_workflow", %{"id" => "not-a-uuid"}) =~
+               "Workflow not found."
+
+      # The foreign workflow is not marked for deletion.
+      assert Lightning.Repo.reload(foreign_workflow).deleted_at == nil
     end
   end
 

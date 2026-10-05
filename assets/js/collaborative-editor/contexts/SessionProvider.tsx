@@ -13,15 +13,16 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
 import _logger from '#/utils/logger';
 
 import { useSocket } from '../../react/contexts/SocketProvider';
-import { useURLState } from '#/react/lib/use-url-state';
 import { useProviderLifecycle } from '../hooks/useProviderLifecycle';
 import { useYDocPersistence } from '../hooks/useYDocPersistence';
+import { collaborationRoomName, usePinnedView } from '../lib/pinnedView';
 import {
   createSessionStore,
   type SessionStoreInstance,
@@ -34,7 +35,19 @@ const logger = _logger.ns('SessionProvider').seal();
 interface SessionContextValue {
   sessionStore: SessionStoreInstance;
   isNewWorkflow: boolean;
+  /**
+   * Reports the live "new workflow" status up to the SessionProvider so the
+   * channel-join `action` stays honest across in-place reconnects.
+   *
+   * The SessionContextStore (the source of truth, cleared by
+   * `clearIsNewWorkflow()` after the first successful save) is created in
+   * StoreProvider, which is a *child* of SessionProvider — so SessionProvider
+   * cannot read it directly. A small bridge inside StoreProvider subscribes to
+   * `useIsNewWorkflow()` and calls this to keep the join-param action current.
+   */
+  setIsNewWorkflow?: (isNewWorkflow: boolean) => void;
   initialRunData?: string; // JSON-encoded RunStepsData from server
+  experimentalFeatures: boolean;
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null);
@@ -44,6 +57,7 @@ interface SessionProviderProps {
   projectId: string;
   isNewWorkflow: boolean;
   initialRunData?: string; // JSON-encoded RunStepsData from server
+  experimentalFeatures: boolean;
   children: React.ReactNode;
 }
 
@@ -52,13 +66,12 @@ export const SessionProvider = ({
   projectId,
   isNewWorkflow,
   initialRunData,
+  experimentalFeatures,
   children,
 }: SessionProviderProps) => {
   const { socket, isConnected } = useSocket();
 
-  // Get version from URL reactively
-  const { params } = useURLState();
-  const version = params['v'] ?? null;
+  const { release, snapshot, asRun } = usePinnedView();
 
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());
@@ -68,23 +81,32 @@ export const SessionProvider = ({
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [connectionError, setConnectionError] = useState<Error | null>(null);
 
-  // Room naming strategy for snapshots vs collaborative editing:
-  // - NO version param → `workflow:collaborate:${workflowId}` (latest/collaborative)
-  // - WITH version param → `workflow:collaborate:${workflowId}:v${version}` (snapshot)
   const roomname = useMemo(
-    () =>
-      version
-        ? `workflow:collaborate:${workflowId}:v${version}`
-        : `workflow:collaborate:${workflowId}`,
-    [version, workflowId]
+    () => collaborationRoomName(workflowId, { release, snapshot, asRun }),
+    [workflowId, release, snapshot, asRun]
   );
 
-  const joinParams = useMemo(
+  // Track the live "new workflow" status in a ref so the channel-join `action`
+  // is read at connect/reconnect time rather than frozen at mount.
+  //
+  // Seeded from the `isNewWorkflow` prop (LiveView `data-is-new-workflow`) so
+  // the very first join is correct before any save. After the first successful
+  // save, the SessionContextStore flag is cleared and `setIsNewWorkflow(false)`
+  // is reported up via the SessionContext bridge, so a subsequent in-place
+  // reconnect rejoins with `action: "edit"` instead of the stale "new".
+  const isNewWorkflowRef = useRef(isNewWorkflow);
+
+  const setIsNewWorkflow = useCallback((next: boolean) => {
+    isNewWorkflowRef.current = next;
+  }, []);
+
+  // Stable getter: read lazily so reconnects pick up the current action.
+  const getJoinParams = useCallback(
     () => ({
       project_id: projectId,
-      action: isNewWorkflow ? 'new' : 'edit',
+      action: isNewWorkflowRef.current ? 'new' : 'edit',
     }),
-    [projectId, isNewWorkflow]
+    [projectId]
   );
 
   // Handle roomname changes (version switching)
@@ -98,22 +120,21 @@ export const SessionProvider = ({
     };
   }, [roomname, sessionStore]);
 
-  // Use Y.Doc persistence hook to manage Y.Doc lifecycle
   const handleYDocInitialized = useCallback(() => {
-    logger.log('Y.Doc initialized', { version });
-  }, [version]);
+    logger.log('Y.Doc initialized', { roomname });
+  }, [roomname]);
 
   const handleYDocDestroyed = useCallback(() => {
-    logger.log('Y.Doc destroyed (version change or unmount)', { version });
+    logger.log('Y.Doc destroyed (version change or unmount)', { roomname });
     setIsSynced(false);
     setLastSyncTime(null);
     setConnectionError(null);
-  }, [version]);
+  }, [roomname]);
 
   useYDocPersistence({
     sessionStore,
     shouldInitialize: socket !== null && isConnected,
-    version,
+    version: roomname,
     onInitialized: handleYDocInitialized,
     onDestroyed: handleYDocDestroyed,
   });
@@ -138,7 +159,7 @@ export const SessionProvider = ({
     isConnected,
     sessionStore,
     roomname,
-    joinParams,
+    getJoinParams,
     onError: handleProviderError,
     onProviderReady: handleProviderReady,
     onProviderReconnected: handleProviderReconnected,
@@ -199,9 +220,17 @@ export const SessionProvider = ({
     () => ({
       sessionStore,
       isNewWorkflow,
+      setIsNewWorkflow,
+      experimentalFeatures,
       ...(initialRunData !== undefined && { initialRunData }),
     }),
-    [sessionStore, isNewWorkflow, initialRunData]
+    [
+      sessionStore,
+      isNewWorkflow,
+      setIsNewWorkflow,
+      experimentalFeatures,
+      initialRunData,
+    ]
   );
 
   return (

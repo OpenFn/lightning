@@ -1,4 +1,5 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+
 import { LiveViewPage } from './base/liveview.page';
 import { JobInspectorPage } from './components/job-inspector.page';
 
@@ -14,7 +15,7 @@ export class WorkflowCollaborativePage extends LiveViewPage {
     // Main container
     collaborativeEditor: '[data-testid="collaborative-editor"]',
 
-    // Connection status (via CollaborationWidget)
+    // Connection status
     syncStatus: 'text=Synced',
     connectedStatus: 'text=Connected',
 
@@ -32,6 +33,28 @@ export class WorkflowCollaborativePage extends LiveViewPage {
    */
   get jobInspector(): JobInspectorPage {
     return new JobInspectorPage(this.page);
+  }
+
+  /**
+   * Navigate directly to an existing workflow's collaborative editor and
+   * wait until it is loaded and synced.
+   *
+   * The collaborative editor is now the only editor: the workflow route
+   * (`/projects/:projectId/w/:workflowId`) renders it directly, so no
+   * legacy detour or editor toggle is required.
+   *
+   * @param options.projectId - Project ID
+   * @param options.workflowId - Workflow ID
+   */
+  async open(options: {
+    projectId: string;
+    workflowId: string;
+  }): Promise<void> {
+    await this.page.goto(
+      `/projects/${options.projectId}/w/${options.workflowId}`
+    );
+    await this.waitForReactComponentLoaded();
+    await this.waitForSynced();
   }
 
   /**
@@ -116,7 +139,7 @@ export class WorkflowCollaborativePage extends LiveViewPage {
    * @param options - URL components
    * @param options.projectId - Project ID
    * @param options.workflowId - Workflow ID
-   * @param options.path - Path suffix (e.g., '/legacy', '/edit')
+   * @param options.path - Path suffix (e.g., '', '/edit')
    * @param options.query - Optional query parameters
    * @param options.hash - Optional URL hash
    *
@@ -126,7 +149,7 @@ export class WorkflowCollaborativePage extends LiveViewPage {
    * await page.verifyUrl({
    *   projectId: '123',
    *   workflowId: '456',
-   *   path: '/legacy'
+   *   path: ''
    * });
    *
    * // With query params and hash

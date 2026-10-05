@@ -31,8 +31,17 @@ export interface ProviderLifecycleOptions {
   /** Room name for the channel */
   roomname: string;
 
-  /** Parameters for joining the channel */
-  joinParams: Record<string, any>;
+  /**
+   * Returns the parameters for joining the channel.
+   *
+   * Read lazily (not captured once) so that both the initial connection and
+   * any in-place reconnect pick up the *current* values. In particular the
+   * channel-join `action` must reflect whether the workflow has been saved yet
+   * ("new" before the first save, "edit" afterwards) rather than a value frozen
+   * at mount. See SessionProvider for how this stays in sync with the
+   * SessionContextStore's `isNewWorkflow` flag.
+   */
+  getJoinParams: () => Record<string, any>;
 
   /** Callback when provider initialization fails */
   onError?: (error: Error) => void;
@@ -69,7 +78,7 @@ export interface ProviderLifecycleResult {
  *   isConnected,
  *   sessionStore,
  *   roomname: 'workflow:collaborate:xyz',
- *   joinParams: { project_id: '123', action: 'edit' },
+ *   getJoinParams: () => ({ project_id: '123', action: 'edit' }),
  *   onError: (error) => setConnectionError(error),
  *   onProviderReconnected: () => console.log('Syncing...'),
  * });
@@ -79,7 +88,7 @@ export function useProviderLifecycle({
   isConnected,
   sessionStore,
   roomname,
-  joinParams,
+  getJoinParams,
   onError,
   onProviderReady,
   onProviderReconnected,
@@ -102,7 +111,7 @@ export function useProviderLifecycle({
       try {
         sessionStore.initializeSession(socket, roomname, null, {
           connect: true,
-          joinParams,
+          joinParams: getJoinParams(),
         });
 
         hasProviderInitialized.current = true;
@@ -121,7 +130,7 @@ export function useProviderLifecycle({
     isConnected,
     sessionStore,
     roomname,
-    joinParams,
+    getJoinParams,
     onError,
     onProviderReady,
   ]);
@@ -145,10 +154,13 @@ export function useProviderLifecycle({
       });
 
       try {
-        // Reinitialize to create new provider but reuse existing Y.Doc
+        // Reinitialize to create new provider but reuse existing Y.Doc.
+        // Read join params lazily so an in-place reconnect rejoins with the
+        // current `action` ("edit" once the workflow has been saved) instead
+        // of a value frozen at mount.
         sessionStore.initializeSession(socket, roomname, null, {
           connect: true,
-          joinParams,
+          joinParams: getJoinParams(),
         });
 
         setInitError(null);
@@ -170,7 +182,7 @@ export function useProviderLifecycle({
     isConnected,
     sessionStore,
     roomname,
-    joinParams,
+    getJoinParams,
     onError,
     onProviderReconnected,
   ]);

@@ -2,13 +2,13 @@ import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import type { MiniMapNodeProps } from '@xyflow/react';
 import { memo } from 'react';
 
+import { useAdaptorIconUrl } from '#/collaborative-editor/hooks/useAdaptors';
+
 import { useWorkflowStore } from '../../workflow-store/store';
-import useAdaptorIcons from '../useAdaptorIcons';
-import getAdaptorName from '../util/get-adaptor-name';
 
 type Trigger = {
   id: string;
-  type: 'webhook' | 'cron' | 'kafka';
+  type: 'webhook' | 'cron';
 };
 
 type Job = {
@@ -54,21 +54,29 @@ const MiniMapNode = ({
   const storeData = useWorkflowStore();
   const jobs = propJobs ?? storeData.jobs;
   const triggers = propTriggers ?? storeData.triggers;
-  const adaptorIconsData = useAdaptorIcons();
 
   // Check if this node is a trigger by looking it up in the triggers array
   const trigger = triggers.find((trigger: Trigger) => trigger.id === id);
   const isTrigger = !!trigger;
+  const job = jobs.find((job: Job) => job.id === id);
+  const icon = useAdaptorIconUrl(job?.adaptor);
 
   // For triggers, we'll use the appropriate icon
   if (isTrigger) {
     // Use the same icons as the main Trigger component
+    // A historical snapshot can still hold a trigger type we no longer
+    // support. Drawing it with the cron icon would assert something untrue, so
+    // an unrecognised type gets no icon rather than the wrong one.
+    // Read before narrowing: a snapshot can hold a type the union no longer
+    // lists. Same shape as nodes/Trigger.tsx.
+    const declaredType: string = trigger.type;
+
     const icon =
-      trigger.type === 'webhook' ? (
+      declaredType === 'webhook' ? (
         <GlobeAltIcon className="w-full h-full text-gray-500" />
-      ) : (
+      ) : declaredType === 'cron' ? (
         <ClockIcon className="w-full h-full text-gray-500" />
-      );
+      ) : null;
 
     return (
       <g>
@@ -86,14 +94,6 @@ const MiniMapNode = ({
       </g>
     );
   }
-
-  // For jobs, we'll use the adaptor icon if available
-  const job = jobs.find((job: Job) => job.id === id);
-  const adaptor = job?.adaptor ? getAdaptorName(job.adaptor) : null;
-  const icon =
-    adaptor && adaptorIconsData && adaptor in adaptorIconsData
-      ? adaptorIconsData[adaptor]?.square
-      : null;
 
   // Fallback to rectangle if no icon is available
   return (

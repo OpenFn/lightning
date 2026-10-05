@@ -1,111 +1,54 @@
 # Page Object Model (POM) Best Practices
 
-## Overview
-
-The Page Object Model pattern encapsulates page structure and interactions,
-making tests more maintainable and readable. Lightning uses a hierarchical POM
-structure with base classes, page-specific models, and reusable component
-models.
+Lightning's e2e suite uses a hierarchical POM structure: one abstract LiveView base class,
+page-level models that extend it, and standalone component models they compose.
 
 ## POM Architecture
 
 ### Directory Structure
 
-```
-assets/test/e2e/pages/
-├── base/
-│   ├── index.ts                 # Re-export base classes
-│   └── liveview.page.ts         # Base class for LiveView pages
-├── components/
-│   ├── index.ts                 # Re-export component POMs
-│   ├── job-form.page.ts         # Job form component
-│   └── workflow-diagram.page.ts # Workflow diagram component
-├── index.ts                     # Re-export all page objects
-├── login.page.ts                # Login page
-├── projects.page.ts             # Projects list page
-├── workflow-edit.page.ts        # Workflow editor (LiveView)
-└── workflow-collab.page.ts      # NEW: Collaborative editor (React)
-```
+`ls assets/test/e2e/pages/` — three directories deep at most: `base/`, `components/`, and the
+page-level POMs at the root, each with an `index.ts` of named re-exports.
 
 ### Class Hierarchy
 
-```
-Page
-  ↓
-LiveViewPage (base/liveview.page.ts)
-  ↓
-  ├── WorkflowEditPage (workflow-edit.page.ts)
-  ├── ProjectsPage (projects.page.ts)
-  └── WorkflowsPage (workflows.page.ts)
+There is one inheritance chain, and component POMs are **not** in it.
 
-LiveViewPage
-  ↓
-Component POMs
-  ├── WorkflowDiagramPage (components/workflow-diagram.page.ts)
-  └── JobFormPage (components/job-form.page.ts)
+```
+LiveViewPage (abstract — base/liveview.page.ts)
+  ├── LoginPage                  (login.page.ts)
+  ├── ProjectsPage               (projects.page.ts)
+  ├── WorkflowsPage              (workflows.page.ts)
+  └── WorkflowCollaborativePage  (workflow-collab.page.ts)
+
+Standalone, constructed with `page`, composed by the above:
+  WorkflowDiagramPage            (components/workflow-diagram.page.ts)
+    ├── WorkflowDiagramNodesPage (components/workflow-diagram-nodes.page.ts)
+    └── WorkflowDiagramEdgesPage (components/workflow-diagram-edges.page.ts)
+  JobInspectorPage               (components/job-inspector.page.ts)
 ```
 
 ## Base Classes
 
 ### LiveViewPage Base Class
 
-Provides common functionality for Phoenix LiveView pages:
+Provides common functionality for Phoenix LiveView pages.
+`assets/test/e2e/pages/base/liveview.page.ts` is 104 lines. Read it rather than a copy — this
+file used to carry a transcription of it that had drifted, writing `toHaveClass` where the
+source says `toContainClass`, and omitting `waitForEventAttached` entirely.
 
-```typescript
-// pages/base/liveview.page.ts
-import { expect } from '@playwright/test';
-import type { Page, Locator } from '@playwright/test';
+What the base class gives every page object:
 
-export abstract class LiveViewPage {
-  protected baseSelectors = {
-    phoenixMain: 'div[data-phx-main]',
-    flashMessage: '[id^="flash-"][phx-hook="Flash"]',
-  };
+| Member | Purpose |
+|---|---|
+| `baseSelectors` | `div[data-phx-main]` and `[id^="flash-"][phx-hook="Flash"]` |
+| `waitForConnected()` | Waits for `phx-connected` on the main container |
+| `waitForSocketSettled()` | Pings the socket. Its own docstring says this still needs verifying |
+| `waitForEventAttached(locator, eventType, timeout)` | Waits for a LiveView handler to attach |
+| `expectFlashMessage(text)` | Asserts a flash containing `text` |
+| `clickMenuItem(text)` | Clicks a `#side-menu` link by name |
 
-  constructor(protected page: Page) {}
-
-  /**
-   * Wait for Phoenix LiveView connection.
-   * See `.claude/guidelines/e2e/phoenix-liveview.md §LiveView waits` for the canonical implementation and rationale.
-   */
-  async waitForConnected(): Promise<void> {
-    const locator = this.page.locator(this.baseSelectors.phoenixMain);
-    await expect(locator).toBeVisible();
-    await expect(locator).toHaveClass(/phx-connected/);
-  }
-
-  /**
-   * Wait for WebSocket to settle
-   */
-  async waitForSocketSettled(): Promise<void> {
-    await this.page.waitForFunction(() => {
-      return new Promise(resolve => {
-        window.liveSocket.socket.ping(resolve);
-      });
-    });
-  }
-
-  /**
-   * Assert flash message is visible
-   */
-  async expectFlashMessage(text: string): Promise<void> {
-    const flashMessage = this.page
-      .locator(this.baseSelectors.flashMessage)
-      .filter({ hasText: text });
-    await expect(flashMessage).toBeVisible();
-  }
-
-  /**
-   * Click sidebar menu item
-   */
-  async clickMenuItem(itemText: string): Promise<void> {
-    await this.page
-      .locator('#side-menu')
-      .getByRole('link', { name: itemText })
-      .click();
-  }
-}
-```
+See `.claude/guidelines/e2e/phoenix-liveview.md §LiveView waits` for when to use each.
 
 **Key Principles:**
 - Use `protected page: Page` for subclass access
@@ -117,64 +60,11 @@ export abstract class LiveViewPage {
 
 ### Structure Pattern
 
-```typescript
-// pages/workflow-edit.page.ts
-import { expect } from '@playwright/test';
-import type { Page, Locator } from '@playwright/test';
-import { LiveViewPage } from './base';
-import { WorkflowDiagramPage, JobFormPage } from './components';
-
-export class WorkflowEditPage extends LiveViewPage {
-  // Component POMs
-  readonly diagram: WorkflowDiagramPage;
-
-  // Selectors specific to this page
-  protected selectors = {
-    topBar: '[data-testid="top-bar"]',
-    saveButton: 'button:has-text("Save")',
-    runButton: '[data-testid="run-workflow-btn"]',
-    workflowNameInput: 'input[name="workflow[name]"]',
-    unsavedChangesIndicator: '.absolute.-m-1.rounded-full.bg-danger-500',
-  };
-
-  constructor(page: Page) {
-    super(page);
-    // Initialize component POMs
-    this.diagram = new WorkflowDiagramPage(page);
-  }
-
-  /**
-   * Factory method for component POMs with parameters
-   */
-  jobForm(jobIndex: number = 0): JobFormPage {
-    return new JobFormPage(this.page, jobIndex);
-  }
-
-  /**
-   * Page-specific actions
-   */
-  async clickSaveWorkflow(): Promise<void> {
-    const topBar = this.page.locator(this.selectors.topBar);
-    const saveButton = topBar.locator(this.selectors.saveButton);
-    await expect(saveButton).toBeVisible();
-    await saveButton.click();
-  }
-
-  async setWorkflowName(name: string): Promise<void> {
-    const nameInput = this.page.locator(this.selectors.workflowNameInput);
-    await expect(nameInput).toBeVisible();
-    await nameInput.fill(name);
-  }
-
-  /**
-   * Return locators for flexible assertions in tests
-   */
-  unsavedChangesIndicator(): Locator {
-    const topBar = this.page.locator(this.selectors.topBar);
-    return topBar.locator(this.selectors.unsavedChangesIndicator);
-  }
-}
-```
+A page-level POM extends `LiveViewPage`, declares its own `selectors`, composes its component
+POMs, and exposes high-level actions. Read `pages/workflow-collab.page.ts` for the current
+example — `WorkflowCollaborativePage` is the one full-page POM in the suite, and
+`pages/login.page.ts`, `projects.page.ts` and `workflows.page.ts` are smaller instances of the
+same shape.
 
 **Key Principles:**
 - Extend `LiveViewPage` for Phoenix LiveView pages
@@ -183,279 +73,102 @@ export class WorkflowEditPage extends LiveViewPage {
 - Provide high-level methods for user actions
 - Return `Locator` for flexible assertions
 
-### Using the Page Object
-
-```typescript
-import { WorkflowEditPage } from '../pages';
-
-test('edit workflow', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
-
-  // Use page methods
-  await workflowEdit.setWorkflowName('Updated Name');
-
-  // Use component methods
-  await workflowEdit.diagram.clickNode('Job 1');
-
-  // Use factory methods
-  await workflowEdit.jobForm(0).nameInput.fill('New Job Name');
-
-  // Save and verify
-  await workflowEdit.clickSaveWorkflow();
-  await workflowEdit.expectFlashMessage('Workflow saved');
-
-  // Use locator methods for assertions
-  await expect(workflowEdit.unsavedChangesIndicator()).not.toBeVisible();
-});
-```
-
 ## Component POMs
 
 ### Component Pattern
 
-Components are reusable UI elements that appear in multiple pages:
+Components are reusable UI elements that appear in multiple pages. The suite's component POMs
+live in `pages/components/`. Read one before writing another —
+`workflow-diagram.page.ts` is 46 lines and shows the whole shape: a plain class taking `page`,
+a `selectors` object, two `readonly` sub-POMs, and two methods.
 
-```typescript
-// pages/components/workflow-diagram.page.ts
-import { expect } from '@playwright/test';
-import type { Page, Locator } from '@playwright/test';
-import { LiveViewPage } from '../base';
-
-export class WorkflowDiagramPage extends LiveViewPage {
-  protected selectors = {
-    reactFlow: '.react-flow',
-    viewport: '.react-flow__viewport',
-    nodes: '.react-flow__node',
-    jobNodes: '.react-flow__node-job',
-    placeholderNode: '.react-flow__node-placeholder',
-    nodeConnector: '[data-handleid="node-connector"]',
-    fitViewButton: '.react-flow__controls-button[data-tooltip="Fit view"]',
-  };
-
-  constructor(page: Page) {
-    super(page);
-  }
-
-  /**
-   * Get node by visible name/text
-   */
-  getNodeByName(nodeName: string): Locator {
-    return this.page
-      .locator(this.selectors.nodes)
-      .filter({ hasText: nodeName });
-  }
-
-  /**
-   * Click on a node
-   */
-  async clickNode(nodeName: string): Promise<void> {
-    const node = this.getNodeByName(nodeName);
-    await expect(node).toBeVisible();
-    await node.click();
-  }
-
-  /**
-   * Verify node exists
-   */
-  async verifyNodeExists(nodeName: string): Promise<void> {
-    await expect(this.getNodeByName(nodeName)).toBeVisible();
-  }
-
-  /**
-   * Click plus button on node to add connection
-   */
-  async clickNodePlusButtonOn(nodeName: string): Promise<void> {
-    const node = this.getNodeByName(nodeName);
-    await node.hover(); // Show the plus button
-
-    const plusButton = node.locator(this.selectors.nodeConnector);
-    await expect(plusButton).toBeVisible();
-    await plusButton.click();
-  }
-
-  /**
-   * Verify React Flow is present
-   */
-  async verifyReactFlowPresent(): Promise<void> {
-    await expect(this.page.locator(this.selectors.reactFlow)).toBeVisible();
-    await expect(this.page.locator(this.selectors.viewport)).toBeVisible();
-  }
-
-  /**
-   * Get all nodes
-   */
-  get allNodes(): Locator {
-    return this.page.locator(this.selectors.nodes);
-  }
-
-  /**
-   * Verify node count
-   */
-  async verifyNodeCount(expectedCount: number): Promise<void> {
-    await expect(this.allNodes).toHaveCount(expectedCount);
-  }
-}
-```
+Selector strategy for the diagram is **React Flow CSS classes**, not testids:
+`.react-flow`, `.react-flow__viewport`, `.react-flow__node`, `.react-flow__node-job`,
+`.react-flow__node-trigger`, `.react-flow__node-placeholder`, plus
+`[data-handleid="node-connector"]` for the plus handle. The node and edge queries live in
+`workflow-diagram-nodes.page.ts` and `workflow-diagram-edges.page.ts`, not on the parent.
 
 **Key Principles:**
-- Extend `LiveViewPage` for LiveView components
+- Component POMs take `page` and stand alone — **do not** extend `LiveViewPage`. That base
+  class is for whole LiveView pages; a component has no connection lifecycle of its own.
+  `WorkflowDiagramPage`, `WorkflowDiagramNodesPage`, `WorkflowDiagramEdgesPage` and
+  `JobInspectorPage` all follow this.
+- Compose them from the page object that owns them, as a `readonly` field or a getter
 - Focus on component-specific interactions
 - Provide both actions and assertions
 - Use getters for frequently accessed locators
 - Return locators for flexible usage
 
-### Component with Parameters
-
-```typescript
-// pages/components/job-form.page.ts
-import { expect } from '@playwright/test';
-import type { Page, Locator } from '@playwright/test';
-import { LiveViewPage } from '../base';
-
-export class JobFormPage extends LiveViewPage {
-  protected selectors = {
-    form: '[id^="workflow-form-"]',
-    header: 'h2',
-    nameInput: 'input[name*="[name]"]',
-    adaptorSelect: 'select[name*="[adaptor]"]',
-    versionSelect: 'select[name*="[version]"]',
-  };
-
-  constructor(
-    page: Page,
-    private jobIndex: number
-  ) {
-    super(page);
-  }
-
-  /**
-   * Get the form container for this specific job
-   */
-  get workflowForm(): Locator {
-    return this.page.locator(this.selectors.form).nth(this.jobIndex);
-  }
-
-  /**
-   * Get header text
-   */
-  get header(): Locator {
-    return this.workflowForm.locator(this.selectors.header);
-  }
-
-  /**
-   * Get name input
-   */
-  get nameInput(): Locator {
-    return this.workflowForm.locator(this.selectors.nameInput);
-  }
-
-  /**
-   * Get adaptor select
-   */
-  get adaptorSelect(): Locator {
-    return this.workflowForm.locator(this.selectors.adaptorSelect);
-  }
-
-  /**
-   * Get version select
-   */
-  get versionSelect(): Locator {
-    return this.workflowForm.locator(this.selectors.versionSelect);
-  }
-}
-```
-
-**Usage:**
-```typescript
-test('configure job', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
-
-  // Access specific job form by index
-  const job1 = workflowEdit.jobForm(0);
-  await job1.nameInput.fill('Fetch Data');
-  await job1.adaptorSelect.selectOption('@openfn/language-http');
-
-  const job2 = workflowEdit.jobForm(1);
-  await job2.nameInput.fill('Transform Data');
-});
-```
-
 ## Composition Patterns
 
 ### Component Composition
 
-Page objects compose component objects:
+Two shapes are in use, and they differ in when the child is built.
+
+**`readonly` fields, built in the constructor.** `WorkflowDiagramPage`
+(`workflow-diagram.page.ts:11-24`) holds its two sub-POMs this way:
 
 ```typescript
-// Page contains multiple components
-export class WorkflowEditPage extends LiveViewPage {
-  readonly diagram: WorkflowDiagramPage;
-  readonly sidebar: WorkflowSidebarPage;
-  readonly inspector: JobInspectorPage;
+export class WorkflowDiagramPage {
+  readonly edges: WorkflowDiagramEdgesPage;
+  readonly nodes: WorkflowDiagramNodesPage;
 
-  constructor(page: Page) {
-    super(page);
-    this.diagram = new WorkflowDiagramPage(page);
-    this.sidebar = new WorkflowSidebarPage(page);
-    this.inspector = new JobInspectorPage(page);
+  constructor(protected page: Page) {
+    this.edges = new WorkflowDiagramEdgesPage(page);
+    this.nodes = new WorkflowDiagramNodesPage(page);
   }
 }
-
-// Usage
-test('edit workflow', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
-
-  // Use composed components
-  await workflowEdit.diagram.clickNode('Job 1');
-  await workflowEdit.inspector.setJobName('Updated Name');
-  await workflowEdit.sidebar.expandSection('Settings');
-});
 ```
 
-### Factory Methods
+**A getter, built on access.** `WorkflowCollaborativePage`
+(`workflow-collab.page.ts:34-36`) does it lazily instead — see §Getter factories.
 
-Create component instances with parameters:
+Both are fine. Use `readonly` fields when the child is always needed, a getter when it is
+not.
+
+Note that `WorkflowDiagramPage` does **not** extend `LiveViewPage`, and neither do its two
+sub-POMs. Component POMs in this suite are standalone.
+
+### Getter factories, and parameters on locators
+
+There are no parameterised component constructors in this suite. Two patterns cover the same
+ground, and both are in the code.
+
+**A getter that builds the component on demand.** `workflow-collab.page.ts:34-36`:
 
 ```typescript
-export class WorkflowEditPage extends LiveViewPage {
-  /**
-   * Factory method for job forms by index
-   */
-  jobForm(jobIndex: number): JobFormPage {
-    return new JobFormPage(this.page, jobIndex);
-  }
-
-  /**
-   * Factory method for job nodes by name
-   */
-  jobNode(jobName: string): JobNodePage {
-    return new JobNodePage(this.page, jobName);
-  }
+get jobInspector(): JobInspectorPage {
+  return new JobInspectorPage(this.page);
 }
+```
 
-// Usage
-test('configure multiple jobs', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
+The component takes only `page` (`job-inspector.page.ts:11`), so the getter needs no
+arguments. Reach for this when the component is a singleton on the page.
 
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
+**Parameters on the locator method, not the constructor.** `WorkflowDiagramNodesPage` takes
+only `page` and puts the parameter where the query is:
 
-  // Create different instances
-  await workflowEdit.jobForm(0).nameInput.fill('Job 1');
-  await workflowEdit.jobForm(1).nameInput.fill('Job 2');
+```typescript
+getByName(name: string): Locator          // workflow-diagram-nodes.page.ts:27
+getJobByIndex(index: number): Locator     // :36
+async clickJobByIndex(index: number)      // :137
+```
 
-  await workflowEdit.jobNode('Job 1').clickRunButton();
-  await workflowEdit.jobNode('Job 2').clickDeleteButton();
-});
+This is what replaced the old `jobForm(index)` factory. One instance of the component POM
+handles every node, and there is no per-instance state to get wrong. Prefer it.
+
+`WorkflowCollaborativePage` composes only `jobInspector`, so a test that needs the diagram
+constructs `WorkflowDiagramPage` alongside it — which is what
+`specs/collaborative/edge-validation.spec.ts:41,48` does.
+
+```typescript
+const collabEditor = new WorkflowCollaborativePage(page);
+const diagram = new WorkflowDiagramPage(page);
+
+await collabEditor.open({ projectId, workflowId });
+
+await diagram.nodes.clickJobByIndex(0);
+await collabEditor.jobInspector.setName('Fetch Data');
 ```
 
 ## LiveView-Specific Waiting in POMs
@@ -477,106 +190,10 @@ class WorkflowEditPage extends LiveViewPage {
 }
 ```
 
-## Testing Multiple Page Variants
-
-### Handling Old and New Implementations
-
-When introducing a new collaborative editor alongside the old LiveView editor:
-
-```typescript
-// pages/workflow-edit.page.ts (OLD - LiveView)
-export class WorkflowEditPage extends LiveViewPage {
-  // ... existing LiveView implementation
-}
-
-// pages/workflow-collab.page.ts (NEW - React collaborative)
-export class WorkflowCollabPage {
-  constructor(protected page: Page) {}
-
-  // New collaborative editor methods
-  async waitForYjsConnection(): Promise<void> {
-    await this.page.waitForFunction(() => {
-      return window.ydoc && window.ydoc.synced;
-    });
-  }
-
-  async waitForPresenceUpdate(): Promise<void> {
-    // Wait for presence indicator
-    await this.page.waitForSelector('[data-presence="connected"]');
-  }
-}
-```
-
-**Usage in tests:**
-```typescript
-test('old workflow editor', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-  await page.goto('/w/123'); // Old route
-  await workflowEdit.waitForConnected();
-  // Test old editor
-});
-
-test('new collaborative editor', async ({ page }) => {
-  const workflowCollab = new WorkflowCollabPage(page);
-  await page.goto('/collab/w/123'); // New route
-  await workflowCollab.waitForYjsConnection();
-  // Test new editor
-});
-```
-
-### Shared Component POMs
-
-Reuse component POMs across implementations:
-
-```typescript
-// Both use same diagram component
-export class WorkflowEditPage extends LiveViewPage {
-  readonly diagram: WorkflowDiagramPage;
-
-  constructor(page: Page) {
-    super(page);
-    this.diagram = new WorkflowDiagramPage(page);
-  }
-}
-
-export class WorkflowCollabPage {
-  readonly diagram: WorkflowDiagramPage;
-
-  constructor(page: Page) {
-    this.diagram = new WorkflowDiagramPage(page);
-  }
-}
-```
-
 ## Index Files
 
-### Exporting Page Objects
-
-Create index files for clean imports:
-
-```typescript
-// pages/index.ts
-export * from './login.page';
-export * from './projects.page';
-export * from './workflows.page';
-export * from './workflow-edit.page';
-export * from './workflow-collab.page';
-export * from './components';
-export * from './base';
-
-// Usage in tests
-import {
-  LoginPage,
-  ProjectsPage,
-  WorkflowEditPage,
-  WorkflowCollabPage
-} from '../pages';
-```
-
-```typescript
-// pages/components/index.ts
-export * from './workflow-diagram.page';
-export * from './job-form.page';
-export * from './job-inspector.page';
-```
+`pages/index.ts` is a flat list of **named** re-exports, not `export *`. Six lines today.
+Add your class to it so tests can `import { ... } from '../pages'`, and read the file
+rather than a copy of it — `pages/index.ts`, `pages/base/index.ts`,
+`pages/components/index.ts`.
 

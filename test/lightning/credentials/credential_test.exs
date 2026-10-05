@@ -20,7 +20,7 @@ defmodule Lightning.Credentials.CredentialTest do
       user = insert(:user)
 
       changeset =
-        Credential.changeset(%Credential{}, %{
+        Credential.create_changeset(%Credential{}, %{
           name: "Test Credential",
           user_id: user.id,
           schema: "raw"
@@ -38,7 +38,7 @@ defmodule Lightning.Credentials.CredentialTest do
       )
 
       changeset =
-        Credential.changeset(%Credential{}, %{
+        Credential.create_changeset(%Credential{}, %{
           name: "Unique Name",
           user_id: user.id,
           schema: "raw"
@@ -61,7 +61,7 @@ defmodule Lightning.Credentials.CredentialTest do
       )
 
       changeset =
-        Credential.changeset(%Credential{}, %{
+        Credential.create_changeset(%Credential{}, %{
           name: "Same Name",
           user_id: user2.id,
           schema: "raw"
@@ -73,6 +73,7 @@ defmodule Lightning.Credentials.CredentialTest do
     test "validates name format" do
       user = insert(:user)
 
+      # `@` and `#` are ordinary characters. A control character is not.
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Invalid@Name#",
@@ -80,11 +81,78 @@ defmodule Lightning.Credentials.CredentialTest do
           schema: "raw"
         })
 
+      refute errors_on(changeset)[:name]
+
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "bad\u{0000}name",
+          user_id: user.id,
+          schema: "raw"
+        })
+
       refute changeset.valid?
 
       assert errors_on(changeset)[:name] == [
-               "credential name has invalid format"
+               "credential name can't contain control characters"
              ]
+    end
+
+    test "validates schema length" do
+      user = insert(:user)
+
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "a credential",
+          user_id: user.id,
+          schema: String.duplicate("a", 101)
+        })
+
+      assert errors_on(changeset)[:schema] == [
+               "credential schema is too long, please use a shorter one"
+             ]
+
+      ok =
+        Credential.changeset(%Credential{}, %{
+          name: "a credential",
+          user_id: user.id,
+          schema: String.duplicate("a", 100)
+        })
+
+      refute errors_on(ok)[:schema]
+    end
+
+    test "an over-long external_id is a changeset error" do
+      user = insert(:user)
+
+      changeset =
+        Credential.changeset(%Credential{}, %{
+          name: "a credential",
+          user_id: user.id,
+          schema: "raw",
+          external_id: String.duplicate("a", 256)
+        })
+
+      assert errors_on(changeset)[:external_id] == [
+               "credential external ID is too long, please use a shorter one"
+             ]
+    end
+
+    test "accepts the names the export fix exists for" do
+      user = insert(:user)
+
+      # The names the YAML export has to quote. Creating them has to work too.
+      for name <- ["MailChimp June'24", "Vérifier l'état", "患者確認", "step 🎉"] do
+        changeset =
+          Credential.changeset(%Credential{}, %{
+            name: name,
+            user_id: user.id,
+            schema: "raw",
+            body: %{}
+          })
+
+        refute errors_on(changeset)[:name],
+               "expected #{inspect(name)} to be accepted"
+      end
     end
 
     test "allows valid name formats" do
@@ -101,7 +169,7 @@ defmodule Lightning.Credentials.CredentialTest do
 
       for name <- valid_names do
         changeset =
-          Credential.changeset(%Credential{}, %{
+          Credential.create_changeset(%Credential{}, %{
             name: name,
             user_id: user.id,
             schema: "raw"
@@ -113,7 +181,7 @@ defmodule Lightning.Credentials.CredentialTest do
 
     test "validates assoc constraint for user" do
       changeset =
-        Credential.changeset(%Credential{}, %{
+        Credential.create_changeset(%Credential{}, %{
           name: "Test",
           user_id: Ecto.UUID.generate(),
           schema: "raw"
@@ -166,25 +234,11 @@ defmodule Lightning.Credentials.CredentialTest do
       assert get_change(changeset, :scheduled_deletion) == deletion_time
     end
 
-    test "casts transfer_status field" do
-      user = insert(:user)
-
-      changeset =
-        Credential.changeset(%Credential{}, %{
-          name: "Test",
-          user_id: user.id,
-          schema: "raw",
-          transfer_status: :pending
-        })
-
-      assert get_change(changeset, :transfer_status) == :pending
-    end
-
     test "normalizes empty string external_id to nil" do
       user = insert(:user)
 
       changeset =
-        Credential.changeset(%Credential{}, %{
+        Credential.create_changeset(%Credential{}, %{
           name: "Test",
           user_id: user.id,
           schema: "raw",
@@ -199,7 +253,7 @@ defmodule Lightning.Credentials.CredentialTest do
       user = insert(:user)
 
       changeset =
-        Credential.changeset(%Credential{}, %{
+        Credential.create_changeset(%Credential{}, %{
           name: "Test",
           user_id: user.id,
           schema: "raw",
@@ -215,7 +269,7 @@ defmodule Lightning.Credentials.CredentialTest do
       project = insert(:project)
 
       changeset =
-        Credential.changeset(%Credential{}, %{
+        Credential.create_changeset(%Credential{}, %{
           name: "Test",
           user_id: user.id,
           schema: "raw",
@@ -224,6 +278,117 @@ defmodule Lightning.Credentials.CredentialTest do
 
       assert changeset.valid?
       assert length(get_change(changeset, :project_credentials, [])) == 1
+    end
+  end
+
+  describe "changeset/2 mass-assignment protection" do
+    test "ignores user_id and transfer_status" do
+      owner = insert(:user)
+      other_user = insert(:user)
+
+      credential = insert(:credential, user: owner, schema: "raw")
+
+      changeset =
+        Credential.changeset(credential, %{
+          name: "Renamed",
+          user_id: other_user.id,
+          transfer_status: :completed
+        })
+
+      assert get_change(changeset, :name) == "Renamed"
+      refute Map.has_key?(changeset.changes, :user_id)
+      refute Map.has_key?(changeset.changes, :transfer_status)
+    end
+  end
+
+  describe "create_changeset/2" do
+    test "casts user_id and satisfies validate_required" do
+      user = insert(:user)
+
+      changeset =
+        Credential.create_changeset(%Credential{}, %{
+          name: "Test Credential",
+          user_id: user.id,
+          schema: "raw"
+        })
+
+      assert changeset.valid?
+      assert get_change(changeset, :user_id) == user.id
+    end
+
+    test "does not cast transfer_status" do
+      user = insert(:user)
+
+      changeset =
+        Credential.create_changeset(%Credential{}, %{
+          name: "Test",
+          user_id: user.id,
+          schema: "raw",
+          transfer_status: :completed
+        })
+
+      refute Map.has_key?(changeset.changes, :transfer_status)
+    end
+  end
+
+  describe "transfer_changeset/2" do
+    test "casts both user_id and transfer_status" do
+      owner = insert(:user)
+      receiver = insert(:user)
+      credential = insert(:credential, user: owner, schema: "raw")
+
+      changeset =
+        Credential.transfer_changeset(credential, %{
+          user_id: receiver.id,
+          transfer_status: :completed
+        })
+
+      assert get_change(changeset, :user_id) == receiver.id
+      assert get_change(changeset, :transfer_status) == :completed
+    end
+
+    test "retains the generic name validation" do
+      owner = insert(:user)
+      receiver = insert(:user)
+      credential = insert(:credential, user: owner, schema: "raw")
+
+      changeset =
+        Credential.transfer_changeset(credential, %{
+          user_id: receiver.id,
+          transfer_status: :completed,
+          name: "bad\u{0000}name"
+        })
+
+      refute changeset.valid?
+
+      assert errors_on(changeset)[:name] == [
+               "credential name can't contain control characters"
+             ]
+    end
+
+    test "retains the unique_constraint on name and user_id" do
+      owner = insert(:user)
+      receiver = insert(:user)
+
+      # Receiver already owns a credential with this name.
+      insert(:credential, name: "Shared", user: receiver, schema: "raw")
+
+      credential =
+        insert(:credential, name: "Shared", user: owner, schema: "raw")
+
+      changeset =
+        Credential.transfer_changeset(credential, %{
+          user_id: receiver.id,
+          transfer_status: :completed
+        })
+
+      # Because the unique_constraint is registered, a name collision on the
+      # receiver returns an error changeset rather than raising.
+      assert {:error, changeset} = Repo.update(changeset)
+
+      assert errors_on(changeset)[:name] == [
+               "you have another credential with the same name"
+             ]
     end
   end
 

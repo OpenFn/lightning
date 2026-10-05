@@ -10,7 +10,10 @@
     <LayoutComponents.header current_user={@current_user}>
       <:breadcrumbs>
         <LayoutComponents.breadcrumbs>
-          <LayoutComponents.breadcrumb_project_picker project={@project} />
+          <LayoutComponents.breadcrumb_project_picker
+            project={@project}
+            label={@project_label}
+          />
           <LayoutComponents.breadcrumb>
             <:label>{@page_title}</:label>
           </LayoutComponents.breadcrumb>
@@ -243,6 +246,44 @@
               </div>
             </div>
 
+            <%!-- Run status chip. Only when set: a runs-chart band is the only
+                  thing that sets it, and unlike the two date chips above there
+                  is no dropdown behind it to open. Its own chip rather than a
+                  clause on the run-date one, so a reader who wants the whole
+                  slot can drop the band without losing the slot. --%>
+            <% run_status = get_change(@filters_changeset, :run_status) || [] %>
+            <%= if run_status != [] do %>
+              <.filter_chip
+                id="run-status-filter-chip"
+                active={true}
+                clear_fields={[{:run_status, nil}]}
+              >
+                Run status: {Enum.map_join(
+                  run_status,
+                  ", ",
+                  &String.capitalize/1
+                )}
+              </.filter_chip>
+            <% end %>
+
+            <%!-- Run date chip. "Created", because these bound a run's
+                  `inserted_at` — the chips above bound the work order's
+                  arrival and its last activity. --%>
+            <% run_date_after = get_change(@filters_changeset, :run_date_after)
+            run_date_before = get_change(@filters_changeset, :run_date_before) %>
+            <%= if run_date_after || run_date_before do %>
+              <.filter_chip
+                id="run-dates-filter-chip"
+                active={true}
+                clear_fields={[
+                  {:run_date_after, nil},
+                  {:run_date_before, nil}
+                ]}
+              >
+                Run created {format_run_range(run_date_after, run_date_before)}
+              </.filter_chip>
+            <% end %>
+
             <%!-- Work order ID chip (only when workorder_id filter is active) --%>
             <%= if workorder_id = get_change(@filters_changeset, :workorder_id) do %>
               <.filter_chip
@@ -251,6 +292,30 @@
                 clear_fields={[{:workorder_id, nil}]}
               >
                 Work order: {display_short_uuid(workorder_id)}
+              </.filter_chip>
+            <% end %>
+
+            <%!-- Error signature chip (only when the signature filter is active) --%>
+            <% exit_reason =
+              get_change(@filters_changeset, :error_signature_exit_reason) %>
+            <%= if exit_reason do %>
+              <% error_type =
+                get_change(@filters_changeset, :error_signature_error_type)
+
+              job_id = get_change(@filters_changeset, :error_signature_job_id) %>
+              <.filter_chip
+                id="error-signature-filter-chip"
+                active={true}
+                clear_fields={[
+                  {:error_signature_exit_reason, nil},
+                  {:error_signature_error_type, nil},
+                  {:error_signature_job_id, nil}
+                ]}
+              >
+                {exit_reason}{if error_type,
+                  do: ":#{error_type}"}{if job_id,
+                  do:
+                    " @ #{@error_signature_job_name || display_short_uuid(job_id)}"}
               </.filter_chip>
             <% end %>
           </div>
@@ -374,7 +439,7 @@
                                    @string_search_limit,
                                  do: "+"} work orders with runs matching "{search}"
         <%= if @page.total_entries >= @string_search_limit do %>
-          <span class="text-xs text-gray">
+          <span class="text-xs">
             (try more specific filters)
           </span>
         <% end %>
@@ -581,6 +646,11 @@
                   project={@project}
                   can_edit_data_retention={@can_edit_data_retention}
                   can_run_workflow={@can_run_workflow}
+                  experimental_features={
+                    Lightning.Accounts.experimental_features_enabled?(
+                      @current_user
+                    )
+                  }
                   entry_selected={
                     Enum.any?(@selected_work_orders, fn wo ->
                       wo.id == workorder.id
@@ -592,7 +662,7 @@
           </:body>
           <:pagination_actions>
             <button
-              :if={@page.total_entries > 0}
+              :if={@can_run_workflow && @page.total_entries > 0}
               id="export-history-button"
               type="button"
               phx-click="show-export-modal"

@@ -65,28 +65,30 @@ defmodule LightningWeb.WorkflowController do
     end
   end
 
-  defp check_permissions(conn, project, _workflow) do
+  defp check_permissions(conn, project, workflow) do
     current_user = conn.assigns.current_user
 
-    cond do
-      not Permissions.can?(
+    can_edit_workflow =
+      Permissions.can?(
         :project_users,
         :edit_workflow,
         current_user,
         project
-      ) ->
-        {:error, :forbidden}
+      )
 
-      not Permissions.can?(
+    can_run_workflow =
+      Permissions.can?(
         :project_users,
         :run_workflow,
         current_user,
         project
-      ) ->
-        {:error, :forbidden}
+      )
 
-      true ->
-        :ok
+    if project.id == workflow.project_id and can_edit_workflow and
+         can_run_workflow do
+      :ok
+    else
+      {:error, :forbidden}
     end
   end
 
@@ -258,6 +260,13 @@ defmodule LightningWeb.WorkflowController do
         conn
         |> put_status(:unprocessable_entity)
         |> json(%{error: "Cannot retry run for deleted workflow"})
+
+      # An authorisation refusal is not an unprocessable entity. Without this
+      # the catch-all below would turn every denial into a 422 carrying the
+      # reason atom; hand it to the fallback controller instead, so this route
+      # answers a refused caller the way the rest of the app does.
+      {:error, :unauthorized} = error ->
+        LightningWeb.FallbackController.call(conn, error)
 
       {:error, reason} ->
         conn

@@ -80,14 +80,7 @@ defmodule Lightning.Runtime.RuntimeManager do
     end
 
     def to_env(config) do
-      (config.env ++ [{"WORKER_SECRET", config.worker_secret}])
-      |> Enum.map(fn
-        {k, nil} ->
-          {String.to_charlist(k), false}
-
-        {k, v} ->
-          {String.to_charlist(k), String.to_charlist(v)}
-      end)
+      config.env ++ [{"WORKER_SECRET", config.worker_secret}]
     end
 
     defp to_arg({:backoff, v}), do: ~w(--backoff #{v[:min]}/#{v[:max]})
@@ -125,7 +118,8 @@ defmodule Lightning.Runtime.RuntimeManager do
     @moduledoc """
     Behaviour for runtime clients to improve testability.
     """
-    @callback start_runtime(state :: map()) :: state :: map()
+    @callback start_runtime(state :: map()) ::
+                {:ok, state :: map()} | {:error, term()}
 
     @callback stop_runtime(state :: map()) :: any()
   end
@@ -134,7 +128,8 @@ defmodule Lightning.Runtime.RuntimeManager do
             runtime_os_pid: nil,
             runtime_client: __MODULE__,
             buffer: [],
-            config: nil
+            config: nil,
+            exit_status: nil
 
   # credo:disable-for-next-line
   @behaviour RuntimeClient
@@ -169,19 +164,22 @@ defmodule Lightning.Runtime.RuntimeManager do
 
   @impl GenServer
   def handle_continue(:start_runtime, %{runtime_client: runtime_client} = state) do
-    {:noreply, runtime_client.start_runtime(state)}
+    case runtime_client.start_runtime(state) do
+      {:ok, state} -> {:noreply, state}
+      {:error, reason} -> {:stop, {:runtime_not_started, reason}, state}
+    end
   end
 
   @impl GenServer
   def handle_info({port, {:exit_status, status}}, %{runtime_port: port} = state) do
     Logger.error("Runtime exited with status: #{status}")
     # Data may arrive after exit status on line mode
-    {:noreply, state, 0}
+    {:noreply, %{state | exit_status: status}, 0}
   end
 
   @impl GenServer
   def handle_info(:timeout, state) do
-    {:stop, :premature_termination, state}
+    {:stop, premature_termination(state), state}
   end
 
   @impl GenServer
@@ -207,7 +205,7 @@ defmodule Lightning.Runtime.RuntimeManager do
         %{runtime_port: port, buffer: buffer} = state
       ) do
     log_buffer([data | buffer])
-    {:stop, :premature_termination, %{state | buffer: []}}
+    {:stop, premature_termination(state), %{state | buffer: []}}
   end
 
   @impl GenServer
@@ -217,7 +215,7 @@ defmodule Lightning.Runtime.RuntimeManager do
       ) do
     Logger.debug("Runtime port was stopped with reason: #{reason}")
 
-    {:stop, :premature_termination, state}
+    {:stop, premature_termination(state), state}
   end
 
   @impl GenServer
@@ -231,6 +229,7 @@ defmodule Lightning.Runtime.RuntimeManager do
         %{runtime_client: runtime_client} = state
       ) do
     if reason not in [:timeout, :premature_termination] and
+         not match?({:premature_termination, _}, reason) and
          state.runtime_port do
       Port.connect(state.runtime_port, self())
       runtime_client.stop_runtime(state)
@@ -251,28 +250,21 @@ defmodule Lightning.Runtime.RuntimeManager do
     # Source: https://stackoverflow.com/questions/75594758/sigterm-not-intercepted-by-the-handler-in-nodejs-app
     # System.shell("kill $(lsof -n -i :2222 | grep LISTEN | awk '{print $2}')")
 
-    wrapper = Application.app_dir(:lightning, "priv/runtime/port_wrapper")
-    init_cmd = port_init(wrapper)
+    [cmd | args] = Config.to_args(state.config)
 
-    opts =
-      [
-        :use_stdio,
-        :exit_status,
-        :binary,
-        :hide,
-        cd: state.config.cd,
-        args: state.config |> Config.to_args(),
-        line: 1024,
-        env: state.config |> Config.to_env()
-      ]
+    Logger.debug(
+      "Starting runtime: #{inspect([cmd | args])} in #{state.config.cd}"
+    )
 
-    Logger.debug("Starting runtime with opts: #{inspect(opts)}")
-
-    port = Port.open(init_cmd, opts)
-    {:os_pid, os_pid} = Port.info(port, :os_pid)
-    :persistent_term.put(:runtime_os_pid, os_pid)
-
-    %{state | runtime_port: port, runtime_os_pid: os_pid}
+    with {:ok, port, os_pid} <-
+           Lightning.OsProcess.open(cmd, args,
+             cd: state.config.cd,
+             line: 1024,
+             env: Config.to_env(state.config)
+           ) do
+      :persistent_term.put(:runtime_os_pid, os_pid)
+      {:ok, %{state | runtime_port: port, runtime_os_pid: os_pid}}
+    end
   end
 
   @impl RuntimeClient
@@ -300,20 +292,14 @@ defmodule Lightning.Runtime.RuntimeManager do
     end
   end
 
+  # Carries the worker's exit status into the stop reason, so a monitoring
+  # process learns why the runtime died and not just that it did.
+  defp premature_termination(%{exit_status: nil}), do: :premature_termination
+
+  defp premature_termination(%{exit_status: status}),
+    do: {:premature_termination, status}
+
   defp log_buffer(buffer) do
     buffer |> Enum.reverse() |> IO.iodata_to_binary() |> Logger.info()
-  end
-
-  defp port_init(command) when is_binary(command) do
-    cmd = String.to_charlist(command)
-
-    cmd =
-      if Path.type(cmd) == :absolute do
-        cmd
-      else
-        :os.find_executable(cmd) || :erlang.error(:enoent, [command])
-      end
-
-    {:spawn_executable, cmd}
   end
 end

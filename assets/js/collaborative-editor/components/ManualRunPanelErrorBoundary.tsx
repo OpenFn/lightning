@@ -1,6 +1,8 @@
-import { Component, type ReactNode } from 'react';
+import { type ReactNode, useCallback } from 'react';
 
 import { notifications } from '../lib/notifications';
+
+import { ErrorBoundary } from './common/ErrorBoundary';
 
 interface Props {
   children: ReactNode;
@@ -8,24 +10,12 @@ interface Props {
   onClose?: () => void;
 }
 
-interface State {
-  hasError: boolean;
-  error: Error | null;
-}
-
 /**
  * Error boundary for ManualRunPanel
  *
  * Catches errors in the ManualRunPanel and its children, displaying a
- * user-friendly error message with options to retry or close the panel.
- *
- * Features:
- * - Displays error message from the caught error
- * - Provides "Try Again" button to reset error state
- * - Provides "Close Panel" button to exit the panel
- * - Logs errors to console for debugging
- * - Optionally calls onError callback for error reporting
- * - Shows toast notification when error occurs
+ * user-friendly error message with options to retry or close the panel. Also
+ * raises a toast, since the panel can be off-screen when it fails.
  *
  * @example
  * ```tsx
@@ -34,43 +24,28 @@ interface State {
  * </ManualRunPanelErrorBoundary>
  * ```
  */
-export class ManualRunPanelErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+export function ManualRunPanelErrorBoundary({
+  children,
+  onError,
+  onClose,
+}: Props) {
+  const handleError = useCallback(
+    (error: Error) => {
+      notifications.alert({
+        title: 'Error loading run panel',
+        description:
+          error.message || 'An unexpected error occurred. Please try again.',
+      });
+      onError?.(error);
+    },
+    [onError]
+  );
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
-  }
-
-  override componentDidCatch(error: Error) {
-    console.error('ManualRunPanel error:', error);
-
-    // Show toast notification
-    notifications.alert({
-      title: 'Error loading run panel',
-      description:
-        error.message || 'An unexpected error occurred. Please try again.',
-    });
-
-    // Call optional error callback for error reporting
-    this.props.onError?.(error);
-  }
-
-  handleReset = () => {
-    this.setState({ hasError: false, error: null });
-  };
-
-  handleClose = () => {
-    // Reset error state before closing
-    this.setState({ hasError: false, error: null });
-    this.props.onClose?.();
-  };
-
-  override render() {
-    if (this.state.hasError) {
-      return (
+  return (
+    <ErrorBoundary
+      label="ManualRunPanel"
+      onError={handleError}
+      fallback={(error, reset) => (
         <div className="flex items-center justify-center h-full p-8">
           <div className="text-center max-w-md">
             <div className="mb-4">
@@ -94,13 +69,13 @@ export class ManualRunPanelErrorBoundary extends Component<Props, State> {
             </h3>
 
             <p className="text-sm text-gray-600 mb-6">
-              {this.state.error?.message ||
+              {error.message ||
                 'An unexpected error occurred while loading the run panel.'}
             </p>
 
             <div className="flex gap-3 justify-center">
               <button
-                onClick={this.handleReset}
+                onClick={reset}
                 className="px-4 py-2 bg-primary-600 text-white rounded
                   hover:bg-primary-700 focus:outline-none focus:ring-2
                   focus:ring-primary-500 focus:ring-offset-2"
@@ -108,9 +83,14 @@ export class ManualRunPanelErrorBoundary extends Component<Props, State> {
                 Try Again
               </button>
 
-              {this.props.onClose && (
+              {onClose && (
                 <button
-                  onClick={this.handleClose}
+                  onClick={() => {
+                    // Reset before closing so reopening the panel isn't stuck
+                    // on the error state.
+                    reset();
+                    onClose();
+                  }}
                   className="px-4 py-2 bg-gray-200 text-gray-900 rounded
                     hover:bg-gray-300 focus:outline-none focus:ring-2
                     focus:ring-gray-500 focus:ring-offset-2"
@@ -121,9 +101,9 @@ export class ManualRunPanelErrorBoundary extends Component<Props, State> {
             </div>
           </div>
         </div>
-      );
-    }
-
-    return this.props.children;
-  }
+      )}
+    >
+      {children}
+    </ErrorBoundary>
+  );
 }

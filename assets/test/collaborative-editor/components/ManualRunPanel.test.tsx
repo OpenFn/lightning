@@ -76,6 +76,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock the monaco module that CustomView imports
@@ -93,6 +94,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
     awareness: null,
     isConnected: false,
     isSynced: false,
+    settled: true,
   }),
 }));
 
@@ -206,6 +208,7 @@ describe('ManualRunPanel', () => {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
@@ -252,6 +255,24 @@ describe('ManualRunPanel', () => {
     });
   });
 
+  test('renders "Pick a custom input" title when entryPoint is custom-input', async () => {
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      triggerId: 'trigger-1',
+      entryPoint: 'custom-input',
+      onClose: () => {},
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Pick a custom input')).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByText('Run from Trigger (webhook)')
+    ).not.toBeInTheDocument();
+  });
+
   test('shows three tabs with correct labels', async () => {
     renderManualRunPanel({
       workflow: mockWorkflow,
@@ -264,7 +285,7 @@ describe('ManualRunPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('Empty')).toBeInTheDocument();
     });
-    expect(screen.getByText('Custom')).toBeInTheDocument();
+    expect(screen.getByText('New')).toBeInTheDocument();
     expect(screen.getByText('Existing')).toBeInTheDocument();
   });
 
@@ -294,8 +315,8 @@ describe('ManualRunPanel', () => {
       onClose: () => {},
     });
 
-    // Click Custom tab
-    await user.click(screen.getByText('Custom'));
+    // Click New tab (custom input)
+    await user.click(screen.getByText('New'));
 
     // Monaco editor should appear
     await waitFor(() => {
@@ -360,7 +381,7 @@ describe('ManualRunPanel', () => {
     });
 
     await waitFor(() => {
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).not.toBeDisabled();
     });
   });
@@ -382,6 +403,101 @@ describe('ManualRunPanel', () => {
         {}
       );
     });
+  });
+
+  test('preselects the dataclip named in the URL', async () => {
+    urlState.setParam('dataclip', 'dc-from-run');
+
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [
+        {
+          id: 'dc-from-run',
+          name: 'Input from run abcdef',
+          type: 'saved_input',
+        },
+        { id: 'dc-other', name: 'something else', type: 'saved_input' },
+      ],
+      next_cron_run_dataclip_id: null,
+      can_edit_dataclip: true,
+    } as never);
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      jobId: 'job-1',
+      onClose: () => {},
+    });
+
+    expect(
+      await screen.findByText('Input from run abcdef')
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        dataclip: null,
+      });
+    });
+    expect(urlState.mockFns.replaceSearchParams).not.toHaveBeenCalled();
+  });
+
+  test('drops the URL dataclip even when the run already chose one', async () => {
+    urlState.setParam('dataclip', 'dc-from-run');
+
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [
+        {
+          id: 'dc-from-run',
+          name: 'Input from run abcdef',
+          type: 'saved_input',
+        },
+      ],
+      next_cron_run_dataclip_id: null,
+      can_edit_dataclip: true,
+    } as never);
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      jobId: 'job-1',
+      onClose: () => {},
+      selectedDataclip: {
+        id: 'dc-the-run-used',
+        name: 'the run input',
+        type: 'step_result',
+      } as never,
+    });
+
+    await waitFor(() => {
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        dataclip: null,
+      });
+    });
+  });
+
+  test('leaves the selection alone when the URL names a dataclip it does not have', async () => {
+    urlState.setParam('dataclip', 'dc-missing');
+
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [{ id: 'dc-other', name: 'something else', type: 'saved_input' }],
+      next_cron_run_dataclip_id: null,
+      can_edit_dataclip: true,
+    } as never);
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      jobId: 'job-1',
+      onClose: () => {},
+    });
+
+    await waitFor(() => {
+      expect(dataclipApi.searchDataclips).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByText('dc-missing')).toBeNull();
   });
 
   test('fetches dataclips on mount with trigger context', async () => {
@@ -518,8 +634,8 @@ describe('ManualRunPanel', () => {
       onClose: () => {},
     });
 
-    // Switch to Custom tab
-    await user.click(screen.getByText('Custom'));
+    // Switch to New tab (custom input)
+    await user.click(screen.getByText('New'));
 
     // The Monaco editor is mocked, so we can't actually test JSON validation
     // through user interaction. This is acceptable as JSON validation is
@@ -560,7 +676,7 @@ describe('ManualRunPanel', () => {
 
     // Run button should be enabled
     await waitFor(() => {
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).not.toBeDisabled();
     });
   });
@@ -608,7 +724,7 @@ describe('ManualRunPanel', () => {
       ).toBeInTheDocument();
 
       // Should show footer with Run button
-      expect(screen.getByText('Run')).toBeInTheDocument();
+      expect(screen.getByText('Run From Here')).toBeInTheDocument();
     });
 
     test('embedded mode shows only content, no header or footer', async () => {
@@ -635,7 +751,7 @@ describe('ManualRunPanel', () => {
       ).not.toBeInTheDocument();
 
       // Should NOT show footer with Run button
-      expect(screen.queryByText('Run')).not.toBeInTheDocument();
+      expect(screen.queryByText('Run From Here')).not.toBeInTheDocument();
     });
 
     test('embedded mode with trigger context', async () => {
@@ -735,7 +851,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
     });
@@ -751,7 +867,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).not.toBeDisabled();
       });
     });
@@ -802,7 +918,7 @@ describe('ManualRunPanel', () => {
 
       // Run button should still be disabled due to lack of permission
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
     });
@@ -840,11 +956,11 @@ describe('ManualRunPanel', () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
       // Click Run button
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
       // Verify save was called first, then run
       await waitFor(() => {
@@ -871,10 +987,10 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
       // Save should be called
       await waitFor(() => {
@@ -910,10 +1026,10 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
       // Save should be called
       await waitFor(() => {
@@ -954,15 +1070,15 @@ describe('ManualRunPanel', () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
       // Click Run button
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
-      // Verify saveWorkflow was called with { silent: true }
+      // Verify saveWorkflow was called with { notify: 'none' }
       await waitFor(() => {
-        expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+        expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'none' });
         expect(saveWorkflow).toHaveBeenCalledOnce();
       });
     });
@@ -994,11 +1110,11 @@ describe('ManualRunPanel', () => {
 
       // Wait for initial render
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
       // Click Run button - this will start the save
-      await user.click(screen.getByText('Run'));
+      await user.click(screen.getByText('Run From Here'));
 
       // Button should show "Processing" while submitting
       // Use helper for CSS Grid layout (invisible spacers render same text)
@@ -1050,7 +1166,7 @@ describe('ManualRunPanel', () => {
 
       // Button should be enabled with selected dataclip
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).not.toBeDisabled();
       });
 
@@ -1073,7 +1189,7 @@ describe('ManualRunPanel', () => {
 
       // Button should now be disabled
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
     });
@@ -1116,8 +1232,8 @@ describe('ManualRunPanel', () => {
       );
       await user.click(xButton!);
 
-      // Switch to Custom tab
-      await user.click(screen.getByText('Custom'));
+      // Switch to New tab (custom input)
+      await user.click(screen.getByText('New'));
 
       // Switch back to Existing tab
       await user.click(screen.getByText('Existing'));
@@ -1133,7 +1249,7 @@ describe('ManualRunPanel', () => {
       expect(screen.getByText('Test Dataclip')).toBeInTheDocument();
 
       // Run button should still be disabled
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).toBeDisabled();
     });
 
@@ -1178,7 +1294,7 @@ describe('ManualRunPanel', () => {
 
       // Run button should be enabled on Empty tab
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).not.toBeDisabled();
       });
     });
@@ -1248,10 +1364,10 @@ describe('ManualRunPanel', () => {
 
       // Footer should be rendered with Run button
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).not.toBeDisabled();
 
       // The footer button passes showKeyboardShortcuts=true
@@ -1271,7 +1387,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
 
@@ -1309,11 +1425,11 @@ describe('ManualRunPanel', () => {
 
       // Wait for component to load with retryable state
       await waitFor(() => {
-        expect(screen.getByText('Run')).toBeInTheDocument();
+        expect(screen.getByText('Run From Here')).toBeInTheDocument();
       });
 
       // Footer button should be rendered
-      const runButton = screen.getByText('Run');
+      const runButton = screen.getByText('Run From Here');
       expect(runButton).toBeInTheDocument();
 
       // showKeyboardShortcuts=true is passed, enabling tooltip for main button
@@ -1336,7 +1452,7 @@ describe('ManualRunPanel', () => {
       });
 
       // Footer should NOT be rendered in embedded mode
-      expect(screen.queryByText('Run')).not.toBeInTheDocument();
+      expect(screen.queryByText('Run From Here')).not.toBeInTheDocument();
 
       // No tooltip concerns because RunRetryButton is not rendered in footer
     });
@@ -1361,7 +1477,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).not.toBeDisabled();
       });
     });
@@ -1384,7 +1500,7 @@ describe('ManualRunPanel', () => {
       });
 
       await waitFor(() => {
-        const runButton = screen.getByText('Run');
+        const runButton = screen.getByText('Run From Here');
         expect(runButton).toBeDisabled();
       });
     });

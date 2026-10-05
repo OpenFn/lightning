@@ -10,9 +10,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { act } from 'react';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { EdgeForm } from '../../../../js/collaborative-editor/components/inspector/EdgeForm';
+import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
@@ -24,7 +25,6 @@ import type { CredentialStoreInstance } from '../../../../js/collaborative-edito
 import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
 import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../../js/collaborative-editor/types/session';
@@ -32,6 +32,7 @@ import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
+import { createTestSessionStore } from '../../__helpers__/sessionStoreHelpers';
 import { createMockSocket } from '../../mocks/phoenixSocket';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 
@@ -60,7 +61,7 @@ function createWrapper(
   awarenessStore: AwarenessStoreInstance
 ): React.ComponentType<{ children: React.ReactNode }> {
   // Create session store and initialize with mock socket
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const mockSocket = createMockSocket();
   sessionStore.initializeSession(mockSocket as any, 'test:room', null, {
     connect: true, // Ensure connected state
@@ -82,11 +83,21 @@ function createWrapper(
     isNewWorkflow: false,
   };
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+    redirect: vi.fn(),
+  };
+
   return ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={mockSessionValue}>
-      <StoreContext.Provider value={mockStoreValue}>
-        {children}
-      </StoreContext.Provider>
+      <LiveViewActionsProvider actions={mockLiveViewActions}>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </LiveViewActionsProvider>
     </SessionContext.Provider>
   );
 }

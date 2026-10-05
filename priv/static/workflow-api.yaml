@@ -273,6 +273,13 @@ components:
           type: string
         custom_path:
           type: string
+          description: >-
+            Names this webhook's endpoint so the URL is known before deploying.
+            The public URL is /i/{project_id}/{custom_path}. Unique within the
+            project. Lowercase letters, numbers, hyphens and underscores, and
+            not a UUID. The generated /i/{trigger_id} URL keeps working
+            whether or not this is set.
+          example: et-emr-facility-001
         cron_expression:
           type: string
         type:

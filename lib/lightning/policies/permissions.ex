@@ -42,7 +42,7 @@ defmodule Lightning.Policies.Permissions do
 
   **Using atom shortcuts:**
   ```elixir  
-  can_create = Permissions.can?(:credentials, :create_keychain_credential, project_user)
+  can_create = Permissions.can?(:credentials, :create_keychain_credential, user, project)
   can_delete = Permissions.can?(:project_users, :delete_project, user, project)
   ```
 

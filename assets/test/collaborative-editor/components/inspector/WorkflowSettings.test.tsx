@@ -83,6 +83,7 @@ function createWrapper(
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   const mockSessionValue = {
@@ -152,18 +153,17 @@ function setupTest(projectConcurrency: number | null = null) {
       },
       config: {
         require_email_verification: false,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
     });
   });
 

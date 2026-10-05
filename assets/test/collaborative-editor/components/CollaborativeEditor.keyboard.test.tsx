@@ -29,6 +29,14 @@ import {
 } from '../__helpers__/urlStateMocks';
 
 // Mock Socket
+vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: () => ({ isSynced: true, settled: true }),
+}));
+
+vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => ({ hasChanges: false }),
+}));
+
 vi.mock('phoenix', () => ({
   Socket: vi.fn(() => ({
     connect: vi.fn(),
@@ -66,6 +74,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock CollaborativeWorkflowDiagram
@@ -81,11 +90,6 @@ vi.mock(
 // Mock Inspector
 vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   Inspector: () => <div data-testid="inspector">Inspector</div>,
-}));
-
-// Mock LeftPanel
-vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
-  LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
 }));
 
 // Mock FullScreenIDE
@@ -202,17 +206,34 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 
 // Mock session context hooks
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useContentLocked: () => false,
   useIsNewWorkflow: () => false,
+  useSessionWorkflow: () => null,
+  useExperimentalFeatures: () => true,
   useProjectRepoConnection: () => undefined,
   useProject: () => ({
     id: 'project-1',
     name: 'Test Project',
   }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useLatestSnapshotId: () => null,
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
   useLatestSnapshotLockVersion: () => 1,
+  usePermissions: () => ({
+    can_edit_workflow: true,
+    can_run_workflow: true,
+    can_write_webhook_auth_method: true,
+    can_provision_sandbox: true,
+  }),
   useUser: () => ({
     id: 'user-1',
     email: 'test@example.com',
@@ -309,6 +330,13 @@ const mockWorkflow: Workflow = {
 };
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowEnabled: () => ({ enabled: true, setEnabled: vi.fn() }),
+  // Not exercised by this suite (landing-screen build-from-scratch flow is
+  // covered by CollaborativeEditor.build-from-scratch.test.tsx) — stubbed
+  // only because LandingScreenWrapper calls it unconditionally.
+  useCreateWorkflowFlow: () => ({
+    createWorkflowFrom: vi.fn().mockResolvedValue(true),
+  }),
   useNodeSelection: () => ({
     currentNode,
     selectNode: mockSelectNode,
@@ -333,10 +361,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useCanRun: () => ({
     canRun: true,
     tooltipMessage: '',
-  }),
-  useWorkflowEnabled: () => ({
-    enabled: true,
-    setEnabled: vi.fn(),
   }),
   useCanSave: () => ({
     canSave: true,
@@ -363,8 +387,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsAIAssistantPanelOpen: () => mockIsAIAssistantPanelOpen(),
   useAIAssistantInitialMessage: () => null,
   useIsGitHubSyncModalOpen: () => false,
-  useIsCreateWorkflowPanelCollapsed: () => true,
-  useImportPanelState: () => 'initial',
+  useShowLandingScreen: () => false,
   useUICommands: () => ({
     openRunPanel: vi.fn(),
     closeRunPanel: vi.fn(),
@@ -373,18 +396,12 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
     toggleAIAssistantPanel: vi.fn(),
     openGitHubSyncModal: vi.fn(),
     closeGitHubSyncModal: vi.fn(),
-    toggleCreateWorkflowPanel: vi.fn(),
-    collapseCreateWorkflowPanel: vi.fn(),
-    expandCreateWorkflowPanel: vi.fn(),
-    selectTemplate: vi.fn(),
     setTemplateSearchQuery: vi.fn(),
   }),
   useTemplatePanel: () => ({
     templates: [],
     loading: false,
-    error: null,
     searchQuery: '',
-    selectedTemplate: null,
   }),
 }));
 
@@ -399,7 +416,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIAssistant', () => ({
   useAISessionId: () => null,
   useAISessionType: () => null,
   useAIConnectionState: () => 'disconnected',
-  useAIHasReadDisclaimer: () => true,
   useAIWorkflowTemplateContext: () => null,
 }));
 
@@ -416,12 +432,19 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIAssistantChannel', () => ({
     loadSessions: vi.fn(),
     updateContext: vi.fn(),
     retryMessage: vi.fn(),
-    markDisclaimerRead: vi.fn(),
   }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
-  useVersionSelect: () => vi.fn(),
+  useVersionSelect: () => ({
+    handleVersionSelect: vi.fn(),
+    prompt: {
+      isAsking: false,
+      cancel: vi.fn(),
+      runPending: vi.fn(),
+      saveAndRunPending: vi.fn().mockResolvedValue(true),
+    },
+  }),
 }));
 
 describe('CollaborativeEditor IDE keyboard shortcuts', () => {

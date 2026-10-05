@@ -11,6 +11,7 @@ defmodule Lightning.VersionControl do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.VersionControl.Audit
   alias Lightning.VersionControl.Events
@@ -22,20 +23,31 @@ defmodule Lightning.VersionControl do
 
   require Logger
 
+  @doc "Subscribes to a user's version control events, such as a failed OAuth token refresh."
   defdelegate subscribe(user), to: Events
 
   @doc """
-  Creates a connection between a project and a github repo
+  Creates a connection between a project and a github repo.
+
+  The `(root_project_id, repo, branch)` uniqueness constraint on
+  `project_repo_connections` is the source of truth: two concurrent inserts
+  for the same project family + (repo, branch) cannot both succeed even at
+  READ COMMITTED isolation. The constraint violation is translated back into
+  `:branch_used_in_project_tree` for callers.
   """
   @spec create_github_connection(map(), User.t()) ::
           {:ok, ProjectRepoConnection.t()}
-          | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
+          | {:error,
+             Ecto.Changeset.t()
+             | UsageLimiting.message()
+             | :branch_used_in_project_tree
+             | binary()}
   def create_github_connection(attrs, user) do
     changeset =
       ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
 
     Repo.transact(fn ->
-      with {:ok, repo_connection} <- Repo.insert(changeset),
+      with {:ok, repo_connection} <- insert_repo_connection(changeset),
            {:ok, _audit} <-
              repo_connection
              |> Audit.repo_connection(:created, user)
@@ -50,8 +62,24 @@ defmodule Lightning.VersionControl do
     end)
   end
 
+  defp insert_repo_connection(changeset) do
+    case Repo.insert(changeset) do
+      {:ok, repo_connection} ->
+        {:ok, repo_connection}
+
+      {:error, %Ecto.Changeset{} = failed} ->
+        if ProjectRepoConnection.tree_unique_violation?(failed) do
+          {:error, :branch_used_in_project_tree}
+        else
+          {:error, failed}
+        end
+    end
+  end
+
+  # `binary()` because this reaches `initiate_sync/2`, whose export pre-flight
+  # fails with a plain string naming the colliding entities.
   @spec reconfigure_github_connection(ProjectRepoConnection.t(), map(), User.t()) ::
-          :ok | {:error, UsageLimiting.message() | map()}
+          :ok | {:error, UsageLimiting.message() | map() | binary()}
   def reconfigure_github_connection(repo_connection, params, user) do
     changeset =
       ProjectRepoConnection.reconfigure_changeset(repo_connection, params)
@@ -135,10 +163,18 @@ defmodule Lightning.VersionControl do
     Repo.get_by(ProjectRepoConnection, access_token: token)
   end
 
+  @doc """
+  Fires the GitHub Action that pulls the project spec and commits it.
+
+  The export runs here first and its result is thrown away. The Action fetches
+  `/api/provision/:id.yaml`, and a 400 there lands in a GitHub Actions log
+  Lightning cannot read, so the user sees a sync that failed with no reason.
+  Costs one extra full spec generation on every successful sync.
+  """
   @spec initiate_sync(
           repo_connection :: ProjectRepoConnection.t(),
           commit_message :: String.t()
-        ) :: :ok | {:error, UsageLimiting.message() | map()}
+        ) :: :ok | {:error, UsageLimiting.message() | map() | binary()}
   def initiate_sync(repo_connection, commit_message) do
     with :ok <-
            VersionControlUsageLimiter.limit_github_sync(
@@ -146,6 +182,13 @@ defmodule Lightning.VersionControl do
            ),
          snapshots <-
            list_snapshots_for_project(repo_connection),
+         {:ok, _spec} <-
+           Projects.export_project(
+             :yaml,
+             repo_connection.project_id,
+             snapshot_ids_for_export(snapshots),
+             :v1
+           ),
          {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -180,9 +223,27 @@ defmodule Lightning.VersionControl do
         join: s in assoc(w, :snapshots),
         on: s.lock_version == w.lock_version,
         where: w.project_id == ^project_id and is_nil(w.deleted_at),
+        order_by: s.id,
         select: s.id
 
-    Repo.all(current_query) |> Enum.reverse()
+    Repo.all(current_query)
+  end
+
+  # Mirrors maybe_add_snapshots/2 below: an empty list means the Action fetches
+  # the current workflows rather than a set of snapshots, so the pre-flight has
+  # to ask for the same spec the Action will.
+  defp snapshot_ids_for_export([]), do: nil
+  defp snapshot_ids_for_export(snapshot_ids), do: snapshot_ids
+
+  defp export_preflight(repo_connection) do
+    Projects.export_project(
+      :yaml,
+      repo_connection.project_id,
+      repo_connection
+      |> list_snapshots_for_project()
+      |> snapshot_ids_for_export(),
+      :v1
+    )
   end
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do
@@ -246,8 +307,20 @@ defmodule Lightning.VersionControl do
 
   defp maybe_fetch_remaining_repos(_client, initial_result), do: initial_result
 
-  def fetch_repo_branches(installation_id, repo_name) do
-    with {:ok, client} <- GithubClient.build_installation_client(installation_id) do
+  @doc """
+  Fetches a repository's branches for `user`.
+
+  The GitHub App private key can mint an installation token for **any**
+  installation of the shared App, so this verifies (using the user's own GitHub
+  OAuth grant, via `/user/installations`) that `installation_id` is one the user
+  can access before using the app credential. Without this check a user could
+  read branch names from a private repository in another tenant's installation
+  (a confused-deputy). GitHub's installation token then scopes repository access
+  to that installation.
+  """
+  def fetch_repo_branches(user, installation_id, repo_name) do
+    with :ok <- authorize_installation_access(user, installation_id),
+         {:ok, client} <- GithubClient.build_installation_client(installation_id) do
       case GithubClient.get_repo_branches(client, repo_name) do
         {:ok, %{body: body}} ->
           {:ok, body}
@@ -255,6 +328,25 @@ defmodule Lightning.VersionControl do
         {:error, %{body: body}} ->
           {:error, body}
       end
+    end
+  end
+
+  defp authorize_installation_access(user, installation_id) do
+    case fetch_user_installations(user) do
+      {:ok, %{"installations" => installations}} when is_list(installations) ->
+        if Enum.any?(installations, fn installation ->
+             to_string(installation["id"]) == to_string(installation_id)
+           end) do
+          :ok
+        else
+          {:error, :unauthorized_installation}
+        end
+
+      {:ok, _body} ->
+        {:error, :unauthorized_installation}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -727,9 +819,14 @@ defmodule Lightning.VersionControl do
   end
 
   @spec configure_github_repo(ProjectRepoConnection.t(), User.t()) ::
-          :ok | {:error, map()}
+          :ok | {:error, map() | binary()}
   defp configure_github_repo(repo_connection, user) do
-    with {:ok, user_token} <- fetch_user_access_token(user),
+    # Before anything is written to the repo. This path pushes pull.yml, the
+    # workflow files and the API secret before it reaches initiate_sync/2, so a
+    # project whose names collide would otherwise leave a modified GitHub repo
+    # behind and no connection row to show for it.
+    with {:ok, _spec} <- export_preflight(repo_connection),
+         {:ok, user_token} <- fetch_user_access_token(user),
          {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
          {:ok, _} <-
            push_pull_yml_to_default_branch(tesla_client, repo_connection),

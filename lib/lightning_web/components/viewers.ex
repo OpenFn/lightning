@@ -16,7 +16,6 @@ defmodule LightningWeb.Components.Viewers do
   import React
 
   alias Lightning.Invocation.Dataclip
-  alias LightningWeb.Components.Icon
   alias Phoenix.LiveView.JS
 
   require Lightning.Run
@@ -244,11 +243,11 @@ defmodule LightningWeb.Components.Viewers do
   def step_dataclip_viewer(assigns) do
     ~H"""
     <%= if dataclip_wiped?(@step, @dataclip, @input_or_output) do %>
-      <.wiped_dataclip_viewer
+      <.wiped_data_viewer
         id={@id}
         can_edit_data_retention={@can_edit_data_retention}
         admin_contacts={@admin_contacts}
-        input_or_output={@input_or_output}
+        data_label={@input_or_output}
         project_id={@project_id}
       />
     <% else %>
@@ -292,7 +291,11 @@ defmodule LightningWeb.Components.Viewers do
   end
 
   attr :id, :string, default: nil
-  attr :input_or_output, :atom, required: true, values: [:input, :output]
+
+  attr :data_label, :atom,
+    required: true,
+    values: [:input, :output, :request_response]
+
   attr :project_id, :string, required: true
 
   attr :admin_contacts, :list,
@@ -303,7 +306,7 @@ defmodule LightningWeb.Components.Viewers do
 
   slot :footer
 
-  def wiped_dataclip_viewer(assigns) do
+  def wiped_data_viewer(assigns) do
     ~H"""
     <div
       id={@id}
@@ -316,24 +319,34 @@ defmodule LightningWeb.Components.Viewers do
       </div>
       <div class="text-center mb-4 text-gray-500">
         <h3 class="font-bold text-lg">
-          <span class="capitalize">No {@input_or_output} Data</span> here!
+          No {wiped_label(@data_label)} Data here!
         </h3>
         <p class="text-sm">
-          <span class="capitalize">{@input_or_output}</span>
-          data for this step has not been retained in accordance
+          {wiped_label(@data_label)} data for this {wiped_subject(@data_label)} has not been retained in accordance
           with your project's data storage policy.
         </p>
       </div>
       <div class="text-center text-gray-500 text-sm">
         <%= if @can_edit_data_retention do %>
-          You can’t rerun this work order, but you can change
-          <.link
-            navigate={~p"/projects/#{@project_id}/settings#data-storage"}
-            class="link"
-          >
-            this policy
-          </.link>
-          for future runs.
+          <%= if @data_label == :request_response do %>
+            You can change
+            <.link
+              navigate={~p"/projects/#{@project_id}/settings#data-storage"}
+              class="link"
+            >
+              this policy
+            </.link>
+            for future requests.
+          <% else %>
+            You can’t rerun this work order, but you can change
+            <.link
+              navigate={~p"/projects/#{@project_id}/settings#data-storage"}
+              class="link"
+            >
+              this policy
+            </.link>
+            for future runs.
+          <% end %>
         <% else %>
           Contact one of your
           <span
@@ -348,39 +361,6 @@ defmodule LightningWeb.Components.Viewers do
         <% end %>
       </div>
       {render_slot(@footer)}
-    </div>
-    """
-  end
-
-  attr :id, :string, required: true
-
-  attr :type, :atom,
-    default: nil,
-    values: [nil | Dataclip.source_types()]
-
-  defp dataclip_type(assigns) do
-    assigns =
-      assign(assigns,
-        icon: Icon.dataclip_icon_class(assigns.type),
-        color: Icon.dataclip_icon_color(assigns.type)
-      )
-
-    ~H"""
-    <div
-      id={@id}
-      class={[
-        "absolute top-0 right-0 flex items-center gap-2 group z-10"
-      ]}
-    >
-      <div class="hidden group-hover:block font-mono text-white text-xs">
-        type: {@type}
-      </div>
-      <div class={[
-        "rounded-bl-md rounded-tr-md p-1 pt-0 opacity-70 group-hover:opacity-100 content-center",
-        @color
-      ]}>
-        <.icon :if={@icon} name={@icon} class="h-4 w-4 inline-block align-middle" />
-      </div>
     </div>
     """
   end
@@ -401,4 +381,12 @@ defmodule LightningWeb.Components.Viewers do
 
   defp dataclip_field(:input), do: :input_dataclip_id
   defp dataclip_field(:output), do: :output_dataclip_id
+
+  defp wiped_label(:input), do: "Input"
+  defp wiped_label(:output), do: "Output"
+  defp wiped_label(:request_response), do: "Request/Response"
+
+  defp wiped_subject(:input), do: "step"
+  defp wiped_subject(:output), do: "step"
+  defp wiped_subject(:request_response), do: "channel request"
 end

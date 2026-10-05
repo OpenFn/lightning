@@ -31,7 +31,6 @@ export const useAICommands = () => {
     disconnect: store.disconnect,
     setMessageSending: store.setMessageSending,
     retryMessage: store.retryMessage,
-    markDisclaimerRead: store.markDisclaimerRead,
     clearSession: store.clearSession,
   };
 };
@@ -116,6 +115,43 @@ export const useAIStreamingContent = () => {
 };
 
 /**
+ * Get the woven text/status streaming timeline. Populated for every stream
+ * (text chunks are mirrored in); status segments only occur on global
+ * assistant streams today.
+ */
+export const useAIStreamingSegments = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.streamingSegments)
+  );
+};
+
+/**
+ * Get the workflow YAML snapshots streamed so far for the in-flight reply,
+ * each pinned to the timeline segment it belongs under.
+ */
+export const useAIStreamingSnapshots = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.streamingSnapshots)
+  );
+};
+
+/**
+ * Get the snapshots retained per finalized assistant message, so a reply
+ * keeps its per-status diffs after the stream ends.
+ */
+export const useAISnapshotsByMessageId = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.snapshotsByMessageId)
+  );
+};
+
+/**
  * Get streaming changes (code edits or workflow YAML sent before text streams)
  */
 export const useAIStreamingChanges = () => {
@@ -123,6 +159,18 @@ export const useAIStreamingChanges = () => {
   return useSyncExternalStore(
     store.subscribe,
     store.withSelector(state => state.streamingChanges)
+  );
+};
+
+/**
+ * Get the pending streaming apply record (YAML already imported to the
+ * canvas during streaming, awaiting the final new_message)
+ */
+export const useAIStreamingApply = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.streamingApply)
   );
 };
 
@@ -145,17 +193,6 @@ export const useAIIsSending = () => {
   return useSyncExternalStore(
     store.subscribe,
     store.withSelector(state => state.isSending)
-  );
-};
-
-/**
- * Get disclaimer read state
- */
-export const useAIHasReadDisclaimer = () => {
-  const store = useAIStore();
-  return useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => state.hasReadDisclaimer)
   );
 };
 

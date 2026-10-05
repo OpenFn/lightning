@@ -1,6 +1,7 @@
 defmodule LightningWeb.RunWithOptionsTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   alias Lightning.Runs
@@ -9,6 +10,18 @@ defmodule LightningWeb.RunWithOptionsTest do
   alias LightningWeb.RunWithOptions
 
   describe "rendering a run" do
+    setup :isolated_adaptors
+
+    setup do
+      insert(:adaptor,
+        name: "@openfn/language-common",
+        source: :npm,
+        latest_version: "1.6.2"
+      )
+
+      :ok
+    end
+
     test "renders a workflow using a snapshot" do
       user = insert(:user)
 
@@ -17,7 +30,7 @@ defmodule LightningWeb.RunWithOptionsTest do
         |> Workflow.touch()
         |> Workflows.save_workflow(user)
 
-      %{runs: [run]} =
+      %{id: work_order_id, runs: [run]} =
         work_order_for(trigger,
           workflow: workflow,
           dataclip: dataclip = insert(:dataclip)
@@ -50,22 +63,25 @@ defmodule LightningWeb.RunWithOptionsTest do
           ],
           "starting_node_id" => trigger.id,
           "triggers" => [%{"id" => trigger.id}],
-          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300_000}
+          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300_000},
+          "meta" => %{
+            "work_order_id" => work_order_id,
+            "workflow_id" => workflow.id,
+            "project_id" => workflow.project_id
+          }
         }
 
       run = Runs.get_for_worker(run.id)
 
-      assert RunWithOptions.render(run)
-             |> Jason.encode!()
-             |> Jason.decode!() ==
-               expected_result
+      assert {:ok, plan} = RunWithOptions.render(run)
+      assert plan |> Jason.encode!() |> Jason.decode!() == expected_result
 
       {:ok, workflow} =
         workflow
         |> Workflows.change_workflow(%{jobs: [%{id: job.id, body: "foo()"}]})
         |> Workflows.save_workflow(user)
 
-      %{runs: [run]} =
+      %{id: work_order_id, runs: [run]} =
         work_order_for(trigger,
           workflow: workflow,
           dataclip: dataclip = insert(:dataclip)
@@ -100,23 +116,19 @@ defmodule LightningWeb.RunWithOptionsTest do
           ],
           "starting_node_id" => trigger.id,
           "triggers" => [%{"id" => trigger.id}],
-          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300_000}
+          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300_000},
+          "meta" => %{
+            "work_order_id" => work_order_id,
+            "workflow_id" => workflow.id,
+            "project_id" => workflow.project_id
+          }
         }
 
-      assert RunWithOptions.render(run)
-             |> Jason.encode!()
-             |> Jason.decode!() ==
-               expected_result
+      assert {:ok, plan} = RunWithOptions.render(run)
+      assert plan |> Jason.encode!() |> Jason.decode!() == expected_result
     end
 
-    @tag :tmp_dir
-    test "renders adaptors with @local when local_daptors_repo is configured", %{
-      tmp_dir: tmp_dir
-    } do
-      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
-        [local_adaptors_repo: tmp_dir]
-      end)
-
+    test "returns the adaptor lookup error when a job's @latest cannot be resolved" do
       user = insert(:user)
 
       {:ok, %{triggers: [trigger], jobs: [job]} = workflow} =
@@ -125,28 +137,18 @@ defmodule LightningWeb.RunWithOptionsTest do
         |> Workflows.save_workflow(user)
 
       %{runs: [run]} =
-        work_order_for(trigger,
-          workflow: workflow,
-          dataclip: insert(:dataclip)
-        )
+        work_order_for(trigger, workflow: workflow, dataclip: insert(:dataclip))
         |> insert()
 
-      expected_result =
-        %{
-          "jobs" => [
-            %{
-              "adaptor" => "@openfn/language-common@local",
-              "body" => job.body,
-              "credential_id" => nil,
-              "id" => job.id,
-              "name" => job.name
-            }
-          ]
-        }
+      run = Runs.get_for_worker(run.id)
 
-      result = run.id |> Runs.get_for_worker() |> RunWithOptions.render()
+      snapshot_job =
+        Enum.find(run.snapshot.jobs, &(&1.id == job.id))
+        |> Map.put(:adaptor, "@openfn/language-never-published@latest")
 
-      assert expected_result["jobs"] == result["jobs"]
+      run = put_in(run.snapshot.jobs, [snapshot_job])
+
+      assert {:error, :not_found} = RunWithOptions.render(run)
     end
   end
 

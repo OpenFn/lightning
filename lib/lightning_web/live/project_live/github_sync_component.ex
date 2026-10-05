@@ -27,6 +27,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   @impl true
   def handle_event("validate", %{"connection" => params}, socket) do
+    params = Map.put(params, "project_id", socket.assigns.project.id)
     changeset = validate_changes(socket.assigns.project_repo_connection, params)
 
     {:noreply,
@@ -170,6 +171,23 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         changeset
       end
     end)
+    |> maybe_force_branch_error_action()
+  end
+
+  # When the project-tree branch guard fails on a branch the user just
+  # selected, set the changeset action so Phoenix renders the error inline.
+  # We only promote the action when the conflict error is present so other
+  # "blank" errors stay hidden until the user submits.
+  defp maybe_force_branch_error_action(changeset) do
+    branch_errors = Keyword.get_values(changeset.errors, :branch)
+
+    if Enum.any?(branch_errors, fn {_msg, opts} ->
+         Keyword.get(opts, :reason) == :tree_branch_conflict
+       end) do
+      Map.put(changeset, :action, :validate)
+    else
+      changeset
+    end
   end
 
   defp create_connection(socket, params) do
@@ -209,8 +227,19 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       %{"error_description" => message} ->
         "GitHub Error: #{message}"
 
-      %Tesla.Env{body: body} ->
+      # Only a decoded body is worth unwrapping. Tesla.Middleware.JSON leaves
+      # the body a binary for an HTML or plain-text response, and recursing
+      # into that lands on the clause below, putting a page of GitHub's HTML in
+      # a flash.
+      %Tesla.Env{body: %{} = body} ->
         error_message(body)
+
+      # Usually this is our export pre-flight failing with a plain string that
+      # names both colliding entities, which the generic message below would
+      # lose. Not always, though. refresh_oauth_token/1 passes GitHub's body
+      # straight through.
+      message when is_binary(message) ->
+        message
 
       _error ->
         "Oops! An error occurred while connecting to GitHub. Please try again later"
@@ -241,6 +270,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         assign(socket, changeset: changeset)
+
+      # The export pre-flight in initiate_sync/2 fails with a plain string
+      # naming both colliding entities. Without this it reaches the catch-all
+      # below and the user is told they lack GitHub access, which is false.
+      {:error, message} when is_binary(message) ->
+        socket
+        |> put_flash(:error, message)
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
+        )
 
       {:error, _} ->
         socket
@@ -283,7 +322,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   defp maybe_fetch_branches(
-         %{assigns: %{changeset: changeset, branches: branches}} = socket
+         %{assigns: %{changeset: changeset, branches: branches, user: user}} =
+           socket
        ) do
     installation = Ecto.Changeset.get_field(changeset, :github_installation_id)
     repo = Ecto.Changeset.get_field(changeset, :repo)
@@ -297,7 +337,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           socket,
           :branches,
           fn ->
-            branches = fetch_branches(installation, repo)
+            branches = fetch_branches(user, installation, repo)
             {:ok, %{branches: %{repo => branches}}}
           end,
           reset: true
@@ -326,9 +366,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
       repos =
         installations
-        |> Task.async_stream(fn installation ->
-          {installation["id"], fetch_repos(installation["id"])}
-        end)
+        |> Task.async_stream(
+          fn installation ->
+            {installation["id"], fetch_repos(installation["id"])}
+          end,
+          timeout: 30_000,
+          on_timeout: :kill_task
+        )
         |> Stream.filter(&match?({:ok, _}, &1))
         |> Map.new(fn {:ok, val} -> val end)
 
@@ -350,8 +394,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
-  defp fetch_branches(installation_id, repo_name) do
-    case VersionControl.fetch_repo_branches(installation_id, repo_name) do
+  defp fetch_branches(user, installation_id, repo_name) do
+    case VersionControl.fetch_repo_branches(user, installation_id, repo_name) do
       {:ok, body} ->
         body
         |> Enum.map(fn branch -> Map.take(branch, ["name"]) end)

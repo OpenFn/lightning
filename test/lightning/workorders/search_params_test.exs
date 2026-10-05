@@ -40,6 +40,68 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                workflow_id: "babd29f7-bf15-4a66-af21-51209217ebd4"
              } == SearchParams.new(params)
     end
+
+    # A server-built link naming a workflow and a date carries no search-field
+    # flags. Reading that as "search nothing" makes the search box on the
+    # landed page match nothing at all.
+    test "falls back to every search field when the params name none of them" do
+      params =
+        SearchParams.new(%{
+          "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
+          "search_term" => "hello"
+        })
+
+      assert params.search_fields == [:id, :body, :log, :dataclip_name]
+    end
+
+    # And an unticked box still arrives, marked false, so turning them all off
+    # is a different thing from a link that never mentioned them.
+    test "searches nothing when every search field is present and false" do
+      params =
+        SearchParams.new(%{
+          "id" => "false",
+          "body" => "false",
+          "log" => "false",
+          "dataclip_name" => "false",
+          "search_term" => "hello"
+        })
+
+      assert params.search_fields == []
+    end
+  end
+
+  describe "from_map/1" do
+    test "rebuilds an identical struct from a JSON round-trip" do
+      params =
+        SearchParams.new(%{
+          "body" => "true",
+          "log" => "true",
+          "failed" => "true",
+          "success" => "true",
+          "search_term" => "hello",
+          "date_after" => "2023-05-16T12:54"
+        })
+
+      round_tripped =
+        params
+        |> JSON.encode!()
+        |> JSON.decode!()
+        |> SearchParams.from_map()
+
+      assert {:ok, ^params} = round_tripped
+    end
+
+    test "returns an error for stale or malformed args instead of raising" do
+      # The export worker relies on this: a bad arg fails the export cleanly
+      # rather than crashing the worker or silently broadening the results.
+      assert {:error, %Ecto.Changeset{}} =
+               SearchParams.from_map(%{"status" => ["gone_status"]})
+
+      assert {:error, %Ecto.Changeset{}} =
+               SearchParams.from_map(%{"date_after" => "not-a-date"})
+
+      assert {:error, :invalid_search_params} = SearchParams.from_map(nil)
+    end
   end
 
   describe "to_uri_params/1" do
@@ -53,10 +115,6 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "log" => true,
                "body" => false,
                "failed" => true,
-               "wo_date_after" => nil,
-               "wo_date_before" => nil,
-               "date_after" => nil,
-               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "dataclip_name" => true
              }
@@ -69,19 +127,28 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "failed" => true,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
              }) == %{
-               "id" => true,
-               "log" => true,
-               "body" => true,
                "failed" => true,
-               "wo_date_after" => nil,
-               "wo_date_before" => nil,
-               "date_after" => nil,
-               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "sort_direction" => "desc",
                "sort_by" => "inserted_at",
-               "dataclip_name" => true
+               "log" => true
              }
+    end
+
+    test "falls back to log alone when the caller names no search field" do
+      params =
+        SearchParams.to_uri_params(%{
+          "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
+        })
+
+      assert params == %{
+               "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
+               "log" => true
+             }
+
+      # Reading the link back gives log alone, so the chip the reader sees is
+      # the field the search actually covers.
+      assert SearchParams.new(params).search_fields == [:log]
     end
 
     test "converts dates to string" do
@@ -100,10 +167,8 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "log" => false,
                "id" => false,
                "crashed" => true,
-               "wo_date_after" => nil,
                "wo_date_before" => now |> DateTime.to_string(),
                "date_after" => now |> DateTime.to_string(),
-               "date_before" => nil,
                "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
                "dataclip_name" => true
              }

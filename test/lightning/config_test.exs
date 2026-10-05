@@ -50,15 +50,6 @@ defmodule Lightning.Configtest do
       assert actual == not disabled
     end
 
-    test "indicates if the tracking of UI metrics is enabled" do
-      expected =
-        extract_from_config(:ui_metrics_tracking, :enabled)
-
-      actual = API.ui_metrics_tracking_enabled?()
-
-      assert expected == actual
-    end
-
     test "returns module responsible for injecting external metric plugins" do
       expected =
         extract_from_config(Lightning.Extensions, :external_metrics)
@@ -68,15 +59,6 @@ defmodule Lightning.Configtest do
       actual = API.external_metrics_module()
 
       assert expected == actual
-    end
-
-    test "returns configured AI modes" do
-      modes = API.ai_assistant_modes()
-
-      assert modes[:job] == LightningWeb.Live.AiAssistant.Modes.JobCode
-
-      assert modes[:workflow] ==
-               LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
     end
 
     test "returns number of seconds that constitutes stalled run threshold" do
@@ -240,5 +222,38 @@ defmodule Lightning.Configtest do
 
   defp extract_from_config(config, key) do
     Application.get_env(:lightning, config) |> Keyword.get(key)
+  end
+
+  describe "max_sandbox_nesting_depth/0" do
+    test "defaults to 5 when no config is set" do
+      with_max_sandbox_nesting_depth(nil, fn ->
+        assert API.max_sandbox_nesting_depth() == 5
+      end)
+    end
+
+    test "returns the configured value when set" do
+      with_max_sandbox_nesting_depth(10, fn ->
+        assert API.max_sandbox_nesting_depth() == 10
+      end)
+    end
+  end
+
+  defp with_max_sandbox_nesting_depth(value, fun) do
+    prev = Application.get_env(:lightning, :max_sandbox_nesting_depth)
+
+    try do
+      if is_nil(value) do
+        Application.delete_env(:lightning, :max_sandbox_nesting_depth)
+      else
+        Application.put_env(:lightning, :max_sandbox_nesting_depth, value)
+      end
+
+      fun.()
+    after
+      case prev do
+        nil -> Application.delete_env(:lightning, :max_sandbox_nesting_depth)
+        _ -> Application.put_env(:lightning, :max_sandbox_nesting_depth, prev)
+      end
+    end
   end
 end

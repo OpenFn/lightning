@@ -1,9 +1,189 @@
 defmodule Lightning.Workflows.EdgeTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.AdaptorTestHelpers
+
   alias Lightning.Workflows.Edge
 
+  describe "condition_label and condition_expression" do
+    defp edge_changeset(attrs) do
+      Edge.changeset(
+        %Edge{source_job_id: Ecto.UUID.generate()},
+        Map.merge(
+          %{
+            workflow_id: Ecto.UUID.generate(),
+            target_job_id: Ecto.UUID.generate()
+          },
+          attrs
+        )
+      )
+    end
+
+    test "a control character in the label is rejected on every condition type" do
+      # An :always edge carries its label into the snapshot jsonb just like a
+      # :js_expression one, so the check cannot live in that branch.
+      for condition_type <- [
+            :always,
+            :on_job_success,
+            :on_job_failure,
+            :js_expression
+          ] do
+        changeset =
+          edge_changeset(%{
+            condition_type: condition_type,
+            condition_label: "bad\u{0000}label",
+            condition_expression: "state.data.ok"
+          })
+
+        assert errors_on(changeset)[:condition_label] == [
+                 "condition label can't contain control characters"
+               ],
+               "expected #{condition_type} to reject a control character"
+      end
+    end
+
+    test "the label length cap applies on every condition type too" do
+      for condition_type <- [:always, :on_job_success, :js_expression] do
+        changeset =
+          edge_changeset(%{
+            condition_type: condition_type,
+            condition_label: String.duplicate("a", 256),
+            condition_expression: "state.data.ok"
+          })
+
+        assert errors_on(changeset)[:condition_label],
+               "expected #{condition_type} to reject an over-long label"
+      end
+    end
+
+    test "an ordinary label is accepted on every condition type" do
+      for condition_type <- [:always, :on_job_success, :js_expression] do
+        changeset =
+          edge_changeset(%{
+            condition_type: condition_type,
+            condition_label: "évaluation rechazada 🎉",
+            condition_expression: "state.data.ok"
+          })
+
+        refute errors_on(changeset)[:condition_label],
+               "expected #{condition_type} to accept the label"
+      end
+    end
+
+    test "a NUL in the expression is rejected on every condition type" do
+      # cast/3 accepts an expression whatever the condition type is, and it
+      # reaches the snapshot jsonb either way, so the check cannot live in the
+      # :js_expression branch or behind a `valid?` short circuit.
+      for condition_type <- [
+            :always,
+            :on_job_success,
+            :on_job_failure,
+            :js_expression
+          ] do
+        changeset =
+          edge_changeset(%{
+            condition_type: condition_type,
+            condition_expression: "state.data\u{0000}"
+          })
+
+        assert errors_on(changeset)[:condition_expression] == [
+                 "condition expression can't contain a null byte"
+               ],
+               "expected #{condition_type} to reject a null byte"
+      end
+    end
+
+    test "a label short in graphemes but too wide for the column is rejected" do
+      # The cap above counts graphemes, the column counts codepoints: 200 ZWJ
+      # families are 200 characters to Ecto and 1400 to Postgres.
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+      label = String.duplicate(family, 200)
+
+      assert String.length(label) == 200
+      assert label |> String.codepoints() |> length() == 1400
+
+      for condition_type <- [:always, :on_job_success, :js_expression] do
+        changeset =
+          edge_changeset(%{
+            condition_type: condition_type,
+            condition_label: label,
+            condition_expression: "state.data.ok"
+          })
+
+        assert errors_on(changeset)[:condition_label] == [
+                 "condition label is too long, please use a shorter one"
+               ],
+               "expected #{condition_type} to reject an over-wide label"
+      end
+    end
+
+    test "an expression short in graphemes but too wide for the column is rejected" do
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+      expression = String.duplicate(family, 200)
+
+      for condition_type <- [:always, :on_job_success, :js_expression] do
+        changeset =
+          edge_changeset(%{
+            condition_type: condition_type,
+            condition_expression: expression
+          })
+
+        assert errors_on(changeset)[:condition_expression] == [
+                 "condition expression is too long, please use a shorter one"
+               ],
+               "expected #{condition_type} to reject an over-wide expression"
+      end
+    end
+
+    test "the expression length cap applies on every condition type" do
+      for condition_type <- [:always, :on_job_success, :js_expression] do
+        changeset =
+          edge_changeset(%{
+            condition_type: condition_type,
+            condition_expression: String.duplicate("a", 256)
+          })
+
+        assert errors_on(changeset)[:condition_expression],
+               "expected #{condition_type} to reject an over-long expression"
+      end
+    end
+
+    test "the checks run even when the changeset is invalid for other reasons" do
+      # A minimal changeset is invalid for unrelated missing fields on plenty
+      # of real save paths, so the jsonb checks have to run on an invalid
+      # changeset too.
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          condition_type: :always,
+          condition_expression: "state\u{0000}",
+          condition_label: "bad\u{0000}label"
+        })
+
+      refute changeset.valid?
+
+      assert errors_on(changeset)[:condition_expression] == [
+               "condition expression can't contain a null byte"
+             ]
+
+      assert errors_on(changeset)[:condition_label] == [
+               "condition label can't contain control characters"
+             ]
+    end
+
+    test "the expression may hold newlines and tabs" do
+      changeset =
+        edge_changeset(%{
+          condition_type: :js_expression,
+          condition_expression: "state.data\n\t&& true"
+        })
+
+      refute errors_on(changeset)[:condition_expression]
+    end
+  end
+
   describe "changeset/2" do
+    setup :isolated_adaptors
+
     test "valid changeset" do
       changeset =
         Edge.changeset(%Edge{source_job_id: Ecto.UUID.generate()}, %{
@@ -12,6 +192,32 @@ defmodule Lightning.Workflows.EdgeTest do
         })
 
       assert changeset.valid?
+    end
+
+    test "a malformed uuid field is a changeset error, not an Ecto.ChangeError on save" do
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          source_job_id: "__ID_JOB_Envoyer-dans-DHIS2__",
+          target_job_id: Ecto.UUID.generate(),
+          condition_type: :on_job_success
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:source_job_id] == {"is not a valid UUID", []}
+    end
+
+    test "a malformed workflow_id is a changeset error, not an Ecto.ChangeError on save" do
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: "__ID_WF_Foo_____",
+          source_job_id: Ecto.UUID.generate(),
+          target_job_id: Ecto.UUID.generate(),
+          condition_type: :on_job_success
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:workflow_id] == {"is not a valid UUID", []}
     end
 
     test "edges must have a condition" do
@@ -256,20 +462,15 @@ defmodule Lightning.Workflows.EdgeTest do
           }
         )
 
-      assert changeset.errors == [
-               condition_expression: {
-                 "should be at most %{count} character(s)",
-                 [
-                   {:count, 255},
-                   {:validation, :length},
-                   {:kind, :max},
-                   {:type, :string}
-                 ]
-               },
-               condition_label:
-                 {"should be at most %{count} character(s)",
-                  [count: 255, validation: :length, kind: :max, type: :string]}
+      # Asserted by field rather than as an ordered list. The order of
+      # changeset.errors is not what this test is about.
+      errors = errors_on(changeset)
+
+      assert errors[:condition_expression] == [
+               "should be at most 255 character(s)"
              ]
+
+      assert errors[:condition_label] == ["should be at most 255 character(s)"]
     end
 
     test "requires JS expression to have valid syntax" do

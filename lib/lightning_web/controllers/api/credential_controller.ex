@@ -21,12 +21,30 @@ defmodule LightningWeb.API.CredentialController do
   """
   use LightningWeb, :controller
 
+  alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
 
   action_fallback LightningWeb.FallbackController
+
+  # `require_authenticated_api_resource` lets repo-connection tokens through
+  # this pipeline, and everything here is about credentials, which belong to a
+  # person. Every action would hand a machine token to a function that only
+  # takes a user, which raises rather than refusing. Answer it once here.
+  plug :require_user
+
+  defp require_user(%{assigns: %{current_resource: %User{}}} = conn, _opts),
+    do: conn
+
+  defp require_user(conn, _opts) do
+    conn
+    |> put_status(:forbidden)
+    |> put_view(LightningWeb.ErrorView)
+    |> render(:"403")
+    |> halt()
+  end
 
   @doc """
   Lists credentials with optional project filtering.
@@ -69,7 +87,13 @@ defmodule LightningWeb.API.CredentialController do
              current_user,
              project
            ) do
-      credentials = Credentials.list_credentials(project)
+      # The requested project is already access-checked above, so always show
+      # it (covers membership at any depth and support-user access).
+      credentials =
+        project
+        |> Credentials.list_credentials()
+        |> scope_to_visible_projects(current_user, [project.id])
+
       render(conn, "index.json", credentials: credentials)
     else
       nil ->
@@ -82,7 +106,11 @@ defmodule LightningWeb.API.CredentialController do
 
   def index(conn, _params) do
     current_user = conn.assigns.current_resource
-    credentials = Credentials.list_credentials(current_user)
+
+    credentials =
+      current_user
+      |> Credentials.list_credentials()
+      |> scope_to_visible_projects(current_user)
 
     render(conn, "index.json", credentials: credentials)
   end
@@ -133,7 +161,8 @@ defmodule LightningWeb.API.CredentialController do
 
     with {:ok, validated_params} <-
            validate_and_authorize_projects(params, current_user),
-         {:ok, credential} <- Credentials.create_credential(validated_params) do
+         {:ok, credential} <-
+           Credentials.create_credential(validated_params, current_user) do
       conn
       |> put_status(:created)
       |> render("create.json", credential: credential)
@@ -170,7 +199,7 @@ defmodule LightningWeb.API.CredentialController do
          credential when not is_nil(credential) <-
            Credentials.get_credential(id),
          :ok <- validate_credential_ownership(credential, current_user),
-         {:ok, _} <- Credentials.delete_credential(credential) do
+         {:ok, _} <- Credentials.delete_credential(credential, current_user) do
       send_resp(conn, :no_content, "")
     else
       {:error, :invalid_uuid} ->
@@ -193,6 +222,56 @@ defmodule LightningWeb.API.CredentialController do
       :error -> {:error, :invalid_uuid}
     end
   end
+
+  # A shared credential may be linked to projects in other tenants; rendering
+  # those would leak their id/name/description across the tenant boundary. Prune
+  # each credential's project associations to the caller-visible set here so the
+  # JSON view can render whatever it is handed.
+  #
+  # The visible set is the caller's memberships (any depth), matching the
+  # :access_project check so a caller's own sandbox associations are not
+  # dropped, plus any `extra_project_ids` already access-checked by the caller
+  # (e.g. the requested project on the project-scoped endpoint).
+  defp scope_to_visible_projects(
+         credentials,
+         current_user,
+         extra_project_ids \\ []
+       ) do
+    visible =
+      current_user
+      |> Projects.member_project_ids()
+      |> Enum.concat(extra_project_ids)
+      |> MapSet.new()
+
+    Enum.map(credentials, fn credential ->
+      projects =
+        filter_accessible_projects(
+          credential.projects,
+          visible,
+          fn project -> project.id end
+        )
+
+      project_credentials =
+        filter_accessible_projects(
+          credential.project_credentials,
+          visible,
+          fn project_credential -> project_credential.project_id end
+        )
+
+      %{
+        credential
+        | projects: projects,
+          project_credentials: project_credentials
+      }
+    end)
+  end
+
+  defp filter_accessible_projects(assoc, visible, key_fun) when is_list(assoc) do
+    Enum.filter(assoc, fn record -> MapSet.member?(visible, key_fun.(record)) end)
+  end
+
+  # Leave unloaded associations untouched; the view renders them as [].
+  defp filter_accessible_projects(assoc, _visible, _key_fun), do: assoc
 
   defp validate_credential_ownership(credential, current_user) do
     if credential.user_id == current_user.id do

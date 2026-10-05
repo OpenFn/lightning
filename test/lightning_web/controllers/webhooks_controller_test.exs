@@ -1,7 +1,6 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
-  import Ecto.Query
   import Lightning.Factories
   import Mox
 
@@ -27,7 +26,8 @@ defmodule LightningWeb.WebhooksControllerTest do
   describe "a POST request to '/i'" do
     setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
 
-    test "returns 200 when run soft limit has been reached", %{conn: conn} do
+    test "returns 200 and the rejection reason when run soft limit has been reached",
+         %{conn: conn} do
       Mox.stub(MockUsageLimiter, :limit_action, &StubUsageLimiter.limit_action/2)
 
       %{triggers: [trigger]} =
@@ -37,11 +37,22 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       conn = post(conn, "/i/#{trigger.id}")
 
-      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+      response = json_response(conn, 200)
+
+      assert %{"work_order_id" => work_order_id, "error" => "too_many_runs"} =
+               response
+
       assert Ecto.UUID.dump(work_order_id)
+
+      refute Map.has_key?(response, "message"),
+             "the limiter's project-facing copy must not reach /i/*"
+
+      work_order = WorkOrders.get(work_order_id, include: [:runs])
+      assert work_order.state == :rejected
+      assert work_order.runs == []
     end
 
-    test "returns 402 when run limit has been reached", %{conn: conn} do
+    test "returns 429 when run limit has been reached", %{conn: conn} do
       Mox.stub(MockUsageLimiter, :limit_action, fn _action, _ctx ->
         {:error, :runs_hard_limit,
          %Lightning.Extensions.Message{text: "Runs limit exceeded"}}
@@ -52,7 +63,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       conn = post(conn, "/i/#{trigger.id}")
 
-      assert json_response(conn, 402) == %{
+      assert json_response(conn, 429) == %{
                "error" => "runs_hard_limit",
                "message" => "Runs limit exceeded"
              }
@@ -81,7 +92,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       assert {:ok, %Tesla.Env{status: 413, body: "Request Entity Too Large"}} =
                [
-                 {Tesla.Middleware.BaseUrl, "http://localhost:4002"},
+                 {Tesla.Middleware.BaseUrl, LightningWeb.Endpoint.url()},
                  Tesla.Middleware.JSON
                ]
                |> Tesla.client()
@@ -164,6 +175,57 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       assert Runs.get_dataclip_request(run) ==
                ~s({\"path\": [\"i\", \"#{trigger_id}\"], \"method\": \"POST\", \"headers\": {\"content-type\": \"multipart/mixed; boundary=plug_conn_test\"}, \"query_params\": {}})
+    end
+
+    test "creates a pending workorder from a project-namespaced custom path", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      %{triggers: [%{id: trigger_id} = trigger]} =
+        insert(:simple_workflow, project: project)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      {:ok, _} =
+        trigger
+        |> Lightning.Workflows.Trigger.changeset(%{
+          custom_path: "et-emr-facility-001"
+        })
+        |> Repo.update()
+
+      conn =
+        post(conn, "/i/#{project.id}/et-emr-facility-001", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      assert %{trigger: %{id: ^trigger_id}, state: :pending} =
+               WorkOrders.get(work_order_id, include: [:trigger])
+    end
+
+    test "the generated URL still works once a custom path is set", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      %{triggers: [%{id: trigger_id} = trigger]} =
+        insert(:simple_workflow, project: project)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      {:ok, _} =
+        trigger
+        |> Lightning.Workflows.Trigger.changeset(%{
+          custom_path: "et-emr-facility-001"
+        })
+        |> Repo.update()
+
+      conn = post(conn, "/i/#{trigger_id}", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      assert %{trigger: %{id: ^trigger_id}} =
+               WorkOrders.get(work_order_id, include: [:trigger])
     end
 
     test "creates a pending workorder with a valid trigger and an additional path",
@@ -402,89 +464,60 @@ defmodule LightningWeb.WebhooksControllerTest do
   describe "delayed webhook response (webhook_reply: :after_completion)" do
     setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
 
-    test "waits for and returns the final state on success", %{conn: conn} do
-      %{triggers: [trigger]} =
+    test "waits for and returns the broadcast response body and status code", %{
+      conn: conn
+    } do
+      %{triggers: [trigger], project_id: project_id} =
         insert(:simple_workflow)
         |> Lightning.Repo.preload(:triggers)
         |> with_snapshot()
 
-      # Update trigger to use after_completion
       trigger =
         trigger
         |> Ecto.Changeset.change(webhook_reply: :after_completion)
         |> Repo.update!()
 
-      message = %{"foo" => "bar"}
+      Lightning.WorkOrders.Events.subscribe(project_id)
 
-      # Spawn a task that will post to the webhook
-      # This task will be blocked waiting for the webhook response
       test_pid = self()
 
       task =
         Task.async(fn ->
-          conn = post(conn, "/i/#{trigger.id}", message)
+          conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
           send(test_pid, {:response, conn})
         end)
 
-      # Wait for the work order to be created
-      Process.sleep(100)
-
-      # Find the work order
-      work_order =
-        Lightning.Repo.one(
-          from wo in Lightning.WorkOrder,
-            where: wo.trigger_id == ^trigger.id,
-            order_by: [desc: wo.inserted_at],
-            limit: 1
-        )
-
-      assert work_order
-
-      # Get the run for metadata
-      run =
-        Lightning.Repo.one(
-          from r in Lightning.Run,
-            where: r.work_order_id == ^work_order.id,
-            limit: 1
-        )
-
-      # Simulate the worker completing the run with final state
-      final_state_data = %{"result" => "success", "data" => %{"x" => 42}}
-
-      response_body = %{
-        data: final_state_data,
-        meta: %{
-          work_order_id: work_order.id,
-          run_id: run.id,
-          state: :success,
-          error_type: nil,
-          inserted_at: run.inserted_at,
-          started_at: run.started_at,
-          claimed_at: run.claimed_at,
-          finished_at: run.finished_at
-        }
+      assert_receive %Lightning.WorkOrders.Events.WorkOrderCreated{
+        work_order: work_order
       }
+
+      assert_receive %Lightning.WorkOrders.Events.RunCreated{run: run}
+
+      body = %{"result" => "success", "value" => 42}
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
         "work_order:#{work_order.id}:webhook_response",
-        {:webhook_response, 200, response_body}
+        {:webhook_response, 200, body}
       )
 
-      # Now the task should complete with the response
       assert_receive {:response, response_conn}, 5_000
 
-      response = json_response(response_conn, 200)
-      assert response["data"] == final_state_data
-      assert response["meta"]["work_order_id"] == work_order.id
-      assert response["meta"]["run_id"] == run.id
-      assert response["meta"]["state"] == "success"
+      assert json_response(response_conn, 200) == body
+
+      assert get_resp_header(response_conn, "x-meta-work-order-id") == [
+               work_order.id
+             ]
+
+      assert get_resp_header(response_conn, "x-meta-run-id") == [run.id]
 
       Task.await(task)
     end
 
-    test "waits for and returns error state on failure", %{conn: conn} do
-      %{triggers: [trigger]} =
+    test "passes through any status code from the broadcast message", %{
+      conn: conn
+    } do
+      %{triggers: [trigger], project_id: project_id} =
         insert(:simple_workflow)
         |> Lightning.Repo.preload(:triggers)
         |> with_snapshot()
@@ -494,65 +527,39 @@ defmodule LightningWeb.WebhooksControllerTest do
         |> Ecto.Changeset.change(webhook_reply: :after_completion)
         |> Repo.update!()
 
-      message = %{"foo" => "bar"}
+      Lightning.WorkOrders.Events.subscribe(project_id)
+
       test_pid = self()
 
       task =
         Task.async(fn ->
-          conn = post(conn, "/i/#{trigger.id}", message)
+          conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
           send(test_pid, {:response, conn})
         end)
 
-      Process.sleep(100)
-
-      work_order =
-        Lightning.Repo.one(
-          from wo in Lightning.WorkOrder,
-            where: wo.trigger_id == ^trigger.id,
-            order_by: [desc: wo.inserted_at],
-            limit: 1
-        )
-
-      assert work_order
-
-      # Get the run for metadata
-      run =
-        Lightning.Repo.one(
-          from r in Lightning.Run,
-            where: r.work_order_id == ^work_order.id,
-            limit: 1
-        )
-
-      error_data = %{"error" => "Something went wrong"}
-
-      response_body = %{
-        data: error_data,
-        meta: %{
-          work_order_id: work_order.id,
-          run_id: run.id,
-          state: :failed,
-          error_type: "RuntimeError",
-          inserted_at: run.inserted_at,
-          started_at: run.started_at,
-          claimed_at: run.claimed_at,
-          finished_at: run.finished_at
-        }
+      assert_receive %Lightning.WorkOrders.Events.WorkOrderCreated{
+        work_order: work_order
       }
+
+      assert_receive %Lightning.WorkOrders.Events.RunCreated{run: run}
+
+      body = %{"message" => "run failed"}
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
         "work_order:#{work_order.id}:webhook_response",
-        {:webhook_response, 422, response_body}
+        {:webhook_response, 422, body}
       )
 
       assert_receive {:response, response_conn}, 5_000
 
-      response = json_response(response_conn, 422)
-      assert response["data"] == error_data
-      assert response["meta"]["work_order_id"] == work_order.id
-      assert response["meta"]["run_id"] == run.id
-      assert response["meta"]["state"] == "failed"
-      assert response["meta"]["error_type"] == "RuntimeError"
+      assert json_response(response_conn, 422) == body
+
+      assert get_resp_header(response_conn, "x-meta-work-order-id") == [
+               work_order.id
+             ]
+
+      assert get_resp_header(response_conn, "x-meta-run-id") == [run.id]
 
       Task.await(task)
     end
@@ -560,7 +567,6 @@ defmodule LightningWeb.WebhooksControllerTest do
     test "returns timeout if workflow doesn't complete within timeout period", %{
       conn: conn
     } do
-      # Set a shorter timeout for this test (2 seconds instead of default)
       expect(Lightning.MockConfig, :webhook_response_timeout_ms, fn -> 2_000 end)
 
       %{triggers: [trigger]} =
@@ -573,20 +579,123 @@ defmodule LightningWeb.WebhooksControllerTest do
         |> Ecto.Changeset.change(webhook_reply: :after_completion)
         |> Repo.update!()
 
-      message = %{"foo" => "bar"}
+      conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
 
-      # This will timeout since we never broadcast a response
-      conn = post(conn, "/i/#{trigger.id}", message)
+      [work_order_id] = get_resp_header(conn, "x-meta-work-order-id")
 
       assert json_response(conn, 504) == %{
                "error" => "timeout",
                "message" => "Workflow did not complete within timeout period",
-               "work_order_id" => json_response(conn, 504)["work_order_id"]
+               "work_order_id" => work_order_id
              }
 
-      # Verify work order was still created
-      work_order_id = json_response(conn, 504)["work_order_id"]
       assert WorkOrders.get(work_order_id)
+    end
+
+    for status_code <- [204, 304] do
+      test "sends empty body when broadcast status is #{status_code}", %{
+        conn: conn
+      } do
+        %{triggers: [trigger], project_id: project_id} =
+          insert(:simple_workflow)
+          |> Lightning.Repo.preload(:triggers)
+          |> with_snapshot()
+
+        trigger =
+          trigger
+          |> Ecto.Changeset.change(webhook_reply: :after_completion)
+          |> Repo.update!()
+
+        Lightning.WorkOrders.Events.subscribe(project_id)
+
+        test_pid = self()
+
+        task =
+          Task.async(fn ->
+            conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+            send(test_pid, {:response, conn})
+          end)
+
+        assert_receive %Lightning.WorkOrders.Events.WorkOrderCreated{
+          work_order: work_order
+        }
+
+        assert_receive %Lightning.WorkOrders.Events.RunCreated{run: _run}
+
+        Phoenix.PubSub.broadcast(
+          Lightning.PubSub,
+          "work_order:#{work_order.id}:webhook_response",
+          {:webhook_response, unquote(status_code), nil}
+        )
+
+        assert_receive {:response, response_conn}, 5_000
+
+        assert response_conn.status == unquote(status_code)
+        assert response_conn.resp_body == ""
+
+        Task.await(task)
+      end
+    end
+
+    test "replies with the rejection instead of waiting when no run was created",
+         %{conn: conn} do
+      Mox.stub(MockUsageLimiter, :limit_action, &StubUsageLimiter.limit_action/2)
+
+      Mox.stub(Lightning.MockConfig, :webhook_response_timeout_ms, fn ->
+        60_000
+      end)
+
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Repo.update!()
+
+      {elapsed_us, conn} =
+        :timer.tc(fn -> post(conn, "/i/#{trigger.id}", %{"foo" => "bar"}) end)
+
+      assert elapsed_us < 5_000_000,
+             "request waited on a response nothing can send"
+
+      response = json_response(conn, 429)
+
+      assert %{"error" => "too_many_runs", "work_order_id" => work_order_id} =
+               response
+
+      refute Map.has_key?(response, "message"),
+             "the limiter's project-facing copy must not reach /i/*"
+
+      work_order = WorkOrders.get(work_order_id, include: [:runs])
+      assert work_order.state == :rejected
+      assert work_order.runs == []
+    end
+
+    test "returns immediately when webhook_reply is :custom, which has no publisher",
+         %{conn: conn} do
+      Mox.stub(Lightning.MockConfig, :webhook_response_timeout_ms, fn ->
+        60_000
+      end)
+
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :custom)
+      |> Repo.update!()
+
+      {elapsed_us, conn} =
+        :timer.tc(fn -> post(conn, "/i/#{trigger.id}", %{"foo" => "bar"}) end)
+
+      assert elapsed_us < 5_000_000,
+             "request waited on a response nothing can send"
+
+      [work_order_id] = get_resp_header(conn, "x-meta-work-order-id")
+      assert %{"work_order_id" => ^work_order_id} = json_response(conn, 200)
     end
 
     test "returns immediately when webhook_reply is before_start (default)", %{
@@ -597,16 +706,225 @@ defmodule LightningWeb.WebhooksControllerTest do
         |> Lightning.Repo.preload(:triggers)
         |> with_snapshot()
 
-      # Ensure trigger is using default before_start
       assert trigger.webhook_reply == :before_start
 
-      message = %{"foo" => "bar"}
+      conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
 
-      # Should return immediately
-      conn = post(conn, "/i/#{trigger.id}", message)
-
-      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+      [work_order_id] = get_resp_header(conn, "x-meta-work-order-id")
+      assert %{"work_order_id" => ^work_order_id} = json_response(conn, 200)
       assert WorkOrders.get(work_order_id)
     end
+  end
+
+  describe "sensitive request headers" do
+    setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
+
+    test "the x-api-key consumed by webhook auth is not persisted in dataclip.request",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      auth_method =
+        insert(:webhook_auth_method,
+          auth_type: :api,
+          api_key: "sup3r-s3cret-api-key"
+        )
+
+      associate_auth_methods(trigger, [auth_method])
+
+      conn =
+        conn
+        |> put_req_header("x-api-key", "sup3r-s3cret-api-key")
+        |> post("/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      %{runs: [run]} = WorkOrders.get(work_order_id, include: [:runs])
+
+      request = Runs.get_dataclip_request(run) |> Jason.decode!()
+
+      assert request["headers"]["x-api-key"] == "[REDACTED]",
+             "the api key Lightning already consumed to authenticate must not be retained"
+
+      refute Runs.get_dataclip_request(run) =~ "sup3r-s3cret-api-key"
+    end
+
+    test "the Basic Authorization consumed by webhook auth is redacted from dataclip.request",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      auth_method =
+        insert(:webhook_auth_method,
+          auth_type: :basic,
+          username: "caller",
+          password: "sup3r-s3cret-password"
+        )
+
+      associate_auth_methods(trigger, [auth_method])
+
+      credentials = Base.encode64("caller:sup3r-s3cret-password")
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Basic #{credentials}")
+        |> post("/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      %{runs: [run]} = WorkOrders.get(work_order_id, include: [:runs])
+
+      request = Runs.get_dataclip_request(run) |> Jason.decode!()
+
+      assert request["headers"]["authorization"] == "Basic [REDACTED]",
+             "the Basic credentials Lightning already consumed must not be " <>
+               "retained; the scheme is not a secret, so it stays legible"
+
+      raw = Runs.get_dataclip_request(run)
+      refute raw =~ credentials
+      refute raw =~ "sup3r-s3cret-password"
+    end
+
+    test "a caller's own x-api-key survives when it is not the trigger's secret",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      auth_method =
+        insert(:webhook_auth_method,
+          auth_type: :basic,
+          username: "caller",
+          password: "sup3r-s3cret-password"
+        )
+
+      associate_auth_methods(trigger, [auth_method])
+
+      credentials = Base.encode64("caller:sup3r-s3cret-password")
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Basic #{credentials}")
+        |> put_req_header("x-api-key", "a-token-for-the-job-to-forward")
+        |> post("/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      %{runs: [run]} = WorkOrders.get(work_order_id, include: [:runs])
+
+      request = Runs.get_dataclip_request(run) |> Jason.decode!()
+
+      assert request["headers"]["authorization"] == "Basic [REDACTED]"
+
+      assert request["headers"]["x-api-key"] ==
+               "a-token-for-the-job-to-forward",
+             "redaction is by value, not by header name: a token Lightning " <>
+               "never consumed belongs to the caller and their job"
+    end
+
+    test "our api key is redacted from both headers webhook auth reads",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      auth_method =
+        insert(:webhook_auth_method,
+          auth_type: :api,
+          api_key: "sup3r-s3cret-api-key"
+        )
+
+      associate_auth_methods(trigger, [auth_method])
+
+      conn =
+        conn
+        |> put_req_header("x-api-key", "sup3r-s3cret-api-key")
+        |> put_req_header("authorization", "Bearer sup3r-s3cret-api-key")
+        |> put_req_header("x-copy-of-it", "sup3r-s3cret-api-key")
+        |> post("/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      %{runs: [run]} = WorkOrders.get(work_order_id, include: [:runs])
+
+      request = Runs.get_dataclip_request(run) |> Jason.decode!()
+
+      assert request["headers"]["x-api-key"] == "[REDACTED]"
+
+      assert request["headers"]["authorization"] == "Bearer [REDACTED]",
+             "auth matched on x-api-key, but the copy in the other header we " <>
+               "read would otherwise be persisted intact"
+
+      assert request["headers"]["x-copy-of-it"] == "sup3r-s3cret-api-key",
+             "a header webhook auth does not read is passed through verbatim, " <>
+               "secret-shaped or not"
+    end
+
+    test "cookie and proxy-authorization are redacted from dataclip.request",
+         %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      conn =
+        conn
+        |> put_req_header("cookie", "session=a-third-party-session-cookie")
+        |> put_req_header("proxy-authorization", "Basic cHJveHk6c2VjcmV0")
+        |> post("/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      %{runs: [run]} = WorkOrders.get(work_order_id, include: [:runs])
+
+      request = Runs.get_dataclip_request(run) |> Jason.decode!()
+
+      assert request["headers"]["cookie"] == "[REDACTED]",
+             "caller session cookies are a load-balancer/front-end concern, not run state"
+
+      assert request["headers"]["proxy-authorization"] == "[REDACTED]"
+
+      raw = Runs.get_dataclip_request(run)
+      refute raw =~ "a-third-party-session-cookie"
+      refute raw =~ "cHJveHk6c2VjcmV0"
+    end
+
+    test "non-sensitive caller headers are still passed through verbatim", %{
+      conn: conn
+    } do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      conn =
+        conn
+        |> put_req_header("x-request-id", "caller-supplied-id")
+        |> put_req_header("user-agent", "acme-integration/1.2")
+        |> post("/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      %{runs: [run]} = WorkOrders.get(work_order_id, include: [:runs])
+
+      request = Runs.get_dataclip_request(run) |> Jason.decode!()
+
+      assert request["headers"]["x-request-id"] == "caller-supplied-id"
+      assert request["headers"]["user-agent"] == "acme-integration/1.2"
+    end
+  end
+
+  defp associate_auth_methods(trigger, auth_methods) do
+    trigger
+    |> Repo.preload(:webhook_auth_methods)
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_assoc(:webhook_auth_methods, auth_methods)
+    |> Repo.update!()
   end
 end

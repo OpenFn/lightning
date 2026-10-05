@@ -2,6 +2,8 @@ defmodule Lightning.Credentials.SchemaTest do
   use Lightning.DataCase, async: true
 
   import ExUnit.CaptureLog
+  import Lightning.AdaptorTestHelpers
+  import Lightning.Factories
   import Mox
 
   alias Lightning.Credentials
@@ -9,11 +11,23 @@ defmodule Lightning.Credentials.SchemaTest do
   alias Lightning.Credentials.SchemaDocument
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
     Mox.stub(Lightning.MockSentry, :capture_message, fn _msg, _opts -> :ok end)
     :ok
+  end
+
+  defp seed_adaptor_schema(name) do
+    # Persist the raw JSON binary (not a decoded map) so
+    # `Jason.decode!(_, objects: :ordered_objects)` downstream can
+    # preserve the schema's property order.
+    schema_body =
+      Path.join(["test", "fixtures", "schemas", "#{name}.json"])
+      |> File.read!()
+
+    insert(:adaptor, name: name, source: :npm, schema_data: schema_body)
   end
 
   setup do
@@ -138,7 +152,7 @@ defmodule Lightning.Credentials.SchemaTest do
         with_log(fn -> Schema.new(schema_map) end)
 
       assert schema.types == %{count: :float, label: :string}
-      refute log =~ "count"
+      refute log =~ "Unknown JSON Schema type"
 
       schema_map = put_in(schema_map["properties"]["count"]["type"], "Bogus")
 
@@ -186,7 +200,11 @@ defmodule Lightning.Credentials.SchemaTest do
                items: {:array, :string}
              }
 
-      assert log == ""
+      # Not `log == ""`. with_log/1 captures everything logged in the window,
+      # including from async tests running alongside this one, so an unrelated
+      # warning elsewhere failed this. What matters is that these types were
+      # recognised, so assert on the message that would say otherwise.
+      refute log =~ "Unknown JSON Schema type"
     end
 
     test "resolves anyOf types by picking the first concrete type" do
@@ -301,9 +319,41 @@ defmodule Lightning.Credentials.SchemaTest do
     end
   end
 
+  describe "Credentials.get_schema/1" do
+    test "preserves JSON property order from the persisted schema body" do
+      ordered_body = ~s({
+        "properties": {
+          "zeta": {"type": "string"},
+          "alpha": {"type": "string"},
+          "mu": {"type": "string"}
+        },
+        "type": "object"
+      })
+
+      insert(:adaptor,
+        name: "ordered-fixture",
+        source: :npm,
+        schema_data: ordered_body
+      )
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
+        {:error, :unreachable}
+      end)
+
+      {:ok, schema} = Credentials.get_schema("ordered-fixture")
+
+      assert schema.fields == [:zeta, :alpha, :mu]
+    end
+  end
+
   describe "validate/2" do
+    setup do
+      Enum.each(~w(godata postgresql http dhis2), &seed_adaptor_schema/1)
+      :ok
+    end
+
     test "successfully validates field with json schema email format" do
-      schema = Credentials.get_schema("godata")
+      {:ok, schema} = Credentials.get_schema("godata")
 
       changeset =
         Ecto.Changeset.put_change(
@@ -320,7 +370,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "returns a changeset with 2 expected formats" do
-      schema = Credentials.get_schema("postgresql")
+      {:ok, schema} = Credentials.get_schema("postgresql")
 
       changeset =
         Ecto.Changeset.put_change(
@@ -338,7 +388,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "returns a changeset with 1 expected format and 2 allowed types" do
-      schema = Credentials.get_schema("http")
+      {:ok, schema} = Credentials.get_schema("http")
 
       changeset =
         Ecto.Changeset.put_change(
@@ -356,7 +406,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "treats object types as text (TEMP FIX)" do
-      schema = Credentials.get_schema("http")
+      {:ok, schema} = Credentials.get_schema("http")
 
       assert schema.types == %{
                username: :string,
@@ -368,7 +418,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "returns a changeset with expected email format" do
-      schema = Credentials.get_schema("godata")
+      {:ok, schema} = Credentials.get_schema("godata")
 
       changeset =
         Ecto.Changeset.put_change(
@@ -386,7 +436,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "returns a changeset with no expected format and 2 allowed types" do
-      schema = Credentials.get_schema("dhis2")
+      {:ok, schema} = Credentials.get_schema("dhis2")
 
       changeset =
         Ecto.Changeset.put_change(

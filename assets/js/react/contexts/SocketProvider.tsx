@@ -11,11 +11,12 @@ interface SocketContextValue {
   socket: PhoenixSocket | null;
   isConnected: boolean;
   connectionError: string | null;
-  connect: () => void;
-  disconnect: () => void;
 }
 
-const SocketContext = createContext<SocketContextValue | null>(null);
+// Exported for tests that need to supply a connected socket context directly
+// (e.g. integration tests that render the real SessionProvider without
+// standing up a real PhoenixSocket).
+export const SocketContext = createContext<SocketContextValue | null>(null);
 
 export const useSocket = () => {
   const context = useContext(SocketContext);
@@ -34,12 +35,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  const connect = () => {
-    // Check if we already have a socket
-    if (socket?.isConnected()) {
-      return;
-    }
-
+  useEffect(() => {
     // Get user token from window (set by Lightning's root layout)
     const userToken = (window as any).userToken;
     if (!userToken) {
@@ -47,7 +43,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       return;
     }
 
-    // Create new socket
     const newSocket = new PhoenixSocket('/socket', {
       params: { token: userToken },
       logger: (kind: any, msg: any, data: any) => {
@@ -58,7 +53,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       },
     });
 
-    // Set up event handlers
     newSocket.onOpen(() => {
       console.log('✅ Socket connected');
       setIsConnected(true);
@@ -76,36 +70,18 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       setIsConnected(false);
     });
 
-    // Connect the socket
     newSocket.connect();
     setSocket(newSocket);
-  };
 
-  const disconnect = () => {
-    if (socket) {
-      socket.disconnect(true);
-      setSocket(null);
-      setIsConnected(false);
-    }
-  };
-
-  // Auto-connect when component mounts
-  useEffect(() => {
-    connect();
-
-    // Cleanup on unmount
     return () => {
-      disconnect();
+      newSocket.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value: SocketContextValue = {
     socket,
     isConnected,
     connectionError,
-    connect,
-    disconnect,
   };
 
   return (

@@ -3,7 +3,11 @@ defmodule ResolverTest do
 
   alias Lightning.Credentials.Resolver
 
+  require Logger
+
+  import Lightning.ApplicationHelpers, only: [capture_info_log: 1]
   import Lightning.Factories
+  import ExUnit.CaptureLog
 
   describe "resolve_credential/1 with regular credential" do
     test "returns ResolvedCredential with credential body" do
@@ -28,7 +32,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       credential = Repo.preload(credential, :credential_bodies)
@@ -59,7 +63,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
 
       # Empty strings should be removed
       expected_body = %{
@@ -105,7 +109,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should have all the data
@@ -140,7 +144,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should remove empty values
@@ -196,7 +200,7 @@ defmodule ResolverTest do
 
       credential = Repo.preload(credential, :oauth_client)
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should have refreshed token data merged with credential body
@@ -248,10 +252,16 @@ defmodule ResolverTest do
 
       credential = Repo.preload(credential, :oauth_client)
 
-      assert {:error, {:reauthorization_required, credential}} =
-               Resolver.resolve_credential(credential)
+      {result, log} =
+        capture_info_log(fn ->
+          Resolver.resolve_credential(credential, "main")
+        end)
 
+      assert {:error, {:reauthorization_required, credential}} = result
       assert credential.name == "Test Googlesheets Credential"
+
+      assert log =~ "[info]"
+      assert log =~ "OAuth refresh token has expired"
     end
 
     test "when refresh fails with rate limit returns temporary_failure error", %{
@@ -282,8 +292,15 @@ defmodule ResolverTest do
 
       credential = Repo.preload(credential, :oauth_client)
 
-      assert {:error, {:temporary_failure, _credential}} =
-               Resolver.resolve_credential(credential)
+      {result, log} =
+        capture_info_log(fn ->
+          Resolver.resolve_credential(credential, "main")
+        end)
+
+      assert {:error, {:temporary_failure, _credential}} = result
+
+      assert log =~ "[info]"
+      assert log =~ "Could not reach the OAuth provider"
     end
 
     test "when refresh fails with other error returns generic error", %{
@@ -315,7 +332,7 @@ defmodule ResolverTest do
       credential = Repo.preload(credential, :oauth_client)
 
       assert {:error, {original_error, _credential}} =
-               Resolver.resolve_credential(credential)
+               Resolver.resolve_credential(credential, "main")
 
       # Should return the original error for generic failures
       assert original_error != :reauthorization_required
@@ -328,7 +345,7 @@ defmodule ResolverTest do
       credential = insert(:keychain_credential)
 
       assert_raise FunctionClauseError, fn ->
-        Resolver.resolve_credential(credential)
+        Resolver.resolve_credential(credential, "main")
       end
     end
   end
@@ -520,6 +537,86 @@ defmodule ResolverTest do
 
       assert resolved.body == main_body.body
       assert resolved.credential.id == default_credential.id
+    end
+
+    test "refuses a default credential the keychain's project cannot use", %{
+      default_credential: default_credential,
+      job: job,
+      keychain_credential: keychain_credential,
+      project: project,
+      workflow: workflow
+    } do
+      # The row stays as it is; only the sharing goes away. This is the state a
+      # keychain written before the changeset guard worked would be in, or one
+      # whose credential was later unshared from the project. Checking at write
+      # time cannot help here, so resolution has to check for itself.
+      Repo.delete_all(
+        from(pc in Lightning.Projects.ProjectCredential,
+          where:
+            pc.project_id == ^project.id and
+              pc.credential_id == ^default_credential.id
+        )
+      )
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          dataclip:
+            build(:dataclip, %{
+              body: %{"user_id" => "nobody_matches_this"}
+            }),
+          starting_job: job
+        })
+
+      assert {:ok, nil} =
+               Resolver.resolve_credential(run, keychain_credential.id)
+    end
+
+    test "refuses a keychain belonging to another project entirely", %{
+      workflow: workflow,
+      job: job
+    } do
+      # A job holding a keychain from somewhere else. The keychain's own
+      # default really is shared with its own project, so anchoring the check
+      # on the keychain would pass it and hand this run a credential its
+      # project was never given. Every write path blocks this reference now, so
+      # it takes a row written before those guards existed, which is the case
+      # this half is here for.
+      other_user = insert(:user)
+      other_project = insert(:project)
+
+      other_credential =
+        insert(:credential, name: "Theirs", schema: "raw", user: other_user)
+        |> with_body(%{name: "main", body: %{"secret" => "not yours"}})
+
+      insert(:project_credential,
+        project: other_project,
+        credential: other_credential
+      )
+
+      foreign_keychain =
+        insert(:keychain_credential,
+          name: "Someone else's keychain",
+          path: "$.nothing",
+          default_credential: other_credential,
+          project: other_project,
+          created_by: other_user
+        )
+
+      # Point this project's job at it, the way a stale row would.
+      job
+      |> Ecto.Changeset.change(%{keychain_credential_id: foreign_keychain.id})
+      |> Repo.update!()
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          dataclip: build(:dataclip, %{body: %{"user_id" => "no match"}}),
+          starting_job: job
+        })
+
+      assert {:ok, nil} =
+               Resolver.resolve_credential(run, foreign_keychain.id)
     end
 
     test "returns nil when there is no matching or default credential", %{
@@ -724,6 +821,111 @@ defmodule ResolverTest do
 
       assert {:error, :not_found} =
                Resolver.resolve_credential(run, other_credential.id)
+    end
+
+    test "logs environment_mismatch at warning level when credential lacks the project environment body",
+         %{user: user} do
+      project =
+        insert(:project, env: "staging", project_users: [%{user: user}])
+
+      credential =
+        insert(:credential, user: user, name: "Mismatch Credential")
+        |> with_body(%{name: "main", body: %{"key" => "value"}})
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{
+          project_credential: %{credential: credential, project: project}
+        })
+        |> insert()
+
+      dataclip = insert(:dataclip)
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{dataclip: dataclip, starting_job: job})
+
+      {result, log} =
+        with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
+
+      assert {:error, {:environment_mismatch, _credential}} = result
+
+      assert log =~ "[warning]"
+      assert log =~ "Credential environment does not match project environment"
+    end
+
+    test "logs environment_not_configured at warning level for a non-root project with no env",
+         %{user: user} do
+      parent = insert(:project, env: "main")
+
+      project =
+        insert(:project,
+          parent_id: parent.id,
+          env: nil,
+          project_users: [%{user: user}]
+        )
+
+      credential =
+        insert(:credential, user: user, name: "Unconfigured Env Credential")
+        |> with_body(%{name: "main", body: %{"key" => "value"}})
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{
+          project_credential: %{credential: credential, project: project}
+        })
+        |> insert()
+
+      dataclip = insert(:dataclip)
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{dataclip: dataclip, starting_job: job})
+
+      {result, log} =
+        with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
+
+      assert {:error, {:environment_not_configured, nil}} = result
+
+      assert log =~ "[warning]"
+      assert log =~ "Project has no environment configured"
+    end
+
+    test "logs project_not_found at error level when the run's project is missing" do
+      # No project_users / project_credentials so the project can be removed
+      # without tripping restrict FKs; project lookup is what we exercise.
+      project = insert(:project)
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job()
+        |> insert()
+
+      dataclip = insert(:dataclip)
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{dataclip: dataclip, starting_job: job})
+
+      # Remove the project so the run's in-memory struct resolves to a
+      # missing project (workflow/workorder/run cascade-delete, but the
+      # struct still drives get_project_for_run/1 -> nil).
+      Repo.delete_all(
+        from(p in Lightning.Projects.Project, where: p.id == ^project.id)
+      )
+
+      fake_credential_id = Ecto.UUID.generate()
+
+      {result, log} =
+        with_log(fn -> Resolver.resolve_credential(run, fake_credential_id) end)
+
+      assert {:error, {:project_not_found, nil}} = result
+
+      assert log =~ "[error]"
+      assert log =~ "Project not found for run"
     end
   end
 end

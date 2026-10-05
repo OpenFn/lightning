@@ -1,7 +1,7 @@
 import YAML from 'yaml';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
-import { convertWorkflowStateToSpec } from '../../yaml/util';
+import { convertWorkflowStateToSpec } from '../../yaml/v1';
 
 interface WorkflowMetadata {
   id: string;
@@ -106,10 +106,40 @@ export function prepareWorkflowForSerialization(
 }
 
 /**
+ * Serializes the canvas for change detection, omitting positions so moving a
+ * node does not read as an edit.
+ *
+ * Both sides of a comparison must come from here: the assistant's own YAML is
+ * written by Apollo's serializer, and `importWorkflow` mutates further on the
+ * way in, so comparing against either would report changes nobody made.
+ */
+export function serializeCanvasForComparison(canvas: {
+  workflow: WorkflowMetadata | null;
+  jobs: unknown[];
+  triggers: unknown[];
+  edges: unknown[];
+}): string | undefined {
+  const prepared = prepareWorkflowForSerialization(
+    canvas.workflow,
+    canvas.jobs,
+    canvas.triggers,
+    canvas.edges,
+    {}
+  );
+
+  return prepared ? serializeWorkflowToYAML(prepared) : undefined;
+}
+
+/**
  * Serializes a workflow to YAML format for AI Assistant context.
  *
- * This utility converts the workflow state from the Zustand store into YAML format
- * that can be sent to the AI Assistant as context. It's used in multiple places:
+ * Emits the **v1** format (top-level `jobs`/`triggers`/`edges`, with ids), not
+ * the v2 portability format used everywhere else. Apollo's workflow_chat
+ * service still reads and writes v1: it swaps job bodies and ids for
+ * placeholders so the model cannot mangle them, and that only works on v1.
+ * Switch this to v2 only once Apollo supports it.
+ *
+ * Used in multiple places:
  * - Initial session connection with workflow context
  * - Sending messages with updated workflow state
  * - Creating new conversations
@@ -117,53 +147,42 @@ export function prepareWorkflowForSerialization(
  *
  * @param workflow - The workflow data including jobs, triggers, edges, and positions
  * @returns YAML string representation of the workflow, or undefined if serialization fails
- *
- * @example
- * ```ts
- * const yaml = serializeWorkflowToYAML({
- *   id: workflow.id,
- *   name: workflow.name,
- *   jobs: jobs.map(job => ({ id: job.id, name: job.name, adaptor: job.adaptor, body: job.body })),
- *   triggers: triggers,
- *   edges: edges,
- *   positions: positions
- * });
- * ```
  */
 export function serializeWorkflowToYAML(
   workflow: SerializableWorkflow
 ): string | undefined {
   try {
-    const workflowSpec = convertWorkflowStateToSpec(
-      {
-        id: workflow.id,
-        name: workflow.name,
-        jobs: workflow.jobs,
-        triggers: workflow.triggers,
-        edges: workflow.edges.map(edge => ({
-          id: edge.id,
-          condition_type: edge.condition_type || 'always',
-          enabled: edge.enabled !== false,
-          target_job_id: edge.target_job_id,
-          ...(edge.source_job_id && {
-            source_job_id: edge.source_job_id,
-          }),
-          ...(edge.source_trigger_id && {
-            source_trigger_id: edge.source_trigger_id,
-          }),
-          ...(edge.condition_label && {
-            condition_label: edge.condition_label,
-          }),
-          ...(edge.condition_expression && {
-            condition_expression: edge.condition_expression,
-          }),
-        })),
-        positions: workflow.positions,
-      },
-      true // Include IDs so AI responses preserve them (matches legacy behavior)
-    );
+    const state: YAMLWorkflowState = {
+      id: workflow.id,
+      name: workflow.name,
+      jobs: workflow.jobs.map(job => ({
+        id: job.id,
+        name: job.name,
+        adaptor: job.adaptor,
+        body: job.body,
+        keychain_credential_id: null,
+        project_credential_id: null,
+      })),
+      triggers: workflow.triggers,
+      edges: workflow.edges.map(edge => ({
+        id: edge.id,
+        condition_type: edge.condition_type || 'always',
+        enabled: edge.enabled !== false,
+        target_job_id: edge.target_job_id,
+        ...(edge.source_job_id && { source_job_id: edge.source_job_id }),
+        ...(edge.source_trigger_id && {
+          source_trigger_id: edge.source_trigger_id,
+        }),
+        ...(edge.condition_label && { condition_label: edge.condition_label }),
+        ...(edge.condition_expression && {
+          condition_expression: edge.condition_expression,
+        }),
+      })),
+      positions: workflow.positions,
+    };
 
-    return YAML.stringify(workflowSpec);
+    // Include IDs so AI responses preserve them
+    return YAML.stringify(convertWorkflowStateToSpec(state, true));
   } catch (error) {
     console.error('Failed to serialize workflow to YAML:', error);
     return undefined;

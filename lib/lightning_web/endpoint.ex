@@ -85,7 +85,8 @@ defmodule LightningWeb.Endpoint do
 
   LightningWeb.Utils.add_dynamic_plugs(@pre_parsers_plugs)
 
-  plug Sentry.PlugContext
+  plug Sentry.PlugContext,
+    header_scrubber: {LightningWeb.SentryScrubber, :scrub_headers}
 
   plug Plugs.WebhookAuth
 

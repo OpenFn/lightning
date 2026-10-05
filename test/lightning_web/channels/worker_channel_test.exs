@@ -7,9 +7,21 @@ defmodule LightningWeb.WorkerChannelTest do
   alias LightningWeb.WorkerPresence
 
   import Lightning.Factories
+  import Lightning.TokenHelpers
 
   # this ensures the WorkAvailable server inherits the mox stubs
   setup :set_mox_from_context
+
+  # Sockets are built with `socket/3` rather than through `WorkerSocket.connect/2`,
+  # so `verify_worker_token/2` never runs here — the claims are assigned directly.
+  # They are still minted in the shape ws-worker sends so no test in the tree encodes a
+  # token shape `@openfn/ws-worker` does not send.
+  defp ws_worker_socket do
+    claims = ws_worker_claims()
+
+    LightningWeb.WorkerSocket
+    |> socket("socket_id", %{token: raw_worker_token(claims), claims: claims})
+  end
 
   describe "joining" do
     test "with an invalid claim" do
@@ -25,18 +37,9 @@ defmodule LightningWeb.WorkerChannelTest do
     end
 
     test "tracks worker presence with default capacity" do
-      {:ok, bearer, claims} =
-        Workers.WorkerToken.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
-
-      socket =
-        LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer, claims: claims})
-
       {:ok, _, _socket} =
-        socket |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue")
+        ws_worker_socket()
+        |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue")
 
       # Give presence a moment to sync
       Process.sleep(50)
@@ -45,18 +48,8 @@ defmodule LightningWeb.WorkerChannelTest do
     end
 
     test "tracks worker presence with custom capacity" do
-      {:ok, bearer, claims} =
-        Workers.WorkerToken.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
-
-      socket =
-        LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer, claims: claims})
-
       {:ok, _, _socket} =
-        socket
+        ws_worker_socket()
         |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue", %{
           "capacity" => 10
         })
@@ -70,18 +63,9 @@ defmodule LightningWeb.WorkerChannelTest do
 
   describe "worker:queue channel" do
     setup do
-      {:ok, bearer, claims} =
-        Workers.WorkerToken.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
-
-      socket =
-        LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer, claims: claims})
-
       {:ok, _, socket} =
-        socket |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue")
+        ws_worker_socket()
+        |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue")
 
       %{socket: socket}
     end

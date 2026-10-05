@@ -37,18 +37,26 @@ import React, {
 } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+import _logger from '#/utils/logger';
 
+import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
+import flowEvents from '../components/diagram/react-flow-events';
+import { useLiveViewActions } from '../contexts/LiveViewActionsContext';
 import { StoreContext } from '../contexts/StoreProvider';
-import {
-  formatChannelErrorMessage,
-  isChannelRequestError,
-} from '../lib/errors';
+import { isChannelRequestError } from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import { usePinnedView } from '../lib/pinnedView';
 import type { WorkflowStoreInstance } from '../stores/createWorkflowStore';
 import type { Workflow } from '../types/workflow';
 
-import { useSession } from './useSession';
 import {
+  selectIsConnected,
+  selectIsConnecting,
+  useSession,
+} from './useSession';
+import {
+  useContentLocked,
+  useExperimentalFeatures,
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
@@ -57,8 +65,29 @@ import {
   useWorkflowTemplate,
 } from './useSessionContext';
 
-// import _logger from "#/utils/logger";
-// const logger = _logger.ns("useWorkflow").seal();
+const logger = _logger.ns('useWorkflow').seal();
+
+// Stable id for the generic "Failed to save workflow" toast so a later
+// successful save can dismiss it even if it was shown with duration:
+// Infinity (new-workflow case). Also collapses repeated failures into one
+// updated toast instead of stacking a new permanent toast per attempt.
+const SAVE_WORKFLOW_ERROR_TOAST_ID = 'save-workflow-error';
+
+export type SaveNotifyLevel = 'all' | 'error-only' | 'none';
+
+export const CONTENT_LOCKED_MESSAGE =
+  'This workflow is live. Switch to draft or edit in a sandbox to make changes.';
+
+export interface SaveWorkflowOptions {
+  /**
+   * Which toasts the shared save handler may show.
+   * - 'all' (default): success and failure toasts
+   * - 'error-only': failure toasts only (creation flows: the flow has its
+   *   own success transition, but failures must surface with Retry)
+   * - 'none': caller owns all outcome feedback (save-before-run flows)
+   */
+  notify?: SaveNotifyLevel;
+}
 
 /**
  * Hook to access the WorkflowStore context.
@@ -155,7 +184,6 @@ export const useWorkflowSelector = <T,>(
  * @example
  * // Simple state selections - ideal use cases
  * const jobs = useWorkflowState(state => state.jobs);
- * const enabled = useWorkflowState(state => state.enabled);
  * const triggers = useWorkflowState(state => state.triggers);
  *
  * @example
@@ -212,16 +240,6 @@ export const usePositions = () => {
 // =============================================================================
 // SPECIALIZED HOOKS
 // =============================================================================
-
-export const useWorkflowEnabled = () => {
-  return useWorkflowSelector(
-    (state, store) => ({
-      enabled: state.enabled,
-      setEnabled: store.setEnabled,
-    }),
-    []
-  );
-};
 
 /**
  * Hook for accessing current selected job with YText body.
@@ -344,6 +362,16 @@ export const useNodeSelection = () => {
   };
 };
 
+export const useWorkflowEnabled = () => {
+  return useWorkflowSelector(
+    (state, store) => ({
+      enabled: state.enabled,
+      setEnabled: store.setEnabled,
+    }),
+    []
+  );
+};
+
 // =============================================================================
 // ACTION HOOKS (COMMANDS)
 // =============================================================================
@@ -351,13 +379,13 @@ export const useNodeSelection = () => {
 export const useWorkflowActions = () => {
   const store = useWorkflowStoreContext();
   const context = useContext(StoreContext);
+  const { navigate } = useLiveViewActions();
 
   if (!context) {
     throw new Error('useWorkflowActions must be used within StoreProvider');
   }
 
   const sessionContextStore = context.sessionContextStore;
-  const uiStore = context.uiStore;
 
   return {
     updateJob: store.updateJob,
@@ -373,7 +401,6 @@ export const useWorkflowActions = () => {
     removeEdge: store.removeEdge,
 
     updateTrigger: store.updateTrigger,
-    setEnabled: store.setEnabled,
 
     updatePositions: store.updatePositions,
     updatePosition: store.updatePosition,
@@ -385,6 +412,7 @@ export const useWorkflowActions = () => {
     removeJobAndClearSelection: store.removeJobAndClearSelection,
 
     setError: store.setError,
+    clearErrorField: store.clearErrorField,
     setClientErrors: (...args: Parameters<typeof store.setClientErrors>) => {
       // Note: there was something stale here
       store.setClientErrors(...args);
@@ -393,10 +421,8 @@ export const useWorkflowActions = () => {
     saveWorkflow: (() => {
       const handleSaveSuccess = (
         response: Awaited<ReturnType<typeof store.saveWorkflow>>,
-        silent = false
+        notify: SaveNotifyLevel
       ) => {
-        if (!response) return;
-
         // Update session context with new lock version if present
         if (response.lock_version !== undefined) {
           sessionContextStore.setLatestSnapshotLockVersion(
@@ -417,28 +443,31 @@ export const useWorkflowActions = () => {
           const projectId = currentState.project?.id;
 
           if (workflowId && projectId) {
-            // Update URL to include project_id and remove template-related params
+            // Update URL to include project_id
             const url = new URL(window.location.href);
             const searchParams = new URLSearchParams(url.search);
-            searchParams.delete('method'); // Close left panel
-            searchParams.delete('template'); // Clear template selection
-            searchParams.delete('search'); // Clear template search
             const queryString = searchParams.toString();
             const newUrl = `/projects/${projectId}/w/${workflowId}${queryString ? `?${queryString}` : ''}`;
-            window.history.replaceState(null, '', newUrl);
-
-            // Clear template state in UI store
-            uiStore.selectTemplate(null);
-            uiStore.setTemplateSearchQuery('');
-            uiStore.collapseCreateWorkflowPanel();
+            navigate(newUrl, { replace: true });
 
             // Clear isNewWorkflow flag after successful save
             sessionContextStore.clearIsNewWorkflow();
+
+            // First save of a new workflow: the canvas was just populated
+            // (import or manual build); fit it as the editor transitions to
+            // the saved URL.
+            flowEvents.dispatch('fit-view');
           }
         }
 
-        // Show success notification unless silent mode
-        if (!silent) {
+        // Clear any stale "Failed to save workflow" toast from a prior
+        // failed attempt now that a save has gone through — regardless of
+        // notify level, since even a silent (notify: 'error-only') success
+        // should retire a previously-shown persistent failure toast.
+        notifications.dismiss(SAVE_WORKFLOW_ERROR_TOAST_ID);
+
+        // Show success notification only when the caller wants all toasts
+        if (notify === 'all') {
           notifications.info({
             title: 'Workflow saved',
             description: response.saved_at
@@ -449,40 +478,64 @@ export const useWorkflowActions = () => {
       };
 
       // Helper: Handle save errors with appropriate notifications
+      //
+      // The Retry action below always calls wrappedSaveWorkflow with no
+      // options, so a successful retry runs with notify: 'all' regardless of
+      // the notify level the original (failed) call used. For creation flows
+      // (notify: 'error-only'), this means a successful retry does NOT run
+      // the flow's own success callback (dismissLandingScreen, closeModal,
+      // etc.) — those components must unmount themselves off the
+      // isNewWorkflow gate (cleared by handleSaveSuccess above) rather than
+      // relying on the original caller's promise resolving.
       const handleSaveError = (
         error: unknown,
-        retrySaveWorkflow: () => Promise<unknown>
+        retrySaveWorkflow: () => Promise<unknown>,
+        notify: SaveNotifyLevel
       ) => {
-        // Format channel errors into user-friendly messages
-        if (isChannelRequestError(error)) {
-          error.message = formatChannelErrorMessage({
-            errors: error.errors as { base?: string[] } & Record<
-              string,
-              string[]
-            >,
-            type: error.type,
-          });
+        if (notify === 'none') return;
 
+        // A failed save on a brand-new workflow leaves imported nodes with
+        // no DB record; the toast is the only recovery path, so it must not
+        // auto-dismiss.
+        const persistence = sessionContextStore.getSnapshot().isNewWorkflow
+          ? { duration: Infinity }
+          : {};
+
+        if (isChannelRequestError(error)) {
           if (error.type === 'unauthorized') {
             notifications.alert({
+              id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Permission Denied',
               description: error.message,
+              ...persistence,
             });
           } else if (error.type === 'validation_error') {
             notifications.alert({
+              id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Save failed: invalid workflow',
               description: (
                 <div style={{ whiteSpace: 'pre-wrap' }}>{error.message}</div>
               ),
+              ...persistence,
             });
           } else {
             notifications.alert({
+              id: SAVE_WORKFLOW_ERROR_TOAST_ID,
               title: 'Failed to save workflow',
               description: error.message,
+              ...persistence,
               action: {
                 label: 'Retry',
-                onClick: () => {
-                  void retrySaveWorkflow();
+                onClick: event => {
+                  // Sonner dismisses the toast on action click by default;
+                  // since retry failures reuse this toast's id, that default
+                  // dismissal races the next handleSaveError call and can
+                  // swallow it. Prevent it so the toast stays until
+                  // handleSaveSuccess explicitly dismisses it.
+                  event.preventDefault();
+                  // Failure feedback is re-issued by handleSaveError on the
+                  // next pass.
+                  retrySaveWorkflow().catch(() => {});
                 },
               },
             });
@@ -490,15 +543,25 @@ export const useWorkflowActions = () => {
         } else {
           // Handle non-channel errors
           notifications.alert({
+            id: SAVE_WORKFLOW_ERROR_TOAST_ID,
             title: 'Failed to save workflow',
             description:
               error instanceof Error
                 ? error.message
                 : 'Please check your connection and try again',
+            ...persistence,
             action: {
               label: 'Retry',
-              onClick: () => {
-                void retrySaveWorkflow();
+              onClick: event => {
+                // Sonner dismisses the toast on action click by default;
+                // since retry failures reuse this toast's id, that default
+                // dismissal races the next handleSaveError call and can
+                // swallow it. Prevent it so the toast stays until
+                // handleSaveSuccess explicitly dismisses it.
+                event.preventDefault();
+                // Failure feedback is re-issued by handleSaveError on the
+                // next pass.
+                retrySaveWorkflow().catch(() => {});
               },
             },
           });
@@ -506,27 +569,34 @@ export const useWorkflowActions = () => {
       };
 
       // Main wrapped saveWorkflow function
-      const wrappedSaveWorkflow = async (options?: { silent?: boolean }) => {
+      const wrappedSaveWorkflow = async (options?: SaveWorkflowOptions) => {
+        const notify = options?.notify ?? 'all';
         try {
           const response = await store.saveWorkflow();
-
-          if (!response) {
-            // saveWorkflow returns null when not connected
-            // Connection status is already shown in UI, no toast needed
-            return null;
-          }
-
-          handleSaveSuccess(response, options?.silent);
+          handleSaveSuccess(response, notify);
           return response;
         } catch (error) {
-          handleSaveError(error, wrappedSaveWorkflow);
-          // Re-throw error for any upstream error handling
+          handleSaveError(error, wrappedSaveWorkflow, notify);
+          // Re-throw so callers can reset local state (button spinners,
+          // modal import state). Notification is already handled above.
           throw error;
         }
       };
 
       return wrappedSaveWorkflow;
     })(),
+
+    goLive: async () => {
+      const response = await store.goLive();
+      await sessionContextStore.requestSessionContext();
+      return response;
+    },
+
+    switchToDraft: async () => {
+      const response = await store.switchToDraft();
+      await sessionContextStore.requestSessionContext();
+      return response;
+    },
 
     // GitHub save and sync action - wrapped to handle lock version updates and errors
     saveAndSyncWorkflow: (commitMessage: string) => {
@@ -548,25 +618,10 @@ export const useWorkflowActions = () => {
           sessionContextStore.setBaseWorkflow(response.workflow);
         }
 
-        // Check if this is a new workflow and update URL
-        const currentState = sessionContextStore.getSnapshot();
-        if (currentState.isNewWorkflow) {
-          const workflowState = store.getSnapshot();
-          const workflowId = workflowState.workflow?.id;
-          const projectId = currentState.project?.id;
-
-          if (workflowId && projectId) {
-            // Update URL to include project_id and remove method param (closes left panel)
-            const url = new URL(window.location.href);
-            const searchParams = new URLSearchParams(url.search);
-            searchParams.delete('method'); // Close left panel
-            const queryString = searchParams.toString();
-            const newUrl = `/projects/${projectId}/w/${workflowId}/legacy${queryString ? `?${queryString}` : ''}`;
-            window.history.pushState({}, '', newUrl);
-            // Mark workflow as no longer new after first save
-            sessionContextStore.clearIsNewWorkflow();
-          }
-        }
+        // No first-save handling here: Save & Sync is unavailable while the
+        // workflow is still new (the header that hosts it is unmounted), so a
+        // sync is always a save of an already-persisted workflow. The
+        // first-save transition lives in the plain save_workflow path.
 
         // Show success toast
         const successOptions: {
@@ -602,16 +657,7 @@ export const useWorkflowActions = () => {
         error: unknown,
         retrySaveAndSync: () => Promise<unknown>
       ) => {
-        // Format channel errors into user-friendly messages
         if (isChannelRequestError(error)) {
-          error.message = formatChannelErrorMessage({
-            errors: error.errors as { base?: string[] } & Record<
-              string,
-              string[]
-            >,
-            type: error.type,
-          });
-
           if (error.type === 'unauthorized') {
             notifications.alert({
               title: 'Permission denied',
@@ -667,6 +713,16 @@ export const useWorkflowActions = () => {
       return wrappedSaveAndSyncWorkflow();
     },
 
+    listSandboxes: store.listSandboxes,
+    editInSandbox: store.editInSandbox,
+
+    promote: store.promote,
+    checkPromote: store.checkPromote,
+    archiveSandbox: store.archiveSandbox,
+
+    restoreVersion: store.restoreVersion,
+    checkRestore: store.checkRestore,
+
     resetWorkflow: store.resetWorkflow,
     importWorkflow: store.importWorkflow,
 
@@ -683,6 +739,99 @@ export const useWorkflowActions = () => {
 };
 
 /**
+ * Canonical "not connected" copy for the workflow-creation paths (landing/
+ * blank, template browser, YAML import, AI assistant). All four show this
+ * exact alert when attempting to create while offline — kept as one string
+ * so it can't drift into a "connection lost" framing, which would be
+ * factually wrong here (nothing was ever connected in a creation flow).
+ */
+export const NOT_CONNECTED_ALERT = {
+  title: 'Not connected',
+  description: 'Connect to the server before creating a workflow.',
+};
+
+/**
+ * Shown instead of `NOT_CONNECTED_ALERT` during the initial channel-join
+ * window, when the session isn't disconnected — it just hasn't finished
+ * connecting yet. Keeps the block (the action still can't proceed) but
+ * avoids telling the user something false.
+ */
+export const STILL_CONNECTING_ALERT = {
+  title: 'Still connecting',
+  description: 'Connecting to the server — try again in a moment.',
+};
+
+/**
+ * Shared pre/post-save flow for workflow-creation paths that always import
+ * then save (landing/blank, template browser, YAML import). The AI assistant
+ * path has a different shape (collaborator coordination, optional creation)
+ * and reuses the `NOT_CONNECTED_ALERT`/`STILL_CONNECTING_ALERT` constants for
+ * its own offline gate, but not this hook.
+ *
+ * `createWorkflowFrom` returns a boolean rather than taking a success
+ * callback — every caller's post-success cleanup differs (close a modal,
+ * reset local form state, dismiss the landing screen), so `if (created) {
+ * ... }` at the call site is simpler than a shared callback shape.
+ *
+ * Takes a thunk rather than a pre-built state so that building the state
+ * (e.g. parsing a template's YAML) happens inside the flow and can report its
+ * own failure. Building and importing fail for different reasons, so they are
+ * caught separately: a template whose stored YAML no longer parses is not a
+ * connection problem and must not be described as one.
+ */
+export function useCreateWorkflowFlow() {
+  const isConnected = useSession(selectIsConnected);
+  const isConnecting = useSession(selectIsConnecting);
+  const { importWorkflow, saveWorkflow } = useWorkflowActions();
+
+  // Not a useCallback: importWorkflow/saveWorkflow come from
+  // useWorkflowActions(), which rebuilds them every render, so memoizing
+  // this against them would never actually stabilize the reference anyway.
+  const createWorkflowFrom = async (
+    buildState: () => YAMLWorkflowState
+  ): Promise<boolean> => {
+    if (!isConnected) {
+      notifications.alert(
+        isConnecting ? STILL_CONNECTING_ALERT : NOT_CONNECTED_ALERT
+      );
+      return false;
+    }
+    let state: YAMLWorkflowState;
+    try {
+      state = buildState();
+    } catch (error) {
+      logger.error('Failed to build workflow state for import', error);
+      notifications.alert({
+        title: 'Failed to create workflow',
+        description:
+          'This workflow could not be read. Please check the YAML and try again.',
+      });
+      return false;
+    }
+    try {
+      await importWorkflow(state);
+    } catch (error) {
+      logger.error('Failed to import workflow', error);
+      notifications.alert({
+        title: 'Failed to create workflow',
+        description: 'Please check your connection and try again.',
+      });
+      return false;
+    }
+    try {
+      await saveWorkflow({ notify: 'error-only' });
+    } catch (error) {
+      // Shared handler has already shown a persistent Retry toast.
+      logger.error('Failed to save new workflow', error);
+      return false;
+    }
+    return true;
+  };
+
+  return { createWorkflowFrom };
+}
+
+/**
  * Internal hook that computes workflow state conditions used by both
  * useCanSave and useCanRun.
  *
@@ -694,7 +843,7 @@ export const useWorkflowActions = () => {
  * - hasPermission: User has can_edit_workflow permission
  * - isConnected: Session is synced with backend
  * - isDeleted: Workflow has been deleted
- * - isPinnedVersion: Viewing a pinned version (any ?v parameter in URL)
+ * - isPinnedView: Reading the past rather than the live workflow
  *
  * @internal This is shared logic between useCanSave and useCanRun
  */
@@ -702,22 +851,22 @@ const useWorkflowConditions = () => {
   const { isSynced } = useSession();
   const permissions = usePermissions();
   const workflow = useWorkflowState(state => state.workflow);
-  const { params } = useURLState();
 
   const hasEditPermission = permissions?.can_edit_workflow ?? false;
   const hasRunPermission = permissions?.can_run_workflow ?? false;
+  const contentLocked = useContentLocked();
   const isConnected = isSynced;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
 
-  // Check if version is pinned via URL parameter
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+  const { isPinnedView } = usePinnedView();
 
   return {
     hasEditPermission,
     hasRunPermission,
     isConnected,
     isDeleted,
-    isPinnedVersion,
+    isPinnedView,
+    contentLocked,
   };
 };
 
@@ -731,12 +880,17 @@ const useWorkflowConditions = () => {
  * Checks:
  * 1. User permissions (can_edit_workflow)
  * 2. Connection state (isSynced)
- * 3. Version pinning (any ?v parameter in URL)
+ * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view)
  * 4. Workflow deletion state (deleted_at)
  */
 export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
-  const { hasEditPermission, isConnected, isDeleted, isPinnedVersion } =
-    useWorkflowConditions();
+  const {
+    hasEditPermission,
+    isConnected,
+    isDeleted,
+    isPinnedView,
+    contentLocked,
+  } = useWorkflowConditions();
 
   // Check if any apply operation in progress
   const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
@@ -757,9 +911,12 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canSave = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isPinnedVersion) {
+  } else if (isPinnedView) {
     canSave = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
+  } else if (contentLocked) {
+    canSave = false;
+    tooltipMessage = CONTENT_LOCKED_MESSAGE;
   } else if (isApplyingJobCode) {
     canSave = false;
     tooltipMessage = 'Applying AI-generated code...';
@@ -781,22 +938,40 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  * Checks:
  * 1. User permissions (can_edit_workflow or can_run_workflow)
  * 2. Connection state (isSynced)
- * 3. Version pinning (any ?v parameter in URL)
+ * 3. Reading the past, unless the control retries a loaded run
  * 4. Workflow deletion state (deleted_at)
  * 5. Run limits (from session context)
+ *
+ * Deliberately not the read-only lock: running is not editing.
  */
-export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
+export interface CanRunOptions {
+  forRetry?: boolean;
+}
+
+export const useCanRun = (
+  options: CanRunOptions = {}
+): { canRun: boolean; tooltipMessage: string } => {
+  const { forRetry = false } = options;
   const {
     hasEditPermission,
     hasRunPermission,
     isConnected,
     isDeleted,
-    isPinnedVersion,
+    isPinnedView,
   } = useWorkflowConditions();
 
   // Get run limits from session context (defaults to allowed if missing)
   const limits = useLimits();
   const runLimits = limits.runs ?? { allowed: true, message: null };
+
+  const isNewWorkflow = useIsNewWorkflow();
+  const experimentalFeatures = useExperimentalFeatures();
+  const jobs = useWorkflowState(state => state.jobs);
+  const triggers = useWorkflowState(state => state.triggers);
+  // Not behind the flag: the base refused this through the read-only lock that
+  // this hook no longer consults.
+  const isUnsavedNewWorkflow =
+    isNewWorkflow && (jobs.length > 0 || triggers.length > 0);
 
   // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
   const hasPermission = hasEditPermission || hasRunPermission;
@@ -814,9 +989,12 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canRun = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isPinnedVersion) {
+  } else if (isPinnedView && !(forRetry && experimentalFeatures)) {
     canRun = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
+  } else if (isUnsavedNewWorkflow) {
+    canRun = false;
+    tooltipMessage = 'Create this workflow before running it';
   } else if (!runLimits.allowed && runLimits.message) {
     canRun = false;
     tooltipMessage = runLimits.message;
@@ -834,27 +1012,41 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  *
  * Checks (in priority order):
  * 1. Workflow deletion state (deleted_at)
- * 2. User permissions (can_edit_workflow)
- * 3. Version pinning (any ?v parameter in URL)
- * 4. Template preview (new workflow with selected template)
+ * 2. User permissions (can_edit_workflow), asked before the lock so a viewer is
+ *    never pointed at actions only an editor can take
+ * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view),
+ *    which is about the document on screen and so answers before the lifecycle:
+ *    switching to draft would not make an old version editable
+ * 4. The lifecycle lock (content_locked), which is an editor's way out
+ * 5. Template preview (new workflow with selected template)
  *
  * Note: Connection state does not affect read-only status. Offline editing
  * is fully supported - Y.Doc buffers transactions locally and syncs when
  * reconnected.
  */
+export type WorkflowReadOnlyReason =
+  | 'deleted'
+  | 'live'
+  | 'no_permission'
+  | 'pinned_version'
+  | 'as_run'
+  | 'unsaved_new'
+  | null;
+
 export const useWorkflowReadOnly = (): {
   isReadOnly: boolean;
   tooltipMessage: string;
+  reason: WorkflowReadOnlyReason;
 } => {
   // Get permissions and workflow state
   const permissions = usePermissions();
   const workflow = useWorkflowState(state => state.workflow);
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
-  const { params } = useURLState();
 
-  // Check if version is pinned via URL parameter
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+  const contentLocked = useContentLocked();
+
+  const { isPinnedVersion, isViewingAsExecuted } = usePinnedView();
 
   // Check if this is a new workflow with content (from template or AI)
   // Users must click "Create" before they can edit
@@ -865,7 +1057,7 @@ export const useWorkflowReadOnly = (): {
   // Don't show read-only state until permissions are loaded
   // This prevents flickering during initial load
   if (permissions === null) {
-    return { isReadOnly: false, tooltipMessage: '' };
+    return { isReadOnly: false, tooltipMessage: '', reason: null };
   }
 
   // Compute read-only conditions
@@ -877,28 +1069,47 @@ export const useWorkflowReadOnly = (): {
     return {
       isReadOnly: true,
       tooltipMessage: 'This workflow has been deleted and cannot be edited',
+      reason: 'deleted',
     };
   }
   if (!hasPermission) {
     return {
       isReadOnly: true,
       tooltipMessage: 'You do not have permission to edit this workflow',
+      reason: 'no_permission',
+    };
+  }
+  if (isViewingAsExecuted) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: 'You are viewing this workflow as a past run executed it',
+      reason: 'as_run',
     };
   }
   if (isPinnedVersion) {
     return {
       isReadOnly: true,
       tooltipMessage: 'You are viewing a pinned version of this workflow',
+      reason: 'pinned_version',
+    };
+  }
+  if (contentLocked) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: CONTENT_LOCKED_MESSAGE,
+      reason: 'live',
     };
   }
   if (isUnsavedNewWorkflow) {
     return {
       isReadOnly: true,
-      tooltipMessage: 'Click "Create" to edit this workflow',
+      tooltipMessage:
+        'This workflow has not been saved yet and cannot be edited',
+      reason: 'unsaved_new',
     };
   }
 
-  return { isReadOnly: false, tooltipMessage: '' };
+  return { isReadOnly: false, tooltipMessage: '', reason: null };
 };
 
 /**

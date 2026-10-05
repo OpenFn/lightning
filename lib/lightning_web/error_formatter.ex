@@ -23,10 +23,8 @@ defmodule LightningWeb.ErrorFormatter do
     })
   end
 
-  def format(:environment_not_configured, %{project: project}) do
-    dgettext("errors", "environment_not_configured", %{
-      settings_url: project_settings_url(project)
-    })
+  def format(:environment_not_configured, _context) do
+    dgettext("errors", "environment_not_configured")
   end
 
   def format(:project_not_found, _context) do
@@ -46,9 +44,5 @@ defmodule LightningWeb.ErrorFormatter do
 
   defp credentials_url(project) do
     url(~p"/projects/#{project}/settings#credentials")
-  end
-
-  defp project_settings_url(project) do
-    url(~p"/projects/#{project}/settings")
   end
 end

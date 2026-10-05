@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const INITIAL_LOADING_STATUSES = [
   'Thinking about the question...',
@@ -14,6 +14,8 @@ const getRandomStatus = () =>
     Math.floor(Math.random() * INITIAL_LOADING_STATUSES.length)
   ];
 
+import { randomUUID } from '#/common';
+
 import { useURLState } from '../../react/lib/use-url-state';
 import {
   useMonacoRef,
@@ -26,8 +28,12 @@ import {
   useAISessionId,
   useAISessionType,
   useAIStore,
+  useAIStreamingApply,
   useAIStreamingChanges,
   useAIStreamingContent,
+  useAIStreamingSegments,
+  useAIStreamingSnapshots,
+  useAISnapshotsByMessageId,
   useAIStreamingStatus,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
@@ -38,16 +44,19 @@ import { useAIPanelDiffManager } from '../hooks/useAIPanelDiffManager';
 import { useAIPanelURLSync } from '../hooks/useAIPanelURLSync';
 import { useAISession } from '../hooks/useAISession';
 import { useAIWorkflowApplications } from '../hooks/useAIWorkflowApplications';
+import { useAIWorkflowUndo } from '../hooks/useAIWorkflowUndo';
+import { useAppliedCanvas } from '../hooks/useAppliedCanvas';
 import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
-  useExperimentalFeaturesEnabled,
-  useHasReadAIDisclaimer,
+  selectIsConnected,
+  selectIsConnecting,
+  useSession,
+} from '../hooks/useSession';
+import {
   useIsNewWorkflow,
   useLimits,
-  useMarkAIDisclaimerRead,
   useProject,
-  useSessionContextLoaded,
   useUser,
 } from '../hooks/useSessionContext';
 import {
@@ -61,7 +70,9 @@ import {
   useWorkflowState,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
-import type { JobCodeContext } from '../types/ai-assistant';
+import { usePinnedView } from '../lib/pinnedView';
+import type { JobCodeContext, Message } from '../types/ai-assistant';
+import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
 import { Z_INDEX } from '../utils/constants';
 import {
   prepareWorkflowForSerialization,
@@ -69,6 +80,7 @@ import {
 } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
+import { AlertDialog } from './AlertDialog';
 import { MessageList } from './MessageList';
 
 /**
@@ -83,6 +95,21 @@ import { MessageList } from './MessageList';
  * - Persists width in localStorage
  * - Syncs open/closed state with URL query param (?chat=true)
  */
+/**
+ * Add pastes into the open job, so it only makes sense when the answer was
+ * written for that job. Global replies are page-independent and apply their own
+ * changes, and a reply carrying a code field has its own Apply.
+ */
+export const showAddButtons = ({
+  page,
+  isGlobal,
+  hasCodeMessage,
+}: {
+  page: string | undefined;
+  isGlobal: boolean;
+  hasCodeMessage: boolean;
+}): boolean => page === 'job_code' && !isGlobal && !hasCodeMessage;
+
 export function AIAssistantPanelWrapper({
   aiAssistantEnabled = false,
 }: {
@@ -94,14 +121,15 @@ export function AIAssistantPanelWrapper({
     closeAIAssistantPanel,
     toggleAIAssistantPanel,
     clearAIAssistantInitialMessage,
-    collapseCreateWorkflowPanel,
   } = useUICommands();
   const { updateSearchParams, params } = useURLState();
-  const currentVersion = params['v'];
 
-  // Check if viewing a pinned version (not latest) to disable AI Assistant
-  const isPinnedVersion =
-    currentVersion !== undefined && currentVersion !== null;
+  const pinnedView = usePinnedView();
+  const isPinnedVersion = pinnedView.isPinnedView;
+  const currentVersion = pinnedView.version ?? undefined;
+
+  const { isReadOnly } = useWorkflowReadOnly();
+  const isNewWorkflow = useIsNewWorkflow();
 
   // Track IDE state changes to re-focus chat input when IDE closes
   const isIDEOpen = params.panel === 'editor';
@@ -121,14 +149,10 @@ export function AIAssistantPanelWrapper({
   useKeyboardShortcut(
     '$mod+k',
     () => {
-      // Close create workflow panel when opening AI Assistant
-      if (!isAIAssistantPanelOpen) {
-        collapseCreateWorkflowPanel();
-      }
       toggleAIAssistantPanel();
     },
     0,
-    { enabled: !isPinnedVersion && aiAssistantEnabled }
+    { enabled: !isPinnedVersion && aiAssistantEnabled && !isNewWorkflow }
   );
 
   const aiStore = useAIStore();
@@ -137,35 +161,71 @@ export function AIAssistantPanelWrapper({
     loadSessions,
     retryMessage: retryMessageViaChannel,
     updateContext: updateContextViaChannel,
+    reportApplyFailure,
+    reportApplyApplied,
   } = useAISessionCommands();
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
   const streamingContent = useAIStreamingContent();
   const streamingStatus = useAIStreamingStatus();
+  const streamingSegments = useAIStreamingSegments();
+  const streamingSnapshots = useAIStreamingSnapshots();
+
+  const snapshotsByMessageId = useAISnapshotsByMessageId();
   const streamingChanges = useAIStreamingChanges();
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
   const connectionState = useAIConnectionState();
-  const sessionContextLoaded = useSessionContextLoaded();
-  const hasReadDisclaimer = useHasReadAIDisclaimer();
-  const experimentalFeaturesEnabled = useExperimentalFeaturesEnabled();
-  const [isGlobalAssistantActive, setIsGlobalAssistantActive] = useState(false);
-  const markAIDisclaimerRead = useMarkAIDisclaimerRead();
+  const isSessionConnected = useSession(selectIsConnected);
+  const isSessionConnecting = useSession(selectIsConnecting);
+  // Routed from here so nothing downstream decides it again.
+  const isGlobalAssistantActive = true;
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
   const user = useUser();
   const workflow = useWorkflowState(state => state.workflow);
   const limits = useLimits();
 
-  // Check readonly state and new workflow status
   // AI can apply changes if: not readonly OR is a new workflow (being created)
-  const { isReadOnly } = useWorkflowReadOnly();
-  const isNewWorkflow = useIsNewWorkflow();
   const canApplyChanges = !isReadOnly || isNewWorkflow;
   const isWriteDisabled = !canApplyChanges;
 
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
+  /**
+   * Open a step from a diff block in the IDE, selecting the node and opening
+   * the editor in one navigation.
+   *
+   * Resolves by id first, then by name. Parsing YAML without `id:` fields
+   * invents ids, and the apply path parses the same YAML separately, so for
+   * a step the reply just added the diff's id and the canvas's id disagree.
+   * Navigating to an id nothing owns opens an empty editor.
+   */
+  /** Whether a diff block's step actually exists on the canvas */
+  const canOpenStep = useCallback(
+    ({ jobId, name }: { jobId?: string; name: string }) =>
+      jobs.some(job => job.id === jobId || job.name === name),
+    [jobs]
+  );
+
+  const handleOpenStep = useCallback(
+    ({ jobId, name }: { jobId?: string; name: string }) => {
+      const match =
+        (jobId && jobs.find(job => job.id === jobId)) ??
+        jobs.find(job => job.name === name);
+      if (!match) return;
+      // Clears the sibling selections too: leaving a stale trigger or edge
+      // behind still resolves to the job, but leaves a URL that is wrong to
+      // share and wrong to go back to.
+      updateSearchParams({
+        panel: 'editor',
+        job: match.id,
+        trigger: null,
+        edge: null,
+      });
+    },
+    [jobs, updateSearchParams]
+  );
   const edges = useWorkflowState(state => state.edges);
   const positions = useWorkflowState(state => state.positions);
 
@@ -300,9 +360,9 @@ export function AIAssistantPanelWrapper({
     [aiStore, project, aiMode, updateSearchParams]
   );
 
-  // Handle initial message from template selection
-  // When user clicks "AI workflow from description" from LeftPanel,
-  // the initial message is stored in UI state and we auto-send it
+  // The landing screen's "Build with AI" card stores the user's prompt in UI
+  // state rather than sending it, because the panel isn't mounted yet. Send it
+  // once the panel is open and the AI connection is ready.
   useAIInitialMessage({
     initialMessage,
     aiMode,
@@ -322,67 +382,36 @@ export function AIAssistantPanelWrapper({
     (
       content: string,
       messageOptions?: {
-        attach_code?: boolean;
         attach_logs?: boolean;
         attach_io_data?: boolean;
-        step_id?: string;
-        use_global_assistant?: boolean;
+        follow_run_id?: string;
       }
     ) => {
       const currentState = aiStore.getSnapshot();
-
-      // For job_code with attach_code, get CURRENT code from Y.Doc
-      let updatedAiMode = aiMode;
-      if (messageOptions?.attach_code && aiMode?.mode === 'job_code') {
-        const context = aiMode.context as JobCodeContext;
-        const jobId = context.job_id;
-
-        if (jobId) {
-          // Get fresh code from jobs array (backed by Y.Doc)
-          const currentJob = jobs.find(j => j.id === jobId);
-          if (currentJob) {
-            // Update aiMode with new context (don't mutate)
-            const projectId =
-              'project_id' in context
-                ? (context.project_id as string)
-                : project!.id;
-            updatedAiMode = {
-              ...aiMode,
-              context: {
-                ...context,
-                project_id: projectId,
-                job_body: currentJob.body,
-              },
-            };
-          }
-          // If job not found, fall back to existing context.job_body
-          // (job could be unsaved or deleted)
-        }
-      }
+      const attached = { ...messageOptions, use_global_assistant: true };
 
       // If no session exists, we need to include content in context for first message
-      if (!currentState.sessionId && updatedAiMode) {
-        const { mode, context, page } = updatedAiMode;
+      if (!currentState.sessionId && aiMode) {
+        const { mode, context, page } = aiMode;
 
         // Prepare context with content and message options for channel join
         let finalContext = {
           ...context,
           content,
-          // Include attach_code/attach_logs so backend knows to include them in first message
-          ...(messageOptions?.attach_code && { attach_code: true }),
-          ...(messageOptions?.attach_logs && { attach_logs: true }),
-          ...(messageOptions?.attach_io_data && { attach_io_data: true }),
-          ...(messageOptions?.step_id && { step_id: messageOptions.step_id }),
-          ...(messageOptions?.use_global_assistant && {
+          ...(attached.attach_logs && { attach_logs: true }),
+          ...(attached.attach_io_data && { attach_io_data: true }),
+          // The first message needs the run the checkbox was gated on too,
+          // otherwise session creation falls back to the URL param.
+          ...(attached.follow_run_id && {
+            follow_run_id: attached.follow_run_id,
+          }),
+          ...(attached.use_global_assistant && {
             use_global_assistant: true,
           }),
         };
 
         // Add workflow YAML if in workflow mode or global assistant
-        if (
-          page === 'workflow_template' ||
-          messageOptions?.use_global_assistant
-        ) {
+        if (page === 'workflow_template' || attached.use_global_assistant) {
           const workflowData = prepareWorkflowForSerialization(
             workflow,
             jobs,
@@ -398,7 +427,7 @@ export function AIAssistantPanelWrapper({
           }
 
           // Derive page for global assistant routing
-          if (messageOptions?.use_global_assistant) {
+          if (attached.use_global_assistant) {
             const jobName = (context as JobCodeContext)?.job_name;
             const workflowName = workflow?.name || 'workflow';
             finalContext = {
@@ -430,21 +459,20 @@ export function AIAssistantPanelWrapper({
       // For existing sessions, prepare options and send
       let options:
         | {
-            attach_code?: boolean;
             attach_logs?: boolean;
             attach_io_data?: boolean;
-            step_id?: string;
             code?: string;
             use_global_assistant?: boolean;
             page?: string;
+            follow_run_id?: string;
           }
         | undefined = {
-        ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
+        ...attached, // attach_logs, attach_io_data, follow_run_id
       };
 
       if (
         aiMode?.page === 'workflow_template' ||
-        messageOptions?.use_global_assistant
+        attached.use_global_assistant
       ) {
         const workflowData = prepareWorkflowForSerialization(
           workflow,
@@ -462,12 +490,20 @@ export function AIAssistantPanelWrapper({
         }
 
         // Derive page for global assistant routing
-        if (messageOptions?.use_global_assistant) {
-          const jobName = (aiMode?.context as JobCodeContext)?.job_name;
+        if (attached.use_global_assistant) {
+          const context = aiMode?.context as JobCodeContext;
+          const jobName = context?.job_name;
           const workflowName = workflow?.name || 'workflow';
           options.page = jobName
             ? `workflows/${workflowName}/${jobName}`
             : `workflows/${workflowName}`;
+
+          // Only follow_run_id, not the whole context: a job_id here would
+          // route the message to job chat. The fallback for a send that
+          // carried no checkbox.
+          if (!options.follow_run_id && context?.follow_run_id) {
+            options.follow_run_id = context.follow_run_id;
+          }
         }
       } else {
         // important: determines what ai to be used
@@ -489,7 +525,6 @@ export function AIAssistantPanelWrapper({
       aiStore,
       aiMode,
       updateSearchParams,
-      project,
     ]
   );
 
@@ -501,17 +536,6 @@ export function AIAssistantPanelWrapper({
     },
     [aiStore, retryMessageViaChannel]
   );
-
-  const handleGlobalAssistantChange = useCallback((active: boolean) => {
-    setIsGlobalAssistantActive(active);
-  }, []);
-
-  const handleMarkDisclaimerRead = useCallback(() => {
-    // Persist to backend via workflow channel and update local state
-    markAIDisclaimerRead();
-    // Also update AI store for consistency
-    aiStore.markDisclaimerRead();
-  }, [aiStore, markAIDisclaimerRead]);
 
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
@@ -548,6 +572,8 @@ export function AIAssistantPanelWrapper({
     startApplyingJobCode,
     doneApplyingJobCode,
     updateJob,
+    saveWorkflow,
+    switchToDraft,
   } = useWorkflowActions();
 
   // Get applying state from workflow store for disabling Apply button across all users
@@ -559,37 +585,113 @@ export function AIAssistantPanelWrapper({
     state => state.applyingJobCodeMessageId
   );
 
+  const onValidationError = useCallback(
+    (errorMessage: string) => {
+      const message: Message = {
+        id: randomUUID(),
+        role: 'assistant',
+        content: errorMessage,
+        status: 'error',
+        inserted_at: new Date().toISOString(),
+      };
+      aiStore._addMessage(message);
+    },
+    [aiStore]
+  );
+
+  // Pending streaming apply record (YAML already imported during streaming),
+  // read by the hook's auto-apply effect to skip the duplicate import when
+  // the final new_message arrives with the same YAML
+  const streamingApply = useAIStreamingApply();
+  const streamingApplyActions = useMemo(
+    () => ({
+      set: aiStore._setStreamingApply,
+      setSaveFailed: aiStore._setStreamingApplySaveFailed,
+      clear: aiStore._clearStreamingApply,
+    }),
+    [aiStore]
+  );
+
+  const appliedCanvas = useAppliedCanvas();
+
+  const {
+    undoneMessageId,
+    requestUndoChanges,
+    isConfirmOpen,
+    isRestoring,
+    confirmUndoChanges,
+    cancelUndoChanges,
+  } = useAIWorkflowUndo({
+    jobs,
+    appliedCanvas,
+    workflowActions: {
+      importWorkflow,
+      startApplyingWorkflow,
+      doneApplyingWorkflow,
+    },
+  });
+
   // Hook to handle workflow/job code application logic
-  const { handleApplyWorkflow, handlePreviewJobCode, handleApplyJobCode } =
-    useAIWorkflowApplications({
-      sessionId,
-      page: aiMode?.page || 'workflow_template',
-      currentSession:
-        sessionId && messages.length > 0
-          ? {
-              messages,
-              workflowTemplateContext,
-            }
-          : null,
-      currentUserId: user?.id,
-      aiMode,
-      workflowActions: {
-        importWorkflow,
-        startApplyingWorkflow,
-        doneApplyingWorkflow,
-        startApplyingJobCode,
-        doneApplyingJobCode,
-        updateJob,
-      },
-      monacoRef,
-      jobs,
-      canApplyChanges,
-      connectionState,
-      setPreviewingMessageId,
-      previewingMessageId,
-      setApplyingMessageId,
-      appliedMessageIdsRef,
-    });
+  const {
+    handleApplyWorkflow,
+    launchApply,
+    failedApplyMessageIds,
+    handlePreviewJobCode,
+    handleApplyJobCode,
+  } = useAIWorkflowApplications({
+    sessionId,
+    page: aiMode?.page || 'workflow_template',
+    currentSession:
+      sessionId && messages.length > 0
+        ? {
+            messages,
+            workflowTemplateContext,
+          }
+        : null,
+    currentUserId: user?.id,
+    aiMode,
+    isGlobalSession: isGlobalAssistantActive,
+    isNewWorkflow,
+    isSessionConnected,
+    isSessionConnecting,
+    onValidationError,
+    onCanvasApplied: appliedCanvas.record,
+    onApplyFailure: reportApplyFailure,
+    onApplyApplied: reportApplyApplied,
+    workflowActions: {
+      importWorkflow,
+      startApplyingWorkflow,
+      doneApplyingWorkflow,
+      startApplyingJobCode,
+      doneApplyingJobCode,
+      updateJob,
+      saveWorkflow,
+    },
+    monacoRef,
+    jobs,
+    canApplyChanges,
+    connectionState,
+    setPreviewingMessageId,
+    previewingMessageId,
+    setApplyingMessageId,
+    appliedMessageIdsRef,
+    streamingApply,
+    streamingApplyActions,
+  });
+
+  // A global reply is not a proposal: its changes are applied as they arrive,
+  // so a diff in the editor offered a choice already made, with only a close
+  // button to make it with. The panel's diff blocks are the record, and the
+  // footer's revert takes it back. Job chat still previews, where the code
+  // really is a proposal.
+  const handleAutoPreview = useCallback(
+    (code: string, messageId: string) => {
+      const message = messages.find(m => m.id === messageId);
+      if (message?.from_global) return;
+      handlePreviewJobCode(code, messageId);
+    },
+    [messages, handlePreviewJobCode]
+  );
 
   // Auto-preview job code when AI responds with code
   // Only for the user who authored the triggering message
@@ -599,7 +701,7 @@ export function AIAssistantPanelWrapper({
       ? { id: sessionId, session_type: 'workflow_template', messages }
       : null,
     currentUserId: user?.id,
-    onPreview: handlePreviewJobCode,
+    onPreview: handleAutoPreview,
   });
 
   // Auto-apply streaming changes as soon as they arrive (before text finishes)
@@ -608,51 +710,53 @@ export function AIAssistantPanelWrapper({
   const appliedStreamingChangesRef = useRef<Record<string, unknown> | null>(
     null
   );
-  // Track whether we applied via streaming so we can skip the duplicate
-  // auto-apply when the final new_message arrives
-  const appliedViaStreamingRef = useRef(false);
   useEffect(() => {
     if (!streamingChanges || !canApplyChanges) return;
-    // Avoid re-applying the same streaming changes object
+    // Avoid re-applying the same streaming changes object. The ref is only
+    // set once a handler is invoked for the change (whatever its outcome —
+    // a failed apply is recovered by the final new_message auto-apply), so
+    // a change that never reached a handler stays eligible if the page
+    // switches mid-stream.
     if (appliedStreamingChangesRef.current === streamingChanges) return;
-    appliedStreamingChangesRef.current = streamingChanges;
 
-    if (aiMode?.page === 'workflow_template' && 'yaml' in streamingChanges) {
+    // Every collaborator's browser receives streaming_changes, but only the
+    // author's client auto-applies: the Y.Doc is shared, so concurrent
+    // applies from multiple viewers of the same session would race. Other
+    // collaborators still see the result through the shared doc. When the
+    // author can't be determined (no user info on the message) we fall back
+    // to applying, preserving single-user behavior.
+    const triggeringUserId = messages.findLast(m => m.role === 'user')?.user
+      ?.id;
+    if (triggeringUserId && user?.id && triggeringUserId !== user.id) return;
+
+    // A stream can arrive while a step is open, and the diagram has to be
+    // right when the user navigates back to it.
+    if ('yaml' in streamingChanges) {
       const yaml = streamingChanges['yaml'] as string;
       if (yaml) {
-        appliedViaStreamingRef.current = true;
-        void handleApplyWorkflow(yaml, '__streaming__');
+        appliedStreamingChangesRef.current = streamingChanges;
+        // handleApplyWorkflow records the streaming apply in the store
+        // (after a successful import) so the final new_message can skip it
+        void handleApplyWorkflow(yaml, STREAMING_MESSAGE_ID);
       }
     } else if (aiMode?.page === 'job_code' && 'code' in streamingChanges) {
+      // Job code previews open job-editor UI, so they stay page-gated.
       const code = streamingChanges['code'] as string;
       if (code) {
-        appliedViaStreamingRef.current = true;
-        handlePreviewJobCode(code, '__streaming__');
+        appliedStreamingChangesRef.current = streamingChanges;
+        handlePreviewJobCode(code, STREAMING_MESSAGE_ID);
       }
     }
   }, [
     streamingChanges,
     aiMode?.page,
     canApplyChanges,
+    isGlobalAssistantActive,
+    messages,
+    user?.id,
     handleApplyWorkflow,
     handlePreviewJobCode,
   ]);
-
-  // When a new assistant message with code arrives after we already applied
-  // via streaming, mark it as already applied to prevent duplicate auto-apply
-  // and update previewingMessageId to the real ID to prevent diff flicker
-  useEffect(() => {
-    if (!appliedViaStreamingRef.current) return;
-
-    const latestAssistantMessage = [...messages]
-      .reverse()
-      .find(m => m.role === 'assistant' && m.code && m.status === 'success');
-
-    if (latestAssistantMessage) {
-      appliedMessageIdsRef.current.add(latestAssistantMessage.id);
-      appliedViaStreamingRef.current = false;
-    }
-  }, [messages, appliedMessageIdsRef]);
 
   return (
     <div
@@ -683,7 +787,7 @@ export function AIAssistantPanelWrapper({
           <div className="flex-1 overflow-hidden">
             <AIAssistantPanel
               isOpen={isAIAssistantPanelOpen}
-              onClose={handleClosePanel}
+              onClose={isNewWorkflow ? undefined : handleClosePanel}
               onNewConversation={handleNewConversation}
               onSessionSelect={handleSessionSelect}
               onShowSessions={handleShowSessions}
@@ -696,20 +800,25 @@ export function AIAssistantPanelWrapper({
               loadSessions={loadSessions}
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
-              showDisclaimer={sessionContextLoaded && !hasReadDisclaimer}
-              onAcceptDisclaimer={handleMarkDisclaimerRead}
               aiLimit={limits.ai_assistant ?? null}
-              showGlobalAssistantOption={experimentalFeaturesEnabled}
-              isGlobalAssistantActive={isGlobalAssistantActive}
-              onGlobalAssistantChange={handleGlobalAssistantChange}
+              switchToDraft={switchToDraft}
             >
               <MessageList
                 messages={messages}
                 isLoading={isLoading}
                 onApplyWorkflow={
-                  aiMode?.page === 'workflow_template' && !isApplyingWorkflow
+                  (aiMode?.page === 'workflow_template' ||
+                    // Global messages apply the full workflow even while a
+                    // job is open; handleApplyWorkflow still no-ops for
+                    // non-global messages outside workflow_template mode.
+                    messages.some(m => m.from_global && m.code)) &&
+                  !isApplyingWorkflow
                     ? (yaml, messageId) => {
-                        void handleApplyWorkflow(yaml, messageId);
+                        // Route through the hook's guarded launcher (not
+                        // handleApplyWorkflow raw) so a manual apply marks the
+                        // message and the auto-apply effect can't later re-fire
+                        // a duplicate import/save for it.
+                        launchApply(messageId, yaml);
                       }
                     : undefined
                 }
@@ -732,12 +841,13 @@ export function AIAssistantPanelWrapper({
                     : undefined
                 }
                 previewingMessageId={previewingMessageId}
-                showAddButtons={
-                  aiMode?.page === 'job_code'
-                    ? // For job_code: hide ADD buttons when message has code field
-                      !messages.some(m => m.role === 'assistant' && m.code)
-                    : false
-                }
+                showAddButtons={showAddButtons({
+                  page: aiMode?.page,
+                  isGlobal: isGlobalAssistantActive,
+                  hasCodeMessage: messages.some(
+                    m => m.role === 'assistant' && m.code
+                  ),
+                })}
                 showApplyButton={
                   aiMode?.page === 'workflow_template' ||
                   (aiMode?.page === 'job_code' && messages.some(m => m.code))
@@ -746,11 +856,45 @@ export function AIAssistantPanelWrapper({
                 isWriteDisabled={isWriteDisabled}
                 streamingContent={streamingContent}
                 streamingStatus={streamingStatus}
+                streamingSegments={streamingSegments}
+                streamingSnapshots={streamingSnapshots}
+                snapshotsByMessageId={snapshotsByMessageId}
+                onOpenStep={handleOpenStep}
+                canOpenStep={canOpenStep}
+                currentUserId={user?.id}
+                failedApplyMessageIds={failedApplyMessageIds}
+                onUndoChanges={requestUndoChanges}
+                undoneMessageId={undoneMessageId}
+                isApplyInFlight={!!applyingMessageId || isApplyingWorkflow}
+                isGlobalAssistantActive={isGlobalAssistantActive}
               />
             </AIAssistantPanel>
           </div>
         </>
       )}
+
+      <AlertDialog
+        isOpen={isConfirmOpen}
+        onClose={cancelUndoChanges}
+        onConfirm={confirmUndoChanges}
+        title={
+          isRestoring
+            ? 'Restoring replaces the whole workflow'
+            : 'Reverting replaces the whole workflow'
+        }
+        // States what the action does rather than claiming edits exist. The
+        // check behind this dialog also fires when it simply cannot tell,
+        // after a reload has lost the record of how the canvas was left, so
+        // copy that asserts the workflow has changed is wrong about half the
+        // time.
+        description={
+          isRestoring
+            ? "It goes back to how it was with these changes applied, so anything you've edited since will be lost."
+            : "It goes back to how it was before these changes, so anything you've edited since will be lost."
+        }
+        confirmLabel={isRestoring ? 'Restore anyway' : 'Revert anyway'}
+        variant="danger"
+      />
     </div>
   );
 }

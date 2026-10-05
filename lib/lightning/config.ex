@@ -8,11 +8,6 @@ defmodule Lightning.Config do
     alias Lightning.Services.AdapterHelper
 
     @impl true
-    def adaptor_registry do
-      Application.get_env(:lightning, Lightning.AdaptorRegistry, [])
-    end
-
-    @impl true
     def token_signer do
       :persistent_term.get({__MODULE__, "token_signer"}, nil)
       |> case do
@@ -82,12 +77,6 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def oauth_provider(key) do
-      Application.get_env(:lightning, :oauth_clients)
-      |> Keyword.get(key)
-    end
-
-    @impl true
     def purge_deleted_after_days do
       Application.get_env(:lightning, :purge_deleted_after_days)
     end
@@ -95,6 +84,34 @@ defmodule Lightning.Config do
     @impl true
     def activity_cleanup_chunk_size do
       Application.get_env(:lightning, :activity_cleanup_chunk_size)
+    end
+
+    @impl true
+    def log_lines_search_indexing_batch_size do
+      log_lines_search_indexing_config() |> Keyword.fetch!(:batch_size)
+    end
+
+    @impl true
+    def log_lines_search_indexing_max_batches do
+      log_lines_search_indexing_config() |> Keyword.fetch!(:max_batches)
+    end
+
+    defp log_lines_search_indexing_config do
+      Application.get_env(:lightning, :log_lines_search_indexing, [])
+    end
+
+    @impl true
+    def dataclip_search_indexing_batch_size do
+      dataclip_search_indexing_config() |> Keyword.fetch!(:batch_size)
+    end
+
+    @impl true
+    def dataclip_search_indexing_max_batches do
+      dataclip_search_indexing_config() |> Keyword.fetch!(:max_batches)
+    end
+
+    defp dataclip_search_indexing_config do
+      Application.get_env(:lightning, :dataclip_search_indexing, [])
     end
 
     @impl true
@@ -204,53 +221,13 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def kafka_triggers_enabled? do
-      kafka_trigger_config() |> Keyword.get(:enabled, false)
-    end
-
-    @impl true
     def max_dataclip_size_bytes do
       Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000)
     end
 
     @impl true
-    def kafka_alternate_storage_enabled? do
-      kafka_trigger_config() |> Keyword.get(:alternate_storage_enabled)
-    end
-
-    @impl true
-    def kafka_alternate_storage_file_path do
-      kafka_trigger_config() |> Keyword.get(:alternate_storage_file_path)
-    end
-
-    @impl true
-    def kafka_duplicate_tracking_retention_seconds do
-      kafka_trigger_config()
-      |> Keyword.get(:duplicate_tracking_retention_seconds)
-    end
-
-    @impl true
-    def kafka_notification_embargo_seconds do
-      kafka_trigger_config() |> Keyword.get(:notification_embargo_seconds)
-    end
-
-    @impl true
-    def kafka_number_of_consumers do
-      kafka_trigger_config() |> Keyword.get(:number_of_consumers)
-    end
-
-    @impl true
-    def kafka_number_of_messages_per_second do
-      kafka_trigger_config() |> Keyword.get(:number_of_messages_per_second)
-    end
-
-    @impl true
-    def kafka_number_of_processors do
-      kafka_trigger_config() |> Keyword.get(:number_of_processors)
-    end
-
-    defp kafka_trigger_config do
-      Application.get_env(:lightning, :kafka_triggers, [])
+    def max_sandbox_nesting_depth do
+      Application.get_env(:lightning, :max_sandbox_nesting_depth, 5)
     end
 
     @impl true
@@ -280,15 +257,6 @@ defmodule Lightning.Config do
 
     defp promex_config do
       Application.get_env(:lightning, Lightning.PromEx, [])
-    end
-
-    @impl true
-    def ui_metrics_tracking_enabled? do
-      Keyword.get(ui_metrics_tracking_config(), :enabled)
-    end
-
-    defp ui_metrics_tracking_config do
-      Application.get_env(:lightning, :ui_metrics_tracking, [])
     end
 
     @impl true
@@ -329,14 +297,6 @@ defmodule Lightning.Config do
     def external_metrics_module do
       Application.get_env(:lightning, Lightning.Extensions, [])
       |> Keyword.get(:external_metrics)
-    end
-
-    @impl true
-    def ai_assistant_modes do
-      %{
-        job: LightningWeb.Live.AiAssistant.Modes.JobCode,
-        workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
-      }
     end
 
     @impl true
@@ -415,6 +375,11 @@ defmodule Lightning.Config do
       |> Keyword.get(:max_credential_sensitive_values, 50)
     end
 
+    @impl true
+    def service_account do
+      Application.get_env(:lightning, :service_account)
+    end
+
     defp default_webhook_retry do
       [
         max_attempts: 5,
@@ -456,20 +421,12 @@ defmodule Lightning.Config do
   @callback google(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
-  @callback kafka_alternate_storage_enabled?() :: boolean()
-  @callback kafka_alternate_storage_file_path() :: String.t()
-  @callback kafka_duplicate_tracking_retention_seconds() :: integer()
-  @callback kafka_notification_embargo_seconds() :: integer()
-  @callback kafka_number_of_consumers() :: integer()
-  @callback kafka_number_of_messages_per_second() :: float()
-  @callback kafka_number_of_processors() :: integer()
-  @callback kafka_triggers_enabled?() :: boolean()
   @callback max_dataclip_size_bytes() :: non_neg_integer()
+  @callback max_sandbox_nesting_depth() :: non_neg_integer()
   @callback metrics_run_performance_age_seconds() :: integer()
   @callback metrics_run_queue_metrics_period_seconds() :: integer()
   @callback metrics_stalled_run_threshold_seconds() :: integer()
   @callback metrics_unclaimed_run_threshold_seconds() :: integer()
-  @callback oauth_provider(key :: atom()) :: keyword() | nil
   @callback promex_metrics_endpoint_authorization_required?() :: boolean()
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
@@ -477,6 +434,10 @@ defmodule Lightning.Config do
   @callback promex_enabled?() :: boolean()
   @callback purge_deleted_after_days() :: integer()
   @callback activity_cleanup_chunk_size() :: integer()
+  @callback log_lines_search_indexing_batch_size() :: pos_integer()
+  @callback log_lines_search_indexing_max_batches() :: pos_integer()
+  @callback dataclip_search_indexing_batch_size() :: pos_integer()
+  @callback dataclip_search_indexing_max_batches() :: pos_integer()
   @callback default_ecto_database_timeout() :: integer()
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback reset_password_token_validity_in_days() :: integer()
@@ -484,7 +445,6 @@ defmodule Lightning.Config do
   @callback storage() :: term()
   @callback storage(key :: atom()) :: term()
   @callback token_signer() :: Joken.Signer.t()
-  @callback ui_metrics_tracking_enabled?() :: boolean()
   @callback usage_tracking() :: Keyword.t()
   @callback usage_tracking_cleartext_uuids_enabled?() :: boolean()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
@@ -493,7 +453,6 @@ defmodule Lightning.Config do
   @callback usage_tracking_run_chunk_size() :: integer()
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
-  @callback adaptor_registry() :: Keyword.t()
   @callback credential_transfer_token_validity_in_days() :: integer()
   @callback book_demo_banner_enabled?() :: boolean()
   @callback book_demo_calendly_url() :: String.t()
@@ -501,7 +460,6 @@ defmodule Lightning.Config do
   @callback gdpr_banner() :: map() | false
   @callback gdpr_preferences() :: map() | false
   @callback external_metrics_module() :: module() | nil
-  @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
   @callback claim_work_mem() :: String.t() | nil
   @callback log_queue_queries() :: boolean()
@@ -512,13 +470,7 @@ defmodule Lightning.Config do
   @callback webhook_response_timeout_ms() :: integer()
   @callback runtime_manager_port() :: integer()
   @callback max_credential_sensitive_values() :: pos_integer()
-
-  @doc """
-  Returns the configuration for the `Lightning.AdaptorRegistry` service
-  """
-  def adaptor_registry do
-    impl().adaptor_registry()
-  end
+  @callback service_account() :: Lightning.ServiceAccount.t() | nil
 
   @doc """
   Returns the Apollo server configuration.
@@ -579,16 +531,28 @@ defmodule Lightning.Config do
     impl().repo_connection_token_signer()
   end
 
-  def oauth_provider(key) do
-    impl().oauth_provider(key)
-  end
-
   def purge_deleted_after_days do
     impl().purge_deleted_after_days()
   end
 
   def activity_cleanup_chunk_size do
     impl().activity_cleanup_chunk_size()
+  end
+
+  def log_lines_search_indexing_batch_size do
+    impl().log_lines_search_indexing_batch_size()
+  end
+
+  def log_lines_search_indexing_max_batches do
+    impl().log_lines_search_indexing_max_batches()
+  end
+
+  def dataclip_search_indexing_batch_size do
+    impl().dataclip_search_indexing_batch_size()
+  end
+
+  def dataclip_search_indexing_max_batches do
+    impl().dataclip_search_indexing_max_batches()
   end
 
   def default_ecto_database_timeout do
@@ -655,40 +619,18 @@ defmodule Lightning.Config do
     impl().usage_tracking_run_chunk_size()
   end
 
-  def kafka_triggers_enabled? do
-    impl().kafka_triggers_enabled?()
-  end
-
   def max_dataclip_size_bytes do
     impl().max_dataclip_size_bytes()
   end
 
-  def kafka_alternate_storage_enabled? do
-    impl().kafka_alternate_storage_enabled?()
-  end
-
-  def kafka_alternate_storage_file_path do
-    impl().kafka_alternate_storage_file_path()
-  end
-
-  def kafka_duplicate_tracking_retention_seconds do
-    impl().kafka_duplicate_tracking_retention_seconds()
-  end
-
-  def kafka_number_of_consumers do
-    impl().kafka_number_of_consumers()
-  end
-
-  def kafka_notification_embargo_seconds do
-    impl().kafka_notification_embargo_seconds()
-  end
-
-  def kafka_number_of_messages_per_second do
-    impl().kafka_number_of_messages_per_second()
-  end
-
-  def kafka_number_of_processors do
-    impl().kafka_number_of_processors()
+  @doc """
+  Maximum depth of nested sandboxes. A direct child sandbox is depth 1, a
+  sandbox of a sandbox is depth 2, etc. Root projects are depth 0 and not
+  subject to this limit. Defaults to 5. Set to 0 to disable sandbox
+  creation entirely.
+  """
+  def max_sandbox_nesting_depth do
+    impl().max_sandbox_nesting_depth()
   end
 
   def promex_metrics_endpoint_authorization_required? do
@@ -709,10 +651,6 @@ defmodule Lightning.Config do
 
   def promex_enabled? do
     impl().promex_enabled?()
-  end
-
-  def ui_metrics_tracking_enabled? do
-    impl().ui_metrics_tracking_enabled?()
   end
 
   def credential_transfer_token_validity_in_days do
@@ -741,10 +679,6 @@ defmodule Lightning.Config do
 
   def external_metrics_module do
     impl().external_metrics_module()
-  end
-
-  def ai_assistant_modes do
-    impl().ai_assistant_modes()
   end
 
   def metrics_run_performance_age_seconds do
@@ -807,6 +741,14 @@ defmodule Lightning.Config do
   """
   def max_credential_sensitive_values do
     impl().max_credential_sensitive_values()
+  end
+
+  @doc """
+  The service account registered at boot from `SERVICE_ACCOUNT_PUBLIC_KEY`, or
+  nil when none is.
+  """
+  def service_account do
+    impl().service_account()
   end
 
   defp impl do

@@ -188,6 +188,11 @@ defmodule LightningWeb.RunLive.IndexTest do
 
       assert render_click(view, "bulk-rerun", %{type: "all", job: job_a.id}) =~
                "You are not authorized to perform this action."
+
+      assert render_click(view, "rerun", %{
+               "run_id" => Ecto.UUID.generate(),
+               "step_id" => Ecto.UUID.generate()
+             }) =~ "You are not authorized to perform this action."
     end
 
     @tag role: :editor
@@ -248,6 +253,78 @@ defmodule LightningWeb.RunLive.IndexTest do
 
       # this is zero because the previous retried run has no steps
       assert html =~ "New run enqueued for 0 workorder"
+    end
+
+    @tag role: :editor
+    test "an editor cannot rerun a run that belongs to another project", %{
+      conn: conn,
+      project: project
+    } do
+      # A run living in a project unrelated to the one being viewed.
+      other_project = insert(:project)
+
+      %{jobs: [other_job], triggers: [other_trigger]} =
+        other_workflow = insert(:simple_workflow, project: other_project)
+
+      other_dataclip = insert(:dataclip, project: other_project)
+
+      other_wo =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: other_dataclip,
+          state: :failed
+        )
+        |> with_run(
+          state: :failed,
+          dataclip: other_dataclip,
+          starting_trigger: other_trigger,
+          steps: [
+            build(:step,
+              job: other_job,
+              input_dataclip: other_dataclip,
+              exit_reason: "fail"
+            )
+          ]
+        )
+
+      [other_run] = other_wo.runs
+      [other_step] = Lightning.Repo.preload(other_run, :steps).steps
+
+      {:ok, view, _html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      html =
+        render_click(view, "rerun", %{
+          "run_id" => other_run.id,
+          "step_id" => other_step.id
+        })
+
+      assert html =~ "Run not found"
+
+      # the foreign run was not retried: no new run inserted for its work order
+      assert Lightning.Repo.aggregate(Ecto.assoc(other_wo, :runs), :count) == 1
+    end
+
+    @tag role: :editor
+    test "rerun with a malformed or mismatched id returns not-found, not a crash",
+         %{conn: conn, project: project, work_order_1: work_order_1} do
+      {:ok, view, _html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      # a non-UUID run id must not reach (and crash) the query
+      assert render_click(view, "rerun", %{
+               "run_id" => "not-a-uuid",
+               "step_id" => Ecto.UUID.generate()
+             }) =~ "Run not found."
+
+      # a valid in-project run, but a step that is not one of its steps
+      [run] = work_order_1.runs
+
+      assert render_click(view, "rerun", %{
+               "run_id" => run.id,
+               "step_id" => Ecto.UUID.generate()
+             }) =~ "Run not found."
     end
 
     test "jobs on the modal are updated every time the selected workflow is changed",
@@ -642,6 +719,95 @@ defmodule LightningWeb.RunLive.IndexTest do
         live(conn, "/projects/#{project.id}/channels/requests")
       end
     end
+
+    test "request path column shows the path when the event has one",
+         %{conn: conn, project: project, user: user} do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      channel = insert(:channel, project: project, name: "test-channel")
+
+      {:ok, snapshot} =
+        Lightning.Channels.get_or_create_current_snapshot(channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          state: :success,
+          started_at: DateTime.utc_now()
+        )
+
+      insert(:channel_event,
+        channel_request: request,
+        type: :destination_response,
+        request_path: "/some/upstream/path"
+      )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/history/channels")
+
+      doc = Floki.parse_fragment!(html)
+
+      # "Request Path" header is the second column.
+      assert doc
+             |> Floki.find("#channel-requests-table thead th:nth-child(2)")
+             |> Floki.text() =~ "Request Path"
+
+      # The path cell in the row is the second td.
+      assert doc
+             |> Floki.find("tr#request-#{request.id} td:nth-child(2)")
+             |> Floki.text()
+             |> String.trim() == "/some/upstream/path"
+    end
+
+    test "request path column shows a dash when the request was wiped (request_path nil)",
+         %{conn: conn, project: project, user: user} do
+      Lightning.Accounts.update_user_preferences(user, %{
+        "experimental_features" => true
+      })
+
+      project
+      |> Lightning.Projects.Project.changeset(%{retention_policy: :erase_all})
+      |> Lightning.Repo.update!()
+
+      channel = insert(:channel, project: project, name: "test-channel")
+
+      {:ok, snapshot} =
+        Lightning.Channels.get_or_create_current_snapshot(channel)
+
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          state: :success,
+          is_wiped: true,
+          started_at: DateTime.utc_now()
+        )
+
+      insert(:channel_event,
+        channel_request: request,
+        type: :destination_response,
+        request_path: nil
+      )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/history/channels")
+
+      doc = Floki.parse_fragment!(html)
+
+      # Column header stays put.
+      assert doc
+             |> Floki.find("#channel-requests-table thead th:nth-child(2)")
+             |> Floki.text() =~ "Request Path"
+
+      # The path cell in the row renders a dash placeholder (not the path).
+      assert doc
+             |> Floki.find("tr#request-#{request.id} td:nth-child(2)")
+             |> Floki.text()
+             |> String.trim() == "—"
+    end
   end
 
   describe "filter chips" do
@@ -804,6 +970,163 @@ defmodule LightningWeb.RunLive.IndexTest do
       assert has_element?(view, "#workorder-id-filter-chip")
       chip = element(view, "#workorder-id-filter-chip")
       assert render(chip) =~ "Work order:"
+    end
+
+    test "error signature filter chip appears when the filter is set", %{
+      conn: conn,
+      project: project,
+      jobs: [job | _]
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              error_signature_exit_reason: "fail",
+              error_signature_error_type: "AdaptorError",
+              error_signature_job_id: job.id
+            }
+          )
+        )
+
+      assert has_element?(view, "#error-signature-filter-chip")
+      chip = element(view, "#error-signature-filter-chip")
+
+      assert render(chip) =~ "fail:AdaptorError @ #{job.name}"
+    end
+
+    # The name is read back from the id, so the read is scoped to the project
+    # the page is on — a hand-edited id from elsewhere names nothing here.
+    test "error signature filter chip falls back to the id for a job outside the project",
+         %{conn: conn, project: project} do
+      other_job = insert(:job, workflow: build(:workflow))
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              error_signature_exit_reason: "fail",
+              error_signature_job_id: other_job.id
+            }
+          )
+        )
+
+      chip = render(element(view, "#error-signature-filter-chip"))
+
+      refute chip =~ other_job.name
+
+      assert chip =~
+               LightningWeb.LiveHelpers.display_short_uuid(other_job.id)
+    end
+
+    test "error signature filter chip omits error type and job id when absent",
+         %{
+           conn: conn,
+           project: project
+         } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{error_signature_exit_reason: "lost"}
+          )
+        )
+
+      chip = element(view, "#error-signature-filter-chip")
+      html = render(chip)
+      assert html =~ "lost"
+      refute html =~ "@"
+    end
+
+    test "error signature filter chip is absent when the filter is not set",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      refute has_element?(view, "#error-signature-filter-chip")
+    end
+
+    # A band of a bar on the workflow health page's runs chart links here, and
+    # sets both. Two chips, so either can be dropped without the other: the
+    # band without the slot is every failure in the range, the slot without
+    # the band is the whole bar.
+    test "a runs-chart band renders a run status chip and a run date chip", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              run_date_after: "2026-09-08T02:00:00Z",
+              run_date_before: "2026-09-08T04:00:00Z",
+              run_status: ["failed", "crashed"]
+            }
+          )
+        )
+
+      assert render(element(view, "#run-status-filter-chip")) =~
+               "Run status: Failed, Crashed"
+
+      dates = render(element(view, "#run-dates-filter-chip"))
+
+      # The stamp is UTC and says so: the bars are cut on the reader's clock
+      # and nothing here records what that clock is.
+      assert dates =~ "Run created 8-Sep 02:00"
+      assert dates =~ "8-Sep 04:00 UTC"
+    end
+
+    test "a run status filter renders no run date chip", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{run_status: ["success"]}
+          )
+        )
+
+      assert render(element(view, "#run-status-filter-chip")) =~
+               "Run status: Success"
+
+      refute has_element?(view, "#run-dates-filter-chip")
+    end
+
+    # The newest bar is still filling, so its link carries no upper bound.
+    test "run date chip reads open-ended without a run_date_before", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{run_date_after: "2026-09-08T02:00:00Z"}
+          )
+        )
+
+      assert render(element(view, "#run-dates-filter-chip")) =~
+               "Run created after 8-Sep 02:00 UTC"
+
+      refute has_element?(view, "#run-status-filter-chip")
+    end
+
+    test "run chips are absent when neither filter is set", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      refute has_element?(view, "#run-status-filter-chip")
+      refute has_element?(view, "#run-dates-filter-chip")
     end
   end
 
@@ -987,10 +1310,16 @@ defmodule LightningWeb.RunLive.IndexTest do
           )
         )
 
-      html =
-        render_click(view, "bulk-cancel", %{type: "selected"})
+      assert render_click(view, "bulk-cancel", %{type: "selected"}) =~
+               "You are not authorized to perform this action."
 
-      assert html =~ "You are not authorized to perform this action."
+      assert render_click(view, "cancel", %{
+               "workorder_id" => Ecto.UUID.generate()
+             }) =~ "You are not authorized to perform this action."
+
+      assert render_click(view, "cancel-run", %{
+               "run_id" => Ecto.UUID.generate()
+             }) =~ "You are not authorized to perform this action."
     end
 
     @tag role: :editor
@@ -1233,6 +1562,49 @@ defmodule LightningWeb.RunLive.IndexTest do
         )
 
       assert has_element?(view, "button#export-history-button")
+    end
+
+    @tag role: :viewer
+    test "a viewer cannot start a history export", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      refute has_element?(view, "button#export-history-button")
+
+      assert render_click(view, "show-export-modal", %{}) =~ "not authorized"
+
+      html = render_click(view, "confirm-export", %{})
+
+      assert html =~ "not authorized"
+
+      refute Enum.any?(
+               Lightning.Repo.all(Lightning.Projects.File),
+               &(&1.type == :export)
+             )
+    end
+
+    @tag role: :editor
+    test "an editor can start a history export", %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      html = render_click(view, "confirm-export", %{})
+
+      assert html =~ "started successfully"
+
+      assert Enum.any?(
+               Lightning.Repo.all(Lightning.Projects.File),
+               &(&1.type == :export)
+             )
     end
   end
 end

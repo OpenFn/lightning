@@ -17,6 +17,7 @@ config :logger, level: :info
 
 # Filter sensitive parameters from logs
 config :phoenix, :filter_parameters, [
+  "assertion",
   "authorization",
   "body",
   "credential",
@@ -27,9 +28,5 @@ config :phoenix, :filter_parameters, [
   "secret",
   "token"
 ]
-
-config :lightning,
-  schemas_path: "priv/schemas",
-  adaptor_icons_path: "priv/static/images/adaptors"
 
 config :lightning, :claim_work_mem, "32MB"

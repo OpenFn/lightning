@@ -2,7 +2,7 @@
  * Trigger Node Component Tests
  *
  * Tests that trigger nodes display correct icons for all trigger types
- * (webhook, cron, kafka) and handle edge cases gracefully.
+ * (webhook, cron) and handle edge cases gracefully.
  */
 
 import { render } from '@testing-library/react';
@@ -27,9 +27,6 @@ function renderTriggerNode(trigger: Lightning.TriggerNode) {
         cron_expression: trigger.cron_expression,
       }),
       ...(trigger.type === 'webhook' && {
-        has_auth_method: trigger.has_auth_method,
-      }),
-      ...(trigger.type === 'kafka' && {
         has_auth_method: trigger.has_auth_method,
       }),
     },
@@ -112,23 +109,6 @@ describe('Trigger Node - Icon Display', () => {
     expect(svgElement).toBeInTheDocument();
   });
 
-  test('displays icon for kafka trigger', () => {
-    const kafkaTrigger: Lightning.KafkaTrigger = {
-      id: 'trigger-5',
-      name: 'Kafka Trigger',
-      type: 'kafka',
-      enabled: true,
-      has_auth_method: true,
-      workflow_id: 'test-workflow',
-    };
-
-    const { container } = renderTriggerNode(kafkaTrigger);
-
-    // Kafka icon (custom SVG) should be rendered
-    const svgElement = container.querySelector('svg');
-    expect(svgElement).toBeInTheDocument();
-  });
-
   test('displays lock icon for webhook trigger with auth', () => {
     const webhookTrigger: Lightning.WebhookTrigger = {
       id: 'trigger-11',
@@ -141,23 +121,6 @@ describe('Trigger Node - Icon Display', () => {
     };
 
     const { container } = renderTriggerNode(webhookTrigger);
-
-    // Should have both primary icon and lock icon
-    const svgElements = container.querySelectorAll('svg');
-    expect(svgElements.length).toBeGreaterThanOrEqual(1);
-  });
-
-  test('displays lock icon for kafka trigger with auth', () => {
-    const kafkaTrigger: Lightning.KafkaTrigger = {
-      id: 'trigger-12',
-      name: 'Kafka Trigger',
-      type: 'kafka',
-      enabled: true,
-      has_auth_method: true,
-      workflow_id: 'test-workflow',
-    };
-
-    const { container } = renderTriggerNode(kafkaTrigger);
 
     // Should have both primary icon and lock icon
     const svgElements = container.querySelectorAll('svg');

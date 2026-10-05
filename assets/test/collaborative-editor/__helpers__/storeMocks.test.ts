@@ -27,8 +27,8 @@ describe('storeMocks', () => {
 
       // Verify commands exist
       expect(store.requestSessionContext).toBeInstanceOf(Function);
-      expect(store.requestVersions).toBeInstanceOf(Function);
-      expect(store.clearVersions).toBeInstanceOf(Function);
+      expect(store.requestReleases).toBeInstanceOf(Function);
+      expect(store.clearReleases).toBeInstanceOf(Function);
       expect(store.setLoading).toBeInstanceOf(Function);
       expect(store.setError).toBeInstanceOf(Function);
       expect(store.clearError).toBeInstanceOf(Function);
@@ -222,7 +222,7 @@ describe('storeMocks', () => {
       expect(defaultSessionContextState.error).toBe(null);
       expect(defaultSessionContextState.isNewWorkflow).toBe(false);
       expect(defaultSessionContextState.webhookAuthMethods).toEqual([]);
-      expect(defaultSessionContextState.versions).toEqual([]);
+      expect(defaultSessionContextState.releases).toEqual([]);
     });
   });
 });

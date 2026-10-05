@@ -4,6 +4,7 @@ defmodule LightningWeb.Components.MenuTest do
 
   import Phoenix.LiveViewTest
 
+  alias LightningWeb.Components.Menu
   alias LightningWeb.LayoutComponents
 
   describe "menu_items/1" do
@@ -26,6 +27,33 @@ defmodule LightningWeb.Components.MenuTest do
 
       assert element |> Floki.attribute("class") |> hd =~
                "menu-item-inactive"
+    end
+  end
+
+  describe "experimental_mode_item/1" do
+    test "tells the user the mode is on and links to where it is turned off" do
+      html =
+        render_component(&Menu.experimental_mode_item/1, %{
+          current_user: %Lightning.Accounts.User{
+            preferences: %{"experimental_features" => true}
+          }
+        })
+
+      assert html =~ "Experimental"
+      assert html =~ "still being built"
+      assert html =~ ~s(phx-hook="Tooltip")
+      refute html =~ "<a"
+    end
+
+    test "says nothing at all when the mode is off" do
+      for preferences <- [%{}, %{"experimental_features" => false}, nil] do
+        html =
+          render_component(&Menu.experimental_mode_item/1, %{
+            current_user: %Lightning.Accounts.User{preferences: preferences}
+          })
+
+        refute html =~ "Experimental"
+      end
     end
   end
 

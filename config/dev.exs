@@ -7,7 +7,7 @@ config :lightning, Lightning.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "lightning_dev",
+  database: System.get_env("DEV_DATABASE_NAME", "lightning_dev"),
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
@@ -33,13 +33,10 @@ config :lightning, LightningWeb.Endpoint,
     # Start the esbuild watcher by calling Esbuild.install_and_run(:default, args)
     esbuild:
       {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]},
-    storybook_tailwind: {Tailwind, :install_and_run, [:storybook, ~w(--watch)]}
+    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
 
 config :lightning,
-  schemas_path: "priv/schemas",
-  adaptor_icons_path: "priv/static/images/adaptors",
   repo_connection_signing_secret:
     "39h9Qr6+v2wgzjlh4xQoJ90aDe+LY7qIvA5v7QLsTwIwGDfs8el9Z0oFk2Ege33E"
 
@@ -112,8 +109,7 @@ config :lightning, LightningWeb.Endpoint,
       ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
       ~r"lib/lightning_web/(live|components|views)/.*(ex|heex)$",
-      ~r"lib/lightning_web/templates/.*(eex)$",
-      ~r"storybook/.*(exs)$"
+      ~r"lib/lightning_web/templates/.*(eex)$"
     ]
   ]
 
@@ -129,15 +125,35 @@ config :phoenix, :plug_init_mode, :runtime
 
 config :lightning, :is_resettable_demo, true
 
-config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 30_000
+config :lightning, :auth_providers_allow_insecure_loopback, true
+
+config :lightning, :apollo,
+  endpoint: "http://localhost:3000",
+  # Roomier than prod for a cold python start, but the sum of the three still
+  # has to sit under Oban's drain window or every boot warns about it.
+  idle_timeout: 40_000,
+  request_timeout: 300_000
+
+# Philter's egress guard blocks private/loopback ranges by default; allow
+# localhost so channel proxies can reach services running on the dev machine.
+# Matching is on the literal host string in the URL, so "localhost" only allows
+# http://localhost; http://127.0.0.1 stays blocked unless you add "127.0.0.1" too.
+config :philter, allowed_hosts: ["localhost"]
+
+# Mirror the philter allowlist for the pinned OAuth egress adapter so local dev
+# OAuth against localhost works; other private ranges stay blocked.
+config :lightning, Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter,
+  allowed_hosts: ["localhost"]
 
 config :git_hooks,
   # In local dev (with a real .git repo) we auto-install hooks.
   # In Docker builds the .git directory is not present (or incomplete),
   # so skip auto-install to avoid compile-time failures.
+  # In a worktree .git is a file pointing at the main repo, so there is no
+  # .git/config to look for.
   auto_install:
     System.get_env("GIT_HOOKS_AUTO_INSTALL", "true") == "true" and
-      File.exists?(".git/config"),
+      (File.exists?(".git/config") or File.regular?(".git")),
   verbose: true,
   hooks: [
     pre_commit: [
@@ -150,16 +166,7 @@ config :git_hooks,
          "git diff --cached | grep -E '^[+](<<<<<<<\\s|=======$|>>>>>>>\\s)' && " <>
            "echo 'ERROR: Unresolved merge conflict markers found in staged files' && " <>
            "exit 1 || exit 0"},
-        {:cmd,
-         "FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(ex|exs|heex)$' || true); " <>
-           "if [ -n \"$FILES\" ]; then " <>
-           "mix format $FILES && git add $FILES; " <>
-           "fi"},
-        {:cmd,
-         "FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(js|ts|tsx|jsx|md)$' || true); " <>
-           "if [ -n \"$FILES\" ]; then " <>
-           "npx --prefix assets prettier --config .prettierrc --ignore-path .prettierignore --write $FILES && git add $FILES; " <>
-           "fi"},
+        {:cmd, "bin/format --staged"},
         {:cmd,
          "git diff --cached --quiet && echo 'No changes to commit after formatting' && exit 1 || exit 0"}
       ]

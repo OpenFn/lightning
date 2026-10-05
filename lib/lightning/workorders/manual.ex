@@ -34,6 +34,7 @@ defmodule Lightning.WorkOrders.Manual do
     |> validate_required([:project, :job, :created_by, :workflow])
     |> remove_body_if_dataclip_present()
     |> validate_body_or_dataclip()
+    |> validate_dataclip_in_project()
     |> validate_json(:body)
     |> validate_change(:workflow, fn _field, workflow ->
       case workflow do
@@ -65,6 +66,20 @@ defmodule Lightning.WorkOrders.Manual do
           {:ok, _} -> add_error(changeset, field, "Must be an object")
           {:error, _} -> add_error(changeset, field, "Invalid JSON")
         end
+    end
+  end
+
+  # A client-supplied dataclip_id must belong to the run's project, otherwise a
+  # manual run could pull another project's dataclip in as job input.
+  defp validate_dataclip_in_project(changeset) do
+    dataclip_id = get_change(changeset, :dataclip_id)
+    project = get_field(changeset, :project)
+
+    if is_nil(dataclip_id) or is_nil(project) or
+         Lightning.Invocation.dataclip_in_project?(dataclip_id, project.id) do
+      changeset
+    else
+      add_error(changeset, :dataclip_id, "does not belong to this project")
     end
   end
 

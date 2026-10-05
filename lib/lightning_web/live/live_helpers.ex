@@ -3,6 +3,9 @@ defmodule LightningWeb.LiveHelpers do
   General purpose LiveView helper functions
   """
   use Phoenix.Component
+  use LightningWeb, :verified_routes
+
+  import Phoenix.LiveView, only: [push_navigate: 2, put_flash: 3]
 
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Services.UsageLimiter
@@ -205,5 +208,18 @@ defmodule LightningWeb.LiveHelpers do
       {:error, _reason, %{position: position} = component} ->
         assign(assigns, position, component)
     end
+  end
+
+  @doc """
+  Refuses a collaborator change the current user is not allowed to make.
+
+  Navigates as well as flashes: a LiveComponent's flash is only rendered by its
+  parent LiveView, and the navigation re-runs `:project_scope` so a user whose
+  standing has been revoked is bounced out.
+  """
+  def deny_collaborator_change(%{assigns: %{project: project}} = socket) do
+    socket
+    |> put_flash(:error, "You are not authorized to perform this action.")
+    |> push_navigate(to: ~p"/projects/#{project}/settings#collaboration")
   end
 end

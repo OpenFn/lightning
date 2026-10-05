@@ -43,6 +43,16 @@ defmodule Lightning.Collaboration.TestClient do
     Yex.Sync.SharedDoc.observe(shared_doc_pid)
   end
 
+  # At teardown the SharedDoc and this client are often stopped concurrently,
+  # so the document may already be gone by the time we get here.
+  defp unobserve(nil), do: :ok
+
+  defp unobserve(shared_doc_pid) do
+    Yex.Sync.SharedDoc.unobserve(shared_doc_pid)
+  catch
+    :exit, _reason -> :ok
+  end
+
   defp start_sync(shared_doc_pid, client_doc) do
     {:ok, step1} = Yex.Sync.get_sync_step1(client_doc)
     local_message = Yex.Sync.message_encode!({:sync, step1})
@@ -50,7 +60,7 @@ defmodule Lightning.Collaboration.TestClient do
   end
 
   def handle_call(:unobserve, _from, state) do
-    Yex.Sync.SharedDoc.unobserve(state.shared_doc_pid)
+    unobserve(state.shared_doc_pid)
 
     {:reply, :ok, %{state | shared_doc_pid: nil}}
   end
@@ -134,7 +144,7 @@ defmodule Lightning.Collaboration.TestClient do
   end
 
   def terminate(_reason, state) do
-    Yex.Sync.SharedDoc.unobserve(state.shared_doc_pid)
+    unobserve(state.shared_doc_pid)
     Yex.Doc.demonitor_update(state.monitor_ref)
     :ok
   end

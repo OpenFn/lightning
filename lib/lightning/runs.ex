@@ -65,13 +65,20 @@ defmodule Lightning.Runs do
   Joins through `work_order -> workflow` to verify the run belongs to the
   given project. Returns `nil` if the run doesn't exist or belongs to a
   different project.
+
+  Accepts an `:include` option to preload associations, e.g.
+  `get_for_project(id, project_id, include: [:steps])`.
   """
-  @spec get_for_project(Ecto.UUID.t(), Ecto.UUID.t()) :: Run.t() | nil
-  def get_for_project(id, project_id) do
+  @spec get_for_project(Ecto.UUID.t(), Ecto.UUID.t(), keyword()) ::
+          Run.t() | nil
+  def get_for_project(id, project_id, opts \\ []) do
+    preloads = Keyword.get(opts, :include, [])
+
     from(r in Run,
       join: wo in assoc(r, :work_order),
       join: w in assoc(wo, :workflow),
-      where: r.id == ^id and w.project_id == ^project_id
+      where: r.id == ^id and w.project_id == ^project_id,
+      preload: ^preloads
     )
     |> Repo.one()
   end
@@ -141,7 +148,7 @@ defmodule Lightning.Runs do
   @doc """
   Returns a run's dataclip formatted for use as state.
 
-  Only `http_request` and kafka dataclips are changed,
+  Only `http_request` and stored kafka dataclips are changed,
   their `body` is nested inside a `"data"` key and `request` data
   is added as a `"request"` key.
 
@@ -179,9 +186,13 @@ defmodule Lightning.Runs do
     |> select([d], d)
     |> Lightning.Invocation.Query.wipe_dataclips()
     |> Repo.update_all([])
-    |> then(fn {1, [dataclip]} ->
-      Events.dataclip_updated(run.id, dataclip)
-      :ok
+    |> then(fn
+      {1, [dataclip]} ->
+        Events.dataclip_updated(run.id, dataclip)
+        :ok
+
+      {0, []} ->
+        :ok
     end)
   end
 
@@ -527,6 +538,7 @@ defmodule Lightning.Runs do
     {:ok, updated_count}
   end
 
+  @doc "Subscribes to the events of a single run."
   defdelegate subscribe(run), to: Events
 
   @doc """

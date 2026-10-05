@@ -274,7 +274,13 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
   describe "edit modal" do
     setup %{conn: conn, user: user} do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
-      sb = insert(:sandbox, parent: parent, name: "sb-1")
+
+      sb =
+        insert(:sandbox,
+          parent: parent,
+          name: "sb-1",
+          project_users: [%{user: user, role: :owner}]
+        )
 
       Mimic.stub(
         Lightning.Projects,
@@ -355,9 +361,16 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
     test "color input displays existing sandbox color", %{
       conn: conn,
-      parent: parent
+      parent: parent,
+      user: user
     } do
-      sb = insert(:sandbox, parent: parent, name: "sb-colored", color: "#ff0000")
+      sb =
+        insert(:sandbox,
+          parent: parent,
+          name: "sb-colored",
+          color: "#ff0000",
+          project_users: [%{user: user, role: :owner}]
+        )
 
       {:ok, view, _} =
         live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")

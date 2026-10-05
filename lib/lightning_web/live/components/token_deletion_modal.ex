@@ -6,14 +6,29 @@ defmodule LightningWeb.Components.TokenDeletionModal do
 
   @impl true
   def update(%{id: id} = assigns, socket) do
-    {:ok, socket |> assign(id: id, return_to: assigns.return_to)}
+    {:ok, assign(socket, id: id, return_to: assigns.return_to)}
   end
 
   @impl true
   def handle_event("delete_token", %{"id" => id}, socket) do
-    token = Accounts.get_token!(id)
+    if id == socket.assigns.id do
+      delete_token(socket)
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You can't perform this action")
+       |> push_navigate(to: socket.assigns.return_to)}
+    end
+  end
 
-    Accounts.delete_token(token)
+  @impl true
+  def handle_event("close_modal", _, socket) do
+    {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
+  end
+
+  defp delete_token(socket) do
+    Accounts.get_token!(socket.assigns.id)
+    |> Accounts.delete_token()
     |> case do
       {:ok, _} ->
         {:noreply,
@@ -24,11 +39,6 @@ defmodule LightningWeb.Components.TokenDeletionModal do
       {:error, _changeset} ->
         {:noreply, socket |> put_flash(:error, "Something went wrong.")}
     end
-  end
-
-  @impl true
-  def handle_event("close_modal", _, socket) do
-    {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
   end
 
   @impl true

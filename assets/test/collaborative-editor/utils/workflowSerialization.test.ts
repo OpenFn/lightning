@@ -2,12 +2,13 @@ import { describe, it, expect } from 'vitest';
 
 import {
   prepareWorkflowForSerialization,
+  serializeCanvasForComparison,
   serializeWorkflowToYAML,
 } from '../../../js/collaborative-editor/utils/workflowSerialization';
 
 describe('workflowSerialization', () => {
   describe('serializeWorkflowToYAML', () => {
-    it('includes entity IDs in serialized YAML', () => {
+    it('serializes the workflow to v1 YAML with ids, for Apollo', () => {
       const workflow = {
         id: 'workflow-uuid-123',
         name: 'Test Workflow',
@@ -44,10 +45,22 @@ describe('workflowSerialization', () => {
       const yaml = serializeWorkflowToYAML(workflow);
 
       expect(yaml).toBeDefined();
-      expect(yaml).toContain('id: workflow-uuid-123');
-      expect(yaml).toContain('id: job-uuid-456');
-      expect(yaml).toContain('id: trigger-uuid-789');
-      expect(yaml).toContain('id: edge-uuid-abc');
+      // v1 wire shape, which Apollo's workflow_chat service expects:
+      // top-level jobs/triggers/edges maps, not a v2 `steps:` array.
+      expect(yaml).toContain('name: Test Workflow');
+      expect(yaml).toContain('jobs:');
+      expect(yaml).toContain('triggers:');
+      expect(yaml).toContain('edges:');
+      expect(yaml).not.toContain('steps:');
+      expect(yaml).toContain('Get-Data:');
+      expect(yaml).toContain('webhook->Get-Data:');
+      expect(yaml).toContain('source_trigger: webhook');
+      expect(yaml).toContain('target_job: Get-Data');
+      // Ids are included so Apollo can preserve them across edits.
+      expect(yaml).toContain('workflow-uuid-123');
+      expect(yaml).toContain('job-uuid-456');
+      expect(yaml).toContain('trigger-uuid-789');
+      expect(yaml).toContain('edge-uuid-abc');
     });
 
     it('preserves all job properties', () => {
@@ -78,7 +91,8 @@ describe('workflowSerialization', () => {
       const yaml = serializeWorkflowToYAML(workflow);
 
       expect(yaml).toContain('name: My Job');
-      expect(yaml).toContain('adaptor: "@openfn/language-common@latest"');
+      expect(yaml).toContain('My-Job:');
+      expect(yaml).toContain('@openfn/language-common@latest');
       expect(yaml).toContain('console.log("hello");');
     });
   });
@@ -130,6 +144,56 @@ describe('workflowSerialization', () => {
       expect(result?.name).toBe('Test Workflow');
       expect(result?.jobs).toHaveLength(1);
       expect(result?.jobs[0].id).toBe('job-1');
+    });
+  });
+
+  describe('serializeCanvasForComparison', () => {
+    const canvas = (
+      overrides: {
+        body?: string;
+        positions?: Record<string, { x: number; y: number }>;
+      } = {}
+    ) => ({
+      workflow: { id: 'wf-1', name: 'Test Workflow' },
+      jobs: [
+        {
+          id: 'job-1',
+          name: 'Get Data',
+          adaptor: '@openfn/language-http@latest',
+          body: overrides.body ?? 'fn(state => state);',
+        },
+      ],
+      triggers: [{ id: 'trigger-1', type: 'webhook', enabled: true }],
+      edges: [
+        {
+          id: 'edge-1',
+          condition_type: 'always',
+          enabled: true,
+          target_job_id: 'job-1',
+          source_trigger_id: 'trigger-1',
+        },
+      ],
+    });
+
+    it('is deterministic and carries no positions', () => {
+      // Both properties are what make a string comparison a safe change
+      // detector: dragging a node must not read as an edit.
+      expect(serializeCanvasForComparison(canvas())).toBe(
+        serializeCanvasForComparison(canvas())
+      );
+      expect(serializeCanvasForComparison(canvas())).not.toContain('pos:');
+    });
+
+    it('reflects an edited step body', () => {
+      expect(serializeCanvasForComparison(canvas())).not.toBe(
+        serializeCanvasForComparison(canvas({ body: 'fn(state => null);' }))
+      );
+    });
+
+    it('returns undefined for a canvas with no steps to compare', () => {
+      expect(
+        serializeCanvasForComparison({ ...canvas(), jobs: [] })
+      ).toBeUndefined();
     });
   });
 });

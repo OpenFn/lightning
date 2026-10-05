@@ -19,10 +19,10 @@ import { SessionContext } from '../../../js/collaborative-editor/contexts/Sessio
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
 import { createSessionContext } from '../__helpers__/sessionContextFactory';
+import { createTestSessionStore } from '../__helpers__/sessionStoreHelpers';
 import {
   createMockURLState,
   getURLStateMockValue,
@@ -61,7 +61,7 @@ function createTestSetup(options: WrapperOptions = {}) {
     isNewWorkflow = false,
   } = options;
 
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const sessionContextStore = createSessionContextStore(isNewWorkflow);
   const workflowStore = createWorkflowStore();
 

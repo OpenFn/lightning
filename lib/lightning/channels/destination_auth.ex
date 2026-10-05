@@ -4,8 +4,8 @@ defmodule Lightning.Channels.DestinationAuth do
 
   ## Supported Schemas
 
-  - `"http"` — Bearer token (`access_token`) or Basic auth (`username`+`password`)
-  - `"dhis2"` — DHIS2 ApiToken (`pat`) or Basic auth (`username`+`password`)
+  - `"@openfn/language-http"` — Bearer token (`access_token`) or Basic auth (`username`+`password`)
+  - `"@openfn/language-dhis2"` — DHIS2 ApiToken (`pat`) or Basic auth (`username`+`password`)
   - `"oauth"` — Bearer token (`access_token`, with auto-refresh via `resolve_credential_body`)
 
   Schemas not in this list are rejected at config time. If an unsupported schema
@@ -24,7 +24,7 @@ defmodule Lightning.Channels.DestinationAuth do
   @spec build_auth_header(String.t(), map()) ::
           {:ok, String.t()}
           | {:error, :no_auth_fields | {:unsupported_schema, String.t()}}
-  def build_auth_header("http", body) do
+  def build_auth_header("@openfn/language-http", body) do
     cond do
       token = body["access_token"] ->
         {:ok, "Bearer #{token}"}
@@ -38,7 +38,7 @@ defmodule Lightning.Channels.DestinationAuth do
     end
   end
 
-  def build_auth_header("dhis2", body) do
+  def build_auth_header("@openfn/language-dhis2", body) do
     cond do
       token = body["pat"] ->
         {:ok, "ApiToken #{token}"}

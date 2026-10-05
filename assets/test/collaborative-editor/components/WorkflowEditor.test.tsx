@@ -32,6 +32,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock CollaborativeWorkflowDiagram
@@ -49,11 +50,6 @@ vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   Inspector: ({ onOpenRunPanel }: { onOpenRunPanel: (ctx: any) => void }) => (
     <div data-testid="inspector">Inspector</div>
   ),
-}));
-
-// Mock LeftPanel
-vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
-  LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
 }));
 
 // Mock FullScreenIDE
@@ -128,17 +124,29 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 }));
 
 // Mock session context hooks
+const mockIsNewWorkflow = vi.fn(() => false);
+
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
-  useIsNewWorkflow: () => false,
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
+  useExperimentalFeatures: () => true,
+  useIsNewWorkflow: () => mockIsNewWorkflow(),
   useProjectRepoConnection: () => undefined,
   useProject: () => ({
     id: 'project-1',
     name: 'Test Project',
   }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
 }));
 
 // Create mock workflow
@@ -186,6 +194,8 @@ const mockIsRunPanelOpen = vi.fn(() => false);
 const mockRunPanelContext = vi.fn(() => null);
 const mockOpenRunPanel = vi.fn();
 const mockCloseRunPanel = vi.fn();
+const mockIsAIAssistantPanelOpen = vi.fn(() => false);
+const mockShowLandingScreen = vi.fn(() => false);
 
 vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsRunPanelOpen: () => mockIsRunPanelOpen(),
@@ -193,23 +203,12 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
     openRunPanel: mockOpenRunPanel,
     closeRunPanel: mockCloseRunPanel,
-    toggleCreateWorkflowPanel: vi.fn(),
     openAIAssistantPanel: vi.fn(),
     closeAIAssistantPanel: vi.fn(),
-    collapseCreateWorkflowPanel: vi.fn(),
-    expandCreateWorkflowPanel: vi.fn(),
-    selectTemplate: vi.fn(),
-    setTemplateSearchQuery: vi.fn(),
+    openYAMLImportModal: vi.fn(),
   }),
-  useTemplatePanel: () => ({
-    templates: [],
-    loading: false,
-    error: null,
-    searchQuery: '',
-    selectedTemplate: null,
-  }),
-  useIsCreateWorkflowPanelCollapsed: () => true,
-  useIsAIAssistantPanelOpen: () => false,
+  useIsAIAssistantPanelOpen: () => mockIsAIAssistantPanelOpen(),
+  useShowLandingScreen: () => mockShowLandingScreen(),
 }));
 
 // Mock workflow hooks with controllable node selection
@@ -230,6 +229,7 @@ const mockSelectNode = vi.fn((node: any) => {
 // Mock canRun state
 let mockCanRun = true;
 let mockTooltipMessage = '';
+let mockWorkflowStateOverride: Partial<typeof mockWorkflow> | null = null;
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useNodeSelection: () => ({
@@ -244,11 +244,14 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     saveWorkflow: vi.fn(),
   }),
   useWorkflowState: (selector: any) => {
+    const workflow = mockWorkflowStateOverride
+      ? { ...mockWorkflow, ...mockWorkflowStateOverride }
+      : mockWorkflow;
     const state = {
-      workflow: mockWorkflow,
-      jobs: mockWorkflow.jobs,
-      triggers: mockWorkflow.triggers,
-      edges: mockWorkflow.edges,
+      workflow,
+      jobs: workflow.jobs,
+      triggers: workflow.triggers,
+      edges: workflow.edges,
       positions: {},
     };
     return typeof selector === 'function' ? selector(state) : state;
@@ -276,6 +279,10 @@ describe('WorkflowEditor', () => {
     // Reset state
     mockIsRunPanelOpen.mockReturnValue(false);
     mockRunPanelContext.mockReturnValue(null);
+    mockIsNewWorkflow.mockReturnValue(false);
+    mockIsAIAssistantPanelOpen.mockReturnValue(false);
+    mockShowLandingScreen.mockReturnValue(false);
+    mockWorkflowStateOverride = null;
     currentNode = { type: null, node: null };
     mockRunHandler.mockClear();
     mockCanRun = true;
@@ -369,6 +376,67 @@ describe('WorkflowEditor', () => {
 
       const panel = screen.getByTestId('manual-run-panel');
       expect(panel.getAttribute('data-trigger-id')).toBe('trigger-1');
+    });
+  });
+
+  describe('URL persistence of run-panel entry point', () => {
+    test('URL with runMode=custom-input opens panel with entryPoint', async () => {
+      urlState.setParams({
+        panel: 'run',
+        trigger: 'trigger-1',
+        runMode: 'custom-input',
+      });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: 'trigger-1',
+          entryPoint: 'custom-input',
+        });
+      });
+    });
+
+    test('URL without runMode opens panel without entryPoint', async () => {
+      urlState.setParams({ panel: 'run', trigger: 'trigger-1' });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: 'trigger-1',
+        });
+      });
+    });
+
+    test('URL with runMode=custom-input + jobParam preserves entryPoint', async () => {
+      urlState.setParams({
+        panel: 'run',
+        job: 'job-1',
+        runMode: 'custom-input',
+      });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          jobId: 'job-1',
+          entryPoint: 'custom-input',
+        });
+      });
+    });
+
+    test('URL with only panel=run defaults to first trigger + custom-input', async () => {
+      urlState.setParams({ panel: 'run' });
+
+      renderWorkflowEditor();
+
+      await waitFor(() => {
+        expect(mockOpenRunPanel).toHaveBeenCalledWith({
+          triggerId: 'trigger-1',
+          entryPoint: 'custom-input',
+        });
+      });
     });
   });
 

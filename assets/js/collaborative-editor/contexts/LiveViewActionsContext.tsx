@@ -11,7 +11,8 @@ interface LiveViewActions {
     name: string,
     callback: (payload: unknown) => void
   ) => () => void;
-  navigate: (path: string) => void;
+  navigate: (path: string, options?: { replace?: boolean }) => void;
+  redirect: (path: string, options?: { replace?: boolean }) => void;
 }
 
 const LiveViewActionsContext = createContext<LiveViewActions | null>(null);
@@ -30,6 +31,10 @@ export function LiveViewActionsProvider({
       {children}
     </LiveViewActionsContext.Provider>
   );
+}
+
+export function useOptionalLiveViewActions(): LiveViewActions | null {
+  return useContext(LiveViewActionsContext);
 }
 
 export function useLiveViewActions(): LiveViewActions {

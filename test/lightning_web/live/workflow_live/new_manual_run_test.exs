@@ -167,6 +167,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(
           job_a.id,
+          project,
           "query=+",
           10,
           0
@@ -235,6 +236,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(
           job_a.id,
+          project,
           "query=+",
           10,
           0
@@ -254,6 +256,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(
           job_a.id,
+          project,
           "query=+",
           10,
           0
@@ -275,6 +278,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(
           job_a.id,
+          project,
           "query=+",
           10,
           0
@@ -315,12 +319,29 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
       {:ok, result} =
         NewManualRun.search_selectable_dataclips(
           job_record.id,
+          project,
           "query=+",
           10,
           0
         )
 
       assert result.next_cron_run_dataclip_id == nil
+    end
+
+    test "returns an empty result for a job in another project" do
+      project = insert(:project)
+
+      other_job =
+        insert(:job, workflow: insert(:workflow, project: insert(:project)))
+
+      assert {:ok, %{dataclips: [], next_cron_run_dataclip_id: nil}} =
+               NewManualRun.search_selectable_dataclips(
+                 other_job.id,
+                 project,
+                 "query=+",
+                 10,
+                 0
+               )
     end
   end
 end

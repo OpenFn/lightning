@@ -10,8 +10,6 @@ config :tesla, adapter: Lightning.Tesla.Mock
 config :tesla, Lightning.AuthProviders.OauthHTTPClient,
   adapter: Lightning.AuthProviders.OauthHTTPClient.Mock
 
-config :tesla, Mix.Tasks.Lightning.InstallAdaptorIcons, adapter: Tesla.Mock
-
 config :tesla, Lightning.UsageTracking.Client, adapter: Tesla.Mock
 config :tesla, Lightning.UsageTracking.GithubClient, adapter: Tesla.Mock
 
@@ -31,15 +29,20 @@ ownership_timeout =
   end
 
 # On certain machines we get db queue timeouts, so we raise `queue_target`
-# from 50 to 100 to give the DBConnection some room to respond.
+# and `queue_interval` to give the DBConnection more room to respond. This
+# matters most for `async: false` tests, where Sandbox's shared-connection
+# mode funnels every process (including a subprocess worker's WebSocket
+# channels) through a single physical connection, so `pool_size` doesn't help.
 config :lightning, Lightning.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "lightning_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database:
+    "#{System.get_env("TEST_DATABASE_NAME", "lightning_test")}#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 15,
-  queue_target: 100,
+  queue_target: 200,
+  queue_interval: 2_000,
   ownership_timeout: ownership_timeout
 
 config :lightning, Lightning.Vault,
@@ -47,15 +50,25 @@ config :lightning, Lightning.Vault,
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
+#
+# The port is randomized (unless TEST_PORT is set) so `mix test` can run
+# concurrently across multiple git worktrees on the same machine without
+# port clashes.
+test_port =
+  case System.get_env("TEST_PORT") do
+    nil -> Enum.random(4100..4800)
+    port -> String.to_integer(port)
+  end
+
 config :lightning, LightningWeb.Endpoint,
-  http: [port: 4002],
+  http: [port: test_port],
   url: [scheme: "http"],
   secret_key_base:
     "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
   server: true
 
 config :lightning, Lightning.Runtime.RuntimeManager,
-  ws_url: "ws://localhost:4002/worker"
+  ws_url: "ws://localhost:#{test_port}/worker"
 
 config :lightning, :workers,
   private_key: """
@@ -93,8 +106,21 @@ config :lightning, :workers,
 # In test we don't send emails.
 config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Test
 
-config :lightning, Lightning.AdaptorRegistry,
-  use_cache: "test/fixtures/adaptor_registry_cache.json"
+config :lightning, Lightning.Adaptors,
+  strategy: Lightning.Adaptors.StrategyMock,
+  refresh_interval: 0,
+  # The instance application.ex starts comes up on an empty catalogue with
+  # refreshes off, which is exactly the state the operator warning is for.
+  # Test-owned instances pass their own opts instead.
+  warn_when_empty: false
+
+# The reconciler runs against the shared production catalogue table, which
+# tests seed freely; each test that needs it starts its own named instance.
+config :lightning, Lightning.Credentials.SchemaReconciler, enabled: false
+
+# `Config.source_for/1` only maps the two real strategies; the mock has to
+# declare its catalogue source like any other third-party strategy would.
+config :lightning, Lightning.Adaptors.StrategyMock, source: :npm
 
 config :hammer,
   backend:
@@ -106,17 +132,19 @@ config :lightning, Lightning.FailureAlerter,
   rate_limit: 3
 
 config :lightning,
-  schemas_path: "test/fixtures/schemas",
-  adaptor_icons_path: "test/fixtures/adaptors/icons",
   repo_connection_signing_secret:
     "39h9Qr6+v2wgzjlh4xQoJ90aDe+LY7qIvA5v7QLsTwIwGDfs8el9Z0oFk2Ege33E"
 
 # Print only warnings and errors during test
 config :logger, level: :warning
 
+config :tzdata, :autoupdate, :disabled
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 config :phoenix, :logger, true
+
+config :philter, allowed_hosts: ["localhost"]
 
 config :junit_formatter,
   report_file: "elixir_test_report.xml",
@@ -129,9 +157,13 @@ config :lightning, Oban, testing: :inline
 # Enables / Displays the credential features for LightningWeb.CredentialLiveTest
 config :lightning, LightningWeb, allow_credential_transfer: true
 
-config :lightning, CLI, child_process_mod: FakeRambo
-
 config :lightning, :is_resettable_demo, true
+
+# Tiny budget so a handful of pending rows fills multiple full batches and trips
+# the per-run budget guard, exercising the snowball follow-up path.
+config :lightning, :log_lines_search_indexing, batch_size: 2, max_batches: 2
+
+config :lightning, :dataclip_search_indexing, batch_size: 2, max_batches: 2
 
 config :lightning, :github_app,
   app_id: "111111",
@@ -159,3 +191,22 @@ config :lightning, :github_app,
 config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 25,
   max_database_limit: 15
+
+# The OIDC test suite serves discovery/JWKS/userinfo/token over http on
+# localhost via Bypass; allow those loopback endpoints to skip TLS verification.
+config :lightning, :auth_providers_allow_insecure_loopback, true
+
+# Under test, collaboration document children are spawned by an internal
+# GenServer rather than the test process. When a test owns the database
+# connection (and any per-test mocks), those children need to be granted access
+# explicitly. This callback runs synchronously as each document tree starts up,
+# so the children can talk to the database and resolve mocks via the owning test
+# process. Outside the test environment this config is absent and the supervisor
+# falls back to a no-op.
+config :lightning,
+       :collaboration_process_allow,
+       fn owner, pid ->
+         Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, owner, pid)
+         Mox.allow(LightningMock, owner, pid)
+         :ok
+       end

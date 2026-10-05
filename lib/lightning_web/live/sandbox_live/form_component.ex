@@ -67,21 +67,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
           }
         } = socket
       ) do
-    parent_users = Projects.get_project_users!(parent.id)
-
-    collaborators =
-      parent_users
-      |> Enum.reject(fn pu -> pu.user_id == actor.id end)
-      |> Enum.map(fn pu ->
-        role = if pu.role == :owner, do: :admin, else: pu.role
-        %{user_id: pu.user_id, role: role}
-      end)
-
     attrs =
       params
       |> build_sandbox_attrs()
       |> Map.put(:env, "dev")
-      |> Map.put(:collaborators, collaborators)
 
     with :ok <- ProjectLimiter.limit_new_sandbox(parent.id),
          {:ok, sandbox} <- Projects.provision_sandbox(parent, actor, attrs) do
@@ -293,7 +282,7 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   end
 
   defp initial_params(%{mode: :new}) do
-    %{"color" => get_random_color()}
+    %{"color" => Components.random_color()}
   end
 
   defp form_changeset(%Project{} = base, params, parent_id) do
@@ -329,10 +318,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       name: params["name"],
       color: params["color"]
     }
-  end
-
-  defp get_random_color do
-    Components.color_palette_hex_colors() |> Enum.random()
   end
 
   defp return_path(socket) do

@@ -6,7 +6,7 @@ These guidelines ensure maintainable, readable tests that focus on behavior rath
 
 ## Test behavior not implementation
 
-Test what a user or a calling module observes — inputs, outputs, side effects — not internal data structures or private fields. Micro-tests that assert "uses a Map internally" or "notifies subscribers exactly twice" are coupling tests to implementation and will break on refactor without signalling a real regression.
+Test what a user or a calling module observes. Asserting internal data structures or private fields couples the test to the implementation. Counting store notifications is the exception the stores earn: `useSyncExternalStore` re-renders once per `notify()`, so an exact count is the only way to catch a double-notify regression. Count when the number is the behaviour; do not count as a way of asserting how the store is built internally.
 
 ## Group related assertions
 
@@ -68,65 +68,17 @@ end
 - Verifying a state transition (before → action → after)
 - Related side effects of a single command
 
-### Quick decision tree
-
-```
-Is this testing a single operation?
-  → YES: Can you group assertions?
-    → YES: Group them in one test
-    → NO: Is the setup identical?
-      → YES: Still consider grouping
-      → NO: Separate tests OK
-
-Is this testing user-facing behavior?
-  → YES: Write the test
-  → NO: Skip it (probably testing framework/library code)
-
-Will this test catch a real bug?
-  → YES: Write the test
-  → NO: Skip it (probably testing trivial getters/setters)
-```
-
 ## Test file length
 
-**Test files > 400 lines → consolidate.**
-
-If you're past 400 lines you're probably:
-1. Testing framework features instead of your logic
-2. Splitting one assertion per test
-3. Not using test helpers or fixtures
-4. Testing implementation details
+**Test files over 400 lines: consolidate.** Group related assertions, extract setup into `test/collaborative-editor/__helpers__/`, and split by behaviour rather than by property. New work already meets this — files added in the last three months run to a median of 196 lines. Roughly half the older suite does not, and the largest file is 1,955 lines; that is legacy, not licence. Nothing enforces this; reviewers do.
 
 ## Channel mocks
 
-Phoenix Channel mocks for the collaborative editor (`createMockPhoenixChannel`, `createMockPushWithResponse`) are Lightning-specific and live in one place.
+Phoenix Channel mocks for the collaborative editor are Lightning-specific and live in the test tree, not in these guidelines. `assets/test/collaborative-editor/mocks/phoenixChannel.ts` exports `createMockPhoenixChannel` and `createMockPhoenixChannelProvider`; `assets/test/collaborative-editor/__helpers__/storeHelpers.ts` exports the per-store setup factories that wire a mock channel into a store; `assets/test/collaborative-editor/__helpers__/channelMocks.ts` exports the push-response helpers (`createMockChannelPushOk`, `createMockChannelPushError`, and four more). Read those files rather than reconstructing the mocks.
 
-> See `.claude/guidelines/testing/collaborative-editor.md §Channel Mocks` for the canonical implementation.
+> `.claude/guidelines/testing/collaborative-editor.md §Channel Mocks` covers what the mock channel exposes beyond the Phoenix `Channel` interface.
 
 ## Test structure and organization
-
-### File layout
-
-```
-assets/test/
-  collaborative-editor/
-    stores/
-      createSessionStore.test.ts
-      createAdaptorStore.test.ts
-    hooks/
-      useSession.test.ts
-    components/
-      SessionProvider.test.tsx
-    __helpers__/
-      storeHelpers.ts
-      testUtils.ts
-    __fixtures__/
-      adaptorData.ts
-      sessionData.ts
-    mocks/
-      phoenixSocket.ts
-      phoenixChannel.ts
-```
 
 ### Naming
 
@@ -142,20 +94,7 @@ Not `test('it works')`, `test('test1')`, `test('error')`.
 
 ### Setup
 
-Extract common setup into `beforeEach` or a factory helper:
-
-```typescript
-// __helpers__/storeHelpers.ts
-export function setupAdaptorStoreTest() {
-  const store = createAdaptorStore();
-  const mockChannel = createMockPhoenixChannel();
-  const mockProvider = createMockPhoenixChannelProvider(mockChannel);
-
-  mockChannel.push = createMockPushWithResponse('ok', { adaptors: [] });
-
-  return { store, mockChannel, mockProvider, cleanup: () => { /* ... */ } };
-}
-```
+Extract common setup into `beforeEach` or a factory helper. `assets/test/collaborative-editor/__helpers__/storeHelpers.ts` exports five, one per store shape.
 
 ## Async testing
 
@@ -187,7 +126,7 @@ npm test                             # Run all tests
 npm run test:watch                   # Watch mode
 npm test -- useSession.test.ts       # Specific file
 npm test -- useSession.test.ts:45    # Specific line
-npm test -- --grep "SessionStore"    # Filter by name
+npm test -- -t "SessionStore"        # Filter by name
 ```
 
 ## Additional resources

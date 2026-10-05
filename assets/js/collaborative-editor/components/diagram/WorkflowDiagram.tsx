@@ -11,7 +11,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import tippy from 'tippy.js';
 
-import { useProjectAdaptors } from '#/collaborative-editor/hooks/useAdaptors';
+import { useAdaptorsInUse } from '#/collaborative-editor/hooks/useAdaptors';
 import useConnect from '#/collaborative-editor/hooks/useConnect';
 import {
   usePositions,
@@ -75,7 +75,8 @@ const LAYOUT_DURATION = 300;
 const useTippyForControls = (
   isManualLayout: boolean,
   canUndo: boolean,
-  canRedo: boolean
+  canRedo: boolean,
+  isReadOnly: boolean
 ) => {
   useEffect(() => {
     // Find the control buttons and initialize tooltips based on their dataset attributes
@@ -99,7 +100,7 @@ const useTippyForControls = (
         f();
       });
     };
-  }, [isManualLayout, canUndo, canRedo]);
+  }, [isManualLayout, canUndo, canRedo, isReadOnly]);
 };
 
 // increase this value to determine the amount of movement we allow during a click
@@ -139,7 +140,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     edges: state.edges,
   }));
 
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, tooltipMessage: readOnlyTooltip } = useWorkflowReadOnly();
 
   const workflow = React.useMemo(() => {
     // Entities already have errors denormalized from store
@@ -200,8 +201,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     position: { x: number; y: number };
   } | null>(null);
 
-  // Fetch project adaptors for modal
-  const { projectAdaptors } = useProjectAdaptors();
+  const { adaptorsInUse } = useAdaptorsInUse();
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -882,11 +882,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     workflowStore
   );
   // Set up tooltips for control buttons
-  useTippyForControls(isManualLayout, canUndo, canRedo);
+  useTippyForControls(isManualLayout, canUndo, canRedo, isReadOnly);
 
   // undo/redo keyboard shortcuts
   useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
+      if (isReadOnly) return;
+
       const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'z';
       const isRedo =
         ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
@@ -905,7 +907,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     return () => {
       window.removeEventListener('keydown', keyHandler);
     };
-  }, [redo, undo]);
+  }, [redo, undo, isReadOnly]);
 
   return (
     <>
@@ -919,7 +921,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         onNodesChange={onNodesChange}
         onNodeDragStart={flowhandlers.ondragstart()}
         onNodeDragStop={flowhandlers.ondragstop(onNodeDragStop)}
-        nodesDraggable={isManualLayout}
+        nodesDraggable={isManualLayout && !isReadOnly}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={handleNodeClick}
@@ -946,10 +948,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
             <ControlButton
               onClick={() => switchLayout()}
+              disabled={isReadOnly}
               data-tooltip={
-                isManualLayout
-                  ? 'Switch to auto layout mode'
-                  : 'Switch to manual layout mode'
+                isReadOnly
+                  ? readOnlyTooltip
+                  : isManualLayout
+                    ? 'Switch to auto layout mode'
+                    : 'Switch to manual layout mode'
               }
             >
               {isManualLayout ? (
@@ -966,17 +971,29 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
             </ControlButton>
             <ControlButton
               onClick={() => undo()}
-              data-tooltip={canUndo ? 'Undo' : 'Nothing to undo'}
+              data-tooltip={
+                isReadOnly
+                  ? readOnlyTooltip
+                  : canUndo
+                    ? 'Undo'
+                    : 'Nothing to undo'
+              }
               data-testid="undo-button"
-              disabled={!canUndo}
+              disabled={!canUndo || isReadOnly}
             >
               <span className="text-black hero-arrow-uturn-left w-4 h-4" />
             </ControlButton>
             <ControlButton
               onClick={() => redo()}
-              data-tooltip={canRedo ? 'Redo' : 'Nothing to redo'}
+              data-tooltip={
+                isReadOnly
+                  ? readOnlyTooltip
+                  : canRedo
+                    ? 'Redo'
+                    : 'Nothing to redo'
+              }
               data-testid="redo-button"
-              disabled={!canRedo}
+              disabled={!canRedo || isReadOnly}
             >
               <span className="text-black hero-arrow-uturn-right w-4 h-4" />
             </ControlButton>
@@ -1000,7 +1017,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         isOpen={pendingPlaceholder !== null}
         onClose={handleAdaptorModalClose}
         onSelect={handleAdaptorSelect}
-        projectAdaptors={projectAdaptors}
+        adaptorsInUse={adaptorsInUse}
       />
     </>
   );

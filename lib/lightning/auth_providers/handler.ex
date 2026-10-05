@@ -5,22 +5,35 @@ defmodule Lightning.AuthProviders.Handler do
   any OIDC compliant provider.
   """
 
+  alias Lightning.AuthProviders.TLS
   alias Lightning.AuthProviders.WellKnown
+
+  @scope "openid email profile"
+
+  @jwks_cache :auth_provider_jwks
+  @jwks_ttl :timer.minutes(10)
+
+  # Asymmetric algorithms only. Restricting the accepted set (never `none`, never
+  # an HMAC alg) is what stops an "alg confusion" forgery where a token signed
+  # with a symmetric alg is verified against the provider's public key.
+  @id_token_algs ~w(RS256 RS384 RS512 ES256 ES384 ES512)
 
   @type t :: %__MODULE__{
           name: String.t(),
           client: OAuth2.Client.t(),
-          wellknown: WellKnown.t()
+          wellknown: WellKnown.t(),
+          allow_unverified_email: boolean()
         }
 
   @type opts :: [
           client_id: String.t(),
           client_secret: String.t(),
           redirect_uri: String.t(),
-          wellknown: WellKnown.t()
+          wellknown: WellKnown.t(),
+          allow_unverified_email: boolean()
         ]
 
-  defstruct [:name, :client, :wellknown]
+  defstruct [:name, :client, :wellknown, allow_unverified_email: false]
 
   @doc """
   Create a new Provider struct, expects a name and opts:
@@ -49,12 +62,24 @@ defmodule Lightning.AuthProviders.Handler do
             client_secret: opts[:client_secret],
             authorize_url: wellknown.authorization_endpoint,
             token_url: wellknown.token_endpoint,
-            redirect_uri: opts[:redirect_uri]
+            redirect_uri: opts[:redirect_uri],
+            # Verify the TLS chain on the token exchange: that POST carries the
+            # client_secret and the auth code, so a MITM here would capture the
+            # RP's long-lived secret. (The scheme is enforced in get_token/2,
+            # since these opts are inert over plaintext http.) OAuth2 runs on the
+            # Tesla/Hackney adapter, which reads `ssl_options` (not `ssl`), so we
+            # verify against the same OS trust store the HTTPoison fetches use.
+            request_opts: [ssl_options: TLS.verify_opts()]
           )
           |> OAuth2.Client.put_serializer("application/json", Jason)
 
         {:ok,
-         struct!(__MODULE__, name: name, client: client, wellknown: wellknown)}
+         struct!(__MODULE__,
+           name: name,
+           client: client,
+           wellknown: wellknown,
+           allow_unverified_email: opts[:allow_unverified_email] || false
+         )}
     end
   end
 
@@ -67,42 +92,253 @@ defmodule Lightning.AuthProviders.Handler do
   def from_model(nil), do: {:error, :not_found}
 
   def from_model(model) do
-    opts =
-      model
-      |> Map.from_struct()
-      |> Keyword.new(fn
-        {:discovery_url, v} -> {:wellknown, WellKnown.fetch!(v)}
-        {k, v} -> {k, v}
-      end)
+    # Handle a failed discovery fetch (e.g. TLS verification against an internal
+    # IdP's untrusted CA) as an error rather than threading the error tuple into
+    # `new/2`, which would crash on `Map.from_struct`.
+    case WellKnown.fetch(model.discovery_url) do
+      {:ok, wellknown} ->
+        opts =
+          model
+          |> Map.from_struct()
+          |> Keyword.new(fn
+            {:discovery_url, _v} -> {:wellknown, wellknown}
+            {k, v} -> {k, v}
+          end)
 
-    new(model.name, opts)
+        new(model.name, opts)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
-  @spec authorize_url(handler :: __MODULE__.t()) :: String.t()
-  def authorize_url(handler) do
-    OAuth2.Client.authorize_url!(handler.client, scope: "openid email profile")
+  @spec authorize_url(
+          handler :: __MODULE__.t(),
+          state :: String.t(),
+          nonce :: String.t()
+        ) :: String.t()
+  def authorize_url(handler, state, nonce) do
+    OAuth2.Client.authorize_url!(handler.client,
+      scope: @scope,
+      state: state,
+      nonce: nonce
+    )
   end
 
   @spec get_token(handler :: __MODULE__.t(), code :: String.t()) ::
-          {:ok, OAuth2.AccessToken.t()} | {:error, map()}
+          {:ok, OAuth2.AccessToken.t()} | {:error, map() | atom()}
   def get_token(handler, code) when is_binary(code) do
-    case OAuth2.Client.get_token(handler.client,
-           code: code,
-           scope: "openid email profile"
-         ) do
-      {:ok, client} -> {:ok, client.token}
-      {:error, %OAuth2.Response{body: body}} -> {:error, body}
+    if TLS.secure_url?(handler.wellknown.token_endpoint) do
+      case OAuth2.Client.get_token(handler.client, code: code, scope: @scope) do
+        {:ok, client} -> {:ok, client.token}
+        {:error, %OAuth2.Response{body: body}} -> {:error, body}
+        {:error, %OAuth2.Error{}} -> {:error, :token_request_failed}
+      end
+    else
+      {:error, :insecure_token_endpoint}
     end
   end
 
   @spec get_userinfo(handler :: __MODULE__.t(), token :: OAuth2.AccessToken.t()) ::
           map()
   def get_userinfo(handler, token) do
-    OAuth2.Client.get!(
-      %{handler.client | token: token},
-      handler.wellknown.userinfo_endpoint
-    ).body
+    userinfo_endpoint = handler.wellknown.userinfo_endpoint
+
+    # Fetch userinfo directly over verified TLS rather than through the OAuth2
+    # client (which does not verify the chain), since its `email`/`email_verified`
+    # can decide a login on the fallback path. Refuse a plaintext endpoint (the
+    # ssl opts are inert over http) so the bearer token and the trusted email are
+    # never exchanged in the clear. Loopback is allowed for the test suite.
+    unless TLS.secure_url?(userinfo_endpoint) do
+      raise "refusing to fetch userinfo over an unverified (non-https) endpoint"
+    end
+
+    headers = [{"authorization", "Bearer #{token.access_token}"}]
+    opts = [ssl: TLS.verify_opts(), timeout: 10_000, recv_timeout: 10_000]
+
+    %HTTPoison.Response{status_code: 200, body: body} =
+      HTTPoison.get!(userinfo_endpoint, headers, opts)
+
+    Jason.decode!(body)
   end
+
+  @doc """
+  Verifies the `id_token` returned by the token endpoint and returns its claims.
+
+  Checks the JWT signature against the provider's JWKS (asymmetric algs only),
+  then that `iss` matches the discovered issuer, `aud` contains our client id,
+  the token is not expired, and `nonce` matches the value we sent. This is what
+  lets the caller trust the token's identity claims (`email`, `email_verified`,
+  `sub`) rather than an unauthenticated userinfo response.
+  """
+  @spec verify_id_token(
+          handler :: __MODULE__.t(),
+          token :: OAuth2.AccessToken.t(),
+          nonce :: String.t() | nil
+        ) :: {:ok, map()} | {:error, term()}
+  def verify_id_token(handler, token, nonce) do
+    with {:ok, id_token} <- fetch_id_token(token),
+         {:ok, claims} <- verify_signature(handler, id_token) do
+      verify_claims(handler, claims, nonce)
+    end
+  end
+
+  defp fetch_id_token(%OAuth2.AccessToken{
+         other_params: %{"id_token" => id_token}
+       })
+       when is_binary(id_token),
+       do: {:ok, id_token}
+
+  defp fetch_id_token(_token), do: {:error, :missing_id_token}
+
+  defp verify_signature(handler, id_token) do
+    with {:ok, header} <- peek_header(id_token),
+         {:ok, keys} <- signing_keys(handler.wellknown.jwks_uri, header) do
+      keys
+      |> candidate_keys(header)
+      |> verify_with_keys(id_token)
+    end
+  rescue
+    _ -> {:error, :invalid_id_token}
+  end
+
+  # Serve the provider's signing keys from cache to keep the JWKS fetch off the
+  # per-login hot path.
+  defp signing_keys(jwks_uri, header) do
+    case Cachex.get(@jwks_cache, jwks_uri) do
+      # Cold cache: fetch fresh. The result is already current, so there's no
+      # point refetching even if this token's kid isn't in it.
+      {:ok, nil} ->
+        refresh_jwks(jwks_uri)
+
+      # Warm cache: reuse it, unless the token names a `kid` the cached set
+      # doesn't hold, in which case a key may have just rotated in, so fetch
+      # fresh once. A steady miss is no worse than the uncached per-login fetch.
+      {:ok, keys} ->
+        if kid_present?(keys, header),
+          do: {:ok, keys},
+          else: refresh_jwks(jwks_uri)
+
+      # Cache unavailable: fall back to a direct fetch.
+      _ ->
+        fetch_jwks(jwks_uri)
+    end
+  end
+
+  defp refresh_jwks(jwks_uri) do
+    with {:ok, keys} <- fetch_jwks(jwks_uri) do
+      Cachex.put(@jwks_cache, jwks_uri, keys, ttl: @jwks_ttl)
+      {:ok, keys}
+    end
+  end
+
+  defp kid_present?(keys, %{"kid" => kid}) when is_binary(kid),
+    do: Enum.any?(keys, &(&1["kid"] == kid))
+
+  defp kid_present?(_keys, _header), do: true
+
+  defp peek_header(id_token) do
+    {:ok, id_token |> JOSE.JWS.peek_protected() |> Jason.decode!()}
+  rescue
+    _ -> {:error, :malformed_id_token}
+  end
+
+  # With a `kid`, only that key can be the signer. Without one, any of the
+  # provider's signing keys might be, so try them all (a JWKS can lead with an
+  # encryption key or, mid-rotation, the previous key).
+  defp candidate_keys(keys, %{"kid" => kid}) when is_binary(kid),
+    do: Enum.filter(keys, &(&1["kid"] == kid))
+
+  defp candidate_keys(keys, _header),
+    do: Enum.filter(keys, &(&1["use"] in [nil, "sig"]))
+
+  defp verify_with_keys([], _id_token), do: {:error, :invalid_signature}
+
+  defp verify_with_keys([key | rest], id_token) do
+    case verify_one_key(key, id_token) do
+      {:ok, claims} -> {:ok, claims}
+      :error -> verify_with_keys(rest, id_token)
+    end
+  end
+
+  # A malformed/unsupported key entry must only skip that key, not abort the
+  # whole verification, so a valid signing key later in the set is still tried.
+  defp verify_one_key(key, id_token) do
+    jwk = JOSE.JWK.from_map(key)
+
+    case JOSE.JWT.verify_strict(jwk, @id_token_algs, id_token) do
+      {true, %JOSE.JWT{fields: claims}, _jws} -> {:ok, claims}
+      _ -> :error
+    end
+  rescue
+    _ -> :error
+  end
+
+  defp fetch_jwks(nil), do: {:error, :missing_jwks_uri}
+
+  defp fetch_jwks(jwks_uri) do
+    if TLS.secure_url?(jwks_uri),
+      do: get_jwks(jwks_uri),
+      else: {:error, :insecure_jwks_uri}
+  end
+
+  defp get_jwks(jwks_uri) do
+    opts = [ssl: TLS.verify_opts(), timeout: 10_000, recv_timeout: 10_000]
+
+    case HTTPoison.get(jwks_uri, [], opts) do
+      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+        case Jason.decode(body) do
+          {:ok, %{"keys" => keys}} when is_list(keys) -> {:ok, keys}
+          _ -> {:error, :invalid_jwks}
+        end
+
+      _ ->
+        {:error, :jwks_fetch_failed}
+    end
+  end
+
+  defp verify_claims(handler, claims, nonce) do
+    cond do
+      is_nil(handler.wellknown.issuer) ->
+        {:error, :missing_issuer}
+
+      claims["iss"] != handler.wellknown.issuer ->
+        {:error, :invalid_issuer}
+
+      not audience_valid?(claims, handler.client.client_id) ->
+        {:error, :invalid_audience}
+
+      expired?(claims["exp"]) ->
+        {:error, :expired}
+
+      is_nil(nonce) ->
+        {:error, :missing_nonce}
+
+      claims["nonce"] != nonce ->
+        {:error, :invalid_nonce}
+
+      true ->
+        {:ok, claims}
+    end
+  end
+
+  # `aud` must contain our client id. When it lists more than one audience the
+  # OIDC spec requires `azp` to name us; and if `azp` is present at all it must
+  # be us, so a token minted for another client at the same issuer is rejected.
+  defp audience_valid?(claims, client_id) do
+    aud = List.wrap(claims["aud"])
+    azp = claims["azp"]
+
+    cond do
+      client_id not in aud -> false
+      length(aud) > 1 -> azp == client_id
+      not is_nil(azp) -> azp == client_id
+      true -> true
+    end
+  end
+
+  defp expired?(exp) when is_integer(exp), do: exp <= System.system_time(:second)
+  defp expired?(_exp), do: true
 
   defp validate_opts(opts) do
     with nil <-

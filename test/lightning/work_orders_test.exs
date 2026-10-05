@@ -7,7 +7,7 @@ defmodule Lightning.WorkOrdersTest do
   alias Lightning.Extensions.MockUsageLimiter
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.Message
-  alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
+  alias Lightning.Invocation.Dataclip
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.RetryManyWorkOrdersJob
@@ -28,22 +28,11 @@ defmodule Lightning.WorkOrdersTest do
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
 
-      record_changeset =
-        TriggerKafkaMessageRecord.changeset(
-          %TriggerKafkaMessageRecord{},
-          %{topic_partition_offset: "foo-bar-baz", trigger_id: trigger.id}
-        )
-
-      multi =
-        Multi.new()
-        |> Multi.insert(:record, record_changeset)
-
       %{
         workflow: workflow,
         trigger: trigger |> Repo.reload!(),
         job: job |> Repo.reload!(),
-        snapshot: snapshot,
-        multi: multi
+        snapshot: snapshot
       }
     end
 
@@ -119,7 +108,7 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     @tag trigger_type: :webhook
-    test "with a sync webhook trigger (custom)", context do
+    test "with a webhook trigger (custom, which is not synchronous)", context do
       %{workflow: existing_workflow} = context
 
       job = build(:job)
@@ -141,7 +130,7 @@ defmodule Lightning.WorkOrdersTest do
         WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
 
       [run] = workorder.runs
-      assert run.queue == "fast_lane"
+      assert run.queue == "default"
     end
 
     test "with a webhook trigger (without runs)", context do
@@ -210,9 +199,7 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    @tag trigger_type: :kafka
     test "with a provided multi instance - also executes the multi", %{
-      multi: multi,
       trigger: trigger,
       workflow: workflow
     } do
@@ -226,6 +213,20 @@ defmodule Lightning.WorkOrdersTest do
       Lightning.WorkOrders.subscribe(project_id)
       dataclip = insert(:dataclip, project: project)
 
+      record_id = Ecto.UUID.generate()
+
+      multi =
+        Multi.new()
+        |> Multi.insert(
+          :record,
+          Dataclip.new(%{
+            id: record_id,
+            body: %{"from" => "the multi"},
+            type: :global,
+            project_id: project_id
+          })
+        )
+
       assert {:ok, _workorder} =
                WorkOrders.create_for(
                  trigger,
@@ -234,8 +235,7 @@ defmodule Lightning.WorkOrdersTest do
                  workflow: workflow
                )
 
-      assert TriggerKafkaMessageRecord
-             |> Repo.get_by(trigger_id: trigger.id) != nil
+      assert Repo.get(Dataclip, record_id) != nil
     end
 
     test "with a manual workorder", context do
@@ -2727,6 +2727,87 @@ defmodule Lightning.WorkOrdersTest do
       assert Enum.all?(results, &(&1.workflow_id == workflow.id))
     end
 
+    test "does not surface another workflow's work order for a foreign run_id",
+         %{workflow: workflow, trigger: trigger, snapshot: snapshot} do
+      # An own work order, so this workflow's history is non-empty.
+      own_dataclip = insert(:dataclip)
+
+      own_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: own_dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:run,
+        work_order: own_workorder,
+        dataclip: own_dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot
+      )
+
+      # A run belonging to a DIFFERENT workflow (and project).
+      other_workflow = insert(:simple_workflow)
+      other_trigger = hd(other_workflow.triggers)
+      {:ok, other_snapshot} = Lightning.Workflows.Snapshot.create(other_workflow)
+      other_dataclip = insert(:dataclip)
+
+      foreign_workorder =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: other_dataclip,
+          snapshot: other_snapshot
+        )
+
+      foreign_run =
+        insert(:run,
+          work_order: foreign_workorder,
+          dataclip: other_dataclip,
+          starting_trigger: other_trigger,
+          snapshot: other_snapshot
+        )
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, foreign_run.id)
+      wo_ids = Enum.map(results, & &1.id)
+
+      # The foreign run's work order is never returned; the caller falls back to
+      # its own workflow's history.
+      refute foreign_workorder.id in wo_ids
+      assert own_workorder.id in wo_ids
+      assert Enum.all?(results, &(&1.workflow_id == workflow.id))
+    end
+
+    test "falls back to the workflow's history for a malformed run_id", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot: snapshot
+    } do
+      dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          runs: [
+            %{
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+
+      # A non-UUID run_id must not crash; it's treated as no pin.
+      results = WorkOrders.get_workorders_with_runs(workflow.id, "not-a-uuid")
+
+      assert Enum.map(results, & &1.id) == [workorder.id]
+    end
+
     test "respects the limit of 20 workorders", %{
       workflow: workflow,
       trigger: trigger,
@@ -2914,6 +2995,177 @@ defmodule Lightning.WorkOrdersTest do
       # Should include other workorders up to the limit
       # 1 from specific query + up to 20 from main query
       assert length(results) <= 21
+    end
+  end
+
+  describe "get_workorders_for_version/2 and get_workorders_unversioned/1" do
+    setup do
+      user = insert(:user)
+      workflow = insert(:simple_workflow)
+      trigger = hd(workflow.triggers)
+
+      snapshot_v1 = insert(:snapshot, workflow: workflow, lock_version: 1)
+      snapshot_v2 = insert(:snapshot, workflow: workflow, lock_version: 2)
+      draft_snapshot = insert(:snapshot, workflow: workflow, lock_version: 3)
+
+      {:ok, release_v1} = release_for(workflow, snapshot_v1, user)
+      {:ok, release_v2} = release_for(workflow, snapshot_v2, user)
+
+      %{
+        workflow: workflow,
+        trigger: trigger,
+        snapshot_v1: snapshot_v1,
+        snapshot_v2: snapshot_v2,
+        draft_snapshot: draft_snapshot,
+        release_v1: release_v1,
+        release_v2: release_v2
+      }
+    end
+
+    test "returns only the work orders whose runs ran at that version's snapshot",
+         %{
+           workflow: workflow,
+           trigger: trigger,
+           snapshot_v1: snapshot_v1,
+           snapshot_v2: snapshot_v2,
+           draft_snapshot: draft_snapshot,
+           release_v1: release_v1
+         } do
+      {wo_v1, _} = workorder_with_run(workflow, trigger, snapshot_v1, :success)
+      {_wo_v2, _} = workorder_with_run(workflow, trigger, snapshot_v2, :success)
+
+      {_wo_draft, _} =
+        workorder_with_run(workflow, trigger, draft_snapshot, :success)
+
+      results =
+        WorkOrders.get_workorders_for_version(
+          workflow.id,
+          release_v1.version_number
+        )
+
+      assert [%{id: id, runs: [run]}] = results
+      assert id == wo_v1.id
+      assert run.snapshot.lock_version == 1
+    end
+
+    test "includes only the matching runs within a work order retried across versions",
+         %{
+           workflow: workflow,
+           trigger: trigger,
+           snapshot_v1: snapshot_v1,
+           snapshot_v2: snapshot_v2,
+           release_v1: release_v1
+         } do
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot_v1
+        )
+
+      run_v1 =
+        insert(:run,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          snapshot: snapshot_v1,
+          state: :success
+        )
+
+      _run_v2 =
+        insert(:run,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          snapshot: snapshot_v2,
+          state: :success
+        )
+
+      results =
+        WorkOrders.get_workorders_for_version(
+          workflow.id,
+          release_v1.version_number
+        )
+
+      assert [%{id: wo_id, runs: [run]}] = results
+      assert wo_id == work_order.id
+      assert run.id == run_v1.id
+      assert run.snapshot.lock_version == 1
+    end
+
+    test "returns an empty list for an unknown version_number", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot_v1: snapshot_v1
+    } do
+      workorder_with_run(workflow, trigger, snapshot_v1, :success)
+
+      assert WorkOrders.get_workorders_for_version(workflow.id, 99) == []
+    end
+
+    test "caps the version-filtered feed at 20 work orders", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot_v1: snapshot_v1,
+      release_v1: release_v1
+    } do
+      for _ <- 1..25 do
+        workorder_with_run(workflow, trigger, snapshot_v1, :success)
+      end
+
+      results =
+        WorkOrders.get_workorders_for_version(
+          workflow.id,
+          release_v1.version_number
+        )
+
+      assert length(results) == 20
+    end
+
+    test "get_workorders_unversioned returns only the draft/unreleased runs", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot_v1: snapshot_v1,
+      draft_snapshot: draft_snapshot
+    } do
+      {_wo_v1, _} = workorder_with_run(workflow, trigger, snapshot_v1, :success)
+
+      {wo_draft, _} =
+        workorder_with_run(workflow, trigger, draft_snapshot, :success)
+
+      results = WorkOrders.get_workorders_unversioned(workflow.id)
+
+      assert [%{id: id, runs: [run]}] = results
+      assert id == wo_draft.id
+      assert run.snapshot.lock_version == 3
+    end
+
+    test "get_workorders_unversioned returns all runs when no releases exist" do
+      workflow = insert(:simple_workflow)
+      trigger = hd(workflow.triggers)
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 1)
+
+      workorder_with_run(workflow, trigger, snapshot, :success)
+      workorder_with_run(workflow, trigger, snapshot, :failed)
+
+      results = WorkOrders.get_workorders_unversioned(workflow.id)
+
+      assert length(results) == 2
+    end
+
+    test "get_workorders_unversioned caps at 20 work orders" do
+      workflow = insert(:simple_workflow)
+      trigger = hd(workflow.triggers)
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 1)
+
+      for _ <- 1..25 do
+        workorder_with_run(workflow, trigger, snapshot, :success)
+      end
+
+      assert length(WorkOrders.get_workorders_unversioned(workflow.id)) == 20
     end
   end
 
@@ -3115,5 +3367,37 @@ defmodule Lightning.WorkOrdersTest do
 
       assert Repo.reload!(run).state == :cancelled
     end
+  end
+
+  defp release_for(workflow, snapshot, user) do
+    Lightning.Workflows.WorkflowReleases.insert_release(Repo, %{
+      workflow_id: workflow.id,
+      kind: :go_live,
+      snapshot_id: snapshot.id,
+      published_by_id: user.id
+    })
+  end
+
+  defp workorder_with_run(workflow, trigger, snapshot, state) do
+    dataclip = insert(:dataclip)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
+      )
+
+    run =
+      insert(:run,
+        work_order: work_order,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot,
+        state: state
+      )
+
+    {work_order, run}
   end
 end

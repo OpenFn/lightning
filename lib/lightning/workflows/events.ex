@@ -13,6 +13,15 @@ defmodule Lightning.Workflows.Events do
     )
   end
 
+  @doc """
+  Subscribes to the workflow events of a single project.
+
+  This is a high-traffic topic: `WorkflowUpdated` fires on every save in the
+  project. Session-teardown events belong on `Lightning.Projects.Events`
+  instead, which the same surfaces already subscribe to and which only carries
+  events that change what a session may do — see
+  `Lightning.Projects.Events.WorkflowDeleted`.
+  """
   def subscribe(project_id) do
     Lightning.subscribe(topic(project_id))
   end

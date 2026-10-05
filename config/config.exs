@@ -10,6 +10,14 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
+# Apollo (AI assistant service). Compiled defaults so these are never nil;
+# Config.Bootstrap overrides them from the environment. See there for what
+# each one bounds.
+config :lightning, :apollo,
+  connect_timeout: 5_000,
+  idle_timeout: 30_000,
+  request_timeout: 300_000
+
 config :lightning, Lightning.Repo,
   types: Lightning.PostgrexTypes,
   log: :debug
@@ -80,6 +88,14 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 # Set OAuth2 to use Hackney for HTTP calls
 config :oauth2, adapter: Tesla.Adapter.Hackney
 
+# hackney 4 negotiates HTTP/2 via ALPN by default, where 1.x was HTTP/1.1 only.
+# Concurrent requests to one host then multiplex onto a single connection, so
+# retiring that connection fails every in-flight request at once -- around a
+# quarter of a bulk schema fetch when this was first seen. Pinned to HTTP/1.1
+# to keep the transport hackney 1.25 used; revisit as a deliberate change if we
+# want h2 multiplexing.
+config :hackney, default_protocols: [:http1]
+
 # Configure esbuild (the version is required)
 # TODO: work out how to _NOT_ have this set of entry points try and build
 # monaco-editor, since we already have a separate esbuild task for that.
@@ -102,18 +118,12 @@ config :esbuild,
          --external:/fonts/*
          --external:/images/*
          js/app.js
-         js/storybook.js
-         js/editor/Editor.tsx
          js/react/components/DataclipViewer.tsx
          js/react/components/CollectionPreviewViewer.tsx
-         js/job-editor/JobEditor.tsx
-         js/workflow-editor/WorkflowEditor.tsx
-         js/workflow-store/WorkflowStore.tsx
-         js/manual-run-panel/ManualRunPanel.tsx
-         js/panel/panels/WorkflowRunPanel.tsx
          js/collaborative-editor/CollaborativeEditor.tsx
          js/picker/Picker.tsx
          js/picker/PickerButton.tsx
+         js/health/WorkflowHealth.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js
@@ -145,30 +155,38 @@ config :tailwind,
       --output=priv/static/assets/app.css
     ),
     cd: Path.expand("..", __DIR__)
-  ],
-  storybook: [
-    args: ~w(
-      --input=assets/css/storybook.css
-      --output=priv/static/assets/storybook.css
-    ),
-    cd: Path.expand("..", __DIR__)
   ]
+
+# Every key the app attaches with Logger.metadata/1, mostly via
+# LightningWeb.Observability.put_scope/1. Defined once so the console and
+# Sentry can't drift; a new key has to be added here to reach either.
+log_metadata = [
+  :request_id,
+  :session_id,
+  :prompt_size,
+  :credential_id,
+  :run_id,
+  :project_id,
+  :project_env,
+  :user_id,
+  :workflow_id,
+  :worker_id
+]
+
+config :lightning, :log_metadata, log_metadata
 
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: [
-    :request_id,
-    :session_id,
-    :prompt_size,
-    :credential_id,
-    :run_id,
-    :project_id,
-    :project_env
-  ]
+  metadata: log_metadata
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Without this every `DateTime.shift_zone/2` with a zone name returns
+# `{:error, :utc_only_time_zone_database}`. Needed by the workflow health
+# charts, which bucket on the reader's clock.
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 
 config :lightning, Lightning.Vault, json_library: Jason
 
@@ -181,11 +199,30 @@ config :lightning, LightningWeb, allow_credential_transfer: false
 
 config :tesla, adapter: {Tesla.Adapter.Finch, name: Lightning.Finch}
 
-config :philter, finch_name: Lightning.Finch
+# Route server-side OAuth provider requests through the rebinding-proof egress
+# adapter, which pins the connection to a validated IP address.
+config :tesla, Lightning.AuthProviders.OauthHTTPClient,
+  adapter: {Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter, []}
+
+config :lightning, Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter,
+  block_private_networks: true,
+  allowed_hosts: []
+
+# Egress guard for the channel reverse proxy. Secure by default: block all
+# private/reserved ranges and allowlist nothing. Overridable at runtime via
+# CHANNEL_BLOCK_PRIVATE_NETWORKS and CHANNEL_ALLOWED_HOSTS (see config/bootstrap).
+config :philter,
+  block_private_networks: true,
+  allowed_hosts: []
 
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil
+
 config :lightning, :claim_work_mem, nil
+
+config :lightning, :log_lines_search_indexing, batch_size: 2_500, max_batches: 10
+
+config :lightning, :dataclip_search_indexing, batch_size: 250, max_batches: 10
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 

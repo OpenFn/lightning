@@ -54,24 +54,32 @@ defmodule Lightning.Credentials.OauthClient do
 
   This function validates the presence of essential fields, ensures that URLs are valid,
   and handles associations with projects through nested changesets.
+
+  ## Options
+
+  - `:allow_global` - when `true`, permits casting `:global` (which publishes the
+    client instance-wide). Defaults to `false`, so `:global` is dropped from the
+    params unless the caller has authorized it; only superusers may set it.
   """
-  def changeset(oauth_client, attrs) do
+  def changeset(oauth_client, attrs, opts \\ []) do
+    build_changeset(oauth_client, attrs, castable_fields(opts))
+  end
+
+  @doc """
+  Changeset for creating a client, where the owner (`:user_id`) is settable.
+
+  `Lightning.OauthClients` authorises every write by asking who owns the client,
+  so an update that could move `:user_id` would let the owner hand the client,
+  and the secret they already know, to another person's account. Same split as
+  `Lightning.Credentials.Credential`.
+  """
+  def create_changeset(oauth_client, attrs, opts \\ []) do
+    build_changeset(oauth_client, attrs, [:user_id | castable_fields(opts)])
+  end
+
+  defp build_changeset(oauth_client, attrs, fields) do
     oauth_client
-    |> cast(attrs, [
-      :name,
-      :client_id,
-      :client_secret,
-      :authorization_endpoint,
-      :token_endpoint,
-      :revocation_endpoint,
-      :userinfo_endpoint,
-      :introspection_endpoint,
-      :global,
-      :user_id,
-      :mandatory_scopes,
-      :optional_scopes,
-      :scopes_doc_url
-    ])
+    |> cast(attrs, fields)
     |> validate_required([
       :name,
       :client_id,
@@ -89,5 +97,25 @@ defmodule Lightning.Credentials.OauthClient do
       with: &ProjectOauthClient.changeset/2
     )
     |> assoc_constraint(:user)
+  end
+
+  @base_fields [
+    :name,
+    :client_id,
+    :client_secret,
+    :authorization_endpoint,
+    :token_endpoint,
+    :revocation_endpoint,
+    :userinfo_endpoint,
+    :introspection_endpoint,
+    :mandatory_scopes,
+    :optional_scopes,
+    :scopes_doc_url
+  ]
+
+  defp castable_fields(opts) do
+    if Keyword.get(opts, :allow_global, false),
+      do: [:global | @base_fields],
+      else: @base_fields
   end
 end

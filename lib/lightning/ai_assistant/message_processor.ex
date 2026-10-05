@@ -51,28 +51,29 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   @doc """
-  Defines the job timeout based on Apollo configuration.
+  How long one AI job may run, in milliseconds.
 
-  Adds a 10-second buffer to the Apollo timeout to account for
-  network overhead and processing time.
-
-  ## Returns
-
-  Timeout in milliseconds
+  The three Apollo timeouts added together, plus a 10-second buffer, so the
+  transport gets to fail first and say why.
   """
   @impl Oban.Worker
   @spec timeout(Oban.Job.t()) :: pos_integer()
-  def timeout(_job) do
-    # The Finch receive_timeout on the streaming client is the primary
-    # timeout mechanism. The Oban worker timeout is a safety net that
-    # should be slightly longer.
-    streaming_timeout_ms =
-      Lightning.Config.apollo(:streaming_timeout) || 120_000
+  def timeout(_job), do: job_timeout()
 
-    streaming_timeout_ms + 10_000
+  @doc """
+  The same ceiling as `timeout/1`, for callers that have no job in hand.
+  """
+  @spec job_timeout() :: pos_integer()
+  def job_timeout do
+    # Just outside the transport's worst case, so the HTTP layer fails first and
+    # says why. request_timeout is only checked between reads, so it can overrun
+    # by one idle_timeout; hence both, not a flat margin. Must stay under Oban's
+    # shutdown_grace_period.
+    Lightning.Config.apollo(:connect_timeout) +
+      Lightning.Config.apollo(:request_timeout) +
+      Lightning.Config.apollo(:idle_timeout) + 10_000
   end
 
-  @doc false
   @spec process_message(String.t()) ::
           {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_message(message_id) do
@@ -129,7 +130,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec dispatch_message_processing(
           AiAssistant.ChatSession.t(),
           ChatMessage.t()
-        ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+        ) ::
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, AiAssistant.stream_error()}
   defp dispatch_message_processing(session, message) do
     if global_chat?(session) do
       process_global_message(session, message)
@@ -148,16 +151,114 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   @spec process_global_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, AiAssistant.stream_error()}
   defp process_global_message(session, message) do
     workflow_yaml = message.code
     page = get_in(session.meta, ["message_options", "page"])
 
+    if workflow_yaml in [nil, ""] do
+      Logger.warning(
+        "[AI Assistant] Global chat message #{message.id} has no workflow YAML; " <>
+          "Apollo will receive no workflow context (session #{session.id}, page #{inspect(page)})"
+      )
+    end
+
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
-      page: page
+      page: page,
+      attachments: build_attachments(session)
     )
   end
+
+  # Run context the user ticked on the chat input; an unresolvable source is
+  # omitted rather than sent as an empty attachment.
+  @spec build_attachments(AiAssistant.ChatSession.t()) :: [map()]
+  defp build_attachments(session) do
+    opts = get_in(session.meta, ["message_options"]) || %{}
+    run_id = get_in(session.meta, ["follow_run_id"])
+
+    log_attachments(opts["log"] == true, run_id, session.project_id) ++
+      io_attachments(
+        opts["attach_io_data"] == true,
+        run_id,
+        session.project_id
+      )
+  end
+
+  defp log_attachments(true, run_id, project_id) when is_binary(run_id) do
+    case Invocation.logs_for_run(run_id, project_id) do
+      [] ->
+        warn_unresolved("logs", run: run_id, project: project_id)
+        []
+
+      lines ->
+        [%{"type" => "log", "content" => lines}]
+    end
+  end
+
+  defp log_attachments(true, run_id, _project_id) do
+    warn_unresolved("logs", run: run_id)
+    []
+  end
+
+  defp log_attachments(_attach, _run_id, _project_id), do: []
+
+  defp io_attachments(true, run_id, project_id) when is_binary(run_id) do
+    case Invocation.scrubbed_io_for_run(run_id, project_id) do
+      # No steps: the run is not this project's, or has yet to start one.
+      [] ->
+        warn_unresolved("I/O data", run: run_id, project: project_id)
+        []
+
+      steps ->
+        # Steps that kept no dataclip. Ordinary, unlike the case above.
+        case Enum.flat_map(steps, &step_io_attachments/1) do
+          [] ->
+            warn_no_data(run_id, project_id, length(steps))
+            []
+
+          attachments ->
+            attachments
+        end
+    end
+  end
+
+  defp io_attachments(true, run_id, _project_id) do
+    warn_unresolved("I/O data", run: run_id)
+    []
+  end
+
+  defp io_attachments(_attach, _run_id, _project_id), do: []
+
+  # The name goes inside the content because Apollo renders an attachment as
+  # its type and its content, and nothing else.
+  defp step_io_attachments(step) do
+    attachment("input_dataclip", step.step_name, step.input) ++
+      attachment("output_dataclip", step.step_name, step.output)
+  end
+
+  defp warn_no_data(run_id, project_id, steps) do
+    Logger.warning(
+      "[AI Assistant] I/O data requested but the run's steps kept none " <>
+        "(#{inspect(run: run_id, project: project_id, steps: steps)})"
+    )
+  end
+
+  # The assistant answers from context the user believes it has.
+  defp warn_unresolved(what, context) do
+    Logger.warning(
+      "[AI Assistant] #{what} requested but nothing resolved " <>
+        "(#{inspect(context)})"
+    )
+  end
+
+  defp attachment(_type, _step_name, nil), do: []
+
+  defp attachment(type, step_name, content),
+    do: [
+      %{"type" => type, "content" => %{"step" => step_name, "data" => content}}
+    ]
 
   @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
   defp job_chat?(session, message) do
@@ -172,7 +273,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @spec handle_processing_result(
           ChatMessage.t(),
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, AiAssistant.stream_error()}
         ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp handle_processing_result(message, result) do
     case result do
@@ -182,9 +284,42 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
         {:ok, updated_session}
 
-      {:error, error_message} ->
+      {:error, %Ecto.Changeset{} = changeset} ->
         {:ok, _updated_session, _updated_message} =
-          update_message_status(message, :error)
+          update_message_status(
+            message,
+            :error,
+            {:internal, "Something went wrong. Please try again."}
+          )
+
+        Logger.error(
+          "[MessageProcessor] Failed to save assistant response for message " <>
+            "#{message.id}: invalid changeset: #{inspect(changeset.errors)}"
+        )
+
+        {:error, "Failed to save assistant response"}
+
+      # Raised on our side, so the text describes our internals. Not logged
+      # again: whoever raised it already did, and a second Logger.error is a
+      # second Sentry event for one failure.
+      {:error, {:internal, raw}} ->
+        {:ok, _updated_session, _updated_message} =
+          update_message_status(
+            message,
+            :error,
+            {:internal, "Something went wrong. Please try again."}
+          )
+
+        {:error, raw}
+
+      {:error, error_message} ->
+        # Every string reaching here is already written for a person to read.
+        {:ok, _updated_session, _updated_message} =
+          update_message_status(
+            message,
+            :error,
+            {:upstream_error, error_message}
+          )
 
         {:error, error_message}
     end
@@ -192,7 +327,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec process_job_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, AiAssistant.stream_error()}
   defp process_job_message(session, message) do
     enriched_session = AiAssistant.enrich_session_with_job_context(session)
 
@@ -210,7 +346,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       case session.meta do
         %{"message_options" => %{"attach_io_data" => true, "step_id" => step_id}}
         when is_binary(step_id) ->
-          {input, output} = fetch_and_scrub_io_data(step_id)
+          {input, output} = fetch_and_scrub_io_data(step_id, session.project_id)
 
           options
           |> Keyword.put(:input, input)
@@ -223,9 +359,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     AiAssistant.query_stream(enriched_session, message.content, options)
   end
 
-  @spec fetch_and_scrub_io_data(String.t()) :: {map() | nil, map() | nil}
-  defp fetch_and_scrub_io_data(step_id) do
-    case Invocation.get_step_with_dataclips(step_id) do
+  @spec fetch_and_scrub_io_data(String.t(), Ecto.UUID.t()) ::
+          {map() | nil, map() | nil}
+  defp fetch_and_scrub_io_data(step_id, project_id) do
+    case Invocation.get_step_with_dataclips(step_id, project_id) do
       nil ->
         {nil, nil}
 
@@ -248,7 +385,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec process_workflow_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, AiAssistant.stream_error()}
   defp process_workflow_message(session, message) do
     code = message.code || workflow_code_from_session(session)
 
@@ -258,17 +396,42 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @doc false
   @spec broadcast_status(
           String.t(),
-          atom() | {atom(), AiAssistant.ChatSession.t()}
+          atom() | {atom(), AiAssistant.ChatSession.t()},
+          Ecto.UUID.t() | nil
         ) :: :ok
-  defp broadcast_status(session_id, status) do
+  # Carries message_id so a listener need not guess. It guessed by taking the
+  # newest, which marks the wrong one the moment the reaper reports on a message
+  # stranded several exchanges back.
+  defp broadcast_status(session_id, status, message_id) do
     Lightning.broadcast(
       "ai_session:#{session_id}",
       {:ai_assistant, :message_status_changed,
        %{
          status: status,
-         session_id: session_id
+         session_id: session_id,
+         message_id: message_id
        }}
     )
+  end
+
+  @doc """
+  Tells a session one of its messages has failed.
+
+  For callers that write the status themselves - the reaper uses a guarded
+  update rather than a read-modify-write - and so cannot go through
+  `update_message_status/3`.
+  """
+  @spec broadcast_message_error(Ecto.UUID.t(), Ecto.UUID.t()) :: :ok
+  def broadcast_message_error(session_id, message_id) do
+    # get/1, not get!/1: the reaper calls this per message, so a session deleted
+    # since it selected its candidates would abandon the rest of the sweep.
+    case AiAssistant.get_session(session_id) do
+      {:ok, session} ->
+        broadcast_status(session_id, {:error, session}, message_id)
+
+      {:error, :not_found} ->
+        :ok
+    end
   end
 
   @doc """
@@ -282,6 +445,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     - `message` - The `ChatMessage` struct to update
     - `status` - The new status atom (`:processing`, `:success`, or `:error`)
+    - `failure` - `{category, sentence}` to record why it failed, or `nil` to
+      leave the failure columns as they are
 
   ## Returns
 
@@ -290,11 +455,12 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   """
   @spec update_message_status(
           ChatMessage.t(),
-          atom()
+          atom(),
+          {atom(), String.t()} | nil
         ) ::
           {:ok, ChatSession.t(), ChatMessage.t()}
-  def update_message_status(message, status) do
-    changes = build_status_changes(status)
+  def update_message_status(message, status, failure \\ nil) do
+    changes = status |> build_status_changes() |> put_failure(failure)
 
     updated_message =
       message
@@ -303,17 +469,25 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     updated_session = AiAssistant.get_session!(updated_message.chat_session_id)
 
-    broadcast_status(updated_session.id, {status, updated_session})
+    broadcast_status(
+      updated_session.id,
+      {status, updated_session},
+      updated_message.id
+    )
 
     {:ok, updated_session, updated_message}
   end
 
-  @doc false
+  # :processing clears the last attempt's failure. A retry writes only :pending,
+  # so without that a message which failed and then succeeded keeps the old
+  # category and sentence, and the channel attaches both to a :success message.
   @spec build_status_changes(atom()) :: map()
   defp build_status_changes(:processing) do
     %{
       status: :processing,
-      processing_started_at: DateTime.utc_now()
+      processing_started_at: DateTime.utc_now(),
+      failure_category: nil,
+      failure_message: nil
     }
   end
 
@@ -331,7 +505,18 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     }
   end
 
-  @doc false
+  defp put_failure(changes, nil), do: changes
+
+  # Clamped here, not in the changeset: this writes through change/2, which
+  # validates nothing, and the column is re-sent on every channel join.
+  defp put_failure(changes, {category, message}) do
+    Map.merge(changes, %{
+      failure_category: category,
+      failure_message:
+        String.slice(message, 0, ChatMessage.max_failure_message_length())
+    })
+  end
+
   @spec workflow_code_from_session(AiAssistant.ChatSession.t()) ::
           String.t() | nil
   defp workflow_code_from_session(session) do
@@ -355,7 +540,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     error = meta.error
     timeout? = is_map(error) and Map.get(error, :reason) == :timeout
 
-    Logger.error(~s"""
+    # An upstream condition, not our fault, and the capture below is already a
+    # warning. See .claude/rules/logging.md.
+    Logger.log(if(timeout?, do: :warning, else: :error), ~s"""
     AI Assistant exception:
     Worker: #{job.worker}
     Type: #{if timeout?, do: "Timeout", else: "Error"}
@@ -364,8 +551,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     Duration: #{measure.duration / 1_000_000}ms
     """)
 
+    # get/2, not get!/2: a raise in a telemetry handler detaches it, silently
+    # ending Oban error reporting for the life of the node.
     ChatMessage
-    |> Repo.get!(job.args["message_id"])
+    |> Repo.get(job.args["message_id"])
     |> case do
       %ChatMessage{id: message_id, status: status} = message
       when status in [:pending, :processing] ->
@@ -373,12 +562,25 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           "[AI Assistant] Updating message #{message_id} to error status after exception"
         )
 
+        failure =
+          if timeout? do
+            {:timeout,
+             "The assistant took too long to respond. Please try again."}
+          else
+            {:internal, "Something went wrong. Please try again."}
+          end
+
         {:ok, _updated_session, _updated_message} =
-          update_message_status(message, :error)
+          update_message_status(message, :error, failure)
 
       %ChatMessage{id: message_id, status: status} ->
         Logger.debug(
           "[AI Assistant] Message #{message_id} already has status: #{status}, skipping cleanup"
+        )
+
+      nil ->
+        Logger.debug(
+          "[AI Assistant] Message #{job.args["message_id"]} no longer exists, skipping cleanup"
         )
     end
 
@@ -433,7 +635,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         :ok
 
       other ->
-        Logger.error("""
+        # Cancelled or discarded, usually a deploy. Expected, not faulty.
+        Logger.warning("""
         AI Assistant stop (non-success):
         Worker: #{meta.job.worker}
         State: #{inspect(other)}
@@ -442,7 +645,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         """)
 
         ChatMessage
-        |> Repo.get!(meta.job.args["message_id"])
+        |> Repo.get(meta.job.args["message_id"])
         |> case do
           %ChatMessage{id: message_id, status: status} = message
           when status in [:pending, :processing] ->
@@ -450,7 +653,13 @@ defmodule Lightning.AiAssistant.MessageProcessor do
               "[AI Assistant] Updating message #{message_id} to error status after stop=#{other}"
             )
 
-            {:ok, _sess, _msg} = update_message_status(message, :error)
+            {:ok, _sess, _msg} =
+              update_message_status(
+                message,
+                :error,
+                {:interrupted,
+                 "The assistant was interrupted before it finished. Please try again."}
+              )
 
           _ ->
             :ok

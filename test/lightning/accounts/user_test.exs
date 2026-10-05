@@ -160,7 +160,7 @@ defmodule Lightning.Accounts.UserTest do
       changeset = User.details_changeset(%User{}, attrs)
 
       refute changeset.valid?
-      assert errors_on(changeset).email == ["must have the @ sign and no spaces"]
+      assert errors_on(changeset).email == ["must be a valid email address"]
     end
 
     test "is invalid if the email contains whitespace", %{attrs: attrs} do
@@ -169,19 +169,19 @@ defmodule Lightning.Accounts.UserTest do
       changeset = User.details_changeset(%User{}, attrs)
 
       refute changeset.valid?
-      assert errors_on(changeset).email == ["must have the @ sign and no spaces"]
+      assert errors_on(changeset).email == ["must be a valid email address"]
     end
 
     test "is invalid if the length of the email exceeds 160 characters", %{
       attrs: attrs
     } do
-      attrs = Map.put(attrs, :email, String.duplicate("@", 160))
+      attrs = Map.put(attrs, :email, String.duplicate("a", 155) <> "@b.co")
 
       changeset = User.details_changeset(%User{}, attrs)
 
       assert changeset.valid?
 
-      attrs = Map.put(attrs, :email, String.duplicate("@", 161))
+      attrs = Map.put(attrs, :email, String.duplicate("a", 156) <> "@b.co")
 
       changeset = User.details_changeset(%User{}, attrs)
 
@@ -401,6 +401,100 @@ defmodule Lightning.Accounts.UserTest do
     end
   end
 
+  describe "the rules changeset/2 and details_changeset/2 share" do
+    setup do
+      %{
+        attrs: %{
+          "email" => "shared@example.com",
+          "first_name" => "Ada",
+          "last_name" => "Lovelace",
+          "password" => "a long enough password"
+        }
+      }
+    end
+
+    for fun <- [:changeset, :details_changeset] do
+      test "#{fun} normalises names and refuses ones that can't be stored",
+           %{attrs: attrs} do
+        build = &apply(User, unquote(fun), [%User{}, Map.merge(attrs, &1)])
+
+        assert %{valid?: true, changes: %{first_name: "Ada", last_name: "Lo"}} =
+                 build.(%{"first_name" => " Ada ", "last_name" => "Lo\n"})
+
+        assert errors_on(
+                 build.(%{
+                   "first_name" => "a\0b",
+                   "last_name" => String.duplicate("é", 256)
+                 })
+               ) == %{
+                 first_name: ["can't contain control characters"],
+                 last_name: ["should be at most 255 character(s)"]
+               }
+
+        assert errors_on(build.(%{"first_name" => "\u200B", "last_name" => " "})) ==
+                 %{first_name: ["can't be blank"], last_name: ["can't be blank"]}
+      end
+
+      test "#{fun} marks a taken email as a uniqueness failure", %{attrs: attrs} do
+        insert(:user, email: "shared@example.com")
+
+        changeset = apply(User, unquote(fun), [%User{}, attrs])
+
+        assert changeset.errors[:email] ==
+                 {"has already been taken", validation: :unsafe_unique}
+
+        assert [%{field: :email, type: :unique}] = changeset.constraints
+      end
+
+      test "#{fun} confirms when asked and never unconfirms", %{attrs: attrs} do
+        build = &apply(User, unquote(fun), [&1, Map.merge(attrs, &2)])
+
+        assert %DateTime{} =
+                 build.(%User{}, %{"confirmed" => true}).changes.confirmed_at
+
+        for confirmed <- [false, nil] do
+          refute Map.has_key?(
+                   build.(%User{}, %{"confirmed" => confirmed}).changes,
+                   :confirmed_at
+                 )
+        end
+
+        confirmed = %User{confirmed_at: ~U[2020-01-01 00:00:00Z]}
+
+        for value <- [true, false] do
+          refute Map.has_key?(
+                   build.(confirmed, %{"confirmed" => value}).changes,
+                   :confirmed_at
+                 )
+        end
+
+        assert errors_on(build.(%User{}, %{"confirmed" => "perhaps"})) == %{
+                 confirmed: ["is invalid"]
+               }
+      end
+
+      test "#{fun} keeps the current password, unless bcrypt would misread it" do
+        user = insert(:user)
+
+        unchanged =
+          apply(User, unquote(fun), [user, %{"password" => "hello world!"}])
+
+        assert unchanged.valid?
+        refute Map.has_key?(unchanged.changes, :hashed_password)
+
+        nul =
+          apply(User, unquote(fun), [user, %{"password" => "hello world!\0x"}])
+
+        assert errors_on(nul).password == ["can't contain a NUL character"]
+
+        changed =
+          apply(User, unquote(fun), [user, %{"password" => "a new password"}])
+
+        assert %{valid?: true, changes: %{hashed_password: _}} = changed
+      end
+    end
+  end
+
   describe "password validation" do
     test "it allows passwords between 12 and 72 characters" do
       changeset =
@@ -476,11 +570,64 @@ defmodule Lightning.Accounts.UserTest do
     end
   end
 
+  test "the registration changesets never cast hashed_password, disabled or scheduled_deletion" do
+    attrs = %{
+      email: "reg@example.com",
+      first_name: "Reg",
+      last_name: "Istered",
+      password: "a long enough password",
+      hashed_password: "not-a-hash",
+      disabled: true,
+      scheduled_deletion: "2026-10-09T00:00:00Z",
+      terms_accepted: true
+    }
+
+    for changeset <- [
+          User.user_registration_changeset(attrs, hash_password: false),
+          User.superuser_registration_changeset(attrs, hash_password: false)
+        ] do
+      assert changeset.valid?
+      refute Map.has_key?(changeset.changes, :hashed_password)
+      refute Map.has_key?(changeset.changes, :disabled)
+      refute Map.has_key?(changeset.changes, :scheduled_deletion)
+    end
+  end
+
   describe "superuser_registration_changeset/1" do
     test "puts role change in changeset" do
       assert User.superuser_registration_changeset(%{})
              |> Ecto.Changeset.get_change(:role) ==
                :superuser
+    end
+  end
+
+  describe "core_contributor?/1" do
+    test "true for @openfn.org email" do
+      assert User.core_contributor?(%User{email: "alice@openfn.org"})
+    end
+
+    test "case-insensitive" do
+      assert User.core_contributor?(%User{email: "Bob@OpenFN.ORG"})
+    end
+
+    test "false for other domains" do
+      refute User.core_contributor?(%User{email: "alice@example.com"})
+    end
+
+    test "false for nil/empty email" do
+      refute User.core_contributor?(%User{email: nil})
+      refute User.core_contributor?(%User{email: ""})
+    end
+  end
+
+  describe "langfuse_persona/1" do
+    test "core-contributor for @openfn user" do
+      assert User.langfuse_persona(%User{email: "x@openfn.org"}) ==
+               "core-contributor"
+    end
+
+    test "user for everyone else" do
+      assert User.langfuse_persona(%User{email: "x@example.com"}) == "user"
     end
   end
 end

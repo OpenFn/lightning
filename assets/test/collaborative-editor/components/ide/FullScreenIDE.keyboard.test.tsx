@@ -41,6 +41,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 vi.mock('../../../../js/monaco', () => ({
@@ -202,6 +203,17 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useSessionContext: () => ({ workflow: null, permissions: null }),
+  useExperimentalFeatures: () => true,
   useProject: () => ({
     id: 'project-1',
     name: 'Test Project',
@@ -216,10 +228,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useAppConfig: () => ({
     require_email_verification: false,
   }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
 }));
 
 // Mock UI commands
@@ -232,9 +244,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
   useTemplatePanel: () => ({
     templates: [],
     loading: false,
-    error: null,
     searchQuery: '',
-    selectedTemplate: null,
   }),
 }));
 
@@ -243,6 +253,7 @@ const mockYText = new Y.Text();
 mockYText.insert(0, 'fn(state => state)');
 
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowEnabled: () => ({ enabled: true, setEnabled: vi.fn() }),
   useCanSave: () => ({
     canSave: true,
     tooltipMessage: 'Save workflow',
@@ -300,10 +311,6 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useNodeSelection: () => ({
     selectNode: vi.fn(),
     selectedNodeId: null,
-  }),
-  useWorkflowEnabled: () => ({
-    enabled: true,
-    setEnabled: vi.fn(),
   }),
   useWorkflowSettingsErrors: () => ({
     hasErrors: false,
@@ -366,14 +373,15 @@ vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
 
 // Mock adaptor hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
-  useProjectAdaptors: () => ({
-    projectAdaptors: [],
+  useAdaptorsInUse: () => ({
+    adaptorsInUse: [],
     allAdaptors: [],
   }),
   useAdaptors: () => ({
     adaptors: [],
     loading: false,
   }),
+  useAdaptorsLoading: () => false,
 }));
 
 // Mock awareness hooks
@@ -409,6 +417,7 @@ function setupMockUseRunRetry(options: Partial<UseRunRetryReturn> = {}) {
     isRetryable: false,
     runIsProcessing: false,
     canRun: true,
+    canRetry: true,
     ...options,
   }));
 

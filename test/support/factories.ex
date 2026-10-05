@@ -1,6 +1,20 @@
 defmodule Lightning.Factories do
   use ExMachina.Ecto, repo: Lightning.Repo
+  use Lightning.Factories.ChannelFactories
+
   alias Lightning.Workflows.Snapshot
+
+  def adaptor_factory do
+    Lightning.AdaptorTestHelpers.ensure_isolated!()
+
+    %Lightning.Adaptors.Catalogue.Adaptor{
+      name: sequence(:adaptor_name, &"@openfn/language-test-#{&1}"),
+      source: :npm,
+      latest_version: "1.0.0",
+      checked_at: DateTime.utc_now(),
+      schema_data: nil
+    }
+  end
 
   def webhook_auth_method_factory do
     %Lightning.Workflows.WebhookAuthMethod{
@@ -12,14 +26,42 @@ defmodule Lightning.Factories do
     }
   end
 
-  def project_repo_connection_factory do
-    %Lightning.VersionControl.ProjectRepoConnection{
-      project: build(:project),
+  def project_repo_connection_factory(attrs) do
+    project =
+      case Map.get(attrs, :project) do
+        %Lightning.Projects.Project{id: id} = p when is_binary(id) -> p
+        %Lightning.Projects.Project{} = p -> insert(p)
+        nil -> nil
+      end
+
+    project =
+      project ||
+        case Map.get(attrs, :project_id) do
+          id when is_binary(id) ->
+            Lightning.Repo.get!(Lightning.Projects.Project, id)
+
+          _ ->
+            insert(:project)
+        end
+
+    root_project_id =
+      Map.get_lazy(attrs, :root_project_id, fn ->
+        Lightning.Projects.root_id(project.id)
+      end)
+
+    base = %Lightning.VersionControl.ProjectRepoConnection{
+      project: project,
+      root_project_id: root_project_id,
       repo: "some/repo",
       branch: "branch",
       github_installation_id: "some-id",
       access_token: sequence(:token, &"prc_sometoken#{&1}")
     }
+
+    merge_attributes(
+      base,
+      Map.drop(attrs, [:project, :project_id, :root_project_id])
+    )
   end
 
   def project_factory do
@@ -80,7 +122,23 @@ defmodule Lightning.Factories do
     trigger
     |> merge_attributes(attrs)
     |> evaluate_lazy_attributes()
+    |> put_trigger_project_id()
   end
+
+  # Triggers carry their workflow's project. Production code fills it in inside
+  # the insert transaction, which factories bypass.
+  defp put_trigger_project_id(%{project_id: project_id} = trigger)
+       when not is_nil(project_id),
+       do: trigger
+
+  defp put_trigger_project_id(
+         %{workflow: %Lightning.Workflows.Workflow{} = workflow} = trigger
+       ) do
+    {workflow, project_id} = ensure_project_id(workflow)
+    %{trigger | workflow: workflow, project_id: project_id}
+  end
+
+  defp put_trigger_project_id(trigger), do: trigger
 
   def edge_factory do
     %Lightning.Workflows.Edge{
@@ -345,24 +403,8 @@ defmodule Lightning.Factories do
     }
   end
 
-  def triggers_kafka_configuration_factory do
-    %Lightning.Workflows.Triggers.KafkaConfiguration{
-      group_id: "arb_group_id",
-      hosts: [
-        ["localhost", "9096"],
-        ["localhost", "9095"],
-        ["localhost", "9094"]
-      ],
-      initial_offset_reset_policy: "earliest",
-      ssl: false,
-      topics: ["arb_topic"]
-    }
-  end
-
-  def trigger_kafka_message_record_factory do
-    %Lightning.KafkaTriggers.TriggerKafkaMessageRecord{
-      topic_partition_offset: "foo_1_1001"
-    }
+  def webhook_response_config_factory do
+    %Lightning.Workflows.Triggers.WebhookResponseConfig{}
   end
 
   def chat_session_factory do
@@ -615,15 +657,36 @@ defmodule Lightning.Factories do
   end
 
   def with_trigger(workflow, trigger) do
+    {workflow, project_id} = ensure_project_id(workflow)
+
     %{
       workflow
       | triggers:
           merge_assoc(
             workflow.triggers,
-            merge_attributes(trigger, %{workflow: nil})
+            merge_attributes(trigger, %{workflow: nil, project_id: project_id})
           )
     }
   end
+
+  # As above, but the id has to exist before the workflow and its triggers are
+  # written, so an unsaved project gets one here.
+  defp ensure_project_id(%{project_id: project_id} = workflow)
+       when not is_nil(project_id),
+       do: {workflow, project_id}
+
+  defp ensure_project_id(%{project: %{id: project_id}} = workflow)
+       when not is_nil(project_id),
+       do: {workflow, project_id}
+
+  defp ensure_project_id(
+         %{project: %Lightning.Projects.Project{} = project} = workflow
+       ) do
+    project_id = Ecto.UUID.generate()
+    {%{workflow | project: %{project | id: project_id}}, project_id}
+  end
+
+  defp ensure_project_id(workflow), do: {workflow, nil}
 
   def with_edge(workflow, source_target, extra \\ %{})
 
@@ -857,48 +920,5 @@ defmodule Lightning.Factories do
 
   def sandbox_for(parent, attrs \\ %{}) do
     build(:project, Map.merge(%{parent: parent}, attrs))
-  end
-
-  def channel_factory do
-    %Lightning.Channels.Channel{
-      project: build(:project),
-      name: sequence(:channel_name, &"channel-#{&1}"),
-      destination_url:
-        sequence(
-          :channel_destination_url,
-          &"https://example.com/destination/#{&1}"
-        ),
-      enabled: true
-    }
-  end
-
-  def channel_auth_method_factory do
-    %Lightning.Channels.ChannelAuthMethod{
-      role: :client,
-      webhook_auth_method: build(:webhook_auth_method)
-    }
-  end
-
-  def channel_snapshot_factory do
-    %Lightning.Channels.ChannelSnapshot{
-      lock_version: 1,
-      name: sequence(:channel_snapshot_name, &"channel-#{&1}"),
-      destination_url: "https://example.com/destination",
-      enabled: true
-    }
-  end
-
-  def channel_request_factory do
-    %Lightning.Channels.ChannelRequest{
-      request_id: sequence(:channel_request_id, &"req-#{&1}"),
-      state: :pending,
-      started_at: DateTime.utc_now()
-    }
-  end
-
-  def channel_event_factory do
-    %Lightning.Channels.ChannelEvent{
-      type: :destination_response
-    }
   end
 end

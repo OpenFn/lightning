@@ -1,13 +1,13 @@
 defmodule Lightning.CredentialsTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Accounts.UserToken
   alias Lightning.Auditing
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
   alias Lightning.Repo
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Ecto.Query
   import Mox
@@ -190,10 +190,13 @@ defmodule Lightning.CredentialsTest do
                 audit: %Lightning.Auditing.Audit{} = audit,
                 credential: %Credential{} = credential
               }} =
-               Credentials.delete_credential(%Lightning.Credentials.Credential{
-                 id: credential_id,
-                 user_id: user.id
-               })
+               Credentials.delete_credential(
+                 %Lightning.Credentials.Credential{
+                   id: credential_id,
+                   user_id: user.id
+                 },
+                 user
+               )
 
       assert audit.event == "deleted"
       assert audit.item_id == credential_id
@@ -257,7 +260,7 @@ defmodule Lightning.CredentialsTest do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       {:ok, updated_credential} =
-        Credentials.schedule_credential_deletion(credential)
+        Credentials.schedule_credential_deletion(credential, user)
 
       assert updated_credential.scheduled_deletion != nil
 
@@ -308,18 +311,88 @@ defmodule Lightning.CredentialsTest do
       end)
 
       {:ok, oauth_credential} =
-        Credentials.schedule_credential_deletion(oauth_credential)
+        Credentials.schedule_credential_deletion(oauth_credential, user)
 
       assert oauth_credential.scheduled_deletion
     end
 
-    test "cancel_scheduled_deletion/1 sets scheduled_deletion to nil for a given credential" do
+    test "creating and updating refuse someone who does not own the credential" do
+      # These two are the fragile pair: they ask about a credential built from
+      # the attrs rather than one loaded from the database, so they are the
+      # likeliest to drift.
+      owner = insert(:user)
+      stranger = insert(:user)
+
+      assert {:error, :unauthorized} =
+               Credentials.create_credential(
+                 %{
+                   "name" => "theirs",
+                   "schema" => "raw",
+                   "body" => %{"a" => 1},
+                   "user_id" => owner.id
+                 },
+                 stranger
+               )
+
+      credential =
+        insert(:credential, user: owner, name: "existing", schema: "raw")
+
+      assert {:error, :unauthorized} =
+               Credentials.update_credential(
+                 credential,
+                 %{name: "renamed"},
+                 stranger
+               )
+
+      assert Repo.reload!(credential).name == "existing"
+
+      # and the owner is not blocked by the same rule
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{name: "renamed"},
+                 owner
+               )
+    end
+
+    test "the deletion lifecycle refuses someone who does not own the credential" do
+      owner = insert(:user)
+      stranger = insert(:user)
+
+      credential =
+        insert(:credential, user: owner, name: "Not yours")
+        |> with_body(%{name: "main", body: %{foo: :bar}})
+
+      assert {:error, :unauthorized} =
+               Credentials.schedule_credential_deletion(credential, stranger)
+
+      assert {:error, :unauthorized} =
+               Credentials.delete_credential(credential, stranger)
+
+      scheduled =
+        credential
+        |> Ecto.Changeset.change(%{
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        })
+        |> Repo.update!()
+
+      assert {:error, :unauthorized} =
+               Credentials.cancel_scheduled_deletion(scheduled.id, stranger)
+
+      # Nothing moved: the credential is still there and still scheduled.
+      reloaded = Repo.get!(Credential, credential.id)
+      refute is_nil(reloaded.scheduled_deletion)
+    end
+
+    test "cancel_scheduled_deletion/2 sets scheduled_deletion to nil for a given credential" do
       scheduled_date =
         DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second)
 
+      user = insert(:user)
+
       credential =
         insert(:credential,
-          user: insert(:user),
+          user: user,
           name: "My Credential",
           scheduled_deletion: scheduled_date
         )
@@ -329,7 +402,7 @@ defmodule Lightning.CredentialsTest do
                scheduled_date
 
       {:ok, updated_credential} =
-        Credentials.cancel_scheduled_deletion(credential.id)
+        Credentials.cancel_scheduled_deletion(credential.id, user)
 
       assert is_nil(updated_credential.scheduled_deletion)
     end
@@ -341,31 +414,27 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
-  describe "get_credential_by_project_credential/1" do
-    test "returns the credential with given project_credential id" do
-      refute Credentials.get_credential_by_project_credential(
-               Ecto.UUID.generate()
-             )
-
-      project_credential = insert(:project_credential)
-
-      credential =
-        Credentials.get_credential_by_project_credential(project_credential.id)
-
-      assert credential.id == project_credential.credential.id
-    end
-  end
-
   describe "create_credential/1" do
+    setup :isolated_adaptors
+
+    setup do
+      # create_credential/1 needs a schema on file for body casting to work.
+      Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
+      :ok
+    end
+
     test "fails if another cred exists with the same name for the same user" do
+      user = insert(:user)
+
       valid_attrs = %{
         body: %{"a" => "test"},
         name: "simple name",
-        user_id: insert(:user).id,
+        user_id: user.id,
         schema: "raw"
       }
 
-      assert {:ok, %Credential{}} = Credentials.create_credential(valid_attrs)
+      assert {:ok, %Credential{}} =
+               Credentials.create_credential(valid_attrs, user)
 
       assert {
                :error,
@@ -379,13 +448,15 @@ defmodule Lightning.CredentialsTest do
                       ]}
                  ]
                }
-             } = Credentials.create_credential(valid_attrs)
+             } = Credentials.create_credential(valid_attrs, user)
     end
 
     test "succeeds with raw schema" do
+      user = insert(:user)
+
       valid_attrs = %{
         name: "some raw credential",
-        user_id: insert(:user).id,
+        user_id: user.id,
         schema: "raw",
         project_credentials: [
           %{project_id: insert(:project).id}
@@ -399,7 +470,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, %Credential{} = credential} =
-               Credentials.create_credential(valid_attrs)
+               Credentials.create_credential(valid_attrs, user)
 
       credential = Repo.preload(credential, :credential_bodies)
       main_body = Enum.find(credential.credential_bodies, &(&1.name == "main"))
@@ -432,6 +503,8 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "saves the body casting non string fields" do
+      user = insert(:user)
+
       body = %{
         "user" => "user1",
         "password" => "pass1",
@@ -444,7 +517,7 @@ defmodule Lightning.CredentialsTest do
 
       valid_attrs = %{
         name: "some name",
-        user_id: insert(:user).id,
+        user_id: user.id,
         schema: "postgresql",
         project_credentials: [
           %{project_id: insert(:project).id}
@@ -456,7 +529,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, %Credential{} = credential} =
-               Credentials.create_credential(valid_attrs)
+               Credentials.create_credential(valid_attrs, user)
 
       credential = Repo.preload(credential, :credential_bodies)
       main_body = Enum.find(credential.credential_bodies, &(&1.name == "main"))
@@ -496,12 +569,24 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "fails with invalid data" do
+      user = insert(:user)
+
       assert {:error, %Ecto.Changeset{}} =
-               Credentials.create_credential(@invalid_attrs)
+               Credentials.create_credential(
+                 Map.put(@invalid_attrs, :user_id, user.id),
+                 user
+               )
     end
   end
 
   describe "update_credential/2" do
+    setup :isolated_adaptors
+
+    setup do
+      Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
+      :ok
+    end
+
     test "updates an OAuth credential with new scopes" do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
@@ -543,7 +628,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, %Credential{} = updated_credential} =
-               Credentials.update_credential(credential, update_attrs)
+               Credentials.update_credential(credential, update_attrs, user)
 
       # ✅ Check the updated credential_body
       updated_credential =
@@ -595,7 +680,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, %Credential{} = credential} =
-               Credentials.update_credential(credential, update_attrs)
+               Credentials.update_credential(credential, update_attrs, user)
 
       # ✅ Check credential_bodies instead of body
       credential = Repo.preload(credential, :credential_bodies, force: true)
@@ -667,7 +752,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, %Credential{} = updated_credential} =
-               Credentials.update_credential(credential, removal_attrs)
+               Credentials.update_credential(credential, removal_attrs, user)
 
       assert Enum.empty?(updated_credential.project_credentials)
 
@@ -739,11 +824,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, %Credential{} = updated_credential} =
-               Credentials.update_credential(credential, %{
-                 credential_bodies: [
-                   %{name: "main", body: new_body_attrs}
-                 ]
-               })
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   credential_bodies: [
+                     %{name: "main", body: new_body_attrs}
+                   ]
+                 },
+                 user
+               )
 
       updated_credential =
         Repo.preload(updated_credential, :credential_bodies, force: true)
@@ -812,7 +901,8 @@ defmodule Lightning.CredentialsTest do
                    fn ->
                      Credentials.update_credential(
                        credential,
-                       params_with_missing_project_credential
+                       params_with_missing_project_credential,
+                       user
                      )
                    end
     end
@@ -822,9 +912,36 @@ defmodule Lightning.CredentialsTest do
       credential = insert(:credential, user_id: user.id)
 
       assert {:error, %Ecto.Changeset{}} =
-               Credentials.update_credential(credential, @invalid_attrs)
+               Credentials.update_credential(credential, @invalid_attrs, user)
 
       assert credential == Credentials.get_credential!(credential.id)
+    end
+
+    test "ignores mass-assigned user_id and transfer_status" do
+      owner = insert(:user)
+      other_user = insert(:user)
+
+      credential =
+        insert(:credential, name: "some name", schema: "raw", user: owner)
+
+      assert {:ok, %Credential{} = updated} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   name: "renamed",
+                   user_id: other_user.id,
+                   transfer_status: :completed
+                 },
+                 owner
+               )
+
+      assert updated.name == "renamed"
+      assert updated.user_id == owner.id
+      assert is_nil(updated.transfer_status)
+
+      persisted = Repo.get!(Credential, credential.id)
+      assert persisted.user_id == owner.id
+      assert is_nil(persisted.transfer_status)
     end
   end
 
@@ -1100,7 +1217,13 @@ defmodule Lightning.CredentialsTest do
         # ✅
         |> with_body(%{name: "main", body: %{baz: :qux}})
 
-      Credentials.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      # The count is asserted because it was silently always zero: the reduce
+      # matched a bare `:ok` against a function that returns a transaction
+      # tuple, and nothing here noticed.
+      assert {:ok, %{deleted_count: 1}} =
+               Credentials.perform(%Oban.Job{
+                 args: %{"type" => "purge_deleted"}
+               })
 
       assert is_nil(Repo.get(Credential, scheduled_credential_2.id))
       assert Repo.get(Credential, credential.id)
@@ -1108,7 +1231,7 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "credential transfers" do
-    test "confirm_transfer/4 transfers credential ownership" do
+    test "confirm_transfer/2 transfers credential ownership" do
       owner = insert(:user)
       receiver = insert(:user)
       credential = insert(:credential, user_id: owner.id)
@@ -1116,18 +1239,10 @@ defmodule Lightning.CredentialsTest do
       :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
 
       assert_email_sent(fn email ->
-        [token] =
-          Regex.run(~r{/transfer/[^/]+/[^/]+/([^\s\n]+)}, email.text_body,
-            capture: :all_but_first
-          )
+        token = extract_transfer_token(email)
 
         assert {:ok, updated_credential} =
-                 Credentials.confirm_transfer(
-                   credential.id,
-                   receiver.id,
-                   owner.id,
-                   token
-                 )
+                 Credentials.confirm_transfer(token, owner)
 
         assert updated_credential.user_id == receiver.id
 
@@ -1139,11 +1254,6 @@ defmodule Lightning.CredentialsTest do
         assert audit.changes.before["user_id"] == credential.user_id
         assert audit.changes.after["user_id"] == receiver.id
 
-        refute Repo.get_by(UserToken,
-                 context: "credential_transfer",
-                 user_id: owner.id
-               )
-
         assert_email_sent(
           to: Swoosh.Email.Recipient.format(receiver),
           subject: "A credential has been transferred to you."
@@ -1151,49 +1261,140 @@ defmodule Lightning.CredentialsTest do
       end)
     end
 
-    test "confirm_transfer/4 fails with non-existent entities" do
+    # H-4: credential-transfer confirmation must bind the token to the specific
+    # credential and receiver. These tests specify the reworked confirm flow that
+    # takes only the token + the confirming user, deriving credential and receiver
+    # from the verified token (never from caller/URL input).
+    defp extract_transfer_token(email) do
+      [token] =
+        Regex.run(~r{/transfer/([^\s\n/]+)}, email.text_body,
+          capture: :all_but_first
+        )
+
+      token
+    end
+
+    test "confirm_transfer/2 rejects a token whose owner does not own the target credential" do
+      # The core theft scenario. The credential id is carried INSIDE the signed
+      # JWT, so an honest `initiate` can only ever mint a token bound to the
+      # owner's own credential. To express the attack we forge a token that is
+      # cryptographically valid (signed with the real signer, owner = attacker)
+      # yet names the VICTIM's credential — the mismatch `initiate` would never
+      # produce. The ownership guard (credential.user_id == token owner) is the
+      # core fix and must reject it regardless of the valid signature.
+      attacker = insert(:user)
+      accomplice = insert(:user)
+      victim = insert(:user)
+
+      victim_credential = insert(:credential, user_id: victim.id)
+
+      {:ok, token, _claims} =
+        Lightning.Tokens.CredentialTransferToken.generate_and_sign(
+          %{
+            "sub" => "credential_transfer:#{attacker.id}",
+            "credential_id" => victim_credential.id,
+            "receiver_id" => accomplice.id
+          },
+          Lightning.Config.token_signer()
+        )
+
+      assert {:error, :not_owner} =
+               Credentials.confirm_transfer(token, attacker)
+
+      refreshed = Repo.get!(Credential, victim_credential.id)
+      assert refreshed.user_id == victim.id
+    end
+
+    test "a transfer token cannot be used as an API bearer token" do
+      # The transfer JWT is signed with the shared token signer, so it must not
+      # authenticate as the owner via Tokens.verify/1. The `credential_transfer:`
+      # sub prefix keeps it out of the personal-access-token path.
+      owner = insert(:user)
+
+      {:ok, token, _claims} =
+        Lightning.Tokens.CredentialTransferToken.generate_and_sign(
+          %{
+            "sub" => "credential_transfer:#{owner.id}",
+            "credential_id" => Ecto.UUID.generate(),
+            "receiver_id" => Ecto.UUID.generate()
+          },
+          Lightning.Config.token_signer()
+        )
+
+      assert {:error, "Unsupported token type"} = Lightning.Tokens.verify(token)
+    end
+
+    test "confirm_transfer/2 fails once the transfer has been revoked" do
+      # Covers both the not-pending guard and the "revoked link is dead" AC: the
+      # JWT may still be cryptographically valid, but a revoked transfer must not
+      # complete at confirm.
       owner = insert(:user)
       receiver = insert(:user)
-      credential = insert(:credential, user: owner)
+      credential = insert(:credential, user_id: owner.id)
 
       :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
 
       assert_email_sent(fn email ->
-        [token] =
-          Regex.run(~r{/transfer/[^/]+/[^/]+/([^\s\n]+)}, email.text_body,
-            capture: :all_but_first
-          )
+        token = extract_transfer_token(email)
 
-        assert {:error, :not_found} ==
-                 Credentials.confirm_transfer(
-                   Ecto.UUID.generate(),
-                   receiver.id,
-                   owner.id,
-                   token
-                 )
+        assert {:ok, _revoked} =
+                 Credentials.revoke_transfer(credential.id, owner)
 
-        assert {:error, :not_found} ==
-                 Credentials.confirm_transfer(
-                   credential.id,
-                   Ecto.UUID.generate(),
-                   owner.id,
-                   token
-                 )
+        assert {:error, :not_pending} =
+                 Credentials.confirm_transfer(token, owner)
+
+        refreshed = Repo.get!(Credential, credential.id)
+        assert refreshed.user_id == owner.id
       end)
     end
 
-    test "confirm_transfer/4 fails with invalid token" do
+    test "confirm_transfer/2 derives the receiver from the token, not caller input" do
+      # The receiver named at initiation is the only one who can end up owning the
+      # credential; there is no caller/URL receiver value to swap.
       owner = insert(:user)
       receiver = insert(:user)
+      credential = insert(:credential, user_id: owner.id)
+
+      :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
+
+      assert_email_sent(fn email ->
+        token = extract_transfer_token(email)
+
+        assert {:ok, transferred} = Credentials.confirm_transfer(token, owner)
+
+        assert transferred.user_id == receiver.id
+
+        refreshed = Repo.get!(Credential, credential.id)
+        assert refreshed.user_id == receiver.id
+      end)
+    end
+
+    test "confirm_transfer/2 fails when the token names a missing credential" do
+      # A cryptographically-valid token whose credential no longer exists must
+      # not complete the transfer.
+      owner = insert(:user)
+      receiver = insert(:user)
+
+      {:ok, token, _claims} =
+        Lightning.Tokens.CredentialTransferToken.generate_and_sign(
+          %{
+            "sub" => "credential_transfer:#{owner.id}",
+            "credential_id" => Ecto.UUID.generate(),
+            "receiver_id" => receiver.id
+          },
+          Lightning.Config.token_signer()
+        )
+
+      assert {:error, :not_found} =
+               Credentials.confirm_transfer(token, owner)
+    end
+
+    test "confirm_transfer/2 fails with invalid token" do
+      owner = insert(:user)
       credential = insert(:credential)
 
       assert {:error, :token_error} ==
-               Credentials.confirm_transfer(
-                 credential.id,
-                 receiver.id,
-                 owner.id,
-                 "invalid_token"
-               )
+               Credentials.confirm_transfer("invalid_token", owner)
 
       refreshed_credential = Repo.get!(Credential, credential.id)
       assert refreshed_credential.user_id == credential.user_id
@@ -1210,28 +1411,17 @@ defmodule Lightning.CredentialsTest do
       assert updated_credential.transfer_status == :pending
     end
 
-    test "confirm_transfer/4 updates transfer status from pending to completed" do
+    test "confirm_transfer/2 updates transfer status from pending to completed" do
       owner = insert(:user)
       receiver = insert(:user)
-
-      credential =
-        insert(:credential, user_id: owner.id, transfer_status: :pending)
+      credential = insert(:credential, user_id: owner.id)
 
       :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
 
       assert_email_sent(fn email ->
-        [token] =
-          Regex.run(~r{/transfer/[^/]+/[^/]+/([^\s\n]+)}, email.text_body,
-            capture: :all_but_first
-          )
+        token = extract_transfer_token(email)
 
-        {:ok, updated_credential} =
-          Credentials.confirm_transfer(
-            credential.id,
-            receiver.id,
-            owner.id,
-            token
-          )
+        {:ok, updated_credential} = Credentials.confirm_transfer(token, owner)
 
         assert updated_credential.transfer_status == :completed
       end)
@@ -1249,27 +1439,42 @@ defmodule Lightning.CredentialsTest do
       assert is_nil(updated_credential.transfer_status)
     end
 
-    test "revoke_transfer/2 clears transfer status and deletes tokens" do
+    test "confirm_transfer/2 confirming one transfer does not invalidate another" do
+      # Regression: a stateless JWT keeps each transfer independent. An owner can
+      # have two pending transfers at once; confirming the first must not orphan
+      # the second (the old jti-row + delete_all approach wiped all of the
+      # owner's transfer tokens on the first confirm).
       owner = insert(:user)
+      receiver_x = insert(:user)
+      receiver_y = insert(:user)
+      credential_a = insert(:credential, user_id: owner.id)
+      credential_b = insert(:credential, user_id: owner.id)
 
-      credential =
-        insert(:credential, user_id: owner.id, transfer_status: :pending)
+      :ok =
+        Credentials.initiate_credential_transfer(
+          owner,
+          receiver_x,
+          credential_a
+        )
 
-      # Create a transfer token that should be deleted
-      {_token_value, user_token} =
-        UserToken.build_email_token(owner, "credential_transfer", owner.email)
+      assert_received {:email, email_a}
+      token_a = extract_transfer_token(email_a)
 
-      {:ok, _token} = Repo.insert(user_token)
+      :ok =
+        Credentials.initiate_credential_transfer(
+          owner,
+          receiver_y,
+          credential_b
+        )
 
-      assert {:ok, updated_credential} =
-               Credentials.revoke_transfer(credential.id, owner)
+      assert_received {:email, email_b}
+      token_b = extract_transfer_token(email_b)
 
-      assert is_nil(updated_credential.transfer_status)
-      # Verify token was deleted
-      refute Repo.get_by(UserToken,
-               context: "credential_transfer",
-               user_id: owner.id
-             )
+      assert {:ok, transferred_a} = Credentials.confirm_transfer(token_a, owner)
+      assert transferred_a.user_id == receiver_x.id
+
+      assert {:ok, transferred_b} = Credentials.confirm_transfer(token_b, owner)
+      assert transferred_b.user_id == receiver_y.id
     end
 
     test "revoke_transfer/2 fails with non-existent credential" do
@@ -1307,20 +1512,44 @@ defmodule Lightning.CredentialsTest do
                Credentials.revoke_transfer(credential.id, owner)
     end
 
-    test "confirm_transfer/4 fails if credential is not pending" do
+    test "confirm_transfer/2 fails if credential is not pending" do
+      # A token bound to the owner's own credential that never entered a pending
+      # transfer must be rejected by the pending guard.
       owner = insert(:user)
       receiver = insert(:user)
+      credential = insert(:credential, user_id: owner.id, transfer_status: nil)
 
-      credential =
-        insert(:credential, user_id: owner.id, transfer_status: :completed)
+      {:ok, token, _claims} =
+        Lightning.Tokens.CredentialTransferToken.generate_and_sign(
+          %{
+            "sub" => "credential_transfer:#{owner.id}",
+            "credential_id" => credential.id,
+            "receiver_id" => receiver.id
+          },
+          Lightning.Config.token_signer()
+        )
 
-      assert {:error, :token_error} =
-               Credentials.confirm_transfer(
-                 credential.id,
-                 receiver.id,
-                 owner.id,
-                 "valid_token"
-               )
+      assert {:error, :not_pending} =
+               Credentials.confirm_transfer(token, owner)
+    end
+
+    test "confirm_transfer/2 cannot be replayed after completing" do
+      # After a successful transfer the credential belongs to the receiver, so
+      # replaying the same link is rejected (ownership guard).
+      owner = insert(:user)
+      receiver = insert(:user)
+      credential = insert(:credential, user_id: owner.id)
+
+      :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
+
+      assert_email_sent(fn email ->
+        token = extract_transfer_token(email)
+
+        assert {:ok, _} = Credentials.confirm_transfer(token, owner)
+
+        assert {:error, :not_owner} =
+                 Credentials.confirm_transfer(token, owner)
+      end)
     end
 
     test "revoke_transfer/2 fails if transfer is already completed" do
@@ -1442,7 +1671,7 @@ defmodule Lightning.CredentialsTest do
               %Lightning.Credentials.OauthValidation.Error{
                 type: :missing_scope,
                 message: "Missing required OAuth field: scope or scopes"
-              }} = Credentials.create_credential(attrs)
+              }} = Credentials.create_credential(attrs, user)
     end
 
     test "update_credential/2 handles failure to extract scopes when updating OAuth token" do
@@ -1488,7 +1717,7 @@ defmodule Lightning.CredentialsTest do
               %Lightning.Credentials.OauthValidation.Error{
                 type: :missing_scope,
                 message: "Missing required OAuth field: scope or scopes"
-              }} = Credentials.update_credential(credential, update_attrs)
+              }} = Credentials.update_credential(credential, update_attrs, user)
     end
   end
 
@@ -1501,7 +1730,7 @@ defmodule Lightning.CredentialsTest do
       invalid_attrs = %{"name" => nil}
 
       assert {:error, %Ecto.Changeset{errors: [name: {"can't be blank", _}]}} =
-               Credentials.update_credential(credential, invalid_attrs)
+               Credentials.update_credential(credential, invalid_attrs, user)
 
       assert Lightning.Credentials.get_credential!(credential.id)
              |> Map.get(:name) == credential.name
@@ -1519,7 +1748,7 @@ defmodule Lightning.CredentialsTest do
         ]
       }
 
-      assert {:error, changeset} = Credentials.create_credential(attrs)
+      assert {:error, changeset} = Credentials.create_credential(attrs, user)
 
       # Error should be on :credential_bodies with environment info
       assert [credential_bodies: {msg, _}] = changeset.errors
@@ -1540,7 +1769,7 @@ defmodule Lightning.CredentialsTest do
         ]
       }
 
-      assert {:error, changeset} = Credentials.create_credential(attrs)
+      assert {:error, changeset} = Credentials.create_credential(attrs, user)
 
       # Error should reference Environment 2 (second body at index 1)
       assert [credential_bodies: {msg, _}] = changeset.errors
@@ -1570,7 +1799,8 @@ defmodule Lightning.CredentialsTest do
           }
         })
 
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       assert credential.scheduled_deletion
     end
@@ -1645,7 +1875,7 @@ defmodule Lightning.CredentialsTest do
               %Lightning.Credentials.OauthValidation.Error{
                 type: :missing_access_token,
                 message: "Missing required OAuth field: access_token"
-              }} = Credentials.create_credential(attrs)
+              }} = Credentials.create_credential(attrs, user)
 
       # ✅ Test missing refresh_token
       attrs = %{
@@ -1669,7 +1899,7 @@ defmodule Lightning.CredentialsTest do
               %Lightning.Credentials.OauthValidation.Error{
                 type: :missing_refresh_token,
                 message: "Missing required OAuth field: refresh_token"
-              }} = Credentials.create_credential(attrs)
+              }} = Credentials.create_credential(attrs, user)
 
       # ✅ Test missing expiration fields
       attrs = %{
@@ -1695,7 +1925,7 @@ defmodule Lightning.CredentialsTest do
                 type: :missing_expiration,
                 message:
                   "Missing expiration field: either expires_in or expires_at is required"
-              }} = Credentials.create_credential(attrs)
+              }} = Credentials.create_credential(attrs, user)
 
       # ✅ Test valid token data
       attrs = %{
@@ -1717,7 +1947,7 @@ defmodule Lightning.CredentialsTest do
         ]
       }
 
-      assert {:ok, _credential} = Credentials.create_credential(attrs)
+      assert {:ok, _credential} = Credentials.create_credential(attrs, user)
     end
 
     test "create_credential/1 validates expected scopes" do
@@ -1749,7 +1979,7 @@ defmodule Lightning.CredentialsTest do
                 type: :missing_scopes,
                 message: message,
                 details: %{missing_scopes: ["write"]}
-              }} = Credentials.create_credential(attrs)
+              }} = Credentials.create_credential(attrs, user)
 
       assert message =~ "Missing required scopes: write"
     end
@@ -1945,7 +2175,7 @@ defmodule Lightning.CredentialsTest do
               %Lightning.Credentials.OauthValidation.Error{
                 type: :unsupported_token_type,
                 message: "Unsupported token type: 'Basic'. Expected 'Bearer'"
-              }} = Credentials.create_credential(attrs)
+              }} = Credentials.create_credential(attrs, user)
     end
 
     test "update_credential/2 preserves refresh_token when not provided in update" do
@@ -1984,7 +2214,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, updated_credential} =
-               Credentials.update_credential(credential, update_attrs)
+               Credentials.update_credential(credential, update_attrs, user)
 
       updated_credential =
         Repo.preload(updated_credential, :credential_bodies, force: true)
@@ -2070,7 +2300,8 @@ defmodule Lightning.CredentialsTest do
         credential_bodies: [%{name: "main", body: %{"key" => "val"}}]
       }
 
-      assert {:ok, %Credential{}} = Credentials.create_credential(valid_attrs)
+      assert {:ok, %Credential{}} =
+               Credentials.create_credential(valid_attrs, user)
 
       duplicate_attrs = %{
         name: "cred two",
@@ -2081,7 +2312,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error, %Ecto.Changeset{} = changeset} =
-               Credentials.create_credential(duplicate_attrs)
+               Credentials.create_credential(duplicate_attrs, user)
 
       assert "you already have a credential with the same external ID" in errors_on(
                changeset
@@ -2108,8 +2339,8 @@ defmodule Lightning.CredentialsTest do
         credential_bodies: [%{name: "main", body: %{}}]
       }
 
-      assert {:ok, _} = Credentials.create_credential(attrs1)
-      assert {:ok, _} = Credentials.create_credential(attrs2)
+      assert {:ok, _} = Credentials.create_credential(attrs1, user1)
+      assert {:ok, _} = Credentials.create_credential(attrs2, user2)
     end
 
     test "nil external_id is always allowed (no uniqueness enforced)" do
@@ -2123,7 +2354,7 @@ defmodule Lightning.CredentialsTest do
           credential_bodies: [%{name: "main", body: %{}}]
         }
 
-        assert {:ok, _} = Credentials.create_credential(attrs)
+        assert {:ok, _} = Credentials.create_credential(attrs, user)
       end
     end
 
@@ -2131,13 +2362,16 @@ defmodule Lightning.CredentialsTest do
       user = insert(:user)
 
       {:ok, credential} =
-        Credentials.create_credential(%{
-          name: "blank ext",
-          user_id: user.id,
-          schema: "raw",
-          external_id: "",
-          credential_bodies: [%{name: "main", body: %{}}]
-        })
+        Credentials.create_credential(
+          %{
+            name: "blank ext",
+            user_id: user.id,
+            schema: "raw",
+            external_id: "",
+            credential_bodies: [%{name: "main", body: %{}}]
+          },
+          user
+        )
 
       assert credential.external_id == nil
     end
@@ -2166,8 +2400,8 @@ defmodule Lightning.CredentialsTest do
         credential_bodies: [%{name: "main", body: %{}}]
       }
 
-      assert {:ok, _} = Credentials.create_credential(attrs1)
-      assert {:ok, _} = Credentials.create_credential(attrs2)
+      assert {:ok, _} = Credentials.create_credential(attrs1, user1)
+      assert {:ok, _} = Credentials.create_credential(attrs2, user2)
     end
 
     test "cross-user duplicate external_id in the same project is rejected" do
@@ -2184,7 +2418,7 @@ defmodule Lightning.CredentialsTest do
         credential_bodies: [%{name: "main", body: %{}}]
       }
 
-      assert {:ok, _} = Credentials.create_credential(attrs1)
+      assert {:ok, _} = Credentials.create_credential(attrs1, user1)
 
       attrs2 = %{
         name: "cred two",
@@ -2196,7 +2430,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error, %Ecto.Changeset{} = changeset} =
-               Credentials.create_credential(attrs2)
+               Credentials.create_credential(attrs2, user2)
 
       assert "another credential with the same external ID already exists in this project" in errors_on(
                changeset
@@ -2210,17 +2444,20 @@ defmodule Lightning.CredentialsTest do
 
       # Create our credential in both projects (no conflict yet)
       {:ok, credential} =
-        Credentials.create_credential(%{
-          name: "my cred",
-          user_id: user.id,
-          schema: "raw",
-          external_id: "remove-test",
-          project_credentials: [
-            %{project_id: project1.id},
-            %{project_id: project2.id}
-          ],
-          credential_bodies: [%{name: "main", body: %{}}]
-        })
+        Credentials.create_credential(
+          %{
+            name: "my cred",
+            user_id: user.id,
+            schema: "raw",
+            external_id: "remove-test",
+            project_credentials: [
+              %{project_id: project1.id},
+              %{project_id: project2.id}
+            ],
+            credential_bodies: [%{name: "main", body: %{}}]
+          },
+          user
+        )
 
       credential = Repo.preload(credential, :project_credentials)
 
@@ -2238,30 +2475,39 @@ defmodule Lightning.CredentialsTest do
 
       # Remove from project1 via delete flag, keep project2
       assert {:ok, updated} =
-               Credentials.update_credential(credential, %{
-                 "project_credentials" => [
-                   %{
-                     "id" => pc_project1.id,
-                     "project_id" => project1.id,
-                     "delete" => "true"
-                   },
-                   Map.from_struct(pc_project2)
-                 ]
-               })
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "project_credentials" => [
+                     %{
+                       "id" => pc_project1.id,
+                       "project_id" => project1.id,
+                       "delete" => "true"
+                     },
+                     Map.from_struct(pc_project2)
+                   ]
+                 },
+                 user
+               )
 
       assert length(updated.project_credentials) == 1
       assert hd(updated.project_credentials).project_id == project2.id
 
       # Now another user can use the same external_id in project1
+      other_user = insert(:user)
+
       {:ok, _other} =
-        Credentials.create_credential(%{
-          name: "other cred",
-          user_id: insert(:user).id,
-          schema: "raw",
-          external_id: "remove-test",
-          project_credentials: [%{project_id: project1.id}],
-          credential_bodies: [%{name: "main", body: %{}}]
-        })
+        Credentials.create_credential(
+          %{
+            name: "other cred",
+            user_id: other_user.id,
+            schema: "raw",
+            external_id: "remove-test",
+            project_credentials: [%{project_id: project1.id}],
+            credential_bodies: [%{name: "main", body: %{}}]
+          },
+          other_user
+        )
     end
 
     test "removing credential from a conflicting project allows the update" do
@@ -2272,30 +2518,36 @@ defmodule Lightning.CredentialsTest do
 
       # User A has a credential with external_id "conflict-id" in shared_project
       {:ok, _cred_a} =
-        Credentials.create_credential(%{
-          name: "user a cred",
-          user_id: user_a.id,
-          schema: "raw",
-          external_id: "conflict-id",
-          project_credentials: [%{project_id: shared_project.id}],
-          credential_bodies: [%{name: "main", body: %{}}]
-        })
+        Credentials.create_credential(
+          %{
+            name: "user a cred",
+            user_id: user_a.id,
+            schema: "raw",
+            external_id: "conflict-id",
+            project_credentials: [%{project_id: shared_project.id}],
+            credential_bodies: [%{name: "main", body: %{}}]
+          },
+          user_a
+        )
 
       # User B has a credential with the same external_id in shared_project
       # AND another project. This is set up by inserting into other_project
       # first (no conflict), then adding shared_project directly in the DB
       # to bypass the validation and simulate a pre-existing state.
       {:ok, cred_b} =
-        Credentials.create_credential(%{
-          name: "user b cred",
-          user_id: user_b.id,
-          schema: "raw",
-          external_id: "conflict-id",
-          project_credentials: [
-            %{project_id: other_project.id}
-          ],
-          credential_bodies: [%{name: "main", body: %{}}]
-        })
+        Credentials.create_credential(
+          %{
+            name: "user b cred",
+            user_id: user_b.id,
+            schema: "raw",
+            external_id: "conflict-id",
+            project_credentials: [
+              %{project_id: other_project.id}
+            ],
+            credential_bodies: [%{name: "main", body: %{}}]
+          },
+          user_b
+        )
 
       # Add the shared_project association directly in the DB to simulate
       # a pre-existing conflict (bypasses the app-level validation)
@@ -2322,16 +2574,20 @@ defmodule Lightning.CredentialsTest do
       # keeping only other_project. This should succeed because after the
       # update there is no longer a conflict in shared_project.
       assert {:ok, updated} =
-               Credentials.update_credential(cred_b, %{
-                 "project_credentials" => [
-                   %{
-                     "id" => pc_shared.id,
-                     "project_id" => shared_project.id,
-                     "delete" => "true"
-                   },
-                   Map.from_struct(pc_other)
-                 ]
-               })
+               Credentials.update_credential(
+                 cred_b,
+                 %{
+                   "project_credentials" => [
+                     %{
+                       "id" => pc_shared.id,
+                       "project_id" => shared_project.id,
+                       "delete" => "true"
+                     },
+                     Map.from_struct(pc_other)
+                   ]
+                 },
+                 user_b
+               )
 
       # Only other_project should remain
       assert length(updated.project_credentials) == 1
@@ -2356,26 +2612,32 @@ defmodule Lightning.CredentialsTest do
 
       # User A adds credential with external_id directly to sandbox
       {:ok, _sandbox_cred} =
-        Credentials.create_credential(%{
-          name: "sandbox cred",
-          user_id: user2.id,
-          schema: "raw",
-          external_id: "sandbox-conflict",
-          project_credentials: [%{project_id: sandbox.id}],
-          credential_bodies: [%{name: "main", body: %{}}]
-        })
+        Credentials.create_credential(
+          %{
+            name: "sandbox cred",
+            user_id: user2.id,
+            schema: "raw",
+            external_id: "sandbox-conflict",
+            project_credentials: [%{project_id: sandbox.id}],
+            credential_bodies: [%{name: "main", body: %{}}]
+          },
+          user2
+        )
 
       # User B tries to add credential with same external_id to parent
       # — should fail because it would propagate to the sandbox
       assert {:error, %Ecto.Changeset{} = changeset} =
-               Credentials.create_credential(%{
-                 name: "parent cred",
-                 user_id: user1.id,
-                 schema: "raw",
-                 external_id: "sandbox-conflict",
-                 project_credentials: [%{project_id: parent.id}],
-                 credential_bodies: [%{name: "main", body: %{}}]
-               })
+               Credentials.create_credential(
+                 %{
+                   name: "parent cred",
+                   user_id: user1.id,
+                   schema: "raw",
+                   external_id: "sandbox-conflict",
+                   project_credentials: [%{project_id: parent.id}],
+                   credential_bodies: [%{name: "main", body: %{}}]
+                 },
+                 user1
+               )
 
       assert "another credential with the same external ID already exists in a sandbox of this project" in errors_on(
                changeset
@@ -2387,14 +2649,17 @@ defmodule Lightning.CredentialsTest do
       project = insert(:project)
 
       {:ok, credential} =
-        Credentials.create_credential(%{
-          name: "my cred",
-          user_id: user.id,
-          schema: "raw",
-          external_id: "keep-me",
-          project_credentials: [%{project_id: project.id}],
-          credential_bodies: [%{name: "main", body: %{"a" => "1"}}]
-        })
+        Credentials.create_credential(
+          %{
+            name: "my cred",
+            user_id: user.id,
+            schema: "raw",
+            external_id: "keep-me",
+            project_credentials: [%{project_id: project.id}],
+            credential_bodies: [%{name: "main", body: %{"a" => "1"}}]
+          },
+          user
+        )
 
       credential = Repo.preload(credential, :project_credentials)
 
@@ -2402,10 +2667,14 @@ defmodule Lightning.CredentialsTest do
         Enum.map(credential.project_credentials, &Map.from_struct/1)
 
       assert {:ok, updated} =
-               Credentials.update_credential(credential, %{
-                 name: "my cred renamed",
-                 project_credentials: original_pc
-               })
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   name: "my cred renamed",
+                   project_credentials: original_pc
+                 },
+                 user
+               )
 
       assert updated.name == "my cred renamed"
       assert updated.external_id == "keep-me"
@@ -2450,7 +2719,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, %Credential{} = credential} =
-               Credentials.create_credential(valid_attrs)
+               Credentials.create_credential(valid_attrs, user)
 
       # Verify credential was added to parent
       parent_credentials =
@@ -2512,7 +2781,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, %Credential{}} =
-               Credentials.update_credential(credential, update_attrs)
+               Credentials.update_credential(credential, update_attrs, user)
 
       # Verify credential was propagated to sandbox
       sandbox_credentials =
@@ -2542,13 +2811,16 @@ defmodule Lightning.CredentialsTest do
 
       # Create credential with parent project using create_credential (not factory insert)
       {:ok, credential} =
-        Credentials.create_credential(%{
-          name: "test cred",
-          schema: "raw",
-          user_id: user.id,
-          project_credentials: [%{project_id: parent_project.id}],
-          credential_bodies: [%{name: "main", body: %{}}]
-        })
+        Credentials.create_credential(
+          %{
+            name: "test cred",
+            schema: "raw",
+            user_id: user.id,
+            project_credentials: [%{project_id: parent_project.id}],
+            credential_bodies: [%{name: "main", body: %{}}]
+          },
+          user
+        )
 
       # Verify credential already exists in sandbox from initial creation
       sandbox_credentials =
@@ -2574,7 +2846,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:ok, %Credential{}} =
-               Credentials.update_credential(credential, update_attrs)
+               Credentials.update_credential(credential, update_attrs, user)
 
       # Verify no duplicates in sandbox
       sandbox_credentials =
@@ -2617,13 +2889,16 @@ defmodule Lightning.CredentialsTest do
 
       # Add credential to root
       {:ok, credential} =
-        Credentials.create_credential(%{
-          name: "deep cred",
-          schema: "raw",
-          user_id: user.id,
-          project_credentials: [%{project_id: root.id}],
-          credential_bodies: [%{name: "main", body: %{}}]
-        })
+        Credentials.create_credential(
+          %{
+            name: "deep cred",
+            schema: "raw",
+            user_id: user.id,
+            project_credentials: [%{project_id: root.id}],
+            credential_bodies: [%{name: "main", body: %{}}]
+          },
+          user
+        )
 
       # Verify propagation to all levels
       for project <- [root, level1, level2, level3] do
@@ -2637,6 +2912,104 @@ defmodule Lightning.CredentialsTest do
         assert length(credentials) == 1,
                "Credential should be present in project #{project.name}"
       end
+    end
+  end
+
+  describe "reconcile_legacy_schema_names/1" do
+    setup :isolated_adaptors
+
+    test "promotes a resolvable short-name row to the full npm name", %{
+      sup: sup
+    } do
+      Lightning.AdaptorTestHelpers.seed_adaptor_package(
+        "@openfn/language-postgresql",
+        "1.0.0"
+      )
+
+      credential = insert(:credential, schema: "postgresql")
+      other = insert(:credential, schema: "postgresql")
+
+      assert Credentials.reconcile_legacy_schema_names(sup) == 2
+
+      assert Repo.get!(Credential, credential.id).schema ==
+               "@openfn/language-postgresql"
+
+      assert Repo.get!(Credential, other.id).schema ==
+               "@openfn/language-postgresql"
+
+      assert Repo.get!(Credential, credential.id).updated_at ==
+               credential.updated_at
+    end
+
+    test "leaves raw, oauth, and an unresolvable custom short name untouched",
+         %{sup: sup} do
+      raw = insert(:credential, schema: "raw")
+      oauth = insert(:credential, schema: "oauth")
+      custom = insert(:credential, schema: "totally-custom")
+
+      assert Credentials.reconcile_legacy_schema_names(sup) == 0
+
+      assert Repo.get!(Credential, raw.id).schema == "raw"
+      assert Repo.get!(Credential, oauth.id).schema == "oauth"
+      assert Repo.get!(Credential, custom.id).schema == "totally-custom"
+    end
+  end
+
+  describe "get_schema/1" do
+    setup :isolated_adaptors
+
+    test "returns the adaptor's schema when one is present" do
+      seed_credential_schema("http")
+
+      assert {:ok, %Credentials.Schema{fields: fields}} =
+               Credentials.get_schema("@openfn/language-http")
+
+      assert fields != []
+    end
+
+    test "returns {:error, :not_found} for an adaptor the catalogue lacks" do
+      seed_credential_schema("http")
+
+      assert {:error, :not_found} =
+               Credentials.get_schema("@openfn/language-never-existed")
+    end
+
+    test "returns an error rather than raising when the catalogue cannot answer",
+         %{sup: sup} do
+      :ok =
+        Supervisor.terminate_child(
+          sup,
+          Lightning.Adaptors.Supervisor.highlander_name(sup)
+        )
+
+      assert {:error, :not_ready} =
+               Credentials.get_schema("@openfn/language-http")
+    end
+
+    test "a save while the catalogue cannot answer says so on the body" do
+      user = insert(:user)
+
+      Mimic.stub(Lightning.Adaptors, :resolve_name, fn name -> {:ok, name} end)
+
+      Mimic.stub(Lightning.Adaptors, :schema, fn _name ->
+        {:error, :not_ready}
+      end)
+
+      attrs = %{
+        name: "a http credential",
+        user_id: user.id,
+        schema: "@openfn/language-http",
+        credential_bodies: [%{name: "main", body: %{"baseUrl" => "http://x"}}]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Credentials.create_credential(attrs, user)
+
+      assert [
+               credential_bodies:
+                 {"Environment 1: body adaptor catalogue is not ready yet, try again shortly",
+                  []}
+             ] = changeset.errors
     end
   end
 end

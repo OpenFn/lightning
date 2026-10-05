@@ -4,8 +4,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   """
   use LightningWeb, :live_component
 
+  alias Lightning.Adaptors
+  alias Lightning.Adaptors.PackageName
   alias Lightning.Credentials
   alias Lightning.OauthClients
+  alias LightningWeb.AdaptorIconURL
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.GenericOauthComponent
   alias LightningWeb.CredentialLive.Helpers
@@ -44,6 +47,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       show_modal: true,
       body_valid?: true,
       schema_changeset: nil,
+      schema_attempt: 0,
+      adaptors_error: nil,
       touched_body_fields: MapSet.new(),
       touched_raw_bodies: MapSet.new()
     }
@@ -170,6 +175,17 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   def handle_event("schema_selected", %{"_target" => ["selected"]}, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("retry_schema", _, socket) do
+    {:noreply,
+     socket
+     |> assign(:schema_changeset, nil)
+     |> update(:schema_attempt, &(&1 + 1))}
+  end
+
+  def handle_event("retry_adaptors", _, socket) do
+    {:noreply, assign_oauth_clients_and_type_options(socket)}
   end
 
   def handle_event("change_page", _, socket) do
@@ -445,7 +461,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def handle_event("save_keychain", %{"keychain_credential" => params}, socket) do
     case Credentials.create_keychain_credential(
            socket.assigns.keychain_credential,
-           params
+           params,
+           socket.assigns.current_user
          ) do
       {:ok, keychain_credential} ->
         if socket.assigns[:on_save] do
@@ -453,6 +470,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         end
 
         {:noreply, socket}
+
+      {:error, :unauthorized} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "You are not authorized to create a keychain credential here."
+         )}
 
       {:error, changeset} ->
         {:noreply, assign(socket, keychain_changeset: changeset)}
@@ -638,11 +663,19 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
          touched_fields,
          _raw_touched
        ) do
-    schema = Credentials.get_schema(schema_name)
-    full_changeset = Credentials.SchemaDocument.changeset(body, schema: schema)
-    display_changeset = filter_errors_to_touched(full_changeset, touched_fields)
+    case Credentials.get_schema(schema_name) do
+      {:ok, schema} ->
+        full_changeset =
+          Credentials.SchemaDocument.changeset(body, schema: schema)
 
-    {full_changeset.valid?, display_changeset}
+        display_changeset =
+          filter_errors_to_touched(full_changeset, touched_fields)
+
+        {full_changeset.valid?, display_changeset}
+
+      {:error, _reason} ->
+        {false, nil}
+    end
   end
 
   defp filter_errors_to_touched(changeset, touched_fields) do
@@ -694,6 +727,21 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             phx-target={@myself}
             phx-change="schema_selected"
           >
+            <div
+              :if={@adaptors_error}
+              id="credential-type-adaptors-error"
+              class="flex flex-col items-center gap-2 py-4 text-sm text-gray-500"
+            >
+              <p>Couldn't load adaptors. Please try again.</p>
+              <button
+                type="button"
+                phx-click="retry_adaptors"
+                phx-target={@myself}
+                class="text-primary-600 hover:text-primary-500 font-medium"
+              >
+                Retry
+              </button>
+            </div>
             <div class="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-3 gap-4 overflow-auto max-h-99">
               <div
                 :for={{name, key, logo, _id} <- @type_options}
@@ -925,6 +973,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                     current_body={@current_body}
                     schema_changeset={@schema_changeset}
                     raw_body_touched={@raw_body_touched}
+                    target={@myself}
+                    attempt={@schema_attempt}
                   >
                     {fieldset}
                   </Components.Credentials.form_component>
@@ -1161,33 +1211,31 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     "Environment names organize credential configurations by deployment stage. When workflows run in sandbox projects (e.g., env: 'staging'), they automatically use the matching credential environment. Choose names that align with your project environments: 'production' for live systems, 'staging' for testing, 'development' for local work. Consistent naming ensures the right secrets are used in each environment."
   end
 
-  defp get_type_options(schemas_path) do
-    schemas_options =
-      Path.wildcard("#{schemas_path}/*.json")
-      |> Enum.map(fn p ->
-        name = p |> Path.basename() |> String.replace(".json", "")
+  defp get_type_options do
+    with {:ok, packages} <- Adaptors.packages() do
+      options =
+        packages
+        |> Enum.filter(& &1.has_schema)
+        |> Enum.map(&adaptor_type_option/1)
+        |> Enum.reject(fn {_, name, _, _} ->
+          name in ["@openfn/language-googlesheets", "@openfn/language-gmail"]
+        end)
 
-        image_path =
-          Routes.static_path(
-            LightningWeb.Endpoint,
-            "/images/adaptors/#{name}-square.png"
-          )
+      {:ok, options}
+    end
+  end
 
-        {name, name, image_path, nil}
-      end)
+  defp raw_type_option do
+    {"Raw JSON", "raw",
+     Routes.static_path(
+       LightningWeb.Endpoint,
+       "/images/raw.png"
+     ), nil}
+  end
 
-    schemas_options
-    |> Enum.reject(fn {_, name, _, _} ->
-      name in ["googlesheets", "gmail", "collections"]
-    end)
-    |> Enum.concat([
-      {"Raw JSON", "raw",
-       Routes.static_path(
-         LightningWeb.Endpoint,
-         "/images/raw.png"
-       ), nil}
-    ])
-    |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
+  defp adaptor_type_option(%Adaptors.Package{name: name} = pkg) do
+    {PackageName.short_name(name), name,
+     AdaptorIconURL.build(name, pkg, :square), nil}
   end
 
   defp list_users do
@@ -1211,45 +1259,29 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        ) do
     %{credential: form_credential} = socket.assigns
 
-    with {:same_user, true} <-
-           {:same_user,
-            socket.assigns.current_user.id == socket.assigns.credential.user_id},
-         {:ok, credential} <-
-           Credentials.update_credential(form_credential, credential_params) do
-      # Call on_save callback if it exists (for collaborative editor)
-      if socket.assigns[:on_save] do
-        socket.assigns[:on_save].(credential)
-      end
-
-      socket =
-        socket
-        |> put_flash(:info, "Credential updated successfully")
-
-      socket =
-        if socket.assigns.return_to do
-          push_navigate(socket, to: socket.assigns.return_to)
-        else
-          socket
+    form_credential
+    |> Credentials.update_credential(
+      credential_params,
+      socket.assigns.current_user
+    )
+    |> case do
+      {:ok, credential} ->
+        # Call on_save callback if it exists (for collaborative editor)
+        if socket.assigns[:on_save] do
+          socket.assigns[:on_save].(credential)
         end
 
-      {:noreply, socket}
-    else
-      {:same_user, false} ->
-        socket =
-          socket
-          |> put_flash(
-            :error,
-            "Invalid credentials. Please log in again."
-          )
+        socket
+        |> put_flash(:info, "Credential updated successfully")
+        |> close_or_stay()
 
-        socket =
-          if socket.assigns.return_to do
-            push_navigate(socket, to: socket.assigns.return_to)
-          else
-            socket
-          end
-
-        {:noreply, socket}
+      # Same refusal as the creation branch below, and as the OAuth client
+      # form. The user is signed in, they are just not allowed to touch this
+      # credential, so don't send them back to the login page.
+      {:error, :unauthorized} ->
+        socket
+        |> put_flash(:error, "You are not authorized to do that.")
+        |> close_or_stay()
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -1267,13 +1299,29 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     credential_params
     |> Map.put("user_id", user_id)
     |> Map.put("schema", schema_name)
-    |> Credentials.create_credential()
+    |> Credentials.create_credential(socket.assigns.current_user)
     |> case do
       {:ok, credential} ->
         {:noreply, Helpers.handle_save_response(socket, credential)}
 
+      # Defence in depth. No screen can reach this today, because
+      # `Credential.changeset/2` does not cast :user_id and both render sites
+      # seed the struct with the current user. It is here so a future caller
+      # that names another owner is refused rather than silently allowed.
+      {:error, :unauthorized} ->
+        {:noreply,
+         put_flash(socket, :error, "You are not authorized to do that.")}
+
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
+    end
+  end
+
+  defp close_or_stay(socket) do
+    if socket.assigns.return_to do
+      {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
+    else
+      {:noreply, socket}
     end
   end
 
@@ -1313,11 +1361,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         do: OauthClients.list_clients(project),
         else: OauthClients.list_clients(current_user)
 
-    type_options =
+    {type_options, adaptors_error} =
       if action == :new do
-        {:ok, schemas_path} =
-          Application.fetch_env(:lightning, :schemas_path)
-
         keychain_option =
           if socket.assigns[:from_collab_editor] do
             [
@@ -1331,29 +1376,49 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             []
           end
 
-        get_type_options(schemas_path)
-        |> Enum.concat(
-          Enum.map(oauth_clients, fn client ->
-            {client.name, client.id, "/images/oauth-2.png", "oauth"}
-          end)
-        )
-        |> Enum.concat(keychain_option)
-        |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
+        {adaptor_options, error} =
+          case get_type_options() do
+            {:ok, options} -> {options, nil}
+            {:error, reason} -> {[], reason}
+          end
+
+        options =
+          adaptor_options
+          |> Enum.concat([raw_type_option()])
+          |> Enum.concat(
+            Enum.map(oauth_clients, fn client ->
+              {client.name, client.id, "/images/oauth-2.png", "oauth"}
+            end)
+          )
+          |> Enum.concat(keychain_option)
+          |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
+
+        {options, error}
       else
-        []
+        {[], nil}
       end
 
-    assign(socket, oauth_clients: oauth_clients, type_options: type_options)
+    assign(socket,
+      oauth_clients: oauth_clients,
+      type_options: type_options,
+      adaptors_error: adaptors_error
+    )
   end
 
-  defp format_schema_name("raw"), do: "Raw JSON"
-  defp format_schema_name("oauth"), do: "OAuth"
-  defp format_schema_name("http"), do: "HTTP"
-
   defp format_schema_name(schema) when is_binary(schema) do
-    schema
-    |> String.split("_")
-    |> Enum.map_join(" ", &String.capitalize/1)
+    case PackageName.short_name(schema) do
+      "raw" ->
+        "Raw JSON"
+
+      "oauth" ->
+        "OAuth"
+
+      "http" ->
+        "HTTP"
+
+      short ->
+        short |> String.split("_") |> Enum.map_join(" ", &String.capitalize/1)
+    end
   end
 
   defp get_credential_description("raw", _type),

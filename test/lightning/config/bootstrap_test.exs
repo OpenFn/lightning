@@ -4,6 +4,7 @@ defmodule Lightning.Config.BootstrapTest do
   alias Lightning.Config.Bootstrap
 
   import Mox
+  import ExUnit.CaptureLog
   setup :verify_on_exit!
 
   @opts_key {Config, :opts}
@@ -127,6 +128,75 @@ defmodule Lightning.Config.BootstrapTest do
       assert endpoint_idle_timeout() == 75_000
     end
 
+    test "Repo socket options" do
+      db = %{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      }
+
+      reconfigure(db)
+      assert repo_opt(:socket_options) == dead_socket_options(20_000)
+
+      reconfigure(Map.put(db, "DATABASE_TIMEOUT", "30000"))
+      assert repo_opt(:socket_options) == dead_socket_options(35_000)
+
+      reconfigure(Map.put(db, "DATABASE_TCP_USER_TIMEOUT", "25000"))
+      assert repo_opt(:socket_options) == dead_socket_options(25_000)
+
+      reconfigure(Map.put(db, "ECTO_IPV6", "true"))
+
+      assert repo_opt(:socket_options) ==
+               [:inet6 | dead_socket_options(20_000)]
+
+      reconfigure(Map.put(db, "DATABASE_TCP_USER_TIMEOUT", "0"))
+      assert repo_opt(:socket_options) == []
+    end
+
+    test "rejects a DATABASE_TCP_USER_TIMEOUT the kernel would refuse" do
+      for bad <- ["-1", "2147483648"] do
+        assert_raise RuntimeError, ~r/DATABASE_TCP_USER_TIMEOUT/, fn ->
+          reconfigure(%{
+            "SECRET_KEY_BASE" => "Foo",
+            "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+            "DATABASE_TCP_USER_TIMEOUT" => bad
+          })
+        end
+      end
+    end
+
+    test "warns on Linux when DATABASE_TCP_USER_TIMEOUT is below DATABASE_TIMEOUT" do
+      configure_with = fn tcp_user_timeout ->
+        capture_log(fn ->
+          reconfigure(%{
+            "SECRET_KEY_BASE" => "Foo",
+            "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+            "DATABASE_TCP_USER_TIMEOUT" => tcp_user_timeout
+          })
+        end)
+      end
+
+      assert configure_with.("5000") =~ "DATABASE_TCP_USER_TIMEOUT" == linux?()
+      refute configure_with.("20000") =~ "DATABASE_TCP_USER_TIMEOUT"
+    end
+
+    test "Repo SSL is on by default and disabled by DISABLE_DB_SSL" do
+      # SSL defaults on for managed Postgres; DISABLE_DB_SSL opts out
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      assert repo_opt(:ssl) == :tls_certificate_check.options("HOST")
+
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true"
+      })
+
+      assert repo_opt(:ssl) == false
+    end
+
     test "prod endpoint URL defaults" do
       reconfigure(%{
         "SECRET_KEY_BASE" => "Foo",
@@ -168,6 +238,117 @@ defmodule Lightning.Config.BootstrapTest do
 
       assert get_in(endpoint, [:http, :port]) == 8080
       assert get_in(endpoint, [:url, :port]) == 443
+    end
+
+    test "DISABLE_DB_SSL true, DISABLE_DB_SSL_CERT_VERIFY not set" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == false
+    end
+
+    test "DISABLE_DB_SSL true, DISABLE_DB_SSL_CERT_VERIFY true" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == false
+    end
+
+    test "DISABLE_DB_SSL true, DISABLE_DB_SSL_CERT_VERIFY false" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == false
+    end
+
+    test "DISABLE_DB_SSL not set, DISABLE_DB_SSL_CERT_VERIFY not set" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+
+    test "DISABLE_DB_SSL false, DISABLE_DB_SSL_CERT_VERIFY not set" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+
+    test "DISABLE_DB_SSL not set, `DISABLE_DB_SSL_CERT_VERIFY true" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == [verify: :verify_none]
+    end
+
+    test "DISABLE_DB_SSL false, DISABLE_DB_SSL_CERT_VERIFY true" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "false",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == [verify: :verify_none]
+    end
+
+    test "DISABLE_DB_SSL not set, DISABLE_DB_SSL_CERT_VERIFY false" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+
+    test "DISABLE_DB_SSL false, DISABLE_DB_SSL_CERT_VERIFY false" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "false",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
     end
   end
 
@@ -405,112 +586,30 @@ defmodule Lightning.Config.BootstrapTest do
 
       Bootstrap.configure()
 
-      assert get_env(:lightning, Lightning.Mailer) == [
+      config = get_env(:lightning, Lightning.Mailer)
+
+      assert config == [
                adapter: Swoosh.Adapters.SMTP,
                username: "foo",
                password: "bar",
                relay: "baz",
                tls: :always,
-               tls_options: [
-                 versions: [:"tlsv1.3"],
-                 verify: :verify_peer,
-                 cacerts: :public_key.cacerts_get(),
-                 server_name_indication: to_charlist("baz"),
-                 depth: 5,
-                 customize_hostname_check: [
-                   match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-                 ]
-               ],
+               tls_options: :tls_certificate_check.options("baz"),
                port: 587
              ]
-    end
-  end
 
-  describe "kafka alternate storage" do
-    setup %{
-            tmp_dir: tmp_dir,
-            enabled: enabled,
-            misconfigured: misconfigured
-          } = context do
-      path = Map.get(context, :path, tmp_dir)
+      tls_options = Keyword.get(config, :tls_options)
 
-      %{"KAFKA_ALTERNATE_STORAGE_ENABLED" => enabled}
-      |> then(fn vars ->
-        if path do
-          vars
-          |> Map.put("KAFKA_ALTERNATE_STORAGE_FILE_PATH", path)
-        else
-          vars
-        end
-      end)
-      |> List.wrap()
-      |> Dotenvy.source()
-
-      if misconfigured do
-        tmp_dir |> File.chmod!(0o000)
-      end
-
-      :ok
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: true
-    test "raises an error if enabled and misconfigured" do
-      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
-        Bootstrap.configure()
-      end
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: "xxx/yyy"
-    test "raises an error if enabled and path does not exist" do
-      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
-        Bootstrap.configure()
-      end
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: nil
-    test "raises an error if enabled and path is nil" do
-      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
-        Bootstrap.configure()
-      end
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: ""
-    test "raises an error if enabled and path is empty string" do
-      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
-        Bootstrap.configure()
-      end
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: false
-    test "does not raise an error if enabled and properly configured" do
-      Bootstrap.configure()
-    end
-
-    @tag tmp_dir: true, enabled: "false", misconfigured: true
-    test "does not raise an error if disabled and misconfigured" do
-      Bootstrap.configure()
-    end
-
-    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: nil
-    test "does not raise an error if disabled and path is nil" do
-      Bootstrap.configure()
-    end
-
-    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: ""
-    test "does not raise an error if disabled and path is empty string" do
-      Bootstrap.configure()
-    end
-
-    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: "xxx/yyy"
-    test "does not raise an error if disabled and path does not exist" do
-      Bootstrap.configure()
+      assert {:verify, :verify_peer} in tls_options
+      assert is_list(Keyword.get(tls_options, :cacerts))
+      assert Keyword.has_key?(tls_options, :customize_hostname_check)
     end
   end
 
   describe "adaptor registry" do
-    test "raises an exception when LOCAL_ADAPTORS is set to true but OPENFN_ADAPTORS_REPO is not set" do
+    test "raises when LOCAL_ADAPTORS is set to true but no repo path is set" do
       assert_raise RuntimeError,
-                   ~r/LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set/,
+                   ~r/ADAPTORS_STRATEGY is set to local, but neither ADAPTORS_LOCAL_REPO nor/,
                    fn ->
                      Dotenvy.source([%{"LOCAL_ADAPTORS" => "true"}])
 
@@ -518,26 +617,354 @@ defmodule Lightning.Config.BootstrapTest do
                    end
     end
 
-    test "local_adaptors_repo is set to false when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
-      Dotenvy.source([%{"OPENFN_ADAPTORS_REPO" => "/path"}])
-      Bootstrap.configure()
+    test "LOCAL_ADAPTORS=true with ADAPTORS_LOCAL_REPO boots the local strategy and only warns" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{"LOCAL_ADAPTORS" => "true", "ADAPTORS_LOCAL_REPO" => "/path"}
+          ])
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+          Bootstrap.configure()
+        end)
 
-      assert adaptor_registry[:local_adaptors_repo] == false
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.Local
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
+      assert log =~ "LOCAL_ADAPTORS is deprecated"
     end
 
-    test "local_adaptors_repo is set when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set" do
-      # configure both
+    test "OPENFN_ADAPTORS_REPO with LOCAL_ADAPTORS=true becomes the local strategy's single repo path" do
       Dotenvy.source([
         %{"OPENFN_ADAPTORS_REPO" => "/path", "LOCAL_ADAPTORS" => "true"}
       ])
 
       Bootstrap.configure()
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
+    end
 
-      assert adaptor_registry[:local_adaptors_repo] == "/path"
+    test "comma-separated OPENFN_ADAPTORS_REPO parses into an ordered list" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "/private/repo,/canonical/adaptors",
+          "LOCAL_ADAPTORS" => "true"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == [
+               "/private/repo",
+               "/canonical/adaptors"
+             ]
+    end
+
+    test "OPENFN_ADAPTORS_REPO drops empty segments and trims whitespace" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "  /a  ,  ,/b ",
+          "LOCAL_ADAPTORS" => "true"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == [
+               "/a",
+               "/b"
+             ]
+    end
+  end
+
+  describe "adaptors NPM upstream URLs" do
+    test "no keys are forced when nothing is set, so sub-modules' own @default_* wins" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      refute Keyword.has_key?(npm, :registry_url)
+      refute Keyword.has_key?(npm, :jsdelivr_url)
+      refute Keyword.has_key?(npm, :github_url)
+      refute Keyword.has_key?(npm, :github_ref)
+      refute Keyword.has_key?(npm, :http_timeout)
+    end
+
+    test "are overridden by the ADAPTORS_NPM_* env vars" do
+      Dotenvy.source([
+        %{
+          "ADAPTORS_NPM_REGISTRY_URL" => "http://localhost:4874/npm",
+          "ADAPTORS_NPM_JSDELIVR_URL" => "http://localhost:4874/jsdelivr",
+          "ADAPTORS_NPM_GITHUB_URL" => "http://localhost:4874/github",
+          "ADAPTORS_NPM_GITHUB_REF" => "some-feature-branch"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      assert npm[:registry_url] == "http://localhost:4874/npm"
+      assert npm[:jsdelivr_url] == "http://localhost:4874/jsdelivr"
+      assert npm[:github_url] == "http://localhost:4874/github"
+      assert npm[:github_ref] == "some-feature-branch"
+    end
+
+    test "ADAPTORS_NPM_HTTP_TIMEOUT sets http_timeout when present" do
+      Dotenvy.source([%{"ADAPTORS_NPM_HTTP_TIMEOUT" => "5000"}])
+
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      assert npm[:http_timeout] == 5000
+    end
+
+    test "ADAPTORS_NPM_HTTP_TIMEOUT does not force a 0ms timeout when set but empty" do
+      Dotenvy.source([%{"ADAPTORS_NPM_HTTP_TIMEOUT" => ""}])
+
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      refute Keyword.has_key?(npm, :http_timeout)
+    end
+  end
+
+  describe "adaptors refresh interval" do
+    test "ADAPTORS_REFRESH_INTERVAL_SECONDS sets refresh_interval in ms" do
+      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_SECONDS" => "60"}])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:refresh_interval] ==
+               60_000
+    end
+
+    test "ADAPTORS_REFRESH_INTERVAL_SECONDS accepts 0 to disable the scheduler" do
+      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_SECONDS" => "0"}])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:refresh_interval] == 0
+    end
+
+    test "is not forced when unset, so config/test.exs's 0 is left alone" do
+      Dotenvy.source([%{}])
+
+      Bootstrap.configure()
+
+      refute Keyword.has_key?(
+               get_env(:lightning, Lightning.Adaptors),
+               :refresh_interval
+             )
+    end
+
+    test "does not set refresh_interval when set but empty" do
+      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_SECONDS" => ""}])
+
+      Bootstrap.configure()
+
+      refute Keyword.has_key?(
+               get_env(:lightning, Lightning.Adaptors),
+               :refresh_interval
+             )
+    end
+  end
+
+  describe "adaptors strategy" do
+    test "defaults to the npm strategy when nothing is set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.NPM
+    end
+
+    test "ADAPTORS_STRATEGY=npm explicitly selects the npm strategy" do
+      Dotenvy.source([%{"ADAPTORS_STRATEGY" => "npm"}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.NPM
+    end
+
+    test "ADAPTORS_STRATEGY=local selects the local strategy" do
+      Dotenvy.source([
+        %{"ADAPTORS_STRATEGY" => "local", "ADAPTORS_LOCAL_REPO" => "/path"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.Local
+    end
+
+    test "ADAPTORS_STRATEGY is trimmed of surrounding whitespace" do
+      Dotenvy.source([
+        %{"ADAPTORS_STRATEGY" => "  local  ", "ADAPTORS_LOCAL_REPO" => "/path"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.Local
+    end
+
+    test "ADAPTORS_STRATEGY=local with no repo path configured raises" do
+      assert_raise RuntimeError,
+                   ~r/ADAPTORS_STRATEGY is set to local, but neither ADAPTORS_LOCAL_REPO nor/,
+                   fn ->
+                     Dotenvy.source([%{"ADAPTORS_STRATEGY" => "local"}])
+
+                     Bootstrap.configure()
+                   end
+    end
+
+    test "does not write :strategy into the real application env in :test, so config/test.exs's mock survives" do
+      Process.put({Config, :opts}, {:test, ""})
+
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      refute Keyword.has_key?(
+               get_env(:lightning, Lightning.Adaptors),
+               :strategy
+             )
+    end
+
+    test "raises when ADAPTORS_STRATEGY is not npm or local" do
+      assert_raise RuntimeError, ~r/ADAPTORS_STRATEGY/, fn ->
+        Dotenvy.source([%{"ADAPTORS_STRATEGY" => "bogus"}])
+        Bootstrap.configure()
+      end
+    end
+
+    test "LOCAL_ADAPTORS=true with ADAPTORS_STRATEGY unset back-compats to the local strategy and warns" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{"LOCAL_ADAPTORS" => "true", "OPENFN_ADAPTORS_REPO" => "/path"}
+          ])
+
+          Bootstrap.configure()
+        end)
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.Local
+
+      assert log =~ "ADAPTORS_STRATEGY=local"
+    end
+
+    test "ADAPTORS_STRATEGY explicitly set wins over the LOCAL_ADAPTORS back-compat" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{
+              "LOCAL_ADAPTORS" => "true",
+              "OPENFN_ADAPTORS_REPO" => "/path",
+              "ADAPTORS_STRATEGY" => "npm"
+            }
+          ])
+
+          Bootstrap.configure()
+        end)
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.NPM
+
+      refute log =~ "ADAPTORS_STRATEGY=local"
+    end
+  end
+
+  describe "adaptors icons path" do
+    test "is unset when ADAPTORS_ICONS_PATH is not set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      # A present-but-nil :icon_path would defeat
+      # Lightning.Adaptors.Config's own default, so the key must be absent
+      # entirely, not just nil.
+      refute Keyword.has_key?(
+               get_env(:lightning, Lightning.Adaptors),
+               :icon_path
+             )
+    end
+
+    test "ADAPTORS_ICONS_PATH sets and expands the icon path" do
+      Dotenvy.source([%{"ADAPTORS_ICONS_PATH" => "./tmp/icons"}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:icon_path] ==
+               Path.expand("./tmp/icons")
+    end
+  end
+
+  describe "adaptors local strategy repo paths" do
+    test "defaults to an empty list when nothing is set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == []
+    end
+
+    test "ADAPTORS_LOCAL_REPO parses a comma-separated list" do
+      Dotenvy.source([%{"ADAPTORS_LOCAL_REPO" => "/a,/b"}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == [
+               "/a",
+               "/b"
+             ]
+    end
+
+    test "OPENFN_ADAPTORS_REPO back-compats to the local strategy paths and warns when ADAPTORS_STRATEGY=local" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{
+              "OPENFN_ADAPTORS_REPO" => "/path",
+              "ADAPTORS_STRATEGY" => "local"
+            }
+          ])
+
+          Bootstrap.configure()
+        end)
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
+      assert log =~ "ADAPTORS_LOCAL_REPO"
+    end
+
+    test "a blank ADAPTORS_LOCAL_REPO falls back to OPENFN_ADAPTORS_REPO instead of discarding it" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{
+              "OPENFN_ADAPTORS_REPO" => "/path",
+              "ADAPTORS_LOCAL_REPO" => " , ",
+              "ADAPTORS_STRATEGY" => "local"
+            }
+          ])
+
+          Bootstrap.configure()
+        end)
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
+      assert log =~ "ADAPTORS_LOCAL_REPO"
+    end
+
+    test "ADAPTORS_LOCAL_REPO takes precedence over OPENFN_ADAPTORS_REPO" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "/old",
+          "ADAPTORS_LOCAL_REPO" => "/new"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/new"]
     end
   end
 
@@ -572,6 +999,63 @@ defmodule Lightning.Config.BootstrapTest do
                    fn ->
                      Bootstrap.configure()
                    end
+    end
+  end
+
+  describe "max_sandbox_nesting_depth" do
+    test "defaults to 5" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :max_sandbox_nesting_depth) == 5
+    end
+
+    test "can be set to a different value via MAX_SANDBOX_NESTING_DEPTH" do
+      Dotenvy.source([%{"MAX_SANDBOX_NESTING_DEPTH" => "10"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :max_sandbox_nesting_depth) == 10
+    end
+  end
+
+  describe "apollo timeouts" do
+    test "fall back to the compiled defaults" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      apollo = get_env(:lightning, :apollo)
+
+      assert apollo[:connect_timeout] == 5_000
+      assert apollo[:idle_timeout] == 30_000
+      assert apollo[:request_timeout] == 300_000
+    end
+
+    # The names are the contract DEPLOYMENT.md documents; a typo in one would
+    # fall back to its default and ship without a failure anywhere.
+    test "each one is read from its own variable" do
+      Dotenvy.source([
+        %{
+          "APOLLO_CONNECT_TIMEOUT_MS" => "1000",
+          "APOLLO_IDLE_TIMEOUT_MS" => "2000",
+          "APOLLO_REQUEST_TIMEOUT_MS" => "3000"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      apollo = get_env(:lightning, :apollo)
+
+      assert apollo[:connect_timeout] == 1_000
+      assert apollo[:idle_timeout] == 2_000
+      assert apollo[:request_timeout] == 3_000
+    end
+
+    test "records APOLLO_TIMEOUT only when it is set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      refute get_env(:lightning, :apollo_timeout_env_still_set)
+
+      Dotenvy.source([%{"APOLLO_TIMEOUT" => "120000"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :apollo_timeout_env_still_set)
     end
   end
 
@@ -693,6 +1177,62 @@ defmodule Lightning.Config.BootstrapTest do
       Dotenvy.source([%{"WEBHOOK_RETRY_JITTER" => "true"}])
       Bootstrap.configure()
       assert get_env(:lightning, :webhook_retry) == [jitter: true]
+    end
+  end
+
+  describe "channel proxy egress (philter) configuration" do
+    test "defaults to blocking private networks and does not override allowed_hosts" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      assert get_env(:philter, :block_private_networks) == true
+      # allowed_hosts left untouched so base/dev/test defaults survive
+      assert get_env(:philter, :allowed_hosts) == nil
+    end
+
+    test "CHANNEL_BLOCK_PRIVATE_NETWORKS toggles the flag" do
+      for {value, expected} <- [
+            {"false", false},
+            {"no", false},
+            {"true", true},
+            {"yes", true}
+          ] do
+        Dotenvy.source([%{"CHANNEL_BLOCK_PRIVATE_NETWORKS" => value}])
+        Bootstrap.configure()
+        assert get_env(:philter, :block_private_networks) == expected
+      end
+    end
+
+    test "CHANNEL_BLOCK_PRIVATE_NETWORKS rejects garbage input" do
+      Dotenvy.source([%{"CHANNEL_BLOCK_PRIVATE_NETWORKS" => "nope"}])
+
+      assert_raise ArgumentError, fn -> Bootstrap.configure() end
+    end
+
+    test "CHANNEL_ALLOWED_HOSTS sets a single normalised host" do
+      Dotenvy.source([%{"CHANNEL_ALLOWED_HOSTS" => "Internal.Svc."}])
+      Bootstrap.configure()
+
+      assert get_env(:philter, :allowed_hosts) == ["internal.svc"]
+    end
+
+    test "CHANNEL_ALLOWED_HOSTS parses a comma-separated list" do
+      Dotenvy.source([
+        %{"CHANNEL_ALLOWED_HOSTS" => "internal.svc, api.example.org"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:philter, :allowed_hosts) ==
+               ["internal.svc", "api.example.org"]
+    end
+
+    test "CHANNEL_ALLOWED_HOSTS rejects a malformed entry" do
+      Dotenvy.source([
+        %{"CHANNEL_ALLOWED_HOSTS" => "internal.svc,https://bad.one"}
+      ])
+
+      assert_raise ArgumentError, fn -> Bootstrap.configure() end
     end
   end
 
@@ -879,6 +1419,102 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "service account" do
+    @service_account_pem """
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0vx7agoebGcQSuuPiLJX
+    ZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tS
+    oc/BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ/2W+5JsGY4Hc5n9yBXArwl93lqt
+    7/RN5w6Cf0h4QyQ5v+65YGjQR0/FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0
+    zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt+bFTWhAI4vMQFh6WeZu0f
+    M4lFd2NcRwr3XPksINHaQ+G/xBniIqbw0Ls1jF44+csFCur+kEgU8awapJzKnqDK
+    gwIDAQAB
+    -----END PUBLIC KEY-----
+    """
+
+    test "registers one service account and turns off first setup" do
+      reconfigure(%{
+        "SERVICE_ACCOUNT_PUBLIC_KEY" =>
+          Base.encode64(@service_account_pem, padding: false)
+      })
+
+      assert %Lightning.ServiceAccount{
+               id: "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
+             } = get_env(:lightning, :service_account)
+
+      assert get_env(:lightning, :allow_first_setup) == false
+    end
+
+    test "schedules the pruning of seen assertions" do
+      reconfigure(%{})
+
+      crontab = get_env(:lightning, Oban)[:plugins][Oban.Plugins.Cron][:crontab]
+
+      assert Enum.any?(
+               crontab,
+               &match?({_, Lightning.ServiceAccount.Assertion}, &1)
+             )
+    end
+
+    test "registers none and leaves first setup on when unset" do
+      reconfigure(%{})
+
+      assert get_env(:lightning, :service_account) == nil
+      assert get_env(:lightning, :allow_first_setup) == true
+    end
+
+    test "stops the boot on a value that is not base64" do
+      value = "not base64!"
+
+      error =
+        assert_raise RuntimeError, fn ->
+          reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
+        end
+
+      assert error.message =~
+               "SERVICE_ACCOUNT_PUBLIC_KEY is not unpadded base64"
+
+      refute error.message =~ value
+    end
+
+    test "stops the boot on an RSA key shorter than 2048 bits" do
+      error =
+        assert_raise RuntimeError, fn ->
+          reconfigure(%{
+            "SERVICE_ACCOUNT_PUBLIC_KEY" => encoded_public_key(1024)
+          })
+        end
+
+      assert error.message ==
+               "SERVICE_ACCOUNT_PUBLIC_KEY is a 1024-bit RSA key; it must be at least 2048 bits"
+    end
+
+    for bits <- [2048, 4096] do
+      test "accepts a #{bits}-bit RSA key" do
+        reconfigure(%{
+          "SERVICE_ACCOUNT_PUBLIC_KEY" => encoded_public_key(unquote(bits))
+        })
+
+        assert %Lightning.ServiceAccount{} =
+                 get_env(:lightning, :service_account)
+      end
+    end
+
+    test "stops the boot on a value that holds no RSA public key" do
+      value = Base.encode64("not a key", padding: false)
+
+      error =
+        assert_raise RuntimeError, fn ->
+          reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
+        end
+
+      assert error.message =~
+               "SERVICE_ACCOUNT_PUBLIC_KEY is not an RSA public key"
+
+      refute error.message =~ value
+    end
+  end
+
   describe "live debugger (dev)" do
     test "does not set :ip or :external_url by default" do
       Dotenvy.source([%{}])
@@ -936,6 +1572,37 @@ defmodule Lightning.Config.BootstrapTest do
       {_, value} -> value
       nil -> nil
     end
+  end
+
+  defp linux?, do: match?({:unix, :linux}, :os.type())
+
+  defp dead_socket_options(tcp_user_timeout) do
+    if linux?() do
+      [
+        {:keepalive, true},
+        {:raw, 6, 4, <<5::32-native>>},
+        {:raw, 6, 5, <<5::32-native>>},
+        {:raw, 6, 18, <<tcp_user_timeout::32-native>>}
+      ]
+    else
+      []
+    end
+  end
+
+  defp repo_opt(key) do
+    :lightning
+    |> get_env(Lightning.Repo)
+    |> Keyword.get(key)
+  end
+
+  defp encoded_public_key(bits) do
+    {_, pem} =
+      {:rsa, bits}
+      |> JOSE.JWK.generate_key()
+      |> JOSE.JWK.to_public()
+      |> JOSE.JWK.to_pem()
+
+    Base.encode64(pem, padding: false)
   end
 
   defp reconfigure(envs) do

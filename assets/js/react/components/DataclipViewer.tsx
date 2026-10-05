@@ -2,17 +2,30 @@ import { useEffect, useState } from 'react';
 
 import { CodeViewer } from './CodeViewer';
 
-async function fetchDataclipContent(dataclipId: string) {
+type FetchResult =
+  | { kind: 'ok'; body: string }
+  | { kind: 'not-found' }
+  | { kind: 'error' };
+
+async function fetchDataclipContent(dataclipId: string): Promise<FetchResult> {
   try {
     const response = await fetch(`/dataclip/body/${dataclipId}`);
-    if (!response.ok && response.status !== 304) {
-      throw new Error('Network response was not ok');
+
+    if (response.status === 404) {
+      return { kind: 'not-found' };
     }
 
-    return await response.text();
+    if (!response.ok) {
+      console.error(
+        `Error fetching content: unexpected status ${response.status}`
+      );
+      return { kind: 'error' };
+    }
+
+    return { kind: 'ok', body: await response.text() };
   } catch (error) {
     console.error('Error fetching content:', error);
-    return 'Failed to load content';
+    return { kind: 'error' };
   }
 }
 
@@ -21,12 +34,23 @@ export const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
 
   useEffect(() => {
     void (async () => {
-      const rawContent = await fetchDataclipContent(dataclipId);
-      try {
-        const parsed = JSON.parse(rawContent);
-        setContent(JSON.stringify(parsed, null, 2));
-      } catch {
-        setContent(rawContent);
+      const result = await fetchDataclipContent(dataclipId);
+
+      switch (result.kind) {
+        case 'ok':
+          try {
+            const parsed = JSON.parse(result.body);
+            setContent(JSON.stringify(parsed, null, 2));
+          } catch {
+            setContent(result.body);
+          }
+          break;
+        case 'not-found':
+          setContent('Dataclip not found');
+          break;
+        case 'error':
+          setContent('Failed to load content');
+          break;
       }
     })();
   }, [dataclipId]);

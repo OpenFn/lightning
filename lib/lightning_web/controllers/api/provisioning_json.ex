@@ -4,6 +4,8 @@ defmodule LightningWeb.API.ProvisioningJSON do
   import LightningWeb.CoreComponents, only: [translate_error: 1]
   import Ecto.Changeset
 
+  alias Lightning.Channels.Channel
+  alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Collections.Collection
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
@@ -39,6 +41,12 @@ defmodule LightningWeb.API.ProvisioningJSON do
     |> Map.put(
       :collections,
       project.collections
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(&as_json/1)
+    )
+    |> Map.put(
+      :channels,
+      project.channels
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.map(&as_json/1)
     )
@@ -95,18 +103,19 @@ defmodule LightningWeb.API.ProvisioningJSON do
   def as_json(%module{} = trigger) when module in [Trigger, Snapshot.Trigger] do
     trigger = Ecto.embedded_dump(trigger, :json)
 
-    kafka_configuration =
-      trigger.kafka_configuration &&
-        Map.take(
-          trigger.kafka_configuration,
-          ~w(hosts topics initial_offset_reset_policy connect_timeout)a
-        )
+    webhook_response_config =
+      trigger.webhook_response_config &&
+        Map.take(trigger.webhook_response_config, [
+          :success_code,
+          :error_code
+        ])
+        |> drop_keys_with_nil_value()
 
     trigger
-    |> Map.take(
-      ~w(id type cron_expression enabled webhook_reply cron_cursor_job_id)a
-    )
-    |> Map.put(:kafka_configuration, kafka_configuration)
+    |> Map.take(~w(id type custom_path cron_expression enabled webhook_reply
+         cron_cursor_job_id)a)
+    |> drop_unusable_custom_path()
+    |> Map.put(:webhook_response_config, webhook_response_config)
     |> drop_keys_with_nil_value()
   end
 
@@ -129,6 +138,23 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%Collection{} = collection) do
     %{id: collection.id, name: collection.name}
+  end
+
+  def as_json(%Channel{} = channel) do
+    %{
+      id: channel.id,
+      name: channel.name,
+      destination_url: channel.destination_url,
+      enabled: channel.enabled,
+      destination_credential_id: destination_credential_id(channel)
+    }
+  end
+
+  defp destination_credential_id(%Channel{destination_auth_method: method}) do
+    case method do
+      %ChannelAuthMethod{project_credential_id: id} -> id
+      _ -> nil
+    end
   end
 
   defp drop_keys_with_nil_value(map) do
@@ -250,4 +276,18 @@ defmodule LightningWeb.API.ProvisioningJSON do
   defp find_item_by_id(items, id) do
     Enum.find(items, fn item -> item.id == id end)
   end
+
+  # A path written before the naming rules would fail validation when this
+  # document is deployed into another project and take the whole run with it,
+  # the same guard `ExportUtils` and `MergeProjects` apply.
+  defp drop_unusable_custom_path(%{custom_path: path} = trigger)
+       when is_binary(path) do
+    if Lightning.Workflows.Trigger.valid_custom_path?(path) do
+      trigger
+    else
+      Map.delete(trigger, :custom_path)
+    end
+  end
+
+  defp drop_unusable_custom_path(trigger), do: trigger
 end

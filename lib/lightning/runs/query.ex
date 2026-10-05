@@ -164,7 +164,8 @@ defmodule Lightning.Runs.Query do
   of data processed by expensive window functions, significantly improving query
   performance on large datasets.
 
-  > ### Note {: .info}
+  > #### Note {: .info}
+  >
   > The default `:per_workflow_claim_limit` is 50.
   > This can be configured via the `PER_WORKFLOW_CLAIM_LIMIT` environment variable.
   > The value must be larger than the max concurrency of any individual workflow.
@@ -177,7 +178,7 @@ defmodule Lightning.Runs.Query do
     Run
     |> with_cte("subset", as: ^available_within_concurrency_limits())
     |> join(:inner, [r], subset in fragment(~s("subset")), on: r.id == subset.id)
-    |> order_by([r], asc: r.priority, asc: r.inserted_at)
+    |> order_by([r], asc: r.priority, asc: r.inserted_at, asc: r.id)
   end
 
   @doc """
@@ -231,7 +232,7 @@ defmodule Lightning.Runs.Query do
     # Step 1: Rank runs within each workflow by priority and insertion time
     ranked_runs_query =
       from(r in Run,
-        where: r.state in [:available, :claimed, :started],
+        where: r.state in ^Run.active_states(),
         join: wo in assoc(r, :work_order),
         join: w in assoc(wo, :workflow),
         join: p in assoc(w, :project)

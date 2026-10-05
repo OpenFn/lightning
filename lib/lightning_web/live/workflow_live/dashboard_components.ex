@@ -2,15 +2,17 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   @moduledoc false
   use LightningWeb, :component
 
+  alias Lightning.DashboardStats
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
+  alias Lightning.WorkOrder
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.Components.Common
   alias LightningWeb.WorkflowLive.Helpers
   alias Phoenix.LiveView.JS
 
   attr :period, :string, default: "last 30 days"
-  attr :can_create_workflow, :boolean
+  attr :lifecycle, :boolean, default: false
   attr :can_delete_workflow, :boolean
   attr :workflows_stats, :list
   attr :project, :map
@@ -20,19 +22,10 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   def workflow_list(assigns) do
     ~H"""
-    <div class="w-full">
-      <div class="mt-14 flex justify-between mb-3">
-        <.table_title count={length(@workflows_stats)} />
-        <div class="flex gap-2 items-start">
-          <.search_workflows_input search_term={@search_term} />
-          <.create_workflow_card
-            project_id={@project.id}
-            can_create_workflow={@can_create_workflow}
-          />
-        </div>
-      </div>
+    <div class="w-full mt-8">
       <.workflows_table
         id="workflows-table"
+        lifecycle={@lifecycle}
         period={@period}
         workflows_stats={@workflows_stats}
         can_delete_workflow={@can_delete_workflow}
@@ -65,6 +58,38 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     """
   end
 
+  @doc """
+  Page title, search and create controls, sitting above the project metric cards.
+  """
+  attr :count, :integer, required: true
+  attr :can_create_workflow, :boolean, required: true
+  attr :project, :map, required: true
+  attr :search_term, :string, default: ""
+
+  def workflows_header(assigns) do
+    ~H"""
+    <div class="flex justify-between items-center mb-6">
+      <.table_title count={@count} />
+      <div class="flex gap-2 items-stretch">
+        <.search_workflows_input search_term={@search_term} />
+        <.create_workflow_card
+          project_id={@project.id}
+          can_create_workflow={@can_create_workflow}
+        />
+      </div>
+    </div>
+    """
+  end
+
+  # One definition of "the failed work orders behind this number", so every
+  # link opens the same window and the same states its count was taken from.
+  defp failed_wo_filters do
+    WorkOrder.failure_states()
+    |> Map.new(&{to_string(&1), "true"})
+    |> Map.put("date_after", DashboardStats.window_start())
+    |> SearchParams.to_uri_params()
+  end
+
   defp table_title(assigns) do
     ~H"""
     <h3 class="text-3xl font-bold">
@@ -80,6 +105,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   attr :workflows_stats, :list, required: true
   attr :period, :string, required: true
   attr :project, :map, required: true
+  attr :lifecycle, :boolean, default: false
   attr :can_delete_workflow, :boolean, default: false
   attr :sort_key, :string, default: "name"
   attr :sort_direction, :string, default: "asc"
@@ -92,18 +118,9 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       |> assign(
         wo_filters:
           SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1)
+            "date_after" => DashboardStats.window_start()
           }),
-        failed_wo_filters:
-          SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
-            "failed" => "true",
-            "crashed" => "true",
-            "killed" => "true",
-            "cancelled" => "true",
-            "lost" => "true",
-            "exception" => "true"
-          }),
+        failed_wo_filters: failed_wo_filters(),
         workflows: Enum.map(workflows_stats, &Map.merge(&1, &1.workflow)),
         empty?: Enum.empty?(workflows_stats)
       )
@@ -154,11 +171,9 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 active={@sort_key == "enabled"}
                 sort_direction={@sort_direction}
               >
-                Enabled
+                {lifecycle_column_heading(@lifecycle, @project)}
               </.th>
-              <.th>
-                <span class="sr-only">Actions</span>
-              </.th>
+              <.th>Actions</.th>
             </.tr>
           </:header>
           <:body>
@@ -247,19 +262,33 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                   </div>
                 </.td>
                 <.td>
-                  <.input
-                    id={workflow.id}
-                    type="toggle"
-                    name="workflow_state"
-                    value={Helpers.workflow_enabled?(workflow)}
-                    tooltip={Helpers.workflow_state_tooltip(workflow)}
-                    on_click="toggle_workflow_state"
-                    value_key={workflow.id}
-                  />
+                  <%= cond do %>
+                    <% @lifecycle and not Project.sandbox?(@project) -> %>
+                      <.lifecycle_badge state={workflow.state} />
+                    <% true -> %>
+                      <.input
+                        id={workflow.id}
+                        type="toggle"
+                        name="workflow_state"
+                        value={Helpers.workflow_enabled?(workflow)}
+                        tooltip={lifecycle_toggle_tooltip(@lifecycle, workflow)}
+                        on_click="toggle_workflow_state"
+                        value_key={workflow.id}
+                      />
+                  <% end %>
                 </.td>
-                <.td class="text-right">
-                  <%= if @can_delete_workflow do %>
+                <.td>
+                  <div class="flex items-center gap-4">
                     <.link
+                      id={"health-#{workflow.id}"}
+                      class="table-action"
+                      navigate={~p"/projects/#{@project.id}/w/#{workflow.id}/health"}
+                      onclick="event.stopPropagation()"
+                    >
+                      Health
+                    </.link>
+                    <.link
+                      :if={@can_delete_workflow}
                       href="#"
                       class="table-action"
                       phx-click="delete_workflow"
@@ -268,7 +297,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                     >
                       Delete
                     </.link>
-                  <% end %>
+                  </div>
                 </.td>
               </.tr>
             <% end %>
@@ -276,24 +305,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         </.table>
       </div>
     <% end %>
-    """
-  end
-
-  attr :current_sort_key, :string, required: true
-  attr :current_sort_direction, :string, required: true
-  attr :target_sort_key, :string, required: true
-  slot :inner_block, required: true
-
-  defp sortable_table_header(assigns) do
-    ~H"""
-    <Common.sortable_table_header
-      phx-click="sort"
-      phx-value-by={@target_sort_key}
-      active={@current_sort_key == @target_sort_key}
-      sort_direction={@current_sort_direction}
-    >
-      {render_slot(@inner_block)}
-    </Common.sortable_table_header>
     """
   end
 
@@ -347,23 +358,21 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       end)
 
     ~H"""
-    <div>
-      <.button
-        disabled={@disabled}
-        tooltip={@tooltip}
-        phx-click={
-          if !@disabled do
-            JS.navigate(~p"/projects/#{@project_id}/w/new?method=template")
-          end
-        }
-        class="col-span-1 w-full"
-        role="button"
-        id="new-workflow-button"
-        theme="primary"
-      >
-        Create new workflow
-      </.button>
-    </div>
+    <.button
+      disabled={@disabled}
+      tooltip={@tooltip}
+      phx-click={
+        if !@disabled do
+          JS.navigate(~p"/projects/#{@project_id}/w/new")
+        end
+      }
+      class="whitespace-nowrap"
+      role="button"
+      id="new-workflow-button"
+      theme="primary"
+    >
+      Create new workflow
+    </.button>
     """
   end
 
@@ -371,7 +380,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   def search_workflows_input(assigns) do
     ~H"""
-    <div class="relative rounded-md shadow-xs flex h-full">
+    <div class="relative rounded-md shadow-xs w-96">
       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
         <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
       </div>
@@ -380,7 +389,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         name="search_workflows"
         value={@search_term}
         placeholder="Search"
-        class="block w-full rounded-md py-1.5 pl-10 pr-20 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+        class="block w-full rounded-md py-2 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
         phx-keyup="search_workflows"
         phx-debounce="300"
       />
@@ -409,7 +418,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <%= if is_nil(@state) do %>
         <div class="flex items-center gap-x-2">
           <span class="inline-block h-2 w-2 bg-gray-200 rounded-full"></span>
-          <span class="text-grey-200 italic">Nothing {@period}</span>
+          <span class="italic">Nothing {@period}</span>
         </div>
       <% else %>
         <.status_card state={@state} time={@timestamp} />
@@ -455,7 +464,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <div>
       <div class="flex items-center gap-x-2">
         <span class="relative inline-flex h-2 w-2">
-          <%= if @state in [:pending, :running] do %>
+          <%= if @state in WorkOrder.active_states() do %>
             <span class={[
               "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
               @dot_color
@@ -481,26 +490,17 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     assigns =
       assigns
       |> assign(
-        failed_filters:
-          SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
-            "failed" => "true",
-            "crashed" => "true",
-            "killed" => "true",
-            "cancelled" => "true",
-            "lost" => "true",
-            "exception" => "true"
-          }),
+        failed_filters: failed_wo_filters(),
         pending_filters:
           SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
+            "date_after" => DashboardStats.window_start(),
             "pending" => "true",
             "running" => "true"
           })
       )
 
     ~H"""
-    <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       <.metric_card title="Work Orders">
         <:value>{@metrics.work_order_metrics.total}</:value>
         <:suffix>
@@ -508,28 +508,28 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             navigate={
               ~p"/projects/#{@project}/history?#{%{filters: @pending_filters}}"
             }
-            class="link"
+            class="hover:underline"
           >
-            ({@metrics.work_order_metrics.pending} pending)
+            {@metrics.work_order_metrics.pending} pending
           </.link>
         </:suffix>
       </.metric_card>
       <.metric_card title="Runs">
         <:value>{@metrics.run_metrics.total}</:value>
         <:suffix>
-          ({@metrics.run_metrics.pending} pending)
+          {@metrics.run_metrics.pending} pending
         </:suffix>
       </.metric_card>
       <.metric_card title="Successful Runs">
         <:value>{@metrics.run_metrics.success}</:value>
         <:suffix>
-          ({@metrics.run_metrics.success_rate}%)
+          {@metrics.run_metrics.success_rate}%
         </:suffix>
       </.metric_card>
       <.metric_card title="Work Orders in failed state">
         <:value>{@metrics.work_order_metrics.failed}</:value>
         <:suffix>
-          ({@metrics.work_order_metrics.failed_percentage}%)
+          {@metrics.work_order_metrics.failed_percentage}%
         </:suffix>
         <:link>
           <.link
@@ -551,26 +551,53 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   slot :suffix, required: false
   slot :link, required: false
+  attr :rest, :global
 
   def metric_card(assigns) do
     ~H"""
-    <div class="bg-white shadow rounded-lg py-2 px-6">
-      <h2
-        class="text-sm text-gray-500"
-        style="font-weight: 500; font-size: 13px; margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-      >
-        {@title}
-      </h2>
-      <div class="flex space-x-1 items-baseline text-3xl font-bold text-gray-800">
-        <div>{render_slot(@value)}</div>
-        <div class="text-xs font-normal grow">
-          {render_slot(@suffix)}
-        </div>
-        <div class="text-xs font-normal">
-          {render_slot(@link)}
-        </div>
+    <div class="bg-white rounded-lg ring-1 ring-gray-200 shadow-xs py-4 px-5" {@rest}>
+      <h2 class="text-[13px] font-medium text-gray-500 truncate">{@title}</h2>
+      <div class="mt-2 text-3xl font-bold text-gray-800">
+        {render_slot(@value)}
+      </div>
+      <div class="mt-1 flex items-baseline justify-between gap-2 text-xs">
+        <div class="text-gray-500">{render_slot(@suffix)}</div>
+        <div>{render_slot(@link)}</div>
       </div>
     </div>
+    """
+  end
+
+  defp lifecycle_column_heading(false, _project), do: "Enabled"
+
+  defp lifecycle_column_heading(true, project) do
+    if Project.sandbox?(project), do: "Turn on", else: "State"
+  end
+
+  defp lifecycle_toggle_tooltip(false, workflow),
+    do: Helpers.workflow_state_tooltip(workflow)
+
+  defp lifecycle_toggle_tooltip(true, workflow) do
+    if workflow.state == :live do
+      "On. Its triggers are answering."
+    else
+      "Off. Its triggers are not answering."
+    end
+  end
+
+  attr :state, :atom, required: true
+
+  defp lifecycle_badge(assigns) do
+    ~H"""
+    <span class={[
+      "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium",
+      if(@state == :live,
+        do: "bg-green-100 text-green-800",
+        else: "bg-gray-100 text-gray-600"
+      )
+    ]}>
+      {if @state == :live, do: "Live", else: "Draft"}
+    </span>
     """
   end
 end

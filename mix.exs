@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.16.3-pre1",
+      version: "2.19.0",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -14,6 +14,12 @@ defmodule Lightning.MixProject do
       aliases: aliases(),
       deps: deps(),
       dialyzer: [
+        # OTP 28 reworked how Dialyzer checks opaque types (OTP-19364).
+        # Elixir inlines `MapSet.new/0`, so every `Ecto.Multi` call downstream
+        # gets flagged, 62 of them here and none real. Ecto declined to change
+        # its internals (elixir-ecto/ecto#4708). Elixir 1.20 removes the
+        # opacity, so this flag goes then.
+        flags: [:no_opaque],
         plt_add_apps: [:mix],
         plt_local_path: "priv/plts/",
         plt_core_path: "priv/plts/core.plt"
@@ -29,6 +35,7 @@ defmodule Lightning.MixProject do
         verify: :test
       ],
       compilers: Mix.compilers(),
+      hex: hex_audit(),
 
       # Docs
       name: "Lightning",
@@ -64,6 +71,24 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
+  # cowlib advisories we have checked and accepted. Each names a function on
+  # cowlib's header-building path, and nothing in our tree calls any of them. The
+  # parse side of two of them is reachable through cowboy_req, so recheck by
+  # function rather than by module. No patched cowlib release exists yet. Hex
+  # matches an advisory's primary ID or any alias, so the CVE form also silences
+  # the GHSA and EEF variants. Detail in #5102.
+  defp hex_audit do
+    [
+      ignore_advisories: [
+        # cowlib
+        # cow_http_struct_hd:escape_string/2
+        "CVE-2026-43966",
+        # cow_cookie:cookie/1
+        "CVE-2026-43969"
+      ]
+    ]
+  end
+
   # Specifies your project dependencies.
   #
   # Type `mix help deps` for examples and options.
@@ -72,29 +97,38 @@ defmodule Lightning.MixProject do
       # {:rexbug, ">= 1.0.0", only: :test},
       {:bcrypt_elixir, "~> 3.3"},
       {:bodyguard, "~> 2.2"},
-      {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
       {:briefly, "~> 0.5.0"},
       {:cachex, "~> 4.0"},
+      {:castore, "~> 1.0"},
       {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.4.5", only: [:test, :dev], runtime: false},
+      # Ecto pins ~> 2.0, but decimal 3.0 is API-compatible and patches
+      # GHSA-rhv4-8758-jx7v (unbounded exponent DoS in `Decimal.new`).
+      {:decimal, "~> 3.0", override: true},
       {:ecto_enum, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.8.2"},
       {:ecto_sql, "~> 3.13"},
       {:esbuild, "~> 0.9", runtime: Mix.env() == :dev},
-      {:ex_doc, "~> 0.39", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.11.2"},
       {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
+      {:finch, "~> 0.23"},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.26"},
-      {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
-      {:google_api_storage, "~> 0.46.0"},
-      {:hackney, "~> 1.18"},
+      {:git_hooks, "~> 0.9.0", only: [:dev], runtime: false},
+      # Overridden because phoenix_swoosh 1.2.1 (latest) still declares
+      # hackney ~> 1.10. It never actually calls hackney, so the constraint is
+      # dead weight, but it has to be overridden to resolve.
+      # 4.6.0 is the ceiling: 4.6.1+ require h2 ~> 0.11.0 while hackney's own
+      # webtransport dep requires h2 ~> 0.10.4, so newer releases cannot resolve.
+      {:hackney, "~> 4.6.0", override: true},
       {:heroicons, "~> 0.5.3"},
-      {:httpoison, "~> 2.0"},
+      {:highlander_pg, "~> 1.0"},
+      {:httpoison, "~> 3.0.0", override: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.6.0"},
       {:jsonpatch, "~> 2.2"},
@@ -103,12 +137,13 @@ defmodule Lightning.MixProject do
       {:libcluster_postgres, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
-      {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
+      {:mint, "~> 1.11"},
+      {:mix_test_watch, "~> 1.3", only: [:test, :dev], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.19"},
-      {:petal_components, "~> 3.0"},
       {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},
@@ -116,25 +151,36 @@ defmodule Lightning.MixProject do
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
       {:phoenix_live_view, "~> 1.0.17"},
-      {:phoenix_storybook, "~> 0.9.2", only: :dev},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
-      {:postgrex, ">= 0.0.0"},
+      # highlander_pg declares a narrower postgrex range than the rest of the
+      # app needs (see deps/highlander_pg/mix.exs). It only issues advisory
+      # locks, so override rather than hold the app back.
+      {:postgrex, ">= 0.0.0", override: true},
       {:prom_ex, "~> 1.11.0"},
-      {:rambo, "~> 0.3.4"},
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
-      {:sentry, "~> 10.9.0"},
-      {:sobelow, "~> 0.14.1", only: [:test, :dev]},
+      {:sentry, "~> 13.2.0"},
+      {:sobelow, "~> 0.15.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
-      {:swoosh, "~> 1.17"},
+      {:swoosh, "~> 1.26"},
       {:gen_smtp, "~> 1.1"},
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:tesla, "~> 1.15.3"},
-      {:tidewave, "~> 0.5.4", only: :dev},
+      {:tesla, "~> 1.18.2"},
+      {:tidewave, "~> 0.8.0", only: :dev},
       {:timex, "~> 3.7"},
+      # Pinned to the merge of `hackney ~> 1.17 or ~> 4.0` (lau/tzdata#170),
+      # which lets tzdata keep its autoupdater on hackney 4. Not on Hex yet --
+      # 1.1.4 predates the fix and no release is scheduled. Move back to a Hex
+      # release once one carries #170, since git deps are invisible to
+      # `mix deps.audit`.
+      {:tzdata,
+       github: "lau/tzdata",
+       ref: "766f38de21e9cd3dc4b185ac6244466e4ee65308",
+       override: true},
+      {:yaml_elixir, "~> 2.12"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
       {:hammer_backend_mnesia, "~> 0.6"},
@@ -148,10 +194,11 @@ defmodule Lightning.MixProject do
       {:eqrcode, "~> 0.2"},
       # Github API Secret Encoding
       {:enacl, github: "aeternity/enacl", branch: "master"},
-      {:earmark, "~> 1.4"},
+      {:mdex, "~> 0.13"},
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
+      {:tls_certificate_check, "~> 1.32"},
       philter_dep(),
       {:y_ex, "~> 0.8.0"},
       {:chameleon, "~> 2.5"}
@@ -162,7 +209,7 @@ defmodule Lightning.MixProject do
     if path = System.get_env("PHILTER_PATH") do
       {:philter, path: path}
     else
-      {:philter, "~> 0.2.1"}
+      {:philter, "~> 0.4.0"}
     end
   end
 
@@ -179,8 +226,6 @@ defmodule Lightning.MixProject do
         "tailwind.install --if-missing",
         "esbuild.install --if-missing",
         "lightning.install_runtime",
-        "lightning.install_adaptor_icons",
-        "lightning.install_schemas",
         "ecto.setup"
       ],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
@@ -200,7 +245,8 @@ defmodule Lightning.MixProject do
         "format --check-formatted",
         "dialyzer",
         "credo --strict --all",
-        "sobelow"
+        "sobelow",
+        "cmd bin/format --check"
       ],
       compile: [
         "compile --warnings-as-errors"
@@ -216,16 +262,32 @@ defmodule Lightning.MixProject do
       extras: [
         "README.md": [title: "Lightning"],
         "RUNNINGLOCAL.md": [title: "Running Locally"],
+        "ADAPTORS.md": [title: "Adaptors"],
         "DEPLOYMENT.md": [title: "Deployment"],
-        "benchmarking/README.md": [
+        "tooling/benchmarking/README.md": [
           title: "Benchmarking",
-          filename: "benchmarking.md"
+          filename: "benchmarking"
         ],
         "WORKERS.md": [title: "Workers"],
         "PROVISIONING.md": [title: "Provisioning"],
+        "SERVICE_ACCOUNTS.md": [title: "Service Accounts"],
         "CHANGELOG.md": [title: "Changelog"]
       ],
       source_url: "https://github.com/OpenFn/lightning",
+      # Docs name these internals for code readers; they are hidden from the
+      # published docs, so there is nothing to link to.
+      skip_code_autolink_to: [
+        "Lightning.Application",
+        "Lightning.DigestEmailWorker",
+        "Lightning.Workflows.Events",
+        "LightningWeb.ConfirmationLockout",
+        "LightningWeb.Components.UserDeletionModal",
+        "LightningWeb.Hooks.handle_project_user_event/2",
+        "LightningWeb.RunChannel.maybe_send_after_completion_response/2",
+        "LightningWeb.WorkflowLive.DashboardComponents"
+      ],
+      # Changelog entries describe the API as it was at the time.
+      skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       homepage_url: "https://openfn.github.io/lightning",
       groups_for_modules: [
         API: [
@@ -233,6 +295,9 @@ defmodule Lightning.MixProject do
         ],
         Accounts: [
           ~r/Lightning.Accounts/
+        ],
+        Adaptors: [
+          ~r/Lightning.Adaptors/
         ],
         Config: [
           ~r/Lightning.Config/

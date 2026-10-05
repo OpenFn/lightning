@@ -3,9 +3,34 @@ defmodule LightningWeb.LayoutComponentsTest do
   use LightningWeb.ConnCase
 
   import Phoenix.LiveViewTest
+  import Lightning.Factories
 
   alias LightningWeb.LayoutComponents
   alias LightningWeb.Components.Menu
+
+  describe "user_menu_dropdown/1" do
+    test "says what the experimental mode means and offers the way out" do
+      html =
+        render_component(&LayoutComponents.user_menu_dropdown/1, %{
+          current_user:
+            build(:user, preferences: %{"experimental_features" => true})
+        })
+
+      assert html =~ "Experimental features on"
+      assert html =~ "still being built"
+      assert html =~ "Turn off in your profile"
+      assert html =~ ~s(href="/profile")
+    end
+
+    test "says nothing about it when the mode is off" do
+      html =
+        render_component(&LayoutComponents.user_menu_dropdown/1, %{
+          current_user: build(:user, preferences: %{})
+        })
+
+      refute html =~ "Experimental"
+    end
+  end
 
   describe "user_avatar/1" do
     test "renders initials from first and last name" do
@@ -61,21 +86,16 @@ defmodule LightningWeb.LayoutComponentsTest do
   end
 
   describe "breadcrumb_project_picker/1" do
-    test "renders ReactComponent mount point for a root project" do
+    test "renders the ReactComponent mount point for a root project" do
       project = %Lightning.Projects.Project{
         id: Ecto.UUID.generate(),
         name: "my-project",
-        parent_id: nil,
-        parent: %Ecto.Association.NotLoaded{
-          __field__: :parent,
-          __owner__: Lightning.Projects.Project,
-          __cardinality__: :one
-        }
+        parent_id: nil
       }
 
       html =
         (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{project: project})
+        |> render_component(%{project: project, label: "my-project"})
 
       assert html =~ "breadcrumb-project-picker-trigger"
       assert html =~ ~s(data-react-name="PickerButton")
@@ -83,7 +103,7 @@ defmodule LightningWeb.LayoutComponentsTest do
       assert html =~ ~s(data-is-sandbox="false")
     end
 
-    test "renders ReactComponent mount point with sandbox data" do
+    test "renders the ReactComponent mount point for a sandbox" do
       parent = %Lightning.Projects.Project{
         id: Ecto.UUID.generate(),
         name: "parent-project"
@@ -99,7 +119,10 @@ defmodule LightningWeb.LayoutComponentsTest do
 
       html =
         (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{project: project})
+        |> render_component(%{
+          project: project,
+          label: "parent-project/my-sandbox"
+        })
 
       assert html =~ "breadcrumb-project-picker-trigger"
       assert html =~ ~s(data-react-name="PickerButton")
@@ -116,6 +139,110 @@ defmodule LightningWeb.LayoutComponentsTest do
         |> render_component(%{})
 
       refute html =~ "global-project-picker"
+    end
+
+    test "items nest a visible sandbox under its nearest visible ancestor when intermediates are hidden" do
+      user = insert(:user)
+
+      root =
+        insert(:project,
+          name: "root",
+          project_users: [%{user: user, role: :editor}]
+        )
+
+      hidden_middle =
+        insert(:project, name: "hidden-middle", parent: root)
+
+      nested_member =
+        insert(:project,
+          name: "nested-member",
+          parent: hidden_middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+      depth_by_id = Map.new(items, &{&1["id"], &1["depth"]})
+
+      assert root.id in ids
+      assert nested_member.id in ids
+      refute hidden_middle.id in ids
+
+      assert depth_by_id[root.id] == 0
+      assert depth_by_id[nested_member.id] == 1
+    end
+
+    test "items surface a sandbox the user is a direct member of when the user has no role on its root" do
+      user = insert(:user)
+      absolute_root = insert(:project)
+
+      sandbox =
+        insert(:project,
+          parent: absolute_root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+      depth_by_id = Map.new(items, &{&1["id"], &1["depth"]})
+
+      assert ids == [sandbox.id]
+      assert depth_by_id[sandbox.id] == 0
+    end
+
+    test "items omit sandboxes the user has no access to" do
+      user = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user: user, role: :editor}])
+
+      visible_sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      hidden_sandbox = insert(:project, parent: parent)
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+
+      assert parent.id in ids
+      assert visible_sandbox.id in ids
+      refute hidden_sandbox.id in ids
     end
   end
 

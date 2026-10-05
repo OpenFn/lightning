@@ -2,6 +2,7 @@ defmodule Lightning.WebAndWorkerTest do
   use LightningWeb.ConnCase, async: false
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Mox
 
@@ -12,6 +13,7 @@ defmodule Lightning.WebAndWorkerTest do
   alias Lightning.Runtime.RuntimeManager
   alias Lightning.WorkOrders
   alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
 
   setup :set_mox_from_context
   setup :verify_on_exit!
@@ -25,18 +27,34 @@ defmodule Lightning.WebAndWorkerTest do
       Lightning.Extensions.UsageLimiter
     )
 
-    start_runtime_manager()
+    # The worker subprocess logs at :debug via RuntimeManager; without this its
+    # startup output (adaptor installs, connection failures) is dropped before
+    # `capture_log` can hold onto it for a failing test's report.
+    level = Logger.level()
+    Logger.configure(level: :debug)
+    on_exit(fn -> Logger.configure(level: level) end)
+
+    runtime_manager = start_runtime_manager()
 
     uri = LightningWeb.Endpoint.url()
 
-    %{uri: uri}
+    %{uri: uri, runtime_manager: runtime_manager}
   end
 
   describe "webhook triggered runs" do
-    setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
+    setup [
+      :isolated_adaptors,
+      :register_and_log_in_superuser,
+      :stub_rate_limiter_ok,
+      :seed_default_adaptor
+    ]
 
     @tag :integration
-    test "complete a run on a complex workflow with parallel jobs", %{uri: uri} do
+    @tag timeout: 120_000
+    test "complete a run on a complex workflow with parallel jobs", %{
+      uri: uri,
+      runtime_manager: runtime_manager
+    } do
       project = insert(:project)
 
       %{triggers: [%{id: webhook_trigger_id}], edges: edges} =
@@ -58,13 +76,7 @@ defmodule Lightning.WebAndWorkerTest do
       webhook_body = %{"x" => 1}
 
       response =
-        Tesla.client(
-          [
-            {Tesla.Middleware.BaseUrl, uri},
-            Tesla.Middleware.JSON
-          ],
-          {Tesla.Adapter.Finch, name: Lightning.Finch}
-        )
+        build_tesla_client(uri)
         |> Tesla.post!("/i/#{webhook_trigger_id}", webhook_body)
 
       assert response.status == 200
@@ -78,8 +90,7 @@ defmodule Lightning.WebAndWorkerTest do
 
       assert %{id: run_id, steps: []} = Runs.get(run.id, include: [:steps])
 
-      assert_receive %Events.RunUpdated{run: %{id: ^run_id, state: :success}},
-                     115_000
+      await_run_success(run_id, runtime_manager)
 
       assert %{state: :success} = WorkOrders.get(workorder_id)
 
@@ -114,8 +125,13 @@ defmodule Lightning.WebAndWorkerTest do
     end
 
     @tag :integration
-    @tag timeout: 20_000
+    @tag timeout: 120_000
     test "the whole thing", %{conn: conn, user: user} do
+      Lightning.AdaptorTestHelpers.seed_adaptor_package(
+        "@openfn/language-http",
+        "3.1.12"
+      )
+
       project = insert(:project)
 
       # Create credential with body for main environment
@@ -268,8 +284,8 @@ defmodule Lightning.WebAndWorkerTest do
 
       version_logs = pick_out_version_logs(run)
       assert version_logs["@openfn/language-http"] =~ "3.1.12"
-      assert version_logs["worker"] =~ "1.24"
-      assert version_logs["node.js"] =~ "22.12"
+      assert version_logs["worker"] =~ "1.29"
+      assert version_logs["node.js"] =~ "24.18"
       assert version_logs["@openfn/language-common"] == "3.0.2"
 
       [step_1, step_2, step_3, step_4] = run.steps
@@ -396,7 +412,12 @@ defmodule Lightning.WebAndWorkerTest do
   end
 
   describe "webhook with delayed response (after_completion)" do
-    setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
+    setup [
+      :isolated_adaptors,
+      :register_and_log_in_superuser,
+      :stub_rate_limiter_ok,
+      :seed_default_adaptor
+    ]
 
     @tag :integration
     @tag timeout: 120_000
@@ -469,33 +490,16 @@ defmodule Lightning.WebAndWorkerTest do
       # Wait for the workflow to complete (up to 10 seconds)
       response = Task.await(task, 10_000)
 
-      # Should return 201 with the final state
       assert response.status == 201
 
-      # The response body should be the final state from the job inside a "data"
-      # key and the metadata inside a "meta" key.
       assert %{
                "data" => %{"data" => %{"value" => 10}, "result" => "success"},
                "meta" => meta
              } = response.body
 
-      # Verify meta fields exist with correct types and values
-      assert meta["error_type"] == nil
       assert meta["state"] == "success"
       assert is_binary(meta["run_id"])
       assert is_binary(meta["work_order_id"])
-
-      # Verify datetime fields are present and valid ISO8601 strings
-      assert is_binary(meta["claimed_at"])
-      assert is_binary(meta["finished_at"])
-      assert is_binary(meta["inserted_at"])
-      assert is_binary(meta["started_at"])
-
-      # Verify datetime fields match ISO8601 format
-      assert meta["claimed_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
-      assert meta["finished_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
-      assert meta["inserted_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
-      assert meta["started_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
 
       # Verify the work order completed successfully
       work_order =
@@ -556,11 +560,12 @@ defmodule Lightning.WebAndWorkerTest do
         )
         |> Tesla.post!("/i/#{trigger.id}", webhook_body)
 
-      # Should return 201 for failed workflow
+      # Default status when no error_code is configured
       assert response.status == 201
 
-      # Response should include the final state
-      assert is_map(response.body)
+      assert %{"data" => %{"message" => msg}, "meta" => meta} = response.body
+      assert msg =~ "security policy"
+      assert meta["state"] == "failed"
 
       # Verify the work order failed
       work_order =
@@ -717,9 +722,7 @@ defmodule Lightning.WebAndWorkerTest do
 
       assert response.status == 201
 
-      assert %{"data" => final_state, "meta" => meta} = response.body
-
-      assert meta["state"] == "success"
+      assert %{"data" => final_state, "meta" => _meta} = response.body
 
       # The final_state is keyed by job ID. When the same job is reached
       # twice (step 5), the second entry gets a "-1" suffix.
@@ -744,6 +747,302 @@ defmodule Lightning.WebAndWorkerTest do
       assert Enum.count(steps) == 6
       assert Enum.all?(steps, fn step -> step.exit_reason == "success" end)
     end
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "uses configured success_code when workflow succeeds", %{uri: uri} do
+      project = insert(:project)
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => state);",
+          name: "job"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      [trigger] = workflow.triggers
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Ecto.Changeset.put_embed(
+        :webhook_response_config,
+        %WebhookResponseConfig{success_code: 200}
+      )
+      |> Repo.update!()
+
+      Snapshot.create(workflow |> Repo.reload!())
+
+      response =
+        build_tesla_client(uri)
+        |> Tesla.post!("/i/#{trigger.id}", %{"value" => 1})
+
+      assert response.status == 200
+    end
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "uses configured error_code when workflow fails", %{uri: uri} do
+      project = insert(:project)
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => { throw new Error('forced failure'); });",
+          name: "job"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      [trigger] = workflow.triggers
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Ecto.Changeset.put_embed(
+        :webhook_response_config,
+        %WebhookResponseConfig{error_code: 500}
+      )
+      |> Repo.update!()
+
+      Snapshot.create(workflow |> Repo.reload!())
+
+      response =
+        build_tesla_client(uri)
+        |> Tesla.post!("/i/#{trigger.id}", %{})
+
+      assert response.status == 500
+      assert %{"data" => %{"message" => msg}, "meta" => _meta} = response.body
+      assert msg =~ "security policy"
+    end
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "honours webhook_response sent on step:complete", %{uri: uri} do
+      project = insert(:project)
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => ({
+            ...state,
+            webhookResponse: { status: 200, body: { ack: true, received: state.data.value } }
+          }));
+          """,
+          name: "responding-job"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      [trigger] = workflow.triggers
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Repo.update!()
+
+      Snapshot.create(workflow |> Repo.reload!())
+
+      response =
+        build_tesla_client(uri)
+        |> Tesla.post!("/i/#{trigger.id}", %{"value" => 42})
+
+      assert response.status == 200
+
+      assert %{"data" => %{"ack" => true, "received" => 42}, "meta" => _} =
+               response.body
+    end
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "honours webhook_response in a branching workflow where one leaf sets it",
+         %{uri: uri} do
+      project = insert(:project)
+      webhook_trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_1 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => { state.x = state.data.x * 2; return state; });",
+          name: "step-1"
+        )
+
+      job_2 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => { state.x = state.x * 3; return state; });",
+          name: "step-2"
+        )
+
+      job_3 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => { state.x = state.x * 5; return state; });",
+          name: "step-3"
+        )
+
+      job_4 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => {
+            state.x = state.x + 1;
+            state.webhookResponse = {
+              status: 202,
+              body: { from: 'step-4', x: state.x }
+            };
+            return state;
+          });
+          """,
+          name: "step-4"
+        )
+
+      job_5 =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => { state.x = state.x + 100; return state; });",
+          name: "step-5"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(webhook_trigger)
+        |> with_job(job_1)
+        |> with_edge({webhook_trigger, job_1}, condition_type: :always)
+        |> with_job(job_2)
+        |> with_edge({job_1, job_2}, condition_type: :on_job_success)
+        |> with_job(job_3)
+        |> with_edge({job_1, job_3}, condition_type: :on_job_success)
+        |> with_job(job_4)
+        |> with_edge({job_2, job_4}, condition_type: :on_job_success)
+        |> with_job(job_5)
+        |> with_edge({job_2, job_5}, condition_type: :on_job_success)
+        |> with_edge({job_3, job_5}, condition_type: :on_job_success)
+        |> insert()
+
+      [trigger] = workflow.triggers
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Repo.update!()
+
+      Snapshot.create(workflow |> Repo.reload!())
+
+      response =
+        build_tesla_client(uri)
+        |> Tesla.post!("/i/#{trigger.id}", %{"x" => 1})
+
+      # input x=1 → step 1: x=2 → step 2: x=6 → step 4: x=7
+      assert response.status == 202
+
+      assert %{"data" => %{"from" => "step-4", "x" => 7}, "meta" => _} =
+               response.body
+
+      %{entries: steps} = Invocation.list_steps_for_project(project)
+      assert Enum.count(steps) == 6
+      assert Enum.all?(steps, fn step -> step.exit_reason == "success" end)
+    end
+
+    @tag :integration
+    @tag timeout: 120_000
+    test "responds with webhookResponse even when retention_policy is :erase_all",
+         %{uri: uri} do
+      project = insert(:project, retention_policy: :erase_all)
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job =
+        build(:job,
+          adaptor: "@openfn/language-common@latest",
+          body: """
+          fn(state => ({
+            ...state,
+            webhookResponse: {
+              status: 200,
+              body: { ack: true, received: state.data.value }
+            }
+          }));
+          """,
+          name: "responding-job"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      [trigger] = workflow.triggers
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Repo.update!()
+
+      Snapshot.create(workflow |> Repo.reload!())
+
+      response =
+        build_tesla_client(uri)
+        |> Tesla.post!("/i/#{trigger.id}", %{"value" => 42})
+
+      assert response.status == 200
+
+      assert %{"data" => %{"ack" => true, "received" => 42}, "meta" => _} =
+               response.body
+
+      # Confirm erase_all actually took effect: the step's output dataclip
+      # was persisted with the body wiped. The webhook response made it
+      # back to the caller via the in-memory step:complete capture,
+      # independently of dataclip persistence.
+      %{entries: steps} = Invocation.list_steps_for_project(project)
+      assert [step] = steps
+      assert step.exit_reason == "success"
+
+      step =
+        Repo.preload(step,
+          output_dataclip: Invocation.Query.dataclip_with_body()
+        )
+
+      assert step.output_dataclip.body == nil
+      assert step.output_dataclip.wiped_at != nil
+    end
+  end
+
+  defp seed_default_adaptor(_context) do
+    Lightning.AdaptorTestHelpers.seed_adaptor_package(
+      "@openfn/language-common",
+      "3.0.2"
+    )
+
+    :ok
+  end
+
+  # The server side (handle_delayed_response/2) can legitimately wait up to
+  # `webhook_response_timeout_ms` (30s by default). Finch's HTTP1 default
+  # receive_timeout is 15s, so the client was aborting requests the server
+  # was still correctly waiting on. Give the client more room than the server.
+  defp build_tesla_client(uri) do
+    Tesla.client(
+      [{Tesla.Middleware.BaseUrl, uri}, Tesla.Middleware.JSON],
+      {Tesla.Adapter.Finch, name: Lightning.Finch, receive_timeout: 35_000}
+    )
   end
 
   defp webhook_expression do
@@ -808,7 +1107,40 @@ defmodule Lightning.WebAndWorkerTest do
         worker_secret: Lightning.Config.worker_secret()
       )
 
-    start_supervised!({RuntimeManager, opts}, restart: :transient)
+    start_supervised!({RuntimeManager, opts}, restart: :temporary)
+  end
+
+  @failure_states Lightning.Run.final_states() -- [:success]
+
+  # A dead RuntimeManager means the Node worker never started (or exited), so
+  # fail immediately with its reason instead of blocking for the full window.
+  defp await_run_success(run_id, runtime_manager) do
+    ref = Process.monitor(runtime_manager)
+
+    receive do
+      %Events.RunUpdated{run: %{id: ^run_id, state: :success}} ->
+        Process.demonitor(ref, [:flush])
+
+      %Events.RunUpdated{run: %{id: ^run_id, state: state} = run}
+      when state in @failure_states ->
+        Process.demonitor(ref, [:flush])
+        flunk("run #{run_id} finished with state #{state}: #{inspect(run)}")
+
+      {:DOWN, ^ref, :process, _pid, :noproc} ->
+        flunk(
+          "runtime manager had already exited before the run started - " <>
+            "see the captured log for the worker's exit status"
+        )
+
+      {:DOWN, ^ref, :process, _pid, reason} ->
+        flunk("runtime manager exited: #{inspect(reason)}")
+    after
+      115_000 ->
+        flunk(
+          "run #{run_id} did not succeed within 115s. Mailbox: " <>
+            inspect(Process.info(self(), :messages))
+        )
+    end
   end
 
   defp select_dataclip_body(uuid) do

@@ -15,6 +15,11 @@ interface InspectorLayoutProps {
   'data-testid'?: string;
   fixedHeight?: boolean;
   showBackButton?: boolean;
+  /**
+   * Handler for the back button. Falls back to `onClose` when not provided,
+   * so existing callers that only pass `showBackButton` are unaffected.
+   */
+  onBack?: (() => void) | undefined;
   fullHeight?: boolean;
 }
 
@@ -32,6 +37,7 @@ export function InspectorLayout({
   'data-testid': dataTestId,
   fixedHeight = false,
   showBackButton = false,
+  onBack,
   fullHeight = false,
 }: InspectorLayoutProps) {
   return (
@@ -56,7 +62,7 @@ export function InspectorLayout({
               {showBackButton && (
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={onBack ?? onClose}
                   className="flex items-center justify-center hover:text-gray-500 cursor-pointer text-gray-900"
                 >
                   <span className="hero-arrow-left h-4 w-4 inline-block" />
@@ -81,9 +87,14 @@ export function InspectorLayout({
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto">{children}</div>
 
-        {/* Footer - only render if provided */}
+        {/* Footer - only render if provided. Inspectors pass an undefined
+            footer when a read-only workflow leaves no controls, so the bordered
+            bar collapses entirely rather than showing an empty strip. */}
         {footer && (
-          <div className="shrink-0 px-6 py-4 border-t border-gray-200">
+          <div
+            className="shrink-0 px-6 py-4 border-t border-gray-200"
+            data-testid="inspector-footer"
+          >
             {footer}
           </div>
         )}

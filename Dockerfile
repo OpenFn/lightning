@@ -12,10 +12,10 @@
 #   - https://pkgs.org/ - resource for finding needed packages
 #   - Ex: hexpm/elixir:1.16.2-erlang-26.2.5-debian-bookworm-20240513
 #
-ARG ELIXIR_VERSION=1.18.3
-ARG OTP_VERSION=27.3.3
-ARG DEBIAN_VERSION=bookworm-20250428
-ARG NODE_VERSION=22.12.0
+ARG ELIXIR_VERSION=1.18.4
+ARG OTP_VERSION=28.5
+ARG DEBIAN_VERSION=bookworm-20260421
+ARG NODE_VERSION=24.18.1
 ARG ERL_FLAGS
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
@@ -62,8 +62,6 @@ COPY lib lib
 COPY assets assets
 
 RUN mix lightning.install_runtime
-RUN mix lightning.install_adaptor_icons
-RUN mix lightning.install_schemas
 RUN npm install --prefix assets
 
 # compile assets
@@ -117,16 +115,19 @@ RUN chown lightning /app
 ENV MIX_ENV="prod"
 ENV ERL_FLAGS=${ERL_FLAGS}
 ENV ADAPTORS_PATH=/app/priv/openfn
+ENV ADAPTORS_ICONS_PATH=/app/priv/adaptor_icons
 
 # Only copy the final release and the adaptor directory from the build stage
 COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./
 COPY --from=builder --chown=lightning:root /app/priv/openfn ./priv/openfn
-COPY --from=builder --chown=lightning:root /app/priv/schemas ./priv/schemas
 COPY --from=builder --chown=lightning:root /app/priv/github ./priv/github
+
+# A new volume mounted here inherits this directory's ownership, so the
+# non-root runtime user can write to it.
+RUN mkdir -p ${ADAPTORS_ICONS_PATH} && chown lightning:root ${ADAPTORS_ICONS_PATH}
 
 USER lightning
 
-ENV SCHEMAS_PATH="/app/priv/schemas"
 ENV COMMIT=${COMMIT}
 ENV BRANCH=${BRANCH}
 ENV IMAGE_TAG=${IMAGE_TAG}

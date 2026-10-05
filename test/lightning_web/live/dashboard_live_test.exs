@@ -268,6 +268,24 @@ defmodule LightningWeb.DashboardLiveTest do
       assert has_element?(view, "tr#projects-table-row-#{project.id}")
     end
 
+    test "creating a project cannot mass-assign parent_id", %{
+      conn: conn,
+      user: user
+    } do
+      # A project the user has no role on; provisioning a sandbox under it would
+      # normally require :provision_sandbox on the parent.
+      other_project = insert(:project)
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      view
+      |> form("#project-form", project: %{raw_name: "sneaky"})
+      |> render_submit(%{"project" => %{"parent_id" => other_project.id}})
+
+      assert [project] = Lightning.Projects.get_projects_for_user(user)
+      assert project.parent_id == nil
+    end
+
     test "Creating a project with a name that resolves to blank shows error",
          %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/projects")
@@ -332,6 +350,31 @@ defmodule LightningWeb.DashboardLiveTest do
       html = render(view)
       project_names_from_html = extract_project_names_from_html(html)
       assert project_names_from_html == projects_sorted_by_name_asc
+    end
+
+    test "a crafted sort param does not crash the projects table", %{
+      conn: conn,
+      user: user
+    } do
+      projects =
+        insert_list(3, :project,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      # Drive the real sort control but override `by` with a value that is not a
+      # real column. It must be ignored (default name/asc), not crash the
+      # component via String.to_existing_atom/dynamic_order_by.
+      bogus = "not_a_column_#{System.unique_integer([:positive])}"
+
+      html =
+        view
+        |> element("a[phx-click='sort'][phx-value-by='name']")
+        |> render_click(%{"by" => bogus})
+
+      assert extract_project_names_from_html(html) ==
+               sorted_projects_by_name(projects)
     end
 
     test "Support users can sort the project table by name", %{

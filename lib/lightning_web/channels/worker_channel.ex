@@ -9,6 +9,7 @@ defmodule LightningWeb.WorkerChannel do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workers
 
+  alias LightningWeb.Observability
   alias LightningWeb.WorkerPresence
 
   require Logger
@@ -22,6 +23,8 @@ defmodule LightningWeb.WorkerChannel do
     # Track this worker's presence with its capacity
     worker_id = "worker-#{inspect(self())}"
     {:ok, _ref} = WorkerPresence.track_worker(self(), worker_id, capacity)
+
+    Observability.put_scope(worker_id: worker_id)
 
     # the work_listener_debounce_time assign is meant to be overidden in test mode.
     # a default value is set incase it's nil or not provided

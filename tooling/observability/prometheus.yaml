@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 5s
+  scrape_native_histograms: true
+
+# OTLP receive settings are preserved so the same Prometheus can accept push
+# traffic later (e.g. when wiring up tracing via the OTel Collector in the
+# same container). They are no-ops until something pushes.
+otlp:
+  keep_identifying_resource_attributes: true
+  promote_resource_attributes:
+    - service.instance.id
+    - service.name
+    - service.namespace
+    - service.version
+    - deployment.environment.name
+    - host.name
+
+storage:
+  tsdb:
+    out_of_order_time_window: 10m
+
+scrape_configs:
+  - job_name: lightning
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['host.docker.internal:4000']
+        labels:
+          service: lightning
+          env: dev

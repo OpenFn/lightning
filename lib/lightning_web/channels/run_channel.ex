@@ -9,14 +9,28 @@ defmodule LightningWeb.RunChannel do
 
   alias Lightning.Credentials
   alias Lightning.Credentials.Resolver
+  alias Lightning.DataclipScrubber
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
+  alias Lightning.Projects.Events.ProjectDeletionScheduled
+  alias Lightning.Projects.Events.ProjectUserRemoved
+  alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
+  alias Lightning.Workflows.WebhookAuthMethod
+  alias LightningWeb.Observability
   alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
   require Logger
+
+  defmodule WebhookResponse do
+    @moduledoc false
+    defstruct status: nil, body: nil, step_id: nil, sent_at: nil
+  end
 
   @impl true
   def join(
@@ -29,8 +43,7 @@ defmodule LightningWeb.RunChannel do
          run when is_map(run) <- Runs.get_for_worker(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
            Runs.get_project_id_for_run(run) do
-      Logger.metadata(run_id: id, project_id: project_id)
-      Sentry.Context.set_extra_context(%{run_id: id})
+      Observability.put_scope(run_id: id, project_id: project_id)
 
       {:ok,
        socket
@@ -39,7 +52,8 @@ defmodule LightningWeb.RunChannel do
          id: id,
          run: run,
          project_id: project_id,
-         scrubber: nil
+         scrubber: webhook_auth_scrubber(run),
+         webhook_response: nil
        })}
     else
       {:error, :not_found} ->
@@ -59,15 +73,10 @@ defmodule LightningWeb.RunChannel do
            Runs.get(run_id, include: [workflow: :project]) ||
              {:error, :not_found},
          project <- run.workflow.project,
-         :ok <-
-           Lightning.Policies.Permissions.can(
-             Lightning.Policies.ProjectUsers,
-             :access_project,
-             user,
-             project
-           ) do
+         :ok <- Permissions.can(ProjectUsers, :access_project, user, project) do
       # Subscribe to run events
       Runs.Events.subscribe(run)
+      Projects.Events.subscribe(project.id)
 
       {:ok,
        socket
@@ -91,42 +100,44 @@ defmodule LightningWeb.RunChannel do
 
   @impl true
   def handle_in("fetch:plan", _payload, socket) do
-    %{run: run} = socket.assigns
+    case RunWithOptions.render(socket.assigns.run) do
+      {:ok, plan} ->
+        reply_and_report(socket, {:ok, plan})
 
-    reply_with(socket, {:ok, RunWithOptions.render(run)})
+      {:error, reason} ->
+        reply_and_report(socket, {:error, %{reason: "adaptor_#{reason}"}})
+    end
   end
 
   def handle_in("run:start", payload, socket) do
     case Runs.start_run(socket.assigns.run, payload) do
       {:ok, run} ->
-        socket |> assign(run: run) |> reply_with({:ok, nil})
+        socket |> assign(run: run) |> reply_and_report({:ok, nil})
 
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
     end
   end
 
   def handle_in("run:complete", payload, socket) do
-    payload = Map.put(payload, "project_id", socket.assigns.project_id)
-
     case Runs.complete_run(socket.assigns.run, payload) do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
         run_with_preloads =
           run
-          |> Repo.preload([:log_lines, work_order: [:workflow, :trigger]])
+          |> Repo.preload([:log_lines, work_order: [:workflow]])
 
         run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
 
-        # Broadcast webhook response if after_completion is enabled
-        maybe_broadcast_webhook_response(run_with_preloads, payload)
-
-        socket |> assign(run: run) |> reply_with({:ok, nil})
+        socket
+        |> assign(run: run)
+        |> maybe_send_after_completion_response(payload["final_state"])
+        |> reply_and_report({:ok, nil})
 
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
     end
   end
 
@@ -137,13 +148,16 @@ defmodule LightningWeb.RunChannel do
 
     case Resolver.resolve_credential(run, id) do
       {:ok, nil} ->
-        reply_with(socket, {:ok, nil})
+        reply_and_report(socket, {:ok, nil})
 
       {:ok, resolved_credential} ->
         handle_resolved_credential(socket, resolved_credential)
 
       {:error, :not_found} ->
-        reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
+        reply_and_report(
+          socket,
+          {:error, %{errors: %{id: ["Credential not found!"]}}}
+        )
 
       {:error, error_tuple} ->
         handle_credential_error(socket, error_tuple, id, project_id, run.id)
@@ -151,7 +165,7 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("fetch:credential", _payload, socket) do
-    reply_with(
+    reply_and_report(
       socket,
       {:error, %{errors: %{id: ["This field can't be blank."]}}}
     )
@@ -173,7 +187,7 @@ defmodule LightningWeb.RunChannel do
     if !socket.assigns.run.options.save_dataclips,
       do: Runs.wipe_dataclips(socket.assigns.run)
 
-    reply_with(socket, {:ok, {:binary, body || "null"}})
+    reply_and_report(socket, {:ok, {:binary, body || "null"}})
   end
 
   def handle_in("step:start", payload, socket) do
@@ -181,20 +195,23 @@ defmodule LightningWeb.RunChannel do
       job_id when is_binary(job_id) ->
         case Runs.start_step(socket.assigns.run, payload) do
           {:error, changeset} ->
-            reply_with(socket, {:error, changeset})
+            reply_and_report(socket, {:error, changeset})
 
           {:ok, step} ->
-            reply_with(socket, {:ok, %{step_id: step.id}})
+            reply_and_report(socket, {:ok, %{step_id: step.id}})
         end
 
       :missing_job_id ->
-        reply_with(
+        reply_and_report(
           socket,
           {:error, %{errors: %{job_id: ["This field can't be blank."]}}}
         )
 
       nil ->
-        reply_with(socket, {:error, %{errors: %{job_id: ["Job not found!"]}}})
+        reply_and_report(
+          socket,
+          {:error, %{errors: %{job_id: ["Job not found!"]}}}
+        )
     end
   end
 
@@ -207,10 +224,12 @@ defmodule LightningWeb.RunChannel do
     |> Runs.complete_step(socket.assigns.run.options)
     |> case do
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
 
       {:ok, step} ->
-        reply_with(socket, {:ok, %{step_id: step.id}})
+        socket
+        |> put_webhook_response(payload)
+        |> reply_and_report({:ok, %{step_id: step.id}})
     end
   end
 
@@ -219,10 +238,10 @@ defmodule LightningWeb.RunChannel do
 
     case Runs.append_run_log(run, payload, scrubber) do
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
 
       {:ok, log_line} ->
-        reply_with(socket, {:ok, %{log_line_id: log_line.id}})
+        reply_and_report(socket, {:ok, %{log_line_id: log_line.id}})
     end
   end
 
@@ -231,10 +250,10 @@ defmodule LightningWeb.RunChannel do
 
     case Runs.append_run_logs_batch(run, payload, scrubber) do
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
 
       {:ok, _} ->
-        reply_with(socket, :ok)
+        reply_and_report(socket, :ok)
     end
   end
 
@@ -252,7 +271,7 @@ defmodule LightningWeb.RunChannel do
         ]
       )
 
-    reply_with(socket, {:ok, %{run: run}})
+    reply_and_report(socket, {:ok, %{run: run}})
   end
 
   def handle_in("fetch:logs", _payload, socket) do
@@ -270,7 +289,7 @@ defmodule LightningWeb.RunChannel do
         {:error, _} -> []
       end
 
-    reply_with(socket, {:ok, %{logs: log_lines}})
+    reply_and_report(socket, {:ok, %{logs: log_lines}})
   end
 
   # Forward PubSub events to browser clients
@@ -303,53 +322,215 @@ defmodule LightningWeb.RunChannel do
     {:noreply, socket}
   end
 
+  # This run's project changed who may see it. Re-derive the permission instead
+  # of matching on the event: `Projects.Scope` re-reads the project, so one
+  # clause covers a membership being revoked and a support user losing the
+  # support access that was their only standing. A role change cannot take
+  # `:access_project` away, so it resolves to a no-op here.
+  #
+  # Only the browser join subscribes to project events; a worker's run token is
+  # not project membership, so it carries no `:current_user` to re-check.
+  def handle_info(%event{} = message, socket)
+      when event in [
+             ProjectDeletionScheduled,
+             ProjectUserRemoved,
+             SupportAccessUpdated
+           ] and is_map_key(socket.assigns, :current_user) do
+    if concerns_current_user?(message, socket.assigns.current_user) and
+         !can_access_project?(socket) do
+      {:stop, :normal, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
 
-  defp maybe_broadcast_webhook_response(run, payload) do
-    work_order = run.work_order
-    trigger = work_order.trigger
+  # The project is wound down, so nobody's standing on it survives — there is no
+  # user to compare against.
+  defp concerns_current_user?(%ProjectDeletionScheduled{}, _current_user),
+    do: true
 
-    if trigger && trigger.type == :webhook &&
-         trigger.webhook_reply == :after_completion do
-      topic = "work_order:#{work_order.id}:webhook_response"
+  defp concerns_current_user?(%SupportAccessUpdated{}, %{support_user: true}),
+    do: true
 
-      # TODO - Later allow workflow authors to customize the status code
-      # and body of the reply.
-      status_code = determine_status_code(run.state)
+  defp concerns_current_user?(%{user_id: user_id}, %{id: user_id}),
+    do: true
 
-      body = %{
-        data: payload["final_state"],
-        meta: %{
-          work_order_id: work_order.id,
-          run_id: run.id,
-          state: run.state,
-          error_type: run.error_type,
-          inserted_at: run.inserted_at,
-          started_at: run.started_at,
-          claimed_at: run.claimed_at,
-          finished_at: run.finished_at
-        }
+  defp concerns_current_user?(_event, _current_user), do: false
+
+  defp can_access_project?(socket) do
+    Permissions.can?(
+      ProjectUsers,
+      :access_project,
+      socket.assigns.current_user,
+      socket.assigns.project_id
+    )
+  end
+
+  defp put_webhook_response(socket, payload) do
+    if already_sent?(socket.assigns.webhook_response) do
+      socket
+    else
+      case Map.get(payload, "webhook_response") do
+        %{} = wr ->
+          assign(socket, :webhook_response, %WebhookResponse{
+            status: Map.get(wr, "status"),
+            body: Map.get(wr, "body"),
+            step_id: Map.get(payload, "step_id")
+          })
+
+        _ ->
+          socket
+      end
+    end
+  end
+
+  defp already_sent?(%WebhookResponse{sent_at: %DateTime{}}), do: true
+  defp already_sent?(_), do: false
+
+  defp maybe_send_after_completion_response(socket, final_state) do
+    run = Repo.preload(socket.assigns.run, :starting_trigger)
+    trigger = run.starting_trigger
+
+    if trigger && trigger.webhook_reply == :after_completion do
+      webhook_response =
+        build_webhook_response(
+          run,
+          final_state,
+          trigger.webhook_response_config,
+          socket.assigns.webhook_response
+        )
+
+      socket
+      |> assign(:webhook_response, webhook_response)
+      |> maybe_broadcast_webhook_response()
+    else
+      socket
+    end
+  end
+
+  defp maybe_broadcast_webhook_response(socket) do
+    %{run: run, webhook_response: %WebhookResponse{} = webhook_response} =
+      socket.assigns
+
+    if already_sent?(webhook_response) do
+      socket
+    else
+      meta = %{
+        work_order_id: run.work_order_id,
+        run_id: run.id,
+        state: run.state,
+        error_type: run.error_type,
+        inserted_at: run.inserted_at,
+        started_at: run.started_at,
+        claimed_at: run.claimed_at,
+        finished_at: run.finished_at
       }
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
-        topic,
-        {:webhook_response, status_code, body}
+        "work_order:#{run.work_order_id}:webhook_response",
+        {:webhook_response, webhook_response.status,
+         %{data: webhook_response.body, meta: meta}}
       )
+
+      assign(socket, :webhook_response, %{
+        webhook_response
+        | sent_at: DateTime.utc_now()
+      })
     end
   end
 
-  # TODO - decide how we should respond... do we use HTTP codes for run states?
-  defp determine_status_code(state) do
-    case state do
-      :success -> 201
-      :failed -> 201
-      :crashed -> 201
-      :exception -> 201
-      :killed -> 201
-      :cancelled -> 201
-      _other -> 201
+  defp build_webhook_response(run, final_state, config, nil) do
+    {status, body} = build_default_response(run, final_state, config)
+    %WebhookResponse{status: status, body: body}
+  end
+
+  defp build_webhook_response(
+         run,
+         final_state,
+         config,
+         %WebhookResponse{} = webhook_response
+       ) do
+    with {:ok, custom_status} <- parse_webhook_status(webhook_response.status),
+         {:ok, custom_body} <- parse_webhook_body(webhook_response.body) do
+      status = custom_status || default_response_status(run.state, config)
+      body = custom_body || default_response_body(run.state, final_state, config)
+      %{webhook_response | status: status, body: body}
+    else
+      {:error, reason} ->
+        {status, body} = malformed_response(reason, run, config)
+        %{webhook_response | status: status, body: body}
+    end
+  end
+
+  defp parse_webhook_status(nil), do: {:ok, nil}
+  defp parse_webhook_status(status) when is_integer(status), do: {:ok, status}
+
+  defp parse_webhook_status(status) when is_float(status),
+    do: {:ok, trunc(status)}
+
+  defp parse_webhook_status(status),
+    do: {:error, "status needs to be an integer, got: #{inspect(status)}"}
+
+  defp parse_webhook_body(nil), do: {:ok, nil}
+  defp parse_webhook_body(body) when is_map(body), do: {:ok, body}
+
+  defp parse_webhook_body(body),
+    do: {:error, "body needs to be a JSON object, got: #{inspect(body)}"}
+
+  defp build_default_response(run, final_state, config) do
+    {default_response_status(run.state, config),
+     default_response_body(run.state, final_state, config)}
+  end
+
+  defp default_response_status(:success, %{success_code: code})
+       when is_integer(code),
+       do: code
+
+  defp default_response_status(:success, _config), do: 201
+
+  defp default_response_status(_run_status, %{error_code: code})
+       when is_integer(code),
+       do: code
+
+  defp default_response_status(_run_status, _config), do: 201
+
+  defp default_response_body(:success, final_state, _config),
+    do: final_state
+
+  defp default_response_body(run_status, _final_state, _config) do
+    %{
+      message:
+        "Run completed with status: #{run_status}. As a security policy, OpenFn does not send state data when the run errors out to avoid leaking sensitive information"
+    }
+  end
+
+  defp malformed_response(reason, run, config) do
+    {default_response_status(run.state, config),
+     %{message: "Run completed, but webhook_response was malformed: #{reason}"}}
+  end
+
+  defp webhook_auth_scrubber(run) do
+    case DataclipScrubber.webhook_auth_methods_for_run(run.id) do
+      [] ->
+        nil
+
+      auth_methods ->
+        {:ok, scrubber} =
+          Scrubber.start_link(
+            samples:
+              Enum.flat_map(
+                auth_methods,
+                &WebhookAuthMethod.sensitive_values_for/1
+              ),
+            basic_auth:
+              Enum.flat_map(auth_methods, &WebhookAuthMethod.basic_auth_for/1)
+          )
+
+        scrubber
     end
   end
 
@@ -371,7 +552,7 @@ defmodule LightningWeb.RunChannel do
 
     socket
     |> assign(scrubber: scrubber)
-    |> reply_with({:ok, resolved_credential.body})
+    |> reply_and_report({:ok, resolved_credential.body})
   end
 
   defp handle_credential_error(
@@ -381,8 +562,6 @@ defmodule LightningWeb.RunChannel do
          _project_id,
          _run_id
        ) do
-    Logger.error("Project has no environment configured")
-
     error =
       LightningWeb.ErrorFormatter.format(:environment_not_configured, %{
         project: socket.assigns.project_id
@@ -398,8 +577,6 @@ defmodule LightningWeb.RunChannel do
          _project_id,
          _run_id
        ) do
-    Logger.error("Project not found for run")
-
     error = LightningWeb.ErrorFormatter.format(:project_not_found, %{})
     {:reply, {:error, error}, socket}
   end
@@ -413,11 +590,6 @@ defmodule LightningWeb.RunChannel do
        ) do
     project_env =
       Lightning.Projects.get_project!(socket.assigns.project_id).env || "unknown"
-
-    Logger.error(
-      "Credential environment does not match project environment",
-      project_env: project_env
-    )
 
     error =
       LightningWeb.ErrorFormatter.format(
@@ -435,8 +607,6 @@ defmodule LightningWeb.RunChannel do
          _project_id,
          _run_id
        ) do
-    Logger.error("OAuth refresh token has expired")
-
     error =
       LightningWeb.ErrorFormatter.format(reason, %{
         project: socket.assigns.project_id
@@ -452,9 +622,18 @@ defmodule LightningWeb.RunChannel do
          _project_id,
          _run_id
        ) do
-    Logger.error("Could not reach the oauth provider")
+    {:reply, {:error, "Could not reach the OAuth provider. Try again later"},
+     socket}
+  end
 
-    {:reply, {:error, "Could not reach the oauth provider. Try again later"},
+  # Fallback for unexpected error terms
+  defp handle_credential_error(socket, error, id, _project_id, run_id) do
+    Logger.warning(
+      "Unhandled credential resolution error for credential #{id} " <>
+        "(run #{run_id}): #{inspect(error)}"
+    )
+
+    {:reply, {:error, "Could not reach the OAuth provider. Try again later"},
      socket}
   end
 end

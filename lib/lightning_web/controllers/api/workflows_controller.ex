@@ -9,7 +9,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
   A workflow consists of:
   - Jobs: JavaScript execution units with adaptors
-  - Triggers: Initiation methods (Webhook, Cron, Kafka)
+  - Triggers: Initiation methods (Webhook, Cron)
   - Edges: Connections between triggers/jobs with conditions
 
   ## Validation Rules
@@ -136,7 +136,7 @@ defmodule LightningWeb.API.WorkflowsController do
           include: [:edges, :jobs, :triggers]
         )
 
-      json(conn, %{workflows: list, errors: %{}})
+      json(conn, %{workflows: Enum.map(list, &public_workflow/1), errors: %{}})
     end
     |> then(&maybe_handle_error(conn, &1))
   end
@@ -147,7 +147,7 @@ defmodule LightningWeb.API.WorkflowsController do
       |> Repo.all()
       |> Repo.preload([:edges, :jobs, :triggers])
 
-    json(conn, %{workflows: list, errors: %{}})
+    json(conn, %{workflows: Enum.map(list, &public_workflow/1), errors: %{}})
   end
 
   @doc """
@@ -208,7 +208,7 @@ defmodule LightningWeb.API.WorkflowsController do
          {:ok, workflow} <- save_workflow(params, conn.assigns.current_resource) do
       conn
       |> put_status(:created)
-      |> json(%{workflow: workflow, errors: %{}})
+      |> json(%{workflow: public_workflow(workflow), errors: %{}})
     end
     |> then(&maybe_handle_error(conn, &1))
   end
@@ -250,7 +250,7 @@ defmodule LightningWeb.API.WorkflowsController do
          :ok <- validate_uuid(workflow_id),
          :ok <- authorize_read(conn, project_id),
          {:ok, workflow} <- get_workflow(workflow_id, project_id) do
-      json(conn, %{workflow: workflow, errors: %{}})
+      json(conn, %{workflow: public_workflow(workflow), errors: %{}})
     end
     |> then(&maybe_handle_error(conn, &1))
   end
@@ -262,7 +262,7 @@ defmodule LightningWeb.API.WorkflowsController do
              include: [:edges, :jobs, :triggers]
            ),
          :ok <- authorize_read_workflow(conn, workflow) do
-      json(conn, %{workflow: workflow, errors: %{}})
+      json(conn, %{workflow: public_workflow(workflow), errors: %{}})
     else
       nil -> {:error, :not_found}
       error -> error
@@ -313,9 +313,13 @@ defmodule LightningWeb.API.WorkflowsController do
          :ok <- authorize_write(conn, workflow),
          {:ok, workflow} <-
            save_workflow(workflow, params, conn.assigns.current_resource) do
-      json(conn, %{workflow: workflow, errors: %{}})
+      json(conn, %{workflow: public_workflow(workflow), errors: %{}})
     end
     |> then(&maybe_handle_error(conn, &1, workflow_id))
+  end
+
+  defp public_workflow(workflow) do
+    Map.take(workflow, Workflow.json_fields() -- [:state])
   end
 
   defp count_enabled_triggers(params),
@@ -412,6 +416,14 @@ defmodule LightningWeb.API.WorkflowsController do
          ids_map
        ),
        do: validate_workflow(edges, jobs, triggers, ids_map)
+
+  defp validate_workflow(%{} = params, ids_map) do
+    edges = Map.get(params, "edges", [])
+    jobs = Map.get(params, "jobs", [])
+    triggers = Map.get(params, "triggers", [])
+
+    validate_workflow(edges, jobs, triggers, ids_map)
+  end
 
   defp validate_workflow(edges, jobs, triggers, ids_map) do
     # {:ok, _ids} <- validate_ids(edges),
@@ -532,11 +544,11 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   defp authorize_write(conn, project_id) do
-    authorize_for_project(conn, project_id, :access_write)
+    authorize_for_project(conn, project_id, :edit_workflow)
   end
 
   defp authorize_read(conn, project_id) do
-    authorize_for_project(conn, project_id, :access_read)
+    authorize_for_project(conn, project_id, :access_project)
   end
 
   defp authorize_read_workflow(conn, %Workflow{project_id: project_id}) do
@@ -547,7 +559,7 @@ defmodule LightningWeb.API.WorkflowsController do
     project = Repo.get(Project, project_id)
 
     Permissions.can(
-      Lightning.Policies.Workflows,
+      Lightning.Policies.ProjectUsers,
       access,
       conn.assigns.current_resource,
       project

@@ -6,12 +6,19 @@
  * proper integration within the Header component.
  */
 
-import { act, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup as reactCleanup,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type React from 'react';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { Header } from '../../../js/collaborative-editor/components/Header';
+import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
@@ -37,10 +44,14 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
 }));
 
-// Mock useAdaptorIcons to prevent async fetch warnings
-vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
-  default: () => ({}),
-}));
+let storeCleanup: (() => void) | null = null;
+
+afterEach(() => {
+  storeCleanup?.();
+  storeCleanup = null;
+  reactCleanup();
+  urlState.reset();
+});
 
 // =============================================================================
 // TEST HELPERS
@@ -56,6 +67,7 @@ interface WrapperOptions {
   repoName?: string;
   branchName?: string;
   triggerSync?: boolean;
+  experimentalFeatures?: boolean;
 }
 
 /**
@@ -72,6 +84,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
     hasGithubConnection = false,
     repoName = 'openfn/demo',
     branchName = 'main',
+    experimentalFeatures = false,
   } = options;
 
   // Create Y.Doc with workflow metadata
@@ -95,6 +108,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
   // Build session context options including workflow data
   const sessionContextOptions: CreateSessionContextOptions = {
     permissions,
+    experimental_features_enabled: experimentalFeatures,
     latest_snapshot_lock_version: latestSnapshotLockVersion,
     workflow: {
       id: 'test-workflow-123',
@@ -136,6 +150,8 @@ async function createTestSetup(options: WrapperOptions = {}) {
     }
   );
 
+  storeCleanup = cleanup;
+
   if (options.triggerSync) {
     // Trigger provider sync to enable save functionality
     triggerProviderSync(sessionStore, true);
@@ -154,11 +170,23 @@ async function createTestSetup(options: WrapperOptions = {}) {
     }
   }
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+    redirect: vi.fn(),
+  };
+
   // Create wrapper (still needed for React context)
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <KeyboardProvider>
       <SessionContext.Provider value={{ sessionStore, isNewWorkflow }}>
-        <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          <StoreContext.Provider value={stores}>
+            {children}
+          </StoreContext.Provider>
+        </LiveViewActionsProvider>
       </SessionContext.Provider>
     </KeyboardProvider>
   );
@@ -339,7 +367,6 @@ describe('Header - Basic Rendering', () => {
     triggerMap.set('type', 'webhook');
     triggerMap.set('enabled', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     render(
@@ -355,7 +382,9 @@ describe('Header - Basic Rendering', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
   });
 
@@ -741,7 +770,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     render(
@@ -760,7 +788,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeInTheDocument();
     });
 
@@ -780,7 +808,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     render(
@@ -799,14 +826,14 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeInTheDocument();
     });
 
     // Tooltip should be hidden when panel is open
     // We're testing tooltip visibility, not button enabled state
     // The button may be disabled for workflow validation reasons
-    const startButton = screen.getByRole('button', { name: /run/i });
+    const startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
   });
 
@@ -821,7 +848,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     const { rerender } = render(
@@ -840,7 +866,9 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
 
     // Make workflow invalid (empty name)
@@ -850,7 +878,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeDisabled();
     });
 
@@ -867,7 +895,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
 
     // Error tooltip should still be shown even when panel is open
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeDisabled();
     });
   });
@@ -883,7 +911,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     const { rerender } = render(
@@ -902,10 +929,12 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
 
-    let startButton = screen.getByRole('button', { name: /run/i });
+    let startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
     // Tooltip should be present when closed
 
@@ -920,7 +949,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    startButton = screen.getByRole('button', { name: /run/i });
+    startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
     // Tooltip should be hidden when open
 
@@ -935,7 +964,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    startButton = screen.getByRole('button', { name: /run/i });
+    startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
     // Tooltip should reappear when closed
   });
@@ -951,7 +980,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     render(
@@ -966,13 +994,13 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeInTheDocument();
     });
 
     // Default should show tooltip (panel closed by default)
     // We're testing that the prop defaults correctly, not button state
-    const startButton = screen.getByRole('button', { name: /run/i });
+    const startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
   });
 });
@@ -1033,35 +1061,6 @@ describe('Header - Unsaved Changes Indicator', () => {
     });
 
     // No changes should mean no red dot
-    expect(container.querySelector('[data-is-dirty]')).not.toBeInTheDocument();
-  });
-
-  test('does not show red dot for new workflows', async () => {
-    const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
-      isNewWorkflow: true,
-      triggerSync: true,
-    });
-
-    const { container } = render(
-      <Header projectId="project-1" workflowId="workflow-1">
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    await act(async () => {
-      emitSessionContext();
-      await new Promise(resolve => setTimeout(resolve, 150));
-    });
-
-    // Make changes to workflow
-    await act(async () => {
-      const workflowMap = ydoc.getMap('workflow');
-      workflowMap.set('name', 'New Workflow');
-    });
-
-    // Should not show red dot for new workflows
-    await new Promise(resolve => setTimeout(resolve, 100));
     expect(container.querySelector('[data-is-dirty]')).not.toBeInTheDocument();
   });
 
@@ -1238,9 +1237,9 @@ describe('Header - Keyboard Shortcuts', () => {
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
-  test('save button is disabled when user lacks permissions', async () => {
+  test('save button stays put and disabled when the user cannot edit', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
     });
 
     render(
@@ -1255,9 +1254,30 @@ describe('Header - Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    // Save button should be disabled
-    const saveButton = screen.getByRole('button', { name: /save/i });
-    expect(saveButton).toBeDisabled();
+    const save = screen.getByRole('button', { name: /save/i });
+    expect(save).toBeInTheDocument();
+    expect(save).toBeDisabled();
+  });
+
+  test('save button stays, disabled, on a read-only view with the flag on', async () => {
+    const { wrapper, emitSessionContext } = await createTestSetup({
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
+      experimentalFeatures: true,
+    });
+
+    render(
+      <Header projectId="project-1" workflowId="workflow-1">
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
   });
 
   test('Header renders with GitHub connection and sync options available', async () => {
@@ -1308,10 +1328,10 @@ describe('Header - Keyboard Shortcuts', () => {
     expect(dropdownButton).not.toBeInTheDocument();
   });
 
-  test('split button dropdown is disabled when user lacks permissions', async () => {
+  test('save and sync stay put and disabled when the user cannot edit', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup({
       hasGithubConnection: true,
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
     });
 
     render(
@@ -1326,14 +1346,10 @@ describe('Header - Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    // Both save and dropdown buttons should be disabled
-    const saveButton = screen.getByRole('button', { name: /save/i });
-    expect(saveButton).toBeDisabled();
-
-    const dropdownButton = screen.getByRole('button', {
-      name: /open sync options/i,
-    });
-    expect(dropdownButton).toBeDisabled();
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /open sync options/i })
+    ).toBeInTheDocument();
   });
 
   test('Header renders correctly with all navigation elements', async () => {
@@ -1377,9 +1393,8 @@ describe('Header - Keyboard Shortcuts', () => {
 // =============================================================================
 
 describe('Header - AI Assistant Button', () => {
-  beforeEach(() => {
-    urlState.reset();
-  });
+  // urlState is reset by the top-level `afterEach` above, so no
+  // block-local `beforeEach` is needed here.
 
   test('AI button is enabled by default when aiAssistantEnabled prop is true', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup();

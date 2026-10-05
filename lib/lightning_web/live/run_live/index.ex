@@ -9,8 +9,11 @@ defmodule LightningWeb.RunLive.Index do
 
   alias Lightning.Invocation
   alias Lightning.Invocation.Step
+  alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Run
+  alias Lightning.Runs
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
@@ -33,6 +36,9 @@ defmodule LightningWeb.RunLive.Index do
     date_before: :utc_datetime,
     wo_date_after: :utc_datetime,
     wo_date_before: :utc_datetime,
+    run_date_after: :utc_datetime,
+    run_date_before: :utc_datetime,
+    run_status: {:array, :string},
     pending: :boolean,
     running: :boolean,
     success: :boolean,
@@ -44,7 +50,10 @@ defmodule LightningWeb.RunLive.Index do
     lost: :boolean,
     rejected: :boolean,
     sort_by: :string,
-    sort_direction: :string
+    sort_direction: :string,
+    error_signature_exit_reason: :string,
+    error_signature_error_type: :string,
+    error_signature_job_id: :string
   }
 
   @empty_page %{
@@ -180,6 +189,8 @@ defmodule LightningWeb.RunLive.Index do
        page_title: "History",
        step: %Step{},
        filters_changeset: filters_changeset(filters),
+       error_signature_job_name:
+         Jobs.get_job_name(project.id, filters["error_signature_job_id"]),
        pagination_path: &pagination_path(socket, project, &1, filters),
        page: @empty_page,
        async_page: AsyncResult.loading()
@@ -362,23 +373,27 @@ defmodule LightningWeb.RunLive.Index do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    %{
-      project: %{id: project_id},
-      can_run_workflow: can_run_workflow?,
-      current_user: current_user
-    } =
-      socket.assigns
+    require_run_workflow(socket, fn ->
+      %{project: %{id: project_id}, current_user: current_user} = socket.assigns
 
-    if can_run_workflow? do
-      with :ok <- WorkOrders.limit_run_creation(project_id),
+      # Scope the browser-supplied run_id to this project before retrying, so an
+      # editor of one project can't retry (execute) another project's run. Also
+      # reject a malformed id or a step that isn't part of the run rather than
+      # let those crash the query.
+      with true <- Lightning.Validators.valid_uuid?(run_id),
+           %Run{steps: steps} <-
+             Runs.get_for_project(run_id, project_id, include: [:steps]),
+           true <- Enum.any?(steps, &(&1.id == step_id)),
+           :ok <- WorkOrders.limit_run_creation(project_id),
            {:ok, _run} <-
              WorkOrders.retry(run_id, step_id, created_by: current_user) do
         {:noreply, socket}
       else
+        result when result in [false, nil] ->
+          {:noreply, put_flash(socket, :error, "Run not found.")}
+
         {:error, _reason, %{text: error_text}} ->
-          {:noreply,
-           socket
-           |> put_flash(:error, error_text)}
+          {:noreply, socket |> put_flash(:error, error_text)}
 
         {:error, :workflow_deleted} ->
           {:noreply,
@@ -387,60 +402,44 @@ defmodule LightningWeb.RunLive.Index do
 
         {:error, _changeset} ->
           {:noreply,
-           socket
-           |> put_flash(:error, "Oops! an error occured during retry.")}
+           socket |> put_flash(:error, "Oops! an error occured during retry.")}
       end
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
-    end
+    end)
   end
 
   def handle_event("bulk-rerun", attrs, socket) do
-    with true <- socket.assigns.can_run_workflow,
-         {:ok, count, discarded_count} <- handle_bulk_rerun(socket, attrs) do
-      {:noreply,
-       socket
-       |> put_flash(
-         :info,
-         "New run#{if count > 1, do: "s"} enqueued for #{count} workorder#{if count > 1, do: "s"}"
-         |> then(fn msg ->
-           if discarded_count > 0 do
-             "#{msg} (#{discarded_count} were discarded due to wiped dataclip/workflow being deleted)"
-           else
-             msg
-           end
-         end)
-       )
-       |> push_navigate(
-         to:
-           ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
-       )}
-    else
-      false ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "You are not authorized to perform this action.")}
+    require_run_workflow(socket, fn ->
+      case handle_bulk_rerun(socket, attrs) do
+        {:ok, count, discarded_count} ->
+          {:noreply,
+           socket
+           |> put_flash(
+             :info,
+             "New run#{if count > 1, do: "s"} enqueued for #{count} workorder#{if count > 1, do: "s"}"
+             |> then(fn msg ->
+               if discarded_count > 0 do
+                 "#{msg} (#{discarded_count} were discarded due to wiped dataclip/workflow being deleted)"
+               else
+                 msg
+               end
+             end)
+           )
+           |> push_navigate(
+             to:
+               ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
+           )}
 
-      {:ok, %{reasons: {0, []}}} ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Oops! The chosen step hasn't been run in the latest runs of any of the selected workorders"
-         )}
+        {:error, _changes} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Oops! an error occured during retries.")}
 
-      {:error, _changes} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Oops! an error occured during retries.")}
-
-      {:error, _reason, %{text: error_message}} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, error_message)}
-    end
+        {:error, _reason, %{text: error_message}} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, error_message)}
+      end
+    end)
   end
 
   def handle_event(
@@ -557,10 +556,10 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("bulk-cancel", attrs, socket) do
-    redirect_to =
-      ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
+    require_run_workflow(socket, fn ->
+      redirect_to =
+        ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
 
-    if socket.assigns.can_run_workflow do
       case handle_bulk_cancel(socket, attrs) do
         {:ok, cancelled} ->
           message =
@@ -582,14 +581,7 @@ defmodule LightningWeb.RunLive.Index do
            |> put_flash(:error, "An error occurred while cancelling.")
            |> push_navigate(to: redirect_to)}
       end
-    else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )}
-    end
+    end)
   end
 
   def handle_event(
@@ -597,7 +589,7 @@ defmodule LightningWeb.RunLive.Index do
         %{"workorder_id" => workorder_id},
         socket
       ) do
-    if socket.assigns.can_run_workflow do
+    require_run_workflow(socket, fn ->
       work_order = %WorkOrder{id: workorder_id}
 
       case WorkOrders.cancel_many(
@@ -624,18 +616,11 @@ defmodule LightningWeb.RunLive.Index do
              "An error occurred while cancelling."
            )}
       end
-    else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )}
-    end
+    end)
   end
 
   def handle_event("cancel-run", %{"run_id" => run_id}, socket) do
-    if socket.assigns.can_run_workflow do
+    require_run_workflow(socket, fn ->
       case CancelHelper.cancel_run(run_id, socket.assigns.project.id) do
         {:ok, _run} ->
           {:noreply, put_flash(socket, :info, "Run cancelled.")}
@@ -660,18 +645,13 @@ defmodule LightningWeb.RunLive.Index do
              "An error occurred while cancelling."
            )}
       end
-    else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )}
-    end
+    end)
   end
 
   def handle_event("show-export-modal", _params, socket) do
-    {:noreply, socket |> assign(:show_export_modal, true)}
+    require_run_workflow(socket, fn ->
+      {:noreply, assign(socket, :show_export_modal, true)}
+    end)
   end
 
   def handle_event("close-export-modal", _params, socket) do
@@ -679,26 +659,28 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("confirm-export", _params, socket) do
-    %{filters: filters, project: project, current_user: current_user} =
-      socket.assigns
+    require_run_workflow(socket, fn ->
+      %{filters: filters, project: project, current_user: current_user} =
+        socket.assigns
 
-    search_params = SearchParams.new(filters)
+      search_params = SearchParams.new(filters)
 
-    case Invocation.export_workorders(project, current_user, search_params) do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> assign(:show_export_modal, false)
-         |> put_flash(
-           :info,
-           "History export started successfully. You will be notified by email after completion."
-         )}
+      case Invocation.export_workorders(project, current_user, search_params) do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(:show_export_modal, false)
+           |> put_flash(
+             :info,
+             "History export started successfully. You will be notified by email after completion."
+           )}
 
-      {:error, _failed_operation, _reason, _changes} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Failed to start export. Please try again.")}
-    end
+        {:error, _failed_operation, _reason, _changes} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Failed to start export. Please try again.")}
+      end
+    end)
   end
 
   defp find_workflow_name(workflows, workflow_id) do
@@ -707,6 +689,22 @@ defmodule LightningWeb.RunLive.Index do
         name
       end
     end)
+  end
+
+  # Every workflow-mutating action on this page needs the run-workflow
+  # permission. Runs fun when the user has it, otherwise replies with the
+  # standard not-authorized flash.
+  defp require_run_workflow(socket, fun) do
+    if socket.assigns.can_run_workflow do
+      fun.()
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "You are not authorized to perform this action."
+       )}
+    end
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
@@ -848,6 +846,21 @@ defmodule LightningWeb.RunLive.Index do
       end
     end
   end
+
+  # The run-date chip's range.
+  #
+  # Stamped in UTC and says so: the bars this comes from are cut on the
+  # reader's clock, nothing in Lightning records what that clock is, and a bare
+  # "14:00" under a bar labelled "16:00" is worse than a suffix. The suffix
+  # goes on once, at the end, rather than on both ends of a range.
+  defp format_run_range(nil, nil), do: "any time"
+  defp format_run_range(from, nil), do: "after #{run_stamp(from)} UTC"
+  defp format_run_range(nil, to), do: "before #{run_stamp(to)} UTC"
+
+  defp format_run_range(from, to),
+    do: "#{run_stamp(from)} – #{run_stamp(to)} UTC"
+
+  defp run_stamp(date), do: Timex.format!(date, "{D}-{Mshort} {h24}:{m}")
 
   defp format_date_range(date_after, date_before) do
     case {date_after, date_before} do

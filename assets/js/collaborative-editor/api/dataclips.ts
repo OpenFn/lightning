@@ -8,6 +8,7 @@ export interface DataclipFilters {
   before?: string;
   after?: string;
   named_only?: boolean;
+  limit?: number;
 }
 
 export interface SearchDataclipsResponse {
@@ -50,7 +51,7 @@ export async function searchDataclips(
     ...(filters?.named_only !== undefined && {
       named_only: String(filters.named_only),
     }),
-    limit: '10',
+    limit: String(filters?.limit ?? 10),
   });
 
   const response = await fetch(
@@ -169,4 +170,14 @@ export async function submitManualRun(
   }
 
   return response.json() as Promise<ManualRunResponse>;
+}
+
+export async function getDataclipBody(dataclipId: string): Promise<string> {
+  const response = await fetch(`/dataclip/body/${dataclipId}`);
+
+  if (!response.ok) {
+    throw new Error(`Could not load dataclip ${dataclipId}`);
+  }
+
+  return await response.text();
 }

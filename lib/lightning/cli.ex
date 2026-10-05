@@ -5,7 +5,8 @@ defmodule Lightning.CLI do
   See [@openfn/cli](https://github.com/OpenFn/kit/tree/main/packages/cli#openfncli)
   """
   require Logger
-  @config Application.compile_env(:lightning, CLI, child_process_mod: Rambo)
+
+  @timeout :timer.minutes(2)
 
   defmodule Result do
     @moduledoc """
@@ -83,35 +84,90 @@ defmodule Lightning.CLI do
     end
   end
 
-  @doc """
-  Execute a command in a child process and parse the results.
-  """
-  @spec execute(command :: String.t()) :: Result.t()
-  def execute(command) do
+  @spec execute(command :: [String.t()], opts :: keyword()) ::
+          {:ok, Result.t()} | {:error, :enoent | :timeout}
+  defp execute(command, opts) when is_list(command) do
     start_time = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+    Logger.debug(fn -> "cmd: openfn #{Enum.join(command, " ")}" end)
 
-    {_, result} = run("/usr/bin/env", ["sh", "-c", command], opts())
+    case Lightning.OsProcess.run(
+           "/usr/bin/env",
+           ["openfn" | command],
+           opts() ++ opts
+         ) do
+      {:ok, result} ->
+        end_time = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
 
-    end_time = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+        if result.status != 0 do
+          Logger.warning(
+            "openfn #{List.first(command)} exited with status #{result.status}" <>
+              stderr_excerpt(result.err)
+          )
+        end
 
-    Result.parse(
-      result,
-      start_time: start_time,
-      end_time: end_time
-    )
+        {:ok, Result.parse(result, start_time: start_time, end_time: end_time)}
+
+      {:error, {:timeout, %{err: err}}} ->
+        Logger.warning(
+          "openfn #{List.first(command)} timed out after #{@timeout}ms and was killed" <>
+            stderr_excerpt(err)
+        )
+
+        {:error, :timeout}
+
+      {:error, :enoent} ->
+        {:error, :enoent}
+    end
+  end
+
+  # The CLI's JSON logs all go to stdout, so stderr only carries Node's own
+  # output: crash traces, warnings, a missing binary.
+  @stderr_excerpt_bytes 2_000
+
+  defp stderr_excerpt(""), do: ""
+
+  defp stderr_excerpt(err) do
+    excerpt =
+      if byte_size(err) > @stderr_excerpt_bytes,
+        do: binary_part(err, 0, @stderr_excerpt_bytes) <> "…",
+        else: err
+
+    ", stderr: " <> String.trim(excerpt)
   end
 
   @doc """
   Retrieve metadata for a given adaptor and configuration.
+
+  The state is handed to the CLI in a file inside a directory only this user
+  can enter, rather than on the command line, where other processes could
+  read it. The directory is private before the file exists, so there is no
+  window where the file is readable by others.
   """
   @spec metadata(state :: map(), adaptor_path :: String.t()) ::
-          Result.t()
+          {:ok, Result.t()} | {:error, :enoent | :timeout}
   def metadata(state, adaptor_path) when is_binary(adaptor_path) do
-    state = Jason.encode_to_iodata!(state)
+    dir = Lightning.OsProcess.make_tmp_dir!()
+    state_path = Path.join(dir, "state.json")
 
-    execute(
-      ~s(openfn metadata --log-json -S '#{state}' -a #{adaptor_path} --log debug)
-    )
+    try do
+      File.write!(state_path, Jason.encode!(state))
+
+      execute(
+        [
+          "metadata",
+          "--log-json",
+          "-s",
+          state_path,
+          "-a",
+          adaptor_path,
+          "--log",
+          "debug"
+        ],
+        cleanup_paths: [dir]
+      )
+    after
+      File.rm_rf(dir)
+    end
   end
 
   defp opts do
@@ -119,30 +175,12 @@ defmodule Lightning.CLI do
       Application.get_env(:lightning, :adaptor_service, [])
       |> Keyword.get(:adaptors_path)
 
-    env = %{
-      "NODE_PATH" => adaptors_path,
-      "PATH" => "#{adaptors_path}/bin:#{System.get_env("PATH")}"
-    }
-
-    [timeout: nil, log: true, env: env]
-  end
-
-  defp run(command, args, opts) do
-    log_command(command, args, opts)
-    @config[:child_process_mod].run(command, args, opts)
-  end
-
-  defp log_command(command, args, opts) do
-    Logger.debug(fn ->
-      # coveralls-ignore-start
-      """
-      env:
-      #{Enum.map_join(opts[:env], " ", fn {k, v} -> "#{k}=#{v}" end)}
-      cmd:
-      #{command} #{args}
-      """
-
-      # coveralls-ignore-stop
-    end)
+    [
+      timeout: @timeout,
+      env: %{
+        "NODE_PATH" => adaptors_path,
+        "PATH" => "#{adaptors_path}/bin:#{System.get_env("PATH")}"
+      }
+    ]
   end
 end

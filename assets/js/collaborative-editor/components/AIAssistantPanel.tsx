@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 
 import { cn } from '#/utils/cn';
 
+import { Tooltip } from '../../components/Tooltip';
 import {
   useAIStorageKey,
   useAISessionType,
@@ -10,16 +11,18 @@ import {
   useAISessionListCommands,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
-import { useSelectedStepId, useSelectedRunId } from '../hooks/useHistory';
+import { useSelectedRunId } from '../hooks/useHistory';
+import { useContentLocked, useIsNewWorkflow } from '../hooks/useSessionContext';
+import { describeLifecycleError } from '../lib/errors';
+import { notifications } from '../lib/notifications';
 
+import { AlertDialog } from './AlertDialog';
 import { ChatInput } from './ChatInput';
-import { DisclaimerScreen } from './DisclaimerScreen';
 import { SessionList } from './SessionList';
-import { Tooltip } from '../../components/Tooltip';
 
 interface AIAssistantPanelProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   onNewConversation?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   onShowSessions?: () => void;
@@ -47,14 +50,6 @@ interface AIAssistantPanelProps {
    */
   focusTrigger?: number;
   /**
-   * Whether to show the disclaimer screen overlay
-   */
-  showDisclaimer?: boolean;
-  /**
-   * Handler for when user accepts the disclaimer
-   */
-  onAcceptDisclaimer?: () => void;
-  /**
    * Connection state for showing loading screen
    */
   connectionState?: 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -62,20 +57,16 @@ interface AIAssistantPanelProps {
    * AI assistant limit information
    */
   aiLimit?: { allowed: boolean; message: string | null } | null;
-  /** Show the experimental global assistant toggle */
-  showGlobalAssistantOption?: boolean;
-  /** Whether the global assistant checkbox is currently checked */
-  isGlobalAssistantActive?: boolean;
-  /** Callback when global assistant checkbox changes */
-  onGlobalAssistantChange?: (active: boolean) => void;
+  /**
+   * Switch the current workflow to draft, for the live workflow notice
+   */
+  switchToDraft?: () => Promise<unknown>;
 }
 
 interface MessageOptions {
-  attach_code?: boolean;
   attach_logs?: boolean;
   attach_io_data?: boolean;
-  step_id?: string;
-  use_global_assistant?: boolean;
+  follow_run_id?: string;
 }
 
 /**
@@ -106,13 +97,9 @@ export function AIAssistantPanel({
   page = null,
   loadSessions: _loadSessions,
   focusTrigger,
-  showDisclaimer = false,
-  onAcceptDisclaimer,
   connectionState = 'connected',
   aiLimit = null,
-  showGlobalAssistantOption = false,
-  isGlobalAssistantActive = false,
-  onGlobalAssistantChange,
+  switchToDraft = () => Promise.resolve(undefined),
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -121,6 +108,7 @@ export function AIAssistantPanel({
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   const [internalFocusTrigger, setInternalFocusTrigger] = useState(0);
+  const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
   const prevViewRef = useRef(view);
 
   // Use hooks to get state from AI Assistant store
@@ -130,8 +118,9 @@ export function AIAssistantPanel({
   const hasSessionContext = useAIHasSessionContext();
   const hasCompletedSessionLoad = useAIHasCompletedSessionLoad();
   const { loadSessionList } = useAISessionListCommands();
-  const selectedStepId = useSelectedStepId();
   const selectedRunId = useSelectedRunId();
+  const isNewWorkflow = useIsNewWorkflow();
+  const contentLocked = useContentLocked();
 
   useEffect(() => {
     if (prevViewRef.current !== view) {
@@ -221,6 +210,15 @@ export function AIAssistantPanel({
     setIsMenuOpen(false);
   };
 
+  const handleConfirmSwitchToDraft = () => {
+    void switchToDraft().catch((error: unknown) => {
+      notifications.alert({
+        title: 'Could not switch to draft',
+        description: describeLifecycleError(error),
+      });
+    });
+  };
+
   const handleSessionSelect = (selectedSessionId: string) => {
     if (onSessionSelect) {
       onSessionSelect(selectedSessionId);
@@ -233,7 +231,7 @@ export function AIAssistantPanel({
       if (onShowSessions) {
         onShowSessions();
       }
-    } else {
+    } else if (onClose) {
       onClose();
     }
   };
@@ -278,24 +276,6 @@ export function AIAssistantPanel({
                 <h2 className="text-base font-semibold text-gray-900">
                   Assistant
                 </h2>
-                {page && (
-                  <span
-                    className={cn(
-                      'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-                      isGlobalAssistantActive
-                        ? 'bg-amber-100 text-amber-800'
-                        : page === 'job_code'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-purple-100 text-purple-800'
-                    )}
-                  >
-                    {isGlobalAssistantActive
-                      ? 'Global (experimental)'
-                      : page === 'job_code'
-                        ? 'Job'
-                        : 'Workflow'}
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -330,33 +310,36 @@ export function AIAssistantPanel({
                     'animate-in fade-in-0 zoom-in-95 duration-100'
                   )}
                 >
-                  <div className="py-1.5">
-                    <button
-                      type="button"
-                      data-testid="sessions-button"
-                      onClick={handleShowSessions}
-                      className={cn(
-                        'group flex items-center w-full',
-                        'px-4 py-2.5 text-sm font-medium',
-                        'text-gray-700 hover:bg-gray-50',
-                        'transition-colors duration-150',
-                        view === 'sessions' && 'bg-primary-50 text-primary-700'
-                      )}
-                    >
-                      <span
+                  {!isNewWorkflow && (
+                    <div className="py-1.5">
+                      <button
+                        type="button"
+                        data-testid="sessions-button"
+                        onClick={handleShowSessions}
                         className={cn(
-                          'hero-chat-bubble-left-right h-5 w-5 mr-3',
-                          view === 'sessions'
-                            ? 'text-primary-600'
-                            : 'text-gray-400 group-hover:text-gray-500'
+                          'group flex items-center w-full',
+                          'px-4 py-2.5 text-sm font-medium',
+                          'text-gray-700 hover:bg-gray-50',
+                          'transition-colors duration-150',
+                          view === 'sessions' &&
+                            'bg-primary-50 text-primary-700'
                         )}
-                      />
-                      <span className="flex-1 text-left">Conversations</span>
-                      {view === 'sessions' && (
-                        <span className="hero-check h-4 w-4 text-primary-600 ml-2" />
-                      )}
-                    </button>
-                  </div>
+                      >
+                        <span
+                          className={cn(
+                            'hero-chat-bubble-left-right h-5 w-5 mr-3',
+                            view === 'sessions'
+                              ? 'text-primary-600'
+                              : 'text-gray-400 group-hover:text-gray-500'
+                          )}
+                        />
+                        <span className="flex-1 text-left">Conversations</span>
+                        {view === 'sessions' && (
+                          <span className="hero-check h-4 w-4 text-primary-600 ml-2" />
+                        )}
+                      </button>
+                    </div>
+                  )}
                   <div className="py-1.5">
                     <button
                       type="button"
@@ -390,27 +373,31 @@ export function AIAssistantPanel({
                 </div>
               )}
             </div>
-            <Tooltip
-              content={sessionId ? 'Close current session' : 'Close assistant'}
-            >
-              <button
-                type="button"
-                onClick={handleClose}
-                className={cn(
-                  'inline-flex items-center justify-center',
-                  'h-8 w-8 rounded-md',
-                  'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
-                  'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
-                  'transition-all duration-150',
-                  'flex-shrink-0'
-                )}
-                aria-label={
+            {onClose && (
+              <Tooltip
+                content={
                   sessionId ? 'Close current session' : 'Close assistant'
                 }
               >
-                <span className="hero-x-mark h-5 w-5" />
-              </button>
-            </Tooltip>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className={cn(
+                    'inline-flex items-center justify-center',
+                    'h-8 w-8 rounded-md',
+                    'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
+                    'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
+                    'transition-all duration-150',
+                    'shrink-0'
+                  )}
+                  aria-label={
+                    sessionId ? 'Close current session' : 'Close assistant'
+                  }
+                >
+                  <span className="hero-x-mark h-5 w-5" />
+                </button>
+              </Tooltip>
+            )}
           </div>
         </div>
       </div>
@@ -444,6 +431,33 @@ export function AIAssistantPanel({
         )}
       </div>
 
+      {/* Live workflow notice - the assistant can only edit a draft workflow;
+          contentLocked is only ever true for a live workflow outside a
+          sandbox, so "switch to draft" is always the right fix */}
+      {!isNewWorkflow && contentLocked && (
+        <div
+          className="flex-none bg-amber-50 border-t border-amber-200 px-4 py-3"
+          role="status"
+          data-testid="ai-draft-mode-banner"
+        >
+          <div className="flex items-start gap-3">
+            <span className="hero-lock-closed h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-amber-800">
+                The Assistant cannot make changes while this workflow is live.{' '}
+                <button
+                  type="button"
+                  className="font-semibold underline hover:no-underline"
+                  onClick={() => setShowSwitchToDraftDialog(true)}
+                >
+                  Switch to draft
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ChatInput
         onSendMessage={onSendMessage}
         isLoading={isLoading}
@@ -453,9 +467,6 @@ export function AIAssistantPanel({
           (view === 'sessions' &&
             (!hasSessionContext || !hasCompletedSessionLoad))
         }
-        showJobControls={page === 'job_code'}
-        showGlobalAssistantOption={showGlobalAssistantOption}
-        onGlobalAssistantChange={onGlobalAssistantChange}
         storageKey={storageKey}
         enableAutoFocus={
           isOpen &&
@@ -465,9 +476,7 @@ export function AIAssistantPanel({
         focusTrigger={(focusTrigger ?? 0) + internalFocusTrigger}
         placeholder={placeholderText}
         disabledMessage={disabledMessage}
-        selectedStepId={selectedStepId}
         selectedRunId={selectedRunId}
-        selectedJobId={selectedContextJobId ?? null}
       />
 
       {/* About AI Assistant Modal */}
@@ -529,10 +538,6 @@ export function AIAssistantPanel({
                 anytime
               </li>
               <li>
-                Sessions are separated by context - job sessions and workflow
-                sessions are kept separate
-              </li>
-              <li>
                 Press{' '}
                 <code className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono">
                   Enter
@@ -544,8 +549,8 @@ export function AIAssistantPanel({
                 for a new line
               </li>
               <li>
-                For jobs, you can choose to include your code and run logs with
-                each message
+                When you have a run open you can attach its logs and its data to
+                a message
               </li>
               <li>
                 Generated workflows appear as artifacts with Apply and Copy
@@ -605,14 +610,16 @@ export function AIAssistantPanel({
               privacy.
             </p>
             <p>
-              <strong>For workflow sessions:</strong> Your project context is
-              automatically included. Generated workflows can be applied
-              directly to the canvas with one click.
+              <strong>What it reads:</strong> your workflow, every time. It
+              needs the steps and their code to answer anything about them, and
+              changes it makes are applied to the canvas as they arrive.
             </p>
             <p>
-              <strong>For job sessions:</strong> You control what the Assistant
-              sees. Use the checkboxes to optionally include your job code and
-              run logs. By default, job code is included but logs are not.
+              <strong>What you attach:</strong> with a run open, two tickboxes
+              above the message box add that run to what you send. "Send run
+              logs" adds every log line. "Send run data" adds the shape of each
+              step's input and output, where the field names go as they are and
+              the values are replaced by their types.
             </p>
             <p>
               All chat sessions are shared with project collaborators. Everyone
@@ -660,19 +667,17 @@ export function AIAssistantPanel({
         </div>
       )}
 
-      {showDisclaimer && (
-        <div
-          className="absolute inset-0 z-50 bg-white"
-          role="dialog"
-          aria-modal="true"
-          aria-label="AI Assistant Terms"
-        >
-          <DisclaimerScreen
-            onAccept={onAcceptDisclaimer || (() => {})}
-            disabled={!onAcceptDisclaimer}
-          />
-        </div>
-      )}
+      <AlertDialog
+        isOpen={showSwitchToDraftDialog}
+        onClose={() => {
+          setShowSwitchToDraftDialog(false);
+        }}
+        onConfirm={handleConfirmSwitchToDraft}
+        title="Switch to draft"
+        description="This takes the workflow out of production. Its triggers will be turned off and it will stop processing data until you go live again."
+        confirmLabel="Switch to draft"
+        variant="primary"
+      />
     </aside>
   );
 }

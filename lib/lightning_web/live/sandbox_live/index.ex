@@ -14,7 +14,14 @@ defmodule LightningWeb.SandboxLive.Index do
   require Logger
 
   defmodule MergeWorkflow do
-    defstruct [:id, :name, :is_changed, :is_diverged, :is_new, :is_deleted]
+    defstruct [
+      :id,
+      :name,
+      :is_changed,
+      :is_diverged,
+      :is_new,
+      :is_deleted
+    ]
   end
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -40,16 +47,10 @@ defmodule LightningWeb.SandboxLive.Index do
   def handle_params(
         %{"id" => id},
         _uri,
-        %{
-          assigns: %{
-            sandboxes: sandboxes,
-            project: project,
-            live_action: live_action
-          }
-        } = socket
+        %{assigns: %{project: project, live_action: live_action}} = socket
       )
       when live_action == :edit do
-    case Enum.find(sandboxes, &(&1.id == id)) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -104,7 +105,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("open-delete-modal", %{"id" => sandbox_id}, socket) do
-    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -114,6 +115,7 @@ defmodule LightningWeb.SandboxLive.Index do
            socket
            |> assign(:confirm_delete_open?, true)
            |> assign(:confirm_delete_sandbox, sandbox)
+           |> assign(:confirm_delete_descendants, active_descendants(sandbox.id))
            |> assign(:confirm_delete_input, "")
            |> assign(:confirm_changeset, confirm_changeset(sandbox))}
         else
@@ -185,7 +187,7 @@ defmodule LightningWeb.SandboxLive.Index do
         %{"id" => sandbox_id},
         %{assigns: %{current_user: current_user}} = socket
       ) do
-    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
@@ -207,19 +209,22 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("open-merge-modal", %{"id" => sandbox_id}, socket) do
-    case Enum.find(socket.assigns.sandboxes, &(&1.id == sandbox_id)) do
+    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Sandbox not found")}
 
       sandbox ->
         if sandbox.can_merge do
-          target_options = get_merge_target_options(socket, sandbox)
+          subtree = Projects.list_descendants(sandbox.id)
+          descendant_ids = MapSet.new(subtree, & &1.id)
+
+          target_options =
+            get_merge_target_options(socket, sandbox, descendant_ids)
 
           default_target =
             Enum.find(target_options, &(&1.value == sandbox.parent_id))
 
-          descendants =
-            get_all_descendants(sandbox, socket.assigns.workspace_projects)
+          descendants = Enum.filter(subtree, &is_nil(&1.scheduled_deletion))
 
           merge_changeset =
             merge_changeset(%{
@@ -229,9 +234,11 @@ defmodule LightningWeb.SandboxLive.Index do
           target_id = default_target && default_target.value
 
           target_project =
-            Enum.find(
+            find_target_project(
               socket.assigns.workspace_projects,
-              fn project -> project.id == target_id end
+              target_id,
+              sandbox,
+              descendant_ids
             )
 
           {sandbox, target_project} =
@@ -255,16 +262,25 @@ defmodule LightningWeb.SandboxLive.Index do
             |> Enum.filter(fn wf -> wf.is_changed end)
             |> MapSet.new(fn wf -> wf.id end)
 
+          merge_credentials = sandbox_only_credentials(sandbox, target_project)
+
           {:noreply,
            socket
            |> assign(:merge_modal_open?, true)
            |> assign(:merge_source_sandbox, sandbox)
            |> assign(:merge_target_options, target_options)
+           |> assign(:merge_descendant_ids, descendant_ids)
            |> assign(:merge_changeset, merge_changeset)
            |> assign(:merge_descendants, descendants)
            |> assign(:merge_diverged_workflows, diverged_workflows)
            |> assign(:merge_source_workflows, source_workflows)
-           |> assign(:merge_selected_workflow_ids, selected_ids)}
+           |> assign(:merge_selected_workflow_ids, selected_ids)
+           |> assign(:merge_credentials, merge_credentials)
+           |> assign(
+             :merge_selected_credential_ids,
+             all_credential_ids(merge_credentials)
+           )
+           |> assign_merge_collections(sandbox, target_project)}
         else
           {:noreply,
            socket
@@ -280,16 +296,23 @@ defmodule LightningWeb.SandboxLive.Index do
 
   @impl true
   def handle_event("toggle-workflow", %{"id" => workflow_id}, socket) do
-    selected = socket.assigns.merge_selected_workflow_ids
+    in_list? =
+      Enum.any?(socket.assigns.merge_source_workflows, &(&1.id == workflow_id))
 
-    new_selected =
-      if MapSet.member?(selected, workflow_id) do
-        MapSet.delete(selected, workflow_id)
-      else
-        MapSet.put(selected, workflow_id)
-      end
+    if in_list? do
+      selected = socket.assigns.merge_selected_workflow_ids
 
-    {:noreply, assign(socket, :merge_selected_workflow_ids, new_selected)}
+      new_selected =
+        if MapSet.member?(selected, workflow_id) do
+          MapSet.delete(selected, workflow_id)
+        else
+          MapSet.put(selected, workflow_id)
+        end
+
+      {:noreply, assign(socket, :merge_selected_workflow_ids, new_selected)}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -308,17 +331,49 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   @impl true
+  def handle_event("toggle-credential", %{"id" => credential_id}, socket) do
+    selected = socket.assigns.merge_selected_credential_ids
+
+    new_selected =
+      if MapSet.member?(selected, credential_id) do
+        MapSet.delete(selected, credential_id)
+      else
+        MapSet.put(selected, credential_id)
+      end
+
+    {:noreply, assign(socket, :merge_selected_credential_ids, new_selected)}
+  end
+
+  @impl true
+  def handle_event("toggle-all-credentials", _params, socket) do
+    all_ids = MapSet.new(socket.assigns.merge_credentials, fn c -> c.id end)
+
+    new_selected =
+      if MapSet.equal?(socket.assigns.merge_selected_credential_ids, all_ids) do
+        MapSet.new()
+      else
+        all_ids
+      end
+
+    {:noreply, assign(socket, :merge_selected_credential_ids, new_selected)}
+  end
+
+  @impl true
   def handle_event(
         "select-merge-target",
         %{"merge" => %{"target_id" => target_id}},
         socket
       ) do
-    merge_changeset = merge_changeset(%{target_id: target_id})
-
     target_project =
-      Enum.find(socket.assigns.workspace_projects, fn project ->
-        project.id == target_id
-      end)
+      find_target_project(
+        socket.assigns.workspace_projects,
+        target_id,
+        socket.assigns.merge_source_sandbox,
+        socket.assigns.merge_descendant_ids
+      )
+
+    merge_changeset =
+      merge_changeset(%{target_id: target_project && target_project.id})
 
     {sandbox, target_project} =
       preload_merge_projects(socket.assigns.merge_source_sandbox, target_project)
@@ -356,12 +411,65 @@ defmodule LightningWeb.SandboxLive.Index do
       |> MapSet.intersection(all_ids)
       |> MapSet.union(added_changed_ids)
 
+    merge_credentials = sandbox_only_credentials(sandbox, target_project)
+
+    # Preserve the user's credential choices across form changes (the checkboxes
+    # live in the same form, so toggling one fires this event). Keep selections
+    # still in the diff, and default any newly-appeared credential to selected.
+    new_credential_ids = all_credential_ids(merge_credentials)
+    previously_shown_ids = MapSet.new(socket.assigns.merge_credentials, & &1.id)
+
+    selected_credential_ids =
+      socket.assigns.merge_selected_credential_ids
+      |> MapSet.intersection(new_credential_ids)
+      |> MapSet.union(
+        MapSet.difference(new_credential_ids, previously_shown_ids)
+      )
+
     {:noreply,
      socket
      |> assign(:merge_changeset, merge_changeset)
      |> assign(:merge_diverged_workflows, diverged_workflows)
      |> assign(:merge_source_workflows, source_workflows)
-     |> assign(:merge_selected_workflow_ids, selected_ids)}
+     |> assign(:merge_selected_workflow_ids, selected_ids)
+     |> assign(:merge_credentials, merge_credentials)
+     |> assign(:merge_selected_credential_ids, selected_credential_ids)
+     |> maybe_assign_merge_collections(sandbox, target_project)}
+  end
+
+  @impl true
+  def handle_event("toggle-collection-to-add", %{"name" => name}, socket) do
+    if name in socket.assigns.merge_collections_to_add do
+      selected = socket.assigns.merge_selected_collection_names
+
+      new_selected =
+        if MapSet.member?(selected, name) do
+          MapSet.delete(selected, name)
+        else
+          MapSet.put(selected, name)
+        end
+
+      {:noreply, assign(socket, :merge_selected_collection_names, new_selected)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle-all-collections-to-add", _params, socket) do
+    all_names = MapSet.new(socket.assigns.merge_collections_to_add)
+
+    new_selected =
+      if MapSet.equal?(
+           socket.assigns.merge_selected_collection_names,
+           all_names
+         ) do
+        MapSet.new()
+      else
+        all_names
+      end
+
+    {:noreply, assign(socket, :merge_selected_collection_names, new_selected)}
   end
 
   @impl true
@@ -391,7 +499,11 @@ defmodule LightningWeb.SandboxLive.Index do
 
       true ->
         socket.assigns.workspace_projects
-        |> find_target_project(target_id)
+        |> find_target_project(
+          target_id,
+          source,
+          socket.assigns.merge_descendant_ids
+        )
         |> case do
           nil ->
             socket
@@ -409,8 +521,20 @@ defmodule LightningWeb.SandboxLive.Index do
               selected_ids =
                 resolve_selected_workflow_ids(socket.assigns)
 
+              selected_credential_ids =
+                MapSet.to_list(socket.assigns.merge_selected_credential_ids)
+
+              skip_collections =
+                skipped_collection_names(socket.assigns, target)
+
               source
-              |> perform_merge(target, actor, selected_ids)
+              |> perform_merge(
+                target,
+                actor,
+                selected_ids,
+                selected_credential_ids,
+                skip_collections
+              )
               |> handle_merge_result(socket, source, target, root_project, actor)
             else
               socket
@@ -440,7 +564,10 @@ defmodule LightningWeb.SandboxLive.Index do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker project={@project} />
+              <LayoutComponents.breadcrumb_project_picker
+                project={@project}
+                label={@project_label}
+              />
               <LayoutComponents.breadcrumb>
                 <:label>Sandboxes</:label>
               </LayoutComponents.breadcrumb>
@@ -452,11 +579,15 @@ defmodule LightningWeb.SandboxLive.Index do
       <LayoutComponents.centered>
         <Components.header
           current_project={@project}
-          enable_create_button={@can_create_sandbox and @limit_new_sandbox == :ok}
+          enable_create_button={
+            @can_create_sandbox and @limit_new_sandbox == :ok and
+              not @nesting_at_limit
+          }
           disabled_button_tooltip={
             create_sandbox_tooltip_message(
               @can_create_sandbox,
-              @limit_new_sandbox
+              @limit_new_sandbox,
+              @nesting_at_limit
             )
           }
         />
@@ -465,9 +596,16 @@ defmodule LightningWeb.SandboxLive.Index do
           root_project={@root_project}
           current_project={@project}
           sandboxes={@sandboxes}
-          enable_create_button={@can_create_sandbox and @limit_new_sandbox == :ok}
+          enable_create_button={
+            @can_create_sandbox and @limit_new_sandbox == :ok and
+              not @nesting_at_limit
+          }
           disabled_button_tooltip={
-            create_sandbox_tooltip_message(@can_create_sandbox, @limit_new_sandbox)
+            create_sandbox_tooltip_message(
+              @can_create_sandbox,
+              @limit_new_sandbox,
+              @nesting_at_limit
+            )
           }
         />
 
@@ -477,6 +615,7 @@ defmodule LightningWeb.SandboxLive.Index do
           sandbox={@confirm_delete_sandbox}
           changeset={@confirm_changeset}
           root_project={@root_project}
+          descendants={@confirm_delete_descendants}
         />
 
         <Components.merge_modal
@@ -489,6 +628,10 @@ defmodule LightningWeb.SandboxLive.Index do
           diverged_workflows={@merge_diverged_workflows}
           source_workflows={@merge_source_workflows}
           selected_workflow_ids={@merge_selected_workflow_ids}
+          credentials={@merge_credentials}
+          selected_credential_ids={@merge_selected_credential_ids}
+          collections_to_add={@merge_collections_to_add}
+          selected_collection_names={@merge_selected_collection_names}
         />
 
         <.live_component
@@ -517,10 +660,19 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   defp load_workspace_projects(%{assigns: %{project: project}} = socket) do
-    %{root: root_project, descendants: descendants} =
-      Projects.list_workspace_projects(project.id)
-
     current_user = socket.assigns.current_user
+    limit_new_sandbox = socket.assigns.limit_new_sandbox
+
+    access_root = Repo.preload(socket.assigns.access_root, :project_users)
+
+    workspace_root =
+      project |> Projects.root_of() |> Repo.preload(:project_users)
+
+    descendants =
+      access_root.id
+      |> Projects.list_descendants()
+      |> Repo.preload([:parent, :project_users])
+      |> Projects.visible_sandboxes(current_user)
 
     can_create_sandbox =
       Permissions.can?(
@@ -530,44 +682,71 @@ defmodule LightningWeb.SandboxLive.Index do
         project
       )
 
+    nesting_at_limit =
+      Projects.depth_of(project.id) >=
+        Lightning.Config.max_sandbox_nesting_depth()
+
     manage_permissions =
-      Lightning.Policies.Sandboxes.check_manage_permissions(
-        descendants,
+      Lightning.Policies.Sandboxes.manage_permissions(
+        [access_root | descendants],
         current_user,
-        root_project
+        workspace_root
       )
 
-    sandboxes =
-      Enum.map(descendants, fn sandbox ->
-        perms =
-          Map.get(manage_permissions, sandbox.id, %{
-            update: false,
-            delete: false,
-            merge: false
-          })
+    decorate =
+      &decorate_for_render(&1, manage_permissions, project, limit_new_sandbox)
 
-        scheduled? = not is_nil(sandbox.scheduled_deletion)
-
-        sandbox
-        |> Map.put(:can_edit, perms.update and not scheduled?)
-        |> Map.put(:can_delete, perms.delete and not scheduled?)
-        |> Map.put(:can_merge, perms.merge and not scheduled?)
-        |> Map.put(:can_cancel_deletion, perms.delete and scheduled?)
-        |> Map.put(:scheduled_for_deletion?, scheduled?)
-        |> Map.put(:is_current, project.id == sandbox.id)
-      end)
+    decorated_root = decorate.(access_root)
+    decorated_sandboxes = Enum.map(descendants, decorate)
 
     socket
-    |> assign(:workspace_projects, [root_project | descendants])
-    |> assign(:root_project, root_project)
-    |> assign(:sandboxes, sandboxes)
+    |> assign(:workspace_projects, [access_root | descendants])
+    |> assign(:workspace_tree, [decorated_root | decorated_sandboxes])
+    |> assign(:root_project, decorated_root)
+    |> assign(:sandboxes, decorated_sandboxes)
     |> assign(:can_create_sandbox, can_create_sandbox)
+    |> assign(:nesting_at_limit, nesting_at_limit)
   end
+
+  defp active_descendants(sandbox_id) do
+    sandbox_id
+    |> Projects.list_descendants()
+    |> Enum.filter(&is_nil(&1.scheduled_deletion))
+  end
+
+  defp decorate_for_render(
+         sandbox,
+         manage_permissions,
+         current_project,
+         limit_new_sandbox
+       ) do
+    can_manage? = Map.get(manage_permissions, sandbox.id, false)
+    scheduled? = not is_nil(sandbox.scheduled_deletion)
+
+    {restore_blocked_by_limit?, restore_blocked_message} =
+      restore_block_state(scheduled?, limit_new_sandbox)
+
+    sandbox
+    |> Map.put(:can_edit, can_manage? and not scheduled?)
+    |> Map.put(:can_delete, can_manage? and not scheduled?)
+    |> Map.put(:can_merge, can_manage? and not scheduled?)
+    |> Map.put(:can_cancel_deletion, can_manage? and scheduled?)
+    |> Map.put(:restore_blocked_by_limit?, restore_blocked_by_limit?)
+    |> Map.put(:restore_blocked_message, restore_blocked_message)
+    |> Map.put(:scheduled_for_deletion?, scheduled?)
+    |> Map.put(:is_current, current_project.id == sandbox.id)
+  end
+
+  defp restore_block_state(true, {:error, _reason, %{text: text}}),
+    do: {true, text}
+
+  defp restore_block_state(_scheduled?, _limit), do: {false, nil}
 
   defp reset_delete_modal_state(socket) do
     socket
     |> assign(:confirm_delete_open?, false)
     |> assign(:confirm_delete_sandbox, nil)
+    |> assign(:confirm_delete_descendants, [])
     |> assign(:confirm_delete_input, "")
     |> assign(:confirm_changeset, empty_confirm_changeset())
   end
@@ -578,10 +757,47 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_source_sandbox, nil)
     |> assign(:merge_changeset, merge_changeset())
     |> assign(:merge_target_options, [])
+    |> assign(:merge_descendant_ids, nil)
     |> assign(:merge_descendants, [])
     |> assign(:merge_diverged_workflows, [])
     |> assign(:merge_source_workflows, [])
     |> assign(:merge_selected_workflow_ids, MapSet.new())
+    |> assign(:merge_credentials, [])
+    |> assign(:merge_selected_credential_ids, MapSet.new())
+    |> assign_merge_collections(nil, nil)
+  end
+
+  # Previews the collections the merge would create in the target (the
+  # sandbox-only names), all preselected. Unchecking a row skips creating
+  # that collection; picking a new target recomputes the list.
+  defp assign_merge_collections(socket, _sandbox, nil) do
+    socket
+    |> assign(:merge_collections_target_id, nil)
+    |> assign(:merge_collections_to_add, [])
+    |> assign(:merge_selected_collection_names, MapSet.new())
+  end
+
+  defp assign_merge_collections(socket, sandbox, target_project) do
+    %{to_create: to_create} =
+      Sandboxes.preview_collections(sandbox, target_project)
+
+    socket
+    |> assign(:merge_collections_target_id, target_project.id)
+    |> assign(:merge_collections_to_add, to_create)
+    |> assign(:merge_selected_collection_names, MapSet.new(to_create))
+  end
+
+  # Toggling any checkbox re-submits the merge form, so the change event
+  # fires for every input. Recomputing the preview also resets the row
+  # selections, so only do it when the target changed.
+  defp maybe_assign_merge_collections(socket, sandbox, target_project) do
+    new_target_id = target_project && target_project.id
+
+    if socket.assigns.merge_collections_target_id == new_target_id do
+      socket
+    else
+      assign_merge_collections(socket, sandbox, target_project)
+    end
   end
 
   defp merge_changeset(params \\ %{}) do
@@ -612,15 +828,13 @@ defmodule LightningWeb.SandboxLive.Index do
   defp handle_sandbox_delete_result(
          {:ok, _project},
          deleted_sandbox,
-         %{assigns: %{project: current_project, root_project: root_project}} =
-           socket
+         %{assigns: %{project: current_project}} = socket
        ) do
     should_redirect =
       current_project.id == deleted_sandbox.id or
-        Projects.descendant_of?(
-          current_project,
-          deleted_sandbox,
-          root_project
+        MapSet.member?(
+          sandbox_descendant_ids(deleted_sandbox),
+          current_project.id
         )
 
     socket_to_return =
@@ -682,18 +896,21 @@ defmodule LightningWeb.SandboxLive.Index do
     put_flash(socket, :error, "Sandbox not found")
   end
 
-  defp get_merge_target_options(socket, source_sandbox) do
+  defp handle_cancel_deletion_result(
+         {:error, _reason, %{text: text}},
+         _sandbox,
+         socket
+       ) do
+    put_flash(socket, :error, text)
+  end
+
+  defp get_merge_target_options(socket, source_sandbox, descendant_ids) do
     current_user = socket.assigns.current_user
-    root_project = socket.assigns.root_project
 
     socket.assigns.workspace_projects
-    |> Enum.reject(fn potential_target ->
-      potential_target.id == source_sandbox.id or
-        Projects.descendant_of?(potential_target, source_sandbox, root_project)
-    end)
     |> Enum.filter(fn project ->
-      user_role_on_project(project, current_user) in [:owner, :admin, :editor] or
-        current_user.role == :superuser
+      mergeable_target?(project, source_sandbox, descendant_ids) and
+        user_role_on_project(project, current_user) in [:owner, :admin, :editor]
     end)
     |> Enum.map(fn project ->
       %{
@@ -710,34 +927,23 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp get_all_descendants(sandbox, workspace_projects) do
-    project_map = Map.new(workspace_projects, &{&1.id, &1})
+  defp find_target_project(_workspace_projects, _target_id, nil, _descendants),
+    do: nil
 
-    workspace_projects
-    |> Enum.filter(fn project ->
-      descendant_of?(project.parent_id, sandbox.id, project_map)
+  defp find_target_project(workspace_projects, target_id, source, descendant_ids) do
+    Enum.find(workspace_projects, fn project ->
+      project.id == target_id and
+        mergeable_target?(project, source, descendant_ids)
     end)
-    |> Enum.sort_by(& &1.name)
   end
 
-  defp descendant_of?(nil, _ancestor_id, _project_map), do: false
-
-  defp descendant_of?(parent_id, ancestor_id, _project_map)
-       when parent_id == ancestor_id,
-       do: true
-
-  defp descendant_of?(parent_id, ancestor_id, project_map) do
-    case Map.get(project_map, parent_id) do
-      nil ->
-        false
-
-      parent ->
-        descendant_of?(parent.parent_id, ancestor_id, project_map)
-    end
+  defp mergeable_target?(project, source_sandbox, descendant_ids) do
+    is_nil(project.scheduled_deletion) and project.id != source_sandbox.id and
+      not MapSet.member?(descendant_ids, project.id)
   end
 
-  defp find_target_project(workspace_projects, target_id) do
-    Enum.find(workspace_projects, fn project -> project.id == target_id end)
+  defp sandbox_descendant_ids(sandbox) do
+    MapSet.new(Projects.descendant_ids([sandbox.id]))
   end
 
   defp build_merge_workflow_list(
@@ -799,14 +1005,22 @@ defmodule LightningWeb.SandboxLive.Index do
         }
       end)
 
+    # Target-only workflows are those in the project but absent from the sandbox.
+    # A workflow added to the project after the fork was never in this sandbox,
+    # so it is not part of the merge and is dropped from the list entirely. What
+    # remains are workflows deleted in the sandbox: they default to unchecked so
+    # a merge never silently deletes them, and removal is opt-in.
     deleted_entries =
       target_workflows
-      |> Enum.reject(fn wf -> MapSet.member?(source_workflow_names, wf.name) end)
+      |> Enum.reject(fn wf ->
+        MapSet.member?(source_workflow_names, wf.name) or
+          workflow_added_after_fork?(wf, source)
+      end)
       |> Enum.map(fn wf ->
         %MergeWorkflow{
           id: wf.id,
           name: wf.name,
-          is_changed: true,
+          is_changed: false,
           is_diverged: false,
           is_new: false,
           is_deleted: true
@@ -817,31 +1031,36 @@ defmodule LightningWeb.SandboxLive.Index do
     |> Enum.sort_by(fn wf -> wf.name end)
   end
 
+  defp workflow_added_after_fork?(%{inserted_at: %DateTime{} = wf_inserted}, %{
+         inserted_at: %DateTime{} = fork_time
+       }) do
+    DateTime.compare(wf_inserted, fork_time) == :gt
+  end
+
+  defp workflow_added_after_fork?(_workflow, _source), do: false
+
+  # Always pass an explicit selection so unchecked target-only workflows are
+  # kept, not deleted. Only workflows deleted in the sandbox reach this list as
+  # target-only, and only the ones the user checks are removed.
   defp resolve_selected_workflow_ids(assigns) do
-    all_ids = MapSet.new(assigns.merge_source_workflows, fn wf -> wf.id end)
+    deleted_ids =
+      assigns.merge_source_workflows
+      |> Enum.filter(fn wf -> wf.is_deleted end)
+      |> MapSet.new(fn wf -> wf.id end)
 
-    if MapSet.equal?(assigns.merge_selected_workflow_ids, all_ids) do
-      {nil, nil}
-    else
-      deleted_ids =
-        assigns.merge_source_workflows
-        |> Enum.filter(fn wf -> wf.is_deleted end)
-        |> MapSet.new(fn wf -> wf.id end)
+    selected = assigns.merge_selected_workflow_ids
 
-      selected = assigns.merge_selected_workflow_ids
+    selected_source_ids =
+      selected
+      |> Enum.reject(&MapSet.member?(deleted_ids, &1))
+      |> Enum.to_list()
 
-      selected_source_ids =
-        selected
-        |> Enum.reject(&MapSet.member?(deleted_ids, &1))
-        |> Enum.to_list()
+    selected_deleted_ids =
+      selected
+      |> Enum.filter(&MapSet.member?(deleted_ids, &1))
+      |> Enum.to_list()
 
-      selected_deleted_ids =
-        selected
-        |> Enum.filter(&MapSet.member?(deleted_ids, &1))
-        |> Enum.to_list()
-
-      {selected_source_ids, selected_deleted_ids}
-    end
+    {selected_source_ids, selected_deleted_ids}
   end
 
   defp preload_merge_projects(source, nil),
@@ -849,6 +1068,35 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp preload_merge_projects(source, target),
     do: {Repo.preload(source, :workflows), Repo.preload(target, :workflows)}
+
+  # The sandbox's project_credentials whose underlying credential the target
+  # does not already have. These would be dropped on merge unless the user
+  # chooses to carry them over.
+  defp sandbox_only_credentials(_source, nil), do: []
+
+  defp sandbox_only_credentials(source, target) do
+    source =
+      Repo.preload(source, project_credentials: [:credential])
+
+    target = Repo.preload(target, :project_credentials)
+
+    target_credential_ids =
+      MapSet.new(target.project_credentials, & &1.credential_id)
+
+    source.project_credentials
+    |> Enum.reject(&MapSet.member?(target_credential_ids, &1.credential_id))
+    |> Enum.map(fn pc ->
+      %{id: pc.id, name: credential_display_name(pc.credential)}
+    end)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  defp credential_display_name(%{name: name}) when is_binary(name), do: name
+  defp credential_display_name(_), do: "Untitled credential"
+
+  defp all_credential_ids(merge_credentials) do
+    MapSet.new(merge_credentials, & &1.id)
+  end
 
   defp get_diverged_workflows(_source, nil), do: []
 
@@ -862,23 +1110,37 @@ defmodule LightningWeb.SandboxLive.Index do
     MergeProjects.diverged_workflows(target_project, source)
   end
 
+  # Only names the user explicitly unchecked are skipped, and only for the
+  # target they were previewed against. A collection added to the sandbox
+  # after the preview is still created. Skipping is explicit, creating is
+  # the default.
+  defp skipped_collection_names(assigns, target) do
+    if assigns.merge_collections_target_id == target.id do
+      assigns.merge_collections_to_add
+      |> MapSet.new()
+      |> MapSet.difference(assigns.merge_selected_collection_names)
+      |> MapSet.to_list()
+    else
+      []
+    end
+  end
+
   defp perform_merge(
          source,
          target,
          actor,
-         {selected_workflow_ids, deleted_target_workflow_ids}
+         {selected_workflow_ids, deleted_target_workflow_ids},
+         selected_credential_ids,
+         skip_collections
        ) do
     maybe_commit_to_github(target, "pre-merge commit")
 
-    opts =
-      if selected_workflow_ids do
-        %{
-          selected_workflow_ids: selected_workflow_ids,
-          deleted_target_workflow_ids: deleted_target_workflow_ids
-        }
-      else
-        %{}
-      end
+    opts = %{
+      selected_workflow_ids: selected_workflow_ids,
+      deleted_target_workflow_ids: deleted_target_workflow_ids,
+      selected_credential_ids: selected_credential_ids,
+      skip_collections: skip_collections
+    }
 
     case Sandboxes.merge(source, target, actor, opts) do
       {:ok, _updated_target} = success ->
@@ -942,12 +1204,19 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp create_sandbox_tooltip_message(can_create_sandbox, limiter_result) do
-    case {can_create_sandbox, limiter_result} do
-      {false, _} ->
+  defp create_sandbox_tooltip_message(
+         can_create_sandbox,
+         limiter_result,
+         nesting_at_limit
+       ) do
+    case {can_create_sandbox, limiter_result, nesting_at_limit} do
+      {false, _, _} ->
         "You are not authorized to create sandboxes in this workspace"
 
-      {_, {:error, _, %{text: text}}} ->
+      {_, _, true} ->
+        "Maximum sandbox nesting depth reached (#{Lightning.Config.max_sandbox_nesting_depth()} levels deep)"
+
+      {_, {:error, _, %{text: text}}, _} ->
         text
 
       _other ->
@@ -955,16 +1224,9 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp format_merge_error(%Ecto.Changeset{} = changeset) do
-    changeset.errors
-    |> List.first()
-    |> case do
-      {field, {message, _}} -> "#{field}: #{message}"
-      _ -> "Failed to merge: validation error"
-    end
-  end
-
   defp format_merge_error(%{text: text}), do: text
-  defp format_merge_error(reason) when is_binary(reason), do: reason
-  defp format_merge_error(reason), do: "Failed to merge: #{inspect(reason)}"
+
+  defp format_merge_error(_reason) do
+    "Couldn't merge this sandbox. Please try again."
+  end
 end

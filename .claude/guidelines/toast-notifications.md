@@ -4,7 +4,9 @@ This guideline covers how to use toast notifications in the collaborative workfl
 
 ## Overview
 
-The collaborative editor uses [Sonner](https://sonner.emilkowal.ski/) via shadcn/ui for toast notifications. Toasts provide immediate user feedback for operations like saving, errors, and validations.
+The collaborative editor uses [Sonner](https://sonner.emilkowal.ski/) **2.x**
+(`^2.0.7` in `assets/package.json`) via shadcn/ui for toast notifications. Toasts provide
+immediate user feedback for operations like saving, errors, and validations.
 
 ## Architecture
 
@@ -14,14 +16,15 @@ The collaborative editor uses [Sonner](https://sonner.emilkowal.ski/) via shadcn
 
 **Provider Location**:
 ```typescript
-<SocketProvider>
-  <SessionProvider>
-    <StoreProvider>
-      <Toaster />  {/* Mounted here */}
-      {/* Rest of app */}
-    </StoreProvider>
-  </SessionProvider>
-</SocketProvider>
+<KeyboardProvider>
+  <SocketProvider>
+    <SessionProvider>
+      <StoreProvider>
+        <LiveViewActionsProvider>
+          <CredentialModalProvider>
+            <MonacoRefProvider>
+              <Toaster />  {/* Mounted here — CollaborativeEditor.tsx:275 */}
+              {/* Rest of app */}
 ```
 
 ## Usage
@@ -31,7 +34,7 @@ The collaborative editor uses [Sonner](https://sonner.emilkowal.ski/) via shadcn
 import { notifications } from "../lib/notifications";
 ```
 
-### Info Notifications (Blue, 2s duration)
+### Info Notifications (Blue, 3s duration)
 Use for successful operations and general information:
 
 ```typescript
@@ -41,7 +44,7 @@ notifications.info({
 });
 ```
 
-### Alert Notifications (Red, 4s duration)
+### Alert Notifications (Red, 6s duration)
 Use for errors and warnings that need attention:
 
 ```typescript
@@ -67,7 +70,7 @@ notifications.alert({
 });
 ```
 
-### Success Notifications (Green, 2s duration)
+### Success Notifications (Green, 3s duration)
 Explicit success confirmation:
 
 ```typescript
@@ -77,7 +80,7 @@ notifications.success({
 });
 ```
 
-### Warning Notifications (Amber, 3s duration)
+### Warning Notifications (Amber, 6s duration)
 Non-critical warnings:
 
 ```typescript
@@ -99,16 +102,17 @@ notifications.dismiss();
 
 ## Styling Conventions
 
-**Color Scheme**:
-- **Info**: Blue (`border-blue-500`, `bg-blue-50`) - Matches Lightning's info flash
-- **Alert**: Red (`border-red-500`, `bg-red-50`) - Matches Lightning's error flash
-- **Success**: Green (`border-green-500`, `bg-green-50`)
-- **Warning**: Amber (`border-amber-500`, `bg-amber-50`)
+**Color Scheme** (all classes carry Tailwind's `!` important prefix to override Sonner's
+defaults — see `lib/notifications.ts`):
+- **Info**: Blue (`!bg-blue-50`, `!border-l-4`, `!border-l-blue-500`)
+- **Alert**: Red (`!bg-red-50`, `!border-l-4`, `!border-l-red-500`)
+- **Success**: Green (`!bg-green-50`, `!border-l-4`, `!border-l-green-500`)
+- **Warning**: Amber (`!bg-amber-50`, `!border-l-4`, `!border-l-amber-500`)
 
-**Duration**:
-- Info/Success: 2 seconds (quick confirmation)
-- Warning: 3 seconds (middle ground)
-- Alert: 4 seconds (needs more attention)
+**Duration** (read the `duration:` literals in `notifications.ts`, not its JSDoc — the JSDoc
+is stale):
+- Info/Success: 3 seconds
+- Alert/Warning: 6 seconds
 - Override: Pass `duration` option for custom timing
 
 **Layout**:
@@ -205,13 +209,15 @@ vi.mock("sonner", () => ({
     warning: vi.fn(),
     dismiss: vi.fn(),
   },
+  // Toaster.tsx imports this; without it any test that renders Toaster gets undefined.
+  Toaster: () => null,
 }));
 
 // Test notification calls
 notifications.info({ title: "Test" });
 expect(toast.info).toHaveBeenCalledWith("Test", expect.objectContaining({
   classNames: expect.objectContaining({
-    toast: expect.stringContaining("border-blue-500")
+    toast: expect.stringContaining("!border-l-blue-500")
   })
 }));
 ```

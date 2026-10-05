@@ -134,6 +134,45 @@ defmodule LightningWeb.UserLiveTest do
       assert Repo.reload!(user) |> user_attrs_match?(@update_attrs)
     end
 
+    test "records the superuser behind a create, a change and a disable, but not a save that changes nothing",
+         %{conn: conn, user: superuser} do
+      {:ok, new_live, _html} = live(conn, Routes.user_edit_path(conn, :new))
+
+      assert {:error, {:live_redirect, _}} =
+               new_live
+               |> form("#user-form", user: @create_attrs)
+               |> render_submit()
+
+      created = Repo.get_by!(User, email: @create_attrs.email)
+
+      for attrs <- [
+            %{first_name: "Renamed"},
+            %{disabled: true},
+            %{first_name: "Renamed"}
+          ] do
+        {:ok, edit_live, _html} =
+          live(conn, Routes.user_edit_path(conn, :edit, created))
+
+        assert {:error, {:live_redirect, _}} =
+                 edit_live |> form("#user-form", user: attrs) |> render_submit()
+      end
+
+      %{entries: audits} = Lightning.Auditing.list_all()
+
+      assert Enum.all?(
+               audits,
+               &({&1.actor_type, &1.actor_id, &1.item_id} ==
+                   {:user, superuser.id, created.id})
+             )
+
+      assert audits |> Enum.map(&{&1.event, &1.changes.before}) |> Enum.sort() ==
+               [
+                 {"created", nil},
+                 {"updated", %{"disabled" => false}},
+                 {"updated", %{"first_name" => "some first_name"}}
+               ]
+    end
+
     test "updates user as support user", %{conn: conn} do
       user = user_fixture()
 
@@ -372,10 +411,11 @@ defmodule LightningWeb.UserLiveTest do
     end
 
     test "retains a cancel deletion button for superusers pending deletion", %{
-      conn: conn,
-      user: user
+      conn: conn
     } do
-      user
+      superuser = superuser_fixture()
+
+      superuser
       |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
       |> Repo.update!()
 
@@ -383,7 +423,7 @@ defmodule LightningWeb.UserLiveTest do
 
       assert index_live
              |> has_element?(
-               "a#cancel-deletion-#{user.id}",
+               "a#cancel-deletion-#{superuser.id}",
                "Cancel deletion"
              )
     end
@@ -468,10 +508,11 @@ defmodule LightningWeb.UserLiveTest do
     end
 
     test "does not enable the `Delete now` button for a superuser", %{
-      conn: conn,
-      user: user
+      conn: conn
     } do
-      user
+      superuser = superuser_fixture()
+
+      superuser
       |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
       |> Repo.update!()
 
@@ -480,7 +521,7 @@ defmodule LightningWeb.UserLiveTest do
       assert(
         index_live
         |> has_element?(
-          "span#delete-now-#{user.id}.cursor-not-allowed",
+          "span#delete-now-#{superuser.id}.cursor-not-allowed",
           "Delete now"
         )
       )
@@ -488,7 +529,7 @@ defmodule LightningWeb.UserLiveTest do
       refute(
         index_live
         |> has_element?(
-          "a#delete-now-#{user.id}",
+          "a#delete-now-#{superuser.id}",
           "Delete now"
         )
       )
@@ -689,22 +730,22 @@ defmodule LightningWeb.UserLiveTest do
       conn: conn,
       user: _user
     } do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, Routes.user_index_path(conn, :index))
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
 
     test "a regular user cannot access a user edit page", %{
       conn: conn,
       user: user
     } do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, Routes.user_edit_path(conn, :edit, user.id))
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
   end
 

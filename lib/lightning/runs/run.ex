@@ -41,6 +41,8 @@ defmodule Lightning.Run do
              :final_dataclip_id
            ]}
 
+  @active_states [:available, :claimed, :started]
+
   @final_states [
     :success,
     :failed,
@@ -51,7 +53,7 @@ defmodule Lightning.Run do
     :lost
   ]
 
-  @states [:available, :claimed, :started] ++ @final_states
+  @states @active_states ++ @final_states
 
   @doc """
   Returns all possible states for a run.
@@ -64,11 +66,43 @@ defmodule Lightning.Run do
   def final_states, do: @final_states
 
   @doc """
-  Returns the list of failure states for a run.
+  Returns the list of active (in-progress) states for a run.
 
-  These are all final states except :success.
+  These are all non-final states: available, claimed, and started.
   """
-  def failure_states, do: final_states() -- [:success]
+  def active_states, do: @active_states
+
+  # The worker's own vocabulary for a finished run. `Handlers.CompleteRun` reads
+  # this inbound to turn a reason into a state; `Workflows.Stats` reads it back
+  # out to name a run-level failure in an error signature. One table, so the two
+  # directions cannot drift. `:lost` is Lightning's own word — a worker never
+  # reports it, since a lost run is one that stopped reporting.
+  @state_reasons %{
+    success: "ok",
+    failed: "fail",
+    crashed: "crash",
+    cancelled: "cancel",
+    killed: "kill",
+    exception: "exception",
+    lost: "lost"
+  }
+
+  @doc """
+  Returns the worker reason each final state came from, keyed by state.
+  """
+  def state_reasons, do: @state_reasons
+
+  @states_by_reason Map.new(@state_reasons, fn {state, reason} ->
+                      {reason, state}
+                    end)
+
+  @doc """
+  Returns the final state each worker reason maps to, keyed by reason.
+
+  The inverse of `state_reasons/0`, built from the same table so the two
+  directions cannot drift.
+  """
+  def states_by_reason, do: @states_by_reason
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

@@ -55,6 +55,30 @@ defmodule LightningWeb.UserConfirmationControllerTest do
 
       refute_email_sent(subject: "Confirm your OpenFn account")
     end
+
+    test "is rate-limited per account, and says so rather than claiming a send",
+         %{conn: conn} do
+      user = insert(:user, confirmed_at: nil)
+      logged_in = log_in_user(conn, user)
+
+      answers =
+        for _ <- 1..4 do
+          conn = get(logged_in, "/users/send-confirmation-email")
+
+          {redirected_to(conn), Phoenix.Flash.get(conn.assigns.flash, :info)}
+        end
+
+      assert [sent, sent, sent, {"/projects", throttled}] = answers
+
+      assert sent == {"/projects", "Confirmation email sent successfully"}
+      assert throttled =~ "you can request another in a few minutes"
+
+      for _ <- 1..3 do
+        assert_email_sent(subject: "Confirm your OpenFn account", to: user.email)
+      end
+
+      refute_email_sent(subject: "Confirm your OpenFn account")
+    end
   end
 
   describe "POST /users/confirm" do
@@ -91,6 +115,37 @@ defmodule LightningWeb.UserConfirmationControllerTest do
                "If your email is in our system"
 
       refute Repo.get_by(Accounts.UserToken, user_id: user.id)
+    end
+
+    test "answers a throttled request exactly as it answers an allowed one", %{
+      conn: conn,
+      user: user
+    } do
+      request = fn ->
+        post(conn, Routes.user_confirmation_path(conn, :create), %{
+          "user" => %{"email" => user.email}
+        })
+      end
+
+      allowed = request.()
+      for _ <- 1..2, do: request.()
+
+      for _ <- 1..3 do
+        assert_email_sent(subject: "Confirm your OpenFn account", to: user)
+      end
+
+      throttled = request.()
+
+      refute_email_sent(subject: "Confirm your OpenFn account")
+      assert Enum.count(Repo.all(Accounts.UserToken)) == 3
+
+      assert throttled.status == allowed.status
+      assert redirected_to(throttled) == redirected_to(allowed)
+
+      assert Phoenix.Flash.get(throttled.assigns.flash, :info) ==
+               Phoenix.Flash.get(allowed.assigns.flash, :info)
+
+      assert throttled.resp_body == allowed.resp_body
     end
 
     test "does not send confirmation token if email is invalid", %{conn: conn} do

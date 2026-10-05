@@ -3,8 +3,6 @@ defmodule Lightning.Invocation.QueryTest do
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Query
-  alias Lightning.Workflows
-  alias Lightning.Workflows.Trigger
 
   import Ecto.Query
   import Lightning.Factories
@@ -53,38 +51,6 @@ defmodule Lightning.Invocation.QueryTest do
     assert [%{id: ^step1_id}] = Query.steps_for(user) |> Repo.all()
   end
 
-  test "any_step/0 returns only 1 result when used in a preload for a job" do
-    %{jobs: [job1]} = workflow = insert(:simple_workflow)
-
-    insert(:step, job: job1)
-    insert(:step, job: job1)
-
-    assert Repo.preload(workflow, [
-             :edges,
-             triggers: Trigger.with_auth_methods_query(),
-             jobs: {Workflows.jobs_ordered_subquery(), [:credential, :steps]}
-           ])
-           |> count_steps() == 2
-
-    assert Repo.preload(workflow, [
-             :edges,
-             triggers: Trigger.with_auth_methods_query(),
-             jobs: {
-               Workflows.jobs_ordered_subquery(),
-               [:credential, steps: Query.any_step()]
-             }
-           ])
-           |> count_steps == 1
-  end
-
-  defp count_steps(workflow) do
-    workflow
-    |> Map.get(:jobs)
-    |> Enum.at(0)
-    |> Map.get(:steps)
-    |> Enum.count()
-  end
-
   describe "select_as_input_text/1" do
     test "with a `http_request` dataclip - nests body and request as JSON text" do
       _dataclip =
@@ -113,34 +79,7 @@ defmodule Lightning.Invocation.QueryTest do
              } = body
     end
 
-    test "with a `kafka` dataclip - nests body and request as JSON text" do
-      _dataclip =
-        insert(
-          :dataclip,
-          type: :kafka,
-          body: %{"key" => "value"},
-          request: %{"partition" => 9}
-        )
-
-      query = from(d in Dataclip)
-
-      result =
-        query
-        |> Query.select_as_input_text()
-        |> Repo.one()
-
-      assert %Dataclip{body: body_text} = result
-      assert is_binary(body_text)
-
-      body = Jason.decode!(body_text)
-
-      assert %{
-               "data" => %{"key" => "value"},
-               "request" => %{"partition" => 9}
-             } = body
-    end
-
-    test "dataclip neither `http_request` nor `kafka` - does not nest body, returns as JSON text" do
+    test "dataclip that is not `http_request` - does not nest body, returns as JSON text" do
       _dataclip =
         insert(
           :dataclip,

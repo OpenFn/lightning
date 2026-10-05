@@ -4,9 +4,11 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
   @moduletag :capture_log
 
   import Mox
+  import Ecto.Query
   import Lightning.Factories
 
   alias Lightning.AiAssistant
+  alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.MessageProcessor
 
   # Note: Integration tests for I/O data scrubbing are tested at lower levels:
@@ -29,8 +31,9 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       case key do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
-        :timeout -> 5_000
-        :streaming_timeout -> 120_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
 
@@ -329,6 +332,303 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
       assert assistant_msg != nil
       assert assistant_msg.content == "Global response"
+      # Flat-string responses have no timeline
+      assert assistant_msg.response_segments == []
+    end
+
+    # A raise on our side is the one failure whose text must not reach the
+    # panel: it carries module names, SQL detail and inspected payloads.
+    test "an exception mid-stream is recorded without its text", %{
+      user: user,
+      project: project
+    } do
+      session = insert(:chat_session, user: user, project: project)
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "help",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        raising =
+          Stream.map([:boom], fn _ ->
+            raise "postgrex disconnected on internal-host-7"
+          end)
+
+        {:ok, %Tesla.Env{status: 200, body: raising}}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = Repo.get!(ChatMessage, user_message.id)
+
+      assert reloaded.status == :error
+      assert reloaded.failure_category == :internal
+
+      assert reloaded.failure_message ==
+               "Something went wrong. Please try again."
+
+      refute reloaded.failure_message =~ "internal-host-7"
+    end
+
+    # A retry writes only :pending, so the run that follows it has to be what
+    # clears the last attempt's failure. Otherwise a message that failed and
+    # then succeeded is broadcast as :success carrying the old reason.
+    test "a retry that succeeds leaves no failure behind", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "help",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, %Finch.TransportError{reason: :econnrefused}}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      failed = Repo.get!(ChatMessage, user_message.id)
+      assert failed.status == :error
+      assert failed.failure_category == :upstream_error
+      assert failed.failure_message
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "here you go",
+          "usage" => %{}
+        })
+      )
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      retried = Repo.get!(ChatMessage, user_message.id)
+      assert retried.status == :success
+      refute retried.failure_category
+      refute retried.failure_message
+    end
+
+    test "marks a reply whose code edits all failed to apply", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{"message_options" => %{"use_global_assistant" => true}}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "fix the mapping",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Here is what I changed.",
+          "usage" => %{},
+          "meta" => %{
+            "subagent_calls" => [
+              %{
+                "_call_metadata" => %{"subagent" => "job_agent"},
+                "diff" => %{
+                  "patches_applied" => 0,
+                  "warning" =>
+                    "Failed to apply edit: KeyError at /app/services/job_chat.py"
+                }
+              }
+            ]
+          }
+        })
+      )
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      assert assistant.meta["code_change_failed"] == true
+
+      # Apollo's warning carries a container path, so it stays out of the row.
+      assert log =~ "Apollo applied no code edits"
+      refute assistant.content =~ "job_chat.py"
+    end
+
+    test "does not mark a reply that still produced a workflow", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{"message_options" => %{"use_global_assistant" => true}}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "fix both steps",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Changed one of them.",
+          "usage" => %{},
+          "attachments" => [
+            %{"type" => "workflow_yaml", "content" => "workflow:\n  name: new"}
+          ],
+          "meta" => %{
+            "subagent_calls" => [
+              %{"diff" => %{"patches_applied" => 0}},
+              %{"diff" => %{"patches_applied" => 1}}
+            ]
+          }
+        })
+      )
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      refute assistant.meta["code_change_failed"]
+    end
+
+    test "persists the segments timeline alongside the flat response",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1"
+        }
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "add a step to my workflow",
+            user: user,
+            code: "workflow:\n  name: test"
+          },
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Here's the final result.",
+          "response_segments" => [
+            %{"type" => "text", "content" => "I'm going to add a step."},
+            %{"type" => "status", "content" => "Adding step send-to-gmail..."},
+            %{"type" => "text", "content" => "Here's the final result."},
+            %{"type" => "unknown", "content" => "dropped during normalization"}
+          ],
+          "attachments" => [
+            %{"type" => "workflow_yaml", "content" => "workflow:\n  name: new"}
+          ],
+          "usage" => %{}
+        })
+      )
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      # Content is the flat response verbatim; segments keep the full timeline
+      # (minus unrecognised entries); code comes from attachments.
+      assert %{
+               content: "Here's the final result.",
+               response_segments: [
+                 %ChatMessage.Segment{
+                   type: :text,
+                   content: "I'm going to add a step."
+                 },
+                 %ChatMessage.Segment{
+                   type: :status,
+                   content: "Adding step send-to-gmail..."
+                 },
+                 %ChatMessage.Segment{
+                   type: :text,
+                   content: "Here's the final result."
+                 }
+               ],
+               code: "workflow:\n  name: new",
+               meta: %{"from_global" => true}
+             } = assistant_msg
     end
 
     test "dispatches to workflow chat when use_global_assistant is not set", %{
@@ -384,6 +684,704 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
       assert assistant_msg != nil
       assert assistant_msg.content == "Workflow response"
+    end
+
+    test "clamps segments over the cap instead of failing the save",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1"
+        }
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "add a step", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      max = ChatMessage.max_response_segments()
+
+      segments =
+        for i <- 1..(max + 1) do
+          %{"type" => "text", "content" => "segment #{i}"}
+        end
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Done!",
+          "response_segments" => segments,
+          "usage" => %{}
+        })
+      )
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      assert length(assistant_msg.response_segments) == max
+      assert log =~ "over the #{max}-segment cap"
+    end
+
+    test "persists a flat message when every segment is invalid",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1"
+        }
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "add a step", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Done!",
+          "response_segments" => [
+            %{"type" => "thinking", "content" => "unknown type"},
+            %{"content" => "no type"}
+          ],
+          "usage" => %{}
+        })
+      )
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      # All-invalid segments degrade to a flat message (the key is omitted,
+      # so the column stays NULL and loads as []), never a save failure.
+      assert assistant_msg.content == "Done!"
+      assert assistant_msg.response_segments == []
+      assert log =~ "2 invalid"
+    end
+
+    test "broadcasts valid status events as streaming segments and drops malformed ones",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1"
+        }
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "add a step", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      segment = %{
+        "type" => "status",
+        "content" => "Adding step send-to-gmail..."
+      }
+
+      sse_body =
+        "event: status\ndata: #{Jason.encode!(segment)}\n\n" <>
+          "event: status\ndata: {not json\n\n" <>
+          "event: status\ndata: #{Jason.encode!(%{"type" => "status", "content" => 123})}\n\n" <>
+          "event: complete\ndata: #{Jason.encode!(%{"response" => "Done!", "usage" => %{}})}\n\n"
+
+      Mox.stub(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+        assert url =~ "/stream"
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           headers: [{"content-type", "text/event-stream"}],
+           body: sse_body
+         }}
+      end)
+
+      Lightning.subscribe("ai_session:#{session.id}")
+      session_id = session.id
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      # The well-formed status event reaches the session topic verbatim...
+      assert_receive {:ai_assistant, :streaming_segment,
+                      %{segment: ^segment, session_id: ^session_id}}
+
+      # ...while the two malformed ones are dropped with a warning, never
+      # broadcast.
+      refute_receive {:ai_assistant, :streaming_segment, _}, 100
+      assert log =~ "Dropping malformed status event"
+    end
+
+    test "marks the message as error when a streaming request returns non-2xx",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "generate a workflow", user: user},
+          []
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      # Streaming requests carry a lazy Stream body even on error responses,
+      # so the error handler must not index it like a decoded JSON map.
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+        assert url =~ "/services/workflow_chat/stream"
+
+        {:ok,
+         %Tesla.Env{
+           status: 500,
+           body: Stream.map(["upstream exploded"], & &1)
+         }}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{
+                 "message_id" => user_message.id
+               })
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assert Enum.find(reloaded.messages, &(&1.role == :user)).status == :error
+      refute Enum.find(reloaded.messages, &(&1.role == :assistant))
+    end
+
+    test "marks the message as error when the assistant reply fails to save",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "generate a workflow", user: user},
+          []
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      # A response over the 10k content cap fails the ChatMessage changeset,
+      # exercising the {:error, %Ecto.Changeset{}} branch in
+      # handle_processing_result/2.
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => String.duplicate("x", 10_001),
+          "usage" => %{}
+        })
+      )
+
+      assert :ok =
+               perform_job(MessageProcessor, %{
+                 "message_id" => user_message.id
+               })
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assert Enum.find(reloaded.messages, &(&1.role == :user)).status == :error
+      refute Enum.find(reloaded.messages, &(&1.role == :assistant))
+    end
+  end
+
+  describe "fetch_and_scrub_io_data/1 via process_job_message/2" do
+    test "attaching your OWN step egresses its scrubbed input/output to Apollo",
+         %{user: user, project: project} do
+      %{job: job, step: step} = step_in_run(project)
+
+      user_message = io_attach_message(user, project, job, step.id)
+
+      respond = apollo_streaming_reply()
+
+      # This `expect` takes precedence over the setup `Mox.stub` for the first
+      # (and only) POST this path makes. The scrubbed IO rides in "context".
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert env.url =~ "/services/job_chat/stream"
+
+        context = Jason.decode!(env.body)["context"]
+
+        # Scrubber.scrub_values/1 preserves keys/shape, reduces values to their
+        # type: integers -> "number", strings -> "string", etc.
+        assert context["input"] == %{"a" => "number"}
+        assert context["output"] == %{"b" => "number"}
+
+        respond.(env, opts)
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+    end
+
+    test "attaching a FOREIGN step must not egress its IO (regression guard)",
+         %{user: user, project: project} do
+      # The attacker's own job, in their own project — makes the message itself
+      # legitimate/authorized.
+      %{job: own_job} = step_in_run(project)
+
+      # A step that lives in a DIFFERENT project the attacker has no rights to.
+      foreign_project = insert(:project)
+      %{step: foreign_step} = step_in_run(foreign_project)
+
+      # Own job on the message, but a foreign step_id in message_options —
+      # exactly the IDOR: step_id is never scoped to the session's project.
+      user_message = io_attach_message(user, project, own_job, foreign_step.id)
+
+      respond = apollo_streaming_reply()
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        context = Jason.decode!(env.body)["context"]
+
+        # After the fix, get_step_with_dataclips/… refuses to load a step that
+        # isn't reachable from a run in the session's project, so no IO is
+        # attached and build_context/2 omits the keys entirely (=> nil once
+        # JSON-decoded).
+        #
+        # ON THE CURRENT VULNERABLE CODE THIS FAILS: context["input"] /
+        # ["output"] come back populated with the foreign step's scrubbed
+        # structure — that failure *is* the confirmed cross-tenant leak.
+        assert context["input"] == nil
+        assert context["output"] == nil
+
+        respond.(env, opts)
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+    end
+
+    # --- helpers ---------------------------------------------------------------
+
+    # A step wired to a real run in `project` (via run_step), with input + output
+    # dataclips carrying simple bodies so both scrub branches run. Returning the
+    # step through a run is what keeps the happy-path test valid after the fix
+    # (which scopes step_id to a run in the session's project).
+    defp step_in_run(project) do
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      snapshot = insert(:snapshot, workflow: workflow)
+      work_order = insert(:workorder, workflow: workflow, snapshot: snapshot)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          snapshot: snapshot,
+          dataclip: build(:dataclip, project: project),
+          starting_job: job
+        )
+
+      step =
+        insert(:step,
+          job: job,
+          snapshot: snapshot,
+          input_dataclip: build(:dataclip, project: project, body: %{"a" => 1}),
+          output_dataclip: build(:dataclip, project: project, body: %{"b" => 2})
+        )
+
+      insert(:run_step, run: run, step: step)
+
+      %{
+        workflow: workflow,
+        job: job,
+        run: run,
+        step: step,
+        snapshot: snapshot
+      }
+    end
+
+    # A job_code session in `project` requesting IO attachment for `step_id`,
+    # plus the user message that carries `job` (so job_chat?/2 routes to the job
+    # path). Returns the persisted user message.
+    defp io_attach_message(user, project, job, step_id) do
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          project: project,
+          job_id: job.id,
+          meta: %{
+            "message_options" => %{
+              "attach_io_data" => true,
+              "step_id" => step_id
+            }
+          }
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "summarise my step io", user: user, job: job},
+          []
+        )
+
+      Enum.find(updated_session.messages, &(&1.role == :user))
+    end
+
+    defp apollo_streaming_reply do
+      Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+        "response" => "AI response",
+        "history" => [
+          %{"role" => "user", "content" => "test"},
+          %{"role" => "assistant", "content" => "AI response"}
+        ]
+      })
+    end
+  end
+
+  describe "attachments via process_global_message/2" do
+    test "sends logs and scrubbed step IO when both are ticked", %{
+      user: user,
+      project: project
+    } do
+      %{job: job, run: run, step: step} = step_in_run(project)
+
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "boom",
+        level: :error,
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      message =
+        global_message(user, project, %{
+          "log" => true,
+          "attach_io_data" => true,
+          "step_id" => step.id,
+          "follow_run_id" => run.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert env.url =~ "/services/global_chat/stream"
+
+        assert [
+                 %{"type" => "log", "content" => [line]},
+                 %{
+                   "type" => "input_dataclip",
+                   "content" => %{
+                     "step" => input_step,
+                     "data" => %{"a" => "number"}
+                   }
+                 },
+                 %{
+                   "type" => "output_dataclip",
+                   "content" => %{
+                     "step" => output_step,
+                     "data" => %{"b" => "number"}
+                   }
+                 }
+               ] = Jason.decode!(env.body)["attachments"]
+
+        assert input_step == job.name
+        assert output_step == job.name
+
+        assert line["message"] == "boom"
+        assert line["level"] == "error"
+        assert line["job_id"] == job.id
+        assert line["step_id"] == step.id
+
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "sends no attachments when nothing is ticked", %{
+      user: user,
+      project: project
+    } do
+      %{run: run, step: step} = step_in_run(project)
+      insert(:log_line, run: run, step: step, message: "boom")
+
+      message =
+        global_message(user, project, %{
+          "step_id" => step.id,
+          "follow_run_id" => run.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "sends the I/O of every step in the run, not just the selected one", %{
+      user: user,
+      project: project
+    } do
+      %{workflow: workflow, job: job, run: run, step: step, snapshot: snapshot} =
+        step_in_run(project)
+
+      other_job = insert(:job, workflow: workflow, name: "Second step")
+
+      other_step =
+        insert(:step,
+          job: other_job,
+          snapshot: snapshot,
+          input_dataclip: build(:dataclip, project: project, body: %{"c" => 3}),
+          output_dataclip: build(:dataclip, project: project, body: %{"d" => 4})
+        )
+
+      insert(:run_step, run: run, step: other_step)
+
+      # Highlighted, and not what decides the attachment.
+      message =
+        global_message(user, project, %{
+          "attach_io_data" => true,
+          "step_id" => step.id,
+          "follow_run_id" => run.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        attachments = Jason.decode!(env.body)["attachments"]
+
+        assert attachments |> Enum.map(& &1["content"]["step"]) |> Enum.uniq() ==
+                 [job.name, "Second step"]
+
+        assert Enum.map(attachments, & &1["content"]["data"]) == [
+                 %{"a" => "number"},
+                 %{"b" => "number"},
+                 %{"c" => "number"},
+                 %{"d" => "number"}
+               ]
+
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "warns and sends nothing when the run's steps kept no data", %{
+      user: user,
+      project: project
+    } do
+      %{run: run, step: step} = step_in_run(project)
+
+      # The step exists, so the run resolves; it just has nothing to attach.
+      Lightning.Repo.update_all(
+        from(s in Lightning.Invocation.Step),
+        set: [input_dataclip_id: nil, output_dataclip_id: nil]
+      )
+
+      # A step_id is sent, so a step-scoped lookup would have had something to
+      # go on. What is missing is the data itself.
+      message =
+        global_message(user, project, %{
+          "attach_io_data" => true,
+          "step_id" => step.id,
+          "follow_run_id" => run.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      # The run resolves, so the warning cannot hang off that.
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{"message_id" => message.id})
+        end)
+
+      assert logs =~ "the run's steps kept none"
+    end
+
+    test "skips the I/O attachment when the run id is not a uuid", %{
+      user: user,
+      project: project
+    } do
+      # A run id that cannot be cast used to raise Ecto.Query.CastError from
+      # inside the Oban job, failing the whole message rather than dropping
+      # the one attachment the user asked for.
+      message =
+        global_message(user, project, %{
+          "attach_io_data" => true,
+          "step_id" => Ecto.UUID.generate(),
+          "follow_run_id" => "not-a-uuid"
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "omits each attachment whose source is missing", %{
+      user: user,
+      project: project
+    } do
+      message =
+        global_message(user, project, %{"log" => true, "attach_io_data" => true})
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "must not egress logs or IO from outside the session's project", %{
+      user: user,
+      project: project
+    } do
+      foreign_project = insert(:project)
+      %{run: foreign_run, step: foreign_step} = step_in_run(foreign_project)
+      insert(:log_line, run: foreign_run, step: foreign_step, message: "secret")
+
+      message =
+        global_message(user, project, %{
+          "log" => true,
+          "attach_io_data" => true,
+          "step_id" => foreign_step.id,
+          "follow_run_id" => foreign_run.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    # --- helpers ---------------------------------------------------------------
+
+    # A global session in `project`. `opts` is merged into message_options,
+    # except "follow_run_id" which is lifted to session meta where the
+    # processor reads it from.
+    defp global_message(user, project, opts) do
+      {run_id, message_options} = Map.pop(opts, "follow_run_id")
+
+      meta = %{
+        "message_options" =>
+          Map.put(message_options, "use_global_assistant", true)
+      }
+
+      meta = if run_id, do: Map.put(meta, "follow_run_id", run_id), else: meta
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: insert(:workflow, project: project),
+          meta: meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "why did this fail?",
+            user: user,
+            code: "workflow:\n  name: test"
+          },
+          []
+        )
+
+      Enum.find(updated_session.messages, &(&1.role == :user))
+    end
+
+    defp global_reply do
+      Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+        "response" => "Global response",
+        "usage" => %{}
+      })
     end
   end
 end

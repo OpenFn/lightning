@@ -92,10 +92,24 @@ defmodule Lightning.Credentials.OauthClientTest do
 
     test "creates changeset with optional attributes" do
       optional_attrs = Map.put_new(@valid_attrs, :global, true)
-      changeset = OauthClient.changeset(%OauthClient{}, optional_attrs)
+
+      changeset =
+        OauthClient.changeset(%OauthClient{}, optional_attrs, allow_global: true)
 
       assert changeset.valid?
       assert changeset.changes.global == true
+    end
+
+    test "does not cast :global unless allow_global is set" do
+      attrs = Map.put(@valid_attrs, :global, true)
+
+      refute Map.has_key?(
+               OauthClient.changeset(%OauthClient{}, attrs).changes,
+               :global
+             )
+
+      assert OauthClient.changeset(%OauthClient{}, attrs, allow_global: true).changes.global ==
+               true
     end
 
     test "handles association casts for projects" do

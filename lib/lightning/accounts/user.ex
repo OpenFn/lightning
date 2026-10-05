@@ -26,6 +26,7 @@ defmodule Lightning.Accounts.User do
     field :last_name, :string
     field :email, :string
     field :password, :string, virtual: true, redact: true
+    field :confirmed, :boolean, virtual: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :role, RolesEnum, default: :user
@@ -53,6 +54,34 @@ defmodule Lightning.Accounts.User do
     timestamps()
   end
 
+  @doc """
+  Returns true when the user's email is on the @openfn.org domain.
+
+  Used to derive Langfuse tracking flags (metrics_opt_in / persona) when
+  making AI chat calls to Apollo.
+  """
+  @spec core_contributor?(t()) :: boolean()
+  def core_contributor?(%__MODULE__{email: email}) when is_binary(email) do
+    email |> String.downcase() |> String.ends_with?("@openfn.org")
+  end
+
+  def core_contributor?(_), do: false
+
+  @doc """
+  Returns the Langfuse persona string for a user.
+
+  `"core-contributor"` for @openfn.org users, `"user"` otherwise.
+  """
+  @spec langfuse_persona(t()) :: String.t()
+  def langfuse_persona(%__MODULE__{} = user) do
+    if core_contributor?(user), do: "core-contributor", else: "user"
+  end
+
+  @doc """
+  A user changeset for creating a user.
+
+  `confirmed: true` confirms the email; nothing unconfirms one.
+  """
   def changeset(user, attrs) do
     user
     |> cast(attrs, [
@@ -61,35 +90,76 @@ defmodule Lightning.Accounts.User do
       :email,
       :password,
       :contact_preference,
-      :role
+      :role,
+      :confirmed
     ])
-    |> validate_name()
-    |> trim_name()
-    |> validate_email()
-    |> maybe_validate_password([])
+    |> validate_names()
+    |> validate_unique_email()
+    |> maybe_validate_password()
+    |> confirm_when_asked()
   end
 
-  defp maybe_validate_password(%{data: %{id: user_id}} = changeset, opts)
+  defp validate_names(changeset) do
+    [:first_name, :last_name]
+    |> Enum.reduce(changeset, fn field, changeset ->
+      changeset
+      |> Lightning.Validators.validate_name(field)
+      |> validate_length(field, max: 255, count: :codepoints)
+    end)
+    |> validate_required([:first_name, :last_name], message: "can't be blank")
+  end
+
+  defp validate_unique_email(changeset) do
+    changeset
+    |> validate_email()
+    |> unique_constraint(:email)
+  end
+
+  defp maybe_validate_password(%{data: %{id: user_id}} = changeset)
        when not is_nil(user_id) do
+    changeset = keep_current_password(changeset)
+
     if get_change(changeset, :password) do
-      validate_password(changeset, opts)
+      validate_password(changeset, [])
     else
       changeset
     end
   end
 
-  defp maybe_validate_password(changeset, opts) do
-    validate_password(changeset, opts)
+  defp maybe_validate_password(changeset) do
+    validate_password(changeset, [])
   end
 
+  # Checked against the password rules first: bcrypt ignores a NUL and
+  # anything past 72 bytes, so an invalid password can verify as the current
+  # one and must still be refused.
+  defp keep_current_password(%{data: user} = changeset) do
+    with password when is_binary(password) <- get_change(changeset, :password),
+         true <- byte_size(password) <= 72,
+         [] <-
+           password_changeset(user, %{password: password}, hash_password: false).errors,
+         true <- valid_password?(user, password) do
+      delete_change(changeset, :password)
+    else
+      _ -> changeset
+    end
+  end
+
+  defp confirm_when_asked(changeset) do
+    if get_change(changeset, :confirmed) == true and
+         is_nil(get_field(changeset, :confirmed_at)),
+       do: confirm_changeset(changeset),
+       else: changeset
+  end
+
+  # `hashed_password` is a type so `maybe_hash_password` can put it, but is
+  # never cast from the attrs.
   @common_registration_attrs %{
     first_name: :string,
     last_name: :string,
     email: :string,
     password: :string,
     hashed_password: :string,
-    disabled: :boolean,
-    scheduled_deletion: :utc_datetime,
     contact_preference:
       Ecto.ParameterizedType.init(Ecto.Enum, values: [:critical, :any])
   }
@@ -118,14 +188,13 @@ defmodule Lightning.Accounts.User do
      })}
     |> cast(
       attrs,
-      Map.keys(@common_registration_attrs) ++
-        [
-          :terms_accepted
-        ]
+      [
+        :terms_accepted
+        | Map.keys(@common_registration_attrs) -- [:hashed_password]
+      ]
     )
     |> validate_email()
-    |> validate_name()
-    |> trim_name()
+    |> validate_names()
     |> validate_password(opts)
     |> validate_change(:terms_accepted, fn :terms_accepted, terms_accepted ->
       if terms_accepted do
@@ -162,27 +231,18 @@ defmodule Lightning.Accounts.User do
     registration_fields = Map.merge(@common_registration_attrs, %{role: :string})
 
     {%{}, registration_fields}
-    |> cast(attrs, Map.keys(registration_fields))
+    |> cast(attrs, Map.keys(registration_fields) -- [:hashed_password])
     |> validate_email()
+    |> validate_names()
     |> validate_password(opts)
     |> put_change(:role, :superuser)
-  end
-
-  def validate_email_format(changeset) do
-    changeset
-    |> validate_required(:email, message: "can't be blank")
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-      message: "must have the @ sign and no spaces"
-    )
-    |> validate_length(:email, max: 160)
-    |> update_change(:email, &String.downcase/1)
   end
 
   def validate_email_exists(changeset) do
     changeset
     |> validate_change(:email, fn :email, email ->
       if Lightning.Repo.exists?(User |> where(email: ^email)) do
-        [email: "has already been taken"]
+        [email: {"has already been taken", validation: :unsafe_unique}]
       else
         []
       end
@@ -191,7 +251,7 @@ defmodule Lightning.Accounts.User do
 
   def validate_email(changeset) do
     changeset
-    |> validate_email_format()
+    |> Lightning.Validators.validate_email_format()
     |> validate_email_exists()
   end
 
@@ -199,12 +259,11 @@ defmodule Lightning.Accounts.User do
     changeset
     |> validate_required(:password, message: "can't be blank")
     |> validate_length(:password, min: 12, max: 72)
+    |> Lightning.Validators.validate_no_null_bytes(
+      :password,
+      "can't contain a NUL character"
+    )
     |> maybe_hash_password(opts)
-  end
-
-  defp validate_name(changeset) do
-    changeset
-    |> validate_required([:first_name, :last_name], message: "can't be blank")
   end
 
   defp maybe_hash_password(changeset, opts) do
@@ -222,12 +281,8 @@ defmodule Lightning.Accounts.User do
   end
 
   @doc """
-  A user changeset for user details:
-
-  - email
-  - first_name
-  - last_name
-  - role
+  A user changeset for changing a user's details, with the same rules as
+  `changeset/2`. A password that is already the user's changes nothing.
   """
   def details_changeset(user, attrs) do
     user
@@ -239,12 +294,13 @@ defmodule Lightning.Accounts.User do
       :role,
       :support_user,
       :disabled,
-      :scheduled_deletion
+      :scheduled_deletion,
+      :confirmed
     ])
-    |> validate_email()
-    |> maybe_validate_password([])
-    |> validate_name()
-    |> trim_name()
+    |> validate_names()
+    |> validate_unique_email()
+    |> maybe_validate_password()
+    |> confirm_when_asked()
     |> maybe_clear_scheduled_deletion()
   end
 
@@ -258,8 +314,7 @@ defmodule Lightning.Accounts.User do
   def info_changeset(user, attrs) do
     user
     |> cast(attrs, [:first_name, :last_name, :contact_preference])
-    |> validate_name()
-    |> trim_name()
+    |> validate_names()
   end
 
   @doc """
@@ -382,12 +437,6 @@ defmodule Lightning.Accounts.User do
         "This email doesn't match your current email"
       )
     end
-  end
-
-  defp trim_name(changeset) do
-    changeset
-    |> update_change(:first_name, &String.trim/1)
-    |> update_change(:last_name, &String.trim/1)
   end
 
   defp maybe_clear_scheduled_deletion(changeset) do

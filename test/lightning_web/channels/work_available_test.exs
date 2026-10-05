@@ -2,23 +2,21 @@ defmodule LightningWeb.WorkAvailableTest do
   use LightningWeb.ChannelCase, async: false
 
   import Lightning.Factories
+  import Lightning.TokenHelpers
 
   alias Lightning.WorkOrders
-  alias Lightning.Workers
 
   # this ensures the WorkAvailable server inherits the mox stubs
   setup :set_mox_from_context
 
   setup context do
-    {:ok, bearer, claims} =
-      Workers.WorkerToken.generate_and_sign(
-        %{},
-        Lightning.Config.worker_token_signer()
-      )
+    # `socket/3` bypasses `WorkerSocket.connect/2`, so the claims are assigned
+    # rather than verified — but they are still the shape ws-worker sends.
+    claims = ws_worker_claims()
 
     socket =
       socket(LightningWeb.WorkerSocket, "socket_id", %{
-        token: bearer,
+        token: raw_worker_token(claims),
         claims: claims,
         work_listener_debounce_time: context[:debounce_time] || 100
       })

@@ -4,18 +4,87 @@ defmodule Lightning.Workflows.JobTest do
   alias Lightning.Workflows.Job
   alias Lightning.Repo
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
+  # No space in the alphabet on purpose: the changeset trims before it measures,
+  # so a name that happens to end in one would be under the cap after trimming
+  # and the length test would pass or fail depending on the seed.
   defp random_job_name(length) do
     for _ <- 1..length,
         into: "",
         do:
-          <<Enum.random(
-              ~c"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
-            )>>
+          <<Enum.random(~c"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")>>
   end
 
   describe "changeset/2" do
+    setup :isolated_adaptors
+
+    test "a malformed id is a changeset error, not an Ecto.ChangeError on save" do
+      # An unsubstituted import placeholder reaching :id (a :binary_id field)
+      # passes cast/3 and would only raise when dumped on insert. validate_uuid
+      # surfaces it as a changeset error instead.
+      changeset =
+        Job.changeset(%Job{}, %{
+          id: "__ID_JOB_Envoyer-dans-DHIS2__",
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest"
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:id] == {"is not a valid UUID", []}
+    end
+
+    test "malformed FK ids are changeset errors, not Ecto.ChangeError on save" do
+      # workflow_id + keychain_credential_id together (no project_credential_id
+      # so validate_exclusive doesn't fire and override the UUID error).
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: "__ID_JOB_Fetch__",
+          keychain_credential_id: "__ID_CRED_Foo___"
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:workflow_id] == {"is not a valid UUID", []}
+
+      assert changeset.errors[:keychain_credential_id] ==
+               {"is not a valid UUID", []}
+
+      # project_credential_id in isolation (no keychain set).
+      project_changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          project_credential_id: "__ID_CRED_Foo___"
+        })
+
+      refute project_changeset.valid?
+
+      assert project_changeset.errors[:project_credential_id] ==
+               {"is not a valid UUID", []}
+    end
+
+    test "FKs left unset stay valid" do
+      workflow = insert(:workflow)
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "Test Job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: workflow.id
+        })
+
+      assert changeset.valid?
+      refute changeset.errors[:project_credential_id]
+      refute changeset.errors[:keychain_credential_id]
+    end
+
     test "accepts keychain_credential_id in changeset" do
       workflow = insert(:workflow)
 
@@ -152,17 +221,372 @@ defmodule Lightning.Workflows.JobTest do
       assert errors[:name] == ["job name should be at most 100 character(s)"]
     end
 
-    test "name can't contain non url-safe chars" do
-      ["My project @ OpenFn", "Can't have a / slash"]
+    test "the 100 character cap counts graphemes, not codepoints or bytes" do
+      # A ZWJ family is one grapheme, seven codepoints and 25 bytes. Ecto counts
+      # graphemes, so 12 of them are 12 characters and not 84 or 300.
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+      assert String.length(family) == 1
+
+      at_cap = String.duplicate("a", 88) <> String.duplicate(family, 12)
+      assert String.length(at_cap) == 100
+
+      refute Job.changeset(%Job{}, %{name: at_cap})
+             |> errors_on()
+             |> Map.get(:name)
+
+      over_cap = String.duplicate("a", 89) <> String.duplicate(family, 12)
+      assert String.length(over_cap) == 101
+
+      assert Job.changeset(%Job{}, %{name: over_cap})
+             |> errors_on()
+             |> Map.get(:name) ==
+               ["job name should be at most 100 character(s)"]
+    end
+
+    test "a name short in graphemes but too wide for the column is rejected" do
+      # 100 ZWJ families clear the product cap at 100 graphemes but are 700
+      # codepoints, and jobs.name is varchar(255).
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+      name = String.duplicate(family, 100)
+
+      assert String.length(name) == 100
+      assert name |> String.codepoints() |> length() == 700
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: name,
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: insert(:workflow).id
+        })
+
+      assert errors_on(changeset)[:name] == [
+               "job name is too long, please use a shorter one"
+             ]
+
+      assert {:error, changeset} = Repo.insert(changeset)
+      refute changeset.valid?
+    end
+
+    test "an over-long name gets one message, not two" do
+      # The column guard stays quiet when the product cap has already spoken.
+      errors =
+        Job.changeset(%Job{}, %{name: random_job_name(300)}) |> errors_on()
+
+      assert errors[:name] == ["job name should be at most 100 character(s)"]
+    end
+
+    test "a name may hold letters, marks, punctuation and symbols from any script" do
+      [
+        "Vérifier l'état",
+        "患者確認",
+        "تسجيل المريض",
+        "רישום מטופל",
+        "step 🎉",
+        "MailChimp June'24",
+        "Flujo 1: Registro en PS y gestión de perfiles",
+        "My project @ OpenFn",
+        "Can't have a / slash",
+        "source -> target",
+        "Ampersand & co",
+        "नमस्ते"
+      ]
       |> Enum.each(fn name ->
         errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
-        assert errors[:name] == ["job name has invalid format"]
+
+        refute errors[:name], "expected #{inspect(name)} to be accepted"
       end)
+    end
+
+    test "a name may not hold a control character" do
+      [
+        "nul\u{0000}byte",
+        "tab\u{0009}here",
+        "line\u{000A}break",
+        "carriage\u{000D}return",
+        "escape\u{001B}[31m",
+        "unit\u{001F}separator",
+        "delete\u{007F}",
+        "c1\u{0080}next",
+        "c1\u{009F}end",
+        "non\u{FFFE}character",
+        "non\u{FFFF}character"
+      ]
+      |> Enum.each(fn name ->
+        errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
+
+        assert errors[:name] == ["job name can't contain control characters"],
+               "expected #{inspect(name)} to be rejected"
+      end)
+    end
+
+    test "a name made only of invisible characters is blank" do
+      # Each of these takes no space and draws nothing, and String.trim/1 does
+      # not know about them.
+      for name <- [
+            "\u{200B}",
+            "\u{FEFF}",
+            "\u{200C}",
+            "\u{00AD}",
+            "\u{180E}",
+            "\u{200B}\u{FEFF}\u{00AD}"
+          ] do
+        errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
+
+        assert "can't be blank" in errors[:name],
+               "expected #{inspect(name)} to be rejected as blank"
+      end
+    end
+
+    test "consecutive joiners do not slip past the blank check" do
+      # String.graphemes/1 fuses a ZWJ-led run into one cluster, so a
+      # per-grapheme check would catch one joiner and miss two.
+      for name <- [
+            "\u{200D}\u{200D}",
+            "\u{200D}\u{200D}\u{200D}",
+            "\u{200B}\u{200D}\u{200D}",
+            "\u{2060}",
+            "\u{3164}",
+            "\u{FFA0}",
+            "\u{115F}",
+            "\u{1160}",
+            "\u{2800}",
+            "\u{200E}",
+            "\u{202E}",
+            "\u{FE0F}"
+          ] do
+        errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
+
+        assert "can't be blank" in errors[:name],
+               "expected #{inspect(name)} to be rejected as blank"
+      end
+    end
+
+    test "a body containing a NUL is a changeset error, not a jsonb crash" do
+      # Only the NUL. A body is code and legitimately holds newlines and tabs.
+      errors =
+        Job.changeset(%Job{}, %{
+          name: "step",
+          body: "fn(state => state)\u{0000}",
+          adaptor: "@openfn/language-common@latest"
+        })
+        |> errors_on()
+
+      assert errors[:body] == ["job body can't contain a null byte"]
+    end
+
+    test "a body may hold newlines, tabs and other control characters" do
+      for body <- ["a\nb", "a\tb", "a\r\nb", "a\u{001B}[31mb"] do
+        errors =
+          Job.changeset(%Job{}, %{
+            name: "step",
+            body: body,
+            adaptor: "@openfn/language-common@latest"
+          })
+          |> errors_on()
+
+        refute errors[:body], "expected #{inspect(body)} to be accepted"
+      end
+    end
+
+    test "a NUL in a body is rejected before the snapshot insert" do
+      project = insert(:project)
+
+      attrs = %{
+        name: "workflow with a bad job body",
+        project_id: project.id,
+        jobs: [
+          %{
+            id: Ecto.UUID.generate(),
+            name: "step",
+            body: "fn(state => state)\u{0000}",
+            adaptor: "@openfn/language-common@latest"
+          }
+        ],
+        triggers: [%{id: Ecto.UUID.generate(), type: :webhook}],
+        edges: []
+      }
+
+      assert {:error, changeset} =
+               Lightning.Workflows.save_workflow(attrs, insert(:user))
+
+      assert [job_changeset] = Ecto.Changeset.get_change(changeset, :jobs)
+
+      assert errors_on(job_changeset)[:body] == [
+               "job body can't contain a null byte"
+             ]
+    end
+
+    test "a name that merely contains an invisible character is fine" do
+      # ZWJ is how an emoji sequence is written, and several scripts need ZWNJ.
+      for name <- [
+            "\u{1F468}\u{200D}\u{1F469}",
+            "a\u{200B}b",
+            "\u{0915}\u{094D}\u{200C}\u{0937}"
+          ] do
+        errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
+
+        refute errors[:name], "expected #{inspect(name)} to be accepted"
+      end
+    end
+
+    test "a name is normalised to NFC on write" do
+      # e + combining acute: two codepoints going in, one coming out.
+      decomposed = "Ve\u{0301}rifier"
+      composed = "V\u{00E9}rifier"
+
+      refute decomposed == composed
+
+      changeset = Job.changeset(%Job{}, %{name: decomposed})
+
+      assert Ecto.Changeset.get_change(changeset, :name) == composed
+    end
+
+    test "the name is trimmed before it is validated, not after" do
+      # 100 characters plus trailing space. The changeset has to trim before it
+      # measures, or this is 105 characters and a name exactly at the cap is
+      # rejected.
+      name = String.duplicate("a", 100) <> "     "
+
+      changeset = Job.changeset(%Job{}, %{name: name})
+
+      refute errors_on(changeset)[:name]
+
+      assert Ecto.Changeset.get_change(changeset, :name) ==
+               String.duplicate("a", 100)
+    end
+
+    test "a whitespace-only name is blank" do
+      errors = Job.changeset(%Job{}, %{name: "   "}) |> errors_on()
+
+      assert errors[:name] == ["job name can't be blank"]
+    end
+
+    test "a NUL in a name is a changeset error, not a crash on the snapshot insert" do
+      project = insert(:project)
+
+      attrs = %{
+        name: "workflow with a bad job name",
+        project_id: project.id,
+        jobs: [
+          %{
+            id: Ecto.UUID.generate(),
+            name: "before\u{0000}after",
+            body: "fn(state => state)",
+            adaptor: "@openfn/language-common@latest"
+          }
+        ],
+        triggers: [%{id: Ecto.UUID.generate(), type: :webhook}],
+        edges: []
+      }
+
+      assert {:error, changeset} =
+               Lightning.Workflows.save_workflow(attrs, insert(:user))
+
+      assert [job_changeset] = Ecto.Changeset.get_change(changeset, :jobs)
+
+      assert errors_on(job_changeset)[:name] == [
+               "job name can't contain control characters"
+             ]
     end
 
     test "must have an adaptor" do
       errors = Job.changeset(%Job{}, %{adaptor: nil}) |> errors_on()
       assert errors[:adaptor] == ["job adaptor can't be blank"]
+    end
+
+    test "accepts well-formed, registry-listed adaptor strings" do
+      ensure_adaptor("@openfn/language-common")
+      ensure_adaptor("@openfn/language-http")
+
+      [
+        "@openfn/language-common@latest",
+        "@openfn/language-http@1.2.3",
+        "@openfn/language-http@1.2.3-pre",
+        "@openfn/language-http",
+        "@openfn/language-common"
+      ]
+      |> Enum.each(fn adaptor ->
+        errors =
+          Job.changeset(%Job{}, %{
+            name: "job",
+            body: "fn(state => state)",
+            adaptor: adaptor
+          })
+          |> errors_on()
+
+        refute errors[:adaptor], "expected #{inspect(adaptor)} to be accepted"
+      end)
+    end
+
+    test "accepts an adaptor the catalogue listing excludes" do
+      ensure_adaptor("@openfn/language-collections")
+
+      errors =
+        Job.changeset(%Job{}, %{
+          name: "job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-collections@1.0.0"
+        })
+        |> errors_on()
+
+      refute errors[:adaptor]
+    end
+
+    test "a never-loaded catalogue refuses the adaptor as not ready, then rejects it once loaded" do
+      # With no expectations the production Scheduler's load fails, as it
+      # would with npm unreachable.
+      params = %{
+        name: "job",
+        body: "fn(state => state)",
+        adaptor: "@openfn/language-totally-unseeded-xyz@1.0.0"
+      }
+
+      assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
+               ["adaptor catalogue is not ready yet, try again shortly"]
+
+      ensure_adaptor("@openfn/language-http")
+
+      assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
+               ["is not a recognised adaptor"]
+    end
+
+    test "rejects a well-formed adaptor that is not in the registry" do
+      ensure_adaptor("@openfn/language-http")
+
+      # The registry membership check only runs on an otherwise-valid changeset,
+      # so name and body are supplied here.
+      [
+        "@openfn/language-never-seeded@1.0.0",
+        "@evilcorp/language-http@1.0.0",
+        "common@1.0.0"
+      ]
+      |> Enum.each(fn adaptor ->
+        errors =
+          Job.changeset(%Job{}, %{
+            name: "job",
+            body: "fn(state => state)",
+            adaptor: adaptor
+          })
+          |> errors_on()
+
+        assert errors[:adaptor] == ["is not a recognised adaptor"],
+               "expected #{inspect(adaptor)} to be rejected as unknown"
+      end)
+    end
+
+    test "rejects malformed / injection-shaped adaptor strings" do
+      [
+        "@openfn/x\npwd\nb@1.0.0",
+        "@openfn/language-http@7.3.2; touch /tmp/x",
+        "@openfn/language-common@latest and stuff"
+      ]
+      |> Enum.each(fn adaptor ->
+        errors = Job.changeset(%Job{}, %{adaptor: adaptor}) |> errors_on()
+
+        assert errors[:adaptor] == ["adaptor has invalid format"],
+               "expected #{inspect(adaptor)} to be rejected"
+      end)
     end
   end
 end

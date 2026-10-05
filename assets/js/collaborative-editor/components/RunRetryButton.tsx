@@ -31,7 +31,7 @@ interface RunRetryButtonProps {
  *   - "Run" when idle
  *   - "Processing" when submitting
  * - Split button when retryable:
- *   - "Run (Retry)" + chevron when idle
+ *   - "Retry" + chevron when idle
  *   - "Processing" + disabled chevron when submitting (chevron stays for visual consistency)
  *
  * The chevron opens a dropdown with "Run (New Work Order)" option.
@@ -62,7 +62,7 @@ export function RunRetryButton({
 }: RunRetryButtonProps) {
   const {
     run = 'Run Workflow',
-    retry = 'Run (Retry)',
+    retry = 'Retry',
     processing = 'Processing',
   } = buttonText;
 
@@ -179,7 +179,7 @@ export function RunRetryButton({
       className={cn('inline-flex rounded-md shadow-xs', className)}
       ref={dropdownRef}
     >
-      {/* Main button - shows "Run (Retry)" or "Processing" */}
+      {/* Main button - shows "Retry" or "Processing" */}
       <Tooltip content={isSubmitting ? null : mainButtonTooltip} side="bottom">
         <button
           type="button"
@@ -236,31 +236,24 @@ export function RunRetryButton({
 
       {/* Chevron dropdown button - stays visible during processing for consistency */}
       <div className="relative -ml-px">
-        <Tooltip
-          content={!chevronDisabled ? dropdownTooltip : null}
-          side="bottom"
+        <button
+          type="button"
+          onClick={() => !chevronDisabled && setIsDropdownOpen(!isDropdownOpen)}
+          disabled={chevronDisabled}
+          className={cn(
+            'rounded-md text-sm font-semibold shadow-xs px-1 py-2',
+            'h-full rounded-l-none',
+            'focus-visible:outline-2 focus-visible:outline-offset-2',
+            chevronDisabled
+              ? [styles.submitting, 'cursor-not-allowed']
+              : [styles.chevronBase, styles.focus]
+          )}
+          aria-expanded={isDropdownOpen}
+          aria-haspopup="true"
         >
-          <button
-            type="button"
-            onClick={() =>
-              !chevronDisabled && setIsDropdownOpen(!isDropdownOpen)
-            }
-            disabled={chevronDisabled}
-            className={cn(
-              'rounded-md text-sm font-semibold shadow-xs px-1 py-2',
-              'h-full rounded-l-none',
-              'focus-visible:outline-2 focus-visible:outline-offset-2',
-              chevronDisabled
-                ? [styles.submitting, 'cursor-not-allowed']
-                : [styles.chevronBase, styles.focus]
-            )}
-            aria-expanded={isDropdownOpen}
-            aria-haspopup="true"
-          >
-            <span className="sr-only">Open options</span>
-            <span className="hero-chevron-down w-4 h-4"></span>
-          </button>
-        </Tooltip>
+          <span className="sr-only">Open options</span>
+          <span className="hero-chevron-down w-4 h-4"></span>
+        </button>
 
         {/* Dropdown menu */}
         {isDropdownOpen && (

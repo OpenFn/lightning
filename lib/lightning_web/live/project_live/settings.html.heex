@@ -10,7 +10,10 @@
     <LayoutComponents.header current_user={@current_user}>
       <:breadcrumbs>
         <LayoutComponents.breadcrumbs>
-          <LayoutComponents.breadcrumb_project_picker project={@project} />
+          <LayoutComponents.breadcrumb_project_picker
+            project={@project}
+            label={@project_label}
+          />
           <LayoutComponents.breadcrumb>
             <:label>{@page_title}</:label>
           </LayoutComponents.breadcrumb>
@@ -130,7 +133,7 @@
                   <.input
                     type="text"
                     field={f[:env]}
-                    disabled={!@can_edit_project}
+                    disabled={true}
                     label="Project environment"
                   />
                   <small class="mt-2 block text-xs text-gray-600">
@@ -195,10 +198,9 @@
             >
               <div class="grid grid-cols md:col-span-2">
                 <div class="flex items-center gap-x-4 justify-between">
-                  <.live_component
+                  <.concurrency_input_slot
                     :if={assigns[:concurrency_input_component]}
-                    module={assigns[:concurrency_input_component]}
-                    id="concucurrency-input-component"
+                    component={@concurrency_input_component}
                     field={f[:concurrency]}
                     project={@project}
                     disabled={not @can_edit_project}
@@ -239,6 +241,13 @@
               </div>
             </.form>
           </div>
+
+          <.usage_caps_input_slot
+            :if={assigns[:usage_caps_input_component]}
+            component={@usage_caps_input_component}
+            project={@project}
+            current_user={@current_user}
+          />
 
           <div class="bg-white p-4 rounded-md space-y-4">
             <div>
@@ -455,9 +464,9 @@
             on_close={JS.push("close_active_modal")}
             return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
           />
-          <LightningWeb.WorkflowLive.Components.linked_triggers_for_webhook_auth_method_modal
-            :if={@active_modal == :linked_triggers_for_webhook_auth_method}
-            id={"linked_triggers_for_#{@active_modal_assigns.webhook_auth_method.id}_modal"}
+          <LightningWeb.WorkflowLive.Components.linked_usage_for_webhook_auth_method_modal
+            :if={@active_modal == :linked_usage_for_webhook_auth_method}
+            id={"linked_usage_for_#{@active_modal_assigns.webhook_auth_method.id}_modal"}
             webhook_auth_method={@active_modal_assigns.webhook_auth_method}
             on_close={JS.push("close_active_modal")}
           />
@@ -481,32 +490,32 @@
                 button_disabled={!@can_write_webhook_auth_method}
               />
             </:empty_state>
-            <:linked_triggers :let={auth_method}>
+            <:linked_usage :let={usage}>
               <span class="relative font-normal">
                 <a
-                  :if={auth_method.triggers != []}
-                  id={"display_linked_triggers_link_#{auth_method.id}"}
+                  :if={usage.in_use?}
+                  id={"display_linked_usage_link_#{usage.auth_method.id}"}
                   href="#"
                   class="text-indigo-600 hover:text-indigo-900"
                   phx-click={
                     JS.push("show_modal",
                       value: %{
-                        target: "linked_triggers_for_webhook_auth_method",
-                        id: auth_method.id
+                        target: "linked_usage_for_webhook_auth_method",
+                        id: usage.auth_method.id
                       }
                     )
                   }
                 >
-                  {Enum.count(auth_method.triggers)}
+                  {usage.summary}
                 </a>
                 <span
-                  :if={auth_method.triggers == []}
+                  :if={!usage.in_use?}
                   class="italic font-normal text-gray-300"
                 >
-                  No associated triggers...
+                  No associated triggers or channels...
                 </span>
               </span>
-            </:linked_triggers>
+            </:linked_usage>
             <:action :let={auth_method}>
               <%= if @can_write_webhook_auth_method do %>
                 <a
@@ -599,6 +608,7 @@
           id="add_collaborators_modal"
           project={@project}
           project_users={@project_users}
+          current_user={@current_user}
         />
         <.live_component
           :if={@can_add_project_user && @show_invite_collaborators_modal}
@@ -936,7 +946,7 @@
                     Input/Output Data Storage Policy
                   </div>
                   <div class="block mt-1 mb-3">
-                    Should OpenFn store input/output data for workflow runs?
+                    The input and output data associated with workflow runs and channel requests is useful for debugging. However it can contain sensitive PII. Should OpenFn store this data?
                     <a
                       target="_blank"
                       href="https://docs.openfn.org/documentation/manage-projects/io-data-storage"
@@ -951,7 +961,7 @@
                   <%!-- TODO: add this to the list of options for https://github.com/OpenFn/Lightning/issues/1694 --%>
                   <%!-- {:retain_with_errors, "Only retain input/output data when a run fails"}, --%>
                   <%= for {value, text} <- [
-                  {:retain_all, "Retain input/output data for all workflow runs"},
+                  {:retain_all, "Retain all input/output data"},
                   {:erase_all, "Never retain input/output data (zero-persistence)"}
                   ] do %>
                     <div class="relative flex items-start">
@@ -983,7 +993,7 @@
                 >
                   <:message>
                     <p>
-                      When enabled, you will no longer be able to retry workflow runs as no data will be stored.
+                      When enabled, you will no longer be able to retry workflow runs, and channel request/response payloads will not be stored.
                     </p>
                   </:message>
                 </Common.alert>

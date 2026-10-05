@@ -60,7 +60,7 @@ describe('useAIInitialMessage', () => {
 
   const jobCodeMode: AIModeResult = {
     mode: 'job_code',
-    context: { job_id: 'job-1', attach_code: false, attach_logs: false },
+    context: { job_id: 'job-1', attach_logs: false },
     storageKey: 'ai-job-job-1',
   };
 

@@ -543,6 +543,7 @@ defmodule Lightning.Runs.QueryTest do
                 where:
                   r.state == :available and
                     wf.project_id in ^[red.project.id, cyan.project.id],
+                order_by: [asc: r.inserted_at],
                 limit: 7,
                 select: r,
                 update: []

@@ -13,8 +13,10 @@ defmodule Lightning.Channels do
   alias Lightning.Channels.ChannelEvent
   alias Lightning.Channels.ChannelRequest
   alias Lightning.Channels.ChannelSnapshot
+  alias Lightning.Channels.PersistencePolicy
   alias Lightning.Channels.SearchParams
   alias Lightning.Config
+  alias Lightning.Credentials.Scoping
   alias Lightning.Projects.Project
   alias Lightning.Repo
 
@@ -193,15 +195,24 @@ defmodule Lightning.Channels do
     changeset = Channel.changeset(%Channel{}, attrs)
 
     Multi.new()
-    |> Multi.insert(:channel, changeset)
-    |> Multi.insert(:audit, fn %{channel: channel} ->
-      Audit.event("created", channel.id, actor, changeset)
+    |> Multi.run(:credential_scope_check, fn _repo, _changes ->
+      credential_scope_check(changeset)
     end)
-    |> Audit.audit_auth_method_changes(changeset, actor)
+    |> Multi.insert(:channel, changeset)
+    |> Multi.run(:audit, fn _repo, %{channel: channel} ->
+      case Audit.event("created", channel.id, actor, changeset) do
+        :no_changes -> {:ok, :no_changes}
+        %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
+      end
+    end)
+    |> Multi.merge(fn %{channel: channel} ->
+      Audit.audit_auth_method_changes(Multi.new(), channel, changeset, actor)
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
       {:error, :channel, changeset, _} -> {:error, changeset}
+      {:error, :credential_scope_check, changeset, _} -> {:error, changeset}
     end
   end
 
@@ -214,16 +225,109 @@ defmodule Lightning.Channels do
     changeset = Channel.changeset(channel, attrs)
 
     Multi.new()
-    |> Multi.update(:channel, changeset, stale_error_field: :lock_version)
-    |> Multi.insert(:audit, fn %{channel: updated} ->
-      Audit.event("updated", updated.id, actor, changeset)
+    |> Multi.run(:credential_scope_check, fn _repo, _changes ->
+      credential_scope_check(changeset)
     end)
-    |> Audit.audit_auth_method_changes(changeset, actor)
+    |> Multi.update(:channel, changeset, stale_error_field: :lock_version)
+    |> Multi.run(:audit, fn _repo, %{channel: updated} ->
+      case Audit.event("updated", updated.id, actor, changeset) do
+        :no_changes -> {:ok, :no_changes}
+        %Ecto.Changeset{} = audit_cs -> Repo.insert(audit_cs)
+      end
+    end)
+    |> Multi.merge(fn %{channel: channel} ->
+      Audit.audit_auth_method_changes(Multi.new(), channel, changeset, actor)
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
       {:error, :channel, changeset, _} -> {:error, changeset}
+      {:error, :credential_scope_check, changeset, _} -> {:error, changeset}
     end
+  end
+
+  defp credential_scope_check(changeset) do
+    project_id = Ecto.Changeset.get_field(changeset, :project_id)
+    dest = Ecto.Changeset.get_change(changeset, :destination_auth_method)
+    clients = Ecto.Changeset.get_change(changeset, :client_auth_methods) || []
+
+    with true <- not is_nil(project_id),
+         refs = destination_refs(dest) ++ client_refs(clients),
+         [_ | _] = violations <-
+           Scoping.out_of_project_references(project_id, refs) do
+      {:error, apply_violations(changeset, dest, clients, violations)}
+    else
+      _ -> {:ok, :ok}
+    end
+  end
+
+  defp destination_refs(%Ecto.Changeset{} = dest) do
+    case Ecto.Changeset.get_field(dest, :project_credential_id) do
+      pc_id when is_binary(pc_id) ->
+        [%{key: :destination, project_credential_id: pc_id}]
+
+      _ ->
+        []
+    end
+  end
+
+  defp destination_refs(_dest), do: []
+
+  # Rows being removed can't introduce a bad reference, and skipping them keeps
+  # a row that is already out of scope deletable rather than wedging the form.
+  defp client_refs(clients) do
+    Enum.flat_map(clients, fn
+      %Ecto.Changeset{action: :delete} ->
+        []
+
+      %Ecto.Changeset{} = client ->
+        case Ecto.Changeset.get_field(client, :webhook_auth_method_id) do
+          wam_id when is_binary(wam_id) ->
+            [%{key: {:client, wam_id}, webhook_auth_method_id: wam_id}]
+
+          _ ->
+            []
+        end
+    end)
+  end
+
+  defp apply_violations(changeset, dest, clients, violations) do
+    {clients, unattached} =
+      Scoping.attach_violations(clients, violations, fn client ->
+        {:client, Ecto.Changeset.get_field(client, :webhook_auth_method_id)}
+      end)
+
+    changeset
+    |> put_client_violations(clients)
+    |> put_destination_violation(dest, unattached)
+    |> Map.put(:valid?, false)
+  end
+
+  defp put_client_violations(changeset, []), do: changeset
+
+  defp put_client_violations(changeset, clients) do
+    Ecto.Changeset.put_change(changeset, :client_auth_methods, clients)
+  end
+
+  defp put_destination_violation(changeset, dest, unattached) do
+    if Enum.any?(unattached, &(&1.key == :destination)) do
+      apply_destination_violation(changeset, dest)
+    else
+      changeset
+    end
+  end
+
+  defp apply_destination_violation(changeset, dest) do
+    dest =
+      Ecto.Changeset.add_error(
+        dest,
+        :project_credential_id,
+        Scoping.violation_message(:project_credential_id)
+      )
+
+    changeset
+    |> Ecto.Changeset.put_change(:destination_auth_method, dest)
+    |> Map.put(:valid?, false)
   end
 
   @doc """
@@ -440,5 +544,96 @@ defmodule Lightning.Channels do
     end
 
     {total, nil}
+  end
+
+  @doc """
+  Returns a channel request with preloads, scoped to the given project.
+
+  Returns `nil` if the request doesn't exist, belongs to a different project,
+  or the ID is not a valid UUID.
+
+  Preloads: `channel_events`, `channel`, `channel_snapshot`,
+  `client_webhook_auth_method`, and `destination_credential` (with its
+  `credential` for display).
+  """
+  @spec get_channel_request_for_project(Ecto.UUID.t(), String.t()) ::
+          ChannelRequest.t() | nil
+  def get_channel_request_for_project(project_id, request_id) do
+    case Ecto.UUID.cast(request_id) do
+      {:ok, uuid} ->
+        from(cr in ChannelRequest,
+          join: c in Channel,
+          on: cr.channel_id == c.id,
+          where: cr.id == ^uuid and c.project_id == ^project_id,
+          preload: [
+            :channel_events,
+            :channel,
+            :channel_snapshot,
+            :client_webhook_auth_method,
+            destination_credential: :credential
+          ]
+        )
+        |> Repo.one()
+
+      :error ->
+        nil
+    end
+  end
+
+  @doc """
+  Records a destination credential resolution failure as a `ChannelRequest` +
+  `ChannelEvent` pair, atomically.
+
+  The caller provides raw attribute maps for the request and event; this
+  function applies the project's zero-persistence policy before insert. When
+  the project's `retention_policy` is `:erase_all`, PII fields are dropped
+  from both maps and the request is marked `is_wiped: true`.
+
+  The event's `:channel_request_id` is set automatically from the inserted
+  request — callers should omit it.
+
+  Returns `:ok` either way: insert failures are logged but never propagate,
+  so callers can respond with the same HTTP status regardless of persistence
+  outcome.
+  """
+  @spec record_destination_credential_error(Channel.t(), map(), map()) :: :ok
+  def record_destination_credential_error(
+        %Channel{} = channel,
+        req_attrs,
+        event_attrs
+      ) do
+    persist? = PersistencePolicy.persist_observations?(channel.project_id)
+
+    req_attrs =
+      PersistencePolicy.wipe_request_attrs(req_attrs,
+        persist_observations: persist?
+      )
+
+    Multi.new()
+    |> Multi.insert(
+      :request,
+      ChannelRequest.changeset(%ChannelRequest{}, req_attrs)
+    )
+    |> Multi.insert(:event, fn %{request: request} ->
+      event_attrs =
+        event_attrs
+        |> Map.put(:channel_request_id, request.id)
+        |> PersistencePolicy.wipe_event_attrs(persist_observations: persist?)
+
+      ChannelEvent.changeset(%ChannelEvent{}, event_attrs)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, _} ->
+        :ok
+
+      {:error, _step, changeset, _changes} ->
+        Logger.warning(
+          "Failed to record credential error for channel #{channel.id}: " <>
+            "#{inspect(changeset.errors)}"
+        )
+
+        :ok
+    end
   end
 end

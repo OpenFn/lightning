@@ -24,8 +24,13 @@ defmodule Lightning.AuthProviders.WellKnownTest do
 
       Bypass.down(bypass)
 
-      {:error, %HTTPoison.Error{id: nil, reason: :econnrefused}} =
-        WellKnown.fetch!("#{endpoint_url}/.not-well-known")
+      assert {:error, %HTTPoison.Error{id: nil, reason: :econnrefused}} =
+               WellKnown.fetch("#{endpoint_url}/.not-well-known")
+    end
+
+    test "refuses a plaintext (non-loopback) discovery url" do
+      assert {:error, :insecure_discovery_url} =
+               WellKnown.fetch("http://accounts.example.com/.well-known")
     end
   end
 end

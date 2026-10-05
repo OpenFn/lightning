@@ -14,35 +14,42 @@ platform_check_dependencies() {
       MISSING_PACKAGES+=("$package")
     fi
   done
-
-  # Check for Rust (optional but recommended for Rambo)
-  if command -v rustc &>/dev/null; then
-    echo "  Rust: $(rustc --version)"
-  else
-    echo "  Rust: not installed (optional)"
-  fi
 }
 
 platform_check_status() {
+  local has_failures=false
+
   if [[ ${#MISSING_PACKAGES[@]} -gt 0 ]]; then
-    echo "Missing system packages:"
-    for package in "${MISSING_PACKAGES[@]}"; do
-      echo "   - $package"
-    done
-    echo ""
-    echo "To install, run:"
-    echo "  sudo apt-get update && sudo apt-get install -y ${MISSING_PACKAGES[*]}"
-    echo ""
-    echo "Then re-run ./bin/bootstrap"
+    {
+      err "Missing system packages:"
+      printf '   - %s\n' "${MISSING_PACKAGES[@]}"
+      printf '%s\n' \
+        "" \
+        "To install, run:" \
+        "  sudo apt-get update && sudo apt-get install -y ${MISSING_PACKAGES[*]}"
+    } >&2
+    has_failures=true
+  fi
+
+  if [[ "$has_failures" == true ]]; then
+    {
+      printf '%s\n' \
+        "" \
+        "Then re-run ./bin/bootstrap"
+    } >&2
     exit 1
   fi
 
-  echo "All dependencies are satisfied"
+  ok "All dependencies are satisfied"
 }
 
 platform_install_dependencies() {
   # On Linux, we don't auto-install packages - we showed the command above
   # and exited. This function is only reached if all packages are installed.
+  :
+}
+
+platform_setup_tool_build_environment() {
   :
 }
 
@@ -59,10 +66,4 @@ platform_setup_environment() {
     export CXX
     echo "Set CXX to $CXX"
   fi
-}
-
-platform_post_compile_hooks() {
-  # No platform-specific post-compile hooks needed on Linux
-  # Rambo compiles automatically during mix deps.compile
-  :
 }

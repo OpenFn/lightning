@@ -4,6 +4,14 @@ import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
+// Number and date formatting in the app uses the viewer's own locale (bare
+// `toLocaleString()`), which is correct for users but makes any test asserting a
+// formatted literal depend on the developer's `LANG`. Pin one locale for the run
+// so the suite is deterministic; set here rather than in the npm scripts so a
+// bare `npx vitest` behaves the same. Must be set before the worker processes
+// fork, since Node resolves its default locale at startup.
+process.env.LC_ALL = 'en_US.UTF-8';
+
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   define: {

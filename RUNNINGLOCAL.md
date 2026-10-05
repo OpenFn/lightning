@@ -77,10 +77,7 @@ mix local.hex
 mix deps.get
 mix local.rebar --force
 [[ $(uname -m) == 'arm64' ]] && CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib mix deps.compile enacl # Force compile enacl if on M1
-[[ $(uname -m) == 'arm64' ]] && mix compile.rambo # Force compile rambo if on M1
 mix lightning.install_runtime
-mix lightning.install_schemas
-mix lightning.install_adaptor_icons
 mix ecto.create
 mix ecto.migrate
 npm install --prefix assets
@@ -142,40 +139,18 @@ you.
 
 [Learn more about configuring workers](WORKERS.md)
 
-### Using Local Adaptors
+### Using local adaptors
 
-You can force lightning to use adaptor builds from your local
-[adaptors](https://github.com/openfn/adaptors) repo.
+To run Lightning against your own checkout of the
+[adaptors](https://github.com/openfn/adaptors) repo, see
+[ADAPTORS.md](ADAPTORS.md).
 
-Note that this is a global toggle: ALL runs will use local adaptor versions, and
-the adaptor picklist in the Workflow Editor will only suggest adaptors present
-in the monorepo.
+### Caching the adaptor upstreams
 
-Remember to re-build your adaptors after making changes (use
-`pnpm build --watch` in the monorepo).
-
-To start, set up the following environment variables:
-
-- `LOCAL_ADAPTORS`: Used to enable or disable the local adaptors mode. Set it to
-  `true` to enable.
-- `OPENFN_ADAPTORS_REPO`: This should point to the adaptors monorepo. This is
-  the same variable used when you pass `-m` to the CLI.
-
-Example configuration:
-
-```sh
-export LOCAL_ADAPTORS=true
-export OPENFN_ADAPTORS_REPO=/path/to/repo/
-```
-
-You can also run the server directly in local mode with:
-
-```sh
-LOCAL_ADAPTORS=true mix phx.server
-```
-
-Ensure that the `OPENFN_ADAPTORS_REPO` directory is correctly set up with the
-necessary `packages` subdirectory, otherwise the app wont start
+For a record-and-replay proxy in front of npm, jsDelivr and GitHub while
+developing, see `tooling/adaptor_cache/README.md`. The `ADAPTORS_NPM_*`
+variables that point Lightning at it are described in
+[ADAPTORS.md](ADAPTORS.md).
 
 ### Problems with Apple Silicon
 

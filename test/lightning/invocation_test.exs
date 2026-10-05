@@ -194,23 +194,6 @@ defmodule Lightning.InvocationTest do
       parsed = Jason.decode!(result.body_json)
       assert parsed == %{"baz" => "qux"}
 
-      # Test with kafka type - should wrap body in {"data": ..., "request": ...}
-      kafka_dataclip =
-        insert(:dataclip,
-          body: %{"kafka" => "data"},
-          request: %{"topic" => "test"},
-          type: :kafka,
-          project: project
-        )
-
-      result = Invocation.get_dataclip_with_body!(kafka_dataclip.id)
-
-      assert result.type == :kafka
-      assert is_binary(result.body_json)
-      parsed = Jason.decode!(result.body_json)
-      assert parsed["data"] == %{"kafka" => "data"}
-      assert parsed["request"] == %{"topic" => "test"}
-
       # Test that it raises when dataclip doesn't exist
       assert_raise Ecto.NoResultsError, fn ->
         Invocation.get_dataclip_with_body!(Ecto.UUID.generate())
@@ -317,6 +300,112 @@ defmodule Lightning.InvocationTest do
                  %{},
                  limit: 5
                )
+    end
+
+    test "offers a named project dataclip the job has never run against" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      named =
+        insert(:dataclip,
+          project: project,
+          name: "known good input",
+          type: :saved_input,
+          body: %{"a" => 1}
+        )
+
+      assert [%{id: id}] =
+               Invocation.list_dataclips_for_job(job, %{},
+                 limit: 5,
+                 named_dataclips: true
+               )
+
+      assert id == named.id
+    end
+
+    test "honours an offset" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      for n <- 1..3 do
+        insert(:dataclip,
+          project: project,
+          name: "named #{n}",
+          type: :saved_input,
+          inserted_at: DateTime.utc_now() |> DateTime.add(n, :second)
+        )
+      end
+
+      first =
+        Invocation.list_dataclips_for_job(job, %{},
+          limit: 1,
+          named_dataclips: true
+        )
+
+      second =
+        Invocation.list_dataclips_for_job(job, %{},
+          limit: 1,
+          offset: 1,
+          named_dataclips: true
+        )
+
+      assert [%{id: first_id}] = first
+      assert [%{id: second_id}] = second
+      refute first_id == second_id
+    end
+
+    test "keeps the job's own inputs ahead of the project's named ones" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      consumed =
+        insert(:dataclip, project: project, name: nil, type: :http_request)
+
+      insert(:step, input_dataclip: consumed, job: job)
+
+      for n <- 1..3 do
+        insert(:dataclip,
+          project: project,
+          name: "named #{n}",
+          type: :saved_input,
+          inserted_at: DateTime.utc_now() |> DateTime.add(n, :second)
+        )
+      end
+
+      assert [%{id: first_id} | _] =
+               Invocation.list_dataclips_for_job(job, %{},
+                 limit: 2,
+                 named_dataclips: true
+               )
+
+      assert first_id == consumed.id
+    end
+
+    test "leaves an unnamed dataclip out unless the job has consumed it" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      insert(:dataclip, project: project, name: nil, type: :saved_input)
+
+      assert [] =
+               Invocation.list_dataclips_for_job(job, %{},
+                 limit: 5,
+                 named_dataclips: true
+               )
+    end
+
+    test "offers only the job's own inputs by default" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      insert(:dataclip,
+        project: project,
+        name: "known good input",
+        type: :saved_input,
+        body: %{"a" => 1}
+      )
+
+      consumed = insert(:dataclip, project: project, type: :http_request)
+      insert(:step, input_dataclip: consumed, job: job)
+
+      assert [%{id: id}] = Invocation.list_dataclips_for_job(job, %{}, limit: 5)
+
+      assert id == consumed.id
     end
 
     test "returns dataclips without the body" do
@@ -456,24 +545,17 @@ defmodule Lightning.InvocationTest do
     test "doesn't return a dataclip if the wrong text is entered" do
       %{jobs: [job1 | _rest]} = insert(:complex_workflow)
 
-      [%{id: dataclip_id} | _ignored] =
-        Enum.map(1..10, fn _i ->
-          insert(:dataclip) |> tap(&insert(:step, input_dataclip: &1, job: job1))
-        end)
-
-      # replace the actual 3rd character with some random number
-      prefix = String.slice(dataclip_id, 0, 2) <> "4"
+      dataclip = insert(:dataclip, id: "11111111-1111-1111-1111-111111111111")
+      insert(:step, input_dataclip: dataclip, job: job1)
 
       dataclips =
         Invocation.list_dataclips_for_job(
           job1,
-          %{id_prefix: prefix},
+          %{id_prefix: "222"},
           limit: 10
         )
 
-      # ensure that the dataclip isn't found:
-      # i.e., refute that writing "ab4" matches a dataclip with UUID prefix "ab7"
-      refute Enum.any?(dataclips, &(&1.id == dataclip_id))
+      refute Enum.any?(dataclips, &(&1.id == dataclip.id))
     end
 
     test "filters out wiped dataclips" do
@@ -1054,6 +1136,189 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  # The triage row's "View" button: `filter_by_error_signature/2` inside
+  # `search_workorders_query/2`. Exercised through `search_workorders_for_export_query/2`
+  # since it applies no destructive-action side filter of its own.
+  describe "filter_by_error_signature/2" do
+    defp signature_params(exit_reason, error_type, job_id) do
+      SearchParams.new(%{
+        "status" => SearchParams.status_list(),
+        "error_signature_exit_reason" => exit_reason,
+        "error_signature_error_type" => error_type,
+        "error_signature_job_id" => job_id
+      })
+    end
+
+    defp signature_matches(project, exit_reason, error_type, job_id \\ nil) do
+      project
+      |> Invocation.search_workorders_for_export_query(
+        signature_params(exit_reason, error_type, job_id)
+      )
+      |> Repo.all()
+      |> Enum.map(& &1.id)
+      |> MapSet.new()
+    end
+
+    defp workorder(workflow, trigger, state) do
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state
+      )
+    end
+
+    # The run carries the work order's own state: every case here is a work
+    # order that ran once and stopped there.
+    defp ran_wo(workflow, trigger, state, steps \\ []) do
+      wo = workorder(workflow, trigger, state)
+
+      insert(:run,
+        work_order: wo,
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state,
+        steps: steps
+      )
+
+      wo
+    end
+
+    defp failing_step(job, error_type) do
+      build(:step, job: job, exit_reason: "fail", error_type: error_type)
+    end
+
+    test "matches exactly the work orders behind a step-level signature, and none of a rejected or lost row" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, job: job} =
+        build_workflow(project: project)
+
+      other_job = insert(:job, workflow: workflow)
+
+      crashed_wo =
+        ran_wo(workflow, trigger, :crashed, [failing_step(job, "RuntimeError")])
+
+      failed_wo =
+        ran_wo(workflow, trigger, :failed, [failing_step(job, "RuntimeError")])
+
+      # Same reason and error type, different job — must not match.
+      ran_wo(workflow, trigger, :failed, [
+        failing_step(other_job, "RuntimeError")
+      ])
+
+      workorder(workflow, trigger, :rejected)
+
+      lost_wo = ran_wo(workflow, trigger, :lost)
+
+      assert signature_matches(project, "fail", "RuntimeError", job.id) ==
+               MapSet.new([crashed_wo.id, failed_wo.id])
+
+      # `"rejected"` is `to_signature/2`'s own literal, not a worker reason —
+      # not present in `Run.state_reasons/0`, so the run-level branch fails
+      # closed rather than matching the rejected work order.
+      assert signature_matches(project, "rejected", "RunLimitExceeded") ==
+               MapSet.new()
+
+      # The run-level branch, for a work order whose latest run never
+      # reached a step.
+      assert signature_matches(project, "lost", nil) == MapSet.new([lost_wo.id])
+    end
+
+    # Mirrors `stats_test.exs`, "treats an empty error type on the run the
+    # same as a missing one": the row reports `nil`, so the filter has to
+    # read `""` as `nil` too or the View button lands on an empty page.
+    test "reads an empty error type on the run as a missing one" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger} = build_workflow(project: project)
+
+      wo = workorder(workflow, trigger, :crashed)
+
+      insert(:run,
+        work_order: wo,
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: :crashed,
+        error_type: ""
+      )
+
+      assert signature_matches(project, "crash", nil) == MapSet.new([wo.id])
+    end
+
+    # Guards every unfiltered history search, not just the View button: the
+    # signature filter sits in the query behind search, bulk retry, bulk cancel
+    # and export, and its run-level branch fails closed. A nil signature that
+    # stopped being a no-op would empty the history page for everyone.
+    test "with all three fields nil is a no-op" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger} = build_workflow(project: project)
+
+      wo = workorder(workflow, trigger, :failed)
+
+      params = SearchParams.new(%{"status" => SearchParams.status_list()})
+
+      assert %{
+               error_signature_exit_reason: nil,
+               error_signature_error_type: nil,
+               error_signature_job_id: nil
+             } = params
+
+      found =
+        project
+        |> Invocation.search_workorders_for_export_query(params)
+        |> Repo.all()
+        |> Enum.map(& &1.id)
+
+      assert found == [wo.id]
+    end
+
+    test "search_workorders_for_retry/2 scopes a bulk retry to the signature" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, job: job} =
+        build_workflow(project: project)
+
+      matching_wo =
+        ran_wo(workflow, trigger, :failed, [failing_step(job, "RuntimeError")])
+
+      ran_wo(workflow, trigger, :failed, [failing_step(job, "CompileError")])
+
+      found =
+        Invocation.search_workorders_for_retry(
+          project,
+          signature_params("fail", "RuntimeError", job.id)
+        )
+
+      assert [matching_wo.id] == Enum.map(found, & &1.id)
+    end
+
+    test "a nil error_type filter matches a step whose own error_type is the empty string" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, job: job} =
+        build_workflow(project: project)
+
+      wo = ran_wo(workflow, trigger, :failed, [failing_step(job, "")])
+
+      assert signature_matches(project, "fail", nil, job.id) ==
+               MapSet.new([wo.id])
+    end
+
+    test "a successful work order is not matched, even when its latest run holds a failing step" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger, job: job} =
+        build_workflow(project: project)
+
+      ran_wo(workflow, trigger, :success, [failing_step(job, "RuntimeError")])
+
+      assert signature_matches(project, "fail", "RuntimeError", job.id) ==
+               MapSet.new()
+    end
+  end
+
   describe "search_workorders/1" do
     test "returns workorders ordered inserted at desc, with nulls first" do
       project = insert(:project)
@@ -1516,6 +1781,140 @@ defmodule Lightning.InvocationTest do
       assert found_workorder.id == wo_now.id
     end
 
+    # The runs chart's bar link. Not expressible with either date filter above:
+    # both work orders here arrived and last moved at the same times, and only
+    # their runs differ.
+    test "filters workorders by when a run was created, half-open on the end" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      bar_start = ~U[2026-09-08T02:00:00.000000Z]
+      bar_end = ~U[2026-09-08T04:00:00.000000Z]
+
+      run_at = fn at ->
+        work_order =
+          insert(:workorder,
+            workflow: workflow,
+            trigger: trigger,
+            inserted_at: bar_start,
+            last_activity: bar_end
+          )
+
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger,
+          inserted_at: at
+        )
+
+        work_order.id
+      end
+
+      before_bar = run_at.(DateTime.add(bar_start, -1, :second))
+      inside_bar = run_at.(DateTime.add(bar_start, 30, :minute))
+      on_start = run_at.(bar_start)
+      # The chart puts a run landing exactly on a boundary in the *later* bar,
+      # so the bar that closes here must not claim it.
+      on_end = run_at.(bar_end)
+
+      found =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "run_date_after" => bar_start,
+            "run_date_before" => bar_end
+          })
+        ).entries
+        |> Enum.map(& &1.id)
+
+      assert Enum.sort(found) == Enum.sort([inside_bar, on_start])
+      refute before_bar in found
+      refute on_end in found
+    end
+
+    # A band of that bar. `run_status` and not `status`, which is the work
+    # order's *current* state: the retried work order here is a success now,
+    # and the red band that counted its failed run still has to reach it.
+    test "filters workorders by the run's own state, not the work order's" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      bar_start = ~U[2026-09-08T02:00:00.000000Z]
+      bar_end = ~U[2026-09-08T04:00:00.000000Z]
+
+      run_at = fn wo_state, run_status ->
+        work_order =
+          insert(:workorder,
+            workflow: workflow,
+            trigger: trigger,
+            state: wo_state,
+            last_activity: bar_end
+          )
+
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger,
+          state: run_status,
+          inserted_at: DateTime.add(bar_start, 30, :minute)
+        )
+
+        work_order.id
+      end
+
+      retried = run_at.(:success, :failed)
+      still_failed = run_at.(:failed, :failed)
+      succeeded = run_at.(:success, :success)
+
+      failures =
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "run_date_after" => bar_start,
+            "run_date_before" => bar_end,
+            "run_status" => ["failed", "crashed", "killed", "exception", "lost"]
+          })
+        ).entries
+        |> Enum.map(& &1.id)
+
+      assert Enum.sort(failures) == Enum.sort([retried, still_failed])
+      refute succeeded in failures
+    end
+
+    # The newest bar is still filling, so its link carries no upper bound.
+    test "filters workorders by an open-ended run window" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      now = DateTime.utc_now()
+
+      work_order = insert(:workorder, workflow: workflow, trigger: trigger)
+
+      # Two runs, one either side of the bound: the work order matches on the
+      # newer one, and is listed once rather than twice.
+      for at <- [DateTime.add(now, -1, :hour), now] do
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_trigger: trigger,
+          inserted_at: at
+        )
+      end
+
+      assert [found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "run_date_after" => DateTime.add(now, -1, :minute)
+                 })
+               ).entries
+
+      assert found.id == work_order.id
+    end
+
     # to be replaced by paginator unit tests
     @tag :skip
     test "filters workorders sets timeout" do
@@ -1598,6 +1997,9 @@ defmodule Lightning.InvocationTest do
         message: "Bukayo Saka is playing for England",
         timestamp: Timex.now()
       )
+
+      flush_log_search_index()
+      flush_dataclip_search_index()
 
       %{
         project: project,
@@ -1695,6 +2097,18 @@ defmodule Lightning.InvocationTest do
 
     test "search on logs does NOT return 'stem' matches... only exact matches",
          %{project: project} do
+      # Positive control: the log vector is populated, so an exact token matches.
+      # Without this, a regression that leaves search_vector NULL would make the
+      # negative assertions below pass vacuously.
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "playing",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+
       assert [] =
                Invocation.search_workorders(
                  project,
@@ -1789,6 +2203,9 @@ defmodule Lightning.InvocationTest do
          %{
            project: project
          } do
+      # Positive control: the dataclip body vector is populated, so a known body
+      # token matches. Without this, a regression that leaves search_vector NULL
+      # would make the negative assertion below pass vacuously.
       assert [_found] =
                Invocation.search_workorders(
                  project,
@@ -1942,6 +2359,9 @@ defmodule Lightning.InvocationTest do
         message: "Processing findme with log_only_value",
         timestamp: Timex.now()
       )
+
+      flush_log_search_index()
+      flush_dataclip_search_index()
 
       %{
         project: project,
@@ -2299,6 +2719,467 @@ defmodule Lightning.InvocationTest do
         assert project_file.status == :enqueued
         assert project_file.type == :export
       end)
+    end
+  end
+
+  describe "get_step_with_dataclips" do
+    setup do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      snapshot = insert(:snapshot, workflow: workflow)
+
+      step =
+        insert(:step,
+          job: job,
+          snapshot: snapshot,
+          input_dataclip: build(:dataclip, project: project, body: %{"a" => 1}),
+          output_dataclip: build(:dataclip, project: project, body: %{"b" => 2})
+        )
+
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      other_job = insert(:job, workflow: other_workflow)
+      other_snapshot = insert(:snapshot, workflow: other_workflow)
+
+      insert(:step,
+        job: other_job,
+        snapshot: other_snapshot,
+        input_dataclip:
+          build(:dataclip, project: other_project, body: %{"c" => 1}),
+        output_dataclip:
+          build(:dataclip, project: other_project, body: %{"d" => 2})
+      )
+
+      %{other_project: other_project, project: project, step: step}
+    end
+
+    test "returns the step with its input and output dataclips preloaded", %{
+      project: project,
+      step: step
+    } do
+      fetched_step = Invocation.get_step_with_dataclips(step.id, project.id)
+
+      assert fetched_step.id == step.id
+      assert fetched_step.input_dataclip.body == %{"a" => 1}
+      assert fetched_step.output_dataclip.body == %{"b" => 2}
+    end
+
+    test "returns nil if the step does not belong to the project", %{
+      other_project: other_project,
+      step: step
+    } do
+      assert Invocation.get_step_with_dataclips(step.id, other_project.id) == nil
+    end
+  end
+
+  describe "logs_for_run/2" do
+    setup do
+      project = insert(:project)
+      dataclip = insert(:dataclip, project: project)
+
+      %{workflow: workflow, trigger: trigger, job: job, snapshot: snapshot} =
+        build_workflow(project: project, name: "logs-for-run")
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          starting_trigger: trigger
+        )
+
+      {:ok, step} =
+        Runs.start_step(run, %{
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "step_id" => Ecto.UUID.generate()
+        })
+
+      %{project: project, run: run, step: step, job: job}
+    end
+
+    test "returns nothing rather than raising without a project", %{run: run} do
+      # A session created for an unsaved job carries no project_id, and the
+      # comparison raises rather than returning empty. The step sibling has
+      # guarded this since it was written.
+      assert Invocation.logs_for_run(run.id, nil) == []
+    end
+
+    test "returns nothing when the run id is not a uuid", %{project: project} do
+      assert Invocation.logs_for_run("not-a-uuid", project.id) == []
+    end
+
+    test "counts what each line costs on the wire, not just its text", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      # Short messages are the case the bound exists for, and the ids and level
+      # ride along with every one of them.
+      for n <- 1..2100 do
+        insert(:log_line,
+          run: run,
+          step: step,
+          message: "x",
+          timestamp: DateTime.add(~U[2026-08-25 10:00:00Z], n, :second)
+        )
+      end
+
+      assert length(Invocation.logs_for_run(run.id, project.id)) < 2100
+    end
+
+    test "stops reading once the lines cannot fit any consumer's limit", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      # A job that logs per record over a large batch produces hundreds of
+      # thousands of rows. Reading them all to build a payload that is then
+      # refused costs the caller the whole run in memory.
+      for n <- 1..6 do
+        insert(:log_line,
+          run: run,
+          step: step,
+          message: String.duplicate("x", 100_000),
+          timestamp: DateTime.add(~U[2026-08-25 10:00:00Z], n, :second)
+        )
+      end
+
+      lines = Invocation.logs_for_run(run.id, project.id)
+
+      assert length(lines) < 6
+      assert Enum.map_join(lines, & &1.message) |> byte_size() > 250_000
+    end
+
+    test "returns lines oldest first with the step's job attributed", %{
+      project: project,
+      run: run,
+      step: step,
+      job: job
+    } do
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "second",
+        level: :error,
+        timestamp: ~U[2026-08-25 10:00:01Z]
+      )
+
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "first",
+        level: :info,
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      assert [
+               %{
+                 message: "first",
+                 level: :info,
+                 job_id: first_job_id,
+                 step_id: first_step_id
+               },
+               %{message: "second", level: :error}
+             ] = Invocation.logs_for_run(run.id, project.id)
+
+      assert first_job_id == job.id
+      assert first_step_id == step.id
+    end
+
+    test "returns nil ids for a run-level line with no step", %{
+      project: project,
+      run: run
+    } do
+      insert(:log_line,
+        run: run,
+        step: nil,
+        message: "starting worker",
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      assert [%{message: "starting worker", job_id: nil, step_id: nil}] =
+               Invocation.logs_for_run(run.id, project.id)
+    end
+
+    test "returns an empty list when the run has no lines", %{
+      project: project,
+      run: run
+    } do
+      assert Invocation.logs_for_run(run.id, project.id) == []
+    end
+
+    test "excludes lines from other runs", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      other_run =
+        insert(:run,
+          work_order: insert(:workorder),
+          dataclip: insert(:dataclip),
+          starting_trigger: build(:trigger)
+        )
+
+      insert(:log_line, run: run, step: step, message: "mine")
+      insert(:log_line, run: other_run, message: "theirs")
+
+      assert [%{message: "mine"}] = Invocation.logs_for_run(run.id, project.id)
+    end
+
+    test "returns nothing for a run outside the project", %{
+      run: run,
+      step: step
+    } do
+      insert(:log_line, run: run, step: step, message: "mine")
+
+      assert Invocation.logs_for_run(run.id, insert(:project).id) == []
+    end
+  end
+
+  describe "scrubbed_io_for_run/2" do
+    setup do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      snapshot = insert(:snapshot, workflow: workflow)
+
+      work_order =
+        insert(:workorder, workflow: workflow, snapshot: snapshot)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          snapshot: snapshot,
+          dataclip: build(:dataclip, project: project),
+          starting_job: build(:job, workflow: workflow)
+        )
+
+      %{project: project, workflow: workflow, snapshot: snapshot, run: run}
+    end
+
+    defp add_step(ctx, name, opts) do
+      step =
+        insert(
+          :step,
+          Keyword.merge(
+            [
+              job: insert(:job, workflow: ctx.workflow, name: name),
+              snapshot: ctx.snapshot
+            ],
+            opts
+          )
+        )
+
+      insert(:run_step, run: ctx.run, step: step)
+      step
+    end
+
+    defp clip(project, body), do: build(:dataclip, project: project, body: body)
+
+    test "replaces values with their types", ctx do
+      add_step(ctx, "one",
+        input_dataclip: clip(ctx.project, %{"n" => 1, "s" => "secret"}),
+        output_dataclip: clip(ctx.project, %{"ok" => true})
+      )
+
+      assert [
+               %{
+                 step_name: "one",
+                 input: %{"n" => "number", "s" => "string"},
+                 output: %{"ok" => "boolean"}
+               }
+             ] = Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+    end
+
+    test "returns every step in the run, in the order it ran", ctx do
+      # Inserted back to front, so row order cannot stand in for run order.
+      add_step(ctx, "second",
+        started_at: ~U[2026-09-01 10:00:05Z],
+        input_dataclip: clip(ctx.project, %{"b" => 2})
+      )
+
+      add_step(ctx, "first",
+        started_at: ~U[2026-09-01 10:00:00Z],
+        input_dataclip: clip(ctx.project, %{"a" => 1})
+      )
+
+      # A step that never started has no time to sort on and belongs last.
+      add_step(ctx, "never ran",
+        started_at: nil,
+        input_dataclip: clip(ctx.project, %{"c" => 3})
+      )
+
+      assert ["first", "second", "never ran"] =
+               ctx.run.id
+               |> Invocation.scrubbed_io_for_run(ctx.project.id)
+               |> Enum.map(& &1.step_name)
+    end
+
+    test "says so rather than lying when a dataclip was erased", ctx do
+      add_step(ctx, "wiped",
+        input_dataclip:
+          clip(ctx.project, nil) |> Map.put(:wiped_at, DateTime.utc_now())
+      )
+
+      assert [%{input: input}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert input =~ "erased"
+    end
+
+    test "describes a body too large to read instead of reading it", ctx do
+      # Incompressible, so it is over the cap by the measure Postgres uses.
+      big = for i <- 1..40_000, into: %{}, do: {"k#{i}", Ecto.UUID.generate()}
+
+      add_step(ctx, "huge", input_dataclip: clip(ctx.project, big))
+
+      assert [%{input: input}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert input =~ "too large"
+    end
+
+    test "measures the body rather than the compressed row", ctx do
+      # Over the cap as JSON and well under it once Postgres has compressed
+      # it, which is the shape these workflows carry and the case a cap on
+      # pg_column_size lets straight through.
+      compressible =
+        for i <- 1..60_000, into: %{}, do: {"key-#{i}", "the same value"}
+
+      add_step(ctx, "compressible",
+        input_dataclip: clip(ctx.project, compressible)
+      )
+
+      assert [%{input: input}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert input =~ "too large"
+    end
+
+    test "says nothing about a dataclip whose body was removed", ctx do
+      step =
+        add_step(ctx, "emptied", input_dataclip: clip(ctx.project, %{"a" => 1}))
+
+      # Not wiped, just no body: what Invocation.delete_dataclip/1 leaves.
+      Lightning.Repo.query!(
+        "UPDATE dataclips SET body = NULL WHERE id = $1",
+        [Ecto.UUID.dump!(step.input_dataclip_id)]
+      )
+
+      assert [%{input: nil}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+    end
+
+    test "calls a null body null rather than too large", ctx do
+      step =
+        add_step(ctx, "null output",
+          output_dataclip: clip(ctx.project, %{"a" => 1})
+        )
+
+      # A body of JSON null, which is a value, not an absent one. Ecto writes
+      # SQL NULL for a nil map, so it has to be set as jsonb directly.
+      Lightning.Repo.query!(
+        "UPDATE dataclips SET body = 'null'::jsonb WHERE id = $1",
+        [Ecto.UUID.dump!(step.output_dataclip_id)]
+      )
+
+      assert [%{output: output}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert output == "null"
+    end
+
+    test "says nothing about a step that had no data to read", ctx do
+      add_step(ctx, "no input", input_dataclip: nil)
+
+      assert [%{input: nil}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+    end
+
+    test "keeps the run a sequence once the budget is spent", ctx do
+      # As much as one dataclip can carry once the key budget has had its say,
+      # repeated until the run's own budget runs out.
+      dense =
+        for i <- 1..50,
+            into: %{},
+            do:
+              {"a-long-enough-key-name-#{i}",
+               for(
+                 j <- 1..10,
+                 into: %{},
+                 do: {"another-long-key-name-#{j}", "v"}
+               )}
+
+      for n <- 1..8 do
+        add_step(ctx, "step-#{n}",
+          started_at: DateTime.add(~U[2026-09-01 10:00:00Z], n),
+          input_dataclip: clip(ctx.project, dense),
+          output_dataclip: clip(ctx.project, dense)
+        )
+      end
+
+      # Past the budget and with nothing to read either way.
+      add_step(ctx, "nothing to read",
+        started_at: ~U[2026-09-01 10:00:59Z],
+        input_dataclip: nil
+      )
+
+      entries = Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      # Every step is still named, and the ones past the budget say why they
+      # are not there rather than going missing.
+      assert length(entries) == 9
+
+      assert List.last(entries) == %{
+               step_name: "nothing to read",
+               input: nil,
+               output: nil
+             }
+
+      assert Enum.any?(entries, &is_map(&1.input))
+
+      assert Enum.any?(
+               entries,
+               &(is_binary(&1.input) and &1.input =~ "ran past")
+             )
+    end
+
+    test "caps how many keys a wide map carries out", ctx do
+      wide = for i <- 1..500, into: %{}, do: {"patient-#{i}", "name"}
+
+      add_step(ctx, "wide", input_dataclip: clip(ctx.project, wide))
+
+      assert [%{input: input}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert map_size(input) < 500
+      assert input["..."] =~ "more keys"
+    end
+
+    test "returns nothing for a run outside the project", ctx do
+      add_step(ctx, "one", input_dataclip: clip(ctx.project, %{"a" => 1}))
+
+      assert Invocation.scrubbed_io_for_run(ctx.run.id, insert(:project).id) ==
+               []
+    end
+
+    test "returns nothing without a project", ctx do
+      add_step(ctx, "one", input_dataclip: clip(ctx.project, %{"a" => 1}))
+
+      assert Invocation.scrubbed_io_for_run(ctx.run.id, nil) == []
+    end
+
+    test "returns nothing for a run id that is not a uuid", ctx do
+      assert Invocation.scrubbed_io_for_run("not-a-uuid", ctx.project.id) == []
     end
   end
 

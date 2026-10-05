@@ -36,7 +36,7 @@ defmodule Lightning.MetadataService do
   ## Parameters
     - `adaptor`: The adaptor npm specification (e.g., "@openfn/language-http")
     - `credential`: The credential struct
-    - `environment`: The environment name (defaults to "main")
+    - `environment`: the environment whose credential body to read
 
   ## Returns
     - `{:ok, metadata}` - The metadata as a map
@@ -44,7 +44,7 @@ defmodule Lightning.MetadataService do
   """
   @spec fetch(adaptor :: String.t(), Credential.t(), environment :: String.t()) ::
           {:ok, %{optional(binary) => binary}} | {:error, Error.t()}
-  def fetch(adaptor, credential, environment \\ "main") do
+  def fetch(adaptor, credential, environment) do
     Lightning.TaskWorker.start_task(@cli_task_worker, fn ->
       LightningWeb.Telemetry.with_span(
         [:lightning, :fetch_metadata],
@@ -66,7 +66,7 @@ defmodule Lightning.MetadataService do
     with {:ok, {adaptor, state}} <-
            assemble_args(adaptor, credential, environment),
          {:ok, adaptor_path} <- get_adaptor_path(adaptor),
-         res <- CLI.metadata(state, adaptor_path),
+         {:ok, res} <- CLI.metadata(state, adaptor_path),
          {:ok, path} <- get_output_path(res) do
       path
       |> File.read()
@@ -124,6 +124,9 @@ defmodule Lightning.MetadataService do
 
   defp get_adaptor_path(adaptor) do
     case AdaptorService.install(@adaptor_service, adaptor) do
+      {:error, {:catalogue_unavailable, _reason}} ->
+        {:error, Error.new("adaptor_catalogue_unavailable")}
+
       {:error, _} ->
         {:error, Error.new("no_matching_adaptor")}
 
@@ -151,7 +154,7 @@ defmodule Lightning.MetadataService do
       is_map(last_message) ->
         {:error, Error.new("no_metadata_result")}
 
-      Regex.match?(~r"^[/a-zA-z0-9\-_\.]+\.json$", last_message) ->
+      Regex.match?(~r"^\A[/A-Za-z0-9\-_\.]+\.json\z", last_message) ->
         path = last_message
         {:ok, path}
 

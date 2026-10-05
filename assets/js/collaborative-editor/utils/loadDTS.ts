@@ -1,6 +1,6 @@
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 
-import dts_es5 from '../../editor/lib/es5.min.dts';
+import dts_es5 from './es5.min.dts';
 
 export type Lib = {
   content: string;

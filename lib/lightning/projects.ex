@@ -22,6 +22,7 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.Events
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Projects.ProjectOauthClient
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.Sandboxes
   alias Lightning.Repo
@@ -29,13 +30,35 @@ defmodule Lightning.Projects do
   alias Lightning.RunStep
   alias Lightning.Services.AccountHook
   alias Lightning.Services.ProjectHook
+  alias Lightning.Storage.ProjectFileDefinition
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.YamlFormat.V2
   alias Lightning.WorkOrder
 
   require Logger
+
+  @doc """
+  Maximum depth bound applied to every `parent_id` walk in this module's
+  recursive CTEs. Derived as `max_sandbox_nesting_depth() + 1` so the CTE
+  bound is always one hop above the deepest legitimate project. A real
+  cycle has no root and exhausts the buffer hop instead of looping until
+  Postgres' `statement_timeout` fires.
+  """
+  @spec max_project_tree_depth() :: pos_integer()
+  def max_project_tree_depth,
+    do: Lightning.Config.max_sandbox_nesting_depth() + 1
+
+  @doc """
+  Depth of a project in the parent tree. Roots return 0, a direct child
+  sandbox returns 1, and so on. Bounded by `max_project_tree_depth/0`.
+  """
+  @spec depth_of(Ecto.UUID.t()) :: non_neg_integer()
+  def depth_of(project_id) when is_binary(project_id) do
+    length(list_ancestors(project_id)) - 1
+  end
 
   defmodule ProjectOverviewRow do
     @moduledoc """
@@ -49,6 +72,28 @@ defmodule Lightning.Projects do
       :collaborators_count,
       :last_updated_at
     ]
+  end
+
+  defmodule ProjectTreeItem do
+    @moduledoc """
+    A node in a user-visible project tree. Carries only the fields needed
+    to render the tree, with `parent_id` shaped for display (`nil` at the
+    user's access roots, the nearest visible ancestor for descendants).
+    `sandbox?` reflects the underlying DB shape (true when the project has
+    a real `parent_id` in the database, regardless of where the user's
+    access root sits) so the picker can pick the right icon for a sandbox
+    surfaced as an access root. Not a persistable record.
+    """
+
+    @type t :: %__MODULE__{
+            id: Ecto.UUID.t(),
+            name: String.t(),
+            color: String.t() | nil,
+            parent_id: Ecto.UUID.t() | nil,
+            sandbox?: boolean()
+          }
+
+    defstruct [:id, :name, :color, :parent_id, :sandbox?]
   end
 
   defdelegate subscribe, to: Events
@@ -150,11 +195,14 @@ defmodule Lightning.Projects do
         args: %{"project_id" => project_id, "type" => "purge_deleted"}
       }) do
     case get_project(project_id) do
-      nil -> :ok
-      project -> delete_project(project)
-    end
+      nil ->
+        :ok
 
-    :ok
+      project ->
+        # Return the error rather than swallowing it, so a purge that can't
+        # complete shows up as a failed job instead of reporting success.
+        with {:ok, _project} <- delete_project(project), do: :ok
+    end
   end
 
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
@@ -259,17 +307,27 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns the **root ancestor** of a project by walking up `parent_id` links.
+  Returns the **root ancestor** of a project.
 
-  Supports arbitrarily deep nesting. (Assumes the parent chain is well-formed.)
+  Uses `preload_ancestors/1` (one recursive CTE) and then walks the loaded
+  `:parent` chain in memory, so the cost is one round trip regardless of
+  how deep `project` sits in its workspace. The returned root carries
+  `parent: nil` (it has no parent in the database); intermediate ancestors
+  remain on the chain in case the caller wants them.
   """
   @spec root_of(Project.t()) :: Project.t()
-  def root_of(%Project{} = p) do
-    case p.parent_id do
-      nil -> p
-      pid -> root_of(Repo.get!(Project, pid))
-    end
+  def root_of(%Project{parent_id: nil} = project), do: project
+
+  def root_of(%Project{} = project) do
+    project
+    |> preload_ancestors()
+    |> walk_to_root()
   end
+
+  defp walk_to_root(%Project{parent: %Project{} = parent}),
+    do: walk_to_root(parent)
+
+  defp walk_to_root(%Project{} = project), do: project
 
   @doc """
   Preloads the full ancestor chain on a project's `:parent` association,
@@ -295,12 +353,20 @@ defmodule Lightning.Projects do
   end
 
   defp list_ancestors(start_id) do
-    initial = from(p in Project, where: p.id == ^start_id)
+    max_depth = max_project_tree_depth()
+
+    initial =
+      from(p in Project,
+        where: p.id == ^start_id,
+        select: %{id: p.id, parent_id: p.parent_id, depth: 0}
+      )
 
     recursion =
       from(p in Project,
         join: a in "ancestors",
-        on: a.parent_id == p.id
+        on: a.parent_id == p.id,
+        where: a.depth < ^max_depth,
+        select: %{id: p.id, parent_id: p.parent_id, depth: a.depth + 1}
       )
 
     from(p in Project, inner_join: a in "ancestors", on: a.id == p.id)
@@ -387,6 +453,32 @@ defmodule Lightning.Projects do
     include = Keyword.get(opts, :include, [])
     ProjectUser |> Repo.get!(id) |> Repo.preload(include)
   end
+
+  @doc """
+  Gets a project user by id only when it belongs to `project`.
+
+  Returns `nil` for a malformed, missing, or cross-project id. Use this instead
+  of `get_project_user!/2` whenever the id comes from client input scoped to a
+  project in the URL, so an action can't reach a membership in another project.
+  """
+  @spec get_project_user_for_project(term(), Project.t(), keyword()) ::
+          ProjectUser.t() | nil
+  def get_project_user_for_project(id, project, opts \\ [])
+
+  def get_project_user_for_project(id, %Project{id: project_id}, opts)
+      when is_binary(id) do
+    include = Keyword.get(opts, :include, [])
+
+    with {:ok, uuid} <- Ecto.UUID.cast(id),
+         %ProjectUser{project_id: ^project_id} = project_user <-
+           Repo.get(ProjectUser, uuid) do
+      Repo.preload(project_user, include)
+    else
+      _ -> nil
+    end
+  end
+
+  def get_project_user_for_project(_id, _project, _opts), do: nil
 
   @spec get_project_user(Ecto.UUID.t()) :: ProjectUser.t() | nil
   def get_project_user(id) when is_binary(id), do: Repo.get(ProjectUser, id)
@@ -506,6 +598,8 @@ defmodule Lightning.Projects do
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project}} ->
+        broadcast_support_access_change(updated_project, changeset)
+
         if retention_setting_updated?(changeset) do
           send_data_retention_change_email(updated_project)
         end
@@ -530,27 +624,159 @@ defmodule Lightning.Projects do
     |> Audit.derive_events(changeset, user)
   end
 
-  @spec update_project_with_users(Project.t(), map(), boolean()) ::
+  @spec update_project_with_users(Project.t(), map(), User.t(), boolean()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
   def update_project_with_users(
         %Project{} = project,
         attrs,
+        %User{} = actor,
         notify_users \\ true
       ) do
     project = Repo.preload(project, :project_users)
 
-    result =
-      project
-      |> Project.project_with_users_changeset(attrs)
-      |> Repo.update()
+    changeset = Project.project_with_users_changeset(project, attrs)
 
-    if notify_users do
-      with {:ok, updated_project} <- result do
-        schedule_project_addition_emails(project, updated_project)
-      end
+    project
+    |> membership_multi(changeset, actor)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{project: updated_project, membership_changes: changes}} ->
+        broadcast_membership_changes(updated_project.id, changes)
+        broadcast_support_access_change(updated_project, changeset)
+
+        if notify_users do
+          schedule_project_addition_emails(project, updated_project)
+        end
+
+        {:ok, updated_project}
+
+      {:error, :project, changeset, _changes_so_far} ->
+        {:error, changeset}
+
+      # Every other step — the audit trail, credential revocation — fails only
+      # if the database itself is in trouble. Raising beats returning a shape
+      # callers would render as a form changeset.
+      {:error, operation, reason, _changes_so_far} ->
+        raise "membership update failed at #{inspect(operation)}: #{inspect(reason)}"
     end
+  end
 
-    result
+  # A membership write submits the whole member list: `cast_assoc/3` only sees
+  # the children the params name, and the owner validation runs over exactly
+  # those, so members nobody is touching still have to be named. `rows` names
+  # the members being changed — a row with an `:id` replaces that member's
+  # entry, one without is a new member. The list is re-read from the database
+  # because a caller's struct may carry an association that predates the rows
+  # being submitted.
+  @spec membership_params(Project.t(), [map()]) :: {Project.t(), map()}
+  defp membership_params(%Project{} = project, rows) do
+    project = Repo.preload(project, :project_users, force: true)
+
+    {changed, added} = Enum.split_with(rows, &Map.has_key?(&1, :id))
+    changed = Map.new(changed, &{&1.id, &1})
+
+    members =
+      Enum.map(project.project_users, fn %{id: id} ->
+        Map.get(changed, id, %{id: id})
+      end)
+
+    {project, %{project_users: added ++ members}}
+  end
+
+  defp membership_multi(%Project{} = project, changeset, actor) do
+    changes = membership_changes(changeset)
+
+    Multi.new()
+    |> Multi.update(:project, changeset)
+    |> Multi.put(:membership_changes, changes)
+    |> revoke_credentials_for_removed(project.id, changes)
+    |> Audit.derive_membership_events(project.id, changes, actor)
+  end
+
+  # A member submitted unchanged arrives as a no-op `:update` child and
+  # classifies as nothing.
+  @spec membership_changes(Ecto.Changeset.t()) :: [{atom(), map()}]
+  defp membership_changes(changeset) do
+    changeset
+    |> Ecto.Changeset.get_change(:project_users, [])
+    |> Enum.flat_map(&classify_membership_change/1)
+  end
+
+  defp classify_membership_change(%Ecto.Changeset{action: :insert} = changeset) do
+    [
+      {:added,
+       %{
+         user_id: Ecto.Changeset.get_field(changeset, :user_id),
+         role: Ecto.Changeset.get_field(changeset, :role)
+       }}
+    ]
+  end
+
+  defp classify_membership_change(%Ecto.Changeset{action: :update} = changeset) do
+    case Ecto.Changeset.fetch_change(changeset, :role) do
+      {:ok, role} ->
+        [
+          {:role_changed,
+           %{
+             user_id: Ecto.Changeset.get_field(changeset, :user_id),
+             role: role,
+             previous_role: changeset.data.role
+           }}
+        ]
+
+      :error ->
+        []
+    end
+  end
+
+  defp classify_membership_change(%Ecto.Changeset{action: :delete} = changeset) do
+    [
+      {:removed, %{user_id: changeset.data.user_id, role: changeset.data.role}}
+    ]
+  end
+
+  defp revoke_credentials_for_removed(multi, project_id, changes) do
+    for {:removed, %{user_id: user_id}} <- changes, reduce: multi do
+      multi ->
+        Multi.delete_all(
+          multi,
+          {:revoke_project_credentials, user_id},
+          user_project_credentials_query(project_id, user_id)
+        )
+    end
+  end
+
+  defp user_project_credentials_query(project_id, user_id) do
+    from(pc in Lightning.Projects.ProjectCredential,
+      join: c in Lightning.Credentials.Credential,
+      on: c.id == pc.credential_id,
+      where: c.user_id == ^user_id and pc.project_id == ^project_id
+    )
+  end
+
+  defp broadcast_membership_changes(project_id, changes) do
+    Enum.each(changes, &broadcast_membership_change(project_id, &1))
+  end
+
+  defp broadcast_membership_change(project_id, {:added, %{user_id: user_id}}),
+    do: Events.project_user_added(project_id, user_id)
+
+  defp broadcast_membership_change(
+         project_id,
+         {:role_changed, %{user_id: user_id}}
+       ),
+       do: Events.project_user_role_changed(project_id, user_id)
+
+  defp broadcast_membership_change(project_id, {:removed, %{user_id: user_id}}),
+    do: Events.project_user_removed(project_id, user_id)
+
+  # Support access is the only standing a support user without a membership row
+  # has on a project, so flipping it changes their permissions the way a role
+  # change does a member's.
+  defp broadcast_support_access_change(project, changeset) do
+    if Ecto.Changeset.changed?(changeset, :allow_support_access) do
+      Events.support_access_updated(project.id, project.allow_support_access)
+    end
   end
 
   defp retention_setting_updated?(changeset) do
@@ -575,34 +801,34 @@ defmodule Lightning.Projects do
     end)
   end
 
+  @notification_pref_fields [:failure_alert, :digest]
+
   @doc """
-  Updates a project user.
+  Updates a single notification preference on a project user.
 
-  ## Examples
-
-      iex> update_project_user(project_user, %{field: new_value})
-      {:ok, %ProjectUser{}}
-
-      iex> update_project_user(projectUser, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
+  Returns `:unchanged` when the submitted value casts equal to the current
+  value, so callers can skip the success flash on a no-op submit.
   """
-  def update_project_user(%ProjectUser{} = project_user, attrs) do
-    project_user
-    |> ProjectUser.changeset(attrs)
-    |> Repo.update()
+  @spec set_notification_pref(ProjectUser.t(), atom(), term()) ::
+          {:ok, ProjectUser.t()} | {:error, Ecto.Changeset.t()} | :unchanged
+  def set_notification_pref(%ProjectUser{} = project_user, field, value)
+      when field in @notification_pref_fields do
+    changeset = ProjectUser.changeset(project_user, %{field => value})
+
+    cond do
+      not changeset.valid? -> {:error, changeset}
+      Ecto.Changeset.changed?(changeset, field) -> Repo.update(changeset)
+      true -> :unchanged
+    end
   end
 
-  @spec add_project_users(Project.t(), [map(), ...], boolean()) ::
+  @spec add_project_users(Project.t(), [map(), ...], User.t(), boolean()) ::
           {:ok, [ProjectUser.t(), ...]} | {:error, Ecto.Changeset.t()}
-  def add_project_users(project, project_users, notify_users \\ true) do
-    project = Repo.preload(project, :project_users)
-    # include the current list to ensure project owner validations work correctly
-    current_users = Enum.map(project.project_users, fn pu -> %{id: pu.id} end)
-    params = %{project_users: project_users ++ current_users}
+  def add_project_users(project, project_users, actor, notify_users \\ true) do
+    {project, params} = membership_params(project, project_users)
 
     with {:ok, updated_project} <-
-           update_project_with_users(project, params, notify_users) do
+           update_project_with_users(project, params, actor, notify_users) do
       {:ok, updated_project.project_users}
     end
   end
@@ -621,25 +847,27 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Deletes a project user and removes their credentials from the project.
+  Removes a collaborator from a project, revoking their project credentials,
+  auditing the removal against `actor` and broadcasting the change.
 
-  This function:
-  1. Deletes the association between the user and the project
-  2. Removes any credentials owned by the user from the project
-
-  All operations are performed within a transaction for data consistency.
+  Refuses to remove the project owner, or an admin of the parent project from a
+  sandbox — neither is expressible through the project form, so both raise.
 
   ## Parameters
     - `project_user`: The `ProjectUser` struct to be deleted
+    - `actor`: The `User` removing them, recorded on the audit event
 
   ## Returns
     - The deleted `ProjectUser` struct
   """
-  @spec delete_project_user!(ProjectUser.t()) :: ProjectUser.t()
-  def delete_project_user!(%ProjectUser{} = project_user) do
-    project_user =
-      %{user_id: user_id, project_id: project_id} =
-      Repo.preload(project_user, [:user, :project])
+  @spec delete_project_user!(ProjectUser.t(), User.t()) :: ProjectUser.t()
+  def delete_project_user!(%ProjectUser{} = project_user, %User{} = actor) do
+    project_user = Repo.preload(project_user, [:user, :project])
+
+    if project_user.role == :owner do
+      raise ArgumentError,
+            "Cannot remove the owner of a project. Transfer ownership first."
+    end
 
     if Project.sandbox?(project_user.project) and
          Lightning.Projects.Sandboxes.parent_admin?(
@@ -650,19 +878,17 @@ defmodule Lightning.Projects do
             "Cannot remove a parent project admin from a sandbox"
     end
 
-    Repo.transaction(fn ->
-      from(pc in Lightning.Projects.ProjectCredential,
-        join: c in Lightning.Credentials.Credential,
-        on: c.id == pc.credential_id,
-        where: c.user_id == ^user_id and pc.project_id == ^project_id
-      )
-      |> Repo.delete_all()
+    {project, params} =
+      membership_params(project_user.project, [
+        %{id: project_user.id, delete: true}
+      ])
 
-      Repo.delete!(project_user)
-    end)
-    |> case do
-      {:ok, project_user} -> project_user
-      {:error, error} -> raise error
+    case update_project_with_users(project, params, actor, false) do
+      {:ok, _project} ->
+        project_user
+
+      {:error, changeset} ->
+        raise Ecto.InvalidChangesetError, action: :update, changeset: changeset
     end
   end
 
@@ -765,6 +991,10 @@ defmodule Lightning.Projects do
     from(pc in ProjectCredential, where: pc.project_id == ^project.id)
   end
 
+  def project_oauth_clients_query(project) do
+    from(poc in ProjectOauthClient, where: poc.project_id == ^project.id)
+  end
+
   def project_dataclips_query(project) do
     from(d in Dataclip, where: d.project_id == ^project.id)
   end
@@ -783,17 +1013,20 @@ defmodule Lightning.Projects do
   """
   @spec descendants_query([Ecto.UUID.t()]) :: Ecto.Query.t()
   def descendants_query(project_ids) when is_list(project_ids) do
+    max_depth = max_project_tree_depth()
+
     initial =
       from(p in Project,
         where: p.parent_id in ^project_ids,
-        select: %{id: p.id}
+        select: %{id: p.id, depth: 0}
       )
 
     recursion =
       from(p in Project,
         join: d in "project_descendants",
         on: p.parent_id == d.id,
-        select: %{id: p.id}
+        where: d.depth < ^max_depth,
+        select: %{id: p.id, depth: d.depth + 1}
       )
 
     "project_descendants"
@@ -813,6 +1046,60 @@ defmodule Lightning.Projects do
 
   def descendant_ids(project_ids) when is_list(project_ids) do
     descendants_query(project_ids) |> Repo.all()
+  end
+
+  @doc """
+  Returns the topmost ancestor (root) project id for the given project. For a
+  root project (`parent_id == nil`) returns its own id. Returns `nil` if the
+  project does not exist.
+
+  Used by the GitHub-sync guard to ensure no two projects sharing the same
+  ultimate root claim the same `(repo, branch)` pair.
+  """
+  @spec root_id(Project.t() | Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def root_id(%Project{id: id, parent_id: nil}) when is_binary(id), do: id
+
+  def root_id(%Project{id: id, parent_id: parent_id})
+      when is_binary(parent_id) and is_binary(id) do
+    root_id(id)
+  end
+
+  def root_id(project_id) when is_binary(project_id) do
+    initial =
+      from(p in Project,
+        where: p.id == ^project_id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    recursion =
+      from(p in Project,
+        join: a in "project_chain",
+        on: a.parent_id == p.id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    "project_chain"
+    |> recursive_ctes(true)
+    |> with_cte("project_chain", as: ^union_all(initial, ^recursion))
+    |> where([c], is_nil(c.parent_id))
+    |> select([c], type(c.id, Ecto.UUID))
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns every descendant project of `project_id`, ordered by name.
+
+  Unlike `list_workspace_projects/2`, the input is treated as the subtree
+  root: only its descendants are returned, not the absolute root of the
+  workspace.
+  """
+  @spec list_descendants(Ecto.UUID.t()) :: [Project.t()]
+  def list_descendants(project_id) when is_binary(project_id) do
+    from(p in Project,
+      where: p.id in subquery(descendants_query([project_id])),
+      order_by: [asc: p.name]
+    )
+    |> Repo.all()
   end
 
   @doc """
@@ -889,30 +1176,364 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns all projects the user can access, including sandboxes at any depth.
-
-  Root projects are fetched via the user's project memberships, then all
-  descendants are included using a recursive CTE via `descendant_ids/1`.
+  Returns the ids of every project the user holds a membership on, at any
+  depth. Unlike `get_projects_for_user/1` (top-level roots only), this includes
+  sandboxes, so it matches the membership check used by `:access_project`.
   """
-  @spec get_project_tree_for_user(User.t()) :: [Project.t()]
+  @spec member_project_ids(User.t()) :: [Ecto.UUID.t()]
+  def member_project_ids(%User{id: user_id}) do
+    from(pu in ProjectUser, where: pu.user_id == ^user_id, select: pu.project_id)
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns the user-visible project tree as a list of `ProjectTreeItem`s
+  ready for a hierarchical render (walk by grouping on `parent_id`).
+
+  The user's *access roots* are the topmost projects they can reach: every
+  project they hold a `project_users` row on (any depth), plus, for support
+  users, every workspace root flagged `allow_support_access`. A membership
+  on a deep sandbox without membership on its ancestors is therefore a
+  legitimate access root.
+
+  Descendants are filtered by the same per-project rule: each descendant
+  is included only when the user has a `project_users` row on it or is a
+  support user and that descendant carries `allow_support_access: true`.
+  Authority does not cascade from a parent project to its descendants.
+
+  `parent_id` on the returned items is the *visible* parent: `nil` at each
+  access root, and the nearest visible ancestor for descendants whose real
+  parent is hidden. The result is not a list of persistable records; see
+  `ProjectTreeItem`.
+  """
+  @spec get_project_tree_for_user(User.t()) :: [ProjectTreeItem.t()]
   def get_project_tree_for_user(%User{} = user) do
-    roots = get_projects_for_user(user)
+    case roots_for_user_tree(user) do
+      [] ->
+        []
+
+      roots ->
+        descendants = load_active_descendants(roots, user)
+        visible = filter_descendants_for_user(descendants, user)
+        shape_for_picker(roots, visible, descendants)
+    end
+  end
+
+  defp load_active_descendants(roots, %User{} = user) do
     root_ids = Enum.map(roots, & &1.id)
 
-    case descendant_ids(root_ids) do
+    case Repo.all(active_descendants_query(root_ids)) do
       [] ->
-        roots
+        []
 
       desc_ids ->
-        descendants =
-          from(p in Project,
-            where: p.id in ^desc_ids and is_nil(p.scheduled_deletion),
-            order_by: [asc: p.name]
-          )
-          |> Repo.all()
+        pu_for_user = project_users_for_user_query(user)
 
-        roots ++ descendants
+        from(p in Project,
+          where: p.id in ^desc_ids,
+          preload: [project_users: ^pu_for_user],
+          order_by: [asc: p.name]
+        )
+        |> Repo.all()
     end
+  end
+
+  defp shape_for_picker(roots, visible_descendants, all_descendants) do
+    Enum.map(roots, &as_access_root_item/1) ++
+      descendant_tree_items(visible_descendants, roots, all_descendants)
+  end
+
+  defp project_users_for_user_query(%User{id: user_id}) do
+    from(pu in ProjectUser, where: pu.user_id == ^user_id)
+  end
+
+  defp as_access_root_item(%Project{} = project) do
+    %ProjectTreeItem{
+      id: project.id,
+      name: project.name,
+      color: project.color,
+      parent_id: nil,
+      sandbox?: not is_nil(project.parent_id)
+    }
+  end
+
+  defp descendant_tree_items(visible_descendants, roots, all_descendants) do
+    project_map = Map.new(roots ++ all_descendants, &{&1.id, &1})
+
+    visible_id_set =
+      roots
+      |> Enum.concat(visible_descendants)
+      |> MapSet.new(& &1.id)
+
+    Enum.map(visible_descendants, fn p ->
+      %ProjectTreeItem{
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        parent_id:
+          nearest_visible_ancestor_id(p.parent_id, project_map, visible_id_set),
+        sandbox?: true
+      }
+    end)
+  end
+
+  defp nearest_visible_ancestor_id(parent_id, project_map, visible_ids) do
+    if MapSet.member?(visible_ids, parent_id) do
+      parent_id
+    else
+      # Parent chain is fully in project_map by the active-descendants CTE; fetch! fails loud if that ever breaks.
+      parent = Map.fetch!(project_map, parent_id)
+      nearest_visible_ancestor_id(parent.parent_id, project_map, visible_ids)
+    end
+  end
+
+  defp active_descendants_query(root_ids) do
+    max_depth = max_project_tree_depth()
+
+    direct_children =
+      from(p in Project,
+        where: p.parent_id in ^root_ids and is_nil(p.scheduled_deletion),
+        select: %{id: p.id, depth: 0}
+      )
+
+    next_level_down =
+      from(p in Project,
+        join: d in "active_project_descendants",
+        on: p.parent_id == d.id,
+        where: d.depth < ^max_depth and is_nil(p.scheduled_deletion),
+        select: %{id: p.id, depth: d.depth + 1}
+      )
+
+    "active_project_descendants"
+    |> recursive_ctes(true)
+    |> with_cte("active_project_descendants",
+      as: ^union_all(direct_children, ^next_level_down)
+    )
+    |> select([d], type(d.id, Ecto.UUID))
+  end
+
+  defp roots_for_user_tree(%User{} = user) do
+    candidates = load_candidate_roots(user)
+    candidate_id_set = MapSet.new(candidates, & &1.id)
+    ancestors_by_candidate = ancestor_ids_by_starting_id(candidate_id_set)
+
+    Enum.reject(
+      candidates,
+      &shadowed_by_candidate_ancestor?(
+        &1,
+        ancestors_by_candidate,
+        candidate_id_set
+      )
+    )
+  end
+
+  defp load_candidate_roots(%User{} = user) do
+    pu_for_user = project_users_for_user_query(user)
+
+    user
+    |> candidate_roots_query()
+    |> Repo.all()
+    |> Repo.preload(project_users: pu_for_user)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  defp shadowed_by_candidate_ancestor?(
+         %Project{id: id},
+         ancestors_by_candidate,
+         candidate_id_set
+       ) do
+    ancestors = Map.get(ancestors_by_candidate, id, MapSet.new())
+    not MapSet.disjoint?(ancestors, candidate_id_set)
+  end
+
+  defp candidate_roots_query(%User{support_user: true} = user) do
+    support_roots =
+      from(p in Project,
+        where:
+          p.allow_support_access and
+            is_nil(p.scheduled_deletion) and
+            is_nil(p.parent_id)
+      )
+
+    membership_projects =
+      from(p in Project,
+        join: pu in assoc(p, :project_users),
+        where: pu.user_id == ^user.id and is_nil(p.scheduled_deletion)
+      )
+
+    support_roots |> union(^membership_projects)
+  end
+
+  defp candidate_roots_query(%User{} = user) do
+    from(p in Project,
+      join: pu in assoc(p, :project_users),
+      where: pu.user_id == ^user.id and is_nil(p.scheduled_deletion)
+    )
+  end
+
+  defp ancestor_ids_by_starting_id(starting_ids) do
+    if MapSet.size(starting_ids) == 0 do
+      %{}
+    else
+      starting_ids
+      |> MapSet.to_list()
+      |> ancestor_pairs_query()
+      |> Repo.all()
+      |> group_ancestors_by_starting_id()
+    end
+  end
+
+  defp ancestor_pairs_query(starting_ids) do
+    max_depth = max_project_tree_depth()
+
+    starting_rows =
+      from(p in Project,
+        where: p.id in ^starting_ids,
+        select: %{starting_id: p.id, ancestor_id: p.parent_id, depth: 0}
+      )
+
+    next_ancestor_up =
+      from(p in Project,
+        join: a in "ancestor_walk",
+        on: a.ancestor_id == p.id,
+        where: not is_nil(a.ancestor_id) and a.depth < ^max_depth,
+        select: %{
+          starting_id: a.starting_id,
+          ancestor_id: p.parent_id,
+          depth: a.depth + 1
+        }
+      )
+
+    "ancestor_walk"
+    |> recursive_ctes(true)
+    |> with_cte("ancestor_walk",
+      as: ^union_all(starting_rows, ^next_ancestor_up)
+    )
+    |> where([a], not is_nil(a.ancestor_id))
+    |> select(
+      [a],
+      {type(a.starting_id, Ecto.UUID), type(a.ancestor_id, Ecto.UUID)}
+    )
+  end
+
+  defp group_ancestors_by_starting_id(pairs) do
+    pairs
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {id, ancestors} -> {id, MapSet.new(ancestors)} end)
+  end
+
+  @doc """
+  Returns the subset of `sandboxes` that `user` is allowed to see.
+
+  A sandbox is visible when the user has a `project_users` row on that
+  sandbox, or is a support user on a sandbox flagged
+  `allow_support_access`. Visibility does not cascade from a parent
+  project; each sandbox is an independent project with its own
+  membership list (seeded from the parent at provision time).
+
+  Assumes each `sandbox.project_users` is preloaded; raises
+  `ArgumentError` otherwise.
+  """
+  @spec visible_sandboxes([Project.t()], User.t()) :: [Project.t()]
+  def visible_sandboxes(sandboxes, %User{} = user) do
+    Enum.each(sandboxes, &assert_project_users_loaded!(&1, "sandbox"))
+    Enum.filter(sandboxes, &accessible?(&1, user))
+  end
+
+  defp assert_project_users_loaded!(
+         %Project{project_users: %Ecto.Association.NotLoaded{}},
+         label
+       ) do
+    raise ArgumentError,
+          "visible_sandboxes/2 requires :project_users to be preloaded on " <>
+            "the #{label}; see the function docstring"
+  end
+
+  defp assert_project_users_loaded!(%Project{}, _label), do: :ok
+
+  @doc "Topmost ancestor of `project` that `user` can see; falls back to `project`."
+  @spec access_root_for_user(Project.t(), User.t()) :: Project.t()
+  def access_root_for_user(%Project{parent_id: nil} = project, %User{}),
+    do: project
+
+  def access_root_for_user(%Project{} = project, %User{} = user) do
+    project.id
+    |> ancestor_chain_with_user_membership(user.id)
+    |> Enum.find(project, &accessible?(&1, user))
+  end
+
+  defp ancestor_chain_with_user_membership(project_id, user_id) do
+    max_depth = max_project_tree_depth()
+
+    seed =
+      from(p in Project,
+        where: p.id == ^project_id,
+        select: %{id: p.id, depth: 0}
+      )
+
+    step_up =
+      from(p in Project,
+        join: walked in "ancestor_walk",
+        on: walked.id == p.id,
+        where: walked.depth < ^max_depth and not is_nil(p.parent_id),
+        select: %{id: p.parent_id, depth: walked.depth + 1}
+      )
+
+    from(p in Project,
+      join: a in "ancestor_walk",
+      on: a.id == p.id,
+      left_join: pu in ProjectUser,
+      on: pu.project_id == p.id and pu.user_id == ^user_id,
+      order_by: [desc: a.depth],
+      preload: [project_users: pu]
+    )
+    |> with_cte("ancestor_walk", as: ^union_all(seed, ^step_up))
+    |> recursive_ctes(true)
+    |> Repo.all()
+  end
+
+  @doc "Display name from `access_root` down to `project`, joined by `/`."
+  @spec display_name_within_access_root(Project.t(), Project.t()) :: String.t()
+  def display_name_within_access_root(
+        %Project{} = project,
+        %Project{id: access_root_id}
+      ) do
+    project
+    |> preload_ancestors()
+    |> truncate_parent_chain(access_root_id)
+    |> Project.display_name()
+  end
+
+  defp truncate_parent_chain(%Project{id: id} = project, id),
+    do: %{project | parent: nil}
+
+  defp truncate_parent_chain(
+         %Project{parent: %Project{} = parent} = project,
+         access_root_id
+       ),
+       do: %{project | parent: truncate_parent_chain(parent, access_root_id)}
+
+  defp truncate_parent_chain(%Project{} = project, _access_root_id),
+    do: project
+
+  defp accessible?(%Project{} = project, %User{} = user) do
+    member?(project, user) or support_access?(project, user)
+  end
+
+  defp support_access?(
+         %Project{allow_support_access: true},
+         %User{support_user: true}
+       ),
+       do: true
+
+  defp support_access?(_project, _user), do: false
+
+  defp member?(%Project{project_users: pus}, %User{id: user_id}) do
+    Enum.any?(pus, &(&1.user_id == user_id))
+  end
+
+  defp filter_descendants_for_user(descendants, %User{} = user) do
+    Enum.filter(descendants, &accessible?(&1, user))
   end
 
   defp project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do
@@ -959,19 +1580,6 @@ defmodule Lightning.Projects do
     |> Repo.one()
   end
 
-  def member_of?(%Project{id: project_id}, %User{id: user_id}) do
-    from(p in Project,
-      join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and p.id == ^project_id,
-      select: true
-    )
-    |> Repo.one()
-    |> case do
-      nil -> false
-      true -> true
-    end
-  end
-
   def get_project_credential(project_id, credential_id) do
     from(pc in ProjectCredential,
       where:
@@ -984,21 +1592,41 @@ defmodule Lightning.Projects do
   @doc """
   Exports a project as yaml.
 
+  The `format` is required and selects the serializer:
+    * `:v1` — legacy Lightning format (`Lightning.ExportUtils`). Hard-wired
+      for the provisioner API so external CLIs that consume
+      `GET /api/provision/yaml` keep working.
+    * `:v2` — portability spec format (`Lightning.Workflows.YamlFormat.V2`).
+      Used by the in-app "Export project as YAML" download.
+
+  `snapshot_ids` may be `nil` (export current workflows) or a list of
+  snapshot ids (export those specific snapshots).
+
   ## Examples
 
-      iex> export_project(:yaml, project_id)
+      iex> export_project(:yaml, project_id, nil, :v2)
       {:ok, string}
 
+  Returns `{:error, message}` when two entities in the project would be written
+  under the same key in the spec. See
+  `Lightning.ExportUtils.DuplicateKeyError`.
+
   """
-  @spec export_project(atom(), Ecto.UUID.t(), [Ecto.UUID.t()] | nil) ::
-          {:ok, binary}
-  def export_project(:yaml, project_id, snapshot_ids \\ nil) do
+  @spec export_project(:yaml, Ecto.UUID.t(), [Ecto.UUID.t()] | nil, :v1 | :v2) ::
+          {:ok, binary} | {:error, binary}
+  def export_project(:yaml, project_id, snapshot_ids, format)
+      when format in [:v1, :v2] do
     project = get_project!(project_id)
 
     snapshots =
-      if snapshot_ids, do: Snapshot.get_all_by_ids(snapshot_ids), else: nil
+      if snapshot_ids,
+        do: Snapshot.get_all_by_ids(snapshot_ids, project_id),
+        else: nil
 
-    {:ok, _yaml} = ExportUtils.generate_new_yaml(project, snapshots)
+    case format do
+      :v1 -> ExportUtils.generate_new_yaml(project, snapshots)
+      :v2 -> V2.serialize_project(project, snapshots)
+    end
   end
 
   @doc """
@@ -1013,8 +1641,13 @@ defmodule Lightning.Projects do
     |> scheduled_project_deletion_changes(project: project)
     |> Repo.transaction()
     |> case do
-      {:ok, %{project: updated_project}} -> {:ok, updated_project}
-      {:error, _op, changeset, _changes} -> {:error, changeset}
+      {:ok, %{project: updated_project}} ->
+        Events.project_deletion_scheduled(updated_project.id)
+
+        {:ok, updated_project}
+
+      {:error, _op, changeset, _changes} ->
+        {:error, changeset}
     end
   end
 
@@ -1100,18 +1733,79 @@ defmodule Lightning.Projects do
 
   defp wipe_dataclips_for(%Project{dataclip_retention_period: period} = project)
        when is_integer(period) do
-    update_query =
-      from d in Lightning.Invocation.Query.wipe_dataclips(),
+    batch_size = Config.activity_cleanup_chunk_size()
+    # Wiping only sets a column, it doesn't remove the row from the index like
+    # a delete would - so a small per-update batch re-walks a growing prefix
+    # of already-wiped rows on every iteration. Fetch a much larger slice of
+    # ids up front to amortise that walk, then apply the actual updates in
+    # batch_size-sized chunks by primary key.
+    fetch_size = batch_size * 100
+
+    eligible_query =
+      from d in Dataclip,
         where: d.project_id == ^project.id,
-        where: d.inserted_at < ago(^period, "day")
+        where: d.inserted_at < ago(^period, "day"),
+        where: d.type in [:http_request, :step_result, :saved_input, :kafka],
+        where: is_nil(d.name),
+        where: is_nil(d.wiped_at),
+        # Matches dataclips_pending_wipe_idx's sort column, so this is
+        # satisfied by the index scan itself - no extra Sort node, and each
+        # page still stops after fetch_size instead of scanning every
+        # eligible row to find an arbitrary top-N.
+        order_by: [asc: d.inserted_at],
+        select: d.id
 
-    {count, _} = Repo.update_all(update_query, [])
+    Stream.repeatedly(fn ->
+      ids =
+        eligible_query
+        |> limit(^fetch_size)
+        |> Repo.all(timeout: Config.default_ecto_database_timeout() * 10)
 
-    {:ok, count}
+      if ids == [], do: nil, else: ids
+    end)
+    |> Stream.take_while(& &1)
+    |> Enum.reduce(0, fn ids, acc ->
+      wiped =
+        ids
+        |> Enum.chunk_every(batch_size)
+        |> Enum.reduce(0, fn chunk, chunk_acc ->
+          {count, _} =
+            from(d in Dataclip, where: d.id in ^chunk)
+            |> Lightning.Invocation.Query.wipe_dataclips()
+            |> Repo.update_all([],
+              timeout: Config.default_ecto_database_timeout() * 10
+            )
+
+          chunk_acc + count
+        end)
+
+      acc + wiped
+    end)
+    |> then(&{:ok, &1})
   end
 
   defp wipe_dataclips_for(_project) do
     {:error, :missing_dataclip_retention_period}
+  end
+
+  @doc """
+  Removes every stored file belonging to a project, both the object in the
+  storage backend and the `project_files` row.
+
+  Used by the deletion path: `project_files.project_id` doesn't cascade, so
+  these have to go before the project itself can be deleted. Returns the files
+  that could not be removed, so the caller can stop rather than tear the
+  project down around an archive that is still sitting in storage.
+  """
+  @spec remove_all_files_for(Project.t()) :: :ok | {:error, [Projects.File.t()]}
+  def remove_all_files_for(%Project{id: project_id}) do
+    from(f in Projects.File, where: f.project_id == ^project_id)
+    |> Repo.all()
+    |> Enum.reject(&remove_file/1)
+    |> case do
+      [] -> :ok
+      remaining -> {:error, remaining}
+    end
   end
 
   defp remove_expired_files_for(%Project{
@@ -1124,17 +1818,34 @@ defmodule Lightning.Projects do
           f.project_id == ^project_id and f.inserted_at < ago(^period, "day")
       )
       |> Repo.all()
-      |> Enum.each(fn %{path: object_path} = project_file ->
-        result = Lightning.Storage.delete(object_path)
-
-        if match?({:ok, _res}, result) or
-             match?({:error, %{status: 404}}, result) do
-          Repo.delete(project_file)
-        end
-      end)
+      |> Enum.each(&remove_file/1)
     end
 
     :ok
+  end
+
+  # Returns true when the file is gone, both from storage and from the table.
+  defp remove_file(%Projects.File{} = project_file) do
+    if is_nil(project_file.path) do
+      Logger.warning(
+        "Deleting orphaned project file #{project_file.id} " <>
+          "for project #{project_file.project_id} " <>
+          "with nil path (likely a failed export)"
+      )
+    end
+
+    with :ok <- ProjectFileDefinition.delete(project_file),
+         {:ok, _} <- Repo.delete(project_file) do
+      true
+    else
+      {:error, reason} ->
+        Logger.error(
+          "Failed to delete stored file #{project_file.path} for project " <>
+            "#{project_file.project_id}: #{inspect(reason)}"
+        )
+
+        false
+    end
   end
 
   defp delete_history_for(
@@ -1313,16 +2024,20 @@ defmodule Lightning.Projects do
   end
 
   def invite_collaborators(project, collaborators, inviter) do
-    Multi.new()
-    |> Multi.put(:collaborators, collaborators)
-    |> Multi.merge(&register_users/1)
-    |> Multi.run(:add_users_to_project, fn _repo, changes ->
-      add_users_to_project(changes, project, collaborators)
-    end)
-    |> Multi.run(:send_invitations, fn _repo, changes ->
-      send_invitations(changes, project, inviter)
-    end)
-    |> execute_transaction()
+    multi =
+      Multi.new()
+      |> Multi.put(:collaborators, collaborators)
+      |> Multi.merge(&register_users/1)
+      |> Multi.merge(&add_users_to_project(&1, project, collaborators, inviter))
+      |> Multi.run(:send_invitations, fn _repo, changes ->
+        send_invitations(changes, project, inviter)
+      end)
+
+    with {:ok, %{project: project, membership_changes: changes}} = result <-
+           execute_transaction(multi) do
+      broadcast_membership_changes(project.id, changes)
+      result
+    end
   end
 
   defp execute_transaction(%Ecto.Multi{} = multi) do
@@ -1332,13 +2047,18 @@ defmodule Lightning.Projects do
     end
   end
 
-  defp add_users_to_project(changes, project, collaborators) do
-    project_users = build_project_users_list(collaborators, changes)
+  defp add_users_to_project(changes, project, collaborators, inviter) do
+    {project, params} =
+      membership_params(
+        project,
+        build_project_users_list(collaborators, changes)
+      )
 
-    case add_project_users(project, project_users, false) do
-      {:ok, project_users} -> {:ok, %{project_users: project_users}}
-      {:error, reason} -> {:error, reason}
-    end
+    membership_multi(
+      project,
+      Project.project_with_users_changeset(project, params),
+      inviter
+    )
   end
 
   defp register_users(%{collaborators: collaborators}) do
@@ -1437,17 +2157,6 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  def find_users_to_notify_of_trigger_failure(project_id) do
-    query =
-      from u in User,
-        join: pu in assoc(u, :project_users),
-        where:
-          pu.project_id == ^project_id and
-            (pu.role in ^[:admin, :owner] or u.role == ^:superuser)
-
-    query |> Repo.all()
-  end
-
   @doc """
   Returns the *direct* sandboxes (children) of a parent project, ordered by `name` (ASC).
 
@@ -1458,8 +2167,11 @@ defmodule Lightning.Projects do
   recursive walker used by `Lightning.Extensions.ProjectHook.handle_delete_project/1`
   to cascade hard-deletes through the subtree at purge time. Filtering would
   skip scheduled descendants and (because the parent FK is `:nilify_all`) leave
-  them as orphan root projects in the database. User-facing surfaces should use
-  `list_workspace_projects/2`, which filters scheduled rows out.
+  them as orphan root projects in the database. User-facing surfaces should
+  use `list_workspace_projects/2`, which returns the full workspace and lets
+  the caller decide what to display: the sandboxes list shows scheduled rows
+  in a separate "Recently Deleted" section, while the picker filters them out
+  at the SQL level in `get_project_tree_for_user/1`'s active-descendants CTE.
   """
   @spec list_sandboxes(Ecto.UUID.t()) :: [Project.t()]
   def list_sandboxes(parent_id) when is_binary(parent_id) do
@@ -1469,6 +2181,55 @@ defmodule Lightning.Projects do
       preload: :parent
     )
     |> Repo.all()
+  end
+
+  @doc """
+  Lists a parent project's active sandboxes for the "Edit in sandbox" picker.
+
+  Returns only the direct children of `parent_id` that are not scheduled for
+  deletion, sorted by `inserted_at` descending to match the "Created {relative}"
+  label the picker renders for each sandbox. Each sandbox preloads only its
+  owner `project_user` (and their user) for owner display, and resolves the
+  clone of the workflow named `workflow_name` so the caller can offer a direct
+  "join" target. The resolved workflow id is returned as `:joinable_workflow_id`,
+  or `nil` when the sandbox has no workflow with that name.
+  """
+  @spec list_active_sandboxes_for_editing(Ecto.UUID.t(), String.t()) :: [
+          {Project.t(), Ecto.UUID.t() | nil}
+        ]
+  def list_active_sandboxes_for_editing(parent_id, workflow_name)
+      when is_binary(parent_id) and is_binary(workflow_name) do
+    owner_preload =
+      from(pu in ProjectUser, where: pu.role == :owner, preload: :user)
+
+    sandboxes =
+      from(p in Project,
+        where: p.parent_id == ^parent_id and is_nil(p.scheduled_deletion),
+        order_by: [desc: p.inserted_at],
+        preload: [project_users: ^owner_preload]
+      )
+      |> Repo.all()
+
+    joinable_workflow_ids = joinable_workflow_ids(sandboxes, workflow_name)
+
+    Enum.map(sandboxes, fn sandbox ->
+      {sandbox, Map.get(joinable_workflow_ids, sandbox.id)}
+    end)
+  end
+
+  defp joinable_workflow_ids([], _workflow_name), do: %{}
+
+  defp joinable_workflow_ids(sandboxes, workflow_name) do
+    sandbox_ids = Enum.map(sandboxes, & &1.id)
+
+    from(w in Workflow,
+      where:
+        w.project_id in ^sandbox_ids and w.name == ^workflow_name and
+          is_nil(w.deleted_at),
+      select: {w.project_id, w.id}
+    )
+    |> Repo.all()
+    |> Map.new()
   end
 
   @doc """
@@ -1566,17 +2327,20 @@ defmodule Lightning.Projects do
             "Invalid sort_order option: #{sort_order}. Valid options are: #{inspect(valid_sort_orders)}"
     end
 
+    max_depth = max_project_tree_depth()
+
     descendants_query =
       from(p in Project,
         where: p.parent_id == ^root.id,
-        select: %{id: p.id, parent_id: p.parent_id, level: 1}
+        select: %{id: p.id, parent_id: p.parent_id, depth: 0}
       )
 
     recursive_query =
       from(p in Project,
         join: d in "descendants",
         on: p.parent_id == d.id,
-        select: %{id: p.id, parent_id: p.parent_id, level: d.level + 1}
+        where: d.depth < ^max_depth,
+        select: %{id: p.id, parent_id: p.parent_id, depth: d.depth + 1}
       )
 
     order_by_clause =
@@ -1630,6 +2394,109 @@ defmodule Lightning.Projects do
   defdelegate provision_sandbox(parent, actor, attrs),
     to: Sandboxes,
     as: :provision
+
+  @doc """
+  Provisions a sandbox from `parent` and returns the sandbox together with its
+  clone of `workflow_name`, so the "Edit in sandbox" flow lands the user on the
+  edited workflow.
+
+  The edited clone comes in disabled and `:draft`, exactly like every other
+  cloned workflow: the clone is deliberately NOT promoted to live. Taking it
+  live in the sandbox is what turns its triggers on, so a user can test
+  connections against dev systems.
+  """
+  @spec provision_editing_sandbox(Project.t(), User.t(), String.t(), map()) ::
+          {:ok,
+           %{
+             sandbox: Project.t(),
+             workflow: Workflow.t(),
+             starting_dataclip_id: Ecto.UUID.t() | nil
+           }}
+          | {:error, term()}
+  def provision_editing_sandbox(parent, actor, workflow_name, attrs) do
+    with {:ok, sandbox} <- provision_sandbox(parent, actor, attrs) do
+      case Lightning.Workflows.get_workflow_by_name(sandbox.id, workflow_name) do
+        %Workflow{} = workflow ->
+          {:ok,
+           %{
+             sandbox: sandbox,
+             workflow: workflow,
+             starting_dataclip_id: sandbox.starting_dataclip_id
+           }}
+
+        nil ->
+          Logger.error(
+            "Cloned workflow #{inspect(workflow_name)} not found in " <>
+              "provisioned sandbox ##{sandbox.id}; deleting the orphaned sandbox."
+          )
+
+          case delete_project(sandbox) do
+            {:ok, _} ->
+              :ok
+
+            {:error, reason} ->
+              Logger.warning(
+                "Failed to delete orphaned sandbox ##{sandbox.id} after a " <>
+                  "missing cloned workflow; it may linger and consume the " <>
+                  "parent's sandbox quota: #{inspect(reason)}"
+              )
+          end
+
+          {:error, :internal_error}
+      end
+    end
+  end
+
+  @doc """
+  Promotes a workflow edited inside a sandbox back to its parent project.
+
+  Reuses `Sandboxes.merge/4` scoped to the single workflow, so siblings on the
+  parent pass through untouched. Authorization is the caller's, as it is there.
+  Archiving the sandbox is separate, so several workflows can be promoted from
+  one sandbox before it is retired.
+
+  Returns `{:ok, %{parent_project_id: id, workflow_id: id | nil}}`,
+  `{:error, :not_a_sandbox}`, or the merge's own error.
+  """
+  @spec promote_workflow(Workflow.t(), User.t()) ::
+          {:ok,
+           %{
+             parent_project_id: Ecto.UUID.t(),
+             workflow_id: Ecto.UUID.t() | nil
+           }}
+          | {:error, :not_a_sandbox | term()}
+  def promote_workflow(%Workflow{} = sandbox_workflow, %User{} = actor) do
+    sandbox = get_project(sandbox_workflow.project_id)
+
+    case sandbox && sandbox.parent_id do
+      nil ->
+        {:error, :not_a_sandbox}
+
+      parent_id ->
+        parent = get_project(parent_id)
+
+        with {:ok, _updated_parent} <-
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [sandbox_workflow.id],
+                 record_release: :promote
+               }) do
+          parent_workflow_id =
+            with %Workflow{name: name} <- Repo.reload(sandbox_workflow),
+                 %Workflow{id: id} <-
+                   Lightning.Workflows.get_workflow_by_name(parent.id, name) do
+              id
+            else
+              _ -> nil
+            end
+
+          {:ok,
+           %{
+             parent_project_id: parent.id,
+             workflow_id: parent_workflow_id
+           }}
+        end
+    end
+  end
 
   @doc """
   Updates a sandbox project's basic attributes (name, color, env).

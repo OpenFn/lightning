@@ -36,7 +36,7 @@
             Make sure to copy your token now as you will not be able to see it again.
           </div>
         </div>
-        <div class="flex rounded overflow-auto p-2 bg-gray-100 w-auto justify-between">
+        <div class="flex rounded overflow-hidden p-2 bg-gray-100 w-auto justify-between">
           <input
             type="text"
             id="new_token"
@@ -45,17 +45,23 @@
             disabled
           />
 
-          <button
-            id="copy"
-            type="button"
-            phx-hook="Copy"
-            phx-then={JS.push("copy")}
-            data-to="#new_token"
-            class="rounded-full bg-blue-100 p-2 text-indigo-700 shadow-xs hover:opacity-75"
+          <span
+            id="copy-token-tooltip"
+            phx-hook="Tooltip"
+            aria-label="Copy to clipboard"
+            data-hide-on-click="false"
           >
-            <.icon name="hero-clipboard" class="h-5 w-5" />
-            <span class="sr-only">Copy</span>
-          </button>
+            <button
+              id="copy"
+              type="button"
+              phx-hook="Copy"
+              data-to="#new_token"
+              class="rounded-full bg-blue-100 p-2 text-indigo-700 shadow-xs hover:opacity-75"
+            >
+              <.icon name="hero-clipboard" class="h-5 w-5" />
+              <span class="sr-only">Copy to clipboard</span>
+            </button>
+          </span>
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ defmodule Lightning.Workflows.Snapshot do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
+  alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
 
@@ -56,13 +57,19 @@ defmodule Lightning.Workflows.Snapshot do
       field :cron_expression, :string
       field :enabled, :boolean
       field :cron_cursor_job_id, :binary_id
-      field :kafka_configuration, :map
+      # :kafka is retained deliberately. Snapshots are immutable history, and a
+      # snapshot taken while the Kafka trigger existed still carries the value.
+      # Dropping it here would make those historical rows unreadable, which is a
+      # worse outcome than an unused enum member.
       field :type, Ecto.Enum, values: [:webhook, :cron, :kafka]
       field :has_auth_method, :boolean, virtual: true
 
       field :webhook_reply, Ecto.Enum,
         values: [:before_start, :after_completion, :custom],
         default: :before_start
+
+      embeds_one :webhook_response_config, WebhookResponseConfig,
+        on_replace: :update
 
       many_to_many :webhook_auth_methods, WebhookAuthMethod,
         join_through: "trigger_webhook_auth_methods",
@@ -110,8 +117,15 @@ defmodule Lightning.Workflows.Snapshot do
   end
 
   @job_fields Lightning.Workflows.Job.__schema__(:fields) -- [:workflow_id]
+  # `project_id` is denormalised routing state rather than workflow content, and
+  # it is constant for a workflow, so it is excluded like `workflow_id`.
   @trigger_fields Lightning.Workflows.Trigger.__schema__(:fields) --
-                    [:workflow_id]
+                    [
+                      :workflow_id,
+                      :project_id,
+                      :legacy_bare_path,
+                      :webhook_response_config
+                    ]
   @edge_fields Lightning.Workflows.Edge.__schema__(:fields) -- [:workflow_id]
 
   defp job_changeset(schema, params) do
@@ -124,6 +138,10 @@ defmodule Lightning.Workflows.Snapshot do
     schema
     |> cast(params, @trigger_fields)
     |> validate_required([:id, :inserted_at, :updated_at])
+    |> cast_embed(:webhook_response_config,
+      required: false,
+      with: &WebhookResponseConfig.changeset/2
+    )
   end
 
   defp edge_changeset(schema, params) do
@@ -142,7 +160,7 @@ defmodule Lightning.Workflows.Snapshot do
     |> Enum.into(%{}, fn {field, value} ->
       case field do
         field when field in @associations_to_include ->
-          {field, Enum.map(value, &Map.from_struct/1)}
+          {field, assoc_to_map(field, value)}
 
         field when field in [:name, :lock_version, :positions] ->
           {field, value}
@@ -156,6 +174,40 @@ defmodule Lightning.Workflows.Snapshot do
     end)
     |> new()
   end
+
+  defp assoc_to_map(field, structs) when is_list(structs) do
+    Enum.map(structs, &assoc_to_map(field, &1))
+  end
+
+  defp assoc_to_map(:triggers, %module{} = struct) do
+    base = Ecto.embedded_dump(struct, :json)
+
+    module.__schema__(:embeds)
+    |> Enum.reduce(base, fn field, acc ->
+      embed = Map.get(struct, field)
+      Map.put(acc, field, embed_to_map(embed))
+    end)
+  end
+
+  defp assoc_to_map(_, %_{} = struct) do
+    Ecto.embedded_dump(struct, :json)
+  end
+
+  defp embed_to_map(%module{} = struct) do
+    base = Ecto.embedded_dump(struct, :json)
+
+    module.__schema__(:embeds)
+    |> Enum.reduce(base, fn field, acc ->
+      embed = Map.get(struct, field)
+      Map.put(acc, field, embed_to_map(embed))
+    end)
+  end
+
+  defp embed_to_map(embeds) when is_list(embeds) do
+    Enum.map(embeds, &embed_to_map/1)
+  end
+
+  defp embed_to_map(nil), do: nil
 
   @spec create(Workflow.t()) ::
           {:ok, t()} | {:error, Ecto.Changeset.t()}
@@ -173,9 +225,17 @@ defmodule Lightning.Workflows.Snapshot do
     |> Repo.all()
   end
 
-  def get_all_by_ids(ids) do
+  @doc """
+  Gets snapshots by id, scoped to a project via each snapshot's workflow.
+
+  Only snapshots whose workflow belongs to `project_id` are returned, so this
+  can't be used to read another project's snapshots.
+  """
+  @spec get_all_by_ids([Ecto.UUID.t()], Ecto.UUID.t()) :: [t()]
+  def get_all_by_ids(ids, project_id) do
     from(s in __MODULE__,
-      where: s.id in ^ids
+      join: w in assoc(s, :workflow),
+      where: s.id in ^ids and w.project_id == ^project_id
     )
     |> Repo.all()
   end
@@ -189,6 +249,26 @@ defmodule Lightning.Workflows.Snapshot do
   @spec get_current_for(Workflow.t()) :: t() | nil
   def get_current_for(%Workflow{} = workflow) do
     get_current_query(workflow)
+    |> Repo.one()
+  end
+
+  @doc """
+  The id of the snapshot holding the workflow's current content.
+
+  Callers asking "is this the content that is live right now?" need identity.
+  A lock version is a near-enough proxy until it isn't: nothing enforces one
+  snapshot per `(workflow_id, lock_version)`, and a client comparing numbers
+  cannot tell two snapshots apart.
+  """
+  @spec current_id_for(Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def current_id_for(workflow_id) when is_binary(workflow_id) do
+    from(s in __MODULE__,
+      join: w in assoc(s, :workflow),
+      where: s.workflow_id == ^workflow_id and s.lock_version == w.lock_version,
+      order_by: [desc: s.inserted_at],
+      limit: 1,
+      select: s.id
+    )
     |> Repo.one()
   end
 
@@ -216,5 +296,79 @@ defmodule Lightning.Workflows.Snapshot do
     Multi.run(multi, name, fn repo, _changes ->
       {:ok, get_current_query(workflow) |> repo.one()}
     end)
+  end
+
+  @job_write_fields [
+    :id,
+    :name,
+    :body,
+    :adaptor,
+    :project_credential_id,
+    :keychain_credential_id
+  ]
+
+  @trigger_write_fields [
+    :id,
+    :comment,
+    :custom_path,
+    :cron_expression,
+    :cron_cursor_job_id,
+    :type,
+    :webhook_reply
+  ]
+
+  @edge_write_fields [
+    :id,
+    :source_job_id,
+    :source_trigger_id,
+    :target_job_id,
+    :condition_type,
+    :condition_expression,
+    :condition_label,
+    :enabled
+  ]
+
+  @doc """
+  Turns a snapshot into attributes to write back as a workflow's content.
+
+  `on_replace` deletes anything the snapshot does not hold, which is what makes
+  a restore a revert rather than a merge.
+
+  Trigger `enabled` is left out: a restore publishes into a live workflow, and
+  an old enabled flag would take production offline mid-rollback. A re-created
+  trigger arrives off, because a snapshot does not record its webhook auth
+  methods. `positions` is written only when the snapshot holds them, so an
+  older snapshot cannot wipe a hand-arranged canvas.
+  """
+  @spec to_workflow_attrs(t()) :: map()
+  def to_workflow_attrs(%__MODULE__{} = snapshot) do
+    %{
+      name: snapshot.name,
+      jobs: Enum.map(snapshot.jobs, &child_attrs(&1, @job_write_fields)),
+      triggers: Enum.map(snapshot.triggers, &trigger_attrs/1),
+      edges: Enum.map(snapshot.edges, &child_attrs(&1, @edge_write_fields))
+    }
+    |> maybe_put_positions(snapshot.positions)
+  end
+
+  defp maybe_put_positions(attrs, nil), do: attrs
+
+  defp maybe_put_positions(attrs, positions),
+    do: Map.put(attrs, :positions, positions)
+
+  defp trigger_attrs(trigger) do
+    trigger
+    |> child_attrs(@trigger_write_fields)
+    |> Map.put(
+      :webhook_response_config,
+      embed_attrs(trigger.webhook_response_config)
+    )
+  end
+
+  defp embed_attrs(nil), do: nil
+  defp embed_attrs(embed), do: Map.from_struct(embed)
+
+  defp child_attrs(child, fields) do
+    child |> Map.from_struct() |> Map.take(fields)
   end
 end

@@ -17,11 +17,10 @@ defmodule Lightning.VersionControlTest do
   import Lightning.GithubHelpers
   import Mox
 
-  :verify_on_exit!
+  setup :verify_on_exit!
 
   describe "create_github_connection/2" do
     test "user with valid oauth token creates connection successfully" do
-      Mox.verify_on_exit!()
       project = insert(:project)
       user = user_with_valid_github_oauth()
 
@@ -42,45 +41,11 @@ defmodule Lightning.VersionControlTest do
 
       expected_branch = %{"name" => "somebranch"}
 
-      # push pull.yml
-      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
-      expect_create_blob(expected_repo["full_name"])
-
-      expect_get_commit(
-        expected_repo["full_name"],
-        expected_repo["default_branch"]
-      )
-
-      expect_create_tree(expected_repo["full_name"])
-      expect_create_commit(expected_repo["full_name"])
-
-      expect_update_ref(
-        expected_repo["full_name"],
-        expected_repo["default_branch"]
-      )
-
-      # push deploy.yml + config.json
-      # deploy.yml blob
-      expect_create_blob(expected_repo["full_name"])
-      # config.json blob
-      expect_create_blob(expected_repo["full_name"])
-      expect_get_commit(expected_repo["full_name"], expected_branch["name"])
-      expect_create_tree(expected_repo["full_name"])
-      expect_create_commit(expected_repo["full_name"])
-      expect_update_ref(expected_repo["full_name"], expected_branch["name"])
-
-      # write secret
-      expect_get_public_key(expected_repo["full_name"])
-      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
-      expect_create_repo_secret(expected_repo["full_name"], secret_name)
-
-      # initialize sync
-      expect_create_installation_token(expected_installation["id"])
-      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
-
-      expect_create_workflow_dispatch(
-        expected_repo["full_name"],
-        "openfn-pull.yml"
+      expect_full_github_connection_flow(
+        expected_repo,
+        expected_branch["name"],
+        project.id,
+        expected_installation["id"]
       )
 
       params = %{
@@ -154,45 +119,11 @@ defmodule Lightning.VersionControlTest do
 
       expected_branch = %{"name" => branch}
 
-      # push pull.yml
-      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
-      expect_create_blob(expected_repo["full_name"])
-
-      expect_get_commit(
-        expected_repo["full_name"],
-        expected_repo["default_branch"]
-      )
-
-      expect_create_tree(expected_repo["full_name"])
-      expect_create_commit(expected_repo["full_name"])
-
-      expect_update_ref(
-        expected_repo["full_name"],
-        expected_repo["default_branch"]
-      )
-
-      # push deploy.yml + config.json
-      # deploy.yml blob
-      expect_create_blob(expected_repo["full_name"])
-      # config.json blob
-      expect_create_blob(expected_repo["full_name"])
-      expect_get_commit(expected_repo["full_name"], expected_branch["name"])
-      expect_create_tree(expected_repo["full_name"])
-      expect_create_commit(expected_repo["full_name"])
-      expect_update_ref(expected_repo["full_name"], expected_branch["name"])
-
-      # write secret
-      expect_get_public_key(expected_repo["full_name"])
-      secret_name = "OPENFN_#{String.replace(project_id, "-", "_")}_API_KEY"
-      expect_create_repo_secret(expected_repo["full_name"], secret_name)
-
-      # initialize sync
-      expect_create_installation_token(expected_installation["id"])
-      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
-
-      expect_create_workflow_dispatch(
-        expected_repo["full_name"],
-        "openfn-pull.yml"
+      expect_full_github_connection_flow(
+        expected_repo,
+        expected_branch["name"],
+        project_id,
+        expected_installation["id"]
       )
 
       params = %{
@@ -245,11 +176,189 @@ defmodule Lightning.VersionControlTest do
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
     end
+
+    test "returns a changeset error when sandbox claims an ancestor's (repo, branch)" do
+      parent = insert(:project)
+
+      insert(:project_repo_connection,
+        project: parent,
+        repo: "someaccount/somerepo",
+        branch: "main"
+      )
+
+      sandbox = insert(:project, parent: parent)
+      user = user_with_valid_github_oauth()
+
+      params = %{
+        "project_id" => sandbox.id,
+        "repo" => "someaccount/somerepo",
+        "branch" => "main",
+        "github_installation_id" => "1234",
+        "sync_direction" => "pull",
+        "accept" => "true"
+      }
+
+      assert {:error, %Ecto.Changeset{valid?: false} = changeset} =
+               VersionControl.create_github_connection(params, user)
+
+      assert {msg, _} = changeset.errors[:branch]
+
+      assert msg =~
+               "already linked to another project in the same project family"
+
+      # parent's existing connection is the only one in the DB
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
+
+    test "returns a changeset error when a sibling sandbox already uses the (repo, branch)" do
+      parent = insert(:project)
+      sibling_a = insert(:project, parent: parent)
+      sibling_b = insert(:project, parent: parent)
+
+      insert(:project_repo_connection,
+        project: sibling_a,
+        repo: "someaccount/somerepo",
+        branch: "feature"
+      )
+
+      user = user_with_valid_github_oauth()
+
+      params = %{
+        "project_id" => sibling_b.id,
+        "repo" => "someaccount/somerepo",
+        "branch" => "feature",
+        "github_installation_id" => "1234",
+        "sync_direction" => "pull",
+        "accept" => "true"
+      }
+
+      assert {:error, %Ecto.Changeset{valid?: false} = changeset} =
+               VersionControl.create_github_connection(params, user)
+
+      assert {msg, _} = changeset.errors[:branch]
+
+      assert msg =~
+               "already linked to another project in the same project family"
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
+
+    test "DB unique index closes the check-then-insert race even when the application-level guard is bypassed" do
+      # Build two raw structs that have already passed the in-memory guard —
+      # this models the race window in which two concurrent transactions both
+      # SELECT no-row before either INSERTs. With the unique index in place,
+      # exactly one INSERT survives; the other raises Ecto.ConstraintError on
+      # `project_repo_connections_root_repo_branch_index`.
+      parent = insert(:project)
+      sibling_a = insert(:project, parent: parent)
+      sibling_b = insert(:project, parent: parent)
+
+      build_struct = fn project ->
+        %Lightning.VersionControl.ProjectRepoConnection{
+          project_id: project.id,
+          root_project_id: parent.id,
+          repo: "someaccount/somerepo",
+          branch: "main",
+          github_installation_id: "1234",
+          access_token: "token-#{project.id}"
+        }
+      end
+
+      assert {:ok, _} = Repo.insert(build_struct.(sibling_a))
+
+      # `Repo.insert/1` on a struct (no changeset) wraps the underlying
+      # Postgres unique violation into Ecto.ConstraintError because no
+      # `unique_constraint/3` was declared on the struct path.
+      assert_raise Ecto.ConstraintError,
+                   ~r/project_repo_connections_root_repo_branch/,
+                   fn ->
+                     Repo.insert(build_struct.(sibling_b))
+                   end
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
+
+    test "tree_unique_violation? identifies a real Repo.insert constraint failure on (root_project_id, repo, branch)" do
+      # Models the production race window: two transactions A and B both
+      # validate `tree_branch_conflict?` and see no row, so both pass the
+      # in-memory guard. A inserts first; B's INSERT then trips the unique
+      # index. `insert_repo_connection/1` translates that result into
+      # `{:error, :branch_used_in_project_tree}` via `tree_unique_violation?`.
+      #
+      # We can't simulate the race deterministically through
+      # `create_github_connection` (the in-memory guard is a same-module local
+      # call which Mimic can't redirect, and racing two test processes inside
+      # SQL Sandbox is flaky). Instead we reproduce B's exact post-validation
+      # state — a changeset with the `unique_constraint(:branch, name: ...)`
+      # declaration but no in-memory branch error — and assert that:
+      #
+      #   1. `Repo.insert/1` returns `{:error, %Changeset{}}` with the unique
+      #      constraint translated by Ecto into a tagged error,
+      #   2. `tree_unique_violation?/1` returns true on that changeset, which
+      #      is the predicate `insert_repo_connection/1` keys off of.
+      #
+      # The one-line translation `if predicate, do: {:error, :atom}` in
+      # `insert_repo_connection/1` is then trivial control flow that can't
+      # silently regress without the predicate first failing.
+      parent = insert(:project)
+      sibling_a = insert(:project, parent: parent)
+      sibling_b = insert(:project, parent: parent)
+
+      insert(:project_repo_connection,
+        project: sibling_a,
+        repo: "someaccount/somerepo",
+        branch: "main"
+      )
+
+      tree_unique_index = "project_repo_connections_root_repo_branch_index"
+
+      tree_branch_message =
+        "this branch is already linked to another project in the same project family; use a different branch"
+
+      racing_changeset =
+        %ProjectRepoConnection{}
+        |> Ecto.Changeset.cast(
+          %{
+            project_id: sibling_b.id,
+            root_project_id: parent.id,
+            repo: "someaccount/somerepo",
+            branch: "main",
+            github_installation_id: "1234",
+            access_token: "race-token"
+          },
+          [
+            :project_id,
+            :root_project_id,
+            :repo,
+            :branch,
+            :github_installation_id,
+            :access_token
+          ]
+        )
+        |> Ecto.Changeset.unique_constraint(:branch,
+          name: tree_unique_index,
+          message: tree_branch_message
+        )
+
+      assert {:error, failed} = Repo.insert(racing_changeset)
+      assert ProjectRepoConnection.tree_unique_violation?(failed)
+
+      # Sanity: the changeset error matches the shape `tree_unique_violation?`
+      # expects — Ecto tags the error with `constraint: :unique` and the
+      # exact index name when the declared `unique_constraint/3` matches.
+      assert {_msg,
+              [
+                {:constraint, :unique},
+                {:constraint_name, ^tree_unique_index}
+              ]} = failed.errors[:branch]
+
+      # Sibling A's row is still the only one — B's INSERT was rejected.
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
   end
 
   describe "remove_github_connection/2" do
     test "user with a valid oauth token can successfully remove a connection" do
-      Mox.verify_on_exit!()
       project = insert(:project)
       user = user_with_valid_github_oauth()
 
@@ -450,22 +559,9 @@ defmodule Lightning.VersionControlTest do
 
   describe "fetch_user_access_token/1" do
     test "returns ok for an access token that is still active" do
-      active_token = %{
-        "access_token" => "access-token",
-        "refresh_token" => "refresh-token",
-        "expires_at" => DateTime.utc_now() |> DateTime.add(20),
-        "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(20)
-      }
+      user = user_with_valid_github_oauth()
 
-      # reload so that we can get the token as they are from the db
-      user =
-        insert(:user, github_oauth_token: active_token)
-        |> Lightning.Repo.reload!()
-
-      expected_token = active_token["access_token"]
-
-      assert {:ok, ^expected_token} =
-               VersionControl.fetch_user_access_token(user)
+      assert {:ok, "access-token"} = VersionControl.fetch_user_access_token(user)
     end
 
     test "returns ok for an access token that has no expiry" do
@@ -563,8 +659,6 @@ defmodule Lightning.VersionControlTest do
 
   describe "initiate_sync/2" do
     setup do
-      verify_on_exit!()
-
       project = insert(:project)
 
       workflow = insert(:simple_workflow, project: project)
@@ -596,6 +690,10 @@ defmodule Lightning.VersionControlTest do
         :ok
       end)
 
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+
       VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
@@ -617,6 +715,47 @@ defmodule Lightning.VersionControlTest do
                VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
+    test "refuses to dispatch when the project cannot be exported", %{
+      commit_message: commit_message,
+      project: project,
+      repo_connection: repo_connection
+    } do
+      # `My Flow` and `My-Flow` are two names that become one spec key, so the
+      # export refuses the whole project.
+      #
+      # No GitHub mocks are set here on purpose: verify_on_exit! turns any call
+      # to the client into a failure, so this also asserts we never dispatched.
+      # Snapshotted, because the sync exports the snapshot set rather than the
+      # live workflows, and an unsnapshotted workflow is not in the spec the
+      # Action would fetch.
+      for name <- ["My Flow", "My-Flow"] do
+        {:ok, _} =
+          insert(:simple_workflow, name: name, project: project)
+          |> Snapshot.create()
+      end
+
+      assert {:error, message} =
+               VersionControl.initiate_sync(repo_connection, commit_message)
+
+      assert message =~ "two workflows in this project"
+      assert message =~ ~s("My-Flow")
+      assert message =~ ~s("My Flow")
+      assert message =~ "Rename one of them"
+    end
+
+    test "dispatches normally when the project exports cleanly", %{
+      commit_message: commit_message,
+      repo_connection: repo_connection
+    } do
+      # The pre-flight generates the spec and throws it away, so a project
+      # without a collision has to reach GitHub as normal.
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+
+      assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
+    end
+
     test "creates GH workflow dispatch event using JSON config (default)", %{
       commit_message: commit_message,
       repo_connection: repo_connection,
@@ -625,20 +764,10 @@ defmodule Lightning.VersionControlTest do
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
 
-      expect_create_workflow_dispatch_with_request_body(
-        repo_connection.repo,
-        "openfn-pull.yml",
-        %{
-          ref: "main",
-          inputs: %{
-            projectId: repo_connection.project_id,
-            apiSecretName: api_secret_name(repo_connection),
-            branch: repo_connection.branch,
-            pathToConfig: path_to_config(repo_connection),
-            commitMessage: commit_message,
-            snapshots: "#{other_snapshot.id} #{snapshot.id}"
-          }
-        }
+      expect_workflow_dispatch_with_snapshots(
+        repo_connection,
+        commit_message,
+        [snapshot.id, other_snapshot.id]
       )
 
       assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
@@ -658,20 +787,10 @@ defmodule Lightning.VersionControlTest do
       expect_create_installation_token(yaml_connection.github_installation_id)
       expect_get_repo(yaml_connection.repo)
 
-      expect_create_workflow_dispatch_with_request_body(
-        yaml_connection.repo,
-        "openfn-pull.yml",
-        %{
-          ref: "main",
-          inputs: %{
-            projectId: yaml_connection.project_id,
-            apiSecretName: api_secret_name(yaml_connection),
-            branch: yaml_connection.branch,
-            pathToConfig: path_to_config(yaml_connection),
-            commitMessage: commit_message,
-            snapshots: "#{other_snapshot.id} #{snapshot.id}"
-          }
-        }
+      expect_workflow_dispatch_with_snapshots(
+        yaml_connection,
+        commit_message,
+        [snapshot.id, other_snapshot.id]
       )
 
       assert :ok = VersionControl.initiate_sync(yaml_connection, commit_message)
@@ -686,6 +805,44 @@ defmodule Lightning.VersionControlTest do
     defp path_to_config(repo_connection) do
       ProjectRepoConnection.config_path(repo_connection)
       |> Path.relative_to(".")
+    end
+
+    # list_snapshots_for_project/1 doesn't order its query, so the
+    # snapshots ids can arrive in either order; assert the set, not a
+    # sequence.
+    defp expect_workflow_dispatch_with_snapshots(
+           repo_connection,
+           commit_message,
+           snapshot_ids
+         ) do
+      repo = repo_connection.repo
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{
+                                                   url:
+                                                     "https://api.github.com/repos/" <>
+                                                       ^repo <>
+                                                       "/actions/workflows/openfn-pull.yml/dispatches",
+                                                   body: body
+                                                 },
+                                                 _opts ->
+        decoded = Jason.decode!(body)
+        inputs = decoded["inputs"]
+
+        assert decoded["ref"] == "main"
+
+        assert inputs["snapshots"] |> String.split() |> Enum.sort() ==
+                 Enum.sort(snapshot_ids)
+
+        assert Map.delete(inputs, "snapshots") == %{
+                 "projectId" => repo_connection.project_id,
+                 "apiSecretName" => api_secret_name(repo_connection),
+                 "branch" => repo_connection.branch,
+                 "pathToConfig" => path_to_config(repo_connection),
+                 "commitMessage" => commit_message
+               }
+
+        {:ok, %Tesla.Env{status: 204, body: ""}}
+      end)
     end
   end
 
@@ -728,41 +885,26 @@ defmodule Lightning.VersionControlTest do
 
       expect_create_installation_token(installation_id)
 
-      Lightning.Tesla.Mock
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 1, per_page: 100]
-           },
-           _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "total_count" => Enum.count(expected_repos),
-               "repositories" => first_100_repos
-             }
-           }}
-        end
-      )
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 2, per_page: 100]
-           },
-           _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "total_count" => Enum.count(expected_repos),
-               "repositories" => next_batch
-             }
-           }}
-        end
-      )
+      expect(Lightning.Tesla.Mock, :call, 2, fn %{
+                                                  url:
+                                                    "https://api.github.com/installation/repositories",
+                                                  query: [
+                                                    page: page,
+                                                    per_page: 100
+                                                  ]
+                                                },
+                                                _opts ->
+        repositories = if page == 1, do: first_100_repos, else: next_batch
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "total_count" => Enum.count(expected_repos),
+             "repositories" => repositories
+           }
+         }}
+      end)
 
       expected_result = %{
         "total_count" => Enum.count(expected_repos),
@@ -798,56 +940,45 @@ defmodule Lightning.VersionControlTest do
 
       expect_create_installation_token(installation_id)
 
-      Lightning.Tesla.Mock
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 1, per_page: 100]
-           },
-           _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "total_count" => total_repo_count,
-               "repositories" => first_100_repos
-             }
-           }}
+      expect(Lightning.Tesla.Mock, :call, 3, fn %{
+                                                  url:
+                                                    "https://api.github.com/installation/repositories",
+                                                  query: [
+                                                    page: page,
+                                                    per_page: 100
+                                                  ]
+                                                },
+                                                _opts ->
+        case page do
+          1 ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "total_count" => total_repo_count,
+                 "repositories" => first_100_repos
+               }
+             }}
+
+          2 ->
+            # We're failing to return the 2nd batch
+            {:ok,
+             %Tesla.Env{
+               status: 403,
+               body: %{"message" => "some error maybe spike"}
+             }}
+
+          3 ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "total_count" => total_repo_count,
+                 "repositories" => last_batch
+               }
+             }}
         end
-      )
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 2, per_page: 100]
-           },
-           _opts ->
-          # We're failing to return the 2nd batch
-          {:ok,
-           %Tesla.Env{
-             status: 403,
-             body: %{"message" => "some error maybe spike"}
-           }}
-        end
-      )
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 3, per_page: 100]
-           },
-           _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "total_count" => total_repo_count,
-               "repositories" => last_batch
-             }
-           }}
-        end
-      )
+      end)
 
       expected_result = %{
         "total_count" => total_repo_count,
@@ -867,8 +998,6 @@ defmodule Lightning.VersionControlTest do
 
   describe "config file blob content" do
     setup do
-      Mox.verify_on_exit!()
-
       project = insert(:project)
       user = user_with_valid_github_oauth()
 
@@ -897,16 +1026,6 @@ defmodule Lightning.VersionControlTest do
        expected_repo: expected_repo}
     end
 
-    defp setup_github_mocks(repo, expected_repo) do
-      expect_get_repo(repo, 200, expected_repo)
-      expect_create_blob(repo)
-      expect_get_commit(repo, expected_repo["default_branch"])
-      expect_create_tree(repo)
-      expect_create_commit(repo)
-      expect_update_ref(repo, expected_repo["default_branch"])
-      expect_create_blob(repo)
-    end
-
     test "pushes JSON config blob when sync_version is false (default)", %{
       project: project,
       user: user,
@@ -916,31 +1035,26 @@ defmodule Lightning.VersionControlTest do
       base_params: base_params,
       expected_repo: expected_repo
     } do
-      setup_github_mocks(repo, expected_repo)
+      expect_full_github_connection_flow(
+        expected_repo,
+        branch,
+        project.id,
+        installation_id,
+        config_blob_expectation: fn ->
+          Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+            assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
+            body = Jason.decode!(env.body)
 
-      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
-        assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
-        body = Jason.decode!(env.body)
+            assert body["content"] =~
+                     "\"statePath\": \"openfn-#{project.id}-state.json\""
 
-        assert body["content"] =~
-                 "\"statePath\": \"openfn-#{project.id}-state.json\""
+            assert body["content"] =~
+                     "\"specPath\": \"openfn-#{project.id}-spec.yaml\""
 
-        assert body["content"] =~
-                 "\"specPath\": \"openfn-#{project.id}-spec.yaml\""
-
-        {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
-      end)
-
-      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
-      expect_get_commit(repo, branch)
-      expect_create_tree(repo)
-      expect_create_commit(repo)
-      expect_update_ref(repo, branch)
-      expect_get_public_key(repo)
-      expect_create_repo_secret(repo, secret_name)
-      expect_create_installation_token(installation_id)
-      expect_get_repo(repo, 200, expected_repo)
-      expect_create_workflow_dispatch(repo, "openfn-pull.yml")
+            {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
+          end)
+        end
+      )
 
       assert {:ok, _} =
                VersionControl.create_github_connection(base_params, user)
@@ -955,41 +1069,86 @@ defmodule Lightning.VersionControlTest do
       base_params: base_params,
       expected_repo: expected_repo
     } do
-      setup_github_mocks(repo, expected_repo)
-
-      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
-        assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
-        body = Jason.decode!(env.body)
-        assert body["content"] =~ "project:"
-        assert body["content"] =~ "uuid: #{project.id}"
-        assert body["content"] =~ LightningWeb.Endpoint.url()
-        {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
-      end)
-
-      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
-      expect_get_commit(repo, branch)
-      expect_create_tree(repo)
-      expect_create_commit(repo)
-      expect_update_ref(repo, branch)
-      expect_get_public_key(repo)
-      expect_create_repo_secret(repo, secret_name)
-      expect_create_installation_token(installation_id)
-      expect_get_repo(repo, 200, expected_repo)
-      expect_create_workflow_dispatch(repo, "openfn-pull.yml")
+      expect_full_github_connection_flow(
+        expected_repo,
+        branch,
+        project.id,
+        installation_id,
+        config_blob_expectation: fn ->
+          Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+            assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
+            body = Jason.decode!(env.body)
+            assert body["content"] =~ "project:"
+            assert body["content"] =~ "uuid: #{project.id}"
+            assert body["content"] =~ LightningWeb.Endpoint.url()
+            {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
+          end)
+        end
+      )
 
       params = Map.put(base_params, "sync_version", "true")
       assert {:ok, _} = VersionControl.create_github_connection(params, user)
     end
   end
 
-  defp user_with_valid_github_oauth do
-    active_token = %{
-      "access_token" => "access-token",
-      "refresh_token" => "refresh-token",
-      "expires_at" => DateTime.utc_now() |> DateTime.add(500),
-      "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(500)
-    }
+  # These 17 expectations share one Mox FIFO queue on the same mocked
+  # function, so registration order here must match the call order
+  # create_github_connection/2 actually makes.
+  #
+  # `config_blob_expectation` overrides the config.json blob call (the 8th
+  # of the 17) for tests that assert on its request body; it defaults to
+  # the plain expect_create_blob/1 behaviour.
+  defp expect_full_github_connection_flow(
+         expected_repo,
+         branch,
+         project_id,
+         installation_id,
+         opts \\ []
+       ) do
+    repo = expected_repo["full_name"]
+    default_branch = expected_repo["default_branch"]
 
-    insert(:user, github_oauth_token: active_token) |> Lightning.Repo.reload()
+    config_blob_expectation =
+      Keyword.get(opts, :config_blob_expectation, fn ->
+        expect_create_blob(repo)
+      end)
+
+    # push pull.yml
+    expect_get_repo(repo, 200, expected_repo)
+    expect_create_blob(repo)
+    expect_get_commit(repo, default_branch)
+    expect_create_tree(repo)
+    expect_create_commit(repo)
+    expect_update_ref(repo, default_branch)
+
+    # push deploy.yml + config.json
+    # deploy.yml blob
+    expect_create_blob(repo)
+    # config.json blob
+    config_blob_expectation.()
+    expect_get_commit(repo, branch)
+    expect_create_tree(repo)
+    expect_create_commit(repo)
+    expect_update_ref(repo, branch)
+
+    # write secret
+    expect_get_public_key(repo)
+    expect_create_repo_secret(repo, api_secret_name(%{project_id: project_id}))
+
+    # initiate sync
+    expect_create_installation_token(installation_id)
+    expect_get_repo(repo, 200, expected_repo)
+    expect_create_workflow_dispatch(repo, "openfn-pull.yml")
+  end
+
+  defp user_with_valid_github_oauth do
+    # github_oauth_token is an encrypted map field: after an update the
+    # in-memory struct still holds the raw terms we set (e.g. DateTime
+    # structs), not the JSON-round-tripped string map that comes back
+    # from a real DB read. Reload so callers get a token shaped the way
+    # it actually looks when loaded from storage.
+    insert(:user)
+    |> set_valid_github_oauth_token!()
+    |> Lightning.Repo.reload!()
   end
 end

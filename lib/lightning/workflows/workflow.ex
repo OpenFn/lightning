@@ -5,11 +5,16 @@ defmodule Lightning.Workflows.Workflow do
   A Workflow contains the fields for defining a workflow.
 
   * `name`
-    A plain text identifier
+    A plain text identifier. Any codepoint except a control character, see
+    `Lightning.Validators.validate_name/3`, and at most 255 of them, which is
+    the width of the column. The cap is higher than a job's 100 because
+    workflow names predate any rule on the field, and nothing longer than the
+    column width can already be stored.
   """
   use Lightning.Schema
 
   alias Lightning.Projects.Project
+  alias Lightning.Validators
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
@@ -24,25 +29,39 @@ defmodule Lightning.Workflows.Workflow do
           project: nil | Project.t() | Ecto.Association.NotLoaded.t()
         }
 
-  @derive {Jason.Encoder,
-           only: [
-             :id,
-             :name,
-             :project_id,
-             :edges,
-             :jobs,
-             :triggers,
-             :positions,
-             :inserted_at,
-             :updated_at,
-             :concurrency,
-             :enable_job_logs
-           ]}
+  @json_fields [
+    :id,
+    :name,
+    :project_id,
+    :edges,
+    :jobs,
+    :triggers,
+    :positions,
+    :inserted_at,
+    :updated_at,
+    :concurrency,
+    :enable_job_logs,
+    :state
+  ]
+
+  @derive {Jason.Encoder, only: @json_fields}
+
+  @doc """
+  The fields this schema encodes to JSON.
+
+  Exposed so a caller can render a subset without restating the list and letting
+  the two drift apart. The REST API uses it to leave `:state` out, which names a
+  lifecycle we have not shipped.
+  """
+  @spec json_fields() :: [atom()]
+  def json_fields, do: @json_fields
+
   schema "workflows" do
     field :name, :string
     field :concurrency, :integer, default: nil
     field :enable_job_logs, :boolean, default: true
     field :positions, :map
+    field :state, Ecto.Enum, values: [:draft, :live], default: :draft
 
     # the ordering of edges, triggers and jobs are intentional
     # ecto reverses the relations when inserting. so jobs->triggers->edges
@@ -85,9 +104,31 @@ defmodule Lightning.Workflows.Workflow do
 
   def validate(changeset) do
     changeset
+    # First, so the length and presence checks below see the normalised value.
+    # Here rather than in changeset/2 because the provisioning API builds its
+    # own changeset and calls validate/1 directly.
+    |> Validators.validate_name(
+      :name,
+      "workflow name can't contain control characters"
+    )
+    # positions is written straight into the workflow_snapshots.positions jsonb,
+    # keys and all, and Postgres refuses a NUL anywhere inside jsonb.
+    |> Validators.validate_no_null_bytes_deep(
+      :positions,
+      "positions can't contain a null byte"
+    )
+    |> Validators.validate_uuid(:project_id)
     |> assoc_constraint(:project)
     |> validate_number(:concurrency, greater_than_or_equal_to: 1)
     |> validate_required([:name])
+    |> validate_length(:name,
+      max: 255,
+      message: "workflow name should be at most %{count} character(s)"
+    )
+    |> Validators.validate_name_fits_column(
+      :name,
+      "workflow name is too long, please use a shorter one"
+    )
     |> unique_constraint([:name, :project_id],
       message:
         "A workflow with this name already exists (possibly pending deletion) in this project."

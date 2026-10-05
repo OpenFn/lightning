@@ -46,6 +46,21 @@ function createWithSelectorMock(getSnapshot: () => any) {
 // Mock useURLState using centralized helper
 const urlState = createMockURLState();
 
+vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => ({
+  ...(await vi.importActual<
+    typeof import('../../../../js/collaborative-editor/hooks/useWorkflow')
+  >('../../../../js/collaborative-editor/hooks/useWorkflow')),
+  useWorkflowActions: () => ({ saveWorkflow: vi.fn() }),
+}));
+
+vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: () => ({ isSynced: true, settled: true }),
+}));
+
+vi.mock('../../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => ({ hasChanges: false }),
+}));
+
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
 }));
