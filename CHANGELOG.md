@@ -75,6 +75,9 @@ and this project adheres to
   characters or no visible characters, and names over 255 characters, as admin
   and API changes already do.
   [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- Failure alert emails no longer include the run's logs, since jobs can log
+  sensitive data. The email links to the run, where the logs are.
+  [#2663](https://github.com/OpenFn/lightning/issues/2663)
 
 ### Removed
 
