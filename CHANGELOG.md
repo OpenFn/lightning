@@ -46,6 +46,8 @@ and this project adheres to
   opened it, with a notice that stays until you reload or close it. Previously
   an open editor could keep running the old version for hours after a deploy.
   [#5202](https://github.com/OpenFn/lightning/pull/5202)
+- Index to improve the performance of the dataclip deletion query.
+  [#5226](https://github.com/OpenFn/lightning/issues/5226)
 
 ### Changed
 
