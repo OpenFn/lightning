@@ -334,6 +334,30 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
   });
 
+  test('opens on the Work orders tab, and shows runs over time on the Runs tab', async () => {
+    mount(both);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Outcomes' })
+    ).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Work orders' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+    expect(
+      screen.queryByRole('heading', { name: 'Runs over time' })
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Runs' }));
+
+    expect(
+      screen.getByRole('heading', { name: 'Runs over time' })
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('heading', { name: 'Outcomes' })
+    ).not.toBeInTheDocument();
+  });
+
   test('folds the failure states into the Outcomes donut', async () => {
     mount(both);
 

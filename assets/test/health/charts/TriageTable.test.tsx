@@ -1,8 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
-import { TriageTable } from '#/health/charts/TriageTable';
-import type { ErrorSignature } from '#/health/types';
+import { FAILURE_COLORS } from '#/health/charts/FailureBreakdownDonut';
+import { adaptorLabel, TriageTable } from '#/health/charts/TriageTable';
+import type { ErrorSignature, FailureState } from '#/health/types';
 
 import { signature } from './counts';
 
@@ -223,5 +224,43 @@ describe('TriageTable', () => {
         })
       ).toBeNull();
     });
+  });
+});
+
+describe('TriageTable failure state', () => {
+  test.each<[string, FailureState]>([
+    ['fail', 'failed'],
+    ['crash', 'crashed'],
+    ['kill', 'killed'],
+    ['exception', 'exception'],
+    ['lost', 'lost'],
+    ['rejected', 'rejected'],
+  ])(
+    'names a %s exit reason "%s", with its donut colour',
+    (exit_reason, state) => {
+      table([signature({ exit_reason })]);
+
+      expect(
+        screen.getByText(state).querySelector('[aria-hidden="true"]')
+      ).toHaveStyle({ backgroundColor: FAILURE_COLORS[state] });
+    }
+  );
+
+  test('names an unlisted exit reason by its error type, with no dot', () => {
+    table([signature({ exit_reason: 'timeout', error_type: 'TimeoutError' })]);
+
+    expect(
+      screen.getByText('TimeoutError').querySelector('[aria-hidden="true"]')
+    ).toBeNull();
+  });
+});
+
+describe('adaptorLabel', () => {
+  test.each([
+    ['@openfn/language-http@1.2.3', 'http adaptor'],
+    ['@openfn/language-common', 'common adaptor'],
+    ['@acme/custom-thing@1.0.0', '@acme/custom-thing adaptor'],
+  ])('labels %s as "%s"', (adaptor, label) => {
+    expect(adaptorLabel(adaptor)).toBe(label);
   });
 });

@@ -3,7 +3,8 @@ import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { ChartTooltip } from './ChartTooltip';
 
 /**
- * A part-to-whole donut with the total in the middle and an always-on legend.
+ * A part-to-whole donut with a headline figure in the middle, chosen by the
+ * caller, and an always-on legend.
  *
  * Takes slices rather than any `Stats` payload, so it renders in a test or on
  * another page without a fetch. Callers decide what a slice is, what the
@@ -53,8 +54,8 @@ export const Donut = ({ slices, emptyMessage, centre }: DonutProps) => {
     // floating in a card that is wider than the chart needs.
     <div className="mx-auto w-full max-w-sm">
       <div className={`${FRAME} relative`}>
-        <div aria-hidden="true">
-          <ResponsiveContainer width="100%" height={220}>
+        <div className="h-full" aria-hidden="true">
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart accessibilityLayer={false}>
               {/* Recharts transitions the panel's transform, so it slides
                 diagonally across the plot as the pointer moves between
@@ -97,10 +98,10 @@ export const Donut = ({ slices, emptyMessage, centre }: DonutProps) => {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        {/* Over the chart rather than a Recharts `Label`, which draws one line
-            of svg text. The pie is centred in this box, so this lines up with
-            the ring's hole. It sits outside the `aria-hidden` chart, so screen
-            readers get the total too. */}
+        {/* Over the chart rather than a Recharts `Label`, which can only draw
+            one line of svg text. The pie is centred in this box, so this lines
+            up with the ring's hole. It sits outside the `aria-hidden` chart, so
+            screen readers read it too. */}
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-2xl font-semibold text-gray-900">
             {middle.value}

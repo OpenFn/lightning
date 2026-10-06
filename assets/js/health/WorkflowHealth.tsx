@@ -2,8 +2,6 @@ import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
-import { cn } from '#/utils/cn';
-
 import { FRAME } from './charts/Donut';
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
@@ -196,19 +194,15 @@ export const WorkflowHealth = ({
 const Card = ({
   title,
   meta,
-  className,
   children,
 }: {
   title: string;
   meta?: ReactNode;
-  className?: string;
   children: ReactNode;
 }) => (
   // A column, so a panel that wants the room can take the height the grid row
   // stretches this card to instead of leaving it blank.
-  <div
-    className={cn('flex flex-col rounded-lg bg-white p-6 shadow', className)}
-  >
+  <div className="flex flex-col rounded-lg bg-white p-6 shadow">
     <div className="mb-4 flex items-baseline justify-between gap-4">
       <h2 className="text-sm font-medium text-gray-900">{title}</h2>
       {meta && <span className="text-xs text-gray-500">{meta}</span>}

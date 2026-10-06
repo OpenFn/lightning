@@ -19,7 +19,7 @@ import { CANCELLED, FAILED, SUCCESS } from './OutcomesDonut';
 /**
  * Run volume over the window, stacked by outcome.
  *
- * Counts runs where the donuts beside it count work orders, so the two differ
+ * Counts runs where the Work orders tab counts work orders, so the two differ
  * on purpose and the card carries no total. Buckets arrive already counted and
  * zero-filled from `Stats.runs/3` — one row per bar, one key per run state,
  * which is the shape Recharts takes as `data` — on a grid cut to the reader's

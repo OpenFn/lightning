@@ -8,7 +8,7 @@ import {
 import { Donut } from './Donut';
 
 /**
- * Finished work order outcomes as a donut, with the total in the middle.
+ * Finished work order outcomes as a donut, with the success rate in the middle.
  *
  * Every state in `FAILURE_STATES` is folded into one `failed` slice; the
  * failure breakdown panel is where they come apart. `cancelled` sits outside
@@ -25,8 +25,8 @@ import { Donut } from './Donut';
 // convention the rest of the app already uses (`dashboard_components.ex` gives
 // it `bg-gray-500`), and it reads as "stopped, not broken" beside the red.
 //
-// Exported because the volume chart shares this row: a green bar and a green
-// wedge on one screen have to mean the same thing.
+// Exported because the volume chart uses the same colours: a green bar and a
+// green wedge have to mean the same thing.
 export const SUCCESS = '#0ca30c';
 export const FAILED = '#d03b3b';
 export const CANCELLED = '#6b7280';

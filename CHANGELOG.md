@@ -75,6 +75,10 @@ and this project adheres to
   characters or no visible characters, and names over 255 characters, as admin
   and API changes already do.
   [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- The workflow health page now has separate tabs for work orders and runs. The
+  donuts show the success rate and the failure count in their middle. Triage
+  rows show each failure's state and adaptor, and the step bars show each step's
+  adaptor.
 
 ### Removed
 
