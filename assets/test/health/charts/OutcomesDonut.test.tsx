@@ -35,7 +35,7 @@ describe('OutcomesDonut', () => {
     // this wedge for free, because it is in `FAILURE_STATES`.
     expect(screen.getByText('Failed')).toBeVisible();
     expect(screen.getByText('144')).toBeVisible();
-    expect(screen.getByText('11.2%')).toBeVisible();
+    expect(screen.getByText('(11.2%)')).toBeVisible();
   });
 
   // Stopping a work order on purpose is not a failure to drive down, so it sits
@@ -53,7 +53,7 @@ describe('OutcomesDonut', () => {
     expect(screen.getByText('Cancelled')).toBeVisible();
     // Failed is 10, not 20: cancelled is not folded in. Both read 10.0% of 100.
     expect(screen.getAllByText('10')).toHaveLength(2);
-    expect(screen.getAllByText('10.0%')).toHaveLength(2);
+    expect(screen.getAllByText('(10.0%)')).toHaveLength(2);
   });
 
   test('leaves the cancelled row out when nothing was cancelled', () => {

@@ -86,7 +86,7 @@ export const WorkflowHealth = ({
           {['Work orders', 'Runs'].map(label => (
             <Tab
               key={label}
-              className="!font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:rounded-md focus-visible:outline-primary-600 data-selected:!border-b-primary-600"
+              className="!font-medium outline-none data-focus:rounded-md data-focus:outline-solid data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-primary-600 data-selected:!border-b-primary-600"
             >
               {label}
             </Tab>
@@ -117,7 +117,7 @@ export const WorkflowHealth = ({
             {/* Same reply as the Outcomes panel — one aggregate read two ways,
                 so the slices here and the red wedge there cannot disagree. */}
             <Card
-              title="Failure breakdown"
+              title="Failure Breakdown"
               meta={outcomes.data && failures(outcomes.data.counts)}
             >
               <Panel data={outcomes.data} error={outcomes.error}>
@@ -137,7 +137,7 @@ export const WorkflowHealth = ({
                 down to "where" — so it costs no request, and the two cannot
                 disagree about a step's weight. */}
             <Card
-              title="Steps with failures"
+              title="Steps with Failures"
               meta={
                 signatures.data && stepFailureTotal(signatures.data.signatures)
               }

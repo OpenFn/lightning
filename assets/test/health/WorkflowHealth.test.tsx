@@ -348,13 +348,13 @@ describe('WorkflowHealth', () => {
     mount(both);
 
     const heading = await screen.findByRole('heading', {
-      name: 'Failure breakdown',
+      name: 'Failure Breakdown',
     });
     expect(heading).toBeVisible();
     // The triage table names the same state, so look inside this card only.
     const card = within(heading.closest<HTMLElement>('.shadow')!);
     expect(card.getByText('failed')).toBeVisible();
-    expect(screen.getByText('69.5%')).toBeVisible();
+    expect(screen.getByText('(69.5%)')).toBeVisible();
     expect(screen.queryByText('cancelled')).not.toBeInTheDocument();
   });
 
@@ -402,7 +402,7 @@ describe('WorkflowHealth', () => {
     // folded from it — so both degrade together.
     expect(await screen.findAllByText(ERROR)).toHaveLength(2);
     expect(screen.getAllByText('Success')[0]).toBeVisible();
-    expect(screen.getByText('69.5%')).toBeVisible();
+    expect(screen.getByText('(69.5%)')).toBeVisible();
   });
 
   test('keeps the page around a failed chart', async () => {
@@ -414,13 +414,13 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Outcomes' })).toBeVisible();
     expect(
-      screen.getByRole('heading', { name: 'Failure breakdown' })
+      screen.getByRole('heading', { name: 'Failure Breakdown' })
     ).toBeVisible();
     expect(
       screen.getByRole('heading', { name: 'Triage - grouped by failure type' })
     ).toBeVisible();
     expect(
-      screen.getByRole('heading', { name: 'Steps with failures' })
+      screen.getByRole('heading', { name: 'Steps with Failures' })
     ).toBeVisible();
 
     await userEvent.click(screen.getByRole('tab', { name: 'Runs' }));

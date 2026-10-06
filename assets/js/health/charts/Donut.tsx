@@ -104,25 +104,26 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
           counts here are that encoding, so the legend is never optional. The
           chart above is hidden from assistive tech; this legend is its
           accessible representation. */}
-      <ul className="mt-2 flex flex-col gap-1 text-sm text-gray-700">
+      <ul className="mt-2 flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm text-gray-700">
         {slices.map(({ key, label, color, value, href }) => (
           <li key={key}>
             <a
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+              className="flex items-center gap-1.5 rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
             >
               <span
                 aria-hidden="true"
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <span className="grow">{label}</span>{' '}
-              <span className="tabular-nums">{value.toLocaleString()}</span>{' '}
-              <span className="w-12 text-right tabular-nums text-gray-500">
-                {share(value)}
+              <span className="capitalize">{label}</span>{' '}
+              <span className="font-medium tabular-nums text-gray-900">
+                {value.toLocaleString()}
               </span>{' '}
+              {/* The share is otherwise only in the hover tooltip. */}
+              <span className="sr-only">({share(value)})</span>{' '}
               <span className="sr-only">(opens in a new tab)</span>
             </a>
           </li>

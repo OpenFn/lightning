@@ -31,9 +31,9 @@ describe('FailureBreakdownDonut', () => {
     expect(screen.getByText('98')).toBeVisible();
     // 98 of 141 failures — success is excluded from the denominator, so this
     // reads 69.5% and not 7.6% of all work orders.
-    expect(screen.getByText('69.5%')).toBeVisible();
+    expect(screen.getByText('(69.5%)')).toBeVisible();
     expect(screen.getByText('crashed')).toBeVisible();
-    expect(screen.getByText('17.0%')).toBeVisible();
+    expect(screen.getByText('(17.0%)')).toBeVisible();
   });
 
   // A work order the run limit refused never ran, but it is still a failure
@@ -48,7 +48,7 @@ describe('FailureBreakdownDonut', () => {
     );
 
     expect(screen.getByText('rejected')).toBeVisible();
-    expect(screen.getByText('25.0%')).toBeVisible();
+    expect(screen.getByText('(25.0%)')).toBeVisible();
   });
 
   test('omits states that never happened', () => {
@@ -78,7 +78,7 @@ describe('FailureBreakdownDonut', () => {
 
     expect(screen.queryByText('cancelled')).not.toBeInTheDocument();
     // 3 of 3 failures, not 3 of 93.
-    expect(screen.getByText('100.0%')).toBeVisible();
+    expect(screen.getByText('(100.0%)')).toBeVisible();
   });
 
   test('is empty when the only other outcome was cancelled', () => {
