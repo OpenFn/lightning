@@ -1,9 +1,6 @@
-import {
-  extractPackageName,
-  getAdaptorDisplayName,
-} from '#/collaborative-editor/utils/adaptorUtils';
 import { cn } from '#/utils/cn';
 
+import { adaptorLabel } from '../adaptorLabel';
 import { historyUrl } from '../historyUrl';
 import type { ErrorSignature, FailureState } from '../types';
 
@@ -89,7 +86,7 @@ export const TriageTable = ({
   return (
     // Cancels the card's `p-6` so the header and row dividers reach the card's
     // edges, as on the LiveView tables.
-    <div className="-m-6 overflow-hidden rounded-lg">
+    <div className="-m-6 overflow-x-auto rounded-lg">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
@@ -244,13 +241,6 @@ const Signature = ({ signature }: { signature: ErrorSignature }) => {
     </div>
   );
 };
-
-// The name the workflow diagram shows under a job, plus "adaptor": "gmail
-// adaptor". The version is left off because rows are grouped by `job_id`, so
-// one row can span an adaptor upgrade. An adaptor the helper can't name shows
-// as its package name.
-export const adaptorLabel = (adaptor: string) =>
-  `${getAdaptorDisplayName(adaptor, { fallback: extractPackageName(adaptor) })} adaptor`;
 
 // A step can fail with no error type or an empty one. `||` catches both null
 // and '', so the signature shows `unknown` rather than a bare `fail:`.

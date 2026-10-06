@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
 import { FAILURE_COLORS } from '#/health/charts/FailureBreakdownDonut';
-import { adaptorLabel, TriageTable } from '#/health/charts/TriageTable';
+import { TriageTable } from '#/health/charts/TriageTable';
 import type { ErrorSignature, FailureState } from '#/health/types';
 
 import { signature } from './counts';
@@ -252,15 +252,5 @@ describe('TriageTable failure state', () => {
     expect(
       screen.getByText('TimeoutError').querySelector('[aria-hidden="true"]')
     ).toBeNull();
-  });
-});
-
-describe('adaptorLabel', () => {
-  test.each([
-    ['@openfn/language-http@1.2.3', 'http adaptor'],
-    ['@openfn/language-common', 'common adaptor'],
-    ['@acme/custom-thing@1.0.0', '@acme/custom-thing adaptor'],
-  ])('labels %s as "%s"', (adaptor, label) => {
-    expect(adaptorLabel(adaptor)).toBe(label);
   });
 });

@@ -1,10 +1,10 @@
 import { cn } from '#/utils/cn';
 
+import { adaptorLabel } from '../adaptorLabel';
 import type { ErrorSignature } from '../types';
 
 import { EMPTY } from './Donut';
 import { FAILED } from './OutcomesDonut';
-import { adaptorLabel } from './TriageTable';
 
 /**
  * Which steps the window's failures land on, heaviest first, as a bar per step.

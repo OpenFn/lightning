@@ -5,7 +5,7 @@ import {
   type WorkOrderStateCounts,
 } from '../types';
 
-import { Donut } from './Donut';
+import { Donut, percent } from './Donut';
 
 /**
  * Finished work order outcomes as a donut, with the success rate in the middle.
@@ -79,7 +79,7 @@ export const OutcomesDonut = ({
         : []),
     ]}
     centre={total => ({
-      value: `${((counts.success / total) * 100).toFixed(1)}%`,
+      value: percent(counts.success, total),
       label: 'success',
     })}
     emptyMessage={emptyMessage}

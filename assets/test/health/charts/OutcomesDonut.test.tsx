@@ -52,6 +52,21 @@ describe('OutcomesDonut', () => {
     expect(screen.getByText('success')).toBeInTheDocument();
   });
 
+  // 2,500 of 2,501 is 99.96%, which one decimal place would round to 100.0%.
+  test('never rounds a workflow with failures to 100%', () => {
+    render(
+      <OutcomesDonut
+        counts={counts({ success: 2500, failed: 1 })}
+        emptyMessage="No work orders"
+        {...links}
+      />
+    );
+
+    expect(screen.getByText('<100%')).toBeInTheDocument();
+    expect(screen.getByText('(<100%)')).toBeVisible();
+    expect(screen.getByText('(<0.1%)')).toBeVisible();
+  });
+
   // Stopping a work order on purpose is not a failure to drive down, so it sits
   // outside the red wedge — but it is still a finished outcome, so the totals
   // only add up if this panel draws it.
