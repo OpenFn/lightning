@@ -24,14 +24,14 @@ const table = (signatures: ErrorSignature[], emptyMessage = 'No failures') =>
   );
 
 describe('TriageTable', () => {
-  test('lays the signature out on three lines, adaptor version dropped', () => {
+  test('lays the signature out on three lines, adaptor named as the diagram names it', () => {
     table([signature()]);
 
     expect(screen.getByText('failed')).toBeVisible();
     expect(
       screen.getByText('fail:RuntimeError @ Map-beneficiary')
     ).toBeVisible();
-    expect(screen.getByText('[@openfn/language-common]')).toBeVisible();
+    expect(screen.getByText('common adaptor')).toBeVisible();
     expect(screen.getByRole('cell', { name: '62' })).toBeVisible();
     expect(
       screen.getByRole('columnheader', { name: 'Work orders' })

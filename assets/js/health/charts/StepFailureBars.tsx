@@ -4,6 +4,7 @@ import type { ErrorSignature } from '../types';
 
 import { EMPTY } from './Donut';
 import { FAILED } from './OutcomesDonut';
+import { adaptorLabel } from './TriageTable';
 
 /**
  * Which steps the window's failures land on, heaviest first, as a bar per step.
@@ -63,23 +64,27 @@ export const StepFailureBars = ({
     // Being positioned also keeps an `sr-only` child inside the scroll area.
     <div className="lg:relative lg:min-h-64 lg:flex-1">
       <ul className="relative -mr-6 flex max-h-64 flex-col gap-6 overflow-y-auto pr-4 lg:absolute lg:inset-0 lg:max-h-none">
-        {rows.map(({ key, label, count }) => (
-          <li key={key} className="flex flex-col gap-1">
+        {rows.map(({ key, label, adaptor, count }) => (
+          <li key={key} className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-4 text-sm">
-              {/* Monospace, matching the triage table's signatures — a step
-                  name is a job's identifier, not prose. Italic for the
-                  unattributed row, which names a bucket rather than a job. */}
-              <span
-                className={cn(
-                  'min-w-0 truncate',
-                  key === NO_STEP
-                    ? 'italic text-gray-500'
-                    : 'font-mono text-gray-900'
+              {/* Italic for the "No failing step" row, which names a group of
+                  work orders, not a job. */}
+              <div className="flex min-w-0 flex-col gap-1">
+                <span
+                  className={cn(
+                    'truncate',
+                    key === NO_STEP ? 'italic text-gray-500' : 'text-gray-900'
+                  )}
+                  title={label}
+                >
+                  {label}
+                </span>
+                {adaptor && (
+                  <span className="truncate font-mono text-xs text-gray-500">
+                    {adaptorLabel(adaptor)}
+                  </span>
                 )}
-                title={label}
-              >
-                {label}
-              </span>
+              </div>
               <span className="shrink-0 font-medium tabular-nums text-gray-900">
                 {count.toLocaleString()}
               </span>
@@ -112,9 +117,12 @@ export const StepFailureBars = ({
  * is in two signatures for the same job.
  */
 const groupByStep = (signatures: ErrorSignature[]) => {
-  const rows = new Map<string, { key: string; label: string; count: number }>();
+  const rows = new Map<
+    string,
+    { key: string; label: string; adaptor: string | null; count: number }
+  >();
 
-  for (const { job_id, step_name, count } of signatures) {
+  for (const { job_id, step_name, adaptor, count } of signatures) {
     const key = job_id ?? NO_STEP;
     const existing = rows.get(key);
 
@@ -124,7 +132,7 @@ const groupByStep = (signatures: ErrorSignature[]) => {
       // A job with no name resolved off any snapshot in the window — it should
       // not happen, but it must not render as a blank row either.
       const label = job_id ? step_name || '(unknown step)' : 'No failing step';
-      rows.set(key, { key, label, count });
+      rows.set(key, { key, label, adaptor, count });
     }
   }
 

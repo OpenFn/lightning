@@ -34,7 +34,7 @@ const bar = (label: string) =>
   screen.getByTitle(label).closest('li')!.querySelector('[aria-hidden] > div');
 
 describe('StepFailureBars', () => {
-  test('lists one row per step, heaviest first', () => {
+  test('lists one row per step, heaviest first, with its adaptor', () => {
     bars([
       signature({ count: 36, job_id: 'job-b', step_name: 'Post-to-Punto' }),
       signature({ count: 62, job_id: 'job-a', step_name: 'Map-beneficiary' }),
@@ -42,21 +42,27 @@ describe('StepFailureBars', () => {
     ]);
 
     expect(rows()).toEqual([
-      'Map-beneficiary62',
-      'Post-to-Punto36',
-      'Fetch-households12',
+      'Map-beneficiarycommon adaptor62',
+      'Post-to-Puntocommon adaptor36',
+      'Fetch-householdscommon adaptor12',
     ]);
   });
 
   // Triage splits a job by exit reason and error type; a step is one place to
   // go and look however many ways it broke.
+  test('shows an adaptor it cannot name as its package, without the version', () => {
+    bars([signature({ adaptor: '@acme/custom-thing@1.2.0' })]);
+
+    expect(rows()).toEqual(['Map-beneficiary@acme/custom-thing adaptor62']);
+  });
+
   test('folds a step together across its exit reasons and error types', () => {
     bars([
       signature({ count: 40, error_type: 'RuntimeError' }),
       signature({ count: 22, exit_reason: 'crash', error_type: 'OOMError' }),
     ]);
 
-    expect(rows()).toEqual(['Map-beneficiary62']);
+    expect(rows()).toEqual(['Map-beneficiarycommon adaptor62']);
   });
 
   // The whole point of the "No failing step" row: these failures would otherwise be
@@ -68,7 +74,10 @@ describe('StepFailureBars', () => {
       runLevel({ count: 4, exit_reason: 'rejected' }),
     ]);
 
-    expect(rows()).toEqual(['Map-beneficiary62', 'No failing step24']);
+    expect(rows()).toEqual([
+      'Map-beneficiarycommon adaptor62',
+      'No failing step24',
+    ]);
   });
 
   // Bars rank the rows against each other, not against the total: against a
@@ -95,7 +104,10 @@ describe('StepFailureBars', () => {
   test('labels a step whose name never resolved without merging it into the no failing step row', () => {
     bars([signature({ count: 3, step_name: null }), runLevel({ count: 2 })]);
 
-    expect(rows()).toEqual(['(unknown step)3', 'No failing step2']);
+    expect(rows()).toEqual([
+      '(unknown step)common adaptor3',
+      'No failing step2',
+    ]);
   });
 });
 

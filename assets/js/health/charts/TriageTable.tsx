@@ -1,3 +1,7 @@
+import {
+  extractPackageName,
+  getAdaptorDisplayName,
+} from '#/collaborative-editor/utils/adaptorUtils';
 import { cn } from '#/utils/cn';
 
 import { historyUrl } from '../historyUrl';
@@ -9,8 +13,8 @@ import { FAILURE_COLORS } from './FailureBreakdownDonut';
 /**
  * Failed work orders grouped by error signature, largest group first. Each row
  * links to history filtered to that group, where "retry all" can act on it.
- * A signature reads `exitReason:errorType [@ stepName [adaptor]]`. The adaptor
- * shows without its version (see `packageNameOf`).
+ * A signature reads `exitReason:errorType [@ stepName]`, with the job's adaptor
+ * on the line below (see `adaptorLabel`).
  */
 
 // One tip per error type the worker reports. Each type covers many root
@@ -234,21 +238,19 @@ const Signature = ({ signature }: { signature: ErrorSignature }) => {
       </p>
       {signature.adaptor && (
         <p className="font-mono text-gray-500">
-          [{packageNameOf(signature.adaptor)}]
+          {adaptorLabel(signature.adaptor)}
         </p>
       )}
     </div>
   );
 };
 
-// Rows are grouped by `job_id`, not by adaptor version, so one row can span an
-// adaptor upgrade. Showing the newest version would mislabel older failures, so
-// only the package name shows. Cuts from the last `@`, unless that `@` starts a
-// scoped package name.
-const packageNameOf = (adaptor: string) => {
-  const lastAt = adaptor.lastIndexOf('@');
-  return lastAt > 0 ? adaptor.slice(0, lastAt) : adaptor;
-};
+// The name the workflow diagram shows under a job, plus "adaptor": "gmail
+// adaptor". The version is left off because rows are grouped by `job_id`, so
+// one row can span an adaptor upgrade. An adaptor the helper can't name shows
+// as its package name.
+export const adaptorLabel = (adaptor: string) =>
+  `${getAdaptorDisplayName(adaptor, { fallback: extractPackageName(adaptor) })} adaptor`;
 
 // A step can fail with no error type or an empty one. `||` catches both null
 // and '', so the signature shows `unknown` rather than a bare `fail:`.
