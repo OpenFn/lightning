@@ -1735,8 +1735,10 @@ defmodule Lightning.Config.BootstrapTest do
                "http://localhost:4317"
     end
 
-    test "doesn't set endpoint if OTEL_EXPORTER_OTLP_ENDPOINT not set" do
-      reconfigure(%{})
+    test "doesn't set endpoint if OTEL_EXPORTER_OTLP_ENDPOINT is empty string" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => ""
+      })
 
       assert get_env(:opentelemetry_exporter) == nil
     end
@@ -1750,8 +1752,25 @@ defmodule Lightning.Config.BootstrapTest do
                "http://localhost:4317"
     end
 
-    test "doesn't set a trace endpoint if OTEL_EXPORTER_OTLP_TRACES_ENDPOINT not set" do
+    test "doesn't set endpoint if OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is empty" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" => ""
+      })
+
+      assert get_env(:opentelemetry_exporter) == nil
+    end
+
+    test "doesn't set endpoint if neither endpoint env var set" do
       reconfigure(%{})
+
+      assert get_env(:opentelemetry_exporter) == nil
+    end
+
+    test "doesn't set endpoint if both endpoint env vars are empty strings" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "",
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" => ""
+      })
 
       assert get_env(:opentelemetry_exporter) == nil
     end
