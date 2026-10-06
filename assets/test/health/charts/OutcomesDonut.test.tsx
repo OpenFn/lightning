@@ -85,6 +85,30 @@ describe('OutcomesDonut', () => {
     expect(screen.getAllByText('(10.0%)')).toHaveLength(2);
   });
 
+  test('leaves cancelled out of the success rate', () => {
+    render(
+      <OutcomesDonut
+        counts={counts({ success: 9, cancelled: 1 })}
+        emptyMessage="No work orders"
+        {...links}
+      />
+    );
+
+    expect(screen.getByText('100.0%')).toBeInTheDocument();
+  });
+
+  test('has no success rate when every work order was cancelled', () => {
+    render(
+      <OutcomesDonut
+        counts={counts({ cancelled: 3 })}
+        emptyMessage="No work orders"
+        {...links}
+      />
+    );
+
+    expect(screen.getByText('–')).toBeInTheDocument();
+  });
+
   test('leaves the cancelled row out when nothing was cancelled', () => {
     render(
       <OutcomesDonut

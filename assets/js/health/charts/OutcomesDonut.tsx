@@ -78,10 +78,15 @@ export const OutcomesDonut = ({
           ]
         : []),
     ]}
-    centre={total => ({
-      value: percent(counts.success, total),
-      label: 'success',
-    })}
+    // Out of success and failure only: cancelled is not a failure, so it must
+    // not pull the rate down. All-cancelled has no rate at all.
+    centre={() => {
+      const decided = counts.success + failureTotal(counts);
+      return {
+        value: decided > 0 ? percent(counts.success, decided) : '–',
+        label: 'success',
+      };
+    }}
     emptyMessage={emptyMessage}
   />
 );
