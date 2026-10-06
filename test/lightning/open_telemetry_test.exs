@@ -56,7 +56,7 @@ defmodule Lightning.OpenTelemetryTest do
     refute OpentelemetryEcto in modules
   end
 
-  test "attached all 4 handlers if both tracing and Ecto enabled" do
+  test "attaches all 4 handlers if both tracing and Ecto enabled" do
     stub(Lightning.MockConfig, :otel_enabled?, fn -> true end)
     stub(Lightning.MockConfig, :otel_ecto_enabled?, fn -> true end)
 

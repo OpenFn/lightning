@@ -5,8 +5,7 @@ defmodule Lightning.OpenTelemetry do
   Gated separately from the SDK's own `sdk_disabled`: these handlers are
   attached process-wide and cannot be detached per-request, and they build
   their full attribute set before consulting the sampler, so a disabled SDK
-  makes them cheap but not free. See the comment at
-  `deps/opentelemetry_ecto/lib/opentelemetry_ecto.ex:60`.
+  makes them cheap but not free.
   """
 
   def setup do

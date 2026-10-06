@@ -157,9 +157,12 @@ config :tailwind,
     cd: Path.expand("..", __DIR__)
   ]
 
-# Every key the app attaches with Logger.metadata/1, mostly via
-# LightningWeb.Observability.put_scope/1. Defined once so the console and
-# Sentry can't drift; a new key has to be added here to reach either.
+# Every metadata key the console and Sentry may emit. Defined once so the two
+# can't drift; a new key has to be added here to reach either. Most are
+# attached by the app via LightningWeb.Observability.put_scope/1. The :otel_*
+# pair is not: the OpenTelemetry API sets it on the process from
+# otel_ctx:attach/1 and detach/1, so it is populated only while tracing is
+# enabled.
 log_metadata = [
   :request_id,
   :session_id,
@@ -170,7 +173,9 @@ log_metadata = [
   :project_env,
   :user_id,
   :workflow_id,
-  :worker_id
+  :worker_id,
+  :otel_span_id,
+  :otel_trace_id
 ]
 
 config :lightning, :log_metadata, log_metadata
@@ -178,7 +183,7 @@ config :lightning, :log_metadata, log_metadata
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: log_metadata ++ [:otel_span_id, :otel_trace_id]
+  metadata: log_metadata
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
