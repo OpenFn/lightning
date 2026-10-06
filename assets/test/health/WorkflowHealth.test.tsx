@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -347,10 +347,13 @@ describe('WorkflowHealth', () => {
   test('breaks the same failures down by work order state', async () => {
     mount(both);
 
-    expect(
-      await screen.findByRole('heading', { name: 'Failure breakdown' })
-    ).toBeVisible();
-    expect(screen.getByText('failed')).toBeVisible();
+    const heading = await screen.findByRole('heading', {
+      name: 'Failure breakdown',
+    });
+    expect(heading).toBeVisible();
+    // The triage table names the same state, so look inside this card only.
+    const card = within(heading.closest<HTMLElement>('.shadow')!);
+    expect(card.getByText('failed')).toBeVisible();
     expect(screen.getByText('69.5%')).toBeVisible();
     expect(screen.queryByText('cancelled')).not.toBeInTheDocument();
   });

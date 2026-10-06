@@ -1,21 +1,21 @@
+import { cn } from '#/utils/cn';
+
 import { historyUrl } from '../historyUrl';
-import type { ErrorSignature } from '../types';
+import type { ErrorSignature, FailureState } from '../types';
 
 import { EMPTY } from './Donut';
+import { FAILURE_COLORS } from './FailureBreakdownDonut';
 
 /**
- * Failed work orders grouped by error signature, heaviest first. Each row
- * links to the history page filtered to the work orders it counts, where the
- * existing "retry all" can act on the group. The signature grammar is:
- * `exitReason:errorType [@ stepName [adaptor]]` — the adaptor renders without
- * its version, since a merged row can span more than one (see `job_id` on
- * `ErrorSignature`).
+ * Failed work orders grouped by error signature, largest group first. Each row
+ * links to history filtered to that group, where "retry all" can act on it.
+ * A signature reads `exitReason:errorType [@ stepName [adaptor]]`. The adaptor
+ * shows without its version (see `packageNameOf`).
  */
 
-// One sentence per error type the worker can report, written to hold
-// for every root cause behind that type — the codes are general, so the tip
-// has to be too. `error_type` is not a closed enum — it is whatever the
-// throwing layer set — so `default` catches whatever is unlisted.
+// One tip per error type the worker reports. Each type covers many root
+// causes, so each tip stays general. `error_type` isn't a closed set, so
+// `default` covers anything not listed.
 const TIPS: Record<string, string> = {
   RuntimeError:
     "Job code hit a value it didn't expect, often a missing input field.",
@@ -24,10 +24,10 @@ const TIPS: Record<string, string> = {
   CompileError: "Job code couldn't be compiled, so no step ever ran.",
   RuntimeCrash:
     "Job code threw an error the runtime couldn't recover from, so the run was abandoned.",
-  // The only two raw JS names that reach Lightning: `assertRuntimeCrash` wraps
-  // exactly these, and the worker reports the wrapper's `subtype` over its
-  // `name`, so `RuntimeCrash` only ever names a run-level failure. Every other
-  // JS error is wrapped as a `RuntimeError` and reports under that name.
+  // The only raw JS error names that reach Lightning. `assertRuntimeCrash`
+  // wraps these two, and the worker reports the wrapper's `subtype` rather than
+  // its `name`, so `RuntimeCrash` only means a run-level failure. Every other
+  // JS error is reported as `RuntimeError`.
   ReferenceError:
     "Job code referred to something that doesn't exist, often a typo or a missing import.",
   SyntaxError:
@@ -67,7 +67,7 @@ interface TriageTableProps {
   emptyMessage: string;
   projectId: string;
   workflowId: string;
-  /** `window.from` off the same response — the picked range's start. */
+  /** Start of the selected range, from the same response's `window.from`. */
   from: string;
 }
 
@@ -83,13 +83,13 @@ export const TriageTable = ({
   }
 
   return (
-    // Cancels the card's `p-6`, so the header band and row dividers run to its
-    // edges the way they do on the LiveView tables.
+    // Cancels the card's `p-6` so the header and row dividers reach the card's
+    // edges, as on the LiveView tables.
     <div className="-m-6 overflow-hidden rounded-lg">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th scope="col" className={TH}>
+            <th scope="col" className={cn(TH, 'w-1/8')}>
               Work orders
             </th>
             <th scope="col" className={TH}>
@@ -105,8 +105,8 @@ export const TriageTable = ({
         </thead>
         <tbody className="divide-y divide-gray-200 bg-white">
           {signatures.map(signature => (
-            // job_id joins the key: a job deleted and recreated with the same
-            // name reads as two identical-looking signatures otherwise.
+            // `job_id` is part of the key because a job deleted and recreated
+            // under the same name gives two signatures that otherwise match.
             <tr
               key={[
                 signature.exit_reason,
@@ -126,9 +126,8 @@ export const TriageTable = ({
                 <Signature signature={signature} />
               </td>
               <td className={TD}>{tipFor(signature)}</td>
-              {/* Nothing to link on a row whose `exit_reason` never resolved:
-                  that leaves neither a step nor a mappable run state to filter
-                  history on. */}
+              {/* No link without an `exit_reason`: there's no step or run
+                  state to filter history by. */}
               <td className={TD}>
                 {signature.exit_reason && (
                   <ViewButton
@@ -144,17 +143,16 @@ export const TriageTable = ({
   );
 };
 
-// Cell classes from the LiveView `table` component (`components/table.ex`),
-// with the outer padding at the card's `p-6` so the columns line up with the
+// Cell classes match the LiveView `table` component (`components/table.ex`).
+// The outer padding matches the card's `p-6`, so the columns line up with the
 // cards above.
 const TH =
   'px-3 py-3.5 first:pl-6 last:pr-6 text-left text-sm font-medium whitespace-nowrap text-gray-800';
 const TD = 'px-3 py-4 first:pl-6 last:pr-6 text-sm text-gray-500';
 
 /**
- * Lands on history filtered to exactly the work orders this row counts, where
- * the existing "retry all" can act on the group. Not labelled with the row's
- * count — the filter re-derives the count on every load, so the number moves.
+ * Links to history filtered to the work orders in this row. The label leaves
+ * out the count because history recounts on every load, so the two can differ.
  */
 const ViewButton = ({ href }: { href: string }) => (
   <a
@@ -163,20 +161,18 @@ const ViewButton = ({ href }: { href: string }) => (
     rel="noopener noreferrer"
     className="inline-block whitespace-nowrap rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:inset-ring-gray-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
   >
-    View <span className="sr-only">(opens in a new tab)</span>
+    View history <span className="sr-only">(opens in a new tab)</span>
   </a>
 );
 
-// A rejected work order never got a run, so the signature filter would fail
-// closed on it server-side — history's existing `rejected` status filter is
-// what actually matches these. `to_signature/2` gives every rejected row the
-// same literal `exit_reason: "rejected"`, so that is the signal to switch.
+// A rejected work order has no run, so the signature filter can't match it.
+// Every rejected row has `exit_reason: "rejected"` (see `to_signature/2`), so
+// those rows use history's `rejected` filter instead.
 //
-// No status is ticked for the other rows: the signature filter carries
-// `wo.state in failure_states()` itself, so the group is already exactly the
-// row's, and a status the reason names would only subtract from it — a `fail:`
-// row counts every work order whose latest run holds a step that failed,
-// whatever state the run itself ended in.
+// Other rows set no status filter. The signature filter already limits results
+// to failed work orders, and a status filter would drop some of them: a `fail:`
+// row includes every work order with a failed step, whatever state its run
+// ended in.
 const signatureUrl = (
   projectId: string,
   workflowId: string,
@@ -198,37 +194,64 @@ const signatureUrl = (
   });
 };
 
-// The parts are styled apart rather than concatenated server-side: the error
-// type is the bit worth scanning down the column for.
-const Signature = ({ signature }: { signature: ErrorSignature }) => (
-  <p className="font-mono text-gray-900">
-    <span className="text-gray-500">{signature.exit_reason}:</span>
-    <span className="font-semibold">{errorTypeOf(signature)}</span>
-    {signature.step_name && <span> @ {signature.step_name}</span>}
-    {signature.adaptor && (
-      <span className="text-gray-500">
-        {' '}
-        [{packageNameOf(signature.adaptor)}]
-      </span>
-    )}
-  </p>
-);
+// Maps the worker's exit reasons to the donut's failure states. The exit reason
+// describes the step that failed, which usually but not always matches how the
+// work order ended. Unlisted reasons fall back to the error type.
+const OUTCOMES: Partial<Record<string, FailureState>> = {
+  fail: 'failed',
+  crash: 'crashed',
+  kill: 'killed',
+  exception: 'exception',
+  lost: 'lost',
+  rejected: 'rejected',
+};
 
-// A row is keyed and labelled by `job_id`, not by (job_id, adaptor), so a row
-// spanning an adaptor bump mid-window is labelled from its newest failing
-// snapshot. Rendering that snapshot's version would head older failures with a
-// version that isn't theirs, so only the package name renders. Strips
-// everything from the last '@' that isn't the scope's leading one, so a scoped
-// package's own '@' survives.
+// Shows the state in a word, then the full signature, then the adaptor. The
+// state colour goes on the dot and the bar, never the text: some of the colours
+// are too pale to read as text on white.
+const Signature = ({ signature }: { signature: ErrorSignature }) => {
+  const state = OUTCOMES[signature.exit_reason];
+  const color = state && FAILURE_COLORS[state];
+
+  return (
+    <div className="space-y-1.5">
+      <p className="flex items-center gap-2 font-medium text-gray-900 capitalize">
+        {color && (
+          <span
+            aria-hidden="true"
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: color }}
+          />
+        )}
+        {state ?? errorTypeOf(signature)}
+      </p>
+      <p
+        className="border-l-2 border-gray-300 pl-2 font-mono text-gray-900"
+        style={{ borderColor: color }}
+      >
+        {signature.exit_reason}:{errorTypeOf(signature)}
+        {signature.step_name && ` @ ${signature.step_name}`}
+      </p>
+      {signature.adaptor && (
+        <p className="font-mono text-gray-500">
+          [{packageNameOf(signature.adaptor)}]
+        </p>
+      )}
+    </div>
+  );
+};
+
+// Rows are grouped by `job_id`, not by adaptor version, so one row can span an
+// adaptor upgrade. Showing the newest version would mislabel older failures, so
+// only the package name shows. Cuts from the last `@`, unless that `@` starts a
+// scoped package name.
 const packageNameOf = (adaptor: string) => {
   const lastAt = adaptor.lastIndexOf('@');
   return lastAt > 0 ? adaptor.slice(0, lastAt) : adaptor;
 };
 
-// A step can finish without reporting a type, and a worker can report one as an
-// empty string. The signature still has to say something, and `default` is the
-// tip written for exactly that case — hence `||`, which catches '' as well as
-// null, where `??` would render a bare `fail:` and a tip with no sentence.
+// A step can fail with no error type or an empty one. `||` catches both null
+// and '', so the signature shows `unknown` rather than a bare `fail:`.
 const errorTypeOf = ({ error_type }: ErrorSignature) => error_type || 'unknown';
 
 const tipFor = ({ error_type }: ErrorSignature) =>

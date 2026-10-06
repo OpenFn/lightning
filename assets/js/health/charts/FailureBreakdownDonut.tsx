@@ -30,7 +30,7 @@ import { FAILED } from './OutcomesDonut';
 //
 // A `Record` keyed by `FailureState`, so adding a state without choosing a
 // colour for it is a compile error rather than a silently missing slice.
-const COLORS: Record<FailureState, string> = {
+export const FAILURE_COLORS: Record<FailureState, string> = {
   failed: FAILED,
   crashed: '#e87ba4',
   killed: '#4a3aa7',
@@ -61,7 +61,7 @@ export const FailureBreakdownDonut = ({
     slices={FAILURE_STATES.filter(state => counts[state] > 0).map(state => ({
       key: state,
       label: state,
-      color: COLORS[state],
+      color: FAILURE_COLORS[state],
       value: counts[state],
       href: stateUrl(projectId, workflowId, from, state),
     }))}

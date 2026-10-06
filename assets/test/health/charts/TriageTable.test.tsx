@@ -24,12 +24,14 @@ const table = (signatures: ErrorSignature[], emptyMessage = 'No failures') =>
   );
 
 describe('TriageTable', () => {
-  test('renders the full signature grammar for a step-level failure, adaptor version dropped', () => {
+  test('lays the signature out on three lines, adaptor version dropped', () => {
     table([signature()]);
 
-    expect(rowText(/RuntimeError/)).toContain(
-      'fail:RuntimeError @ Map-beneficiary [@openfn/language-common]'
-    );
+    expect(screen.getByText('failed')).toBeVisible();
+    expect(
+      screen.getByText('fail:RuntimeError @ Map-beneficiary')
+    ).toBeVisible();
+    expect(screen.getByText('[@openfn/language-common]')).toBeVisible();
     expect(screen.getByRole('cell', { name: '62' })).toBeVisible();
     expect(
       screen.getByRole('columnheader', { name: 'Work orders' })
@@ -142,7 +144,7 @@ describe('TriageTable', () => {
       table([signature()]);
 
       const link = screen.getByRole('link', {
-        name: 'View (opens in a new tab)',
+        name: 'View history (opens in a new tab)',
       });
       expect(link).toHaveAttribute(
         'href',
@@ -173,7 +175,7 @@ describe('TriageTable', () => {
       ]);
 
       const link = screen.getByRole('link', {
-        name: 'View (opens in a new tab)',
+        name: 'View history (opens in a new tab)',
       });
       expect(link).toHaveAttribute(
         'href',
@@ -199,7 +201,7 @@ describe('TriageTable', () => {
       ]);
 
       const link = screen.getByRole('link', {
-        name: 'View (opens in a new tab)',
+        name: 'View history (opens in a new tab)',
       });
       expect(link).toHaveAttribute(
         'href',
@@ -216,7 +218,9 @@ describe('TriageTable', () => {
       table([signature({ exit_reason: '' })]);
 
       expect(
-        screen.queryByRole('link', { name: 'View (opens in a new tab)' })
+        screen.queryByRole('link', {
+          name: 'View history (opens in a new tab)',
+        })
       ).toBeNull();
     });
   });
