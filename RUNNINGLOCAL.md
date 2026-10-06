@@ -152,6 +152,93 @@ developing, see `tooling/adaptor_cache/README.md`. The `ADAPTORS_NPM_*`
 variables that point Lightning at it are described in
 [ADAPTORS.md](ADAPTORS.md).
 
+### Catching traces locally
+
+Lightning exports OpenTelemetry traces over OTLP, so any local collector that
+accepts OTLP will catch them. Jaeger all-in-one needs no configuration file and
+has a query API that returns raw span JSON, which makes it a good default.
+
+Write a compose file for it. `monitoring/` is ignored by git, so this stays out
+of your commits:
+
+```sh
+mkdir -p monitoring
+cat > monitoring/jaeger.yml <<'YAML'
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    container_name: lightning-jaeger
+    environment:
+      # OTLP ingest is opt-in on the 1.x all-in-one image.
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # UI and query API
+      - "4318:4318" # OTLP/HTTP
+      - "4317:4317" # OTLP/gRPC
+YAML
+```
+
+Start it and check it is listening. Spans are kept in memory only, so `down`
+discards everything:
+
+```sh
+docker compose -f monitoring/jaeger.yml up -d
+curl -s localhost:16686/api/services
+```
+
+The reply is `{"data":["jaeger-all-in-one"],...}`. Jaeger traces itself, so its
+own name means the collector is up and nothing has arrived from Lightning yet.
+
+Now start Lightning pointing at it, with sampling turned up:
+
+```sh
+TRACING_ENABLED=true \
+  OTEL_TRACES_SAMPLER=always_on \
+  OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
+  iex -S mix phx.server
+```
+
+Add `TRACING_ECTO_ENABLED=true` for a span per database query. See
+[Tracing](DEPLOYMENT.md#tracing) for what each variable does.
+
+Generate some traffic, wait about ten seconds, then open http://localhost:16686
+and pick the `lightning` service.
+
+Three things cost the most time when a span does not show up:
+
+- The exporter batches, so wait about ten seconds before deciding nothing
+  arrived.
+- Sampling keeps 5% of traces by default, which is why the command above sets
+  `always_on`.
+- Jaeger keeps spans for the life of the container, and a service stays in the
+  list once it has appeared. Restart it between runs:
+
+```sh
+docker compose -f monitoring/jaeger.yml restart jaeger
+```
+
+To read attributes instead of clicking through the UI, query the API. Span
+attributes and resource attributes are in different places, so collect both:
+
+```sh
+curl -s 'localhost:16686/api/traces?service=lightning&limit=200&lookback=1h' \
+  > /tmp/spans.json
+
+# every attribute key emitted, span level and resource level
+jq -r '.data[] | (.spans[].tags[].key, .processes[].tags[].key)' \
+  /tmp/spans.json | sort -u
+
+# the values of one attribute
+jq -r '.data[].spans[].tags[] | select(.key == "db.url") | .value' \
+  /tmp/spans.json | sort -u
+```
+
+Stop the collector when you are done:
+
+```sh
+docker compose -f monitoring/jaeger.yml down
+```
+
 ### Problems with Apple Silicon
 
 You might run into some errors when running the docker containers on Apple
