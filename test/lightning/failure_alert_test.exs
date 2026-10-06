@@ -10,7 +10,6 @@ defmodule Lightning.FailureAlertTest do
   alias Lightning.Extensions.UsageLimiter
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.FailureAlerter
-  alias Lightning.Repo
   alias Lightning.Workers
 
   setup do
@@ -63,7 +62,6 @@ defmodule Lightning.FailureAlertTest do
           finished_at: build(:timestamp),
           state: :started
         )
-        |> Repo.preload(:log_lines)
 
       workflow_2 =
         insert(:workflow,
@@ -86,7 +84,6 @@ defmodule Lightning.FailureAlertTest do
           dataclip: build(:dataclip),
           finished_at: build(:timestamp)
         )
-        |> Repo.preload(:log_lines)
 
       workflow_3 =
         insert(:workflow,
@@ -112,7 +109,6 @@ defmodule Lightning.FailureAlertTest do
           dataclip: build(:dataclip),
           finished_at: build(:timestamp)
         )
-        |> Repo.preload(:log_lines)
 
       {:ok,
        period: period,
@@ -172,6 +168,22 @@ defmodule Lightning.FailureAlertTest do
         "\"workflow-a\" (#{project.name}) failed 4 times in the last #{period}"
 
       refute_receive {:email, %Swoosh.Email{subject: ^s4}}, 250
+    end
+
+    # Jobs can log sensitive data, so the email links to the run instead of
+    # carrying its logs.
+    test "leaves the run's logs out of the email", %{
+      runs: [run, _, _],
+      project: project
+    } do
+      insert(:log_line, run: run, message: "patient_id=12345")
+
+      FailureAlerter.alert_on_failure(run)
+
+      assert_receive {:email, %Swoosh.Email{html_body: html_body}}, 1000
+
+      assert html_body =~ "/projects/#{project.id}/runs/#{run.id}"
+      refute html_body =~ "patient_id=12345"
     end
 
     test "sends a failure alert email for a workflow even if another workflow has been rate limited.",
@@ -512,6 +524,5 @@ defmodule Lightning.FailureAlertTest do
       finished_at: build(:timestamp),
       state: :started
     )
-    |> Repo.preload(:log_lines)
   end
 end
