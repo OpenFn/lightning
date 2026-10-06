@@ -876,16 +876,6 @@ defmodule Lightning.Config.Bootstrap do
           "lightning-cluster"
         )
 
-    # config :opentelemetry,
-    #   span_processor: :batch,
-    #   traces_exporter: :otlp,
-    #   sampler: :always_on,
-    #   resource: %{service: %{name: "lightning"}}
-    #
-    # config :opentelemetry_exporter,
-    #   otlp_protocol: :http_protobuf,
-    #   otlp_endpoint: "http://tempo:4318"
-
     # ==============================================================================
 
     setup_storage()
@@ -1249,6 +1239,19 @@ defmodule Lightning.Config.Bootstrap do
       enabled: not disabled?,
       ecto_enabled: env!("TRACING_ECTO_ENABLED", &Utils.ensure_boolean/1, false)
 
+    otlp_endpoint = otel_endpoint("OTEL_EXPORTER_OTLP_ENDPOINT")
+    otlp_traces_endpoint = otel_endpoint("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+
+    if not disabled? and is_nil(otlp_endpoint) and is_nil(otlp_traces_endpoint) do
+      raise ArgumentError, """
+        Tracing is enabled but no OTLP endpoint is configured.
+
+        Set OTEL_EXPORTER_OTLP_ENDPOINT (e.g. http://localhost:4318 for a local
+        collector), or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT to export only traces,
+        or turn tracing off with TRACING_ENABLED=false.
+      """
+    end
+
     # Defaults only. `OTEL_TRACES_SAMPLER`/`OTEL_TRACES_SAMPLER_ARG`,
     # `OTEL_SERVICE_NAME` and `OTEL_RESOURCE_ATTRIBUTES` override these.
     config :opentelemetry,
@@ -1267,6 +1270,11 @@ defmodule Lightning.Config.Bootstrap do
       nil -> :ok
       endpoint -> config :opentelemetry_exporter, otlp_endpoint: endpoint
     end
+
+    case env!("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", :string, nil) do
+      nil -> :ok
+      endpoint -> config :opentelemetry_exporter, otlp_traces_endpoint: endpoint
+    end
   end
 
   defp otel_parse_sdk_disabled("true"), do: true
@@ -1276,5 +1284,13 @@ defmodule Lightning.Config.Bootstrap do
   defp otel_parse_sdk_disabled(other) do
     raise ArgumentError,
           ~s(OTEL_SDK_DISABLED must be "true" or "false", got: #{inspect(other)})
+  end
+
+  # Empty means unset, as for OTEL_SDK_DISABLED.
+  defp otel_endpoint(var) do
+    case env!(var, :string, nil) do
+      "" -> nil
+      endpoint -> endpoint
+    end
   end
 end
