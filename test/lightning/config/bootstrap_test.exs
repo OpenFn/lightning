@@ -1566,6 +1566,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
       refute get_env(:opentelemetry)[:sdk_disabled]
     end
 
@@ -1575,6 +1576,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
       assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
@@ -1582,6 +1584,7 @@ defmodule Lightning.Config.BootstrapTest do
       reconfigure(%{})
 
       refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
       assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
@@ -1592,6 +1595,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
       refute get_env(:opentelemetry)[:sdk_disabled]
     end
 
@@ -1602,6 +1606,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
       assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
@@ -1611,6 +1616,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
       refute get_env(:opentelemetry)[:sdk_disabled]
     end
 
@@ -1621,6 +1627,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
       refute get_env(:opentelemetry)[:sdk_disabled]
     end
 
@@ -1631,6 +1638,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
       assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
@@ -1640,6 +1648,7 @@ defmodule Lightning.Config.BootstrapTest do
       })
 
       refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
       assert get_env(:opentelemetry)[:sdk_disabled]
     end
 
@@ -1652,6 +1661,45 @@ defmodule Lightning.Config.BootstrapTest do
           "OTEL_SDK_DISABLED" => "invalid"
         })
       end
+    end
+
+    test "enables Ecto tracing if TRACING_ECTO_ENABLED is true" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_SDK_DISABLED" => "false",
+        "TRACING_ECTO_ENABLED" => "yes"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+      assert get_env(:lightning, :otel)[:ecto_enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "disables Ecto tracing if TRACING_ECTO_ENABLED is false" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_SDK_DISABLED" => "false",
+        "TRACING_ECTO_ENABLED" => "no"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "sets an endpoint if OTEL_EXPORTER_OTLP_ENDPOINT is set" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317"
+      })
+
+      assert get_env(:opentelemetry_exporter)[:otlp_endpoint] ==
+               "http://localhost:4317"
+    end
+
+    test "doesn't set endpoint if OTEL_EXPORTER_OTLP_ENDPOINT not set" do
+      reconfigure(%{})
+
+      assert get_env(:opentelemetry_exporter)[:otlp_endpoint] == nil
     end
   end
 

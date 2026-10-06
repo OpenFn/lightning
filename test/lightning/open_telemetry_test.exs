@@ -15,6 +15,11 @@ defmodule Lightning.OpenTelemetryTest do
 
   setup do
     stub_with(Lightning.MockConfig, Lightning.Config.API)
+
+    # Boot may have attached handlers (a developer with TRACING_ENABLED
+    # exported). Start from a known slate.
+    Enum.each(otel_handlers(), &:telemetry.detach/1)
+
     on_exit(fn -> Enum.each(otel_handlers(), &:telemetry.detach/1) end)
 
     :ok

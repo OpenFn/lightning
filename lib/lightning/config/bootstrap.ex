@@ -1245,10 +1245,28 @@ defmodule Lightning.Config.Bootstrap do
         sdk_disabled_set -> sdk_disabled_set
       end
 
-    config :lightning, :otel, enabled: not disabled?
+    config :lightning, :otel,
+      enabled: not disabled?,
+      ecto_enabled: env!("TRACING_ECTO_ENABLED", &Utils.ensure_boolean/1, false)
 
+    # Defaults only. `OTEL_TRACES_SAMPLER`/`OTEL_TRACES_SAMPLER_ARG`,
+    # `OTEL_SERVICE_NAME` and `OTEL_RESOURCE_ATTRIBUTES` override these.
     config :opentelemetry,
-      sdk_disabled: disabled?
+      sdk_disabled: disabled?,
+      span_processor: :batch,
+      traces_exporter: :otlp,
+      sampler: {:parent_based, %{root: {:trace_id_ratio_based, 0.05}}},
+      resource: %{
+        service: %{
+          name: "lightning",
+          version: to_string(Application.spec(:lightning, :vsn))
+        }
+      }
+
+    case env!("OTEL_EXPORTER_OTLP_ENDPOINT", :string, nil) do
+      nil -> :ok
+      endpoint -> config :opentelemetry_exporter, otlp_endpoint: endpoint
+    end
   end
 
   defp otel_parse_sdk_disabled("true"), do: true
