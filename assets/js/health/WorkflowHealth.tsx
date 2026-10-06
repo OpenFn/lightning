@@ -7,13 +7,12 @@ import { cn } from '#/utils/cn';
 import { FRAME } from './charts/Donut';
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
-import { StepFailureBars, stepFailureTotal } from './charts/StepFailureBars';
+import { StepFailureBars } from './charts/StepFailureBars';
 import { TriageTable } from './charts/TriageTable';
 import type { RunVolume } from './charts/VolumeBars';
 import { bucketMeta, VolumeBars } from './charts/VolumeBars';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
 import type { ErrorSignatures, Outcomes } from './types';
-import { failureTotal } from './types';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
 /**
@@ -116,10 +115,7 @@ export const WorkflowHealth = ({
 
             {/* Same reply as the Outcomes panel — one aggregate read two ways,
                 so the slices here and the red wedge there cannot disagree. */}
-            <Card
-              title="Failure Breakdown"
-              meta={outcomes.data && failures(outcomes.data.counts)}
-            >
+            <Card title="Failure breakdown">
               <Panel data={outcomes.data} error={outcomes.error}>
                 {({ counts, window }) => (
                   <FailureBreakdownDonut
@@ -136,12 +132,7 @@ export const WorkflowHealth = ({
             {/* The same `failures` reply as Triage, folded from "what broke"
                 down to "where" — so it costs no request, and the two cannot
                 disagree about a step's weight. */}
-            <Card
-              title="Steps with Failures"
-              meta={
-                signatures.data && stepFailureTotal(signatures.data.signatures)
-              }
-            >
+            <Card title="Steps with failures">
               <Panel data={signatures.data} error={signatures.error}>
                 {({ signatures, window }) => (
                   <StepFailureBars
@@ -261,22 +252,11 @@ const ChartLoading = () => (
   </div>
 );
 
-// "1 work order", "1,287 failed work orders".
-const count = (n: number, noun: string) =>
-  `${n.toLocaleString()} ${noun}${n === 1 ? '' : 's'}`;
-
-const workOrders = (counts: Outcomes['counts']) =>
-  count(
-    Object.values(counts).reduce((sum, n) => sum + n, 0),
-    'work order'
-  );
-
-// The donut's centre total sits inside the `aria-hidden` frame and the legend
-// below lists slices but never their sum, so this is the only place a screen
-// reader can reach the number of failures. Summed from `FAILURE_STATES` rather
-// than the drawn slices, which drop the states that never happened.
-const failures = (counts: Outcomes['counts']) =>
-  count(failureTotal(counts), 'failed work order');
+// "1 work order", "1,287 work orders".
+const workOrders = (counts: Outcomes['counts']) => {
+  const n = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  return `${n.toLocaleString()} work order${n === 1 ? '' : 's'}`;
+};
 
 const emptyMessage = (
   window: Outcomes['window'],

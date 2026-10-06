@@ -78,6 +78,10 @@ export const OutcomesDonut = ({
           ]
         : []),
     ]}
+    centre={total => ({
+      value: `${((counts.success / total) * 100).toFixed(1)}%`,
+      label: 'success',
+    })}
     emptyMessage={emptyMessage}
   />
 );

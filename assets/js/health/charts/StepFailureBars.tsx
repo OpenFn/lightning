@@ -140,7 +140,3 @@ const groupByStep = (signatures: ErrorSignature[]) => {
     (a, b) => b.count - a.count || a.label.localeCompare(b.label)
   );
 };
-
-/** "141 total", for the card's meta. */
-export const stepFailureTotal = (signatures: ErrorSignature[]) =>
-  `${signatures.reduce((sum, { count }) => sum + count, 0).toLocaleString()} total`;

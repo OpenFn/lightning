@@ -65,6 +65,10 @@ export const FailureBreakdownDonut = ({
       value: counts[state],
       href: stateUrl(projectId, workflowId, from, state),
     }))}
+    centre={total => ({
+      value: total.toLocaleString(),
+      label: total === 1 ? 'failure' : 'failures',
+    })}
     emptyMessage={emptyMessage}
   />
 );

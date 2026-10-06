@@ -4,7 +4,7 @@ import { Tooltip } from '#/components/Tooltip';
 
 // The server keeps its own copy of this list and of `DEFAULT_DAYS`, in
 // `WorkflowHealthController`. Change both together.
-export const RANGES = [
+const RANGES = [
   { days: '1', label: 'Last 24 hours' },
   { days: '7', label: 'Last 7 days' },
   { days: '30', label: 'Last 30 days' },

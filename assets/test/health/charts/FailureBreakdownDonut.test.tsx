@@ -36,6 +36,29 @@ describe('FailureBreakdownDonut', () => {
     expect(screen.getByText('(17.0%)')).toBeVisible();
   });
 
+  test('counts the failures in the middle of the ring', () => {
+    const { rerender } = render(
+      <FailureBreakdownDonut
+        counts={counts({ failed: 98, crashed: 43 })}
+        emptyMessage="No failures"
+        {...links}
+      />
+    );
+
+    expect(screen.getByText('141')).toBeInTheDocument();
+    expect(screen.getByText('failures')).toBeInTheDocument();
+
+    rerender(
+      <FailureBreakdownDonut
+        counts={counts({ failed: 1 })}
+        emptyMessage="No failures"
+        {...links}
+      />
+    );
+
+    expect(screen.getByText('failure')).toBeInTheDocument();
+  });
+
   // A work order the run limit refused never ran, but it is still a failure
   // the project can act on, so it gets its own slice rather than vanishing.
   test('gives rejected work orders a slice of their own', () => {

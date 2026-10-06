@@ -29,9 +29,8 @@ export type WorkOrderStateCounts = Record<
 
 /**
  * How many work orders failed. Summed from `FAILURE_STATES` rather than taken
- * as `total - success`, so the outcomes donut's Failed wedge, the failure
- * breakdown's slices and the page's own caption are all driven by the same
- * list.
+ * as `total - success`, so the Outcomes donut's Failed wedge counts the same
+ * states the failure breakdown slices.
  */
 export const failureTotal = (counts: WorkOrderStateCounts) =>
   FAILURE_STATES.reduce((sum, state) => sum + counts[state], 0);

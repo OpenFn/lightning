@@ -1,10 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
-import {
-  StepFailureBars,
-  stepFailureTotal,
-} from '#/health/charts/StepFailureBars';
+import { StepFailureBars } from '#/health/charts/StepFailureBars';
 import type { ErrorSignature } from '#/health/types';
 
 import { signature } from './counts';
@@ -108,22 +105,5 @@ describe('StepFailureBars', () => {
       '(unknown step)common adaptor3',
       'No failing step2',
     ]);
-  });
-});
-
-describe('stepFailureTotal', () => {
-  // The sum of what is drawn, which is signatures and not work orders: a work
-  // order that broke in two branches is counted under each step.
-  test('sums every signature, formatted', () => {
-    expect(
-      stepFailureTotal([
-        signature({ count: 1000 }),
-        signature({ count: 287, job_id: 'job-b' }),
-      ])
-    ).toBe('1,287 total');
-  });
-
-  test('is zero with no failures', () => {
-    expect(stepFailureTotal([])).toBe('0 total');
   });
 });

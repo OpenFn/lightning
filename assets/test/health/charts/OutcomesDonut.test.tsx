@@ -38,6 +38,20 @@ describe('OutcomesDonut', () => {
     expect(screen.getByText('(11.2%)')).toBeVisible();
   });
 
+  test('shows the success rate in the middle of the ring', () => {
+    render(
+      <OutcomesDonut
+        counts={counts({ success: 1146, failed: 144 })}
+        emptyMessage="No work orders"
+        {...links}
+      />
+    );
+
+    // 1,146 of 1,290.
+    expect(screen.getByText('88.8%')).toBeInTheDocument();
+    expect(screen.getByText('success')).toBeInTheDocument();
+  });
+
   // Stopping a work order on purpose is not a failure to drive down, so it sits
   // outside the red wedge — but it is still a finished outcome, so the totals
   // only add up if this panel draws it.

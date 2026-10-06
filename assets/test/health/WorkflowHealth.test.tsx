@@ -340,7 +340,7 @@ describe('WorkflowHealth', () => {
     // 98 + 24 + 12 + 7 — one response feeds both donuts, so the two panels can
     // only disagree if this fold drifts from the breakdown's own total.
     expect((await screen.findAllByText('Failed'))[0]).toBeVisible();
-    expect(screen.getByText('141')).toBeVisible();
+    expect(screen.getByRole('link', { name: /^Failed 141 / })).toBeVisible();
     expect(screen.getAllByText('Success')[0]).toBeVisible();
   });
 
@@ -348,7 +348,7 @@ describe('WorkflowHealth', () => {
     mount(both);
 
     const heading = await screen.findByRole('heading', {
-      name: 'Failure Breakdown',
+      name: 'Failure breakdown',
     });
     expect(heading).toBeVisible();
     // The triage table names the same state, so look inside this card only.
@@ -414,13 +414,13 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Outcomes' })).toBeVisible();
     expect(
-      screen.getByRole('heading', { name: 'Failure Breakdown' })
+      screen.getByRole('heading', { name: 'Failure breakdown' })
     ).toBeVisible();
     expect(
       screen.getByRole('heading', { name: 'Triage - grouped by failure type' })
     ).toBeVisible();
     expect(
-      screen.getByRole('heading', { name: 'Steps with Failures' })
+      screen.getByRole('heading', { name: 'Steps with failures' })
     ).toBeVisible();
 
     await userEvent.click(screen.getByRole('tab', { name: 'Runs' }));
