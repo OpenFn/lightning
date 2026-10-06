@@ -1271,7 +1271,7 @@ defmodule Lightning.Config.Bootstrap do
 
   defp otel_parse_sdk_disabled("true"), do: true
   defp otel_parse_sdk_disabled("false"), do: false
-  defp otel_parse_sdk_disabled(""), do: true
+  defp otel_parse_sdk_disabled(""), do: nil
 
   defp otel_parse_sdk_disabled(other) do
     raise ArgumentError,
