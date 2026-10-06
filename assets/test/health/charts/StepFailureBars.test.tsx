@@ -59,25 +59,16 @@ describe('StepFailureBars', () => {
     expect(rows()).toEqual(['Map-beneficiary62']);
   });
 
-  // The whole point of the "no step" row: these failures would otherwise be
+  // The whole point of the "No failing step" row: these failures would otherwise be
   // invisible, since there is no job to file them under.
-  test('counts failures with no failing step in their own row, and says so', () => {
+  test('counts failures with no failing step in their own row', () => {
     bars([
       signature({ count: 62 }),
       runLevel({ count: 20 }),
       runLevel({ count: 4, exit_reason: 'rejected' }),
     ]);
 
-    expect(rows()).toEqual(['Map-beneficiary62', '(no step)24']);
-    expect(
-      screen.getByText(/24 failures have no failing step/)
-    ).toBeInTheDocument();
-  });
-
-  test('says nothing about unattributed failures when every one has a step', () => {
-    bars([signature()]);
-
-    expect(screen.queryByText(/no failing step/)).not.toBeInTheDocument();
+    expect(rows()).toEqual(['Map-beneficiary62', 'No failing step24']);
   });
 
   // Bars rank the rows against each other, not against the total: against a
@@ -100,11 +91,11 @@ describe('StepFailureBars', () => {
   });
 
   // A job that resolved off no snapshot in the window still has to render as
-  // something, and it is not the same row as "no step".
-  test('labels a step whose name never resolved without merging it into (no step)', () => {
+  // something, and it is not the same row as "No failing step".
+  test('labels a step whose name never resolved without merging it into the no failing step row', () => {
     bars([signature({ count: 3, step_name: null }), runLevel({ count: 2 })]);
 
-    expect(rows()).toEqual(['(unknown step)3', '(no step)2']);
+    expect(rows()).toEqual(['(unknown step)3', 'No failing step2']);
   });
 });
 

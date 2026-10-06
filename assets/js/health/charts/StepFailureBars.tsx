@@ -53,17 +53,16 @@ export const StepFailureBars = ({
   }
 
   const max = Math.max(...rows.map(({ count }) => count));
-  const unattributed = rows.find(({ key }) => key === NO_STEP)?.count ?? 0;
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Capped and scrolled rather than truncated to a top few, the same way
-          the triage table is: the tail is still worth reading, just not worth
-          growing the card for. `-mr-6 pr-4` puts the scrollbar flush against
-          the card's edge, past its `p-6`, and `relative` keeps anything
-          `sr-only` added to a row from escaping the clip — see the same note
-          on `TriageTable`. */}
-      <ul className="relative -mr-6 flex max-h-64 flex-col gap-3 overflow-y-auto pr-4">
+    // In the three-column layout the list fills the height the donuts set for
+    // the row, and scrolls. It is positioned absolutely so a long list can't
+    // make the row taller. In one column it is capped at `max-h-64` instead.
+    //
+    // `-mr-6 pr-4` puts the scrollbar against the card's edge, past its `p-6`.
+    // Being positioned also keeps an `sr-only` child inside the scroll area.
+    <div className="lg:relative lg:min-h-64 lg:flex-1">
+      <ul className="relative -mr-6 flex max-h-64 flex-col gap-6 overflow-y-auto pr-4 lg:absolute lg:inset-0 lg:max-h-none">
         {rows.map(({ key, label, count }) => (
           <li key={key} className="flex flex-col gap-1">
             <div className="flex items-baseline justify-between gap-4 text-sm">
@@ -81,7 +80,7 @@ export const StepFailureBars = ({
               >
                 {label}
               </span>
-              <span className="shrink-0 font-semibold tabular-nums text-gray-900">
+              <span className="shrink-0 font-medium tabular-nums text-gray-900">
                 {count.toLocaleString()}
               </span>
             </div>
@@ -99,15 +98,6 @@ export const StepFailureBars = ({
           </li>
         ))}
       </ul>
-
-      {unattributed > 0 && (
-        <p className="text-sm text-gray-500">
-          {unattributed.toLocaleString()}{' '}
-          {unattributed === 1 ? 'failure has' : 'failures have'} no failing
-          step, so there is no job to attribute{' '}
-          {unattributed === 1 ? 'it' : 'them'} to.
-        </p>
-      )}
     </div>
   );
 };
@@ -133,7 +123,7 @@ const groupByStep = (signatures: ErrorSignature[]) => {
     } else {
       // A job with no name resolved off any snapshot in the window — it should
       // not happen, but it must not render as a blank row either.
-      const label = job_id ? step_name || '(unknown step)' : '(no step)';
+      const label = job_id ? step_name || '(unknown step)' : 'No failing step';
       rows.set(key, { key, label, count });
     }
   }
