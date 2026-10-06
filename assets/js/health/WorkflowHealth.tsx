@@ -57,13 +57,13 @@ export const WorkflowHealth = ({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="min-w-0 text-2xl font-semibold break-words text-gray-900">
+      <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+        <h1 className="order-2 md:order-1 min-w-0 text-2xl font-semibold break-words text-gray-900">
           {workflowName}
         </h1>
         {/* The picker sets the window for every card, so it belongs to the
             header rather than to any one of them. */}
-        <div className="shrink-0">
+        <div className="shrink-0 order-1 md:order-2">
           <RangePicker
             days={days}
             onChange={setDays}
