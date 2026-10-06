@@ -81,7 +81,7 @@ and this project adheres to
 - The workflow health page now has separate tabs for work orders and runs. The
   donuts show the success rate and the failure count in their middle. Triage
   rows show each failure's state and adaptor, and the step bars show each step's
-  adaptor.
+  adaptor. [#5229](https://github.com/OpenFn/lightning/pull/5229)
 
 ### Removed
 
