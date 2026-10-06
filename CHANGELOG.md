@@ -78,6 +78,10 @@ and this project adheres to
 - Failure alert emails no longer include the run's logs, since jobs can log
   sensitive data. The email links to the run, where the logs are.
   [#2663](https://github.com/OpenFn/lightning/issues/2663)
+- The workflow health page now has separate tabs for work orders and runs. The
+  donuts show the success rate and the failure count in their middle. Triage
+  rows show each failure's state and adaptor, and the step bars show each step's
+  adaptor. [#5229](https://github.com/OpenFn/lightning/pull/5229)
 
 ### Removed
 

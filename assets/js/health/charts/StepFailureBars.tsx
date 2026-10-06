@@ -1,5 +1,6 @@
 import { cn } from '#/utils/cn';
 
+import { adaptorLabel } from '../adaptorLabel';
 import type { ErrorSignature } from '../types';
 
 import { EMPTY } from './Donut';
@@ -53,35 +54,38 @@ export const StepFailureBars = ({
   }
 
   const max = Math.max(...rows.map(({ count }) => count));
-  const unattributed = rows.find(({ key }) => key === NO_STEP)?.count ?? 0;
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Capped and scrolled rather than truncated to a top few, the same way
-          the triage table is: the tail is still worth reading, just not worth
-          growing the card for. `-mr-6 pr-4` puts the scrollbar flush against
-          the card's edge, past its `p-6`, and `relative` keeps anything
-          `sr-only` added to a row from escaping the clip — see the same note
-          on `TriageTable`. */}
-      <ul className="relative -mr-6 flex max-h-64 flex-col gap-3 overflow-y-auto pr-4">
-        {rows.map(({ key, label, count }) => (
-          <li key={key} className="flex flex-col gap-1">
+    // In the three-column layout the list fills the height the donuts set for
+    // the row, and scrolls. It is positioned absolutely so a long list can't
+    // make the row taller. In one column it is capped at `max-h-64` instead.
+    //
+    // `-mr-6 pr-4` puts the scrollbar against the card's edge, past its `p-6`.
+    // Being positioned also keeps an `sr-only` child inside the scroll area.
+    <div className="lg:relative lg:min-h-64 lg:flex-1">
+      <ul className="relative -mr-6 flex max-h-64 flex-col gap-6 overflow-y-auto pr-4 lg:absolute lg:inset-0 lg:max-h-none">
+        {rows.map(({ key, label, adaptor, count }) => (
+          <li key={key} className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-4 text-sm">
-              {/* Monospace, matching the triage table's signatures — a step
-                  name is a job's identifier, not prose. Italic for the
-                  unattributed row, which names a bucket rather than a job. */}
-              <span
-                className={cn(
-                  'min-w-0 truncate',
-                  key === NO_STEP
-                    ? 'italic text-gray-500'
-                    : 'font-mono text-gray-900'
+              {/* Italic for the "No failing step" row, which names a group of
+                  work orders, not a job. */}
+              <div className="flex min-w-0 flex-col gap-1">
+                <span
+                  className={cn(
+                    'truncate',
+                    key === NO_STEP ? 'italic text-gray-500' : 'text-gray-900'
+                  )}
+                  title={label}
+                >
+                  {label}
+                </span>
+                {adaptor && (
+                  <span className="truncate font-mono text-xs text-gray-500">
+                    {adaptorLabel(adaptor)}
+                  </span>
                 )}
-                title={label}
-              >
-                {label}
-              </span>
-              <span className="shrink-0 font-semibold tabular-nums text-gray-900">
+              </div>
+              <span className="shrink-0 font-medium tabular-nums text-gray-900">
                 {count.toLocaleString()}
               </span>
             </div>
@@ -99,15 +103,6 @@ export const StepFailureBars = ({
           </li>
         ))}
       </ul>
-
-      {unattributed > 0 && (
-        <p className="text-sm text-gray-500">
-          {unattributed.toLocaleString()}{' '}
-          {unattributed === 1 ? 'failure has' : 'failures have'} no failing
-          step, so there is no job to attribute{' '}
-          {unattributed === 1 ? 'it' : 'them'} to.
-        </p>
-      )}
     </div>
   );
 };
@@ -122,9 +117,12 @@ export const StepFailureBars = ({
  * is in two signatures for the same job.
  */
 const groupByStep = (signatures: ErrorSignature[]) => {
-  const rows = new Map<string, { key: string; label: string; count: number }>();
+  const rows = new Map<
+    string,
+    { key: string; label: string; adaptor: string | null; count: number }
+  >();
 
-  for (const { job_id, step_name, count } of signatures) {
+  for (const { job_id, step_name, adaptor, count } of signatures) {
     const key = job_id ?? NO_STEP;
     const existing = rows.get(key);
 
@@ -133,8 +131,8 @@ const groupByStep = (signatures: ErrorSignature[]) => {
     } else {
       // A job with no name resolved off any snapshot in the window — it should
       // not happen, but it must not render as a blank row either.
-      const label = job_id ? step_name || '(unknown step)' : '(no step)';
-      rows.set(key, { key, label, count });
+      const label = job_id ? step_name || '(unknown step)' : 'No failing step';
+      rows.set(key, { key, label, adaptor, count });
     }
   }
 
@@ -142,7 +140,3 @@ const groupByStep = (signatures: ErrorSignature[]) => {
     (a, b) => b.count - a.count || a.label.localeCompare(b.label)
   );
 };
-
-/** "141 total", for the card's meta. */
-export const stepFailureTotal = (signatures: ErrorSignature[]) =>
-  `${signatures.reduce((sum, { count }) => sum + count, 0).toLocaleString()} total`;

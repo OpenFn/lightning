@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -334,24 +334,51 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
   });
 
+  test('opens on the Work orders tab, and shows runs over time on the Runs tab', async () => {
+    mount(both);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Outcomes' })
+    ).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Work orders' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+    expect(
+      screen.queryByRole('heading', { name: 'Runs over time' })
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Runs' }));
+
+    expect(
+      screen.getByRole('heading', { name: 'Runs over time' })
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('heading', { name: 'Outcomes' })
+    ).not.toBeInTheDocument();
+  });
+
   test('folds the failure states into the Outcomes donut', async () => {
     mount(both);
 
     // 98 + 24 + 12 + 7 — one response feeds both donuts, so the two panels can
     // only disagree if this fold drifts from the breakdown's own total.
     expect((await screen.findAllByText('Failed'))[0]).toBeVisible();
-    expect(screen.getByText('141')).toBeVisible();
+    expect(screen.getByRole('link', { name: /^Failed 141 / })).toBeVisible();
     expect(screen.getAllByText('Success')[0]).toBeVisible();
   });
 
   test('breaks the same failures down by work order state', async () => {
     mount(both);
 
-    expect(
-      await screen.findByRole('heading', { name: 'Failure breakdown' })
-    ).toBeVisible();
-    expect(screen.getByText('failed')).toBeVisible();
-    expect(screen.getByText('69.5%')).toBeVisible();
+    const heading = await screen.findByRole('heading', {
+      name: 'Failure breakdown',
+    });
+    expect(heading).toBeVisible();
+    // The triage table names the same state, so look inside this card only.
+    const card = within(heading.closest<HTMLElement>('.shadow')!);
+    expect(card.getByText('failed')).toBeVisible();
+    expect(screen.getByText('(69.5%)')).toBeVisible();
     expect(screen.queryByText('cancelled')).not.toBeInTheDocument();
   });
 
@@ -359,7 +386,9 @@ describe('WorkflowHealth', () => {
     mount(both);
 
     expect(
-      await screen.findByRole('heading', { name: 'Triage' })
+      await screen.findByRole('heading', {
+        name: 'Triage - grouped by failure type',
+      })
     ).toBeVisible();
     expect(screen.getByRole('cell', { name: '98' })).toBeVisible();
     expect(
@@ -372,9 +401,12 @@ describe('WorkflowHealth', () => {
   test('reports a refused request without echoing the server', async () => {
     mount({ outcomes: 404, failures: 404, runs: 404 });
 
-    // Every slice refused takes every panel with it.
-    expect(await screen.findAllByText(ERROR)).toHaveLength(5);
+    // Every slice refused takes every panel with it, on both tabs.
+    expect(await screen.findAllByText(ERROR)).toHaveLength(4);
     expect(screen.queryByText(/404|Not Found/)).toBeNull();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Runs' }));
+    expect(screen.getAllByText(ERROR)).toHaveLength(2);
   });
 
   test('degrades both donuts when the outcomes request fails', async () => {
@@ -394,7 +426,7 @@ describe('WorkflowHealth', () => {
     // folded from it — so both degrade together.
     expect(await screen.findAllByText(ERROR)).toHaveLength(2);
     expect(screen.getAllByText('Success')[0]).toBeVisible();
-    expect(screen.getByText('69.5%')).toBeVisible();
+    expect(screen.getByText('(69.5%)')).toBeVisible();
   });
 
   test('keeps the page around a failed chart', async () => {
@@ -406,14 +438,18 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Outcomes' })).toBeVisible();
     expect(
-      screen.getByRole('heading', { name: 'Runs over time' })
-    ).toBeVisible();
-    expect(
       screen.getByRole('heading', { name: 'Failure breakdown' })
     ).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Triage' })).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'Triage - grouped by failure type' })
+    ).toBeVisible();
     expect(
       screen.getByRole('heading', { name: 'Steps with failures' })
+    ).toBeVisible();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Runs' }));
+    expect(
+      screen.getByRole('heading', { name: 'Runs over time' })
     ).toBeVisible();
   });
 
@@ -450,7 +486,7 @@ describe('WorkflowHealth', () => {
     expect(screen.queryAllByText('Success')).toHaveLength(0);
     // Each panel holds a placeholder, but only for a reader who lands inside
     // it. jsdom does no layout, so the reserved height needs a browser.
-    expect(screen.getAllByText('Loading…')).toHaveLength(5);
+    expect(screen.getAllByText('Loading…')).toHaveLength(4);
   });
 
   // Why the panels drop together rather than each keeping its own last answer:
@@ -500,11 +536,7 @@ describe('WorkflowHealth', () => {
 
     // An `alert`, so the failure is read out at once.
     const alerts = await screen.findAllByRole('alert');
-    expect(alerts.map(alert => alert.textContent)).toEqual([
-      ERROR,
-      ERROR,
-      ERROR,
-    ]);
+    expect(alerts.map(alert => alert.textContent)).toEqual([ERROR, ERROR]);
     expect(screen.queryAllByText('Success')).toHaveLength(0);
   });
 

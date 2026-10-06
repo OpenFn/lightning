@@ -35,7 +35,36 @@ describe('OutcomesDonut', () => {
     // this wedge for free, because it is in `FAILURE_STATES`.
     expect(screen.getByText('Failed')).toBeVisible();
     expect(screen.getByText('144')).toBeVisible();
-    expect(screen.getByText('11.2%')).toBeVisible();
+    expect(screen.getByText('(11.2%)')).toBeVisible();
+  });
+
+  test('shows the success rate in the middle of the ring', () => {
+    render(
+      <OutcomesDonut
+        counts={counts({ success: 1146, failed: 144 })}
+        emptyMessage="No work orders"
+        {...links}
+      />
+    );
+
+    // 1,146 of 1,290.
+    expect(screen.getByText('88.8%')).toBeInTheDocument();
+    expect(screen.getByText('success')).toBeInTheDocument();
+  });
+
+  // 2,500 of 2,501 is 99.96%, which one decimal place would round to 100.0%.
+  test('never rounds a workflow with failures to 100%', () => {
+    render(
+      <OutcomesDonut
+        counts={counts({ success: 2500, failed: 1 })}
+        emptyMessage="No work orders"
+        {...links}
+      />
+    );
+
+    expect(screen.getByText('<100%')).toBeInTheDocument();
+    expect(screen.getByText('(<100%)')).toBeVisible();
+    expect(screen.getByText('(<0.1%)')).toBeVisible();
   });
 
   // Stopping a work order on purpose is not a failure to drive down, so it sits
@@ -53,7 +82,31 @@ describe('OutcomesDonut', () => {
     expect(screen.getByText('Cancelled')).toBeVisible();
     // Failed is 10, not 20: cancelled is not folded in. Both read 10.0% of 100.
     expect(screen.getAllByText('10')).toHaveLength(2);
-    expect(screen.getAllByText('10.0%')).toHaveLength(2);
+    expect(screen.getAllByText('(10.0%)')).toHaveLength(2);
+  });
+
+  test('leaves cancelled out of the success rate', () => {
+    render(
+      <OutcomesDonut
+        counts={counts({ success: 9, cancelled: 1 })}
+        emptyMessage="No work orders"
+        {...links}
+      />
+    );
+
+    expect(screen.getByText('100.0%')).toBeInTheDocument();
+  });
+
+  test('has no success rate when every work order was cancelled', () => {
+    render(
+      <OutcomesDonut
+        counts={counts({ cancelled: 3 })}
+        emptyMessage="No work orders"
+        {...links}
+      />
+    );
+
+    expect(screen.getByText('–')).toBeInTheDocument();
   });
 
   test('leaves the cancelled row out when nothing was cancelled', () => {
