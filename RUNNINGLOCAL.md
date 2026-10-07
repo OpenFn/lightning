@@ -275,6 +275,13 @@ EOF
 chmod +x /monitoring/jaeger-attrs.sh
 ```
 
+Unfortunately, there does not appear to be a human-friendly URL for Jaeger V3
+API docs, but the OpenApi spec can be found
+[here](https://raw.githubusercontent.com/jaegertracing/jaeger-idl/main/swagger/api_v3/query_service.openapi.yaml).
+
+This can then be fed into a service such as the
+[Swagger Petstore](https://petstore.swagger.io/?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjaegertracing%2Fjaeger-idl%2Fmain%2Fswagger%2Fapi_v3%2Fquery_service.openapi.yaml).
+
 Stop the collector when you are done:
 
 ```sh
