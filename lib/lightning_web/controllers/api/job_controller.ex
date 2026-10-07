@@ -9,7 +9,7 @@ defmodule LightningWeb.API.JobController do
   ## Query Parameters (index)
 
   - `page` - Page number (default: 1)
-  - `page_size` - Number of items per page (default: 10)
+  - `page_size` - Number of items per page (default: 10, at most 100)
   - `project_id` - Filter jobs by project UUID (optional)
 
   ## Examples
@@ -72,7 +72,7 @@ defmodule LightningWeb.API.JobController do
   - `params` - Map containing:
     - `project_id` - Project UUID (optional, filters to specific project)
     - `page` - Page number (optional, default: 1)
-    - `page_size` - Items per page (optional, default: 10)
+    - `page_size` - Items per page (optional, default: 10, at most 100)
 
   ## Returns
 

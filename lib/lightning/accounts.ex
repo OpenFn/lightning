@@ -263,17 +263,19 @@ defmodule Lightning.Accounts do
   A page of users, optionally only the one whose email matches `"email"` in
   any case.
   """
-  @spec paginate_users(map()) :: Scrivener.Page.t()
+  @spec paginate_users(map()) ::
+          {:ok, Scrivener.Page.t()} | {:error, Changeset.t()}
   def paginate_users(params) do
-    User
-    |> then(fn query ->
-      case params do
-        %{"email" => email} when is_binary(email) -> where(query, email: ^email)
-        _all -> query
-      end
-    end)
-    |> order_by([:inserted_at, :id])
-    |> Repo.paginate(Map.take(params, ["page", "page_size"]))
+    with {:ok, filters} <-
+           {%{}, %{email: :string}}
+           |> Changeset.cast(params, [:email], empty_values: [])
+           |> Changeset.apply_action(:validate) do
+      User
+      |> where(^Map.to_list(filters))
+      |> order_by([:inserted_at, :id])
+      |> Repo.paginate(Map.take(params, ["page", "page_size"]))
+      |> then(&{:ok, &1})
+    end
   end
 
   @doc """
