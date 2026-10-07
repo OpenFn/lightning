@@ -455,12 +455,8 @@ describe('FullScreenIDE - Docs/Metadata Panel', () => {
         expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument();
       });
 
-      // Docs tab and content should be visible (look for pill tab which has rounded-md class)
-      const docsTabs = screen.getAllByRole('button', { name: /^Docs$/i });
-      const docsPillTab = docsTabs.find(btn =>
-        btn.className.includes('rounded-md')
-      );
-      expect(docsPillTab).toBeInTheDocument();
+      // Docs tab and content should be visible
+      expect(screen.getByRole('tab', { name: /^Docs$/i })).toBeInTheDocument();
 
       // Should render Docs component by default
       await waitFor(() => {
@@ -606,16 +602,10 @@ describe('FullScreenIDE - Docs/Metadata Panel', () => {
       });
 
       // Find the Metadata pill tab (inside the panel, not header)
-      const docsPanelTabs = screen.getAllByRole('button', {
-        name: /^Metadata$/i,
-      });
-      // The pill tab should be the one with the filled style
-      const metadataTab = docsPanelTabs.find(btn =>
-        btn.className.includes('rounded-md')
-      );
+      const metadataTab = screen.getByRole('tab', { name: /^Metadata$/i });
 
       expect(metadataTab).toBeInTheDocument();
-      await user.click(metadataTab!);
+      await user.click(metadataTab);
 
       // Should switch to Metadata component
       await waitFor(() => {
@@ -639,10 +629,8 @@ describe('FullScreenIDE - Docs/Metadata Panel', () => {
       });
 
       // Switch to Metadata tab
-      const metadataTab = screen
-        .getAllByRole('button', { name: /^Metadata$/i })
-        .find(btn => btn.className.includes('rounded-md'));
-      await user.click(metadataTab!);
+      const metadataTab = screen.getByRole('tab', { name: /^Metadata$/i });
+      await user.click(metadataTab);
 
       await waitFor(() => {
         expect(screen.getByTestId('metadata-component')).toBeInTheDocument();
@@ -692,10 +680,8 @@ describe('FullScreenIDE - Docs/Metadata Panel', () => {
       ).toBeInTheDocument();
 
       // Switch to Metadata
-      const metadataTab = screen
-        .getAllByRole('button', { name: /^Metadata$/i })
-        .find(btn => btn.className.includes('rounded-md'));
-      await user.click(metadataTab!);
+      const metadataTab = screen.getByRole('tab', { name: /^Metadata$/i });
+      await user.click(metadataTab);
 
       await waitFor(() => {
         expect(screen.getByTestId('metadata-component')).toBeInTheDocument();
@@ -887,10 +873,8 @@ describe('FullScreenIDE - Docs/Metadata Panel', () => {
       });
 
       // Switch to Metadata tab
-      const metadataTab = screen
-        .getAllByRole('button', { name: /^Metadata$/i })
-        .find(btn => btn.className.includes('rounded-md'));
-      await user.click(metadataTab!);
+      const metadataTab = screen.getByRole('tab', { name: /^Metadata$/i });
+      await user.click(metadataTab);
 
       await waitFor(() => {
         expect(screen.getByTestId('metadata-component')).toBeInTheDocument();
@@ -954,10 +938,8 @@ describe('FullScreenIDE - Docs/Metadata Panel', () => {
       });
 
       // Switch to Metadata tab
-      const metadataTab = screen
-        .getAllByRole('button', { name: /^Metadata$/i })
-        .find(btn => btn.className.includes('rounded-md'));
-      await user.click(metadataTab!);
+      const metadataTab = screen.getByRole('tab', { name: /^Metadata$/i });
+      await user.click(metadataTab);
 
       await waitFor(() => {
         expect(screen.getByTestId('metadata-component')).toBeInTheDocument();

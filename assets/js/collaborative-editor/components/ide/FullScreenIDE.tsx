@@ -17,6 +17,7 @@ import {
 
 import { useKeyboardShortcut } from '#/collaborative-editor/keyboard';
 import { useURLState } from '#/react/lib/use-url-state';
+import { Tabs } from '#/ui/Tabs';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
@@ -76,7 +77,6 @@ import { RunViewerPanel } from '../run-viewer/RunViewerPanel';
 import { RunRetryButton } from '../RunRetryButton';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { ShortcutKeys } from '../ShortcutKeys';
-import { Tabs } from '../Tabs';
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -1257,6 +1257,7 @@ export function FullScreenIDE({
                             value={activeRightTab}
                             onChange={setActiveRightTab}
                             variant="underline"
+                            size="small"
                             options={[
                               { value: 'log', label: 'Logs' },
                               { value: 'input', label: 'Input' },

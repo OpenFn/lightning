@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './ui/tokens.css';
+@import './ui/tabs.css';
 
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
@@ -1015,10 +1017,6 @@
 
   .run-tab-container [role='tablist'] {
     @apply border-b border-gray-200 -m-1;
-  }
-
-  .job-viewer-tabs[role='tablist'] [role='tab'] {
-    @apply !text-xs;
   }
 
   .tabbed-selector[role='tablist'] [role='tab'] {
