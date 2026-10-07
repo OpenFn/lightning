@@ -99,6 +99,113 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
+  describe "query_global_stream/3 — Apollo history" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "sends the stored history verbatim and stores the returned one", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      stored_history = [
+        %{"role" => "user", "content" => "[pg:workflow] hi"},
+        %{"role" => "assistant", "content" => "hello"}
+      ]
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          apollo_history: stored_history,
+          messages: [
+            %{role: :user, content: "hi", user: user},
+            %{role: :assistant, content: "hello"},
+            %{role: :user, content: "help", user: user, status: :pending}
+          ]
+        )
+
+      returned_history =
+        stored_history ++
+          [
+            %{"role" => "user", "content" => "[pg:workflow] help"},
+            %{"role" => "assistant", "content" => "ok"}
+          ]
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "ok",
+          "attachments" => [],
+          "usage" => %{},
+          "history" => returned_history
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn %{body: body}, _opts ->
+        assert Jason.decode!(body)["history"] == stored_history
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [%{event: "complete", data: complete_payload}]
+         }}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_global_stream(session, "help")
+
+      assert updated_session.apollo_history == returned_history
+    end
+
+    test "keeps the stored history when the response has none", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      stored_history = [%{"role" => "user", "content" => "hi"}]
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          apollo_history: stored_history,
+          messages: [
+            %{role: :user, content: "help", user: user, status: :pending}
+          ]
+        )
+
+      complete_payload =
+        Jason.encode!(%{"response" => "ok", "attachments" => [], "usage" => %{}})
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [%{event: "complete", data: complete_payload}]
+         }}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_global_stream(session, "help")
+
+      assert updated_session.apollo_history == stored_history
+    end
+  end
+
   describe "query_stream/3 — context options" do
     setup do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
