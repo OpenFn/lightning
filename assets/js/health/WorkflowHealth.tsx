@@ -1,6 +1,7 @@
-import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+
+import { Tabs } from '#/ui/Tabs';
 
 import { FRAME } from './charts/Donut';
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
@@ -33,6 +34,13 @@ interface WorkflowHealthProps {
   'data-history-retention-period'?: string;
 }
 
+type CountBy = 'Work orders' | 'Runs';
+
+const TAB_OPTIONS: { value: CountBy; label: CountBy }[] = [
+  { value: 'Work orders', label: 'Work orders' },
+  { value: 'Runs', label: 'Runs' },
+];
+
 export const WorkflowHealth = ({
   'data-workflow-id': workflowId,
   'data-project-id': projectId,
@@ -40,6 +48,7 @@ export const WorkflowHealth = ({
   'data-history-retention-period': historyRetentionPeriod,
 }: WorkflowHealthProps) => {
   const [days, setDays] = useState<string>(DEFAULT_DAYS);
+  const [tab, setTab] = useState<CountBy>('Work orders');
 
   const retentionDays = historyRetentionPeriod
     ? Number(historyRetentionPeriod)
@@ -75,25 +84,26 @@ export const WorkflowHealth = ({
       {/* The tabs swap the top row between what the work orders came to and
           how many runs it took. Both queries keep polling whichever tab is
           open, so switching never waits on a load. */}
-      <TabGroup className="flex flex-col gap-6">
-        <TabList
+      <div className="flex flex-col gap-6">
+        <Tabs
           aria-label="Count by"
-          className="tabbed-selector flex space-x-4"
-        >
-          {['Work orders', 'Runs'].map(label => (
-            <Tab
-              key={label}
-              className="!font-medium outline-none data-focus:rounded-md data-focus:outline-solid data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-primary-600 data-selected:!border-b-primary-600"
-            >
-              {label}
-            </Tab>
-          ))}
-        </TabList>
+          value={tab}
+          onChange={setTab}
+          options={TAB_OPTIONS}
+        />
 
-        <TabPanels>
-          {/* One card wide by default, three across at `lg`. The cards stretch
-              to the row's height so the band reads as one. */}
-          <TabPanel className="grid gap-6 lg:grid-cols-3">
+        {tab === 'Work orders' ? (
+          /* One card wide by default, three across at `lg`. The cards stretch
+              to the row's height so the band reads as one. */
+          <div
+            role="tabpanel"
+            // A focusable panel, per the ARIA tabs pattern: its first content
+            // can't take focus. The strict a11y preset has no tabpanel exception.
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+            tabIndex={0}
+            aria-label="Work orders"
+            className="grid gap-6 lg:grid-cols-3"
+          >
             <Card
               title="Outcomes"
               meta={outcomes.data && workOrders(outcomes.data.counts)}
@@ -140,11 +150,16 @@ export const WorkflowHealth = ({
                 )}
               </Panel>
             </Card>
-          </TabPanel>
-
-          {/* Runs, where the other tab counts work orders — so the meta names
-              the bucket size rather than a total that won't reconcile. */}
-          <TabPanel>
+          </div>
+        ) : (
+          /* Runs, where the other tab counts work orders — so the meta names
+              the bucket size rather than a total that won't reconcile. */
+          <div
+            role="tabpanel"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+            tabIndex={0}
+            aria-label="Runs"
+          >
             <Card
               title="Runs over time"
               meta={volume.data && bucketMeta(volume.data)}
@@ -162,9 +177,9 @@ export const WorkflowHealth = ({
                 )}
               </Panel>
             </Card>
-          </TabPanel>
-        </TabPanels>
-      </TabGroup>
+          </div>
+        )}
+      </div>
 
       {/* Titled above the card rather than inside it, so the table's header
           band is the top of the card. The card padding is for the loading,
