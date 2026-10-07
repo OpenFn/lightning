@@ -15,7 +15,7 @@
   }
 
   .ui-tab {
-    @apply inline-flex cursor-pointer items-center border-b-2 border-transparent px-1 py-2 text-sm leading-tight font-semibold text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600;
+    @apply inline-flex cursor-pointer items-center whitespace-nowrap border-b-2 border-transparent px-1 py-2 text-sm leading-tight font-semibold text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600;
   }
 
   .ui-tabs--vertical .ui-tab {

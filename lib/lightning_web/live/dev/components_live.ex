@@ -4,125 +4,66 @@ defmodule LightningWeb.Dev.ComponentsLive do
   @moduledoc false
   use LightningWeb, {:live_view, layout: {LightningWeb.Layouts, :blank}}
 
-  alias Lightning.Run
-  alias LightningWeb.Components.Viewers
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
 
   @impl true
-  def handle_params(_unsigned_params, _uri, socket) do
-    lines = log_lines()
-    highlight_id = lines |> Enum.at(4) |> elem(0)
-
-    {:noreply,
-     socket
-     |> assign(
-       log_lines: lines,
-       highlight_id: highlight_id
-     )
-     |> assign(
-       :dataclip,
-       dataclip()
-       |> Enum.with_index(1)
-       |> Enum.map(fn {line, index} ->
-         %{id: index, line: line, index: index}
-       end)
-     )}
+  def handle_params(params, _uri, socket) do
+    {:noreply, assign(socket, :tab, Map.get(params, "tab", "log"))}
   end
 
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col gap-y-6">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-y-6">
       <h2 class="text-xl font-bold">Components</h2>
       <div class="overflow-hidden rounded-md bg-white shadow">
-        <ul role="list" class="divide-y divide-gray-200">
-          <li class="px-6 py-4">
-            <h3 class="text-lg font-bold">Viewers</h3>
-          </li>
-          <.variation title="For a dataclip">
-            <div class="max-h-[400px] inline-flex">
-              <%!-- <Viewers.dataclip_viewer
-                id="dataclip-viewer"
-                stream={@streams.dataclip}
-                run_state={%Run{state: :success}}
-                input_or_output={:output}
-                stream_empty?={false}
-                class=""
-              /> --%>
+        <div class="px-6 py-4">
+          <h3 class="text-lg font-bold">Tabs</h3>
+          <p class="font-mono text-xs text-gray-500">
+            Styling: assets/css/ui/tabs.css
+          </p>
+        </div>
+        <div
+          :for={size <- ~w(default small)}
+          class="grid grid-cols-2 gap-x-8 border-t border-gray-200 px-6 py-4"
+        >
+          <div>
+            <p class="mb-2 text-xs text-gray-400">LiveView, size {size}</p>
+            <.tabs id={"heex-tabs-#{size}"} size={size} active={@tab}>
+              <:tab
+                :for={
+                  {id, label} <- [
+                    {"log", "Log"},
+                    {"input", "Input"},
+                    {"output", "Output"}
+                  ]
+                }
+                id={id}
+                patch={"/dev/components?tab=#{id}"}
+              >
+                {label}
+              </:tab>
+            </.tabs>
+            <p class="py-3">{String.capitalize(@tab)} content</p>
+          </div>
+          <div>
+            <p class="mb-2 text-xs text-gray-400">React, size {size}</p>
+            <div
+              id={"react-tabs-#{size}"}
+              phx-hook="ReactComponent"
+              phx-update="ignore"
+              data-react-name="TabsShowcase"
+              data-react-file={~p"/assets/js/dev/TabsShowcase.js"}
+              data-size={size}
+            >
             </div>
-          </.variation>
-          <.variation title="With data">
-            <%!-- <Viewers.log_viewer
-              id="log-viewer-data"
-              stream={@log_lines}
-              run_state={%Run{state: :success}}
-              highlight_id={@highlight_id}
-              stream_empty?={false}
-            /> --%>
-          </.variation>
-          <.variation title="Empty">
-            <Viewers.log_viewer
-              id="log-viewer"
-              logs_empty?={true}
-              run_id="run-id"
-              run_state={%Run{state: :crashed}}
-            />
-          </.variation>
-        </ul>
+          </div>
+        </div>
       </div>
     </div>
     """
-  end
-
-  attr :title, :string, required: true
-  slot :inner_block
-
-  def variation(assigns) do
-    ~H"""
-    <li class="px-6 py-4 flex flex-col gap-y-4">
-      <div class="text-right font-bold">
-        {@title}
-      </div>
-      {render_slot(@inner_block)}
-    </li>
-    """
-  end
-
-  defp log_lines do
-    [
-      %{source: "RUN", message: "Foo bar"},
-      %{source: "RUN", message: "   Foo bar with indent"},
-      %{source: "RUN", message: "Foo bar"},
-      %{
-        source: "RUN",
-        message:
-          "Foo bar #{Enum.map(1..5, fn _ -> " Foo bar #{Ecto.UUID.autogenerate()}" end)}"
-      },
-      %{source: "RUN", message: "I'm highlighted!"},
-      %{source: "RUN", message: "Foo bar"},
-      %{source: "LONG", message: "Foo bar"},
-      %{
-        source: "LONG",
-        message:
-          "Foo bar#{Enum.map(1..7, fn _ -> "  Foo bar with newlines and indent #{Ecto.UUID.autogenerate()}" end) |> Enum.intersperse("\n")}"
-      },
-      %{source: "LONG", message: "Foo bar"},
-      %{source: "LONG", message: "Foo bar"},
-      %{source: "RUN", message: "Foo bar"},
-      %{source: "RUN", message: "Foo bar"},
-      %{source: "RUN", message: "Foo bar"}
-    ]
-    |> Enum.map(fn line ->
-      id = Ecto.UUID.autogenerate()
-      {id, line |> Map.put(:step_id, id)}
-    end)
-  end
-
-  defp dataclip do
-    File.read!("assets/package.json") |> String.split("\n")
   end
 end

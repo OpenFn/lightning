@@ -19,9 +19,10 @@
           </LayoutComponents.breadcrumb>
         </LayoutComponents.breadcrumbs>
       </:breadcrumbs>
-      <.pill_tabs
+      <.tabs
         :if={@channels_enabled}
         id="history-tabs"
+        variant="pills"
         active={
           if @live_action == :index, do: "work-orders", else: "channel-logs"
         }
@@ -35,7 +36,7 @@
         >
           Channel Logs
         </:tab>
-      </.pill_tabs>
+      </.tabs>
     </LayoutComponents.header>
   </:header>
   <.live_component
