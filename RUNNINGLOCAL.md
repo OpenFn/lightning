@@ -166,7 +166,7 @@ mkdir -p monitoring
 cat > monitoring/jaeger.yml <<'YAML'
 services:
   jaeger:
-    image: jaegertracing/all-in-one:1.76.0
+    image: jaegertracing/jaeger:2.21.0
     container_name: lightning-jaeger
     environment:
       # OTLP ingest is opt-in on the 1.x all-in-one image.
@@ -183,11 +183,16 @@ discards everything:
 
 ```sh
 docker compose -f monitoring/jaeger.yml up -d
-curl -s localhost:16686/api/services
 ```
 
-The reply is `{"data":["jaeger-all-in-one"],...}`. Jaeger traces itself, so its
-own name means the collector is up and nothing has arrived from Lightning yet.
+Wait approx 60 seconds for Jaeger to sample itself, then:
+
+```sh
+curl -s localhost:16686/api/v3/services
+```
+
+The reply is `{"services":["jaeger"]}`. Jaeger traces itself, so its own name
+means the collector is up and nothing has arrived from Lightning yet.
 
 Now start Lightning pointing at it, with sampling turned up:
 
@@ -201,36 +206,73 @@ TRACING_ENABLED=true \
 Add `TRACING_ECTO_ENABLED=true` for a span per database query. See
 [Tracing](DEPLOYMENT.md#tracing) for what each variable does.
 
+Note that Lightning only processes the following OpenTelemetry ENV vars:
+
+- `OTEL_SDK_DISABLED`
+- `OTEL_EXPORTER_OTLP_ENDPOINT`
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
+
+The above can be configured via a `.env` file to be read by Dotenvy. Any other
+`OTEL_*` env vars are read directly from the OS envrionment by the OpenTelemetry
+libraries. As a result they will be ignored by Dotenvy, e.g.
+`OTEL_TRACES_SAMPLER` in the `iex -S mix phx.server` code snippet above.
+
 Generate some traffic, wait about ten seconds, then open http://localhost:16686
 and pick the `lightning` service.
 
-Three things cost the most time when a span does not show up:
+If you are not seeing an exepcted span, the following may be factors:
 
-- The exporter batches, so wait about ten seconds before deciding nothing
-  arrived.
-- Sampling keeps 5% of traces by default, which is why the command above sets
-  `always_on`.
-- Jaeger keeps spans for the life of the container, and a service stays in the
-  list once it has appeared. Restart it between runs:
+- The exporter batches, so the rule of thumb is that it may take 10-15 seconds
+  for a span to arrive.
+- Sampling keeps 5% of traces by default, unless you use the `always-on`
+  sampler. This can be set with `OTEL_TRACES_SAMPLER=always_on`.
+
+Jaeger keeps spans for the life of the container, and a service stays in the
+list once it has appeared. Restart it between runs to reduce noise:
 
 ```sh
 docker compose -f monitoring/jaeger.yml restart jaeger
 ```
 
-To read attributes instead of clicking through the UI, query the API. Span
-attributes and resource attributes are in different places, so collect both:
+You can also use the API to pull span data, as per this over-engineered example:
 
 ```sh
-curl -s 'localhost:16686/api/traces?service=lightning&limit=200&lookback=1h' \
-  > /tmp/spans.json
+cat > monitoring/jaeger-attrs.sh <<'EOF'
+#!/usr/bin/env bash
+# Usage: ./jaeger-attrs.sh [service] [lookback_secs] [attribute_key]
+set -euo pipefail
 
-# every attribute key emitted, span level and resource level
-jq -r '.data[] | (.spans[].tags[].key, .processes[].tags[].key)' \
-  /tmp/spans.json | sort -u
+SERVICE="${1:-lightning}"
+LOOKBACK_SECS="${2:-3600}"
+ATTR_KEY="${3:-db.url}"
+JAEGER_URL="${JAEGER_URL:-http://localhost:16686}"
+OUT="${OUT:-/tmp/spans.json}"
 
-# the values of one attribute
-jq -r '.data[].spans[].tags[] | select(.key == "db.url") | .value' \
-  /tmp/spans.json | sort -u
+START=$(jq -nr --argjson s "$LOOKBACK_SECS" 'now - $s | strftime("%Y-%m-%dT%H:%M:%SZ")')
+END=$(jq -nr 'now | strftime("%Y-%m-%dT%H:%M:%SZ")')
+
+curl -fsSG "$JAEGER_URL/api/v3/traces" \
+  --data-urlencode "query.service_name=$SERVICE" \
+  --data-urlencode 'query.num_traces=200' \
+  --data-urlencode "query.start_time_min=$START" \
+  --data-urlencode "query.start_time_max=$END" \
+  > "$OUT"
+
+echo "== attribute keys (span + resource) =="
+jq -r '.result.resourceSpans[]?
+       | (.scopeSpans[]?.spans[]?.attributes[]?.key,
+          .resource.attributes[]?.key)' \
+  "$OUT" | sort -u
+
+echo
+echo "== values of $ATTR_KEY =="
+jq -r --arg k "$ATTR_KEY" '.result.resourceSpans[]?.scopeSpans[]?.spans[]?.attributes[]?
+       | select(.key == $k)
+       | .value | to_entries[0].value
+       | if type == "string" then . else tojson end' \
+  "$OUT" | sort -u
+EOF
+chmod +x /monitoring/jaeger-attrs.sh
 ```
 
 Stop the collector when you are done:
