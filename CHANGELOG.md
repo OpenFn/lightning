@@ -52,7 +52,7 @@ and this project adheres to
 ### Changed
 
 - API list endpoints now return at most 100 items a page, however large the
-  `page_size` asked for.
+  `page_size` asked for. [#5232](https://github.com/OpenFn/lightning/pull/5232)
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - On Linux, database connections now detect a silently dead network path (e.g. a
