@@ -752,22 +752,6 @@
           id="sandbox-banner-vcs"
           variant={:local}
         />
-        <div class="flex items-start gap-3 bg-blue-50 border border-blue-300 p-4 rounded-md text-sm text-black">
-          <.icon
-            name="hero-information-circle"
-            class="h-5 w-5 shrink-0 text-blue-500"
-          />
-          <p>
-            Learn more about synchronizing your project with GitHub at
-            <.link
-              target="_blank"
-              href="https://docs.openfn.org/documentation/link-to-GitHub"
-              class="font-medium underline"
-            >
-              docs.openfn.org
-            </.link>
-          </p>
-        </div>
         <div>
           <%= if assigns[:github_banner] do %>
             {Phoenix.LiveView.TagEngine.component(
