@@ -71,6 +71,86 @@ defmodule Lightning.CredentialsTest do
              ]
     end
 
+    test "list_credentials/2 returns a paginated page for a user" do
+      user = insert(:user)
+      for i <- 1..12, do: insert(:credential, user: user, name: "cred-#{i}")
+
+      page =
+        Credentials.list_credentials(user, %{"page" => "1", "page_size" => "10"})
+
+      assert %Scrivener.Page{} = page
+      assert page.total_entries == 12
+      assert page.page_size == 10
+      assert length(page.entries) == 10
+
+      page2 =
+        Credentials.list_credentials(user, %{"page" => "2", "page_size" => "10"})
+
+      assert length(page2.entries) == 2
+      assert page2.page_number == 2
+    end
+
+    test "list_credentials/2 returns a paginated page for a project" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      other_project = insert(:project)
+
+      for i <- 1..12,
+          do:
+            insert(:credential,
+              user: user,
+              name: "cred-#{i}",
+              project_credentials: [%{project: project}]
+            )
+
+      insert(:credential,
+        user: user,
+        name: "other-cred",
+        project_credentials: [%{project: other_project}]
+      )
+
+      page =
+        Credentials.list_credentials(project, %{
+          "page" => "1",
+          "page_size" => "10"
+        })
+
+      assert %Scrivener.Page{} = page
+      assert page.total_entries == 12
+      assert length(page.entries) == 10
+      assert Enum.all?(page.entries, fn c -> c.id != "other-cred" end)
+    end
+
+    test "list_keychain_credentials_for_project/2 returns a paginated page" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      other_project = insert(:project)
+
+      for _i <- 1..12,
+          do: insert(:keychain_credential, project: project, created_by: user)
+
+      insert(:keychain_credential, project: other_project, created_by: user)
+
+      page =
+        Credentials.list_keychain_credentials_for_project(project, %{
+          "page" => "1",
+          "page_size" => "10"
+        })
+
+      assert %Scrivener.Page{} = page
+      assert page.total_entries == 12
+      assert length(page.entries) == 10
+      assert Enum.all?(page.entries, fn kc -> kc.project_id == project.id end)
+
+      page2 =
+        Credentials.list_keychain_credentials_for_project(project, %{
+          "page" => "2",
+          "page_size" => "10"
+        })
+
+      assert length(page2.entries) == 2
+    end
+
     test "get_credential!/1 returns the credential with given id" do
       user = insert(:user)
       credential = insert(:credential, user_id: user.id)
