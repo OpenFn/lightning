@@ -20,11 +20,11 @@ defmodule LightningWeb.Components.UI.TabsTest do
 
   defp render_hash_tabs(assigns) do
     tabs = [
-      %{hash: "log", inner_block: fn _, _ -> "Log" end},
+      %{hash: "log", icon: "hero-key", inner_block: fn _, _ -> "Log" end},
       %{
         hash: "input",
         disabled: true,
-        disabled_msg: "Pick a step",
+        disabled_reason: "Pick a step",
         inner_block: fn _, _ -> "Input" end
       }
     ]
@@ -71,6 +71,25 @@ defmodule LightningWeb.Components.UI.TabsTest do
       assert Floki.find(parsed, "a[aria-current]") == []
     end
 
+    test "renders the icon before the label" do
+      tabs = [
+        %{
+          id: "first",
+          patch: "/first",
+          icon: "hero-key",
+          inner_block: fn _, _ -> "First" end
+        }
+      ]
+
+      parsed = render_tabs(%{tab: tabs})
+
+      assert [{"a", _, [{"span", attrs, _} | _]}] = Floki.find(parsed, "a")
+      assert Map.new(attrs)["class"] =~ "ui-tab__icon"
+
+      assert parsed |> Floki.find("a") |> Floki.text() |> String.trim() ==
+               "First"
+    end
+
     test "variant, size and orientation add the modifier classes" do
       [default] = render_tabs(%{}) |> Floki.find("nav")
       assert [classes] = Floki.attribute(default, "class")
@@ -110,7 +129,7 @@ defmodule LightningWeb.Components.UI.TabsTest do
       assert String.split(classes) == ["ui-tabs"]
 
       # The hook clears aria-selected through the tab's parentNode.
-      assert [{"a", log_attrs, _}, {"span", input_attrs, _}] =
+      assert [{"a", log_attrs, log_children}, {"span", input_attrs, _}] =
                Enum.filter(tablist_children, &is_tuple/1)
 
       assert Map.new(log_attrs) == %{
@@ -123,6 +142,13 @@ defmodule LightningWeb.Components.UI.TabsTest do
                "lv-keep-aria" => "lv-keep-aria",
                "class" => "ui-tab"
              }
+
+      # The icon sits before the label.
+      assert [{"span", icon_attrs, _} | _] =
+               Enum.filter(log_children, &is_tuple/1)
+
+      assert Map.new(icon_attrs)["class"] =~ "ui-tab__icon"
+      assert Map.new(icon_attrs)["class"] =~ "hero-key"
 
       assert Map.new(input_attrs) == %{
                "id" => "input-tab",

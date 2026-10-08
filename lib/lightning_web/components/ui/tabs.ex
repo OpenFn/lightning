@@ -8,6 +8,8 @@ defmodule LightningWeb.Components.UI.Tabs do
   #   the panel for the URL hash. Its markup must match what the hook reads.
   use Phoenix.Component
 
+  import LightningWeb.Components.Icons
+
   @doc """
   ## Examples
 
@@ -22,7 +24,7 @@ defmodule LightningWeb.Components.UI.Tabs do
 
       <.tabs id="run-tabs" default_hash="log">
         <:tab hash="log">Log</:tab>
-        <:tab hash="input" disabled={true} disabled_msg="Pick a step">Input</:tab>
+        <:tab hash="input" disabled={true} disabled_reason="Pick a step">Input</:tab>
         <:panel hash="log">...</:panel>
         <:panel hash="input">...</:panel>
       </.tabs>
@@ -44,7 +46,8 @@ defmodule LightningWeb.Components.UI.Tabs do
     attr :patch, :string
     attr :hash, :string
     attr :disabled, :boolean
-    attr :disabled_msg, :string
+    attr :disabled_reason, :string
+    attr :icon, :string
   end
 
   slot :panel do
@@ -71,7 +74,8 @@ defmodule LightningWeb.Components.UI.Tabs do
           <.tab
             hash={tab[:hash]}
             disabled={tab[:disabled]}
-            disabled_msg={tab[:disabled_msg]}
+            disabled_reason={tab[:disabled_reason]}
+            icon={tab[:icon]}
           >
             {render_slot(tab)}
           </.tab>
@@ -105,6 +109,7 @@ defmodule LightningWeb.Components.UI.Tabs do
         aria-current={tab.id == @active && "page"}
         class="ui-tab"
       >
+        <.icon :if={tab[:icon]} name={tab.icon} class="ui-tab__icon" />
         {render_slot(tab)}
       </.link>
     </nav>
@@ -124,7 +129,8 @@ defmodule LightningWeb.Components.UI.Tabs do
 
   attr :hash, :string, required: true
   attr :disabled, :boolean, default: false
-  attr :disabled_msg, :string
+  attr :disabled_reason, :string
+  attr :icon, :string, default: nil
   slot :inner_block, required: true
 
   defp tab(assigns) do
@@ -139,10 +145,11 @@ defmodule LightningWeb.Components.UI.Tabs do
         data-disabled
         data-hash={@hash}
         phx-hook="Tooltip"
-        aria-label={@disabled_msg}
+        aria-label={@disabled_reason}
         data-allow-html="true"
         lv-keep-aria
       >
+        <.icon :if={@icon} name={@icon} class="ui-tab__icon" />
         {render_slot(@inner_block)}
       </span>
     <% else %>
@@ -156,6 +163,7 @@ defmodule LightningWeb.Components.UI.Tabs do
         href={"##{@hash}"}
         lv-keep-aria
       >
+        <.icon :if={@icon} name={@icon} class="ui-tab__icon" />
         {render_slot(@inner_block)}
       </a>
     <% end %>

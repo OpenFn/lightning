@@ -26,8 +26,16 @@
     @apply flex-1 justify-center rounded-md border-b-0 px-3 text-sm font-medium transition-all duration-200;
   }
 
+  .ui-tab__icon {
+    @apply mr-2 h-5 w-5;
+  }
+
   .ui-tabs--small .ui-tab {
     @apply text-xs;
+  }
+
+  .ui-tabs--small .ui-tab__icon {
+    @apply mr-1.5 h-4 w-4;
   }
 
   .ui-tabs--small:not(.ui-tabs--pills) .ui-tab {
@@ -35,16 +43,22 @@
   }
 
   /* :where() keeps hover from outranking the active rules below. */
-  .ui-tab:where(:not([data-disabled]):not(:disabled)):hover {
+  .ui-tab:where(
+      :not([data-disabled]):not(:disabled):not([aria-disabled='true'])
+    ):hover {
     @apply border-b-gray-300 text-gray-600;
   }
 
-  .ui-tabs--pills .ui-tab:where(:not([data-disabled]):not(:disabled)):hover {
+  .ui-tabs--pills
+    .ui-tab:where(
+      :not([data-disabled]):not(:disabled):not([aria-disabled='true'])
+    ):hover {
     @apply bg-slate-50 text-gray-700;
   }
 
   .ui-tab[data-disabled],
-  .ui-tab:disabled {
+  .ui-tab:disabled,
+  .ui-tab[aria-disabled='true'] {
     @apply cursor-not-allowed text-gray-300;
   }
 

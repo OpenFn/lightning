@@ -28,41 +28,18 @@
       default_hash="project"
       class=""
     >
-      <:tab hash="project">
-        <.icon name="hero-clipboard" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Setup</span>
+      <:tab hash="project" icon="hero-clipboard">Setup</:tab>
+      <:tab hash="credentials" icon="hero-key">Credentials</:tab>
+      <:tab hash="collections" icon="hero-circle-stack">Collections</:tab>
+      <:tab hash="webhook_security" icon="hero-lock-closed">
+        Webhook Security
       </:tab>
-      <:tab hash="credentials">
-        <.icon name="hero-key" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Credentials</span>
-      </:tab>
-      <:tab hash="collections">
-        <.icon name="hero-circle-stack" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Collections</span>
-      </:tab>
-      <:tab hash="webhook_security">
-        <.icon name="hero-lock-closed" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Webhook Security</span>
-      </:tab>
-      <:tab hash="collaboration">
-        <.icon name="hero-users" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Collaboration</span>
-      </:tab>
-      <:tab hash="security">
-        <.icon name="hero-lock-closed" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Security</span>
-      </:tab>
-      <:tab hash="vcs">
-        <.icon name="hero-arrow-path" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Sync to GitHub</span>
-      </:tab>
-      <:tab hash="data-storage">
-        <.icon name="hero-square-3-stack-3d" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Data Storage</span>
-      </:tab>
-      <:tab hash="history-exports">
-        <.icon name="hero-folder-arrow-down" class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">History Exports</span>
+      <:tab hash="collaboration" icon="hero-users">Collaboration</:tab>
+      <:tab hash="security" icon="hero-lock-closed">Security</:tab>
+      <:tab hash="vcs" icon="hero-arrow-path">Sync to GitHub</:tab>
+      <:tab hash="data-storage" icon="hero-square-3-stack-3d">Data Storage</:tab>
+      <:tab hash="history-exports" icon="hero-folder-arrow-down">
+        History Exports
       </:tab>
       <:panel hash="project" class="space-y-4">
         <.section_header

@@ -109,4 +109,93 @@ describe('Tabs', () => {
 
     expect(screen.getByRole('tablist')).toHaveClass('ui-tabs', 'mx-3');
   });
+
+  test('vertical adds the vertical modifier, horizontal does not', () => {
+    const { rerender } = render(
+      <Tabs value="log" onChange={vi.fn()} options={options} />
+    );
+    expect(screen.getByRole('tablist')).not.toHaveClass('ui-tabs--vertical');
+
+    rerender(
+      <Tabs
+        value="log"
+        onChange={vi.fn()}
+        options={options}
+        orientation="vertical"
+      />
+    );
+    expect(screen.getByRole('tablist')).toHaveClass('ui-tabs--vertical');
+    expect(screen.getByRole('tablist')).not.toHaveAttribute('aria-orientation');
+  });
+
+  test('gives the icon the ui-tab__icon class', () => {
+    const Icon = (props: React.SVGProps<SVGSVGElement>) => (
+      <svg data-testid="icon" {...props} />
+    );
+    render(
+      <Tabs
+        value="log"
+        onChange={vi.fn()}
+        options={[{ value: 'log', label: 'Log', icon: Icon }]}
+      />
+    );
+
+    expect(screen.getByTestId('icon')).toHaveClass('ui-tab__icon');
+  });
+
+  describe('disabled tabs', () => {
+    const disabledOptions = [
+      { value: 'log', label: 'Log' },
+      {
+        value: 'input',
+        label: 'Input',
+        disabled: true,
+        disabledReason: 'Pick a step',
+      },
+    ];
+
+    test('use aria-disabled, stay focusable, and ignore clicks', async () => {
+      const onChange = vi.fn();
+      render(
+        <Tabs value="log" onChange={onChange} options={disabledOptions} />
+      );
+
+      const tab = screen.getByRole('tab', { name: 'Input' });
+      expect(tab).toHaveAttribute('aria-disabled', 'true');
+      expect(tab).not.toBeDisabled();
+
+      await userEvent.click(tab);
+      expect(onChange).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Log' }));
+      expect(onChange).toHaveBeenCalledWith('log');
+    });
+
+    test('show the reason in a tooltip', async () => {
+      render(<Tabs value="log" onChange={vi.fn()} options={disabledOptions} />);
+
+      await userEvent.hover(screen.getByRole('tab', { name: 'Input' }));
+
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(
+        'Pick a step'
+      );
+    });
+
+    test('without a reason, render no tooltip', async () => {
+      render(
+        <Tabs
+          value="log"
+          onChange={vi.fn()}
+          options={[
+            { value: 'log', label: 'Log' },
+            { value: 'input', label: 'Input', disabled: true },
+          ]}
+        />
+      );
+
+      await userEvent.hover(screen.getByRole('tab', { name: 'Input' }));
+
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
+  });
 });

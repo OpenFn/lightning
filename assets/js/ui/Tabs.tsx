@@ -1,11 +1,14 @@
-import type { FC, SVGProps } from 'react';
+import type { FC, ReactNode, SVGProps } from 'react';
 
+import { Tooltip } from '#/components/Tooltip';
 import { cn } from '#/utils/cn';
 
 export interface TabOption<T extends string> {
   value: T;
   label: string;
   icon?: FC<SVGProps<SVGSVGElement>>;
+  disabled?: boolean;
+  disabledReason?: ReactNode;
 }
 
 interface TabsProps<T extends string> {
@@ -14,6 +17,7 @@ interface TabsProps<T extends string> {
   options: TabOption<T>[];
   variant?: 'underline' | 'pills';
   size?: 'default' | 'small';
+  orientation?: 'horizontal' | 'vertical';
   className?: string;
   'aria-label'?: string;
 }
@@ -27,6 +31,7 @@ export function Tabs<T extends string>({
   options,
   variant = 'underline',
   size = 'default',
+  orientation = 'horizontal',
   className,
   'aria-label': ariaLabel = 'Tabs',
 }: TabsProps<T>) {
@@ -38,22 +43,45 @@ export function Tabs<T extends string>({
         'ui-tabs',
         variant === 'pills' && 'ui-tabs--pills',
         size === 'small' && 'ui-tabs--small',
+        orientation === 'vertical' && 'ui-tabs--vertical',
         className
       )}
     >
-      {options.map(({ value: optionValue, label, icon: Icon }) => (
-        <button
-          key={optionValue}
-          type="button"
-          role="tab"
-          aria-selected={value === optionValue}
-          className="ui-tab"
-          onClick={() => onChange(optionValue)}
-        >
-          {Icon && <Icon aria-hidden="true" className="h-5 w-5 mr-2" />}
-          <span>{label}</span>
-        </button>
-      ))}
+      {options.map(
+        ({
+          value: optionValue,
+          label,
+          icon: Icon,
+          disabled,
+          disabledReason,
+        }) => {
+          // aria-disabled, not disabled, keeps the tab focusable so the reason
+          // is reachable by keyboard.
+          const tab = (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={value === optionValue}
+              aria-disabled={disabled ? 'true' : undefined}
+              className="ui-tab"
+              onClick={() => {
+                if (!disabled) onChange(optionValue);
+              }}
+            >
+              {Icon && <Icon aria-hidden="true" className="ui-tab__icon" />}
+              <span>{label}</span>
+            </button>
+          );
+          return (
+            <Tooltip
+              key={optionValue}
+              content={disabled ? disabledReason : null}
+            >
+              {tab}
+            </Tooltip>
+          );
+        }
+      )}
     </div>
   );
 }
