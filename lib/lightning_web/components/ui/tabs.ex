@@ -124,19 +124,25 @@ defmodule LightningWeb.Components.UI.Tabs do
   defp tab(assigns) do
     ~H"""
     <%= if @disabled do %>
+      <%!-- The tab keeps its own name and is focusable, so a screen reader
+      reads "Input, tab, dimmed" and then the reason. The template feeds the
+      tooltip; the hidden span feeds aria-describedby. --%>
       <span
         id={"#{@hash}-tab"}
         aria-controls={"#{@hash}-panel"}
         aria-selected="false"
+        aria-disabled="true"
+        aria-describedby={"#{@hash}-tab-reason"}
+        tabindex="0"
         class="ui-tab"
         role="tab"
         data-disabled
         data-hash={@hash}
         phx-hook="Tooltip"
-        aria-label={@disabled_reason}
-        data-allow-html="true"
         lv-keep-aria
       >
+        <template data-tooltip-content>{@disabled_reason}</template>
+        <span id={"#{@hash}-tab-reason"} hidden>{@disabled_reason}</span>
         <.icon :if={@icon} name={@icon} class="ui-tab__icon" />
         {render_slot(@inner_block)}
       </span>

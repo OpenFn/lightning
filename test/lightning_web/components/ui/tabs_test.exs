@@ -129,7 +129,10 @@ defmodule LightningWeb.Components.UI.TabsTest do
       assert String.split(classes) == ["ui-tabs"]
 
       # The hook clears aria-selected through the tab's parentNode.
-      assert [{"a", log_attrs, log_children}, {"span", input_attrs, _}] =
+      assert [
+               {"a", log_attrs, log_children},
+               {"span", input_attrs, _} = input_tab
+             ] =
                Enum.filter(tablist_children, &is_tuple/1)
 
       assert Map.new(log_attrs) == %{
@@ -154,15 +157,19 @@ defmodule LightningWeb.Components.UI.TabsTest do
                "id" => "input-tab",
                "aria-controls" => "input-panel",
                "aria-selected" => "false",
+               "aria-disabled" => "true",
+               "aria-describedby" => "input-tab-reason",
+               "tabindex" => "0",
                "role" => "tab",
                "data-disabled" => "data-disabled",
                "data-hash" => "input",
                "phx-hook" => "Tooltip",
-               "aria-label" => "Pick a step",
-               "data-allow-html" => "true",
                "lv-keep-aria" => "lv-keep-aria",
                "class" => "ui-tab"
              }
+
+      assert [reason] = Floki.find(input_tab, "#input-tab-reason[hidden]")
+      assert Floki.text(reason) == "Pick a step"
 
       panels = Floki.find(container, "[role=tabpanel]")
 
