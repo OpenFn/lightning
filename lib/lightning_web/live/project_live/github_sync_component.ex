@@ -531,7 +531,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp verify_connection_banner(assigns) do
     ~H"""
-    <div id={@id} class="mb-2">
+    <div id={@id} class="mb-4">
       <.async_result assign={@verify_connection}>
         <:loading>
           <div class="rounded-md bg-blue-50 p-4">

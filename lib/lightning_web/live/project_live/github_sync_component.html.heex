@@ -214,22 +214,23 @@
     </.form>
   </div>
   <div :if={@action == :show}>
-    <.verify_connection_banner
-      id="verify-connection-banner"
-      verify_connection={@verify_connection}
-      myself={@myself}
-      changeset={@changeset}
-      repos={@repos}
-      project={@project}
-      can_reconnect={
-        @can_install_github &&
-          can_access_github_installation?(
-            @project_repo_connection,
-            @installations
-          )
-      }
-    />
     <div class="bg-white p-4 rounded-md">
+      <h6 class="mb-4 font-medium text-black">Connected to GitHub</h6>
+      <.verify_connection_banner
+        id="verify-connection-banner"
+        verify_connection={@verify_connection}
+        myself={@myself}
+        changeset={@changeset}
+        repos={@repos}
+        project={@project}
+        can_reconnect={
+          @can_install_github &&
+            can_access_github_installation?(
+              @project_repo_connection,
+              @installations
+            )
+        }
+      />
       <div class="flex flex-col gap-2 text-black">
         <span>
           Repository:
@@ -256,23 +257,21 @@
           </span>
         </span>
 
-        <span>
+        <span :if={!@project_repo_connection.sync_version}>
           Path to config:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
             {ProjectRepoConnection.config_path(@project_repo_connection)}
           </span>
         </span>
 
-        <span>
-          Sync version:
-          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            {if @project_repo_connection.sync_version,
-              do: "v2 (new)",
-              else: "v1 (legacy)"}
-          </span>
-        </span>
+        <p
+          :if={!@project_repo_connection.sync_version}
+          class="text-xs text-gray-600"
+        >
+          This connection uses the legacy sync format (config.json). Reconnect to update to v2 sync formats
+        </p>
 
-        <div class="pt-2">
+        <div class="flex gap-4 pt-2">
           <.button
             id="initiate-sync-button"
             disabled={
@@ -292,20 +291,19 @@
           >
             Initiate Sync to Branch
           </.button>
+          <.button
+            :if={@can_install_github}
+            id="remove-integration-button"
+            type="button"
+            theme="danger"
+            phx-click={show_modal("remove_connection_modal")}
+          >
+            Remove integration
+          </.button>
         </div>
       </div>
-    </div>
-    <div :if={@can_install_github} class="mt-2">
-      No longer need to sync this project?
-      <.link
-        href="#"
-        class="link link-danger"
-        phx-click={show_modal("remove_connection_modal")}
-        phx-target={@myself}
-      >
-        Remove Integration.
-      </.link>
       <.confirm_connection_removal_modal
+        :if={@can_install_github}
         id="remove_connection_modal"
         myself={@myself}
       />
