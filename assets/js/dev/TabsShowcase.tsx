@@ -6,6 +6,7 @@ import {
 import { useState } from 'react';
 
 import { Tabs, type TabOption } from '#/ui/Tabs';
+import { cn } from '#/utils/cn';
 
 // Mounted on /dev/components next to the HEEx version of the same tabs.
 // Props arrive as data- attributes, so booleans are the strings 'true'/'false'.
@@ -47,7 +48,7 @@ export const TabsShowcase = ({
   ];
 
   return (
-    <div className={orientation === 'vertical' ? 'flex' : undefined}>
+    <div className={cn(orientation === 'vertical' && 'flex')}>
       <Tabs
         value={value}
         onChange={setValue}

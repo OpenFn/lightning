@@ -124,7 +124,6 @@ config :esbuild,
          js/picker/Picker.tsx
          js/picker/PickerButton.tsx
          js/health/WorkflowHealth.tsx
-         js/dev/TabsShowcase.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js
@@ -140,7 +139,14 @@ config :esbuild,
             args ++ ["--define:ENABLE_DEVTOOLS=false"]
 
           _ ->
-            args ++ ["--jsx-dev", "--define:ENABLE_DEVTOOLS=true"]
+            # The /dev/components showcases only exist in dev, so prod skips
+            # them. esbuild expands the glob itself.
+            args ++
+              [
+                "--jsx-dev",
+                "--define:ENABLE_DEVTOOLS=true",
+                "js/dev/*.tsx"
+              ]
         end
       end),
     cd: Path.expand("../assets", __DIR__),

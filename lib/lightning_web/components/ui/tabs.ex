@@ -69,40 +69,28 @@ defmodule LightningWeb.Components.UI.Tabs do
       data-default-hash={@default_hash}
       phx-hook="TabbedContainer"
     >
-      <div role="tablist" class={list_class(assigns)}>
-        <%= for tab <- @tab do %>
-          <.tab
-            hash={tab[:hash]}
-            disabled={tab[:disabled]}
-            disabled_reason={tab[:disabled_reason]}
-            icon={tab[:icon]}
-          >
-            {render_slot(tab)}
-          </.tab>
-        <% end %>
+      <div role="tablist" class={list_class(assigns, nil)}>
+        <.tab
+          :for={tab <- @tab}
+          hash={tab[:hash]}
+          disabled={tab[:disabled]}
+          disabled_reason={tab[:disabled_reason]}
+          icon={tab[:icon]}
+        >
+          {render_slot(tab)}
+        </.tab>
       </div>
-      <%= if @orientation == "vertical" do %>
-        <div class="flex-grow">
-          <%= for panel <- @panel do %>
-            <.panel hash={panel[:hash]} class={panel[:class]}>
-              {render_slot(panel)}
-            </.panel>
-          <% end %>
-        </div>
-      <% else %>
-        <%= for panel <- @panel do %>
-          <.panel hash={panel[:hash]} class={panel[:class]}>
-            {render_slot(panel)}
-          </.panel>
-        <% end %>
-      <% end %>
+      <div :if={@orientation == "vertical"} class="grow">
+        <.panels panel={@panel} />
+      </div>
+      <.panels :if={@orientation != "vertical"} panel={@panel} />
     </div>
     """
   end
 
   def tabs(assigns) do
     ~H"""
-    <nav id={@id} aria-label="Tabs" class={list_class(assigns)}>
+    <nav id={@id} aria-label="Tabs" class={list_class(assigns, @class)}>
       <.link
         :for={tab <- @tab}
         patch={tab.patch}
@@ -116,14 +104,13 @@ defmodule LightningWeb.Components.UI.Tabs do
     """
   end
 
-  defp list_class(assigns) do
+  defp list_class(assigns, class) do
     [
       "ui-tabs",
       assigns.variant == "pills" && "ui-tabs--pills",
       assigns.size == "small" && "ui-tabs--small",
       assigns.orientation == "vertical" && "ui-tabs--vertical",
-      # In hash mode @class goes on the container instead.
-      assigns.panel == [] && assigns.class
+      class
     ]
   end
 
@@ -167,6 +154,18 @@ defmodule LightningWeb.Components.UI.Tabs do
         {render_slot(@inner_block)}
       </a>
     <% end %>
+    """
+  end
+
+  attr :panel, :list, required: true
+
+  # Horizontal panels sit directly in the flex container, so callers can size
+  # them with flex classes; vertical ones share a wrapper beside the tablist.
+  defp panels(assigns) do
+    ~H"""
+    <.panel :for={panel <- @panel} hash={panel.hash} class={panel[:class]}>
+      {render_slot(panel)}
+    </.panel>
     """
   end
 
