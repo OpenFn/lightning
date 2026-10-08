@@ -1,8 +1,11 @@
 defmodule LightningWeb.Components.UI.Tabs do
   @moduledoc false
-  # Tabs as links: each tab patches to a URL, and the page shows the content
-  # for the current one. Styled by .ui-tabs/.ui-tab in assets/css/ui/tabs.css,
-  # the same classes assets/js/ui/Tabs.tsx uses.
+  # Two modes, styled by .ui-tabs/.ui-tab in assets/css/ui/tabs.css, the same
+  # classes assets/js/ui/Tabs.tsx uses.
+  # - Patch mode: each tab patches to a URL, and the page shows the content for
+  #   the current one.
+  # - Hash mode (when :panel slots are given): the TabbedContainer hook shows
+  #   the panel for the URL hash. Its markup must match what the hook reads.
   use Phoenix.Component
 
   @doc """
@@ -16,6 +19,13 @@ defmodule LightningWeb.Components.UI.Tabs do
           Channel Logs
         </:tab>
       </.tabs>
+
+      <.tabs id="run-tabs" default_hash="log">
+        <:tab hash="log">Log</:tab>
+        <:tab hash="input" disabled={true} disabled_msg="Pick a step">Input</:tab>
+        <:panel hash="log">...</:panel>
+        <:panel hash="input">...</:panel>
+      </.tabs>
   """
   attr :id, :string, required: true
   attr :variant, :string, values: ~w(underline pills), default: "underline"
@@ -26,26 +36,69 @@ defmodule LightningWeb.Components.UI.Tabs do
     default: "horizontal"
 
   attr :active, :string, default: nil
+  attr :default_hash, :string, default: nil
   attr :class, :any, default: nil
 
   slot :tab, required: true do
-    attr :id, :string, required: true
-    attr :patch, :string, required: true
+    attr :id, :string
+    attr :patch, :string
+    attr :hash, :string
+    attr :disabled, :boolean
+    attr :disabled_msg, :string
+  end
+
+  slot :panel do
+    attr :hash, :string, required: true
+    attr :class, :string
+  end
+
+  def tabs(%{panel: [_ | _]} = assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class={[
+        if(@orientation == "vertical",
+          do: "flex flex-row gap-y-2 tab-container",
+          else: "flex flex-col gap-x-4 gap-y-2 tab-container"
+        ),
+        @class
+      ]}
+      data-default-hash={@default_hash}
+      phx-hook="TabbedContainer"
+    >
+      <div role="tablist" class={list_class(assigns)}>
+        <%= for tab <- @tab do %>
+          <.tab
+            hash={tab[:hash]}
+            disabled={tab[:disabled]}
+            disabled_msg={tab[:disabled_msg]}
+          >
+            {render_slot(tab)}
+          </.tab>
+        <% end %>
+      </div>
+      <%= if @orientation == "vertical" do %>
+        <div class="flex-grow">
+          <%= for panel <- @panel do %>
+            <.panel hash={panel[:hash]} class={panel[:class]}>
+              {render_slot(panel)}
+            </.panel>
+          <% end %>
+        </div>
+      <% else %>
+        <%= for panel <- @panel do %>
+          <.panel hash={panel[:hash]} class={panel[:class]}>
+            {render_slot(panel)}
+          </.panel>
+        <% end %>
+      <% end %>
+    </div>
+    """
   end
 
   def tabs(assigns) do
     ~H"""
-    <nav
-      id={@id}
-      aria-label="Tabs"
-      class={[
-        "ui-tabs",
-        @variant == "pills" && "ui-tabs--pills",
-        @size == "small" && "ui-tabs--small",
-        @orientation == "vertical" && "ui-tabs--vertical",
-        @class
-      ]}
-    >
+    <nav id={@id} aria-label="Tabs" class={list_class(assigns)}>
       <.link
         :for={tab <- @tab}
         patch={tab.patch}
@@ -55,6 +108,76 @@ defmodule LightningWeb.Components.UI.Tabs do
         {render_slot(tab)}
       </.link>
     </nav>
+    """
+  end
+
+  defp list_class(assigns) do
+    [
+      "ui-tabs",
+      assigns.variant == "pills" && "ui-tabs--pills",
+      assigns.size == "small" && "ui-tabs--small",
+      assigns.orientation == "vertical" && "ui-tabs--vertical",
+      # In hash mode @class goes on the container instead.
+      assigns.panel == [] && assigns.class
+    ]
+  end
+
+  attr :hash, :string, required: true
+  attr :disabled, :boolean, default: false
+  attr :disabled_msg, :string
+  slot :inner_block, required: true
+
+  defp tab(assigns) do
+    ~H"""
+    <%= if @disabled do %>
+      <span
+        id={"#{@hash}-tab"}
+        aria-controls={"#{@hash}-panel"}
+        aria-selected="false"
+        class="ui-tab"
+        role="tab"
+        data-disabled
+        data-hash={@hash}
+        phx-hook="Tooltip"
+        aria-label={@disabled_msg}
+        data-allow-html="true"
+        lv-keep-aria
+      >
+        {render_slot(@inner_block)}
+      </span>
+    <% else %>
+      <a
+        id={"#{@hash}-tab"}
+        aria-controls={"#{@hash}-panel"}
+        aria-selected="false"
+        class="ui-tab"
+        role="tab"
+        data-hash={@hash}
+        href={"##{@hash}"}
+        lv-keep-aria
+      >
+        {render_slot(@inner_block)}
+      </a>
+    <% end %>
+    """
+  end
+
+  attr :hash, :string, required: true
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
+
+  defp panel(assigns) do
+    ~H"""
+    <div
+      id={"#{@hash}-panel"}
+      aria-labelledby={"#{@hash}-tab"}
+      class={[@class, "hidden"]}
+      role="tabpanel"
+      tabindex="0"
+      lv-keep-class
+    >
+      {render_slot(@inner_block)}
+    </div>
     """
   end
 end

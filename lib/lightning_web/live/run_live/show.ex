@@ -8,7 +8,6 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
   alias LightningWeb.RunLive.CancelHelper
   alias Phoenix.LiveView.AsyncResult
@@ -225,7 +224,7 @@ defmodule LightningWeb.RunLive.Show do
               </.step_list>
             </div>
             <div class="@5xl/main:basis-2/3 flex flex-col gap-4 h-full">
-              <Tabbed.container
+              <.tabs
                 id={"run-#{run.id}-tabbed-container"}
                 class="run-tab-container"
                 default_hash="log"
@@ -294,7 +293,7 @@ defmodule LightningWeb.RunLive.Show do
                     can_edit_data_retention={@can_edit_data_retention}
                   />
                 </:panel>
-              </Tabbed.container>
+              </.tabs>
             </div>
           </div>
         </.async_result>

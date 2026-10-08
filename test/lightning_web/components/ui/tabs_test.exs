@@ -18,6 +18,28 @@ defmodule LightningWeb.Components.UI.TabsTest do
     |> Floki.parse_fragment!()
   end
 
+  defp render_hash_tabs(assigns) do
+    tabs = [
+      %{hash: "log", inner_block: fn _, _ -> "Log" end},
+      %{
+        hash: "input",
+        disabled: true,
+        disabled_msg: "Pick a step",
+        inner_block: fn _, _ -> "Input" end
+      }
+    ]
+
+    panels = [
+      %{hash: "log", class: "flex h-full", inner_block: fn _, _ -> "logs" end},
+      %{hash: "input", inner_block: fn _, _ -> "input" end}
+    ]
+
+    %{id: "hash-tabs", default_hash: "log", tab: tabs, panel: panels}
+    |> Map.merge(assigns)
+    |> then(fn assigns -> render_component(&Tabs.tabs/1, assigns) end)
+    |> Floki.parse_fragment!()
+  end
+
   describe "tabs/1 in patch mode" do
     test "renders a nav with the id and one link per tab" do
       parsed = render_tabs(%{id: "my-tabs"})
@@ -67,6 +89,95 @@ defmodule LightningWeb.Components.UI.TabsTest do
 
       assert ~w(ui-tabs ui-tabs--pills ui-tabs--small ui-tabs--vertical mx-3) --
                String.split(classes) == []
+    end
+  end
+
+  describe "tabs/1 in hash mode" do
+    test "renders the markup the TabbedContainer hook reads" do
+      parsed = render_hash_tabs(%{class: "run-tab-container"})
+
+      assert [container] = Floki.find(parsed, "div#hash-tabs")
+      assert Floki.attribute(container, "phx-hook") == ["TabbedContainer"]
+      assert Floki.attribute(container, "data-default-hash") == ["log"]
+
+      assert ~w(flex flex-col gap-x-4 gap-y-2 tab-container run-tab-container) --
+               String.split(hd(Floki.attribute(container, "class"))) == []
+
+      assert [{"div", _, tablist_children} = tablist] =
+               Floki.find(container, "[role=tablist]")
+
+      assert [classes] = Floki.attribute(tablist, "class")
+      assert String.split(classes) == ["ui-tabs"]
+
+      # The hook clears aria-selected through the tab's parentNode.
+      assert [{"a", log_attrs, _}, {"span", input_attrs, _}] =
+               Enum.filter(tablist_children, &is_tuple/1)
+
+      assert Map.new(log_attrs) == %{
+               "id" => "log-tab",
+               "aria-controls" => "log-panel",
+               "aria-selected" => "false",
+               "role" => "tab",
+               "data-hash" => "log",
+               "href" => "#log",
+               "lv-keep-aria" => "lv-keep-aria",
+               "class" => "ui-tab"
+             }
+
+      assert Map.new(input_attrs) == %{
+               "id" => "input-tab",
+               "aria-controls" => "input-panel",
+               "aria-selected" => "false",
+               "role" => "tab",
+               "data-disabled" => "data-disabled",
+               "data-hash" => "input",
+               "phx-hook" => "Tooltip",
+               "aria-label" => "Pick a step",
+               "data-allow-html" => "true",
+               "lv-keep-aria" => "lv-keep-aria",
+               "class" => "ui-tab"
+             }
+
+      panels = Floki.find(container, "[role=tabpanel]")
+
+      assert Enum.map(panels, fn {"div", attrs, _} -> Map.new(attrs) end) == [
+               %{
+                 "id" => "log-panel",
+                 "aria-labelledby" => "log-tab",
+                 "class" => "flex h-full hidden",
+                 "role" => "tabpanel",
+                 "tabindex" => "0",
+                 "lv-keep-class" => "lv-keep-class"
+               },
+               %{
+                 "id" => "input-panel",
+                 "aria-labelledby" => "input-tab",
+                 "class" => "hidden",
+                 "role" => "tabpanel",
+                 "tabindex" => "0",
+                 "lv-keep-class" => "lv-keep-class"
+               }
+             ]
+    end
+
+    test "vertical puts the panels in a flex-grow column" do
+      [container] =
+        render_hash_tabs(%{orientation: "vertical"}) |> Floki.find("#hash-tabs")
+
+      assert ~w(flex flex-row gap-y-2 tab-container) --
+               String.split(hd(Floki.attribute(container, "class"))) == []
+
+      assert [classes] =
+               container
+               |> Floki.find("[role=tablist]")
+               |> Floki.attribute("class")
+
+      assert String.split(classes) == ["ui-tabs", "ui-tabs--vertical"]
+
+      assert container
+             |> Floki.find("div.flex-grow > [role=tabpanel]")
+             |> Enum.flat_map(&Floki.attribute(&1, "id")) ==
+               ["log-panel", "input-panel"]
     end
   end
 end

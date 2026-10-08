@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { TabbedContainer } from '../../js/hooks/TabbedContainer';
 
-// Mirrors the markup lib/lightning_web/live/components/tabbed.ex renders.
+// Mirrors the markup lib/lightning_web/components/ui/tabs.ex renders.
 function render(defaultHash: string | null) {
   document.body.innerHTML = `
     <div id="container" ${defaultHash ? `data-default-hash="${defaultHash}"` : ''}>
