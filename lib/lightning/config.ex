@@ -265,9 +265,13 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def otel_enabled?, do: otel_config() |> Keyword.get(:enabled, false)
+    def otel_enabled? do
+      otel_config() |> Keyword.get(:enabled, false)
+    end
 
-    defp otel_config, do: Application.get_env(:lightning, :otel, [])
+    defp otel_config do
+      Application.get_env(:lightning, :otel, [])
+    end
 
     @impl true
     def credential_transfer_token_validity_in_days do

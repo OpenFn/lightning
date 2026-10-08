@@ -9,6 +9,8 @@ defmodule Lightning.Application do
 
   @impl true
   def start(_type, _args) do
+    Lightning.OpenTelemetry.setup()
+
     Lightning.OsProcess.sweep_tmp_dirs()
 
     # mnesia startup
@@ -159,8 +161,6 @@ defmodule Lightning.Application do
               ]}}
         end
       end)
-
-    Lightning.OpenTelemetry.setup()
 
     children =
       [

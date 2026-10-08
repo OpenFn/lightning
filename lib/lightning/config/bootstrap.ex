@@ -1232,7 +1232,7 @@ defmodule Lightning.Config.Bootstrap do
     """
   end
 
-  defp setup_opentelemetry() do
+  defp setup_opentelemetry do
     disabled? =
       case env!("OTEL_SDK_DISABLED", &otel_parse_sdk_disabled/1, nil) do
         nil -> not env!("TRACING_ENABLED", &Utils.ensure_boolean/1, false)
@@ -1247,7 +1247,10 @@ defmodule Lightning.Config.Bootstrap do
     # `OTEL_SERVICE_NAME` and `OTEL_RESOURCE_ATTRIBUTES` override these.
     config :opentelemetry,
       sdk_disabled: disabled?,
-      span_processor: :batch,
+      processors: [
+        {Lightning.OpenTelemetry.RedactingProcessor, %{}},
+        {:otel_batch_processor, %{}}
+      ],
       traces_exporter: :otlp,
       sampler: {:parent_based, %{root: {:trace_id_ratio_based, 0.05}}},
       resource: %{
@@ -1255,7 +1258,8 @@ defmodule Lightning.Config.Bootstrap do
           name: "lightning",
           version: to_string(Application.spec(:lightning, :vsn))
         }
-      }
+      },
+      event_count_limit: 0
 
     otlp_endpoint = otel_endpoint("OTEL_EXPORTER_OTLP_ENDPOINT")
     otlp_traces_endpoint = otel_endpoint("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")

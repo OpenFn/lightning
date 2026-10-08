@@ -240,7 +240,7 @@ For SMTP, the following environment variables are required:
 | `SECRET_KEY_BASE`                                 | A secret key used as a base to generate secrets for encrypting and signing data.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `SENTRY_DSN`                                      | If using Sentry for error monitoring, your DSN                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `SERVICE_ACCOUNT_PUBLIC_KEY`                      | An RSA public key, as PEM encoded in unpadded base64, for a service account that configures this instance through its API. While it is set, first setup is turned off. Lightning will not start if the value is not an RSA public key of at least 2048 bits. See [Service accounts](SERVICE_ACCOUNTS.md).                                                                                                                                                                                                                                                                                                                                                                     |
-| `TRACING_ECTO_ENABLED`                            | Set to `true` to add a span for every database query. Needs tracing to be on. Off by default because it spans every query. See [Tracing](#tracing).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `TRACING_ECTO_ENABLED`                            | Set to `true` to add a span for every database query. Needs tracing to be on. Off by default: it spans every query, and it exports database error messages, which can contain column values and so may expose sensitive data. See [Tracing](#tracing).                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `TRACING_ENABLED`                                 | Set to `true` to export OpenTelemetry traces. Off by default. An endpoint is required when it is on. See [Tracing](#tracing).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `URL_HOST`                                        | The host used for writing URLs (e.g., `demo.openfn.org`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `URL_PORT`                                        | The port, usually `443` for production                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -415,6 +415,21 @@ without changing the rest of its configuration.
 
 LiveView is not traced, so the workflow editor produces no spans.
 
+Request paths, query strings and network addresses are not exported. Lightning
+puts single-use tokens, collection keys and caller record identifiers in URLs,
+and an address identifies the person behind a request, so `url.path`,
+`url.query`, `client.address`, `network.peer.address` and `server.address` are
+replaced with `[redacted]` before a span leaves the instance. Spans carry the
+route template instead, so a trace shows `GET /projects/:project_id/w` without
+the project id.
+
+A trace will not tell you which client made a request, or which host served it.
+Use your proxy or load balancer logs for that.
+
+Exception messages are not exported. A span records that a request or job
+failed, and the exception type in `error.type`, but not what the exception said.
+The application logs and Sentry still have it.
+
 Two mistakes stop the boot rather than being logged and ignored:
 
 - `OTEL_SDK_DISABLED` set to anything other than `true` or `false`.
@@ -455,4 +470,13 @@ when tracing is on.
 TRACING_ECTO_ENABLED=true
 ```
 
-Turn this on deliberately. It spans every query.
+Turn this on deliberately. It spans every query, so there is volume to plan for,
+but the bigger decision is what those spans carry: a failed query sets the span
+status to the message Postgres returned, and that message can include column
+values. This may expose sensitive data. A unique constraint violation names the
+value that clashed, such as a user's email address, and some errors carry the
+statement that failed as well. The redaction described above does not cover any
+of it, because it rewrites span attributes and this is a span status.
+
+Keep query spans off where other people's data is involved, or send them only to
+a collector you would trust with the contents of your database.

@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Initial implementation of OpenTelemetry, with an emphasis on security over
+  observability. Future iterations will address extending observability.
+  [#4892](https://github.com/OpenFn/lightning/issues/4892)
+
 ### Changed
 
 - Update Project and Workflow yaml exports to match the v4 portability spec
