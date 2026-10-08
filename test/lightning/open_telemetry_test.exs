@@ -69,6 +69,7 @@ defmodule Lightning.OpenTelemetryTest do
     assert OpentelemetryPhoenix in modules
     assert OpentelemetryOban.JobHandler in modules
     assert OpentelemetryEcto in modules
+    refute OpentelemetryOban.PluginHandler in modules
   end
 
   defp otel_handlers do
