@@ -869,54 +869,52 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               </p>
             </div>
 
-            <div class="border-b border-gray-200">
-              <div class="flex space-x-4">
+            <%!-- Deprecated: not the shared <.tabs> component, and not a pattern
+            to copy. It borrows the shared tab styles until environments are
+            redesigned, and the "+" button is deprecated with it. --%>
+            <div class="flex items-end gap-4 border-b border-gray-200">
+              <div role="tablist" aria-label="Environments" class="ui-tabs">
                 <button
                   :for={env <- @credential_environments}
                   type="button"
+                  role="tab"
+                  aria-selected={to_string(@current_tab == env.name)}
+                  class="ui-tab"
                   phx-click="change_tab"
                   phx-value-tab={env.name}
                   phx-target={@myself}
-                  class={[
-                    "pb-4 px-1 border-b-2 font-medium text-sm transition-all whitespace-nowrap",
-                    if @current_tab == env.name do
-                      "border-indigo-500 text-indigo-600"
-                    else
-                      "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    end
-                  ]}
                 >
                   {env.name}
                 </button>
-
-                <span
-                  id="add-environment-button-wrapper"
-                  phx-hook="Tooltip"
-                  data-placement="top"
-                  aria-label={
-                    if length(@credential_environments) >= 5,
-                      do: "Maximum of 5 environments reached",
-                      else: "Add new environment"
-                  }
-                >
-                  <button
-                    id="add-environment-button"
-                    type="button"
-                    phx-click="add_environment"
-                    phx-target={@myself}
-                    disabled={length(@credential_environments) >= 5}
-                    class={[
-                      "pb-4 px-1 transition-colors",
-                      if(length(@credential_environments) >= 5,
-                        do: "text-gray-300 cursor-not-allowed",
-                        else: "text-gray-400 hover:text-gray-600 cursor-pointer"
-                      )
-                    ]}
-                  >
-                    <.icon name="hero-plus" class="h-5 w-5" />
-                  </button>
-                </span>
               </div>
+
+              <span
+                id="add-environment-button-wrapper"
+                phx-hook="Tooltip"
+                data-placement="top"
+                aria-label={
+                  if length(@credential_environments) >= 5,
+                    do: "Maximum of 5 environments reached",
+                    else: "Add new environment"
+                }
+              >
+                <button
+                  id="add-environment-button"
+                  type="button"
+                  phx-click="add_environment"
+                  phx-target={@myself}
+                  disabled={length(@credential_environments) >= 5}
+                  class={[
+                    "py-2 px-1 transition-colors",
+                    if(length(@credential_environments) >= 5,
+                      do: "text-gray-300 cursor-not-allowed",
+                      else: "text-gray-400 hover:text-gray-600 cursor-pointer"
+                    )
+                  ]}
+                >
+                  <.icon name="hero-plus" class="h-5 w-5" />
+                </button>
+              </span>
             </div>
 
             <div
