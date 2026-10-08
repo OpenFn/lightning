@@ -15,6 +15,7 @@ import { useSelectedRunId } from '../hooks/useHistory';
 import { useContentLocked, useIsNewWorkflow } from '../hooks/useSessionContext';
 import { describeLifecycleError } from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import type { AISkill } from '../types/sessionContext';
 
 import { AlertDialog } from './AlertDialog';
 import { ChatInput } from './ChatInput';
@@ -61,6 +62,8 @@ interface AIAssistantPanelProps {
    * Switch the current workflow to draft, for the live workflow notice
    */
   switchToDraft?: () => Promise<unknown>;
+  /** Skills a leading slash command can invoke */
+  skills?: AISkill[];
 }
 
 interface MessageOptions {
@@ -100,6 +103,7 @@ export function AIAssistantPanel({
   connectionState = 'connected',
   aiLimit = null,
   switchToDraft = () => Promise.resolve(undefined),
+  skills,
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -477,6 +481,7 @@ export function AIAssistantPanel({
         placeholder={placeholderText}
         disabledMessage={disabledMessage}
         selectedRunId={selectedRunId}
+        skills={skills}
       />
 
       {/* About AI Assistant Modal */}

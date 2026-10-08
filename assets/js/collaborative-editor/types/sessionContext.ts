@@ -111,6 +111,13 @@ export const LimitsSchema = z.object({
 
 export type Limits = z.infer<typeof LimitsSchema>;
 
+export const AISkillSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+});
+
+export type AISkill = z.infer<typeof AISkillSchema>;
+
 export const SessionContextResponseSchema = z.object({
   user: UserContextSchema.nullable(),
   project: ProjectContextSchema.nullable(),
@@ -125,6 +132,7 @@ export const SessionContextResponseSchema = z.object({
   suppress_enable_trigger_warning: z.boolean().optional().default(false),
   experimental_features_enabled: z.boolean().optional().default(false),
   limits: LimitsSchema.optional(),
+  ai_skills: z.array(AISkillSchema).optional().default([]),
   workflow: BaseWorkflowSchema.optional(),
 });
 
@@ -156,6 +164,7 @@ export interface SessionContextState {
   workflow_template: WorkflowTemplate | null;
   suppressEnableTriggerWarning: boolean;
   limits: Limits;
+  aiSkills: AISkill[];
   isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;

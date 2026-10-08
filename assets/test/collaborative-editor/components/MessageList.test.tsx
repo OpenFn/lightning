@@ -71,6 +71,28 @@ describe('MessageList', () => {
       expect(screen.getByText('Hello AI')).toBeInTheDocument();
     });
 
+    it('highlights a leading known skill command', () => {
+      const skills = [{ name: 'qa', description: 'Review this workflow' }];
+      render(
+        <MessageList
+          skills={skills}
+          messages={[
+            createMockAIMessage({ id: '1', role: 'user', content: '/qa now' }),
+            createMockAIMessage({ id: '2', role: 'user', content: 'or /qa' }),
+          ]}
+        />
+      );
+
+      const [invoked, mentioned] = screen.getAllByTestId('user-message');
+      expect(within(invoked!).getByTestId('skill-command')).toHaveTextContent(
+        '/qa'
+      );
+      expect(invoked).toHaveTextContent(/\/qa\s*now/);
+      expect(
+        within(mentioned!).queryByTestId('skill-command')
+      ).not.toBeInTheDocument();
+    });
+
     it('should render assistant messages', () => {
       const messages = [
         createMockAIMessage({

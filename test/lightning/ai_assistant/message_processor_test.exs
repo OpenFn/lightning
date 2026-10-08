@@ -1133,6 +1133,12 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert_skill(user, project, "/qa", %{"name" => "qa"})
     end
 
+    test "names the design skill", %{user: user, project: project} do
+      assert_skill(user, project, "/design a patient intake flow", %{
+        "name" => "design"
+      })
+    end
+
     test "sends no skill for an unknown command", %{
       user: user,
       project: project

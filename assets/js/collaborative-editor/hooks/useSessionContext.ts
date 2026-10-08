@@ -37,6 +37,7 @@ import { useContext, useSyncExternalStore } from 'react';
 import { StoreContext } from '../contexts/StoreProvider';
 import type { SessionContextStoreInstance } from '../stores/createSessionContextStore';
 import type {
+  AISkill,
   AppConfig,
   Limits,
   Permissions,
@@ -164,6 +165,16 @@ export const usePermissions = (): Permissions | null => {
   );
 
   return useSyncExternalStore(sessionContextStore.subscribe, selectPermissions);
+};
+
+export const useAISkills = (): AISkill[] => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectSkills = sessionContextStore.withSelector(
+    state => state.aiSkills
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectSkills);
 };
 
 export const useExperimentalFeatures = (): boolean => {

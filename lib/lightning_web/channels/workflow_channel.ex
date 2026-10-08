@@ -1379,6 +1379,7 @@ defmodule LightningWeb.WorkflowChannel do
       experimental_features_enabled:
         Lightning.Accounts.experimental_features_enabled?(user),
       limits: render_limits(project.id),
+      ai_skills: Lightning.AiAssistant.Skills.list(),
       workflow: fresh_workflow
     }
   end
