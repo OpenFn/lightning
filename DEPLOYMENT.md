@@ -426,10 +426,13 @@ the default in place.
 
 The OpenTelemetry SDK reads its own variables from the real process environment,
 so `OTEL_*` entries in `.env` have no effect. If you wish to use the `OTEL_*`
-variables in a local dev instance, they will need to set as OS ENV variables.
+variables in a local dev instance, they will need to be set as OS ENV variables.
 The two endpoint variables ( `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and
 `OTEL_EXPORTER_OTLP_ENDPOINT`) are the exception, because Lightning reads those
 itself and passes them on.
+
+A complete list of OpenTelemetry-supported environment variables can be found
+[here](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/).
 
 #### Sampling
 
@@ -445,7 +448,8 @@ OTEL_TRACES_SAMPLER_ARG=0.1
 
 #### Database query spans
 
-Query spans are a separate decision, and stay off when tracing is on.
+Query spans are a separate decision, and need to be independently enabled, even
+when tracing is on.
 
 ```
 TRACING_ECTO_ENABLED=true

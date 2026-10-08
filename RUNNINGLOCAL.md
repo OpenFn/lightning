@@ -168,9 +168,6 @@ services:
   jaeger:
     image: jaegertracing/jaeger:2.21.0
     container_name: lightning-jaeger
-    environment:
-      # OTLP ingest is opt-in on the 1.x all-in-one image.
-      COLLECTOR_OTLP_ENABLED: "true"
     ports:
       - "16686:16686" # UI and query API
       - "4318:4318" # OTLP/HTTP
@@ -213,18 +210,18 @@ Note that Lightning only processes the following OpenTelemetry ENV vars:
 - `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
 
 The above can be configured via a `.env` file to be read by Dotenvy. Any other
-`OTEL_*` env vars are read directly from the OS envrionment by the OpenTelemetry
+`OTEL_*` env vars are read directly from the OS environment by the OpenTelemetry
 libraries. As a result they will be ignored by Dotenvy, e.g.
 `OTEL_TRACES_SAMPLER` in the `iex -S mix phx.server` code snippet above.
 
 Generate some traffic, wait about ten seconds, then open http://localhost:16686
 and pick the `lightning` service.
 
-If you are not seeing an exepcted span, the following may be factors:
+If you are not seeing an expected span, the following may be factors:
 
 - The exporter batches, so the rule of thumb is that it may take 10-15 seconds
   for a span to arrive.
-- Sampling keeps 5% of traces by default, unless you use the `always-on`
+- Sampling keeps 5% of traces by default, unless you use the `always_on`
   sampler. This can be set with `OTEL_TRACES_SAMPLER=always_on`.
 
 Jaeger keeps spans for the life of the container, and a service stays in the
@@ -272,7 +269,7 @@ jq -r --arg k "$ATTR_KEY" '.result.resourceSpans[]?.scopeSpans[]?.spans[]?.attri
        | if type == "string" then . else tojson end' \
   "$OUT" | sort -u
 EOF
-chmod +x /monitoring/jaeger-attrs.sh
+chmod +x monitoring/jaeger-attrs.sh
 ```
 
 Unfortunately, there does not appear to be a human-friendly URL for Jaeger V3
