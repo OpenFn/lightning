@@ -764,7 +764,7 @@
               href="https://docs.openfn.org/documentation/link-to-GitHub"
               class="font-medium underline"
             >
-              docs.openfn.org/documentation/link-to-GitHub
+              docs.openfn.org
             </.link>
           </p>
         </div>
@@ -861,6 +861,44 @@
           >
             Export project
           </.button_link>
+        </div>
+        <div class="bg-white p-4 rounded-md space-y-4">
+          <div>
+            <h6 class="font-medium text-black">Sync with CLI</h6>
+            <p class="block my-1 text-xs text-gray-600">
+              Use the CLI to push and pull this project locally
+            </p>
+          </div>
+          <div class="space-y-3 text-sm">
+            <div>
+              <p class="text-gray-600">
+                Pull this project into a local workspace:
+              </p>
+              <pre class="mt-1 overflow-x-auto rounded-md bg-gray-100 p-2 text-xs text-black"><code>openfn project pull {@project.id}</code></pre>
+            </div>
+            <div>
+              <p class="text-gray-600">
+                Push local changes back to this project:
+              </p>
+              <pre class="mt-1 overflow-x-auto rounded-md bg-gray-100 p-2 text-xs text-black"><code>openfn project deploy</code></pre>
+            </div>
+            <div>
+              <p class="text-gray-600">
+                Run a workflow:
+              </p>
+              <pre class="mt-1 overflow-x-auto rounded-md bg-gray-100 p-2 text-xs text-black"><code>openfn &lt;workflow-name&gt;</code></pre>
+            </div>
+          </div>
+          <p class="text-sm text-gray-600">
+            Learn more in the
+            <.link
+              target="_blank"
+              href="https://docs.openfn.org/documentation/sync"
+              class="font-medium text-indigo-600 hover:text-indigo-900"
+            >
+              CLI Sync Docs
+            </.link>
+          </p>
         </div>
       </:panel>
       <:panel hash="data-storage" class="space-y-4">
