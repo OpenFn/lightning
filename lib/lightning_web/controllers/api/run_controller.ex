@@ -5,7 +5,7 @@ defmodule LightningWeb.API.RunController do
   ## Query Parameters
 
   - `page` - Page number (default: 1)
-  - `page_size` - Number of items per page (default: 10)
+  - `page_size` - Number of items per page (default: 10, at most 100)
   - `state` - Filter by state (comma-separated). Valid values: available, claimed, started, success, failed, crashed, cancelled, killed, exception, lost
   - `inserted_after` - Filter runs created after this ISO8601 datetime
   - `inserted_before` - Filter runs created before this ISO8601 datetime
@@ -74,7 +74,7 @@ defmodule LightningWeb.API.RunController do
   - `params` - Map containing:
     - `project_id` - Project UUID (optional, filters to specific project)
     - `page` - Page number (optional, default: 1)
-    - `page_size` - Items per page (optional, default: 10)
+    - `page_size` - Items per page (optional, default: 10, at most 100)
     - `state` - Comma-separated list of states to filter by (optional)
     - `inserted_after` - Filter runs created after ISO8601 datetime (optional)
     - `inserted_before` - Filter runs created before ISO8601 datetime (optional)
