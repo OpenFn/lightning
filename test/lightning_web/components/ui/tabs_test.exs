@@ -206,6 +206,20 @@ defmodule LightningWeb.Components.UI.TabsTest do
                ["log-panel", "input-panel"]
     end
 
+    test "names the tablist, in both modes" do
+      assert render_hash_tabs(%{})
+             |> Floki.find("[role=tablist]")
+             |> Floki.attribute("aria-label") == ["Tabs"]
+
+      assert render_hash_tabs(%{label: "Step details"})
+             |> Floki.find("[role=tablist]")
+             |> Floki.attribute("aria-label") == ["Step details"]
+
+      assert render_tabs(%{label: "History"})
+             |> Floki.find("nav")
+             |> Floki.attribute("aria-label") == ["History"]
+    end
+
     test "stays in hash mode when there are no panels" do
       parsed = render_hash_tabs(%{panel: []})
 

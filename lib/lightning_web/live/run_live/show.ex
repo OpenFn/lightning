@@ -225,6 +225,7 @@ defmodule LightningWeb.RunLive.Show do
             <div class="@5xl/main:basis-2/3 flex flex-col gap-4 h-full">
               <.tabs
                 id={"run-#{run.id}-tabbed-container"}
+                label="Step details"
                 class="run-tab-container"
                 default_hash="log"
               >

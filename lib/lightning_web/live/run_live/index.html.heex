@@ -22,6 +22,7 @@
       <.tabs
         :if={@channels_enabled}
         id="history-tabs"
+        label="History"
         variant="pills"
         active={
           if @live_action == :index, do: "work-orders", else: "channel-logs"

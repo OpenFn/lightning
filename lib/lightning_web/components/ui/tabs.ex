@@ -40,6 +40,7 @@ defmodule LightningWeb.Components.UI.Tabs do
   attr :active, :string, default: nil
   attr :default_hash, :string, default: nil
   attr :class, :any, default: nil
+  attr :label, :string, default: "Tabs", doc: "Accessible name for the tab list"
 
   slot :tab, required: true do
     attr :id, :string
@@ -69,7 +70,7 @@ defmodule LightningWeb.Components.UI.Tabs do
       data-default-hash={@default_hash}
       phx-hook="TabbedContainer"
     >
-      <div role="tablist" class={list_class(assigns, nil)}>
+      <div role="tablist" aria-label={@label} class={list_class(assigns, nil)}>
         <.tab
           :for={tab <- @tab}
           hash={tab[:hash]}
@@ -90,7 +91,7 @@ defmodule LightningWeb.Components.UI.Tabs do
 
   def tabs(assigns) do
     ~H"""
-    <nav id={@id} aria-label="Tabs" class={list_class(assigns, @class)}>
+    <nav id={@id} aria-label={@label} class={list_class(assigns, @class)}>
       <.link
         :for={tab <- @tab}
         patch={tab.patch}
