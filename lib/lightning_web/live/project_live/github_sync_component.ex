@@ -779,9 +779,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         Initial Setup Action
       </.label>
       <p class="text-sm text-gray-500">
-        Do you want to initialize this 2-way sync by committing your current
-        OpenFn project to GitHub or do you want to overwrite your current OpenFn
-        project, importing a previously created project from a GitHub repo?
+        Choose how to handle setup: you can export this project to GitHub, or import an existing project on GitHub here.
       </p>
       <fieldset class="mt-4">
         <legend class="sr-only">Direction of <em>Initial</em> Sync</legend>
@@ -799,12 +797,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             </div>
             <div class="ml-3 text-sm leading-6">
               <label for="pull_first_sync_option" class="text-gray-900">
-                <span class="font-medium">OpenFn --> GitHub:</span>
-                Export to GitHub (default, non-destructive)
+                <span class="font-medium">OpenFn --> GitHub:</span> Export to GitHub
               </label>
 
               <p id="pull_first_sync_option_description" class="text-gray-500">
-                This option will commit a copy of your current OpenFn project to a GitHub repo.
+                This option will commit a copy of your current OpenFn project to GitHub. It does not affect any workflows or configuration here.
               </p>
             </div>
           </div>
@@ -825,10 +822,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                 Import from GitHub (overwrite this project)
               </label>
               <p id="deploy_first_sync_option_description" class="text-gray-500">
-                If you already have an <code>openfn.yaml</code>
-                (or legacy <code>config.json</code>)
-                tracked on GitHub and you want to <b>overwrite</b>
-                this project on OpenFn, you can choose this advanced option.
+                This option will replace this project with the workflows, collections and channels that are already committed to GitHub.
               </p>
             </div>
           </div>
@@ -886,7 +880,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             </li>
           <% end %>
         </ul>
-        Existing versions of these files on these branches will be overwritten. (I'll be able to find them in my git history if needed.)
+        Existing versions of these files on these branches will be overwritten (but will still exist in git history).
       </span>
     </div>
     """
