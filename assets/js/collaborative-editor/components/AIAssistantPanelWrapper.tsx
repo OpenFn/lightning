@@ -54,6 +54,7 @@ import {
   useSession,
 } from '../hooks/useSession';
 import {
+  useAISkills,
   useIsNewWorkflow,
   useLimits,
   useProject,
@@ -185,6 +186,7 @@ export function AIAssistantPanelWrapper({
   const user = useUser();
   const workflow = useWorkflowState(state => state.workflow);
   const limits = useLimits();
+  const skills = useAISkills();
 
   // AI can apply changes if: not readonly OR is a new workflow (being created)
   const canApplyChanges = !isReadOnly || isNewWorkflow;
@@ -802,6 +804,7 @@ export function AIAssistantPanelWrapper({
               connectionState={sessionId ? connectionState : 'connected'}
               aiLimit={limits.ai_assistant ?? null}
               switchToDraft={switchToDraft}
+              skills={skills}
             >
               <MessageList
                 messages={messages}
@@ -862,6 +865,7 @@ export function AIAssistantPanelWrapper({
                 onOpenStep={handleOpenStep}
                 canOpenStep={canOpenStep}
                 currentUserId={user?.id}
+                skills={skills}
                 failedApplyMessageIds={failedApplyMessageIds}
                 onUndoChanges={requestUndoChanges}
                 undoneMessageId={undoneMessageId}

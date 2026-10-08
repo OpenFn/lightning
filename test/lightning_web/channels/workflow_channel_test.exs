@@ -6430,6 +6430,15 @@ defmodule LightningWeb.WorkflowChannelTest do
              } = response
     end
 
+    test "lists the skills the assistant can be asked to use", %{
+      socket: socket
+    } do
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, %{ai_skills: skills}
+      assert Enum.map(skills, & &1.name) == ["design", "diagnose", "qa"]
+    end
+
     test "reports the plan's sandbox upsell when sandboxes are not available", %{
       socket: socket,
       project: %{id: project_id}

@@ -3,8 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
+import type { AISkill } from '../types/sessionContext';
+import { parseSlashCommand } from '../utils/slashCommand';
 
 import { AIDisclaimerFooter } from './AIDisclaimerFooter';
+import { SkillCommand } from './SkillCommand';
 
 interface ChatInputProps {
   onSendMessage?:
@@ -25,6 +28,8 @@ interface ChatInputProps {
   disabledMessage?: string | undefined;
   /** The run both attachments are scoped to, and what gates them */
   selectedRunId?: string | null;
+  /** Skills a leading slash command can invoke */
+  skills?: AISkill[] | undefined;
 }
 
 interface MessageOptions {
@@ -72,10 +77,29 @@ export function ChatInput({
   placeholder = 'Ask me anything...',
   disabledMessage,
   selectedRunId,
+  skills = [],
 }: ChatInputProps) {
   const [input, setInput] = useState('');
-  const tooLong = input.length > MAX_MESSAGE_LENGTH;
-  const showCount = input.length >= COUNT_FROM;
+  const [skill, setSkill] = useState<AISkill | null>(null);
+  const [highlighted, setHighlighted] = useState(0);
+  const [dismissedMenuFor, setDismissedMenuFor] = useState<string | null>(null);
+
+  const content = skill
+    ? `/${skill.name} ${input.trim()}`.trim()
+    : input.trim();
+  const tooLong = content.length > MAX_MESSAGE_LENGTH;
+  const showCount = content.length >= COUNT_FROM;
+  const canSend = !!content && !isLoading && !isDisabled && !tooLong;
+
+  // A command is only one while it is the first token, so the menu closes
+  // at the first whitespace.
+  const menuMatches =
+    !skill && /^\/\S*$/.test(input) && dismissedMenuFor !== input
+      ? skills.filter(s => s.name.startsWith(input.slice(1)))
+      : [];
+  const activeIndex = Math.min(highlighted, menuMatches.length - 1);
+  const activeSkill: AISkill | undefined = menuMatches[activeIndex];
+  const menuOpen = activeSkill !== undefined;
 
   const [attachLogs, setAttachLogs] = useState(() => {
     if (!storageKey) {
@@ -202,9 +226,28 @@ export function ChatInput({
     prevIsLoadingRef.current = isLoading;
   }, [isLoading, enableAutoFocus]);
 
+  const chooseSkill = (chosen: AISkill, rest = '') => {
+    setSkill(chosen);
+    setInput(rest);
+    setHighlighted(0);
+    textareaRef.current?.focus();
+  };
+
+  const handleChange = (value: string) => {
+    // Typing the space after a known name, or pasting a whole command, turns
+    // it into a pill; a bare `/qa` stays text until then, like `/qafoo`.
+    const parsed = skill ? null : parseSlashCommand(value, skills);
+    if (parsed && /^\/\S+\s/.test(value)) {
+      chooseSkill(parsed.skill, parsed.rest);
+      return;
+    }
+    setInput(value);
+    setHighlighted(0);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || isDisabled || tooLong) return;
+    if (!canSend) return;
 
     const options: MessageOptions = {};
     // The run rides along so what we promise to attach and what the backend
@@ -215,11 +258,45 @@ export function ChatInput({
       options.follow_run_id = selectedRunId;
     }
 
-    onSendMessage?.(input.trim(), options);
+    onSendMessage?.(content, options);
     setInput('');
+    setSkill(null);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (activeSkill) {
+      const move = { ArrowDown: 1, ArrowUp: -1 }[e.key];
+      if (move) {
+        e.preventDefault();
+        setHighlighted(
+          (activeIndex + move + menuMatches.length) % menuMatches.length
+        );
+        return;
+      }
+      if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
+        e.preventDefault();
+        chooseSkill(activeSkill);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setDismissedMenuFor(input);
+        return;
+      }
+    }
+
+    const { selectionStart, selectionEnd } = e.currentTarget;
+    if (
+      skill &&
+      e.key === 'Backspace' &&
+      selectionStart === 0 &&
+      selectionEnd === 0
+    ) {
+      e.preventDefault();
+      setSkill(null);
+      return;
+    }
+
     if (
       e.key === 'Enter' &&
       !e.shiftKey &&
@@ -241,11 +318,49 @@ export function ChatInput({
             side="top"
           >
             <div className="relative">
+              {menuOpen && (
+                <div
+                  id="skill-menu"
+                  role="listbox"
+                  aria-label="Skills"
+                  data-testid="skill-menu"
+                  className={cn(
+                    'absolute bottom-full left-0 right-0 mb-2 z-10 py-1',
+                    'rounded-lg border border-gray-200 bg-white shadow-lg'
+                  )}
+                >
+                  {menuMatches.map((s, i) => (
+                    <div
+                      key={s.name}
+                      id={`skill-option-${s.name}`}
+                      role="option"
+                      aria-selected={i === activeIndex}
+                      tabIndex={-1}
+                      onMouseDown={e => {
+                        e.preventDefault();
+                        chooseSkill(s);
+                      }}
+                      onMouseEnter={() => setHighlighted(i)}
+                      className={cn(
+                        'flex items-baseline gap-2 px-3 py-2 cursor-pointer',
+                        i === activeIndex && 'bg-gray-100'
+                      )}
+                    >
+                      <span className="text-sm font-medium text-gray-900">
+                        /{s.name}
+                      </span>
+                      <span className="text-xs text-gray-500 truncate">
+                        {s.description}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div
                 className={cn(
                   'rounded-xl border-2 transition-all duration-200',
                   'bg-white',
-                  input.trim()
+                  content
                     ? 'border-primary-300'
                     : 'border-gray-200 hover:border-gray-300'
                 )}
@@ -284,29 +399,44 @@ export function ChatInput({
                   </div>
                 )}
 
-                <textarea
-                  ref={textareaRef}
-                  data-testid="chat-input"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={placeholder}
-                  disabled={isLoading || isDisabled}
-                  rows={1}
-                  className={cn(
-                    'block w-full px-4 py-3 bg-transparent resize-none',
-                    'text-[15px] text-gray-900 placeholder:text-gray-400',
-                    'border-0 outline-none focus:outline-none focus:ring-0',
-                    'disabled:text-gray-400 disabled:cursor-not-allowed'
+                <div className="flex items-start">
+                  {skill && (
+                    <SkillCommand
+                      skill={skill}
+                      className="shrink-0 pl-4 py-3 text-[15px]"
+                    />
                   )}
-                  style={{
-                    height: `${MIN_TEXTAREA_HEIGHT}px`,
-                    minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
-                    maxHeight: `${MAX_TEXTAREA_HEIGHT}px`,
-                    overflow: 'hidden',
-                    overflowY: 'auto',
-                  }}
-                />
+                  <textarea
+                    ref={textareaRef}
+                    data-testid="chat-input"
+                    value={input}
+                    onChange={e => handleChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={skill ? 'Add details (optional)' : placeholder}
+                    disabled={isLoading || isDisabled}
+                    rows={1}
+                    role="combobox"
+                    aria-expanded={menuOpen}
+                    aria-controls={menuOpen ? 'skill-menu' : undefined}
+                    aria-activedescendant={
+                      activeSkill && `skill-option-${activeSkill.name}`
+                    }
+                    className={cn(
+                      'block w-full min-w-0 flex-1 px-4 py-3 bg-transparent resize-none',
+                      skill && 'pl-1',
+                      'text-[15px] text-gray-900 placeholder:text-gray-400',
+                      'border-0 outline-none focus:outline-none focus:ring-0',
+                      'disabled:text-gray-400 disabled:cursor-not-allowed'
+                    )}
+                    style={{
+                      height: `${MIN_TEXTAREA_HEIGHT}px`,
+                      minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
+                      maxHeight: `${MAX_TEXTAREA_HEIGHT}px`,
+                      overflow: 'hidden',
+                      overflowY: 'auto',
+                    }}
+                  />
+                </div>
 
                 <div className="flex items-center justify-between gap-3 px-3 pb-2">
                   <div className="min-w-0">
@@ -320,7 +450,7 @@ export function ChatInput({
                             tooLong ? 'text-red-600' : 'text-gray-400'
                           )}
                         >
-                          {input.length.toLocaleString()} /{' '}
+                          {content.length.toLocaleString()} /{' '}
                           {MAX_MESSAGE_LENGTH.toLocaleString()}
                           {tooLong ? ' — too long to send' : null}
                         </span>
@@ -331,15 +461,13 @@ export function ChatInput({
                   <button
                     type="submit"
                     data-testid="send-message-button"
-                    disabled={
-                      !input.trim() || isLoading || isDisabled || tooLong
-                    }
+                    disabled={!canSend}
                     className={cn(
                       'inline-flex items-center justify-center',
                       'h-7 w-7 rounded-lg',
                       'transition-all duration-200',
                       'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                      input.trim() && !isLoading && !isDisabled && !tooLong
+                      canSend
                         ? 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     )}

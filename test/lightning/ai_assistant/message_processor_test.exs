@@ -1116,6 +1116,57 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
     end
   end
 
+  describe "skills via process_global_message/2" do
+    test "names the skill a leading slash command invoked", %{
+      user: user,
+      project: project
+    } do
+      assert_skill(user, project, "/diagnose why did this fail?", %{
+        "name" => "diagnose"
+      })
+    end
+
+    test "names the skill when the command is the whole message", %{
+      user: user,
+      project: project
+    } do
+      assert_skill(user, project, "/qa", %{"name" => "qa"})
+    end
+
+    test "names the design skill", %{user: user, project: project} do
+      assert_skill(user, project, "/design a patient intake flow", %{
+        "name" => "design"
+      })
+    end
+
+    test "sends no skill for an unknown command", %{
+      user: user,
+      project: project
+    } do
+      assert_skill(user, project, "/explain why did this fail?", nil)
+    end
+
+    test "sends no skill when the command is not the first token", %{
+      user: user,
+      project: project
+    } do
+      assert_skill(user, project, "run /qa on this", nil)
+    end
+
+    defp assert_skill(user, project, content, expected) do
+      message = global_message(user, project, %{}, content)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        decoded = Jason.decode!(env.body)
+        assert decoded["skill"] == expected
+        assert decoded["content"] == content
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+  end
+
   describe "attachments via process_global_message/2" do
     test "sends logs and scrubbed step IO when both are ticked", %{
       user: user,
@@ -1343,7 +1394,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
     # A global session in `project`. `opts` is merged into message_options,
     # except "follow_run_id" which is lifted to session meta where the
     # processor reads it from.
-    defp global_message(user, project, opts) do
+    defp global_message(user, project, opts, content \\ "why did this fail?") do
       {run_id, message_options} = Map.pop(opts, "follow_run_id")
 
       meta = %{
@@ -1367,7 +1418,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
           session,
           %{
             role: :user,
-            content: "why did this fail?",
+            content: content,
             user: user,
             code: "workflow:\n  name: test"
           },

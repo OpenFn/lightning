@@ -167,7 +167,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
       page: page,
-      attachments: build_attachments(session)
+      attachments: build_attachments(session),
+      # The command stays in the content: Apollo strips it itself.
+      skill: AiAssistant.Skills.detect(message.content)
     )
   end
 
