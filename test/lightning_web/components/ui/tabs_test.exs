@@ -186,7 +186,7 @@ defmodule LightningWeb.Components.UI.TabsTest do
              ]
     end
 
-    test "vertical puts the panels in a flex-grow column" do
+    test "vertical puts the panels in a grow column" do
       [container] =
         render_hash_tabs(%{orientation: "vertical"}) |> Floki.find("#hash-tabs")
 
@@ -201,9 +201,16 @@ defmodule LightningWeb.Components.UI.TabsTest do
       assert String.split(classes) == ["ui-tabs", "ui-tabs--vertical"]
 
       assert container
-             |> Floki.find("div.flex-grow > [role=tabpanel]")
+             |> Floki.find("div.grow > [role=tabpanel]")
              |> Enum.flat_map(&Floki.attribute(&1, "id")) ==
                ["log-panel", "input-panel"]
+    end
+
+    test "stays in hash mode when there are no panels" do
+      parsed = render_hash_tabs(%{panel: []})
+
+      assert Floki.find(parsed, "#hash-tabs[phx-hook=TabbedContainer]") != []
+      assert Floki.find(parsed, "[role=tabpanel]") == []
     end
   end
 end

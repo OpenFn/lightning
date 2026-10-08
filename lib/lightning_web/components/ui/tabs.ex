@@ -4,7 +4,7 @@ defmodule LightningWeb.Components.UI.Tabs do
   # classes assets/js/ui/Tabs.tsx uses.
   # - Patch mode: each tab patches to a URL, and the page shows the content for
   #   the current one.
-  # - Hash mode (when :panel slots are given): the TabbedContainer hook shows
+  # - Hash mode (when tabs have a hash): the TabbedContainer hook shows
   #   the panel for the URL hash. Its markup must match what the hook reads.
   use Phoenix.Component
 
@@ -55,7 +55,7 @@ defmodule LightningWeb.Components.UI.Tabs do
     attr :class, :string
   end
 
-  def tabs(%{panel: [_ | _]} = assigns) do
+  def tabs(%{tab: [%{hash: _} | _]} = assigns) do
     ~H"""
     <div
       id={@id}
