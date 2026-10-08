@@ -165,11 +165,6 @@
           class="placeholder:italic placeholder:text-slate-400"
         />
       </div>
-      <.config_format_toggle
-        :if={f[:sync_direction].value != :deploy}
-        form={f}
-        project_id={@project.id}
-      />
       <%= if f[:branch].value do %>
         <.accept_checkbox
           project={@project}
@@ -194,6 +189,12 @@
           Connect Branch & Initiate First Sync
         </.button>
       </div>
+      <.config_format_toggle
+        :if={f[:sync_direction].value != :deploy}
+        form={f}
+        project_id={@project.id}
+        myself={@myself}
+      />
     </.form>
   </div>
   <div :if={@action == :show}>

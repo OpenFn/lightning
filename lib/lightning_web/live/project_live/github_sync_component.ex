@@ -91,6 +91,24 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
+  def handle_event("toggle-legacy-format", _params, socket) do
+    changeset = socket.assigns.changeset
+    current = Ecto.Changeset.get_field(changeset, :sync_version)
+
+    # Form fields read from the changeset's params before its changes, so the
+    # flip has to go through the params, like the "validate" event does.
+    params =
+      (changeset.params || %{})
+      |> Map.put("project_id", socket.assigns.project.id)
+      |> Map.put("sync_version", to_string(!current))
+
+    {:noreply,
+     assign(socket,
+       changeset:
+         validate_changes(socket.assigns.project_repo_connection, params)
+     )}
+  end
+
   def handle_event("refresh-installations", _params, socket) do
     changeset = validate_changes(socket.assigns.project_repo_connection, %{})
     user = socket.assigns.user
@@ -120,7 +138,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
        }) do
     socket
     |> assign(
-      changeset: ProjectRepoConnection.configure_changeset(repo_connection, %{})
+      # New connections default to the v2 YAML format.
+      changeset:
+        ProjectRepoConnection.configure_changeset(repo_connection, %{
+          sync_version: true
+        })
     )
     |> assign_async([:installations, :repos], fn ->
       # repos are grouped using the installation_id
@@ -729,39 +751,45 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   attr :form, :map, required: true
   attr :project_id, :string, required: true
+  attr :myself, :any, required: true
 
+  # Inverted: sync_version is true (v2) unless the legacy switch is on. The
+  # hidden input carries the current value with the form's phx-change events.
   defp config_format_toggle(assigns) do
+    assigns = assign(assigns, :legacy?, !sync_version?(assigns.form))
+
     ~H"""
-    <div class="mt-4">
+    <div class="mt-8 flex items-center">
+      <input
+        type="hidden"
+        name={@form[:sync_version].name}
+        value={to_string(!@legacy?)}
+      />
       <button
+        id="toggle-legacy-format-switch"
         type="button"
-        class="cursor-pointer text-sm text-gray-500 hover:text-gray-700 select-none flex items-center gap-1"
-        phx-click={
-          JS.toggle(to: "#sync-version-content")
-          |> JS.toggle_class("rotate-90", to: "#sync-version-chevron")
-        }
+        role="switch"
+        aria-checked={to_string(@legacy?)}
+        aria-labelledby="legacy-format-label"
+        phx-click="toggle-legacy-format"
+        phx-target={@myself}
+        class={[
+          if(@legacy?, do: "bg-indigo-600", else: "bg-gray-200"),
+          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+        ]}
       >
-        <.icon
-          id="sync-version-chevron"
-          name="hero-chevron-right-mini"
-          class="h-4 w-4 transition-transform"
-        /> Advanced: use new YAML config format
+        <span
+          aria-hidden="true"
+          class={[
+            if(@legacy?, do: "translate-x-5", else: "translate-x-0"),
+            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+          ]}
+        >
+        </span>
       </button>
-      <div
-        id="sync-version-content"
-        class="hidden mt-2 ml-5 p-3 bg-gray-50 rounded-md border border-gray-200"
-      >
-        <label class="flex items-center gap-3 cursor-pointer">
-          <.input type="checkbox" field={@form[:sync_version]} hidden_input={false} />
-          <span class="text-sm text-gray-700">
-            Use new <code>openfn.yaml</code> format
-          </span>
-        </label>
-        <p class="mt-1 ml-6 text-xs text-gray-500">
-          Only enable this if you want to use the new <code>openfn.yaml</code>
-          format instead of the legacy JSON config.
-        </p>
-      </div>
+      <span class="ml-3 text-sm text-gray-900" id="legacy-format-label">
+        Use legacy YAML config format
+      </span>
     </div>
     """
   end
