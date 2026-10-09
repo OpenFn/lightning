@@ -531,8 +531,8 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   describe "a repo connection" do
-    # Reached from GET /api/projects/:id; it has no role, so it is refused
-    # rather than crashing the request.
+    # Reached from GET /api/projects/:id; it has no role in the project, so
+    # the policy refuses it.
     test "is refused :access_project on its own project", %{project: project} do
       repo_connection = insert(:project_repo_connection, project: project)
 

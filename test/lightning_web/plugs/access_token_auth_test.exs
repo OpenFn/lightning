@@ -39,7 +39,7 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
                conn.assigns.access_token
 
       assert sub == account.id
-      assert conn.assigns.service_account == account
+      assert conn.assigns.current_resource == account
     end
 
     test "refuses a token for a service account that is no longer registered",

@@ -10,13 +10,15 @@ defmodule Lightning.Policies.ProjectUsers do
   standing in a wound-down project.
 
   `permitted?/2` makes the **judgement**: given that standing, is this action
-  allowed. It decides on `role` and `mfa_satisfied?`, and never mentions
-  `Project.scheduled_deletion` or `Project.requires_mfa` — there is no
-  shut-down project left for it to see, and the MFA rule reaches it as a fact
-  on the scope.
+  allowed. For a person it decides on `role` and `mfa_satisfied?`; for a
+  service account it decides on `actor`, whose authority is the scope its token
+  carries, checked at the route. It never mentions `Project.scheduled_deletion`
+  or `Project.requires_mfa` — there is no shut-down project left for it to see,
+  and the MFA rule reaches it as a fact on the scope.
 
   Adding an action means adding an atom to `@admin_actions` or
-  `@editor_actions`. It inherits the guard; there is nothing to remember.
+  `@editor_actions`. It inherits the guard, and the service account is granted
+  it too, so decide whether it should be.
 
   We deny by default: an action in none of the lists is refused.
   """

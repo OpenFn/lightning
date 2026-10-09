@@ -42,6 +42,33 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
              ]
     end
 
+    test "refuses an expired service-account token with 401 invalid_token", %{
+      conn: conn,
+      account: account
+    } do
+      {_, token} =
+        Lightning.Config.token_signer().jwk
+        |> JOSE.JWT.sign(%{"alg" => "RS256", "typ" => "at+jwt"}, %{
+          "iss" => AccessToken.issuer(),
+          "aud" => AccessToken.issuer() <> "/api",
+          "sub" => account.id,
+          "scope" => "projects:write",
+          "exp" => System.system_time(:second) - 1
+        })
+        |> JOSE.JWS.compact()
+
+      conn =
+        conn
+        |> with_token(token)
+        |> get(~p"/api/projects/#{insert(:project).id}")
+
+      assert json_response(conn, 401) == %{"error" => "invalid_token"}
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer error="invalid_token")
+             ]
+    end
+
     test "shows a project to a member's personal access token", %{conn: conn} do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])

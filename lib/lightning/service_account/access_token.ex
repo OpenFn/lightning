@@ -48,6 +48,17 @@ defmodule Lightning.ServiceAccount.AccessToken do
   end
 
   @doc """
+  Whether `token` declares itself an access token by its `typ`, without
+  checking anything else about it.
+  """
+  @spec access_token?(String.t()) :: boolean()
+  def access_token?(token) do
+    match?(%{"typ" => @typ}, Jason.decode!(JOSE.JWS.peek_protected(token)))
+  rescue
+    _ -> false
+  end
+
+  @doc """
   Returns the claims of `token` when its `typ`, signature, `iss`, `aud` and
   `exp` all check out.
   """

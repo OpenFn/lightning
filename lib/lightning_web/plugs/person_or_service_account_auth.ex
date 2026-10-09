@@ -5,8 +5,9 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuth do
   repo connection token).
 
   A valid service-account token assigns the service account as
-  `:current_resource` and the token's claims as `:access_token`. Any other
-  request gets exactly the answer `UserAuth.authenticate_bearer/2` and
+  `:current_resource` and the token's claims as `:access_token`; a
+  service-account token that fails verification is refused as RFC 6750 §3
+  says. Any other request gets exactly the answer `UserAuth.authenticate_bearer/2` and
   `UserAuth.require_authenticated_api_resource/2` give it elsewhere.
 
   `require_scope/2` holds a service account to the scope a controller names.
@@ -28,7 +29,10 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuth do
         |> assign(:current_resource, service_account)
         |> assign(:access_token, claims)
 
-      :error ->
+      {:error, :invalid_token} ->
+        AccessTokenAuth.refuse(conn, 401, "invalid_token")
+
+      :not_an_access_token ->
         conn
         |> UserAuth.authenticate_bearer([])
         |> UserAuth.require_authenticated_api_resource([])
