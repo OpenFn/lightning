@@ -1,17 +1,25 @@
 defmodule Lightning.Policies.Credentials do
   @moduledoc """
   The Bodyguard Policy module for authorizing credential actions.
+
+  A credential belongs to its owner: only they may edit or delete it. A service
+  account may also write one for a named owner, since the route has already held
+  its token to the credentials scope; it can never delete one.
   """
   @behaviour Bodyguard.Policy
 
   alias Lightning.Accounts.User
+  alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Projects.Project
   alias Lightning.Projects.Scope
+  alias Lightning.ServiceAccount
   require Logger
 
   @type actions ::
-          :create_keychain_credential
+          :edit_credential
+          | :delete_credential
+          | :create_keychain_credential
           | :edit_keychain_credential
           | :delete_keychain_credential
           | :view_keychain_credential
@@ -23,6 +31,18 @@ defmodule Lightning.Policies.Credentials do
   in the associated project.
   """
   def authorize(action, user, resource)
+
+  @spec authorize(
+          action :: actions(),
+          actor :: Lightning.Actor.t(),
+          resource :: Credential.t()
+        ) :: boolean
+  def authorize(action, %User{} = user, %Credential{} = credential)
+      when action in [:edit_credential, :delete_credential] do
+    user.id == credential.user_id
+  end
+
+  def authorize(:edit_credential, %ServiceAccount{}, %Credential{}), do: true
 
   @spec authorize(
           action :: actions(),

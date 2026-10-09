@@ -86,8 +86,13 @@ defmodule Lightning.Credentials.AuditTest do
   end
 
   describe ".user_initiated_event" do
-    test "generates changeset for event with environment bodies in metadata" do
+    test "names the actor passed in, not the owner, with environment bodies in metadata" do
       %{id: user_id} = user_fixture()
+
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      account_uuid = account.uuid
 
       %{id: credential_id} =
         credential =
@@ -103,15 +108,21 @@ defmodule Lightning.Credentials.AuditTest do
       ]
 
       audit_changeset =
-        Audit.user_initiated_event("updated", credential, changeset, env_bodies)
+        Audit.user_initiated_event(
+          "updated",
+          credential,
+          account,
+          changeset,
+          env_bodies
+        )
 
       assert %{
                changes: %{
                  event: "updated",
                  item_id: ^credential_id,
                  item_type: "credential",
-                 actor_id: ^user_id,
-                 actor_type: :user,
+                 actor_id: ^account_uuid,
+                 actor_type: :service_account,
                  metadata: metadata
                }
              } = audit_changeset
@@ -134,7 +145,12 @@ defmodule Lightning.Credentials.AuditTest do
       changeset = Credential.changeset(credential, %{name: "New Name"})
 
       audit_changeset =
-        Audit.user_initiated_event("updated", credential, changeset)
+        Audit.user_initiated_event(
+          "updated",
+          credential,
+          credential.user,
+          changeset
+        )
 
       assert %{
                changes: %{
@@ -160,7 +176,8 @@ defmodule Lightning.Credentials.AuditTest do
         |> with_body(%{name: "main", body: %{}})
         |> Repo.preload(:user)
 
-      audit_changeset = Audit.user_initiated_event("deleted", credential)
+      audit_changeset =
+        Audit.user_initiated_event("deleted", credential, credential.user)
 
       assert %{
                changes: %{
@@ -194,7 +211,13 @@ defmodule Lightning.Credentials.AuditTest do
       changeset = Credential.changeset(credential, %{name: "New Credential"})
 
       audit_changeset =
-        Audit.user_initiated_event("created", credential, changeset, env_bodies)
+        Audit.user_initiated_event(
+          "created",
+          credential,
+          credential.user,
+          changeset,
+          env_bodies
+        )
 
       assert %{
                changes: %{

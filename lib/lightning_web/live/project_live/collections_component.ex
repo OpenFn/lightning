@@ -197,7 +197,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   defp save_collection(socket, :new, params) do
     params
     |> Map.put("project_id", socket.assigns.project.id)
-    |> Collections.create_collection()
+    |> Collections.create_collection(socket.assigns.current_user)
     |> case do
       {:ok, _collection} ->
         socket
@@ -219,7 +219,11 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   end
 
   defp save_collection(socket, :edit, params) do
-    case Collections.update_collection(socket.assigns.collection, params) do
+    case Collections.update_collection(
+           socket.assigns.collection,
+           params,
+           socket.assigns.current_user
+         ) do
       {:ok, _collection} ->
         socket
         |> put_flash(:info, "Collection updated")

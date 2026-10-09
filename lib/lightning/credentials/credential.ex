@@ -59,6 +59,7 @@ defmodule Lightning.Credentials.Credential do
       :user_id
     ])
     |> shared_validations()
+    |> unique_constraint(:id, name: :credentials_pkey)
   end
 
   @doc "Changeset for the guarded credential-transfer flow. Wraps the generic changeset so it keeps all validations/constraints, and additionally allows :user_id and :transfer_status."
