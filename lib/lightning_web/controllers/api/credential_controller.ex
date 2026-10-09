@@ -193,12 +193,12 @@ defmodule LightningWeb.API.CredentialController do
   def show(conn, %{"id" => id}) do
     actor = conn.assigns.current_resource
 
-    with :ok <- validate_uuid(id),
+    with {:ok, id} <- PutRequest.cast_uuid(id),
          %Credential{} = credential <- Credentials.get_credential(id),
          :ok <- authorize_owner(actor, credential) do
       render_credential(conn, credential, actor)
     else
-      {:error, :invalid_uuid} -> {:error, :not_found}
+      :error -> {:error, :not_found}
       nil -> {:error, :not_found}
       error -> error
     end
@@ -460,14 +460,14 @@ defmodule LightningWeb.API.CredentialController do
   def delete(conn, %{"id" => id}) do
     current_user = conn.assigns.current_resource
 
-    with :ok <- validate_uuid(id),
+    with {:ok, id} <- PutRequest.cast_uuid(id),
          credential when not is_nil(credential) <-
            Credentials.get_credential(id),
          :ok <- validate_credential_ownership(credential, current_user),
          {:ok, _} <- Credentials.delete_credential(credential, current_user) do
       send_resp(conn, :no_content, "")
     else
-      {:error, :invalid_uuid} ->
+      :error ->
         {:error, :not_found}
 
       nil ->
@@ -478,13 +478,6 @@ defmodule LightningWeb.API.CredentialController do
 
       error ->
         error
-    end
-  end
-
-  defp validate_uuid(id) do
-    case Ecto.UUID.dump(to_string(id)) do
-      {:ok, _bin} -> :ok
-      :error -> {:error, :invalid_uuid}
     end
   end
 
