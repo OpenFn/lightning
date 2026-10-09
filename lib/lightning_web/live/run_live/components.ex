@@ -88,53 +88,48 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr :text, :string, required: true
-  attr :classes, :string, required: true
-
-  defp base_pill(assigns) do
-    ~H"""
-    <span class={[
-      "my-auto whitespace-nowrap rounded-full py-2 px-4 text-center align-baseline text-xs font-medium leading-none",
-      @classes
-    ]}>
-      {@text}
-    </span>
-    """
-  end
-
   attr :state, :atom, required: true
 
   @spec state_pill(%{:state => any(), optional(any()) => any()}) ::
           Phoenix.LiveView.Rendered.t()
   @spec state_pill(map()) :: Phoenix.LiveView.Rendered.t()
   def state_pill(%{state: state} = assigns) do
-    chip_styles = %{
-      # only workorder states...
-      rejected: "bg-red-300 text-gray-800",
-      pending: "bg-gray-200 text-gray-800",
-      running: "bg-blue-200 text-blue-800",
-      # run and workorder states...
-      available: "bg-gray-200 text-gray-800",
-      claimed: "bg-blue-200 text-blue-800",
-      started: "bg-blue-200 text-blue-800",
-      success: "bg-green-200 text-green-800",
-      failed: "bg-red-200 text-red-800",
-      crashed: "bg-orange-200 text-orange-800",
-      cancelled: "bg-gray-500 text-gray-800",
-      killed: "bg-yellow-200 text-yellow-800",
-      exception: "bg-gray-800 text-white",
-      lost: "bg-gray-800 text-white"
-    }
-
     assigns =
       assign(assigns,
         text: display_text_from_state(state),
-        classes: Map.get(chip_styles, state)
+        color: state_color(state)
       )
 
     ~H"""
-    <.base_pill text={@text} classes={@classes} />
+    <.badge color={@color} class="my-auto">{@text}</.badge>
     """
+  end
+
+  @doc """
+  The badge colour for a run or work order state. Unknown states get no
+  colour, which the badge renders as neutral.
+  """
+  def state_color(state) do
+    Map.get(
+      %{
+        # only workorder states...
+        rejected: "danger",
+        pending: "neutral",
+        running: "info",
+        # run and workorder states...
+        available: "neutral",
+        claimed: "info",
+        started: "info",
+        success: "success",
+        failed: "danger",
+        crashed: "orange",
+        cancelled: "dark",
+        killed: "warning",
+        exception: "dark",
+        lost: "dark"
+      },
+      state
+    )
   end
 
   attr :state, :atom, required: true
@@ -144,18 +139,18 @@ defmodule LightningWeb.RunLive.Components do
   """
   def channel_state_pill(%{state: state} = assigns) do
     config = %{
-      pending: %{text: "In Progress", classes: "bg-blue-200 text-blue-800"},
-      success: %{text: "Success", classes: "bg-green-200 text-green-800"},
-      failed: %{text: "Failed", classes: "bg-red-200 text-red-800"},
-      timeout: %{text: "Timeout", classes: "bg-orange-200 text-orange-800"},
-      error: %{text: "Error", classes: "bg-red-200 text-red-800"}
+      pending: %{text: "In Progress", color: "info"},
+      success: %{text: "Success", color: "success"},
+      failed: %{text: "Failed", color: "danger"},
+      timeout: %{text: "Timeout", color: "orange"},
+      error: %{text: "Error", color: "danger"}
     }
 
-    %{text: text, classes: classes} = Map.fetch!(config, state)
-    assigns = assign(assigns, text: text, classes: classes)
+    %{text: text, color: color} = Map.fetch!(config, state)
+    assigns = assign(assigns, text: text, color: color)
 
     ~H"""
-    <.base_pill text={@text} classes={@classes} />
+    <.badge color={@color} class="my-auto">{@text}</.badge>
     """
   end
 

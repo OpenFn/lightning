@@ -26,16 +26,8 @@
     @apply flex-1 justify-center rounded-md border-b-0 px-3 text-sm font-medium transition-all duration-200;
   }
 
-  .ui-tab__icon {
-    @apply mr-2 h-5 w-5;
-  }
-
   .ui-tabs--small .ui-tab {
     @apply text-xs;
-  }
-
-  .ui-tabs--small .ui-tab__icon {
-    @apply mr-1.5 h-4 w-4;
   }
 
   .ui-tabs--small:not(.ui-tabs--pills) .ui-tab {
@@ -70,5 +62,17 @@
   .ui-tabs--pills .ui-tab[aria-selected='true'],
   .ui-tabs--pills .ui-tab[aria-current='page'] {
     @apply bg-white text-primary-600;
+  }
+}
+
+/* hero-* icons are utilities with a fixed size, and utilities beat
+   components, so the icon size has to live here. */
+@layer utilities {
+  .ui-tab > .ui-tab__icon {
+    @apply mr-2 h-5 w-5;
+  }
+
+  .ui-tabs--small .ui-tab > .ui-tab__icon {
+    @apply mr-1.5 h-4 w-4;
   }
 }

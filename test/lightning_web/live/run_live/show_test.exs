@@ -428,6 +428,38 @@ defmodule LightningWeb.RunLive.ShowTest do
     end
   end
 
+  describe "version badge" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    test "carries the tooltip hook, placement and label", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:simple_workflow, project: project) |> with_snapshot()
+      %{triggers: [%{id: webhook_trigger_id}]} = workflow
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id}]} = WorkOrders.get(wo_id, include: [:runs])
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      badge =
+        view |> element("#run-workflow-version") |> render_async()
+
+      assert badge =~ ~s(phx-hook="Tooltip")
+      assert badge =~ ~s(data-placement="bottom")
+
+      assert badge =~
+               ~s(aria-label="This run is based on the latest version of this workflow.")
+
+      assert badge =~ "latest"
+    end
+  end
+
   describe "cancel run" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user

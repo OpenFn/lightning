@@ -1,0 +1,138 @@
+/* Shared badge styling. Both stacks emit .ui-badge.
+   Labels are spans; real buttons and links take the same classes and add
+   .ui-badge--interactive for hover and focus. */
+@layer components {
+  .ui-badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap;
+  }
+
+  .ui-badge--small {
+    @apply px-1.5 py-0.5;
+  }
+
+  /* Fira Code leaves room below the baseline, so ids and codes sit high. */
+  .ui-badge--mono {
+    @apply font-mono pt-[2.5px] pb-[1.5px];
+  }
+
+  .ui-badge--neutral {
+    @apply bg-gray-100 text-gray-700;
+  }
+
+  .ui-badge--success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .ui-badge--warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .ui-badge--danger {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .ui-badge--info {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .ui-badge--brand {
+    @apply bg-primary-100 text-primary-800;
+  }
+
+  .ui-badge--orange {
+    @apply bg-orange-100 text-orange-800;
+  }
+
+  .ui-badge--dark {
+    @apply bg-gray-800 text-white;
+  }
+
+  /* After the colours, so it drops their fill. */
+  .ui-badge--dot {
+    @apply bg-transparent p-0 text-gray-700;
+  }
+
+  .ui-badge__dot {
+    @apply relative inline-flex h-2 w-2 shrink-0 rounded-full bg-gray-500;
+  }
+
+  .ui-badge--success .ui-badge__dot {
+    @apply bg-green-500;
+  }
+
+  .ui-badge--warning .ui-badge__dot {
+    @apply bg-yellow-500;
+  }
+
+  .ui-badge--danger .ui-badge__dot {
+    @apply bg-red-500;
+  }
+
+  .ui-badge--info .ui-badge__dot {
+    @apply bg-blue-500;
+  }
+
+  .ui-badge--brand .ui-badge__dot {
+    @apply bg-primary-500;
+  }
+
+  .ui-badge--orange .ui-badge__dot {
+    @apply bg-orange-500;
+  }
+
+  .ui-badge--dark .ui-badge__dot {
+    @apply bg-gray-800;
+  }
+
+  .ui-badge__pulse {
+    @apply absolute inline-flex h-full w-full animate-ping rounded-full bg-inherit opacity-75 motion-reduce:animate-none;
+  }
+
+  .ui-badge__remove {
+    @apply -mr-1 inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-black/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-600;
+  }
+
+  .ui-badge--interactive {
+    @apply cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600;
+  }
+
+  .ui-badge--interactive.ui-badge--neutral {
+    @apply hover:bg-gray-200;
+  }
+
+  .ui-badge--interactive.ui-badge--success {
+    @apply hover:bg-green-200;
+  }
+
+  .ui-badge--interactive.ui-badge--warning {
+    @apply hover:bg-yellow-200;
+  }
+
+  .ui-badge--interactive.ui-badge--danger {
+    @apply hover:bg-red-200;
+  }
+
+  .ui-badge--interactive.ui-badge--info {
+    @apply hover:bg-blue-200;
+  }
+
+  .ui-badge--interactive.ui-badge--brand {
+    @apply hover:bg-primary-200;
+  }
+
+  .ui-badge--interactive.ui-badge--orange {
+    @apply hover:bg-orange-200;
+  }
+
+  .ui-badge--interactive.ui-badge--dark {
+    @apply hover:bg-gray-700;
+  }
+}
+
+/* hero-* icons are utilities with a fixed size, and utilities beat
+   components, so the icon size has to live here. */
+@layer utilities {
+  .ui-badge > .ui-badge__icon {
+    @apply h-3.5 w-3.5 shrink-0;
+  }
+}
