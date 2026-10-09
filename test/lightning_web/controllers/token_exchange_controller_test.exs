@@ -56,7 +56,8 @@ defmodule LightningWeb.TokenExchangeControllerTest do
                "scopes_supported" => [
                  "users:read",
                  "users:write",
-                 "projects:write"
+                 "projects:write",
+                 "credentials:write"
                ],
                "response_types_supported" => []
              }
