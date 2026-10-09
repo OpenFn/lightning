@@ -260,15 +260,20 @@ defmodule LightningWeb.API.ProjectController do
     errors =
       if member_errors == %{},
         do: errors,
-        else:
-          Map.put(
-            errors,
-            :members,
-            member_errors |> Map.values() |> List.flatten()
-          )
+        else: Map.put(errors, :members, messages(member_errors))
 
     render_errors(conn, errors)
   end
+
+  # A member's own errors arrive as one map per member, empty for the members
+  # that are fine.
+  defp messages(errors) when is_map(errors),
+    do: errors |> Map.values() |> messages()
+
+  defp messages(errors) when is_list(errors),
+    do: Enum.flat_map(errors, &messages/1)
+
+  defp messages(message) when is_binary(message), do: [message]
 
   defp render_errors(conn, errors) do
     conn

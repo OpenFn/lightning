@@ -489,6 +489,41 @@ defmodule LightningWeb.API.ProjectControllerTest do
       end
     end
 
+    test "lists a member the project refuses as a plain message under members",
+         %{conn: conn} do
+      # An extension refusing one member, the way a seat limit would.
+      Mox.expect(Lightning.Extensions.MockProjectHook, :handle_create_project, fn
+        attrs ->
+          changeset =
+            Lightning.Projects.Project.project_with_users_changeset(
+              %Lightning.Projects.Project{},
+              attrs
+            )
+
+          [first | rest] = Ecto.Changeset.get_change(changeset, :project_users)
+
+          changeset
+          |> Ecto.Changeset.put_change(:project_users, [
+            first,
+            rest
+            |> hd()
+            |> Ecto.Changeset.add_error(:user_id, "has no seat left")
+            | tl(rest)
+          ])
+          |> Ecto.Changeset.apply_action(:insert)
+      end)
+
+      response =
+        conn
+        |> put_project(Ecto.UUID.generate(), %{
+          "name" => "acme",
+          "members" => four_members()
+        })
+        |> json_response(422)
+
+      assert response["errors"] == %{"members" => ["has no seat left"]}
+    end
+
     test "refuses a body that is not a JSON object", %{conn: conn} do
       conn = put_project(conn, Ecto.UUID.generate(), [%{"name" => "acme"}])
 
