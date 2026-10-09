@@ -547,7 +547,8 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  @member_roles ~w(owner admin editor viewer)
+  @member_roles ProjectUser.RolesEnum.__valid_values__()
+                |> Enum.filter(&is_binary/1)
 
   @doc """
   Resolves members given as `%{"email" => email, "role" => role}` to the
@@ -562,12 +563,11 @@ defmodule Lightning.Projects do
           | {:error, [String.t()]}
   def members_by_email(members) do
     if Enum.all?(members, &member_shape?/1) do
-      emails = Enum.map(members, & &1["email"])
-
       user_ids =
-        from(u in User, where: u.email in ^emails, select: {u.email, u.id})
-        |> Repo.all()
-        |> Map.new(fn {email, id} -> {String.downcase(email), id} end)
+        members
+        |> Enum.map(& &1["email"])
+        |> Lightning.Accounts.list_users_by_emails()
+        |> Map.new(&{String.downcase(&1.email), &1.id})
 
       members
       |> Enum.map(fn %{"email" => email, "role" => role} ->
@@ -594,12 +594,11 @@ defmodule Lightning.Projects do
     {found, missing} = members |> Enum.map(& &1.user_id) |> Enum.split_with(& &1)
 
     messages =
-      [
-        missing != [] && "names an email no user holds",
-        length(Enum.uniq(found)) < length(found) &&
-          "names one user more than once"
-      ]
-      |> Enum.filter(&is_binary/1)
+      for {true, message} <- [
+            {missing != [], "names an email no user holds"},
+            {found != Enum.uniq(found), "names one user more than once"}
+          ],
+          do: message
 
     if messages == [], do: {:ok, members}, else: {:error, messages}
   end
