@@ -62,7 +62,7 @@ defmodule LightningWeb.Components.UI.Badge do
       <span :if={@dot} class="ui-badge__dot">
         <span :if={@pulse} class="ui-badge__pulse"></span>
       </span>
-      <.icon :if={@icon} name={@icon} class="ui-badge__icon" />
+      <.icon :if={@icon} name={@icon} class="ui-badge__icon" aria-hidden="true" />
       {render_slot(@inner_block)}
       <button
         :for={remove <- @remove}
@@ -71,7 +71,7 @@ defmodule LightningWeb.Components.UI.Badge do
         aria-label={remove_label!(remove)}
         {assigns_to_attributes(remove, [:label])}
       >
-        <.icon name="hero-x-mark-micro" class="h-3 w-3" />
+        <.icon name="hero-x-mark-micro" class="h-3 w-3" aria-hidden="true" />
       </button>
     </span>
     """

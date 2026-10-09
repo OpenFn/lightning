@@ -58,6 +58,7 @@ defmodule LightningWeb.Components.UI.BadgeTest do
 
       assert {"span", _, [{"span", icon_attrs, _} | _]} = span
       assert Map.new(icon_attrs)["class"] =~ "hero-bolt ui-badge__icon"
+      assert Map.new(icon_attrs)["aria-hidden"] == "true"
     end
 
     test "rest attrs land on the span" do

@@ -160,8 +160,16 @@ defmodule LightningWeb.Dev.ComponentsLive do
               <.badge color="info" dot pulse>Running</.badge>
             </div>
           </div>
-          <div>
-            <p class="mb-2 text-xs text-gray-400">React</p>
+          <div class="flex flex-col gap-y-3">
+            <p class="text-xs text-gray-400">React</p>
+            <div
+              id="react-badges"
+              phx-hook="ReactComponent"
+              phx-update="ignore"
+              data-react-name="BadgeShowcase"
+              data-react-file={~p"/assets/js/dev/BadgeShowcase.js"}
+            >
+            </div>
           </div>
         </div>
       </div>
