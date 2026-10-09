@@ -343,6 +343,26 @@ defmodule Lightning.CredentialsTest do
       :ok
     end
 
+    test "creates under the id it is given, and refuses that id a second time" do
+      owner = insert(:user)
+      id = Ecto.UUID.generate()
+
+      attrs = fn name ->
+        %{"name" => name, "schema" => "raw", "user_id" => owner.id}
+      end
+
+      assert {:ok, %Credential{id: ^id}} =
+               Credentials.create_credential(attrs.("first"), owner, id: id)
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               Credentials.create_credential(attrs.("second"), owner, id: id)
+
+      assert {_, [constraint: :unique, constraint_name: "credentials_pkey"]} =
+               errors[:id]
+
+      assert Repo.get!(Credential, id).name == "first"
+    end
+
     test "fails if another cred exists with the same name for the same user" do
       user = insert(:user)
 

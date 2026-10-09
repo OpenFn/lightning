@@ -187,29 +187,32 @@ defmodule Lightning.Credentials do
         * `name` - Environment name (e.g., "production", "staging")
         * `body` - Credential configuration data
       * `expected_scopes` - List of expected scopes (for OAuth credentials)
+    * `actor` - Who is asking: the owner, or a service account writing for them
+    * `opts`:
+      * `:id` - The id to create the credential under, rather than a new one
 
   ## Returns
     * `{:ok, credential}` - Successfully created credential
     * `{:error, error}` - Error with creation process
   """
-  @spec create_credential(map(), Lightning.Actor.t()) ::
+  @spec create_credential(map(), Lightning.Actor.t(), [{:id, Ecto.UUID.t()}]) ::
           {:ok, Credential.t()} | {:error, any()}
-  def create_credential(attrs, actor) do
+  def create_credential(attrs, actor, opts \\ []) do
     attrs = normalize_keys(attrs)
 
     with :ok <-
            authorize_credential(:edit_credential, actor, %Credential{
              user_id: attrs["user_id"]
            }) do
-      do_create_credential(attrs, actor)
+      do_create_credential(attrs, actor, opts[:id])
     end
   end
 
-  defp do_create_credential(attrs, actor) do
+  defp do_create_credential(attrs, actor, id) do
     credential_bodies = get_credential_bodies(attrs)
 
     with :ok <- validate_credential_bodies(credential_bodies, attrs),
-         changeset <- Credential.create_changeset(%Credential{}, attrs),
+         changeset <- Credential.create_changeset(%Credential{id: id}, attrs),
          :ok <- validate_external_id(changeset) do
       build_create_multi(changeset, credential_bodies)
       |> derive_events(changeset, actor)
