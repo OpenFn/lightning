@@ -710,6 +710,7 @@ defmodule Lightning.Projects do
 
     project
     |> membership_multi(changeset, actor)
+    |> Audit.derive_events(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project, membership_changes: changes}} ->
