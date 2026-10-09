@@ -15,8 +15,9 @@ defmodule Lightning.Policies.Provisioning do
   so a push could re-enable the triggers that shutting the project down had
   disabled.
 
-  Only a superuser can provision a project that does not exist yet. Owners and
-  admins can update an existing one.
+  Only a superuser or a service account can create a project, through
+  `:create_project`; provisioning a project that does not exist yet asks the
+  same. Owners and admins can update an existing one.
   """
   @behaviour Bodyguard.Policy
 
@@ -24,19 +25,27 @@ defmodule Lightning.Policies.Provisioning do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Projects.Scope
+  alias Lightning.ServiceAccount
   alias Lightning.VersionControl.ProjectRepoConnection
 
-  @type actor :: User.t() | ProjectRepoConnection.t()
-  @type actions :: :provision_project | :describe_project
+  @type actor :: User.t() | ServiceAccount.t() | ProjectRepoConnection.t()
+  @type actions :: :create_project | :provision_project | :describe_project
 
-  @spec authorize(actions(), actor(), Project.t()) ::
+  @spec authorize(actions(), actor(), Project.t() | nil) ::
           boolean() | {:error, :forbidden}
+
+  def authorize(:create_project, %User{role: :superuser}, _), do: true
+
+  # The route already held the token to its projects scope.
+  def authorize(:create_project, %ServiceAccount{}, _), do: true
+
+  def authorize(:create_project, _, _), do: {:error, :forbidden}
 
   # STAYS FIRST. A project that does not exist yet cannot be scheduled for
   # deletion, and has no members to consult. Reordering this below the clauses
   # that resolve a Scope breaks project creation through the API.
-  def authorize(:provision_project, %User{role: role}, %Project{id: nil}) do
-    role in [:superuser] or {:error, :forbidden}
+  def authorize(:provision_project, %User{} = user, %Project{id: nil}) do
+    authorize(:create_project, user, nil)
   end
 
   def authorize(:provision_project, %User{} = user, %Project{} = project) do
