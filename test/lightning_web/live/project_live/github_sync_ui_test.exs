@@ -10,6 +10,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
   import Lightning.Factories
   import Lightning.GithubHelpers
   import Mox
+  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
 
   setup :stub_usage_limiter_ok
   setup :verify_on_exit!
@@ -143,6 +144,61 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
       |> render_change(connection: %{sync_direction: "deploy"})
 
       refute has_element?(view, @switch)
+    end
+  end
+
+  describe "docs banner" do
+    @banner "#github-sync-docs-banner"
+
+    test "shows in the new connection form", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      assert has_element?(view, "#project-repo-connection-form #{@banner}")
+    end
+
+    test "shows when the user must first connect their GitHub account",
+         %{conn: conn} do
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert has_element?(view, "#connect-github-link")
+      assert has_element?(view, @banner)
+    end
+
+    test "shows when version control is not configured on the instance",
+         %{conn: conn} do
+      put_temporary_env(:lightning, :github_app,
+        cert: nil,
+        app_id: nil,
+        app_name: nil,
+        client_id: nil,
+        client_secret: nil
+      )
+
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, :viewer)
+
+      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert html =~ "Version Control is not configured"
+      assert has_element?(view, @banner)
+    end
+
+    test "shows on the connected panel", %{conn: conn} do
+      {view, _html} = open_connected_panel(conn, :admin, sync_version: true)
+
+      assert has_element?(view, "div.bg-white:has(h6) #{@banner}")
+    end
+
+    test "links to the sync docs", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      assert has_element?(
+               view,
+               ~s{#{@banner} a[target="_blank"][href="https://docs.openfn.org/documentation/link-to-GitHub"]}
+             )
     end
   end
 

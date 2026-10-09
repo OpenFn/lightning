@@ -12,22 +12,7 @@
       <h6 class="mb-4 font-medium text-black">
         Configure Two-Way Sync to GitHub
       </h6>
-      <div class="mb-4 flex items-start gap-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-black">
-        <.icon
-          name="hero-information-circle"
-          class="h-5 w-5 shrink-0 text-blue-500"
-        />
-        <p>
-          Learn more about synchronizing your project with GitHub at
-          <.link
-            target="_blank"
-            href="https://docs.openfn.org/documentation/link-to-GitHub"
-            class="font-medium underline"
-          >
-            docs.openfn.org
-          </.link>
-        </p>
-      </div>
+      <GithubComponents.sync_docs_banner />
       <%!-- Token is expired/invalid --%>
       <.error_banner
         :if={show_invalid_oauth_error?(@installations)}
@@ -216,6 +201,7 @@
   <div :if={@action == :show}>
     <div class="bg-white p-4 rounded-md">
       <h6 class="mb-4 font-medium text-black">Connected to GitHub</h6>
+      <GithubComponents.sync_docs_banner />
       <.verify_connection_banner
         id="verify-connection-banner"
         verify_connection={@verify_connection}

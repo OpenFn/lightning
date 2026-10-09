@@ -4,6 +4,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   use LightningWeb, :live_component
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
+  alias LightningWeb.Components.GithubComponents
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 

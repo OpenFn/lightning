@@ -74,7 +74,7 @@
               else:
                 "Projects are isolated workspaces that contain workflows, accessible to certain users."
           }
-          permissions_message="basic settings, but you can export a copy."
+          permissions_message="basic settings."
           can_perform_action={@can_edit_project}
         />
         <.sandbox_settings_banner
@@ -807,6 +807,7 @@
                 <h6 class="font-medium text-black">
                   Connect your OpenFn account to GitHub
                 </h6>
+                <GithubComponents.sync_docs_banner class="my-3" />
                 <small class="block mt-1 text-xs text-gray-600">
                   Connect your OpenFn account to GitHub. Click the button below to get started.
                 </small>
@@ -825,6 +826,7 @@
             <h6 class="font-medium text-black">
               Connect to GitHub
             </h6>
+            <GithubComponents.sync_docs_banner class="my-3" />
             <small class="block mt-1 text-xs text-gray-600">
               Version Control is not configured for this Lightning instance. Contact the superuser for more information.
             </small>
