@@ -283,12 +283,12 @@ defmodule LightningWeb.API.CredentialController do
 
   defp project_link?(%{"project_id" => project_id} = link)
        when map_size(link) == 1 and is_binary(project_id),
-       do: Ecto.UUID.cast(project_id) != :error
+       do: cast_uuid(project_id) != :error
 
   defp project_link?(_link), do: false
 
   defp put_path_id(changeset, id) do
-    case Ecto.UUID.cast(id) do
+    case cast_uuid(id) do
       {:ok, id} ->
         changeset
         |> validate_change(:id, fn :id, body_id ->
@@ -301,6 +301,12 @@ defmodule LightningWeb.API.CredentialController do
       :error ->
         add_error(changeset, :id, "is not a UUID")
     end
+  end
+
+  # `Ecto.UUID.cast/1` also takes any 16-byte string as a raw UUID, so a
+  # 16-character path would land under an id other than the one it names.
+  defp cast_uuid(value) do
+    with {:ok, raw} <- Ecto.UUID.dump(value), do: Ecto.UUID.load(raw)
   end
 
   # A person's token makes the caller the owner, and may only name the caller:

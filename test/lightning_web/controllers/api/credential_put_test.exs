@@ -287,13 +287,16 @@ defmodule LightningWeb.API.CredentialPutTest do
         refute Repo.get(Credential, id), "#{case_name} created a credential"
       end
 
-      assert %{"errors" => %{"id" => [_]}} =
-               conn
-               |> put_credential(
-                 "not-a-uuid",
-                 credential_body(%{"owner" => owner.email})
-               )
-               |> json_response(422)
+      for path_id <- ["not-a-uuid", "abcdefghijklmnop"] do
+        assert %{"errors" => %{"id" => [_]}} =
+                 conn
+                 |> put_credential(
+                   path_id,
+                   credential_body(%{"owner" => owner.email})
+                 )
+                 |> json_response(422),
+               path_id
+      end
     end
 
     test "never quotes a submitted value in a 422", %{conn: conn} do
