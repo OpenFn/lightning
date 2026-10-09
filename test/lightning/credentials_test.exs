@@ -499,6 +499,66 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
+  describe "writes by a service account" do
+    setup do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{account: account, owner: insert(:user), project: insert(:project)}
+    end
+
+    test "create a credential owned by the named user and record the account as the actor",
+         %{account: account, owner: owner, project: project} do
+      assert {:ok, credential} =
+               Credentials.create_credential(
+                 %{
+                   "name" => "provisioned",
+                   "schema" => "raw",
+                   "user_id" => owner.id,
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"a" => "1"}}
+                   ],
+                   "project_credentials" => [%{"project_id" => project.id}]
+                 },
+                 account
+               )
+
+      assert credential.user_id == owner.id
+
+      assert [
+               {"added_to_project", account.uuid, :service_account},
+               {"created", account.uuid, :service_account}
+             ] == audit_actors(credential)
+    end
+
+    test "update a credential and record the account as the actor", %{
+      account: account,
+      owner: owner
+    } do
+      credential =
+        insert(:credential, user: owner, name: "before", schema: "raw")
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{"name" => "after"},
+                 account
+               )
+
+      assert [{"updated", account.uuid, :service_account}] ==
+               audit_actors(credential)
+    end
+  end
+
+  defp audit_actors(credential) do
+    from(a in Audit.base_query(),
+      where: a.item_id == ^credential.id,
+      order_by: a.event,
+      select: {a.event, a.actor_id, a.actor_type}
+    )
+    |> Repo.all()
+  end
+
   describe "update_credential/2" do
     setup :isolated_adaptors
 

@@ -192,27 +192,27 @@ defmodule Lightning.Credentials do
     * `{:ok, credential}` - Successfully created credential
     * `{:error, error}` - Error with creation process
   """
-  @spec create_credential(map(), User.t()) ::
+  @spec create_credential(map(), Lightning.Actor.t()) ::
           {:ok, Credential.t()} | {:error, any()}
-  def create_credential(attrs, %User{} = actor) do
+  def create_credential(attrs, actor) do
     attrs = normalize_keys(attrs)
 
     with :ok <-
            authorize_credential(:edit_credential, actor, %Credential{
              user_id: attrs["user_id"]
            }) do
-      do_create_credential(attrs)
+      do_create_credential(attrs, actor)
     end
   end
 
-  defp do_create_credential(attrs) do
+  defp do_create_credential(attrs, actor) do
     credential_bodies = get_credential_bodies(attrs)
 
     with :ok <- validate_credential_bodies(credential_bodies, attrs),
          changeset <- Credential.create_changeset(%Credential{}, attrs),
          :ok <- validate_external_id(changeset) do
       build_create_multi(changeset, credential_bodies)
-      |> derive_events(changeset)
+      |> derive_events(changeset, actor)
       |> Repo.transaction()
       |> handle_transaction_result(changeset)
     end
@@ -251,15 +251,15 @@ defmodule Lightning.Credentials do
     * `{:ok, credential}` - Successfully updated credential
     * `{:error, error}` - Error with update process
   """
-  @spec update_credential(Credential.t(), map(), User.t()) ::
+  @spec update_credential(Credential.t(), map(), Lightning.Actor.t()) ::
           {:ok, Credential.t()} | {:error, any()}
-  def update_credential(%Credential{} = credential, attrs, %User{} = actor) do
+  def update_credential(%Credential{} = credential, attrs, actor) do
     with :ok <- authorize_credential(:edit_credential, actor, credential) do
-      do_update_credential(credential, attrs)
+      do_update_credential(credential, attrs, actor)
     end
   end
 
-  defp do_update_credential(%Credential{} = credential, attrs) do
+  defp do_update_credential(%Credential{} = credential, attrs, actor) do
     credential = Repo.preload(credential, :project_credentials)
     attrs = normalize_keys(attrs)
 
@@ -283,7 +283,7 @@ defmodule Lightning.Credentials do
          changeset <- Credential.changeset(credential, attrs),
          :ok <- validate_external_id(changeset) do
       build_update_multi(credential, changeset, credential_bodies)
-      |> derive_events(changeset)
+      |> derive_events(changeset, actor)
       |> Repo.transaction()
       |> handle_transaction_result(changeset)
     end
@@ -703,7 +703,8 @@ defmodule Lightning.Credentials do
   defp derive_events(
          multi,
          %Ecto.Changeset{data: %Credential{__meta__: %{state: state}}} =
-           changeset
+           changeset,
+         actor
        ) do
     case changeset.changes do
       map when map_size(map) == 0 ->
@@ -713,7 +714,7 @@ defmodule Lightning.Credentials do
         project_credentials_multi =
           Ecto.Changeset.get_change(changeset, :project_credentials, [])
           |> Enum.reduce(Multi.new(), fn changeset, multi ->
-            derive_event(multi, changeset)
+            derive_event(multi, changeset, actor)
           end)
 
         multi
@@ -726,6 +727,7 @@ defmodule Lightning.Credentials do
             Audit.user_initiated_event(
               if(state == :built, do: "created", else: "updated"),
               credential,
+              actor,
               changeset,
               env_bodies
             )
@@ -740,7 +742,8 @@ defmodule Lightning.Credentials do
          %Ecto.Changeset{
            action: :delete,
            data: %Lightning.Projects.ProjectCredential{}
-         } = changeset
+         } = changeset,
+         actor
        ) do
     Multi.insert(
       multi,
@@ -749,6 +752,7 @@ defmodule Lightning.Credentials do
         Audit.user_initiated_event(
           "removed_from_project",
           credential,
+          actor,
           %{
             before: %{
               project_id: Ecto.Changeset.get_field(changeset, :project_id)
@@ -765,7 +769,8 @@ defmodule Lightning.Credentials do
          %Ecto.Changeset{
            action: :insert,
            data: %Lightning.Projects.ProjectCredential{}
-         } = changeset
+         } = changeset,
+         actor
        ) do
     project_id = Ecto.Changeset.get_field(changeset, :project_id)
 
@@ -773,7 +778,7 @@ defmodule Lightning.Credentials do
     |> Multi.insert(
       {:audit, project_id},
       fn %{credential: credential} ->
-        Audit.user_initiated_event("added_to_project", credential, %{
+        Audit.user_initiated_event("added_to_project", credential, actor, %{
           before: %{project_id: nil},
           after: %{project_id: project_id}
         })
@@ -787,10 +792,14 @@ defmodule Lightning.Credentials do
     )
   end
 
-  defp derive_event(multi, %Ecto.Changeset{
-         action: :update,
-         data: %Lightning.Projects.ProjectCredential{}
-       }) do
+  defp derive_event(
+         multi,
+         %Ecto.Changeset{
+           action: :update,
+           data: %Lightning.Projects.ProjectCredential{}
+         },
+         _actor
+       ) do
     multi
   end
 
@@ -840,10 +849,12 @@ defmodule Lightning.Credentials do
   end
 
   defp do_delete_credential(%Credential{} = credential) do
+    %{user: owner} = Repo.preload(credential, :user)
+
     Multi.new()
     |> Multi.delete(:credential, credential)
     |> Multi.insert(:audit, fn _ ->
-      Audit.user_initiated_event("deleted", credential)
+      Audit.user_initiated_event("deleted", credential, owner)
     end)
     |> Repo.transaction()
   end
@@ -937,7 +948,7 @@ defmodule Lightning.Credentials do
     credential = get_credential!(credential_id)
 
     with :ok <- authorize_credential(:delete_credential, actor, credential) do
-      do_update_credential(credential, %{scheduled_deletion: nil})
+      do_update_credential(credential, %{scheduled_deletion: nil}, actor)
     end
   end
 
@@ -1668,7 +1679,7 @@ defmodule Lightning.Credentials do
         })
       end)
       |> Multi.insert(:audit, fn %{credential: updated_credential} ->
-        Audit.user_initiated_event("transfered", credential, %{
+        Audit.user_initiated_event("transfered", credential, owner, %{
           before: %{user_id: credential.user_id},
           after: %{user_id: updated_credential.user_id}
         })

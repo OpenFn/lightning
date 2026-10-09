@@ -22,17 +22,32 @@ defmodule Lightning.Credentials.Audit do
   end
 
   @doc """
-  Creates a user-initiated audit event for credential operations.
+  Creates an audit event for a change `actor` made to a credential.
 
   For multi-environment credentials, environment body data is stored
   in metadata rather than in the changes map.
   """
-  def user_initiated_event(event, credential, changes \\ %{}, env_bodies \\ []) do
-    %{id: id, user: user} = Lightning.Repo.preload(credential, :user)
-
-    metadata = build_metadata_with_bodies(env_bodies)
-
-    event(event, id, user, changes, metadata)
+  @spec user_initiated_event(
+          String.t(),
+          Lightning.Credentials.Credential.t(),
+          Lightning.Actor.t(),
+          map() | Ecto.Changeset.t(),
+          [{String.t(), map()}]
+        ) :: Ecto.Changeset.t()
+  def user_initiated_event(
+        event,
+        credential,
+        actor,
+        changes \\ %{},
+        env_bodies \\ []
+      ) do
+    event(
+      event,
+      credential.id,
+      actor,
+      changes,
+      build_metadata_with_bodies(env_bodies)
+    )
   end
 
   defp build_metadata_with_bodies([]), do: %{}
