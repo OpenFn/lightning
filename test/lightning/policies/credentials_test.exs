@@ -579,4 +579,53 @@ defmodule Lightning.Policies.CredentialsTest do
       end
     end
   end
+
+  describe "Credential ownership" do
+    setup do
+      owner = insert(:user)
+
+      %{
+        owner: owner,
+        credential: insert(:credential, user: owner),
+        superuser: insert(:user, role: :superuser),
+        other_user: insert(:user)
+      }
+    end
+
+    test "the owner can edit and delete their credential", %{
+      owner: owner,
+      credential: credential
+    } do
+      assert Credentials
+             |> Bodyguard.permit?(:edit_credential, owner, credential)
+
+      assert Credentials
+             |> Bodyguard.permit?(:delete_credential, owner, credential)
+    end
+
+    test "anyone else, a superuser included, can do neither", %{
+      credential: credential,
+      superuser: superuser,
+      other_user: other_user
+    } do
+      for user <- [superuser, other_user],
+          action <- [:edit_credential, :delete_credential] do
+        refute Credentials |> Bodyguard.permit?(action, user, credential),
+               "#{action} was granted to someone who does not own the credential"
+      end
+    end
+
+    test "a service account can write any credential but never delete one", %{
+      credential: credential
+    } do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      assert Credentials
+             |> Bodyguard.permit?(:edit_credential, account, credential)
+
+      refute Credentials
+             |> Bodyguard.permit?(:delete_credential, account, credential)
+    end
+  end
 end

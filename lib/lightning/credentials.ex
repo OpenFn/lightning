@@ -198,7 +198,7 @@ defmodule Lightning.Credentials do
     attrs = normalize_keys(attrs)
 
     with :ok <-
-           authorize_credential_owner(actor, %Credential{
+           authorize_credential(:edit_credential, actor, %Credential{
              user_id: attrs["user_id"]
            }) do
       do_create_credential(attrs)
@@ -254,7 +254,7 @@ defmodule Lightning.Credentials do
   @spec update_credential(Credential.t(), map(), User.t()) ::
           {:ok, Credential.t()} | {:error, any()}
   def update_credential(%Credential{} = credential, attrs, %User{} = actor) do
-    with :ok <- authorize_credential_owner(actor, credential) do
+    with :ok <- authorize_credential(:edit_credential, actor, credential) do
       do_update_credential(credential, attrs)
     end
   end
@@ -834,7 +834,7 @@ defmodule Lightning.Credentials do
 
   """
   def delete_credential(%Credential{} = credential, %User{} = actor) do
-    with :ok <- authorize_credential_owner(actor, credential) do
+    with :ok <- authorize_credential(:delete_credential, actor, credential) do
       do_delete_credential(credential)
     end
   end
@@ -881,7 +881,7 @@ defmodule Lightning.Credentials do
 
   """
   def schedule_credential_deletion(%Credential{} = credential, %User{} = actor) do
-    with :ok <- authorize_credential_owner(actor, credential) do
+    with :ok <- authorize_credential(:delete_credential, actor, credential) do
       do_schedule_credential_deletion(credential)
     end
   end
@@ -936,22 +936,16 @@ defmodule Lightning.Credentials do
   def cancel_scheduled_deletion(credential_id, %User{} = actor) do
     credential = get_credential!(credential_id)
 
-    with :ok <- authorize_credential_owner(actor, credential) do
+    with :ok <- authorize_credential(:delete_credential, actor, credential) do
       do_update_credential(credential, %{scheduled_deletion: nil})
     end
   end
 
-  # A credential belongs to the person who made it, and that is the rule the UI
-  # has always drawn its buttons from. Asking here rather than at each screen
-  # means a screen cannot act on someone else's credential by forgetting to
-  # check - the signature will not let it call in without saying who is asking.
-  defp authorize_credential_owner(%User{} = actor, %Credential{} = credential) do
-    if Permissions.can?(
-         :users,
-         :delete_credential,
-         actor,
-         credential
-       ) do
+  # Asking here rather than at each screen means a screen cannot act on someone
+  # else's credential by forgetting to check - the signature will not let it
+  # call in without saying who is asking.
+  defp authorize_credential(action, actor, %Credential{} = credential) do
+    if Permissions.can?(:credentials, action, actor, credential) do
       :ok
     else
       {:error, :unauthorized}

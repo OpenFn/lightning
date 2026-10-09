@@ -7,8 +7,9 @@ defmodule Lightning.Policies.UserPermissionsTest do
 
   Typically, there is only one superuser per deployment of Lightning.
 
-  Regular users have full control over their own credentials, but cannot see or
-  modify other user's credentials. All other resources in Lightning are under
+  Regular users have full control over their own OAuth clients, but cannot
+  modify other users' clients. Credentials are decided by
+  `Lightning.Policies.Credentials`. All other resources in Lightning are under
   the control of Project User Permissions and are demonstrated in the
   ProjectUserPermissionsTest.
   """
@@ -28,7 +29,7 @@ defmodule Lightning.Policies.UserPermissionsTest do
   end
 
   describe "Users" do
-    test "can edit their own credentials and delete their own accounts, api tokens, and credentials.",
+    test "can edit and delete their own OAuth clients and delete their own accounts and api tokens",
          %{
            user: user
          } do
@@ -37,17 +38,15 @@ defmodule Lightning.Policies.UserPermissionsTest do
         |> with_personal_access_token()
         |> insert()
 
-      credential = insert(:credential, user: user)
       client = insert(:oauth_client, user: user)
 
-      assert Users |> Permissions.can?(:edit_credential, user, credential)
+      assert Users |> Permissions.can?(:edit_credential, user, client)
       assert Users |> Permissions.can?(:delete_account, user, user)
       assert Users |> Permissions.can?(:delete_api_token, user, api_token.token)
-      assert Users |> Permissions.can?(:delete_credential, user, credential)
       assert Users |> Permissions.can?(:delete_credential, user, client)
     end
 
-    test "cannot access admin space, edit other users credentials, and delete other users accounts, api tokens, and credentials",
+    test "cannot access admin space, edit or delete other users' OAuth clients, or delete other users' accounts and api tokens",
          %{
            user: user,
            other_user: other_user
@@ -57,18 +56,18 @@ defmodule Lightning.Policies.UserPermissionsTest do
         |> with_personal_access_token()
         |> insert()
 
-      credential = insert(:credential)
+      client = insert(:oauth_client, user: other_user)
 
       refute Users |> Permissions.can?(:access_admin_space, user)
-      refute Users |> Permissions.can?(:edit_credential, user, credential)
+      refute Users |> Permissions.can?(:edit_credential, user, client)
       refute Users |> Permissions.can?(:delete_account, user, other_user)
       refute Users |> Permissions.can?(:delete_api_token, user, api_token.token)
-      refute Users |> Permissions.can?(:delete_credential, user, credential)
+      refute Users |> Permissions.can?(:delete_credential, user, client)
     end
   end
 
   describe "Superusers" do
-    test "can access admin space, edit their own credentials, and delete their own accounts, api tokens, and credentials.",
+    test "can access admin space and delete their own accounts and api tokens",
          %{
            superuser: superuser
          } do
@@ -77,19 +76,14 @@ defmodule Lightning.Policies.UserPermissionsTest do
         |> with_personal_access_token()
         |> insert()
 
-      credential = insert(:credential, user: superuser)
-
       assert Users |> Permissions.can?(:access_admin_space, superuser)
-      assert Users |> Permissions.can?(:edit_credential, superuser, credential)
       assert Users |> Permissions.can?(:delete_account, superuser, superuser)
 
       assert Users
              |> Permissions.can?(:delete_api_token, superuser, api_token.token)
-
-      assert Users |> Permissions.can?(:delete_credential, superuser, credential)
     end
 
-    test "cannot edit other users credentials, and delete other users accounts, api tokens, and credentials",
+    test "cannot edit or delete other users' OAuth clients, or delete other users' accounts and api tokens",
          %{
            superuser: superuser,
            other_user: other_user
@@ -99,15 +93,15 @@ defmodule Lightning.Policies.UserPermissionsTest do
         |> with_personal_access_token()
         |> insert()
 
-      credential = insert(:credential)
+      client = insert(:oauth_client, user: other_user)
 
-      refute Users |> Permissions.can?(:edit_credential, superuser, credential)
+      refute Users |> Permissions.can?(:edit_credential, superuser, client)
       refute Users |> Permissions.can?(:delete_account, superuser, other_user)
 
       refute Users
              |> Permissions.can?(:delete_api_token, superuser, api_token.token)
 
-      refute Users |> Permissions.can?(:delete_credential, superuser, credential)
+      refute Users |> Permissions.can?(:delete_credential, superuser, client)
     end
   end
 end
