@@ -116,27 +116,97 @@ defmodule Lightning.CollectionsTest do
     end
   end
 
-  describe "create_collection/2" do
-    test "creates a new collection" do
+  describe "create_collection/3" do
+    setup do
+      %{actor: insert(:user)}
+    end
+
+    test "creates a collection and records its creator", %{actor: actor} do
       %{id: project_id} = insert(:project)
       name = "col1_project1"
 
-      assert {:ok, %Collection{project_id: ^project_id, name: ^name}} =
-               Collections.create_collection(%{
-                 "project_id" => project_id,
-                 "name" => name
-               })
+      assert {:ok, %Collection{id: id, project_id: ^project_id, name: ^name}} =
+               Collections.create_collection(
+                 %{"project_id" => project_id, "name" => name},
+                 actor
+               )
+
+      assert [audit] = collection_audits(id)
+      assert audit.event == "created"
+      assert audit.actor_id == actor.id
+      assert audit.actor_type == :user
+      assert audit.changes.before == nil
+
+      assert audit.changes.after == %{
+               "name" => name,
+               "project_id" => project_id
+             }
     end
 
-    test "returns an error when collection name is taken" do
+    test "records a service account as the creator" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{id: project_id} = insert(:project)
+
+      assert {:ok, %Collection{id: id}} =
+               Collections.create_collection(
+                 %{"project_id" => project_id, "name" => "patients"},
+                 account
+               )
+
+      assert [audit] = collection_audits(id)
+      assert audit.actor_id == account.uuid
+      assert audit.actor_type == :service_account
+      assert audit.metadata["service_account_id"] == account.id
+    end
+
+    test "creates under the id it is given, never one cast from attrs", %{
+      actor: actor
+    } do
+      %{id: project_id} = insert(:project)
+      id = Ecto.UUID.generate()
+
+      assert {:ok, %Collection{id: ^id}} =
+               Collections.create_collection(
+                 %{"project_id" => project_id, "name" => "given"},
+                 actor,
+                 id: id
+               )
+
+      assert {:ok, %Collection{id: other_id}} =
+               Collections.create_collection(
+                 %{"project_id" => project_id, "name" => "cast", "id" => id},
+                 actor
+               )
+
+      refute other_id == id
+    end
+
+    test "refuses an id already in use as a changeset error", %{actor: actor} do
+      existing = insert(:collection)
+
+      assert {:error, changeset} =
+               Collections.create_collection(
+                 %{"project_id" => insert(:project).id, "name" => "other"},
+                 actor,
+                 id: existing.id
+               )
+
+      assert {_message, opts} = changeset.errors[:id]
+      assert opts[:constraint] == :unique
+      assert collection_audits(existing.id) == []
+    end
+
+    test "returns an error when collection name is taken", %{actor: actor} do
       %{id: project_id1} = insert(:project)
       name = "col1_project1"
 
       assert {:ok, %Collection{project_id: ^project_id1, name: ^name}} =
-               Collections.create_collection(%{
-                 "project_id" => project_id1,
-                 "name" => name
-               })
+               Collections.create_collection(
+                 %{"project_id" => project_id1, "name" => name},
+                 actor
+               )
 
       assert {:error,
               %{
@@ -149,21 +219,21 @@ defmodule Lightning.CollectionsTest do
                      ]}
                 ]
               }} =
-               Collections.create_collection(%{
-                 "project_id" => project_id1,
-                 "name" => name
-               })
+               Collections.create_collection(
+                 %{"project_id" => project_id1, "name" => name},
+                 actor
+               )
     end
 
-    test "returns an error when limit is exceeded" do
+    test "writes nothing when the limit is exceeded", %{actor: actor} do
       %{id: project_id1} = insert(:project)
       %{id: project_id2} = insert(:project)
 
       assert {:ok, %Collection{project_id: ^project_id1, name: "col1"}} =
-               Collections.create_collection(%{
-                 "project_id" => project_id1,
-                 "name" => "col1"
-               })
+               Collections.create_collection(
+                 %{"project_id" => project_id1, "name" => "col1"},
+                 actor
+               )
 
       message = %Lightning.Extensions.Message{text: "some error"}
 
@@ -175,11 +245,90 @@ defmodule Lightning.CollectionsTest do
         end
       )
 
+      id = Ecto.UUID.generate()
+
       assert {:error, :exceeds_limit, ^message} =
-               Collections.create_collection(%{
-                 "project_id" => project_id2,
-                 "name" => "col2"
-               })
+               Collections.create_collection(
+                 %{"project_id" => project_id2, "name" => "col2"},
+                 actor,
+                 id: id
+               )
+
+      refute Repo.get(Collection, id)
+      assert collection_audits(id) == []
+    end
+
+    test "returns an error if invalid attributes are provided", %{actor: actor} do
+      attrs = %{"name" => nil, "project_id" => Ecto.UUID.generate()}
+
+      assert {:error, changeset} = Collections.create_collection(attrs, actor)
+
+      assert %{name: ["can't be blank"]} == errors_on(changeset)
+    end
+  end
+
+  describe "update_collection/3" do
+    setup do
+      %{actor: insert(:user)}
+    end
+
+    test "renames a collection, keeping its items, and records who did", %{
+      actor: actor
+    } do
+      collection = insert(:collection, name: "old-name")
+      insert(:collection_item, collection: collection, key: "k", value: "v")
+
+      assert {:ok, %Collection{name: "updated-name"}} =
+               Collections.update_collection(
+                 collection,
+                 %{"name" => "updated-name"},
+                 actor
+               )
+
+      assert Collections.get(collection, "k").value == "v"
+
+      assert [audit] = collection_audits(collection.id)
+      assert audit.event == "updated"
+      assert audit.actor_id == actor.id
+      assert audit.changes.before == %{"name" => "old-name"}
+      assert audit.changes.after == %{"name" => "updated-name"}
+    end
+
+    test "records nothing when the name is unchanged", %{actor: actor} do
+      collection = insert(:collection, name: "same-name")
+
+      assert {:ok, %Collection{name: "same-name"}} =
+               Collections.update_collection(
+                 collection,
+                 %{"name" => "same-name"},
+                 actor
+               )
+
+      assert collection_audits(collection.id) == []
+    end
+
+    test "never moves a collection to another project", %{actor: actor} do
+      collection = insert(:collection)
+      other_project = insert(:project)
+
+      assert {:ok, _collection} =
+               Collections.update_collection(
+                 collection,
+                 %{"name" => "moved", "project_id" => other_project.id},
+                 actor
+               )
+
+      assert Repo.reload!(collection).project_id == collection.project_id
+    end
+
+    test "returns an error if invalid attributes are provided", %{actor: actor} do
+      collection = insert(:collection)
+
+      assert {:error, changeset} =
+               Collections.update_collection(collection, %{name: nil}, actor)
+
+      assert %{name: ["can't be blank"]} == errors_on(changeset)
+      assert collection_audits(collection.id) == []
     end
   end
 
@@ -729,42 +878,11 @@ defmodule Lightning.CollectionsTest do
     end
   end
 
-  describe "create_collection/1" do
-    test "creates a new collection with valid attributes" do
-      %{id: project_id} = insert(:project)
-      attrs = %{"name" => "new-collection", "project_id" => project_id}
-
-      assert {:ok, %Collection{name: "new-collection"}} =
-               Collections.create_collection(attrs)
-    end
-
-    test "returns an error if invalid attributes are provided" do
-      attrs = %{"name" => nil, "project_id" => Ecto.UUID.generate()}
-
-      assert {:error, changeset} = Collections.create_collection(attrs)
-
-      assert %{name: ["can't be blank"]} == errors_on(changeset)
-    end
-  end
-
-  describe "update_collection/2" do
-    test "updates an existing collection with valid attributes" do
-      collection = insert(:collection, name: "Old Name")
-      attrs = %{name: "updated-name"}
-
-      assert {:ok, %Collection{name: "updated-name"}} =
-               Collections.update_collection(collection, attrs)
-    end
-
-    test "returns an error if invalid attributes are provided" do
-      collection = insert(:collection)
-      attrs = %{name: nil}
-
-      assert {:error, changeset} =
-               Collections.update_collection(collection, attrs)
-
-      assert %{name: ["can't be blank"]} == errors_on(changeset)
-    end
+  defp collection_audits(collection_id) do
+    Repo.all(
+      from a in Lightning.Collections.Audit.base_query(),
+        where: a.item_id == ^collection_id
+    )
   end
 
   defp item_reload(item) do

@@ -124,6 +124,14 @@ defmodule LightningWeb.CollectionLiveTest do
       assert html =~ "Collection created successfully"
       assert html =~ "new-collection"
       assert html =~ project.name
+
+      collection =
+        Lightning.Repo.get_by!(Lightning.Collections.Collection,
+          name: "new-collection"
+        )
+
+      assert %{actor_id: actor_id} = audit_for(collection, "created")
+      assert actor_id == user.id
     end
 
     test "Canceling collection creation modal closes the modal", %{conn: conn} do
@@ -144,7 +152,7 @@ defmodule LightningWeb.CollectionLiveTest do
       refute html =~ "new-collection"
     end
 
-    test "Superuser can update a collection via the modal", %{
+    test "Superuser can rename a collection via the modal, not move it", %{
       conn: conn,
       user: user
     } do
@@ -154,6 +162,11 @@ defmodule LightningWeb.CollectionLiveTest do
       {:ok, view, _html} = live(conn, ~p"/settings/collections")
 
       assert has_element?(view, "#collection-form-#{collection.id}")
+
+      assert has_element?(
+               view,
+               "#collection-form-#{collection.id} select[name='collection[project_id]'][disabled]"
+             )
 
       view
       |> form("#collection-form-#{collection.id}",
@@ -166,7 +179,7 @@ defmodule LightningWeb.CollectionLiveTest do
       {:ok, _view, html} =
         view
         |> form("#collection-form-#{collection.id}",
-          collection: %{raw_name: "Updated Collection", project_id: project.id}
+          collection: %{raw_name: "Updated Collection"}
         )
         |> render_submit()
         |> follow_redirect(conn, ~p"/settings/collections")
@@ -174,6 +187,9 @@ defmodule LightningWeb.CollectionLiveTest do
       assert html =~ "Collection updated successfully"
       assert html =~ "updated-collection"
       assert html =~ project.name
+
+      assert %{actor_id: actor_id} = audit_for(collection, "updated")
+      assert actor_id == user.id
     end
 
     test "Creating a collection with a name that already exists fails", %{
@@ -198,6 +214,13 @@ defmodule LightningWeb.CollectionLiveTest do
       |> form("#collection-form-new")
       |> render_submit() =~ "A collection with this name already exists"
     end
+  end
+
+  defp audit_for(collection, event) do
+    Lightning.Repo.get_by!(Lightning.Collections.Audit.base_query(),
+      item_id: collection.id,
+      event: event
+    )
   end
 
   defp get_sorted_collection_names(view) do

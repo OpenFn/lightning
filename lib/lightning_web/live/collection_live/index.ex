@@ -109,6 +109,7 @@ defmodule LightningWeb.CollectionLive.Index do
             id="create-collection-modal"
             module={LightningWeb.CollectionLive.CollectionCreationModal}
             collection={%Collection{}}
+            current_user={@current_user}
             return_to={~p"/settings/collections"}
           />
         </div>

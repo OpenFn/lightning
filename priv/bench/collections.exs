@@ -6,16 +6,25 @@ keys_count = 5_000
 
 Repo.delete_all(Collections.Collection)
 
+user = Repo.get_by(Lightning.Accounts.User, email: "demo@openfn.org")
+
 project =
   with nil <- Repo.get_by(Projects.Project, name: "benchee") do
-    user = Repo.get_by(Lightning.Accounts.User, email: "demo@openfn.org")
-    {:ok, project} = Projects.create_project(%{name: "benchee", project_users: [%{user_id: user.id, role: :owner}]}, user)
+    {:ok, project} =
+      Projects.create_project(
+        %{name: "benchee", project_users: [%{user_id: user.id, role: :owner}]},
+        user
+      )
+
     project
   end
 
 {:ok, collection} =
   with {:error, :not_found} <- Collections.get_collection("benchee") do
-    Collections.create_collection(%{"project_id" => project.id, "name" => "benchee"})
+    Collections.create_collection(
+      %{"project_id" => project.id, "name" => "benchee"},
+      user
+    )
   end
 
 IO.puts("\n### Setup:")
@@ -23,14 +32,17 @@ IO.puts("Generating items for benchee collection...")
 
 record = fn prefix, i ->
   i_str = String.pad_leading(to_string(i), 5, "0")
-  {"#{prefix}:foo#{i_str}:bar#{i_str}", Jason.encode!(%{fieldA: "value#{1_000_000 + i}"})}
+
+  {"#{prefix}:foo#{i_str}:bar#{i_str}",
+   Jason.encode!(%{fieldA: "value#{1_000_000 + i}"})}
 end
 
 sampleA = Enum.map(1..keys_count, fn i -> record.("keyA", i) end)
 sampleB = Enum.map(1..keys_count, fn i -> record.("keyB", i) end)
 sampleC1 = Enum.map(1..keys_count, fn i -> record.("keyC", i) end)
+
 sampleC2 =
-  keys_count..keys_count * 2
+  keys_count..(keys_count * 2)
   |> Enum.map(fn i -> record.("keyC", i) end)
   |> Enum.map(fn {k, v} -> %{"key" => k, "value" => v} end)
 
@@ -42,6 +54,7 @@ sampleC2 =
         if rem(idx, 1000) == 0, do: IO.puts("Inserting " <> key)
         :ok = Collections.put(collection, key, value)
       end)
+
       :ok
     end)
   end)
@@ -53,6 +66,7 @@ end)
 end)
 
 IO.puts("Inserting #{length(sampleC2)} items with put_all...")
+
 :timer.tc(fn ->
   {:ok, _n} = Collections.put_all(collection, sampleC2)
 end)
@@ -63,6 +77,7 @@ end)
 sampleD = Enum.map(1..keys_count, fn i -> record.("keyD", i) end)
 
 IO.puts("Inserting sampleD (w/ sorted keys)...")
+
 :timer.tc(fn ->
   sampleD
   |> Enum.chunk_every(1000)
@@ -78,6 +93,7 @@ end)
 end)
 
 IO.puts("Upserting sampleD...")
+
 :timer.tc(fn ->
   sampleD
   |> Enum.chunk_every(1000)
@@ -119,7 +135,11 @@ stream_match_all =
 stream_match_prefix =
   fn ->
     Stream.unfold(nil, fn cursor ->
-      case Collections.get_all(collection, %{cursor: cursor, limit: 500}, "keyA*") do
+      case Collections.get_all(
+             collection,
+             %{cursor: cursor, limit: 500},
+             "keyA*"
+           ) do
         [] -> nil
         list -> {list, List.last(list).updated_at}
       end
@@ -131,7 +151,11 @@ stream_match_prefix =
 stream_match_trigram =
   fn ->
     Stream.unfold(nil, fn cursor ->
-        case Collections.get_all(collection, %{cursor: cursor, limit: 500}, "keyB*bar*") do
+      case Collections.get_all(
+             collection,
+             %{cursor: cursor, limit: 500},
+             "keyB*bar*"
+           ) do
         [] -> nil
         list -> {list, List.last(list).updated_at}
       end
@@ -143,10 +167,19 @@ stream_match_trigram =
 # Process.exit(self(), :normal)
 
 IO.puts("\n### Round record count ({microsecs, count}):")
-:timer.tc(fn -> stream_all.() |> Enum.count() end) |> IO.inspect(label: "stream_all")
-:timer.tc(fn -> stream_match_all.() |> Enum.count() end) |> IO.inspect(label: "stream_match_all")
-:timer.tc(fn -> stream_match_prefix.() |> Enum.count() end) |> IO.inspect(label: "stream_match_prefix")
-:timer.tc(fn -> stream_match_trigram.() |> Enum.count() end) |> IO.inspect(label: "stream_match_trigram")
+
+:timer.tc(fn -> stream_all.() |> Enum.count() end)
+|> IO.inspect(label: "stream_all")
+
+:timer.tc(fn -> stream_match_all.() |> Enum.count() end)
+|> IO.inspect(label: "stream_match_all")
+
+:timer.tc(fn -> stream_match_prefix.() |> Enum.count() end)
+|> IO.inspect(label: "stream_match_prefix")
+
+:timer.tc(fn -> stream_match_trigram.() |> Enum.count() end)
+|> IO.inspect(label: "stream_match_trigram")
+
 IO.puts("\n")
 
 Benchee.run(
