@@ -111,6 +111,7 @@ defmodule LightningWeb.Router do
     pipe_through [:projects_api]
 
     get "/projects/:id", API.ProjectController, :show
+    put "/projects/:id", API.ProjectController, :update
   end
 
   scope "/api", LightningWeb, as: :api do

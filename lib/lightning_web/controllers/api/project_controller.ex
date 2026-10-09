@@ -5,6 +5,9 @@ defmodule LightningWeb.API.ProjectController do
   Provides read access to projects for authenticated users and API tokens.
   Users can list projects they have access to and retrieve individual project details.
 
+  `PUT /api/projects/:id` creates the project under that id with its members,
+  or replaces the name and description of the project that has it.
+
   ## Query Parameters (index)
 
   - `page` - Page number (default: 1)
@@ -33,9 +36,16 @@ defmodule LightningWeb.API.ProjectController do
   """
   use LightningWeb, :controller
 
+  import Ecto.Changeset
+
+  alias Lightning.Accounts
+  alias Lightning.Accounts.User
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Policies.Provisioning
   alias Lightning.Projects
+  alias Lightning.Projects.Project
+  alias Lightning.ServiceAccount
 
   action_fallback LightningWeb.FallbackController
 
@@ -108,6 +118,170 @@ defmodule LightningWeb.API.ProjectController do
       nil -> {:error, :not_found}
       error -> error
     end
+  end
+
+  @doc """
+  Creates the project under the path's id, or replaces the name and description
+  of the one that has it.
+
+  `members` and `notify` only apply when the project is created.
+  """
+  @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def update(conn, %{"id" => id}) do
+    actor = conn.assigns.current_resource
+
+    with {:ok, attrs} <- parse_body(conn.body_params, id) do
+      case Projects.get_project(attrs.id) do
+        nil -> create(conn, attrs, actor)
+        project -> replace(conn, project, attrs, actor)
+      end
+    end
+  end
+
+  @body_types %{
+    id: :binary_id,
+    name: :string,
+    description: :string,
+    members: {:array, :map},
+    notify: :boolean
+  }
+
+  defp parse_body(%{"_json" => _not_an_object}, _id) do
+    {:error,
+     {%{}, %{body: :map}}
+     |> change()
+     |> add_error(:body, "must be a JSON object")}
+  end
+
+  defp parse_body(body, id) do
+    changeset =
+      {%{notify: true}, @body_types}
+      |> cast(body, Map.keys(@body_types))
+
+    changeset =
+      case Ecto.UUID.cast(id) do
+        {:ok, id} ->
+          changeset
+          |> validate_change(:id, fn :id, body_id ->
+            if body_id == id,
+              do: [],
+              else: [id: "does not match the id in the path"]
+          end)
+          |> put_change(:id, id)
+
+        :error ->
+          add_error(changeset, :id, "is not a UUID")
+      end
+
+    apply_action(changeset, :validate)
+  end
+
+  defp replace(conn, project, attrs, actor) do
+    with :ok <- writable(project, actor),
+         {:ok, project} <-
+           Projects.update_project(
+             project,
+             %{name: attrs[:name], description: attrs[:description]},
+             actor
+           ) do
+      render_project(conn, project)
+    end
+  end
+
+  # A service account passes every project policy, so telling it the project
+  # is scheduled for deletion leaks nothing; a person gets the policy's answer.
+  defp writable(%Project{scheduled_deletion: %DateTime{}}, %ServiceAccount{}),
+    do: {:error, :scheduled_for_deletion}
+
+  defp writable(project, actor) do
+    if Permissions.can?(ProjectUsers, :edit_project, actor, project),
+      do: :ok,
+      else: {:error, :forbidden}
+  end
+
+  defp create(conn, attrs, actor) do
+    with true <- Provisioning.authorize(:create_project, actor, nil),
+         {:ok, project_users} <- resolve_members(attrs[:members] || []) do
+      attrs
+      |> Map.take([:id, :name, :description])
+      |> Map.put(:project_users, project_users)
+      |> Projects.create_project(actor, notify: attrs.notify)
+      |> case do
+        {:ok, project} ->
+          conn |> put_status(:created) |> render_project(project)
+
+        {:error, changeset} ->
+          if id_taken?(changeset),
+            do: replace(conn, Projects.get_project(attrs.id), attrs, actor),
+            else: render_create_errors(conn, changeset)
+      end
+    end
+  end
+
+  @roles ~w(owner admin editor viewer)
+
+  defp resolve_members(members) do
+    Enum.reduce_while(members, {:ok, []}, fn member, {:ok, resolved} ->
+      case resolve_member(member) do
+        {:ok, %{user_id: user_id} = project_user} ->
+          if Enum.any?(resolved, &(&1.user_id == user_id)),
+            do:
+              {:halt, members_error("names #{member["email"]} more than once")},
+            else: {:cont, {:ok, [project_user | resolved]}}
+
+        {:error, message} ->
+          {:halt, members_error(message)}
+      end
+    end)
+  end
+
+  defp members_error(message) do
+    {:error,
+     {%{}, %{members: {:array, :map}}}
+     |> change()
+     |> add_error(:members, message)}
+  end
+
+  defp resolve_member(%{"email" => email, "role" => role})
+       when is_binary(email) and role in @roles do
+    case Accounts.get_user_by_email(email) do
+      %User{id: user_id} -> {:ok, %{user_id: user_id, role: role}}
+      nil -> {:error, "no user has the email #{email}"}
+    end
+  end
+
+  defp resolve_member(_member),
+    do:
+      {:error,
+       "each member needs an email and a role of #{Enum.join(@roles, ", ")}"}
+
+  # Another request created the project between our lookup and our insert.
+  defp id_taken?(changeset) do
+    Enum.any?(changeset.errors, fn {field, {_message, opts}} ->
+      field == :id and opts[:constraint] == :unique
+    end)
+  end
+
+  # The project's changeset checks members as `owner` and `project_users`;
+  # this API calls them `members`.
+  defp render_create_errors(conn, changeset) do
+    errors = LightningWeb.CoreComponents.translate_errors(changeset)
+
+    {member_errors, errors} = Map.split(errors, [:owner, :project_users])
+
+    errors =
+      if member_errors == %{},
+        do: errors,
+        else:
+          Map.put(
+            errors,
+            :members,
+            member_errors |> Map.values() |> List.flatten()
+          )
+
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: errors})
   end
 
   defp render_project(conn, project) do
