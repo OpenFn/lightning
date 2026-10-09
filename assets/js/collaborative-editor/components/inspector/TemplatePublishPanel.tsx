@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import YAML from 'yaml';
 import { z } from 'zod';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
@@ -15,8 +16,8 @@ import {
   exceedsGraphemeCap,
   isNameTooWideForColumn,
 } from '#/utils/nameValidation';
-import { serializeWorkflow } from '#/yaml/format';
 import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
+import { convertWorkflowStateToSpec } from '#/yaml/util';
 
 logger.ns('TemplatePublishPanel').seal();
 
@@ -111,9 +112,7 @@ export function TemplatePublishPanel() {
     setIsPublishing(true);
 
     try {
-      // Generate v2 YAML code from current workflow state. New templates are
-      // written in the CLI-aligned portability format (v2); existing v1 rows
-      // continue to load via format-detection on read.
+      // Generate YAML code from current workflow state
       const workflowState: YAMLWorkflowState = {
         id: workflow.id,
         name: workflow.name,
@@ -123,7 +122,8 @@ export function TemplatePublishPanel() {
         positions,
       };
 
-      const workflowCode = serializeWorkflow(workflowState);
+      const spec = convertWorkflowStateToSpec(workflowState, false);
+      const workflowCode = YAML.stringify(spec);
 
       // Parse comma-separated tags into array
       const formValues = form.state.values as TemplateFormValues;

@@ -30,7 +30,7 @@ defmodule Lightning.ExportUtilsTest do
     end
 
     test "matches the committed fixture byte for byte", %{project: project} do
-      {:ok, generated} = Projects.export_project(:yaml, project.id, nil, :v1)
+      {:ok, generated} = Projects.export_project(:yaml, project.id)
 
       assert generated == File.read!(@fixture) |> String.trim()
     end
@@ -38,7 +38,7 @@ defmodule Lightning.ExportUtilsTest do
     test "the exported spec parses back to the names it came from", %{
       project: project
     } do
-      {:ok, generated} = Projects.export_project(:yaml, project.id, nil, :v1)
+      {:ok, generated} = Projects.export_project(:yaml, project.id)
 
       assert {:ok, parsed} = YamlElixir.read_from_string(generated)
 
@@ -92,7 +92,7 @@ defmodule Lightning.ExportUtilsTest do
     test "an adaptor is single-quoted" do
       project = cron_project("0 23 * * *")
 
-      {:ok, generated} = Projects.export_project(:yaml, project.id, nil, :v1)
+      {:ok, generated} = Projects.export_project(:yaml, project.id)
 
       assert generated =~ "adaptor: '@openfn/language-common@latest'"
     end
@@ -111,7 +111,7 @@ defmodule Lightning.ExportUtilsTest do
           ] do
         project = cron_project(cron)
 
-        {:ok, generated} = Projects.export_project(:yaml, project.id, nil, :v1)
+        {:ok, generated} = Projects.export_project(:yaml, project.id)
 
         assert generated =~ "cron_expression: '#{cron}'",
                "expected #{inspect(cron)} to be single-quoted"
@@ -176,8 +176,7 @@ defmodule Lightning.ExportUtilsTest do
           ]
         )
 
-      assert {:error, message} =
-               Projects.export_project(:yaml, project.id, nil, :v1)
+      assert {:error, message} = Projects.export_project(:yaml, project.id)
 
       assert message =~ "two workflows in this project"
       assert message =~ ~s("a-b")
@@ -208,8 +207,7 @@ defmodule Lightning.ExportUtilsTest do
       project =
         insert(:project, name: "edge-key-collision", workflows: [workflow])
 
-      assert {:ok, generated} =
-               Projects.export_project(:yaml, project.id, nil, :v1)
+      assert {:ok, generated} = Projects.export_project(:yaml, project.id)
 
       assert {:ok, parsed} = YamlElixir.read_from_string(generated)
 
@@ -413,9 +411,7 @@ defmodule Lightning.ExportUtilsTest do
       project =
         insert(:project, name: "hyphenate-parity", workflows: [workflow])
 
-      assert {:ok, generated} =
-               Projects.export_project(:yaml, project.id, nil, :v1)
-
+      assert {:ok, generated} = Projects.export_project(:yaml, project.id)
       assert {:ok, parsed} = YamlElixir.read_from_string(generated)
 
       keys =

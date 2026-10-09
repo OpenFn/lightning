@@ -1,7 +1,9 @@
+import YAML from 'yaml';
+
 import type { PhoenixHook } from '../hooks/PhoenixHook';
 
-import { serializeWorkflow } from './format';
 import type { WorkflowState } from './types';
+import { convertWorkflowStateToSpec } from './util';
 
 interface WorkflowResponse {
   workflow_params: WorkflowState;
@@ -30,14 +32,21 @@ const WorkflowToYAML = {
     this.pushEvent('get-current-state', {}, (response: WorkflowResponse) => {
       const workflowState = response.workflow_params;
 
-      // v2 (CLI-aligned portability format) is stateless — no UUIDs in the
-      // canonical body. Both `code` and `code_with_ids` payloads carry the
-      // same v2 string after #4718's export cutover.
-      const yamlCode = serializeWorkflow(workflowState);
+      const workflowSpecWithoutIds = convertWorkflowStateToSpec(
+        workflowState,
+        false
+      );
+      const workflowSpecWithIds = convertWorkflowStateToSpec(
+        workflowState,
+        true
+      );
+
+      const yamlWithoutIds = YAML.stringify(workflowSpecWithoutIds);
+      const yamlWithIds = YAML.stringify(workflowSpecWithIds);
 
       this.pushEvent('workflow_code_generated', {
-        code: yamlCode,
-        code_with_ids: yamlCode,
+        code: yamlWithoutIds,
+        code_with_ids: yamlWithIds,
       });
     });
   },

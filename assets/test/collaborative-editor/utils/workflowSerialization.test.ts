@@ -8,7 +8,7 @@ import {
 
 describe('workflowSerialization', () => {
   describe('serializeWorkflowToYAML', () => {
-    it('serializes the workflow to v1 YAML with ids, for Apollo', () => {
+    it('includes entity IDs in serialized YAML', () => {
       const workflow = {
         id: 'workflow-uuid-123',
         name: 'Test Workflow',
@@ -45,22 +45,10 @@ describe('workflowSerialization', () => {
       const yaml = serializeWorkflowToYAML(workflow);
 
       expect(yaml).toBeDefined();
-      // v1 wire shape, which Apollo's workflow_chat service expects:
-      // top-level jobs/triggers/edges maps, not a v2 `steps:` array.
-      expect(yaml).toContain('name: Test Workflow');
-      expect(yaml).toContain('jobs:');
-      expect(yaml).toContain('triggers:');
-      expect(yaml).toContain('edges:');
-      expect(yaml).not.toContain('steps:');
-      expect(yaml).toContain('Get-Data:');
-      expect(yaml).toContain('webhook->Get-Data:');
-      expect(yaml).toContain('source_trigger: webhook');
-      expect(yaml).toContain('target_job: Get-Data');
-      // Ids are included so Apollo can preserve them across edits.
-      expect(yaml).toContain('workflow-uuid-123');
-      expect(yaml).toContain('job-uuid-456');
-      expect(yaml).toContain('trigger-uuid-789');
-      expect(yaml).toContain('edge-uuid-abc');
+      expect(yaml).toContain('id: workflow-uuid-123');
+      expect(yaml).toContain('id: job-uuid-456');
+      expect(yaml).toContain('id: trigger-uuid-789');
+      expect(yaml).toContain('id: edge-uuid-abc');
     });
 
     it('preserves all job properties', () => {
@@ -91,8 +79,7 @@ describe('workflowSerialization', () => {
       const yaml = serializeWorkflowToYAML(workflow);
 
       expect(yaml).toContain('name: My Job');
-      expect(yaml).toContain('My-Job:');
-      expect(yaml).toContain('@openfn/language-common@latest');
+      expect(yaml).toContain('adaptor: "@openfn/language-common@latest"');
       expect(yaml).toContain('console.log("hello");');
     });
   });

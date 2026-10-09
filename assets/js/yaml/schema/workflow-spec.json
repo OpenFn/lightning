@@ -3,9 +3,6 @@
   "title": "WorkflowSpec",
   "type": "object",
   "properties": {
-    "schema_version": {
-      "type": "string"
-    },
     "id": {
       "type": ["string", "null"]
     },
