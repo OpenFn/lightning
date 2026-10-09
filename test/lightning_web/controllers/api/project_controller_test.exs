@@ -482,6 +482,9 @@ defmodule LightningWeb.API.ProjectControllerTest do
                  Enum.all?(messages, &is_binary/1),
                "#{case_name}: #{inspect(response)}"
 
+        refute Enum.any?(messages, &String.contains?(&1, "@")),
+               "#{case_name} echoes an email: #{inspect(response)}"
+
         refute Lightning.Repo.get(Lightning.Projects.Project, id)
       end
     end

@@ -244,8 +244,7 @@ defmodule LightningWeb.API.ProjectController do
       case resolve_member(member) do
         {:ok, %{user_id: user_id} = project_user} ->
           if Enum.any?(resolved, &(&1.user_id == user_id)),
-            do:
-              {:halt, members_error("names #{member["email"]} more than once")},
+            do: {:halt, members_error("names one user more than once")},
             else: {:cont, {:ok, [project_user | resolved]}}
 
         {:error, message} ->
@@ -265,7 +264,7 @@ defmodule LightningWeb.API.ProjectController do
        when is_binary(email) and role in @roles do
     case Accounts.get_user_by_email(email) do
       %User{id: user_id} -> {:ok, %{user_id: user_id, role: role}}
-      nil -> {:error, "no user has the email #{email}"}
+      nil -> {:error, "names an email no user holds"}
     end
   end
 
