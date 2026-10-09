@@ -490,7 +490,7 @@ defmodule LightningWeb.API.CredentialController do
   defp render_credential(conn, credential, actor) do
     credential =
       credential
-      |> Repo.preload([:project_credentials, :projects], force: true)
+      |> Repo.preload([:project_credentials, :projects])
       |> hide_unseen_projects(actor)
 
     render(conn, "create.json", credential: credential)
