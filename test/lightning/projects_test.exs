@@ -3299,6 +3299,20 @@ defmodule Lightning.ProjectsTest do
       assert_creation_audited(project, members, user.id, :user)
     end
 
+    test "an id another project already holds is an error on id, not a raise",
+         %{attrs: attrs} do
+      taken = insert(:project)
+
+      assert {:error, changeset} =
+               Projects.create_project(
+                 Map.put(attrs, :id, taken.id),
+                 insert(:user)
+               )
+
+      assert {_message, opts} = changeset.errors[:id]
+      assert opts[:constraint] == :unique
+    end
+
     test "emails each initial member by default, and none with notify: false",
          %{attrs: attrs} do
       user = insert(:user)

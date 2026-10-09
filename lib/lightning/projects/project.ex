@@ -299,6 +299,7 @@ defmodule Lightning.Projects.Project do
     |> cast_assoc(:project_users, required: true, sort_param: :users_sort)
     |> validate()
     |> validate_project_owner()
+    |> unique_constraint(:id, name: :projects_pkey)
   end
 
   defp validate_project_owner(changeset) do
