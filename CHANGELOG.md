@@ -48,6 +48,8 @@ and this project adheres to
   [#5202](https://github.com/OpenFn/lightning/pull/5202)
 - Index to improve the performance of the dataclip deletion query.
   [#5226](https://github.com/OpenFn/lightning/issues/5226)
+- The Repository and Branch dropdowns on the GitHub sync form now have a text
+  filter. [#5235](https://github.com/OpenFn/lightning/pull/5235)
 
 ### Changed
 
@@ -84,6 +86,12 @@ and this project adheres to
   donuts show the success rate and the failure count in their middle. Triage
   rows show each failure's state and adaptor, and the step bars show each step's
   adaptor. [#5229](https://github.com/OpenFn/lightning/pull/5229)
+- The project settings "Sync to GitHub" tab is now "Sync", and holds the project
+  export and a new CLI section with commands for pulling, deploying and running
+  a project locally. New GitHub connections default to the v2 `openfn.yaml`
+  format, with a switch to use the legacy format, and the connected panel now
+  carries its own title, verification banner and a "Remove integration" button.
+  [#5235](https://github.com/OpenFn/lightning/pull/5235)
 
 ### Removed
 
