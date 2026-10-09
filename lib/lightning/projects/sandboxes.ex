@@ -1027,7 +1027,11 @@ defmodule Lightning.Projects.Sandboxes do
           sandbox_env
         )
 
-      case create_empty_sandbox(parent_with_data, sandbox_attrs, actor) do
+      case Lightning.Projects.create_sandbox(
+             parent_with_data,
+             sandbox_attrs,
+             actor
+           ) do
         {:ok, sandbox} ->
           sandbox
           |> Repo.preload(:project_users)
@@ -1081,10 +1085,6 @@ defmodule Lightning.Projects.Sandboxes do
       env: env,
       project_users: [owner_membership | additional_memberships]
     })
-  end
-
-  defp create_empty_sandbox(parent, attrs, actor) do
-    Lightning.Projects.create_sandbox(parent, attrs, actor)
   end
 
   defp clone_credentials_from_parent(sandbox, parent) do
