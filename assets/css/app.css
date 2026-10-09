@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './ui/tokens.css';
 @import './ui/tabs.css';
+@import './ui/badge.css';
 
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";

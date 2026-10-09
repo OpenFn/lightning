@@ -628,17 +628,21 @@ defmodule LightningWeb.SandboxLive.Components do
                     not Project.sandbox?(@root_project)
                 }
                 id={"env-badge-#{@root_project.id}"}
-                env={
-                  if has_environment?(@root_project),
+                class="max-w-32"
+              >
+                <span class="truncate">
+                  {if has_environment?(@root_project),
                     do: @root_project.env,
-                    else: "main"
-                }
-              />
+                    else: "main"}
+                </span>
+              </.badge>
               <.badge
                 :if={@is_current}
                 id={"active-badge-#{@root_project.id}"}
-                env="active"
-              />
+                class="max-w-32"
+              >
+                <span class="truncate">active</span>
+              </.badge>
             </div>
           </div>
         </div>
@@ -679,13 +683,17 @@ defmodule LightningWeb.SandboxLive.Components do
               <.badge
                 :if={has_environment?(@sandbox)}
                 id={"env-badge-#{@sandbox.id}"}
-                env={@sandbox.env}
-              />
+                class="max-w-32"
+              >
+                <span class="truncate">{@sandbox.env}</span>
+              </.badge>
               <.badge
                 :if={@sandbox.is_current}
                 id={"active-badge-#{@sandbox.id}"}
-                env="active"
-              />
+                class="max-w-32"
+              >
+                <span class="truncate">active</span>
+              </.badge>
             </div>
           </div>
           <.sandbox_actions sandbox={@sandbox} />
@@ -718,33 +726,23 @@ defmodule LightningWeb.SandboxLive.Components do
               <.badge
                 :if={has_environment?(@sandbox)}
                 id={"env-badge-#{@sandbox.id}"}
-                env={@sandbox.env}
-              />
+                class="max-w-32"
+              >
+                <span class="truncate">{@sandbox.env}</span>
+              </.badge>
               <.badge
                 :if={@sandbox.is_current}
                 id={"active-badge-#{@sandbox.id}"}
-                env="active"
-              />
+                class="max-w-32"
+              >
+                <span class="truncate">active</span>
+              </.badge>
             </div>
           </div>
           <.sandbox_actions sandbox={@sandbox} />
         </div>
       </div>
     </div>
-    """
-  end
-
-  attr :id, :string, required: true
-  attr :env, :string, required: true
-
-  defp badge(assigns) do
-    ~H"""
-    <span
-      id={@id}
-      class="inline-block px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded-full truncate max-w-32"
-    >
-      {@env}
-    </span>
     """
   end
 

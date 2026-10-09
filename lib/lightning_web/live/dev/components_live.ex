@@ -32,7 +32,12 @@ defmodule LightningWeb.Dev.ComponentsLive do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, cases: @cases, tabs: @tabs)
+    assigns =
+      assign(assigns,
+        cases: @cases,
+        tabs: @tabs,
+        badge_colors: ~w(neutral success warning danger info brand orange dark)
+      )
 
     ~H"""
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-y-6">
@@ -117,6 +122,46 @@ defmodule LightningWeb.Dev.ComponentsLive do
               data-disabled="true"
             >
             </div>
+          </div>
+        </div>
+      </div>
+      <div class="overflow-hidden rounded-md bg-white shadow">
+        <div class="px-6 py-4">
+          <h3 class="text-lg font-bold">Badge</h3>
+          <p class="font-mono text-xs text-gray-500">
+            Styling: assets/css/ui/badge.css
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-x-8 border-t border-gray-200 px-6 py-4">
+          <div class="flex flex-col gap-y-3">
+            <p class="text-xs text-gray-400">LiveView</p>
+            <div class="flex flex-wrap items-center gap-2">
+              <.badge :for={color <- @badge_colors} color={color}>{color}</.badge>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <.badge :for={color <- @badge_colors} color={color} size="small">
+                {color}
+              </.badge>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <.badge mono>a1b2c3d</.badge>
+              <.badge color="success" icon="hero-bolt">Webhook</.badge>
+              <.badge class="max-w-32">
+                <span class="truncate">a-very-long-sandbox-name</span>
+              </.badge>
+              <.badge color="brand">
+                Project A <:remove label="Remove Project A" />
+              </.badge>
+            </div>
+            <div class="flex flex-wrap items-center gap-4">
+              <.badge :for={color <- @badge_colors} color={color} dot>
+                {color}
+              </.badge>
+              <.badge color="info" dot pulse>Running</.badge>
+            </div>
+          </div>
+          <div>
+            <p class="mb-2 text-xs text-gray-400">React</p>
           </div>
         </div>
       </div>
