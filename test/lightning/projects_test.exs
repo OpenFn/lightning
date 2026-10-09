@@ -3381,6 +3381,17 @@ defmodule Lightning.ProjectsTest do
       assert opts[:constraint] == :unique
     end
 
+    test "an audit event it cannot record is an error, and leaves no project",
+         %{attrs: attrs} do
+      id = Ecto.UUID.generate()
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Projects.create_project(Map.put(attrs, :id, id), %User{})
+
+      assert changeset.errors[:actor_id]
+      refute Repo.get(Project, id)
+    end
+
     test "emails each initial member by default, and none with notify: false",
          %{attrs: attrs} do
       user = insert(:user)

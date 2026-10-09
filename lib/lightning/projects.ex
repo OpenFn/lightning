@@ -625,14 +625,9 @@ defmodule Lightning.Projects do
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
   def create_project(attrs, actor, opts \\ []) do
     Repo.transact(fn ->
-      with {:ok, project} <- ProjectHook.handle_create_project(attrs) do
-        project = Repo.preload(project, :project_users)
-
-        {:ok, _} =
-          Multi.new()
-          |> Audit.derive_creation_events(project, actor)
-          |> Repo.transaction()
-
+      with {:ok, project} <- ProjectHook.handle_create_project(attrs),
+           project = Repo.preload(project, :project_users),
+           {:ok, _events} <- record_creation(project, actor) do
         if Keyword.get(opts, :notify, true) do
           schedule_project_addition_emails(%Project{project_users: []}, project)
         end
@@ -643,6 +638,16 @@ defmodule Lightning.Projects do
     |> tap(fn result ->
       with {:ok, project} <- result, do: Events.project_created(project)
     end)
+  end
+
+  defp record_creation(project, actor) do
+    Multi.new()
+    |> Audit.derive_creation_events(project, actor)
+    |> Repo.transaction()
+    |> case do
+      {:ok, events} -> {:ok, events}
+      {:error, _operation, changeset, _changes_so_far} -> {:error, changeset}
+    end
   end
 
   @doc """
