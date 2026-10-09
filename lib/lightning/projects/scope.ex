@@ -25,6 +25,10 @@ defmodule Lightning.Projects.Scope do
   `nil`. Ownership is checked before liveness, so a connection learns nothing
   about a project that is not its own.
 
+  A `%ServiceAccount{}` has no membership row either, and is not tied to one
+  project: its authority is its token's scope, checked at the route. Its `role`
+  is always `nil`.
+
   Scheduling deletion removes no membership rows and revokes no token, so this
   refusal is the whole of the offboarding gate during the purge window.
 
@@ -50,6 +54,7 @@ defmodule Lightning.Projects.Scope do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
+  alias Lightning.ServiceAccount
   alias Lightning.VersionControl.ProjectRepoConnection
 
   # `mfa_satisfied?` defaults to false so a `%Scope{}` that never went through
@@ -77,9 +82,9 @@ defmodule Lightning.Projects.Scope do
 
   @typedoc """
   Whoever is asking. A `%User{}` may hold a role; a `%ProjectRepoConnection{}`
-  never does.
+  and a `%ServiceAccount{}` never do.
   """
-  @type actor :: User.t() | ProjectRepoConnection.t()
+  @type actor :: User.t() | ProjectRepoConnection.t() | ServiceAccount.t()
 
   @typedoc """
   Anything that identifies a project: a loaded `%Project{}`, a project id, or
@@ -107,6 +112,8 @@ defmodule Lightning.Projects.Scope do
   a project that exists, and — for a `%ProjectRepoConnection{}` actor —
   `{:error, :connection_not_for_this_project}` when the resolved project is not
   the one the connection belongs to.
+
+  A `%ServiceAccount{}` resolves any live project, with no role.
   """
   @spec fetch(actor(), subject()) :: {:ok, t()} | {:error, error()}
   def fetch(%User{} = user, subject) do
@@ -124,6 +131,13 @@ defmodule Lightning.Projects.Scope do
          :ok <- connection_owns?(repo_connection, project),
          :ok <- still_operable(project) do
       {:ok, build(repo_connection, project)}
+    end
+  end
+
+  def fetch(%ServiceAccount{} = account, subject) do
+    with {:ok, project} <- resolve_project(subject),
+         :ok <- still_operable(project) do
+      {:ok, build(account, project)}
     end
   end
 
@@ -209,6 +223,19 @@ defmodule Lightning.Projects.Scope do
     %__MODULE__{
       project: project,
       actor: repo_connection,
+      role: nil,
+      mfa_satisfied?: true
+    }
+  end
+
+  # No role, because it holds no membership row: what it may do is decided by
+  # its token's scope at the route, and `ProjectUsers` answers for it on that
+  # basis. MFA is exempted explicitly for the same reason as a repo connection
+  # above: a machine credential cannot enrol.
+  defp build(%ServiceAccount{} = account, %Project{} = project) do
+    %__MODULE__{
+      project: project,
+      actor: account,
       role: nil,
       mfa_satisfied?: true
     }

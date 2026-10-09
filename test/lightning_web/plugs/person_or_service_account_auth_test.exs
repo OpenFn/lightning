@@ -115,8 +115,8 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
     end
   end
 
-  # A repo connection on GET /api/projects/:id reaches ProjectUsers, which
-  # doesn't decide for one yet, so this exercises the plugs on their own.
+  # The plugs on their own: what the policy then answers is pinned in
+  # project_controller_test.exs.
   describe "a repo connection token" do
     test "is authenticated and passes require_scope", %{conn: conn} do
       repo_connection =

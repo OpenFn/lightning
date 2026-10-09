@@ -25,6 +25,7 @@ defmodule Lightning.Policies.ProjectUsers do
   alias Lightning.Accounts.User
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.Scope
+  alias Lightning.ServiceAccount
 
   @admin_actions [
     :write_webhook_auth_method,
@@ -51,6 +52,10 @@ defmodule Lightning.Policies.ProjectUsers do
   @self_actions [:edit_digest_alerts, :edit_failure_alerts]
 
   @other_actions [:access_project, :delete_project, :publish_template]
+
+  @service_account_actions @admin_actions ++
+                             @editor_actions ++
+                             [:access_project, :delete_project]
 
   @type actions ::
           :access_project
@@ -84,10 +89,10 @@ defmodule Lightning.Policies.ProjectUsers do
     do: @admin_actions ++ @editor_actions ++ @self_actions ++ @other_actions
 
   @doc """
-  Whether `user` may perform `action`, where the subject is anything that
+  Whether `actor` may perform `action`, where the subject is anything that
   identifies a project — see `t:Lightning.Projects.Scope.subject/0`.
   """
-  @spec authorize(actions(), User.t(), Scope.subject()) :: boolean()
+  @spec authorize(actions(), Scope.actor(), Scope.subject()) :: boolean()
 
   # These act on a specific membership row, not on project standing. The alert
   # handlers in `ProjectLive.Settings` pass a client-supplied "project_user_id",
@@ -109,8 +114,8 @@ defmodule Lightning.Policies.ProjectUsers do
       )
   end
 
-  def authorize(action, %User{} = user, subject) do
-    case Scope.fetch(user, subject) do
+  def authorize(action, actor, subject) do
+    case Scope.fetch(actor, subject) do
       {:ok, scope} ->
         permitted?(action, scope)
 
@@ -132,6 +137,14 @@ defmodule Lightning.Policies.ProjectUsers do
   # First, so it denies every action this module decides — including ones added
   # later — without anyone having to remember @admin_actions/@editor_actions.
   def permitted?(_action, %Scope{mfa_satisfied?: false}), do: false
+
+  # A service account holds no role; its authority is its token's scope, which
+  # the route has already checked. It gets every project action except the
+  # self actions, which act on the caller's own membership row (it has none),
+  # and :publish_template, which is for support staff rather than any project
+  # role.
+  def permitted?(action, %Scope{actor: %ServiceAccount{}}),
+    do: action in @service_account_actions
 
   def permitted?(:access_project, %Scope{} = scope), do: has_standing?(scope)
 

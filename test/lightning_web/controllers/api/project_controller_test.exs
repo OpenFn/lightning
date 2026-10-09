@@ -2,6 +2,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import Lightning.ServiceAccountHelpers
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
@@ -153,6 +154,58 @@ defmodule LightningWeb.API.ProjectControllerTest do
                "relationships" => %{},
                "type" => "projects"
              }
+    end
+  end
+
+  describe "show, for a service account with projects:write" do
+    setup %{conn: conn} do
+      {account, _private_key} = service_account_with_key()
+      Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
+
+      token =
+        Lightning.ServiceAccount.AccessToken.issue(account, ["projects:write"])
+
+      %{conn: put_req_header(conn, "authorization", "Bearer " <> token)}
+    end
+
+    test "shows a project it is not a member of", %{conn: conn} do
+      project = insert(:project)
+
+      conn = get(conn, ~p"/api/projects/#{project.id}")
+
+      assert %{"id" => id, "attributes" => %{"name" => name}} =
+               json_response(conn, 200)["data"]
+
+      assert id == project.id
+      assert name == project.name
+    end
+
+    test "is refused a project scheduled for deletion with 401", %{conn: conn} do
+      project =
+        insert(:project,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      conn = get(conn, ~p"/api/projects/#{project.id}")
+
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+  end
+
+  describe "show, for a repo connection" do
+    test "is refused its own project with 401", %{conn: conn} do
+      project = insert(:project)
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      conn =
+        conn
+        |> put_req_header(
+          "authorization",
+          "Bearer " <> repo_connection.access_token
+        )
+        |> get(~p"/api/projects/#{project.id}")
+
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
   end
 end

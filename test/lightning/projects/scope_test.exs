@@ -309,4 +309,55 @@ defmodule Lightning.Projects.ScopeTest do
                Scope.fetch(repo_connection, project)
     end
   end
+
+  describe "a service account as the actor" do
+    setup do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{account: account}
+    end
+
+    test "resolves a live project by project, id, or membership row, with no role",
+         %{account: account, live_project: project} do
+      project_user =
+        hd(Lightning.Repo.preload(project, :project_users).project_users)
+
+      for subject <- [project, project.id, project_user] do
+        assert {:ok, scope} = Scope.fetch(account, subject)
+        assert scope.project.id == project.id
+        assert scope.actor == account
+        assert scope.role == nil
+        assert scope.project_user == nil
+        assert scope.support? == false
+      end
+    end
+
+    # A machine credential cannot enrol, so the requirement does not apply.
+    test "meets the MFA requirement of a project that has one", %{
+      account: account
+    } do
+      project = insert(:project, requires_mfa: true)
+
+      assert {:ok, scope} = Scope.fetch(account, project)
+      assert scope.mfa_satisfied? == true
+    end
+
+    test "is refused a scheduled-deleted project, same as a user", %{
+      account: account,
+      scheduled_deleted_project: project
+    } do
+      assert {:error, :project_scheduled_for_deletion} =
+               Scope.fetch(account, %Project{id: project.id})
+    end
+
+    test "gets no such project for an unknown or malformed id", %{
+      account: account
+    } do
+      assert {:error, :no_such_project} =
+               Scope.fetch(account, Ecto.UUID.generate())
+
+      assert {:error, :no_such_project} = Scope.fetch(account, "not-a-uuid")
+    end
+  end
 end
