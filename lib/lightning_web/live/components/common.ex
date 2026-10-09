@@ -282,24 +282,24 @@ defmodule LightningWeb.Components.Common do
   attr :tooltip, :string, required: false
 
   def snapshot_version_chip(assigns) do
-    styles =
-      if assigns.version == "latest",
-        do: "bg-primary-100 text-primary-800",
-        else: "bg-yellow-100 text-yellow-800"
+    color = if assigns.version == "latest", do: "brand", else: "warning"
 
-    has_tooltip? = Map.has_key?(assigns, :tooltip)
+    tooltip_attrs =
+      if Map.has_key?(assigns, :tooltip),
+        do: [
+          "phx-hook": "Tooltip",
+          "data-placement": "bottom",
+          "aria-label": assigns.tooltip
+        ],
+        else: []
 
-    assigns = assign(assigns, has_tooltip?: has_tooltip?, styles: styles)
+    assigns = assign(assigns, color: color, tooltip_attrs: tooltip_attrs)
 
     ~H"""
     <div id={"#{@id}-container"} class="flex items-middle text-sm font-normal">
-      <span
-        id={@id}
-        {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": @tooltip], else: []}
-        class={"inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium #{@styles}"}
-      >
+      <.badge id={@id} size="small" color={@color} {@tooltip_attrs}>
         {@version}
-      </span>
+      </.badge>
     </div>
     """
   end
@@ -612,29 +612,22 @@ defmodule LightningWeb.Components.Common do
     values: [:step_result, :http_request, :global, :saved_input]
 
   def dataclip_type_pill(assigns) do
-    base_classes = ~w[
-      px-2 py-1 rounded-full inline-block text-sm font-mono
-    ]
+    color =
+      case assigns[:type] do
+        :step_result -> "brand"
+        :http_request -> "success"
+        :global -> "info"
+        :saved_input -> "warning"
+        # Dataclips stored by the removed Kafka trigger keep their type and are
+        # still displayed.
+        :kafka -> "success"
+        _other -> "neutral"
+      end
 
-    class =
-      base_classes ++
-        case assigns[:type] do
-          :step_result -> ~w[bg-purple-500 text-purple-900]
-          :http_request -> ~w[bg-green-500 text-green-900]
-          :global -> ~w[bg-blue-500 text-blue-900]
-          :saved_input -> ~w[bg-yellow-500 text-yellow-900]
-          # Dataclips stored by the removed Kafka trigger keep their type and are
-          # still displayed.
-          :kafka -> ~w[bg-green-500 text-green-900]
-          _other -> []
-        end
-
-    assigns = assign(assigns, class: class)
+    assigns = assign(assigns, color: color)
 
     ~H"""
-    <div class={@class}>
-      {@type}
-    </div>
+    <.badge mono color={@color}>{@type}</.badge>
     """
   end
 
