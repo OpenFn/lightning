@@ -95,6 +95,40 @@ defmodule Lightning.Policies.CollectionsTest do
     end
   end
 
+  describe ":manage_collection on a project" do
+    test "is held by its owner and admins, not its editors or viewers" do
+      [owner, admin, editor, viewer, outsider] = insert_list(5, :user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: owner.id, role: :owner},
+            %{user_id: admin.id, role: :admin},
+            %{user_id: editor.id, role: :editor},
+            %{user_id: viewer.id, role: :viewer}
+          ]
+        )
+
+      assert_can(:manage_collection, owner, project)
+      assert_can(:manage_collection, admin, project)
+      refute_can(:manage_collection, editor, project)
+      refute_can(:manage_collection, viewer, project)
+      refute_can(:manage_collection, outsider, project)
+    end
+
+    test "is held by a service account on any project" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      assert Permissions.can?(
+               Collections,
+               :manage_collection,
+               account,
+               insert(:project)
+             )
+    end
+  end
+
   defp allowed_writes(user, collection) do
     for action <- @write_actions,
         Permissions.can?(Collections, action, user, collection),

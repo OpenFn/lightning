@@ -54,18 +54,21 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
   end
 
   def handle_event("save", %{"collection" => collection_params}, socket) do
-    %{mode: mode, return_to: return_to} = socket.assigns
+    %{mode: mode, return_to: return_to, current_user: current_user} =
+      socket.assigns
+
     collection_params = Helpers.derive_name_param(collection_params)
 
     result =
       case mode do
         :create ->
-          Collections.create_collection(collection_params)
+          Collections.create_collection(collection_params, current_user)
 
         :update ->
           Collections.update_collection(
             socket.assigns.collection,
-            collection_params
+            collection_params,
+            current_user
           )
       end
 
@@ -148,6 +151,7 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
                 field={f[:project_id]}
                 label="Project"
                 options={@projects_options}
+                disabled={@mode == :update}
                 required="true"
               />
             </div>

@@ -6,6 +6,7 @@ defmodule Lightning.Collections do
 
   alias Ecto.Multi
 
+  alias Lightning.Collections.Audit
   alias Lightning.Collections.Collection
   alias Lightning.Collections.Item
   alias Lightning.Extensions.Message
@@ -87,30 +88,29 @@ defmodule Lightning.Collections do
   end
 
   @doc """
-  Creates a new collection with the given attributes.
+  Creates a collection, recording `actor` as having created it.
 
-  ## Parameters
+  The collection hook is asked first, so a refused create writes nothing.
 
-    - `attrs`: A map of attributes to create the collection.
+  ## Options
+
+    * `:id` - The id to create the collection under, rather than a new one
 
   ## Examples
 
-      iex> create_collection(%{name: "New Collection", project_id: "a7895d29-02a9-42cd-845b-7ad893557c24"})
+      iex> create_collection(%{"name" => "patients", "project_id" => project_id}, actor)
       {:ok, %Collection{}}
 
-      iex> create_collection(%{name: nil, project_id: "a7895d29-02a9-42cd-845b-7ad893557c24"}})
+      iex> create_collection(%{"name" => nil, "project_id" => project_id}, actor)
       {:error, %Ecto.Changeset{}}
-
-  ## Returns
-
-    - `{:ok, %Collection{}}` on success.
-    - `{:error, %Ecto.Changeset{}}` on failure due to validation errors.
   """
-  @spec create_collection(map()) ::
+  @spec create_collection(map(), Lightning.Actor.t(), [{:id, Ecto.UUID.t()}]) ::
           {:ok, Collection.t()}
           | {:error, Ecto.Changeset.t()}
           | {:error, :exceeds_limit, Message.t()}
-  def create_collection(attrs) do
+  def create_collection(attrs, actor, opts \\ []) do
+    changeset = Collection.changeset(%Collection{id: opts[:id]}, attrs)
+
     Multi.new()
     |> Multi.run(:limiter, fn _repo, _changes ->
       case CollectionHook.handle_create(attrs) do
@@ -118,42 +118,62 @@ defmodule Lightning.Collections do
         {:error, :exceeds_limit, message} -> {:error, message}
       end
     end)
-    |> Multi.insert(:create, Collection.changeset(%Collection{}, attrs))
+    |> Multi.insert(:create, changeset)
+    |> Multi.insert(:audit, fn %{create: collection} ->
+      Audit.event("created", collection.id, actor, changeset)
+    end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{create: collection}} -> {:ok, collection}
-      {:error, :limiter, message, _changes} -> {:error, :exceeds_limit, message}
-      {:error, _op, changeset, _changes} -> {:error, changeset}
+      {:ok, %{create: collection}} ->
+        {:ok, collection}
+
+      {:error, :limiter, message, _changes} ->
+        {:error, :exceeds_limit, message}
+
+      {:error, :create, changeset, _changes} ->
+        {:error, changeset}
+
+      {:error, :audit, changeset, _changes} ->
+        raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
     end
   end
 
   @doc """
-  Updates an existing collection with the given attributes.
-
-  ## Parameters
-
-    - `collection`: The existing `%Collection{}` struct to update.
-    - `attrs`: A map of attributes to update the collection.
+  Renames a collection, recording `actor` as having renamed it. A write that
+  leaves the name as it was records nothing.
 
   ## Examples
 
-      iex> update_collection(collection, %{name: "Updated Name"})
+      iex> update_collection(collection, %{"name" => "patients"}, actor)
       {:ok, %Collection{}}
 
-      iex> update_collection(collection, %{name: nil})
+      iex> update_collection(collection, %{"name" => nil}, actor)
       {:error, %Ecto.Changeset{}}
-
-  ## Returns
-
-    - `{:ok, %Collection{}}` on success.
-    - `{:error, %Ecto.Changeset{}}` on failure due to validation errors.
   """
-  @spec update_collection(Collection.t(), map()) ::
+  @spec update_collection(Collection.t(), map(), Lightning.Actor.t()) ::
           {:ok, Collection.t()} | {:error, Ecto.Changeset.t()}
-  def update_collection(collection, attrs) do
-    collection
-    |> Collection.changeset(attrs)
-    |> Repo.update()
+  def update_collection(collection, attrs, actor) do
+    changeset = Collection.rename_changeset(collection, attrs)
+
+    Multi.new()
+    |> Multi.update(:update, changeset)
+    |> then(fn multi ->
+      case Audit.event("updated", collection.id, actor, changeset) do
+        :no_changes -> multi
+        event -> Multi.insert(multi, :audit, event)
+      end
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{update: collection}} ->
+        {:ok, collection}
+
+      {:error, :update, changeset, _changes} ->
+        {:error, changeset}
+
+      {:error, :audit, changeset, _changes} ->
+        raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+    end
   end
 
   @spec delete_collection(Ecto.UUID.t()) ::
