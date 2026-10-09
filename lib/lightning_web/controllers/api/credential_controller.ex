@@ -323,6 +323,17 @@ defmodule LightningWeb.API.CredentialController do
     end
   end
 
+  # A person keeps their answer; only apply, through a service account, is
+  # told the credential is about to be deleted.
+  defp replace(
+         _conn,
+         %Credential{user_id: owner_id, scheduled_deletion: %DateTime{}},
+         _attrs,
+         %User{id: owner_id},
+         %ServiceAccount{}
+       ),
+       do: {:error, :scheduled_for_deletion}
+
   # The links the credential holds go to `update_credential` with their ids, so
   # its `cast_assoc` keeps them rather than replacing them.
   defp replace(

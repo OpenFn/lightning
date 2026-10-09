@@ -8,6 +8,8 @@ defmodule LightningWeb.API.CredentialPutTest do
   alias Lightning.Credentials.Credential
   alias Lightning.Repo
 
+  import Ecto.Query
+
   @secret "s3cr3t-never-rendered"
 
   setup %{conn: conn} do
@@ -67,6 +69,22 @@ defmodule LightningWeb.API.CredentialPutTest do
       )
 
     credential
+  end
+
+  defp scheduled_for_deletion(credential) do
+    credential
+    |> Ecto.Changeset.change(
+      scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+    )
+    |> Repo.update!()
+  end
+
+  defp audit_ids(credential_id) do
+    Repo.all(
+      from a in Lightning.Credentials.Audit.base_query(),
+        where: a.item_id == ^credential_id,
+        select: a.id
+    )
   end
 
   describe "PUT, for a service account with credentials:write" do
@@ -201,6 +219,37 @@ defmodule LightningWeb.API.CredentialPutTest do
 
       assert owner_id == owner.id
       assert main_body(credential.id) == %{"password" => "old"}
+    end
+
+    test "answers scheduled_for_deletion and writes nothing to a credential being deleted",
+         %{conn: conn} do
+      owner = insert(:user)
+      [earlier, requested] = insert_pair(:project)
+      credential = scheduled_for_deletion(existing_credential(owner, earlier))
+      audits_before = audit_ids(credential.id)
+
+      conn =
+        put_credential(
+          conn,
+          credential.id,
+          credential_body(%{
+            "name" => "Renamed",
+            "owner" => owner.email,
+            "project_credentials" => links([requested.id])
+          })
+        )
+
+      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert Repo.reload!(credential).name == "Acme DHIS2"
+      assert main_body(credential.id) == %{"password" => "old"}
+
+      assert Repo.all(
+               from pc in Lightning.Projects.ProjectCredential,
+                 where: pc.credential_id == ^credential.id,
+                 select: pc.project_id
+             ) == [earlier.id]
+
+      assert audit_ids(credential.id) == audits_before
     end
 
     test "answers name_taken when the owner holds the name under another id",
@@ -426,6 +475,24 @@ defmodule LightningWeb.API.CredentialPutTest do
 
       assert json_response(conn, 409) == %{"error" => "id_taken"}
       assert Repo.reload!(credential).name == "Theirs"
+    end
+
+    test "still replaces their own credential while it is being deleted", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      credential =
+        scheduled_for_deletion(existing_credential(user, insert(:project)))
+
+      response =
+        conn
+        |> with_pat(user)
+        |> put_credential(credential.id, credential_body(%{"name" => "Renamed"}))
+        |> json_response(200)
+
+      assert response["credential"]["name"] == "Renamed"
+      assert main_body(credential.id) == %{"password" => @secret}
     end
 
     test "links only to projects where they may create a project credential",
