@@ -52,7 +52,7 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
         "role" => "owner"
       }
     })
-    |> Projects.create_project(false)
+    |> Projects.create_project(current_user, notify: false)
     |> case do
       {:ok, project} ->
         {:noreply,

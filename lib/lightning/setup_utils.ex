@@ -197,7 +197,8 @@ defmodule Lightning.SetupUtils do
             Application.get_env(:lightning, :default_retention_period),
           project_users: project_users
         },
-        false
+        owner!(project_users),
+        notify: false
       )
 
     if with_workflow do
@@ -341,7 +342,8 @@ defmodule Lightning.SetupUtils do
           id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa",
           project_users: project_users
         },
-        false
+        owner!(project_users),
+        notify: false
       )
 
     user = get_most_privileged_user!(openhie_project)
@@ -592,7 +594,8 @@ defmodule Lightning.SetupUtils do
           name: "dhis2-project",
           project_users: project_users
         },
-        false
+        owner!(project_users),
+        notify: false
       )
 
     user = get_most_privileged_user!(project)
@@ -942,6 +945,11 @@ defmodule Lightning.SetupUtils do
     {:ok, dataclip} = Lightning.Invocation.create_dataclip(params)
 
     dataclip
+  end
+
+  defp owner!(project_users) do
+    %{user_id: user_id} = Enum.find(project_users, &(&1.role == :owner))
+    Repo.get!(User, user_id)
   end
 
   defp get_most_privileged_user!(project) do

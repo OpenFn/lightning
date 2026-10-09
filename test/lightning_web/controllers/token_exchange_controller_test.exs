@@ -31,7 +31,8 @@ defmodule LightningWeb.TokenExchangeControllerTest do
         "grant_type" => "client_credentials",
         "client_assertion_type" => @assertion_type,
         "client_assertion" =>
-          sign_assertion(private_key, assertion_claims(account, audience))
+          sign_assertion(private_key, assertion_claims(account, audience)),
+        "scope" => "users:read"
       },
       extra
     )
@@ -52,7 +53,11 @@ defmodule LightningWeb.TokenExchangeControllerTest do
                "grant_types_supported" => ["client_credentials"],
                "token_endpoint_auth_methods_supported" => ["private_key_jwt"],
                "token_endpoint_auth_signing_alg_values_supported" => ["RS256"],
-               "scopes_supported" => ["users:read", "users:write"],
+               "scopes_supported" => [
+                 "users:read",
+                 "users:write",
+                 "projects:write"
+               ],
                "response_types_supported" => []
              }
 
@@ -69,14 +74,18 @@ defmodule LightningWeb.TokenExchangeControllerTest do
       account: account,
       private_key: private_key
     } do
-      conn =
-        exchange(conn, valid_params(account, private_key, token_endpoint(conn)))
+      params =
+        valid_params(account, private_key, token_endpoint(conn), %{
+          "scope" => "users:read users:write projects:write"
+        })
+
+      conn = exchange(conn, params)
 
       assert %{
                "access_token" => access_token,
                "token_type" => "Bearer",
                "expires_in" => 300,
-               "scope" => "users:read users:write"
+               "scope" => "users:read users:write projects:write"
              } = json_response(conn, 200)
 
       assert get_resp_header(conn, "cache-control") == ["no-store"]
@@ -95,7 +104,7 @@ defmodule LightningWeb.TokenExchangeControllerTest do
                "aud" => aud,
                "sub" => sub,
                "client_id" => sub,
-               "scope" => "users:read users:write",
+               "scope" => "users:read users:write projects:write",
                "iat" => iat,
                "exp" => exp,
                "jti" => jti
@@ -164,6 +173,20 @@ defmodule LightningWeb.TokenExchangeControllerTest do
 
       assert %{"error" => "invalid_scope"} =
                conn |> exchange(params) |> json_response(400)
+    end
+
+    test "refuses a request that names no scope with invalid_scope", %{
+      conn: conn,
+      account: account,
+      private_key: private_key
+    } do
+      params = valid_params(account, private_key, token_endpoint(conn))
+
+      for params <- [Map.delete(params, "scope"), Map.put(params, "scope", " ")] do
+        assert conn |> exchange(params) |> json_response(400) == %{
+                 "error" => "invalid_scope"
+               }
+      end
     end
 
     test "refuses a failed assertion with invalid_client", %{

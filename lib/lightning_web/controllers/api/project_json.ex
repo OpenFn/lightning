@@ -21,12 +21,21 @@ defmodule LightningWeb.API.ProjectJSON do
 
   def render("show.json", %{project: project, conn: conn}) do
     %{
-      data: resource(conn, project),
+      data:
+        put_in(
+          resource(conn, project),
+          [:attributes, :members],
+          members(project)
+        ),
       included: [],
       links: %{
         self: url_for(conn)
       }
     }
+  end
+
+  defp members(project) do
+    Enum.map(project.project_users, &%{email: &1.user.email, role: &1.role})
   end
 
   defp resource(conn, project) do

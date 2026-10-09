@@ -2,6 +2,7 @@ defmodule Lightning.ServiceAccountHelpers do
   @moduledoc false
 
   alias Lightning.ServiceAccount
+  alias Lightning.ServiceAccount.AccessToken
 
   @doc """
   A fresh key pair and the service account its public half registers.
@@ -37,6 +38,24 @@ defmodule Lightning.ServiceAccountHelpers do
       private_key |> JOSE.JWT.sign(header, claims) |> JOSE.JWS.compact()
 
     token
+  end
+
+  @doc """
+  An access token for `account` carrying `scope`, signed as Lightning signs
+  one, that expired a second ago.
+  """
+  def expired_access_token(%ServiceAccount{id: id}, scope) do
+    sign_assertion(
+      Lightning.Config.token_signer().jwk,
+      %{
+        "iss" => AccessToken.issuer(),
+        "aud" => AccessToken.issuer() <> "/api",
+        "sub" => id,
+        "scope" => scope,
+        "exp" => System.system_time(:second) - 1
+      },
+      %{"alg" => "RS256", "typ" => "at+jwt"}
+    )
   end
 
   @doc """

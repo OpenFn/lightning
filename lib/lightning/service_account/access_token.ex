@@ -9,7 +9,7 @@ defmodule Lightning.ServiceAccount.AccessToken do
 
   alias Lightning.ServiceAccount
 
-  @scopes ["users:read", "users:write"]
+  @scopes ["users:read", "users:write", "projects:write"]
   @lifetime 300
   @typ "at+jwt"
 
@@ -45,6 +45,17 @@ defmodule Lightning.ServiceAccount.AccessToken do
       |> JOSE.JWS.compact()
 
     token
+  end
+
+  @doc """
+  Whether `token` declares itself an access token by its `typ`, without
+  checking anything else about it.
+  """
+  @spec access_token?(String.t()) :: boolean()
+  def access_token?(token) do
+    match?(%{"typ" => @typ}, Jason.decode!(JOSE.JWS.peek_protected(token)))
+  rescue
+    _ -> false
   end
 
   @doc """

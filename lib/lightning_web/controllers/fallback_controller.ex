@@ -38,6 +38,12 @@ defmodule LightningWeb.FallbackController do
     })
   end
 
+  def call(conn, {:error, :scheduled_for_deletion}) do
+    conn
+    |> put_status(:conflict)
+    |> json(%{error: "scheduled_for_deletion"})
+  end
+
   def call(conn, {:error, :forbidden}) do
     conn
     |> put_status(:forbidden)

@@ -547,22 +547,87 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
+  @member_roles ProjectUser.RolesEnum.__valid_values__()
+                |> Enum.filter(&is_binary/1)
+
   @doc """
-  Creates a project.
+  Resolves members given as `%{"email" => email, "role" => role}` to the
+  `%{user_id: id, role: role}` rows a project's `project_users` take.
+
+  Emails match regardless of case. The messages never contain an email, so
+  they can be shown to whoever submitted the list.
+  """
+  @spec members_by_email([term()]) ::
+          {:ok,
+           [%{user_id: Ecto.UUID.t(), role: :owner | :admin | :editor | :viewer}]}
+          | {:error, [String.t()]}
+  def members_by_email(members) do
+    if Enum.all?(members, &member_shape?/1) do
+      user_ids =
+        members
+        |> Enum.map(& &1["email"])
+        |> Lightning.Accounts.list_users_by_emails()
+        |> Map.new(&{String.downcase(&1.email), &1.id})
+
+      members
+      |> Enum.map(fn %{"email" => email, "role" => role} ->
+        %{
+          user_id: Map.get(user_ids, String.downcase(email)),
+          role: String.to_existing_atom(role)
+        }
+      end)
+      |> check_members()
+    else
+      {:error,
+       [
+         "each member needs an email and a role of #{Enum.join(@member_roles, ", ")}"
+       ]}
+    end
+  end
+
+  defp member_shape?(%{"email" => email, "role" => role}),
+    do: is_binary(email) and role in @member_roles
+
+  defp member_shape?(_member), do: false
+
+  defp check_members(members) do
+    {found, missing} = members |> Enum.map(& &1.user_id) |> Enum.split_with(& &1)
+
+    messages =
+      for {true, message} <- [
+            {missing != [], "names an email no user holds"},
+            {found != Enum.uniq(found), "names one user more than once"}
+          ],
+          do: message
+
+    if messages == [], do: {:ok, members}, else: {:error, messages}
+  end
+
+  @doc """
+  Creates a project, recording `actor` as having created it and added each of
+  its initial members.
+
+  ## Options
+
+    * `:notify` - email each initial member that they were added (default `true`)
 
   ## Examples
 
-      iex> create_project(%{field: value})
+      iex> create_project(%{field: value}, actor)
       {:ok, %Project{}}
 
-      iex> create_project(%{field: bad_value})
+      iex> create_project(%{field: bad_value}, actor)
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_project(attrs \\ %{}, schedule_email? \\ true) do
+  @spec create_project(map(), Lightning.Actor.t(), keyword()) ::
+          {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+  def create_project(attrs, actor, opts \\ []) do
     Repo.transact(fn ->
-      with {:ok, project} <- ProjectHook.handle_create_project(attrs) do
-        if schedule_email? do
+      with {:ok, project} <- ProjectHook.handle_create_project(attrs),
+           project = Repo.preload(project, :project_users),
+           {:ok, _events} <- record_creation(project, actor) do
+        if Keyword.get(opts, :notify, true) do
           schedule_project_addition_emails(%Project{project_users: []}, project)
         end
 
@@ -574,19 +639,32 @@ defmodule Lightning.Projects do
     end)
   end
 
+  defp record_creation(project, actor) do
+    Multi.new()
+    |> Audit.derive_creation_events(project, actor)
+    |> Repo.transaction()
+    |> case do
+      {:ok, events} -> {:ok, events}
+      {:error, _operation, changeset, _changes_so_far} -> {:error, changeset}
+    end
+  end
+
   @doc """
   Updates a project.
 
   ## Examples
 
-      iex> update_project(project, %{field: new_value})
+      iex> update_project(project, %{field: new_value}, actor)
       {:ok, %Project{}}
 
-      iex> update_project(project, %{field: bad_value})
+      iex> update_project(project, %{field: bad_value}, actor)
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_project(%Project{} = project, attrs, user \\ nil) do
+  @spec update_project(Project.t(), map(), Lightning.Actor.t()) ::
+          {:ok, Project.t()}
+          | {:error, Ecto.Changeset.t() | :not_related_to_project}
+  def update_project(%Project{} = project, attrs, actor) do
     changeset =
       project
       |> Project.changeset(attrs)
@@ -594,7 +672,7 @@ defmodule Lightning.Projects do
 
     Multi.new()
     |> Multi.update(:project, changeset)
-    |> maybe_audit_changes(changeset, user)
+    |> Audit.derive_events(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project}} ->
@@ -617,13 +695,6 @@ defmodule Lightning.Projects do
     end
   end
 
-  defp maybe_audit_changes(multi, _changeset, nil), do: multi
-
-  defp maybe_audit_changes(multi, changeset, user) do
-    multi
-    |> Audit.derive_events(changeset, user)
-  end
-
   @spec update_project_with_users(Project.t(), map(), User.t(), boolean()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
   def update_project_with_users(
@@ -638,6 +709,7 @@ defmodule Lightning.Projects do
 
     project
     |> membership_multi(changeset, actor)
+    |> Audit.derive_events(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project, membership_changes: changes}} ->
@@ -2257,10 +2329,10 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Creates a sandbox under the given `parent` by delegating to `create_project/2`.
+  Creates a sandbox under the given `parent` by delegating to `create_project/3`.
 
-  This is a convenience wrapper that sets `:parent_id` and preserves the
-  existing behavior around collaborator emails (off by default unless `schedule_email?` is `true`).
+  This is a convenience wrapper that sets `:parent_id` and emails no
+  collaborators.
 
   ## Notes
 
@@ -2274,10 +2346,12 @@ defmodule Lightning.Projects do
   * `{:ok, %Project{}}` on success
   * `{:error, %Ecto.Changeset{}}` on validation/unique errors
   """
-  @spec create_sandbox(Project.t(), map(), boolean()) ::
+  @spec create_sandbox(Project.t(), map(), Lightning.Actor.t()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
-  def create_sandbox(%Project{id: parent_id}, attrs, schedule_email? \\ false) do
-    attrs |> Map.put(:parent_id, parent_id) |> create_project(schedule_email?)
+  def create_sandbox(%Project{id: parent_id}, attrs, actor) do
+    attrs
+    |> Map.put(:parent_id, parent_id)
+    |> create_project(actor, notify: false)
   end
 
   @doc """

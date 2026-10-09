@@ -48,7 +48,7 @@ defmodule LightningWeb.API.UserController do
            Accounts.update_user(
              user,
              Map.take(params, @update_fields),
-             conn.assigns.service_account
+             conn.assigns.current_resource
            ) do
       render(conn, "show.json", user: user, conn: conn)
     end
@@ -57,7 +57,7 @@ defmodule LightningWeb.API.UserController do
   def create(conn, params) do
     case Accounts.create_user(
            Map.take(params, @create_fields),
-           conn.assigns.service_account
+           conn.assigns.current_resource
          ) do
       {:ok, user} ->
         conn

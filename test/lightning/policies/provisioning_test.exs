@@ -143,4 +143,40 @@ defmodule Lightning.Policies.ProvisioningTest do
              )
     end
   end
+
+  describe ":create_project" do
+    test "is allowed for a superuser" do
+      superuser = insert(:user, role: :superuser)
+
+      assert Provisioning.authorize(:create_project, superuser, nil)
+    end
+
+    test "is allowed for a service account" do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      assert Provisioning.authorize(:create_project, account, nil)
+    end
+
+    test "is refused for a user who is not a superuser, whatever roles they hold elsewhere" do
+      for role <- [:owner, :admin, :editor, :viewer] do
+        user = insert(:user)
+        insert(:project, project_users: [%{user_id: user.id, role: role}])
+
+        assert Provisioning.authorize(:create_project, user, nil) ==
+                 {:error, :forbidden}
+
+        assert Provisioning.authorize(:provision_project, user, %Project{
+                 id: nil
+               }) == {:error, :forbidden}
+      end
+    end
+
+    test "is refused for a repo connection" do
+      repo_connection = insert(:project_repo_connection)
+
+      assert Provisioning.authorize(:create_project, repo_connection, nil) ==
+               {:error, :forbidden}
+    end
+  end
 end

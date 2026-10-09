@@ -39,7 +39,7 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
                conn.assigns.access_token
 
       assert sub == account.id
-      assert conn.assigns.service_account == account
+      assert conn.assigns.current_resource == account
     end
 
     test "refuses a token for a service account that is no longer registered",
@@ -75,21 +75,9 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
     end
 
     test "refuses an expired access token", %{conn: conn, account: account} do
-      signer = Lightning.Config.token_signer()
-      now = System.system_time(:second)
-
-      {_, token} =
-        signer.jwk
-        |> JOSE.JWT.sign(%{"alg" => "RS256", "typ" => "at+jwt"}, %{
-          "iss" => AccessToken.issuer(),
-          "aud" => AccessToken.issuer() <> "/api",
-          "sub" => account.id,
-          "scope" => "users:read",
-          "exp" => now - 1
-        })
-        |> JOSE.JWS.compact()
-
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn
+      |> authenticate(expired_access_token(account, "users:read"))
+      |> assert_refused(401, "invalid_token")
     end
 
     test "refuses a token that is right in every way but its typ", %{

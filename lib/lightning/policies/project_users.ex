@@ -18,6 +18,12 @@ defmodule Lightning.Policies.ProjectUsers do
   Adding an action means adding an atom to `@admin_actions` or
   `@editor_actions`. It inherits the guard; there is nothing to remember.
 
+  A service account holds no role. Its authority is the scope its token
+  carries, which `LightningWeb.Plugs.PersonOrServiceAccountAuth` checks at the
+  route; here it may do only what `@service_account_actions` lists. That list
+  is separate and written out, so a new admin or editor action is refused to
+  the service account until it is added there.
+
   We deny by default: an action in none of the lists is refused.
   """
   @behaviour Bodyguard.Policy
@@ -25,6 +31,7 @@ defmodule Lightning.Policies.ProjectUsers do
   alias Lightning.Accounts.User
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.Scope
+  alias Lightning.ServiceAccount
 
   @admin_actions [
     :write_webhook_auth_method,
@@ -51,6 +58,27 @@ defmodule Lightning.Policies.ProjectUsers do
   @self_actions [:edit_digest_alerts, :edit_failure_alerts]
 
   @other_actions [:access_project, :delete_project, :publish_template]
+
+  @service_account_actions [
+    :write_webhook_auth_method,
+    :write_github_connection,
+    :edit_project,
+    :edit_data_retention,
+    :add_project_user,
+    :remove_project_user,
+    :edit_run_settings,
+    :create_workflow,
+    :edit_workflow,
+    :delete_workflow,
+    :run_workflow,
+    :create_project_credential,
+    :initiate_github_sync,
+    :create_channel,
+    :delete_channel,
+    :update_channel,
+    :access_project,
+    :delete_project
+  ]
 
   @type actions ::
           :access_project
@@ -84,10 +112,10 @@ defmodule Lightning.Policies.ProjectUsers do
     do: @admin_actions ++ @editor_actions ++ @self_actions ++ @other_actions
 
   @doc """
-  Whether `user` may perform `action`, where the subject is anything that
+  Whether `actor` may perform `action`, where the subject is anything that
   identifies a project — see `t:Lightning.Projects.Scope.subject/0`.
   """
-  @spec authorize(actions(), User.t(), Scope.subject()) :: boolean()
+  @spec authorize(actions(), Scope.actor(), Scope.subject()) :: boolean()
 
   # These act on a specific membership row, not on project standing. The alert
   # handlers in `ProjectLive.Settings` pass a client-supplied "project_user_id",
@@ -109,8 +137,8 @@ defmodule Lightning.Policies.ProjectUsers do
       )
   end
 
-  def authorize(action, %User{} = user, subject) do
-    case Scope.fetch(user, subject) do
+  def authorize(action, actor, subject) do
+    case Scope.fetch(actor, subject) do
       {:ok, scope} ->
         permitted?(action, scope)
 
@@ -132,6 +160,9 @@ defmodule Lightning.Policies.ProjectUsers do
   # First, so it denies every action this module decides — including ones added
   # later — without anyone having to remember @admin_actions/@editor_actions.
   def permitted?(_action, %Scope{mfa_satisfied?: false}), do: false
+
+  def permitted?(action, %Scope{actor: %ServiceAccount{}}),
+    do: action in @service_account_actions
 
   def permitted?(:access_project, %Scope{} = scope), do: has_standing?(scope)
 
