@@ -591,6 +591,28 @@ defmodule Lightning.CredentialsTest do
       :ok
     end
 
+    test "holds a credential switched to oauth to an OAuth token body" do
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "raw", user: user)
+        |> with_body(%{name: "main", body: %{"foo" => 1}})
+
+      assert {:error, %{type: :missing_access_token}} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "schema" => "oauth",
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"foo" => 2}}
+                   ]
+                 },
+                 user
+               )
+
+      assert Repo.reload!(credential).schema == "raw"
+    end
+
     test "updates an OAuth credential with new scopes" do
       user = insert(:user)
       oauth_client = insert(:oauth_client)

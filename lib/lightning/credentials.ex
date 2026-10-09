@@ -265,25 +265,21 @@ defmodule Lightning.Credentials do
   defp do_update_credential(%Credential{} = credential, attrs, actor) do
     credential = Repo.preload(credential, :project_credentials)
     attrs = normalize_keys(attrs)
+    changeset = Credential.changeset(credential, attrs)
+    schema = Ecto.Changeset.get_field(changeset, :schema)
 
     credential_bodies =
       attrs
       |> get_credential_bodies()
       |> then(fn bodies ->
-        if credential.schema == "oauth" do
+        if schema == "oauth" do
           preserve_refresh_tokens(bodies, credential)
         else
           bodies
         end
       end)
 
-    with :ok <-
-           validate_credential_bodies(
-             credential_bodies,
-             attrs,
-             credential.schema
-           ),
-         changeset <- Credential.changeset(credential, attrs),
+    with :ok <- validate_credential_bodies(credential_bodies, attrs, schema),
          :ok <- validate_external_id(changeset) do
       build_update_multi(credential, changeset, credential_bodies)
       |> derive_events(changeset, actor)
