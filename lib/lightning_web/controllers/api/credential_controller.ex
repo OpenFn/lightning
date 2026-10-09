@@ -550,47 +550,13 @@ defmodule LightningWeb.API.CredentialController do
     # Ensure user_id is set to the current authenticated user
     params_with_user = Map.put(params, "user_id", current_user.id)
 
-    project_credentials = Map.get(params, "project_credentials", [])
-
-    if Enum.empty?(project_credentials) do
-      {:ok, params_with_user}
-    else
-      case validate_project_access(project_credentials, current_user) do
-        :ok -> {:ok, params_with_user}
-        {:error, _} = error -> error
-      end
-    end
-  end
-
-  defp validate_project_access(project_credentials, current_user) do
     project_ids =
-      project_credentials
+      params
+      |> Map.get("project_credentials", [])
       |> Enum.map(&Map.get(&1, "project_id"))
       |> Enum.filter(& &1)
 
-    unauthorized_projects =
-      Enum.filter(project_ids, fn project_id ->
-        case Projects.get_project(project_id) do
-          nil ->
-            true
-
-          project ->
-            case ProjectUsers
-                 |> Permissions.can(
-                   :create_project_credential,
-                   current_user,
-                   project
-                 ) do
-              :ok -> false
-              _ -> true
-            end
-        end
-      end)
-
-    if Enum.empty?(unauthorized_projects) do
-      :ok
-    else
-      {:error, :forbidden}
-    end
+    with :ok <- authorize_links(project_ids, current_user),
+         do: {:ok, params_with_user}
   end
 end
