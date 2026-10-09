@@ -493,6 +493,12 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
           delete_channel
         )a
 
+      refused = ~w(publish_template edit_digest_alerts edit_failure_alerts)a
+
+      assert Enum.sort(ProjectUsers.actions()) ==
+               Enum.sort(expected ++ refused),
+             "classify every new action as allowed or refused for a service account"
+
       allowed =
         for action <- ProjectUsers.actions(),
             Permissions.can?(ProjectUsers, action, account, project),
