@@ -40,11 +40,11 @@ defmodule LightningWeb.API.ProjectController do
 
   alias Lightning.Accounts
   alias Lightning.Accounts.User
-  alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Provisioning
   alias Lightning.Projects
   alias Lightning.Projects.Project
+  alias Lightning.Projects.Scope
   alias Lightning.ServiceAccount
 
   action_fallback LightningWeb.FallbackController
@@ -205,17 +205,20 @@ defmodule LightningWeb.API.ProjectController do
 
   # A service account passes every project policy, so telling it the project
   # is scheduled for deletion leaks nothing; a person gets the policy's answer.
-  defp authorize(
-         _action,
-         %ServiceAccount{},
-         %Project{scheduled_deletion: %DateTime{}}
-       ),
-       do: {:error, :scheduled_for_deletion}
-
   defp authorize(action, actor, project) do
-    if Permissions.can?(ProjectUsers, action, actor, project),
-      do: :ok,
-      else: {:error, :forbidden}
+    case Scope.fetch(actor, project) do
+      {:ok, scope} ->
+        if ProjectUsers.permitted?(action, scope),
+          do: :ok,
+          else: {:error, :forbidden}
+
+      {:error, :project_scheduled_for_deletion}
+      when is_struct(actor, ServiceAccount) ->
+        {:error, :scheduled_for_deletion}
+
+      {:error, _reason} ->
+        {:error, :forbidden}
+    end
   end
 
   defp create(conn, attrs, actor) do
