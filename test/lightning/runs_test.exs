@@ -1297,6 +1297,11 @@ defmodule Lightning.RunsTest do
       assert dataclip.request
       refute dataclip.wiped_at
 
+      Lightning.Repo.query!(
+        "UPDATE dataclips SET search_vector = to_tsvector('english_nostop', 'wipedterm') WHERE id = $1::uuid",
+        [Ecto.UUID.dump!(dataclip.id)]
+      )
+
       current_time = ~U[2024-05-05 12:34:56Z]
       Lightning.Stub.freeze_time(current_time)
 
@@ -1311,6 +1316,12 @@ defmodule Lightning.RunsTest do
 
       refute updated_dataclip.body
       refute updated_dataclip.request
+
+      assert %{rows: [[""]]} =
+               Lightning.Repo.query!(
+                 "SELECT search_vector::text FROM dataclips WHERE id = $1::uuid",
+                 [Ecto.UUID.dump!(dataclip.id)]
+               )
     end
 
     test "emits a DataclipUpdated Event" do
