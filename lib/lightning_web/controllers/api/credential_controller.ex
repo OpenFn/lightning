@@ -303,23 +303,26 @@ defmodule LightningWeb.API.CredentialController do
     end
   end
 
-  # A person's token makes the caller the owner unless it names someone, and it
-  # may only name the caller. A service account must name the owner.
-  defp resolve_owner(%{owner: email}, actor) do
-    case Accounts.list_users_by_emails([email]) do
-      [owner] -> owner_for(owner, actor)
-      _none -> {:error, :invalid, %{owner: ["no user has this email"]}}
-    end
+  # A person's token makes the caller the owner, and may only name the caller:
+  # naming anyone else is refused before the lookup, so the answer never says
+  # whether an email has an account. A service account must name the owner.
+  defp resolve_owner(%{owner: email}, %User{} = user) do
+    if String.downcase(email) == String.downcase(user.email),
+      do: {:ok, user},
+      else: {:error, :forbidden}
   end
 
   defp resolve_owner(_attrs, %User{} = user), do: {:ok, user}
 
+  defp resolve_owner(%{owner: email}, %ServiceAccount{}) do
+    case Accounts.list_users_by_emails([email]) do
+      [owner] -> {:ok, owner}
+      _none -> {:error, :invalid, %{owner: ["no user has this email"]}}
+    end
+  end
+
   defp resolve_owner(_attrs, %ServiceAccount{}),
     do: {:error, :invalid, %{owner: ["can't be blank"]}}
-
-  defp owner_for(%User{id: id} = owner, %User{id: id}), do: {:ok, owner}
-  defp owner_for(_owner, %User{}), do: {:error, :forbidden}
-  defp owner_for(owner, %ServiceAccount{}), do: {:ok, owner}
 
   defp create_under_id(conn, attrs, owner, actor) do
     project_ids = requested_project_ids(attrs)

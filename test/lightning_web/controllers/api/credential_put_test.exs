@@ -403,6 +403,13 @@ defmodule LightningWeb.API.CredentialPutTest do
              |> put_credential(id, credential_body(%{"owner" => other.email}))
              |> json_response(403)
 
+      assert conn
+             |> put_credential(
+               id,
+               credential_body(%{"owner" => "nobody@example.com"})
+             )
+             |> json_response(403)
+
       refute Repo.get(Credential, id)
     end
 
