@@ -87,13 +87,16 @@ and this project adheres to
 - Tabs now look and behave the same on the History, project settings and run
   pages, in workflow health and in the code editor. Workflow health tabs no
   longer move with the arrow keys. Press Tab to reach each one.
+- Badges now share one look: run and channel states, dataclip types, the run
+  page's version, sandbox environments, audit log events and trigger types. Run
+  state badges are smaller and dataclip types are paler than before.
 
 ### Removed
 
 - The `petal_components` dependency. The three components still in use are now
   the app's own: the re-authenticate page's avatar uses `user_avatar`, the audit
-  log's event badge uses `pill`, and the superuser note on the users page is
-  plain markup.
+  log's event badge uses the shared badge, and the superuser note on the users
+  page is plain markup.
 - The `rambo` dependency, so Lightning builds on arm64 without Rust.
   [#5215](https://github.com/OpenFn/lightning/pull/5215)
 
