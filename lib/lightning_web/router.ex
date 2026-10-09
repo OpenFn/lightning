@@ -63,6 +63,13 @@ defmodule LightningWeb.Router do
       scope: "credentials:write"
   end
 
+  pipeline :collections_api do
+    plug :accepts, ["json"]
+
+    plug LightningWeb.Plugs.PersonOrServiceAccountAuth,
+      scope: "collections:write"
+  end
+
   pipeline :authenticated_api do
     plug :accepts, ["json"]
     plug LightningWeb.Plugs.ApiAuth
@@ -126,6 +133,16 @@ defmodule LightningWeb.Router do
 
     get "/credentials/:id", API.CredentialController, :show
     put "/credentials/:id", API.CredentialController, :update
+  end
+
+  scope "/api", LightningWeb, as: :api do
+    pipe_through [:collections_api]
+
+    get "/projects/:project_id/collections/:id", API.CollectionController, :show
+
+    put "/projects/:project_id/collections/:id",
+        API.CollectionController,
+        :update
   end
 
   scope "/api", LightningWeb, as: :api do
