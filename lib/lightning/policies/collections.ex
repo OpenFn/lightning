@@ -18,7 +18,9 @@ defmodule Lightning.Policies.Collections do
       items) requires `:owner` or `:admin`.
     * `:manage_collection` (creating, renaming or deleting the collection
       itself) requires `:owner` or `:admin`. Creation is authorized against the
-      `%Project{}`, since no collection exists yet.
+      `%Project{}`, since no collection exists yet. A service account holds it
+      on any project; the route that admits one holds it to
+      `collections:write`.
 
   The `*_collection_item(s)` actions target the key-value entries exposed by the
   Collections API; `:manage_collection` targets the collection record itself.
@@ -34,6 +36,7 @@ defmodule Lightning.Policies.Collections do
   alias Lightning.Projects.Project
   alias Lightning.Projects.Scope
   alias Lightning.Run
+  alias Lightning.ServiceAccount
 
   @type actions ::
           :access_collection
@@ -47,7 +50,7 @@ defmodule Lightning.Policies.Collections do
 
   @spec authorize(
           actions(),
-          User.t() | Run.t(),
+          User.t() | Run.t() | ServiceAccount.t(),
           Collection.t() | Project.t()
         ) :: :ok | {:error, :unauthorized} | boolean()
   def authorize(:access_collection, %User{} = user, %Collection{} = collection) do
@@ -73,6 +76,8 @@ defmodule Lightning.Policies.Collections do
   def authorize(:manage_collection, %User{} = user, %Project{} = project) do
     Scope.role_in?(user, project.id, @admin_roles)
   end
+
+  def authorize(:manage_collection, %ServiceAccount{}, %Project{}), do: true
 
   def authorize(:manage_collection, %User{} = user, %Collection{} = collection) do
     Scope.role_in?(user, collection.project_id, @admin_roles)
