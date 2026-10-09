@@ -9,7 +9,7 @@ defmodule Lightning.ServiceAccount.AccessToken do
 
   alias Lightning.ServiceAccount
 
-  @scopes ["users:read", "users:write"]
+  @scopes ["users:read", "users:write", "projects:write"]
   @lifetime 300
   @typ "at+jwt"
 

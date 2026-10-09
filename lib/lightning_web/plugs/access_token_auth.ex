@@ -17,15 +17,32 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
   def init(opts), do: opts
 
   def call(conn, _opts) do
+    case service_account(conn) do
+      {:ok, service_account, claims} ->
+        conn
+        |> assign(:access_token, claims)
+        |> assign(:service_account, service_account)
+
+      :error ->
+        refuse(conn, 401, "invalid_token")
+    end
+  end
+
+  @doc """
+  The service account a request's bearer token was issued to, with the token's
+  claims, or `:error` when the token is absent, invalid, or issued to an
+  account no longer registered.
+  """
+  @spec service_account(Plug.Conn.t()) ::
+          {:ok, ServiceAccount.t(), map()} | :error
+  def service_account(conn) do
     with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
          {:ok, %{"sub" => sub} = claims} <- AccessToken.verify(token),
          %ServiceAccount{id: ^sub} = service_account <-
            Lightning.Config.service_account() do
-      conn
-      |> assign(:access_token, claims)
-      |> assign(:service_account, service_account)
+      {:ok, service_account, claims}
     else
-      _other -> refuse(conn, 401, "invalid_token")
+      _other -> :error
     end
   end
 
