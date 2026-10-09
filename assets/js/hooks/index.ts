@@ -566,8 +566,11 @@ export const FragmentMatch = {
 
 export const Tooltip = {
   mounted() {
-    if (!this.el.ariaLabel) {
-      console.warn('Tooltip element missing aria-label attribute', this.el);
+    if (
+      !this.el.ariaLabel &&
+      !this.el.querySelector('template[data-tooltip-content]')
+    ) {
+      console.warn('Tooltip element has no aria-label or template', this.el);
       return;
     }
 

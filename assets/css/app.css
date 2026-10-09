@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './ui/tokens.css';
+@import './ui/tabs.css';
 
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
@@ -1015,36 +1017,6 @@
 
   .run-tab-container [role='tablist'] {
     @apply border-b border-gray-200 -m-1;
-  }
-
-  .job-viewer-tabs[role='tablist'] [role='tab'] {
-    @apply !text-xs;
-  }
-
-  .tabbed-selector[role='tablist'] [role='tab'] {
-    @apply text-sm
-    font-semibold
-  text-secondary-700
-    py-2
-    px-1
-    border-b-2
-    border-transparent
-    leading-tight;
-
-    &[data-disabled] {
-      @apply hover:cursor-not-allowed;
-    }
-
-    &[aria-selected='true'] {
-      @apply border-b-primary-500
-     text-primary-600;
-    }
-
-    &[aria-selected='false'] {
-      @apply text-gray-500
-        hover:text-gray-600
-        hover:border-b-gray-300;
-    }
   }
 
   .makeup-html {

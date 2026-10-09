@@ -2,13 +2,11 @@ defmodule LightningWeb.RunLive.Show do
   use LightningWeb, :live_view
   use LightningWeb.RunLive.Streaming, chunk_size: 100
 
-  import LightningWeb.Components.Icons
   import LightningWeb.RunLive.Components
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
   alias LightningWeb.RunLive.CancelHelper
   alias Phoenix.LiveView.AsyncResult
@@ -225,39 +223,28 @@ defmodule LightningWeb.RunLive.Show do
               </.step_list>
             </div>
             <div class="@5xl/main:basis-2/3 flex flex-col gap-4 h-full">
-              <Tabbed.container
+              <.tabs
                 id={"run-#{run.id}-tabbed-container"}
+                label="Step details"
                 class="run-tab-container"
                 default_hash="log"
               >
-                <:tab hash="log">
-                  <.icon
-                    name="hero-command-line"
-                    class="h-5 w-5 inline-block mr-1 align-middle"
-                  />
-                  <span class="inline-block align-middle">Log</span>
-                </:tab>
+                <:tab hash="log" icon="hero-command-line">Log</:tab>
                 <:tab
                   hash="input"
+                  icon="hero-arrow-down-on-square"
                   disabled={@no_step_selected?}
-                  disabled_msg="A valid step must be selected to view its input"
+                  disabled_reason="A valid step must be selected to view its input"
                 >
-                  <.icon
-                    name="hero-arrow-down-on-square"
-                    class="h-5 w-5 inline-block mr-1 align-middle"
-                  />
-                  <span class="inline-block align-middle">Input</span>
+                  Input
                 </:tab>
                 <:tab
                   hash="output"
+                  icon="hero-arrow-up-on-square"
                   disabled={@no_step_selected?}
-                  disabled_msg="A valid step (with a readable output) must be selected to view its output"
+                  disabled_reason="A valid step (with a readable output) must be selected to view its output"
                 >
-                  <.icon
-                    name="hero-arrow-up-on-square"
-                    class="h-5 w-5 inline-block mr-1 align-middle rotate-180"
-                  />
-                  <span class="inline-block align-middle"> Output </span>
+                  Output
                 </:tab>
                 <:panel hash="input" class="flex-grow h-full">
                   <Viewers.step_dataclip_viewer
@@ -294,7 +281,7 @@ defmodule LightningWeb.RunLive.Show do
                     can_edit_data_retention={@can_edit_data_retention}
                   />
                 </:panel>
-              </Tabbed.container>
+              </.tabs>
             </div>
           </div>
         </.async_result>

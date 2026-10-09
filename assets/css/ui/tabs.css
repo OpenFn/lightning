@@ -1,0 +1,78 @@
+/* Shared tabs styling. Both stacks emit .ui-tabs and .ui-tab.
+   The current tab is aria-selected="true" (React tabs, and hash tabs through
+   TabbedContainer) or aria-current="page" (LiveView links). */
+@layer components {
+  .ui-tabs {
+    @apply flex gap-4;
+  }
+
+  .ui-tabs--pills {
+    @apply gap-1 rounded-lg bg-slate-100 p-1;
+  }
+
+  .ui-tabs--vertical {
+    @apply flex-none flex-col pr-8;
+  }
+
+  .ui-tab {
+    @apply inline-flex cursor-pointer items-center whitespace-nowrap border-b-2 border-transparent px-1 py-2 text-sm leading-tight font-semibold text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600;
+  }
+
+  .ui-tabs--vertical .ui-tab {
+    @apply px-4;
+  }
+
+  .ui-tabs--pills .ui-tab {
+    @apply flex-1 justify-center rounded-md border-b-0 px-3 text-sm font-medium transition-all duration-200;
+  }
+
+  .ui-tabs--small .ui-tab {
+    @apply text-xs;
+  }
+
+  .ui-tabs--small:not(.ui-tabs--pills) .ui-tab {
+    @apply py-1;
+  }
+
+  /* :where() keeps hover from outranking the active rules below. */
+  .ui-tab:where(
+      :not([data-disabled]):not(:disabled):not([aria-disabled='true'])
+    ):hover {
+    @apply border-b-gray-300 text-gray-600;
+  }
+
+  .ui-tabs--pills
+    .ui-tab:where(
+      :not([data-disabled]):not(:disabled):not([aria-disabled='true'])
+    ):hover {
+    @apply bg-slate-50 text-gray-700;
+  }
+
+  .ui-tab[data-disabled],
+  .ui-tab:disabled,
+  .ui-tab[aria-disabled='true'] {
+    @apply cursor-not-allowed text-gray-300;
+  }
+
+  .ui-tab[aria-selected='true'],
+  .ui-tab[aria-current='page'] {
+    @apply border-b-primary-600 text-primary-600;
+  }
+
+  .ui-tabs--pills .ui-tab[aria-selected='true'],
+  .ui-tabs--pills .ui-tab[aria-current='page'] {
+    @apply bg-white text-primary-600;
+  }
+}
+
+/* hero-* icons are utilities with a fixed size, and utilities beat
+   components, so the icon size has to live here. */
+@layer utilities {
+  .ui-tab > .ui-tab__icon {
+    @apply mr-2 h-5 w-5;
+  }
+
+  .ui-tabs--small .ui-tab > .ui-tab__icon {
+    @apply mr-1.5 h-4 w-4;
+  }
+}
