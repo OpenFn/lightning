@@ -5,7 +5,6 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
   import Lightning.ServiceAccountHelpers
 
   alias Lightning.ServiceAccount.AccessToken
-  alias LightningWeb.Plugs.PersonOrServiceAccountAuth
 
   setup %{conn: conn} do
     {account, _private_key} = service_account_with_key()
@@ -46,20 +45,9 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
       conn: conn,
       account: account
     } do
-      {_, token} =
-        Lightning.Config.token_signer().jwk
-        |> JOSE.JWT.sign(%{"alg" => "RS256", "typ" => "at+jwt"}, %{
-          "iss" => AccessToken.issuer(),
-          "aud" => AccessToken.issuer() <> "/api",
-          "sub" => account.id,
-          "scope" => "projects:write",
-          "exp" => System.system_time(:second) - 1
-        })
-        |> JOSE.JWS.compact()
-
       conn =
         conn
-        |> with_token(token)
+        |> with_token(expired_access_token(account, "projects:write"))
         |> get(~p"/api/projects/#{insert(:project).id}")
 
       assert json_response(conn, 401) == %{"error" => "invalid_token"}
@@ -118,45 +106,19 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
       %{conn: with_scopes(conn, account, AccessToken.scopes())}
     end
 
-    test "refuse a service account on POST /api/provision with 401", %{
-      conn: conn
-    } do
-      conn = post(conn, ~p"/api/provision", %{})
+    test "refuse a service account with 401", %{conn: conn} do
+      project = insert(:project)
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
-    end
+      for {method, path} <- [
+            {:post, ~p"/api/provision"},
+            {:get, ~p"/api/projects"},
+            {:get, ~p"/api/projects/#{project.id}/workflows"}
+          ] do
+        conn = dispatch(conn, @endpoint, method, path, %{})
 
-    test "refuse a service account on GET /api/projects with 401", %{
-      conn: conn
-    } do
-      conn = get(conn, ~p"/api/projects")
-
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
-    end
-
-    test "refuse a service account on GET /api/projects/:id/workflows with 401",
-         %{conn: conn} do
-      conn = get(conn, ~p"/api/projects/#{insert(:project).id}/workflows")
-
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
-    end
-  end
-
-  # The plugs on their own: what the policy then answers is pinned in
-  # project_controller_test.exs.
-  describe "a repo connection token" do
-    test "is authenticated and passes require_scope", %{conn: conn} do
-      repo_connection =
-        insert(:project_repo_connection, project: insert(:project))
-
-      conn =
-        conn
-        |> with_token(repo_connection.access_token)
-        |> PersonOrServiceAccountAuth.call([])
-        |> PersonOrServiceAccountAuth.require_scope("projects:write")
-
-      refute conn.halted
-      assert conn.assigns.current_resource.id == repo_connection.id
+        assert json_response(conn, 401) == %{"error" => "Unauthorized"},
+               "#{method} #{path}"
+      end
     end
   end
 end

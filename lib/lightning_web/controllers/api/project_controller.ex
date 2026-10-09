@@ -37,11 +37,7 @@ defmodule LightningWeb.API.ProjectController do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
 
-  import LightningWeb.Plugs.PersonOrServiceAccountAuth, only: [require_scope: 2]
-
   action_fallback LightningWeb.FallbackController
-
-  plug :require_scope, "projects:write" when action == :show
 
   @doc """
   Lists all projects accessible to the authenticated user.

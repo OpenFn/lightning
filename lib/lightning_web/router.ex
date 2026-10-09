@@ -51,9 +51,9 @@ defmodule LightningWeb.Router do
     plug LightningWeb.Plugs.AccessTokenAuth
   end
 
-  pipeline :person_or_service_account_api do
+  pipeline :projects_api do
     plug :accepts, ["json"]
-    plug LightningWeb.Plugs.PersonOrServiceAccountAuth
+    plug LightningWeb.Plugs.PersonOrServiceAccountAuth, scope: "projects:write"
   end
 
   pipeline :authenticated_api do
@@ -108,7 +108,7 @@ defmodule LightningWeb.Router do
 
   ## A service account's access token or a person's bearer token
   scope "/api", LightningWeb, as: :api do
-    pipe_through [:person_or_service_account_api]
+    pipe_through [:projects_api]
 
     get "/projects/:id", API.ProjectController, :show
   end

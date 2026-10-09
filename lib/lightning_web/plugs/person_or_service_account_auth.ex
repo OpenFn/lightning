@@ -4,46 +4,36 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuth do
   bearer tokens `LightningWeb.UserAuth` accepts (a personal access token or a
   repo connection token).
 
-  A valid service-account token assigns the service account as
-  `:current_resource` and the token's claims as `:access_token`; a
-  service-account token that fails verification is refused as RFC 6750 §3
-  says. Any other request gets exactly the answer `UserAuth.authenticate_bearer/2` and
+  A token that declares itself an access token goes to
+  `LightningWeb.Plugs.AccessTokenAuth` and must carry the `scope:` this plug is
+  given. Any other request gets exactly the answer
+  `UserAuth.authenticate_bearer/2` and
   `UserAuth.require_authenticated_api_resource/2` give it elsewhere.
 
-  `require_scope/2` holds a service account to the scope a controller names.
-  Personal access tokens and repo connections carry no scopes, so it lets them
-  through and leaves the decision to the controller's policy.
-  """
-  import Plug.Conn
+  A resource opts in by adding a router pipeline that names its scope:
 
-  alias Lightning.ServiceAccount
+      plug LightningWeb.Plugs.PersonOrServiceAccountAuth, scope: "projects:write"
+
+  A person's token carries no scopes, so the scope binds service accounts
+  only; for a person, the controller's policy decides.
+  """
+  alias Lightning.ServiceAccount.AccessToken
   alias LightningWeb.Plugs.AccessTokenAuth
   alias LightningWeb.UserAuth
 
-  def init(opts), do: opts
+  def init(opts), do: Keyword.fetch!(opts, :scope)
 
-  def call(conn, _opts) do
-    case AccessTokenAuth.service_account(conn) do
-      {:ok, service_account, claims} ->
-        conn
-        |> assign(:current_resource, service_account)
-        |> assign(:access_token, claims)
+  def call(conn, scope) do
+    with {:ok, token} <- UserAuth.get_bearer(conn),
+         true <- AccessToken.access_token?(token) do
+      conn = AccessTokenAuth.call(conn, [])
 
-      {:error, :invalid_token} ->
-        AccessTokenAuth.refuse(conn, 401, "invalid_token")
-
-      :not_an_access_token ->
+      if conn.halted, do: conn, else: AccessTokenAuth.require_scope(conn, scope)
+    else
+      _person ->
         conn
         |> UserAuth.authenticate_bearer([])
         |> UserAuth.require_authenticated_api_resource([])
     end
   end
-
-  def require_scope(
-        %Plug.Conn{assigns: %{current_resource: %ServiceAccount{}}} = conn,
-        scope
-      ),
-      do: AccessTokenAuth.require_scope(conn, scope)
-
-  def require_scope(conn, _scope), do: conn
 end
