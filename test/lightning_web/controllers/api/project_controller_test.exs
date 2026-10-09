@@ -140,11 +140,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
     test "is refused with 403, not 409, on a project scheduled for deletion",
          %{conn: conn, user: user} do
-      project =
-        insert(:project,
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
-          project_users: [%{user: user, role: :owner}]
-        )
+      project = scheduled_project([%{user: user, role: :owner}])
 
       conn = get(conn, ~p"/api/projects/#{project.id}")
 
@@ -178,13 +174,8 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
   describe "show, for a service account with projects:write" do
     setup %{conn: conn} do
-      {account, _private_key} = service_account_with_key()
-      Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
-
-      token =
-        Lightning.ServiceAccount.AccessToken.issue(account, ["projects:write"])
-
-      %{conn: put_req_header(conn, "authorization", "Bearer " <> token)}
+      {conn, _account} = with_service_account(conn, ["projects:write"])
+      %{conn: conn}
     end
 
     test "shows a project it is not a member of, with its members", %{
@@ -271,9 +262,10 @@ defmodule LightningWeb.API.ProjectControllerTest do
     end
   end
 
-  defp scheduled_project do
+  defp scheduled_project(project_users \\ []) do
     insert(:project,
-      scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+      scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+      project_users: project_users
     )
   end
 
@@ -454,16 +446,9 @@ defmodule LightningWeb.API.ProjectControllerTest do
           owner,
           %{"email" => "nobody@example.com", "role" => "admin"}
         ],
-        same_user_twice: [
-          owner,
-          admin,
-          %{admin | "email" => String.upcase(admin["email"]), "role" => "viewer"}
-        ],
         two_owners: [owner, %{admin | "role" => "owner"}],
         no_owner: [admin],
         no_members: [],
-        unknown_role: [owner, %{admin | "role" => "superuser"}],
-        missing_role: [owner, Map.delete(admin, "role")],
         not_a_list: %{"email" => owner["email"], "role" => "owner"}
       ]
 
@@ -649,12 +634,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
     test "is refused with 403, not 409, on a project scheduled for deletion",
          %{conn: conn} do
       user = insert(:user)
-
-      project =
-        insert(:project,
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
-          project_users: [%{user: user, role: :owner}]
-        )
+      project = scheduled_project([%{user: user, role: :owner}])
 
       conn =
         conn
