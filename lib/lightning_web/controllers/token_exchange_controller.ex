@@ -81,19 +81,15 @@ defmodule LightningWeb.TokenExchangeController do
   defp client_assertion(_params), do: {:error, :invalid_request}
 
   defp requested_scopes(%{"scope" => scope}) when is_binary(scope) do
-    case String.split(scope) do
-      [] ->
-        {:ok, AccessToken.scopes()}
+    scopes = String.split(scope)
 
-      scopes ->
-        if Enum.all?(scopes, &(&1 in AccessToken.scopes())),
-          do: {:ok, Enum.uniq(scopes)},
-          else: {:error, :invalid_scope}
-    end
+    if scopes != [] and Enum.all?(scopes, &(&1 in AccessToken.scopes())),
+      do: {:ok, Enum.uniq(scopes)},
+      else: {:error, :invalid_scope}
   end
 
   defp requested_scopes(%{"scope" => _}), do: {:error, :invalid_request}
-  defp requested_scopes(_params), do: {:ok, AccessToken.scopes()}
+  defp requested_scopes(_params), do: {:error, :invalid_scope}
 
   defp authenticate(assertion, params) do
     case Assertion.verify(assertion, url(~p"/api/oauth/token")) do
