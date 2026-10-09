@@ -41,6 +41,20 @@ defmodule Lightning.ServiceAccountHelpers do
   end
 
   @doc """
+  `conn` bearing a live access token, carrying `scopes`, for a fresh service
+  account that this Lightning registers.
+  """
+  def with_service_account(conn, scopes) do
+    {account, _private_key} = service_account_with_key()
+    Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
+
+    token = AccessToken.issue(account, scopes)
+
+    {Plug.Conn.put_req_header(conn, "authorization", "Bearer " <> token),
+     account}
+  end
+
+  @doc """
   An access token for `account` carrying `scope`, signed as Lightning signs
   one, that expired a second ago.
   """
