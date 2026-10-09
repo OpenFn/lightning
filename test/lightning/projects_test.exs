@@ -3260,6 +3260,74 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "members_by_email/1" do
+    test "resolves each member to its user, ignoring the email's case" do
+      owner = insert(:user, email: "owner@example.com")
+      viewer = insert(:user)
+
+      assert {:ok, members} =
+               Projects.members_by_email([
+                 %{"email" => "OWNER@Example.com", "role" => "owner"},
+                 %{"email" => viewer.email, "role" => "viewer"}
+               ])
+
+      assert Enum.sort(members) ==
+               Enum.sort([
+                 %{user_id: owner.id, role: :owner},
+                 %{user_id: viewer.id, role: :viewer}
+               ])
+    end
+
+    test "refuses members it cannot resolve, without echoing an email" do
+      user = insert(:user)
+
+      refused = [
+        unknown_email: [%{"email" => "nobody@example.com", "role" => "admin"}],
+        same_user_twice: [
+          %{"email" => user.email, "role" => "admin"},
+          %{"email" => String.upcase(user.email), "role" => "viewer"}
+        ],
+        unknown_role: [%{"email" => user.email, "role" => "superuser"}],
+        missing_role: [%{"email" => user.email}],
+        not_a_map: ["someone@example.com"]
+      ]
+
+      for {case_name, members} <- refused do
+        assert {:error, [_ | _] = messages} = Projects.members_by_email(members),
+               "#{case_name}"
+
+        refute Enum.any?(messages, &String.contains?(&1, "@")),
+               "#{case_name} echoes an email: #{inspect(messages)}"
+      end
+    end
+
+    test "looks every member up in one query" do
+      users = insert_list(4, :user)
+      ref = make_ref()
+      pid = self()
+
+      :telemetry.attach(
+        inspect(ref),
+        [:lightning, :repo, :query],
+        fn _, _, %{source: source}, _ ->
+          if source == "users" and self() == pid,
+            do: send(pid, {ref, :users_query})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(inspect(ref)) end)
+
+      assert {:ok, [_, _, _, _]} =
+               Projects.members_by_email(
+                 Enum.map(users, &%{"email" => &1.email, "role" => "editor"})
+               )
+
+      assert_received {^ref, :users_query}
+      refute_received {^ref, :users_query}
+    end
+  end
+
   describe "create_project/3 audit and notification" do
     setup do
       owner = insert(:user)

@@ -38,8 +38,6 @@ defmodule LightningWeb.API.ProjectController do
 
   import Ecto.Changeset
 
-  alias Lightning.Accounts
-  alias Lightning.Accounts.User
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Provisioning
   alias Lightning.Projects
@@ -133,9 +131,7 @@ defmodule LightningWeb.API.ProjectController do
       end
     else
       {:error, :unknown_keys, keys} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{errors: Map.new(keys, &{&1, ["is not accepted"]})})
+        render_errors(conn, Map.new(keys, &{&1, ["is not accepted"]}))
 
       error ->
         error
@@ -223,7 +219,8 @@ defmodule LightningWeb.API.ProjectController do
 
   defp create(conn, attrs, actor) do
     with true <- Provisioning.authorize(:create_project, actor, nil),
-         {:ok, project_users} <- resolve_members(attrs[:members] || []) do
+         {:ok, project_users} <-
+           Projects.members_by_email(attrs[:members] || []) do
       attrs
       |> Map.take([:id, :name, :description])
       |> Map.put(:project_users, project_users)
@@ -237,44 +234,14 @@ defmodule LightningWeb.API.ProjectController do
             do: replace(conn, Projects.get_project(attrs.id), attrs, actor),
             else: render_create_errors(conn, changeset)
       end
+    else
+      {:error, messages} when is_list(messages) ->
+        render_errors(conn, %{members: messages})
+
+      error ->
+        error
     end
   end
-
-  @roles ~w(owner admin editor viewer)
-
-  defp resolve_members(members) do
-    Enum.reduce_while(members, {:ok, []}, fn member, {:ok, resolved} ->
-      case resolve_member(member) do
-        {:ok, %{user_id: user_id} = project_user} ->
-          if Enum.any?(resolved, &(&1.user_id == user_id)),
-            do: {:halt, members_error("names one user more than once")},
-            else: {:cont, {:ok, [project_user | resolved]}}
-
-        {:error, message} ->
-          {:halt, members_error(message)}
-      end
-    end)
-  end
-
-  defp members_error(message) do
-    {:error,
-     {%{}, %{members: {:array, :map}}}
-     |> change()
-     |> add_error(:members, message)}
-  end
-
-  defp resolve_member(%{"email" => email, "role" => role})
-       when is_binary(email) and role in @roles do
-    case Accounts.get_user_by_email(email) do
-      %User{id: user_id} -> {:ok, %{user_id: user_id, role: role}}
-      nil -> {:error, "names an email no user holds"}
-    end
-  end
-
-  defp resolve_member(_member),
-    do:
-      {:error,
-       "each member needs an email and a role of #{Enum.join(@roles, ", ")}"}
 
   # Another request created the project between our lookup and our insert.
   defp id_taken?(changeset) do
@@ -300,6 +267,10 @@ defmodule LightningWeb.API.ProjectController do
             member_errors |> Map.values() |> List.flatten()
           )
 
+    render_errors(conn, errors)
+  end
+
+  defp render_errors(conn, errors) do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{errors: errors})

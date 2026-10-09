@@ -547,6 +547,63 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
+  @member_roles ~w(owner admin editor viewer)
+
+  @doc """
+  Resolves members given as `%{"email" => email, "role" => role}` to the
+  `%{user_id: id, role: role}` rows a project's `project_users` take.
+
+  Emails match regardless of case. The messages never contain an email, so
+  they can be shown to whoever submitted the list.
+  """
+  @spec members_by_email([term()]) ::
+          {:ok,
+           [%{user_id: Ecto.UUID.t(), role: :owner | :admin | :editor | :viewer}]}
+          | {:error, [String.t()]}
+  def members_by_email(members) do
+    if Enum.all?(members, &member_shape?/1) do
+      emails = Enum.map(members, & &1["email"])
+
+      user_ids =
+        from(u in User, where: u.email in ^emails, select: {u.email, u.id})
+        |> Repo.all()
+        |> Map.new(fn {email, id} -> {String.downcase(email), id} end)
+
+      members
+      |> Enum.map(fn %{"email" => email, "role" => role} ->
+        %{
+          user_id: Map.get(user_ids, String.downcase(email)),
+          role: String.to_existing_atom(role)
+        }
+      end)
+      |> check_members()
+    else
+      {:error,
+       [
+         "each member needs an email and a role of #{Enum.join(@member_roles, ", ")}"
+       ]}
+    end
+  end
+
+  defp member_shape?(%{"email" => email, "role" => role}),
+    do: is_binary(email) and role in @member_roles
+
+  defp member_shape?(_member), do: false
+
+  defp check_members(members) do
+    {found, missing} = members |> Enum.map(& &1.user_id) |> Enum.split_with(& &1)
+
+    messages =
+      [
+        missing != [] && "names an email no user holds",
+        length(Enum.uniq(found)) < length(found) &&
+          "names one user more than once"
+      ]
+      |> Enum.filter(&is_binary/1)
+
+    if messages == [], do: {:ok, members}, else: {:error, messages}
+  end
+
   @doc """
   Creates a project, recording `actor` as having created it and added each of
   its initial members.
