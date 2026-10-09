@@ -125,11 +125,20 @@ defmodule LightningWeb.API.ProjectController do
   def update(conn, %{"id" => id}) do
     actor = conn.assigns.current_resource
 
-    with {:ok, attrs} <- parse_body(conn.body_params, id) do
+    with :ok <- known_keys(conn.body_params),
+         {:ok, attrs} <- parse_body(conn.body_params, id) do
       case Projects.get_project(attrs.id) do
         nil -> create(conn, attrs, actor)
         project -> replace(conn, project, attrs, actor)
       end
+    else
+      {:error, :unknown_keys, keys} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{errors: Map.new(keys, &{&1, ["is not accepted"]})})
+
+      error ->
+        error
     end
   end
 
@@ -140,6 +149,17 @@ defmodule LightningWeb.API.ProjectController do
     members: {:array, :map},
     notify: :boolean
   }
+
+  @body_keys @body_types |> Map.keys() |> Enum.map(&to_string/1)
+
+  defp known_keys(%{"_json" => _not_an_object}), do: :ok
+
+  defp known_keys(body) do
+    case Map.keys(body) -- @body_keys do
+      [] -> :ok
+      keys -> {:error, :unknown_keys, keys}
+    end
+  end
 
   defp parse_body(%{"_json" => _not_an_object}, _id) do
     {:error,

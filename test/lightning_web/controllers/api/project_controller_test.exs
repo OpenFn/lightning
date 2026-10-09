@@ -415,6 +415,27 @@ defmodule LightningWeb.API.ProjectControllerTest do
       assert %{"id" => [_]} = json_response(conn, 422)["errors"]
     end
 
+    test "refuses a key the body does not take, under that key", %{conn: conn} do
+      id = Ecto.UUID.generate()
+
+      conn =
+        put_project(conn, id, %{
+          "name" => "acme",
+          "members" => four_members(),
+          "requires_mfa" => true,
+          "retention_policy" => "erase_all"
+        })
+
+      assert json_response(conn, 422) == %{
+               "errors" => %{
+                 "requires_mfa" => ["is not accepted"],
+                 "retention_policy" => ["is not accepted"]
+               }
+             }
+
+      refute Lightning.Repo.get(Lightning.Projects.Project, id)
+    end
+
     test "refuses a path id that is not a UUID", %{conn: conn} do
       conn =
         put_project(conn, "not-a-uuid", %{
