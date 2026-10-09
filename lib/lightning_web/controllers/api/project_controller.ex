@@ -103,10 +103,17 @@ defmodule LightningWeb.API.ProjectController do
              conn.assigns.current_resource,
              project
            ) do
-      render(conn, "show.json", project: project, conn: conn)
+      render_project(conn, project)
     else
       nil -> {:error, :not_found}
       error -> error
     end
+  end
+
+  defp render_project(conn, project) do
+    render(conn, "show.json",
+      project: Lightning.Repo.preload(project, project_users: :user),
+      conn: conn
+    )
   end
 end

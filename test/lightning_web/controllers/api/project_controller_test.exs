@@ -137,14 +137,19 @@ defmodule LightningWeb.API.ProjectControllerTest do
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
 
-    test "shows the project", %{conn: conn, project: project} do
+    test "shows the project with its members", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
       conn = get(conn, Routes.api_project_path(conn, :show, project))
       response = json_response(conn, 200)
 
       assert response["data"] == %{
                "attributes" => %{
                  "name" => project.name,
-                 "description" => nil
+                 "description" => nil,
+                 "members" => [%{"email" => user.email, "role" => "editor"}]
                },
                "id" => project.id,
                "links" => %{
@@ -168,16 +173,24 @@ defmodule LightningWeb.API.ProjectControllerTest do
       %{conn: put_req_header(conn, "authorization", "Bearer " <> token)}
     end
 
-    test "shows a project it is not a member of", %{conn: conn} do
-      project = insert(:project)
+    test "shows a project it is not a member of, with its members", %{
+      conn: conn
+    } do
+      owner = insert(:user)
+      project = insert(:project, project_users: [%{user: owner, role: :owner}])
 
       conn = get(conn, ~p"/api/projects/#{project.id}")
 
-      assert %{"id" => id, "attributes" => %{"name" => name}} =
+      assert %{"id" => id, "attributes" => attributes} =
                json_response(conn, 200)["data"]
 
       assert id == project.id
-      assert name == project.name
+
+      assert attributes == %{
+               "name" => project.name,
+               "description" => project.description,
+               "members" => [%{"email" => owner.email, "role" => "owner"}]
+             }
     end
 
     test "is refused a project scheduled for deletion with 401", %{conn: conn} do
