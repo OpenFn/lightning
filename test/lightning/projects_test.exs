@@ -6,6 +6,7 @@ defmodule Lightning.ProjectsTest do
   import Lightning.AccountsFixtures
   import Lightning.Factories
   import Lightning.ProjectsFixtures
+  import Lightning.ServiceAccountHelpers
   import Mox
   import Swoosh.TestAssertions
 
@@ -121,8 +122,8 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project_user(project_user.id) == project_user
     end
 
-    test "create_project/1 with valid data creates a project" do
-      %{id: user_id} = insert(:user)
+    test "create_project/3 with valid data creates a project" do
+      %{id: user_id} = user = insert(:user)
 
       valid_attrs = %{
         name: "some-name",
@@ -130,7 +131,7 @@ defmodule Lightning.ProjectsTest do
       }
 
       assert {:ok, %Project{id: project_id} = project} =
-               Projects.create_project(valid_attrs)
+               Projects.create_project(valid_attrs, user)
 
       assert project.name == "some-name"
 
@@ -138,23 +139,29 @@ defmodule Lightning.ProjectsTest do
                project.project_users
     end
 
-    test "create_project/1 expects project to have exactly one owner" do
+    test "create_project/3 expects project to have exactly one owner" do
       user = insert(:user)
 
       # creates successfully if there's one
       assert {:ok, _project} =
-               Projects.create_project(%{
-                 name: "some-name",
-                 project_users: [%{user_id: user.id, role: :owner}]
-               })
+               Projects.create_project(
+                 %{
+                   name: "some-name",
+                   project_users: [%{user_id: user.id, role: :owner}]
+                 },
+                 user
+               )
 
       # errors out if there is none
       for role <- [:admin, :editor, :viewer] do
         assert {:error, %Ecto.Changeset{errors: errors}} =
-                 Projects.create_project(%{
-                   name: "some-name",
-                   project_users: [%{user_id: user.id, role: role}]
-                 })
+                 Projects.create_project(
+                   %{
+                     name: "some-name",
+                     project_users: [%{user_id: user.id, role: role}]
+                   },
+                   user
+                 )
 
         assert [
                  {:owner,
@@ -168,24 +175,29 @@ defmodule Lightning.ProjectsTest do
       another_user = insert(:user)
 
       assert {:error, %Ecto.Changeset{errors: errors}} =
-               Projects.create_project(%{
-                 name: "some-name",
-                 project_users: [
-                   %{user_id: user.id, role: :owner},
-                   %{user_id: another_user.id, role: :owner}
-                 ]
-               })
+               Projects.create_project(
+                 %{
+                   name: "some-name",
+                   project_users: [
+                     %{user_id: user.id, role: :owner},
+                     %{user_id: another_user.id, role: :owner}
+                   ]
+                 },
+                 user
+               )
 
       assert [{:owner, {"A project can have only one owner.", []}}] ==
                errors
     end
 
-    test "create_project/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} =
-               Projects.create_project(@invalid_attrs)
+    test "create_project/3 with invalid data returns error changeset" do
+      user = insert(:user)
 
       assert {:error, %Ecto.Changeset{}} =
-               Projects.create_project(%{"name" => "Can't have spaces!"})
+               Projects.create_project(@invalid_attrs, user)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.create_project(%{"name" => "Can't have spaces!"}, user)
     end
 
     test "set_notification_pref/3 with a changed value updates the field" do
@@ -3248,6 +3260,92 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "create_project/3 audit and notification" do
+    setup do
+      owner = insert(:user)
+      admin = insert(:user)
+      viewer = insert(:user)
+
+      members = [{owner, :owner}, {admin, :admin}, {viewer, :viewer}]
+
+      %{
+        members: members,
+        attrs: %{
+          name: "audited",
+          description: "made by apply",
+          project_users:
+            Enum.map(members, fn {user, role} ->
+              %{user_id: user.id, role: role}
+            end)
+        }
+      }
+    end
+
+    test "a service account is recorded as creating the project and adding each member",
+         %{attrs: attrs, members: members} do
+      {account, _key} = service_account_with_key()
+
+      assert {:ok, project} = Projects.create_project(attrs, account)
+
+      assert_creation_audited(project, members, account.uuid, :service_account)
+    end
+
+    test "a person is recorded as creating the project and adding each member",
+         %{attrs: attrs, members: members} do
+      user = insert(:user)
+
+      assert {:ok, project} = Projects.create_project(attrs, user)
+
+      assert_creation_audited(project, members, user.id, :user)
+    end
+
+    test "emails each initial member by default, and none with notify: false",
+         %{attrs: attrs} do
+      user = insert(:user)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, quiet} =
+          Projects.create_project(%{attrs | name: "quiet"}, user, notify: false)
+
+        {:ok, loud} = Projects.create_project(attrs, user)
+
+        notified =
+          all_enqueued(worker: Lightning.Accounts.UserNotifier)
+          |> Enum.map(& &1.args["project_user_id"])
+          |> Enum.sort()
+
+        assert notified == loud.project_users |> Enum.map(& &1.id) |> Enum.sort()
+
+        refute Enum.any?(quiet.project_users, &(&1.id in notified))
+      end)
+    end
+
+    defp assert_creation_audited(project, members, actor_id, actor_type) do
+      events =
+        from(a in Audit, where: a.item_id == ^project.id, order_by: a.event)
+        |> Repo.all()
+        |> Enum.map(&{&1.event, &1.actor_id, &1.actor_type, &1.changes})
+
+      added =
+        for {user, role} <- members do
+          {"collaborator_added", actor_id, actor_type,
+           %Audit.Changes{
+             before: nil,
+             after: %{"user_id" => user.id, "role" => to_string(role)}
+           }}
+        end
+
+      created =
+        {"created", actor_id, actor_type,
+         %Audit.Changes{
+           before: nil,
+           after: %{"name" => "audited", "description" => "made by apply"}
+         }}
+
+      assert Enum.sort([created | added]) == Enum.sort(events)
+    end
+  end
+
   describe ".update_project/3" do
     setup do
       %{user: insert(:user)}
@@ -3697,7 +3795,7 @@ defmodule Lightning.ProjectsTest do
       assert Enum.uniq(Enum.map(got, & &1.parent_id)) == [parent.id]
     end
 
-    test "create_sandbox/3 sets parent and creates a normal project (emails off by default)" do
+    test "create_sandbox/3 sets parent and creates a normal project" do
       owner = insert(:user)
 
       parent =
@@ -3708,7 +3806,7 @@ defmodule Lightning.ProjectsTest do
         project_users: [%{user_id: owner.id, role: :owner}]
       }
 
-      assert {:ok, sandbox} = Projects.create_sandbox(parent, attrs)
+      assert {:ok, sandbox} = Projects.create_sandbox(parent, attrs, owner)
       assert sandbox.parent_id == parent.id
       assert sandbox.name == "sandbox-1"
     end

@@ -548,21 +548,35 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Creates a project.
+  Creates a project, recording `actor` as having created it and added each of
+  its initial members.
+
+  ## Options
+
+    * `:notify` - email each initial member that they were added (default `true`)
 
   ## Examples
 
-      iex> create_project(%{field: value})
+      iex> create_project(%{field: value}, actor)
       {:ok, %Project{}}
 
-      iex> create_project(%{field: bad_value})
+      iex> create_project(%{field: bad_value}, actor)
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_project(attrs \\ %{}, schedule_email? \\ true) do
+  @spec create_project(map(), Lightning.Actor.t(), keyword()) ::
+          {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+  def create_project(attrs, actor, opts \\ []) do
     Repo.transact(fn ->
       with {:ok, project} <- ProjectHook.handle_create_project(attrs) do
-        if schedule_email? do
+        project = Repo.preload(project, :project_users)
+
+        {:ok, _} =
+          Multi.new()
+          |> Audit.derive_creation_events(project, actor)
+          |> Repo.transaction()
+
+        if Keyword.get(opts, :notify, true) do
           schedule_project_addition_emails(%Project{project_users: []}, project)
         end
 
@@ -2257,10 +2271,10 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Creates a sandbox under the given `parent` by delegating to `create_project/2`.
+  Creates a sandbox under the given `parent` by delegating to `create_project/3`.
 
-  This is a convenience wrapper that sets `:parent_id` and preserves the
-  existing behavior around collaborator emails (off by default unless `schedule_email?` is `true`).
+  This is a convenience wrapper that sets `:parent_id` and emails no
+  collaborators.
 
   ## Notes
 
@@ -2274,10 +2288,12 @@ defmodule Lightning.Projects do
   * `{:ok, %Project{}}` on success
   * `{:error, %Ecto.Changeset{}}` on validation/unique errors
   """
-  @spec create_sandbox(Project.t(), map(), boolean()) ::
+  @spec create_sandbox(Project.t(), map(), Lightning.Actor.t()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
-  def create_sandbox(%Project{id: parent_id}, attrs, schedule_email? \\ false) do
-    attrs |> Map.put(:parent_id, parent_id) |> create_project(schedule_email?)
+  def create_sandbox(%Project{id: parent_id}, attrs, actor) do
+    attrs
+    |> Map.put(:parent_id, parent_id)
+    |> create_project(actor, notify: false)
   end
 
   @doc """
