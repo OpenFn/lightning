@@ -88,10 +88,6 @@
     @apply absolute inline-flex h-full w-full animate-ping rounded-full bg-inherit opacity-75 motion-reduce:animate-none;
   }
 
-  .ui-badge__icon {
-    @apply h-3.5 w-3.5 shrink-0;
-  }
-
   .ui-badge__remove {
     @apply -mr-1 inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-black/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-600;
   }
@@ -130,5 +126,13 @@
 
   .ui-badge--interactive.ui-badge--dark {
     @apply hover:bg-gray-700;
+  }
+}
+
+/* hero-* icons are utilities with a fixed size, and utilities beat
+   components, so the icon size has to live here. */
+@layer utilities {
+  .ui-badge > .ui-badge__icon {
+    @apply h-3.5 w-3.5 shrink-0;
   }
 }
