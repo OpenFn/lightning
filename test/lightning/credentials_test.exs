@@ -550,6 +550,10 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
+  defp audit_query(credential) do
+    from(a in Audit.base_query(), where: a.item_id == ^credential.id)
+  end
+
   defp audit_actors(credential) do
     from(a in Audit.base_query(),
       where: a.item_id == ^credential.id,
@@ -922,6 +926,176 @@ defmodule Lightning.CredentialsTest do
       persisted = Repo.get!(Credential, credential.id)
       assert persisted.user_id == owner.id
       assert is_nil(persisted.transfer_status)
+    end
+
+    test "a write that changes only a body records one updated event holding only that body" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential, user: owner, name: "unchanged", schema: "raw")
+        |> with_body(%{name: "main", body: %{"a" => "old-secret"}})
+        |> with_body(%{name: "staging", body: %{"b" => "staging-secret"}})
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "unchanged",
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"a" => "new-secret"}},
+                     %{"name" => "staging", "body" => %{"b" => "staging-secret"}}
+                   ]
+                 },
+                 owner
+               )
+
+      assert [audit] = Repo.all(audit_query(credential))
+      assert audit.event == "updated"
+      assert audit.actor_id == owner.id
+      assert audit.metadata["environments"] == ["main"]
+      assert Map.keys(audit.metadata["credential_bodies"]) == ["body:main"]
+
+      assert {:ok, %{"a" => "new-secret"}} =
+               audit.metadata["credential_bodies"]["body:main"]
+               |> Base.decode64!()
+               |> Lightning.Encrypted.Map.load()
+
+      refute inspect(Map.from_struct(audit), limit: :infinity) =~ "secret"
+    end
+
+    test "a typed body resent as a form sends it records nothing" do
+      owner = insert(:user)
+
+      stored = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "https://dbhost",
+        "database" => "test_db",
+        "port" => 5000,
+        "ssl" => true,
+        "allowSelfSignedCert" => false
+      }
+
+      credential =
+        insert(:credential, user: owner, name: "pg", schema: "postgresql")
+        |> with_body(%{name: "main", body: stored})
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "pg",
+                   "credential_bodies" => [
+                     %{
+                       "name" => "main",
+                       "body" =>
+                         Map.merge(stored, %{
+                           "port" => "5000",
+                           "ssl" => "true",
+                           "allowSelfSignedCert" => "false"
+                         })
+                     }
+                   ]
+                 },
+                 owner
+               )
+
+      assert Repo.all(audit_query(credential)) == []
+
+      assert Credentials.get_credential_body(credential.id, "main").body ==
+               stored
+    end
+
+    test "re-authorising an OAuth credential records the new tokens, an unchanged save nothing" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential,
+          user: owner,
+          name: "oauth",
+          schema: "oauth",
+          oauth_client: insert(:oauth_client)
+        )
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "access_token" => "old_token",
+            "refresh_token" => "existing_refresh",
+            "expires_in" => 3600,
+            "scope" => "read write",
+            "token_type" => "Bearer"
+          }
+        })
+
+      # The form never sends the refresh token back; the context keeps it.
+      save = fn access_token ->
+        Credentials.update_credential(
+          credential,
+          %{
+            "name" => "oauth",
+            "credential_bodies" => [
+              %{
+                "name" => "main",
+                "body" => %{
+                  "access_token" => access_token,
+                  "expires_in" => 3600,
+                  "scope" => "read write",
+                  "token_type" => "Bearer"
+                }
+              }
+            ]
+          },
+          owner
+        )
+      end
+
+      assert {:ok, _} = save.("old_token")
+      assert Repo.all(audit_query(credential)) == []
+
+      assert {:ok, _} = save.("new_token")
+
+      assert [%{event: "updated", metadata: %{"environments" => ["main"]}}] =
+               Repo.all(audit_query(credential))
+    end
+
+    test "existing links passed back with their ids are kept beside a new one" do
+      owner = insert(:user)
+      [linked, added] = insert_list(2, :project)
+
+      credential =
+        insert(:credential,
+          user: owner,
+          schema: "raw",
+          project_credentials: [%{project_id: linked.id}]
+        )
+
+      [existing] = credential.project_credentials
+
+      assert {:ok, updated} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "project_credentials" => [
+                     %{"id" => existing.id, "project_id" => linked.id},
+                     %{"project_id" => added.id}
+                   ]
+                 },
+                 owner
+               )
+
+      assert updated.project_credentials
+             |> Enum.map(& &1.project_id)
+             |> Enum.sort() ==
+               Enum.sort([linked.id, added.id])
+
+      assert existing.id in Enum.map(updated.project_credentials, & &1.id)
+
+      assert ["added_to_project", "updated"] ==
+               credential
+               |> audit_query()
+               |> Repo.all()
+               |> Enum.map(& &1.event)
+               |> Enum.sort()
     end
   end
 

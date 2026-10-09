@@ -363,9 +363,17 @@ defmodule Lightning.Credentials do
         credential_body
         |> CredentialBody.changeset(%{body: body_data})
         |> cast_credential_body_change(schema_name)
-        |> Repo.update()
+        |> update_body_if_changed()
     end
   end
+
+  # Compared after typing, so a form resending "5432" for a stored 5432 is no
+  # change.
+  defp update_body_if_changed(%Ecto.Changeset{valid?: true, changes: changes})
+       when map_size(changes) == 0,
+       do: {:ok, :unchanged}
+
+  defp update_body_if_changed(changeset), do: Repo.update(changeset)
 
   defp get_credential_bodies(attrs) do
     case Map.get(attrs, "credential_bodies") do
@@ -685,7 +693,7 @@ defmodule Lightning.Credentials do
 
   defp extract_environment_bodies(changes) do
     Enum.reduce(changes, [], fn
-      {key, credential_body}, acc when is_atom(key) ->
+      {key, %CredentialBody{} = credential_body}, acc when is_atom(key) ->
         case Atom.to_string(key) do
           "credential_body_" <> _ ->
             [{credential_body.name, credential_body.body} | acc]
@@ -706,36 +714,39 @@ defmodule Lightning.Credentials do
            changeset,
          actor
        ) do
-    case changeset.changes do
-      map when map_size(map) == 0 ->
-        multi
+    project_credentials_multi =
+      Ecto.Changeset.get_change(changeset, :project_credentials, [])
+      |> Enum.reduce(Multi.new(), fn changeset, multi ->
+        derive_event(multi, changeset, actor)
+      end)
 
-      _ ->
-        project_credentials_multi =
-          Ecto.Changeset.get_change(changeset, :project_credentials, [])
-          |> Enum.reduce(Multi.new(), fn changeset, multi ->
-            derive_event(multi, changeset, actor)
-          end)
+    multi
+    |> Multi.run(:audit, fn repo, %{credential: credential} = changes ->
+      case extract_environment_bodies(changes) do
+        [] when map_size(changeset.changes) == 0 ->
+          {:ok, nil}
 
-        multi
-        |> Multi.run(:collect_env_bodies, fn _repo, changes ->
-          {:ok, extract_environment_bodies(changes)}
-        end)
-        |> Multi.insert(
-          :audit,
-          fn %{credential: credential, collect_env_bodies: env_bodies} ->
-            Audit.user_initiated_event(
-              if(state == :built, do: "created", else: "updated"),
-              credential,
-              actor,
-              changeset,
-              env_bodies
-            )
-          end
-        )
-        |> Multi.append(project_credentials_multi)
-    end
+        env_bodies ->
+          Audit.user_initiated_event(
+            if(state == :built, do: "created", else: "updated"),
+            credential,
+            actor,
+            field_changes(changeset),
+            env_bodies
+          )
+          |> repo.insert()
+      end
+    end)
+    |> Multi.append(project_credentials_multi)
   end
+
+  # Audit.event reads a changeset with no changes as nothing to record, which a
+  # write that changed only a body is not.
+  defp field_changes(%Ecto.Changeset{changes: changes})
+       when map_size(changes) == 0,
+       do: %{}
+
+  defp field_changes(changeset), do: changeset
 
   defp derive_event(
          multi,
