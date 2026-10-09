@@ -1332,7 +1332,293 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "export_project/2 as yaml:" do
+  describe "export_project/4 as yaml (v2 portability format):" do
+    test "works on project with no workflows" do
+      project = project_fixture(name: "newly-created-project")
+
+      {:ok, generated_yaml} =
+        Projects.export_project(:yaml, project.id, nil, :v2)
+
+      # v2 emits the spec-required `id` (hyphenated) plus `name` and
+      # `schema_version`, and omits empty top-level sections rather than
+      # emitting `null`.
+      # v2 emits the spec-required `id` (hyphenated), `name`, and the
+      # portability `schema_version`. Empty top-level sections are omitted
+      # rather than emitted as `null`.
+      assert generated_yaml ==
+               "id: newly-created-project\nname: newly-created-project\nschema_version: '4.0'\n"
+    end
+
+    test "adds quotes to values with special characters" do
+      project = insert(:project, name: "project: 1")
+
+      workflow_with_bad_name =
+        insert(:simple_workflow, project: project, name: "workflow: 1")
+
+      workflow_with_good_name =
+        insert(:simple_workflow, project: project, name: "workflow 2")
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
+
+      # YAML-unsafe values are wrapped in single quotes.
+      assert generated_yaml =~ ~s(name: '#{project.name}')
+      assert generated_yaml =~ ~s(name: '#{workflow_with_bad_name.name}')
+
+      # The good name has no specials, so no value-quoting.
+      refute generated_yaml =~ ~s(name: '#{workflow_with_good_name.name}')
+      assert generated_yaml =~ "name: #{workflow_with_good_name.name}"
+
+      # The two workflows are emitted under hyphenated keys in the
+      # `workflows:` map. The bad name produces a YAML-unsafe key
+      # (`workflow:-1`) — its name field round-trips correctly via the
+      # quoted value above, and we sanity-check that both workflow
+      # `name:` lines appear in the serialized output.
+      assert generated_yaml =~ ~s(name: '#{workflow_with_bad_name.name}')
+      assert generated_yaml =~ "name: #{workflow_with_good_name.name}"
+    end
+
+    test "js_expressions edge conditions are made multiline" do
+      project = insert(:project, name: "project 1")
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      js_expression = "!state.data && !state.data"
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job},
+        condition_type: :js_expression,
+        condition_expression: js_expression
+      )
+      |> insert()
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
+
+      # Per the portability spec, `condition` IS the JS body. Single-line
+      # bodies emit as a quoted scalar; the old `condition: js_expression`
+      # discriminator + sibling `expression:` field is gone.
+      assert generated_yaml =~ "condition: '#{js_expression}'"
+      refute generated_yaml =~ "condition: js_expression"
+    end
+
+    test "project descriptions with multiline and special characters are correctly represented" do
+      project =
+        insert(:project,
+          name: "project_multiline_special",
+          description: """
+          This is a multiline description.
+          It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
+          Also, YAML indicators: *alias, &anchor, ?key, !tag.
+          Line breaks and special characters should be preserved.
+          """
+        )
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
+
+      expected_yaml = """
+      name: project_multiline_special
+      schema_version: '4.0'
+      description: |
+        This is a multiline description.
+        It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
+        Also, YAML indicators: *alias, &anchor, ?key, !tag.
+        Line breaks and special characters should be preserved.
+      """
+
+      assert generated_yaml =~ expected_yaml
+    end
+
+    test "projects with empty and nil descriptions are correctly represented" do
+      project_empty =
+        insert(:project, name: "project_empty_description", description: "")
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project_empty.id, nil, :v2)
+
+      # v2 elides empty/nil description rather than emitting `description: |`
+      # (project name still contains the substring "description").
+      refute generated_yaml =~ "description: "
+      refute generated_yaml =~ "description:\n"
+      assert generated_yaml =~ "name: project_empty_description"
+
+      project_nil =
+        insert(:project, name: "project_nil_description", description: nil)
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project_nil.id, nil, :v2)
+
+      refute generated_yaml =~ "description: "
+      refute generated_yaml =~ "description:\n"
+      assert generated_yaml =~ "name: project_nil_description"
+    end
+
+    test "channels are included in the export with their destination credential" do
+      user = insert(:user, email: "channel-user@lightning.com")
+      credential = insert(:credential, name: "channel-cred", user: user)
+
+      project = insert(:project, name: "project-with-channel")
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      channel =
+        insert(:channel,
+          project: project,
+          name: "my-channel",
+          destination_url: "https://example.com/destination",
+          enabled: true
+        )
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: project_credential
+      )
+
+      channel_only_name =
+        insert(:channel,
+          project: project,
+          name: "no-cred-channel",
+          destination_url: "https://example.com/other",
+          enabled: false
+        )
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
+
+      assert generated_yaml =~ """
+             channels:
+               - name: my-channel
+                 destination_url: 'https://example.com/destination'
+                 enabled: true
+                 destination_credential: channel-user@lightning.com|channel-cred
+               - name: #{channel_only_name.name}
+                 destination_url: 'https://example.com/other'
+                 enabled: false
+                 destination_credential: null
+             """
+    end
+
+    test "webhook_response_config is included in the export" do
+      project = insert(:project, name: "project 1")
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true,
+          webhook_reply: :after_completion,
+          webhook_response_config:
+            build(:webhook_response_config,
+              success_code: 200,
+              error_code: 500
+            )
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => state)]
+        )
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
+
+      expected_trigger_yaml =
+        """
+              - id: webhook
+                name: webhook
+                enabled: true
+                type: webhook
+                webhook_reply: after_completion
+                webhook_response_config:
+                  success_code: 200
+                  error_code: 500
+        """
+
+      assert generated_yaml =~ expected_trigger_yaml
+    end
+
+    test "webhook_response_config is omitted when it's is nil" do
+      project = insert(:project, name: "project 2")
+
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job = build(:job, body: ~s[fn(state => state)])
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v2)
+
+      refute generated_yaml =~ "webhook_response_config"
+    end
+
+    test "exports canonical project in v2 format" do
+      project =
+        canonical_project_fixture(
+          name: "a-test-project",
+          description: "This is only a test"
+        )
+
+      {:ok, generated_yaml} =
+        Projects.export_project(:yaml, project.id, nil, :v2)
+
+      # Top-level project metadata (id is the hyphenated name; name is the
+      # human label).
+      assert generated_yaml =~ "id: a-test-project"
+      assert generated_yaml =~ "name: a-test-project"
+      assert generated_yaml =~ "description:"
+      assert generated_yaml =~ "This is only a test"
+
+      # Spec: `workflows: WorkflowSpec[]` — sequence items, not keyed map.
+      assert generated_yaml =~ ~r/^workflows:/m
+      assert generated_yaml =~ ~r/^\s*- id: workflow-1/m
+      assert generated_yaml =~ ~r/^\s*- id: workflow-2/m
+
+      # v2 shape: workflows nest a `steps:` array, not v1 `jobs:`/`edges:`.
+      assert generated_yaml =~ ~r/^\s*steps:/m
+      refute generated_yaml =~ ~r/^\s*jobs:/m
+      refute generated_yaml =~ ~r/^\s*edges:/m
+
+      # Step ids and trigger types are emitted at the step level.
+      assert generated_yaml =~ "id: webhook-job"
+      assert generated_yaml =~ "id: on-success"
+      assert generated_yaml =~ "id: on-fail"
+      assert generated_yaml =~ "type: webhook"
+      assert generated_yaml =~ "type: cron"
+
+      # Spec: `cron_expression` is a flat field on the trigger.
+      assert generated_yaml =~ "cron_expression: '0 23 * * *'"
+
+      # Collections and credentials are exported.
+      assert generated_yaml =~ "cannonical-collection"
+    end
+  end
+
+  describe "export_project/4 as yaml (v1 legacy format):" do
     test "exports a snapshot taken when a removed trigger type still existed" do
       # Snapshots keep the trigger type they were taken with. The Kafka trigger
       # is gone, but a snapshot from before it went still says :kafka, and
@@ -1362,7 +1648,7 @@ defmodule Lightning.ProjectsTest do
       |> Repo.update!()
 
       assert {:ok, yaml} =
-               Projects.export_project(:yaml, project.id, [snapshot.id])
+               Projects.export_project(:yaml, project.id, [snapshot.id], :v1)
 
       # The workflow name comes from the node, so asserting only that would hold
       # even if the trigger were dropped or written under the wrong key. Pin the
@@ -1378,7 +1664,8 @@ defmodule Lightning.ProjectsTest do
       expected_yaml =
         "name: newly-created-project\ndescription: null\ncollections: null\nchannels: null\ncredentials: null\nworkflows: null"
 
-      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      {:ok, generated_yaml} =
+        Projects.export_project(:yaml, project.id, nil, :v1)
 
       assert generated_yaml == expected_yaml
     end
@@ -1394,14 +1681,16 @@ defmodule Lightning.ProjectsTest do
         custom_path: "et-emr-facility-001"
       )
 
-      assert {:ok, yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, yaml} = Projects.export_project(:yaml, project.id, nil, :v1)
       assert yaml =~ "custom_path: 'et-emr-facility-001'"
 
       bare_project = insert(:project, name: "bare")
       bare_workflow = insert(:workflow, project: bare_project, name: "w")
       insert(:trigger, workflow: bare_workflow, type: :webhook, enabled: true)
 
-      assert {:ok, bare_yaml} = Projects.export_project(:yaml, bare_project.id)
+      assert {:ok, bare_yaml} =
+               Projects.export_project(:yaml, bare_project.id, nil, :v1)
+
       refute bare_yaml =~ "custom_path"
     end
 
@@ -1416,7 +1705,7 @@ defmodule Lightning.ProjectsTest do
         custom_path: "12345"
       )
 
-      assert {:ok, yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, yaml} = Projects.export_project(:yaml, project.id, nil, :v1)
 
       # Unquoted it parses back as an integer and the whole deploy fails.
       assert yaml =~ "custom_path: '12345'"
@@ -1433,7 +1722,7 @@ defmodule Lightning.ProjectsTest do
           set: [custom_path: "orders.v1"]
         )
 
-      assert {:ok, yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, yaml} = Projects.export_project(:yaml, project.id, nil, :v1)
       refute yaml =~ "orders.v1"
     end
 
@@ -1446,7 +1735,8 @@ defmodule Lightning.ProjectsTest do
       workflow_with_good_name =
         insert(:simple_workflow, project: project, name: "workflow 2")
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
 
       assert generated_yaml =~ ~s(name: '#{project.name}')
       assert generated_yaml =~ ~s(name: '#{workflow_with_bad_name.name}')
@@ -1487,7 +1777,8 @@ defmodule Lightning.ProjectsTest do
       )
       |> insert()
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
 
       assert generated_yaml =~
                "condition_expression: |\n          #{js_expression}"
@@ -1505,7 +1796,8 @@ defmodule Lightning.ProjectsTest do
           """
         )
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
 
       expected_yaml = """
       name: project_multiline_special
@@ -1524,7 +1816,7 @@ defmodule Lightning.ProjectsTest do
         insert(:project, name: "project_empty_description", description: "")
 
       assert {:ok, generated_yaml} =
-               Projects.export_project(:yaml, project_empty.id)
+               Projects.export_project(:yaml, project_empty.id, nil, :v1)
 
       expected_yaml = """
       name: project_empty_description
@@ -1537,7 +1829,7 @@ defmodule Lightning.ProjectsTest do
         insert(:project, name: "project_nil_description", description: nil)
 
       assert {:ok, generated_yaml} =
-               Projects.export_project(:yaml, project_nil.id)
+               Projects.export_project(:yaml, project_nil.id, nil, :v1)
 
       expected_yaml = """
       name: project_nil_description
@@ -1579,7 +1871,8 @@ defmodule Lightning.ProjectsTest do
           enabled: false
         )
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
 
       assert generated_yaml =~ """
              channels:
@@ -1622,7 +1915,8 @@ defmodule Lightning.ProjectsTest do
       |> with_edge({trigger, job}, condition_type: :always)
       |> insert()
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
 
       expected_trigger_yaml =
         """
@@ -1652,7 +1946,8 @@ defmodule Lightning.ProjectsTest do
       |> with_edge({trigger, job}, condition_type: :always)
       |> insert()
 
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project.id, nil, :v1)
 
       refute generated_yaml =~ "webhook_response_config"
     end
@@ -1667,7 +1962,8 @@ defmodule Lightning.ProjectsTest do
       expected_yaml =
         File.read!("test/fixtures/canonical_project.yaml") |> String.trim()
 
-      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      {:ok, generated_yaml} =
+        Projects.export_project(:yaml, project.id, nil, :v1)
 
       assert generated_yaml == expected_yaml
     end
@@ -3834,6 +4130,43 @@ defmodule Lightning.ProjectsTest do
       query = Projects.descendants_query([parent.id])
       assert %Ecto.Query{} = query
       assert Repo.exists?(query)
+    end
+  end
+
+  describe "root_id/1" do
+    test "returns the project's own id for a root project" do
+      project = insert(:project)
+      assert Projects.root_id(project) == project.id
+      assert Projects.root_id(project.id) == project.id
+    end
+
+    test "returns the parent's id for a direct sandbox" do
+      parent = insert(:project)
+      sandbox = insert(:project, parent: parent)
+
+      assert Projects.root_id(sandbox) == parent.id
+      assert Projects.root_id(sandbox.id) == parent.id
+    end
+
+    test "walks all the way to the top of a deep chain" do
+      grandparent = insert(:project)
+      parent = insert(:project, parent: grandparent)
+      grandchild = insert(:project, parent: parent)
+
+      assert Projects.root_id(grandchild) == grandparent.id
+    end
+
+    test "siblings share the same root" do
+      parent = insert(:project)
+      a = insert(:project, parent: parent)
+      b = insert(:project, parent: parent)
+
+      assert Projects.root_id(a) == parent.id
+      assert Projects.root_id(b) == parent.id
+    end
+
+    test "returns nil for an unknown project id" do
+      assert Projects.root_id(Ecto.UUID.generate()) == nil
     end
   end
 

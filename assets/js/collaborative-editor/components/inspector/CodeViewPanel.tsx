@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import YAML from 'yaml';
 
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import {
@@ -8,8 +7,8 @@ import {
 } from '#/collaborative-editor/hooks/useWorkflow';
 import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
+import { serializeWorkflow } from '#/yaml/format';
 import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
-import { convertWorkflowStateToSpec } from '#/yaml/util';
 
 export function CodeViewPanel() {
   // Read workflow data from store - LoadingBoundary guarantees non-null
@@ -19,12 +18,13 @@ export function CodeViewPanel() {
   const edges = useWorkflowState(state => state.edges);
   const positions = useWorkflowState(state => state.positions);
 
-  // Generate YAML from current workflow state
+  // Generate v2 YAML from current workflow state. v2 is the CLI-aligned
+  // portability format; the panel content drives both the textarea and the
+  // Download button payload.
   const yamlCode = useMemo(() => {
     if (!workflow) return '';
 
     try {
-      // Build WorkflowState compatible with YAML utilities
       const workflowState: YAMLWorkflowState = {
         id: workflow.id,
         name: workflow.name,
@@ -34,9 +34,7 @@ export function CodeViewPanel() {
         positions,
       };
 
-      // Convert to spec without IDs (cleaner for export)
-      const spec = convertWorkflowStateToSpec(workflowState, false);
-      return YAML.stringify(spec);
+      return serializeWorkflow(workflowState);
     } catch (error) {
       console.error('Failed to generate YAML:', error);
       return '# Error generating YAML\n# Please check console for details';
