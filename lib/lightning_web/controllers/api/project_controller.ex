@@ -44,6 +44,7 @@ defmodule LightningWeb.API.ProjectController do
   alias Lightning.Projects.Project
   alias Lightning.Projects.Scope
   alias Lightning.ServiceAccount
+  alias LightningWeb.API.PutRequest
 
   action_fallback LightningWeb.FallbackController
 
@@ -123,18 +124,15 @@ defmodule LightningWeb.API.ProjectController do
   def update(conn, %{"id" => id}) do
     actor = conn.assigns.current_resource
 
-    with :ok <- known_keys(conn.body_params),
-         {:ok, attrs} <- parse_body(conn.body_params, id) do
-      case Projects.get_project(attrs.id) do
-        nil -> create(conn, attrs, actor)
-        project -> replace(conn, project, attrs, actor)
-      end
-    else
-      {:error, :unknown_keys, keys} ->
-        render_errors(conn, Map.new(keys, &{&1, ["is not accepted"]}))
+    case parse_body(conn.body_params, id) do
+      {:ok, attrs} ->
+        case Projects.get_project(attrs.id) do
+          nil -> create(conn, attrs, actor)
+          project -> replace(conn, project, attrs, actor)
+        end
 
-      error ->
-        error
+      {:error, :invalid, errors} ->
+        PutRequest.render_errors(conn, errors)
     end
   end
 
@@ -146,46 +144,13 @@ defmodule LightningWeb.API.ProjectController do
     notify: :boolean
   }
 
-  @body_keys @body_types |> Map.keys() |> Enum.map(&to_string/1)
-
-  defp known_keys(%{"_json" => _not_an_object}), do: :ok
-
-  defp known_keys(body) do
-    case Map.keys(body) -- @body_keys do
-      [] -> :ok
-      keys -> {:error, :unknown_keys, keys}
-    end
-  end
-
-  defp parse_body(%{"_json" => _not_an_object}, _id) do
-    {:error,
-     {%{}, %{body: :map}}
-     |> change()
-     |> add_error(:body, "must be a JSON object")}
-  end
-
   defp parse_body(body, id) do
-    changeset =
-      {%{notify: true}, @body_types}
-      |> cast(body, Map.keys(@body_types))
+    with {:ok, changeset} <-
+           PutRequest.changeset(body, id, {%{notify: true}, @body_types}) do
+      changeset
       |> validate_required(:notify, message: "must be true or false")
-
-    changeset =
-      case Ecto.UUID.cast(id) do
-        {:ok, id} ->
-          changeset
-          |> validate_change(:id, fn :id, body_id ->
-            if body_id == id,
-              do: [],
-              else: [id: "does not match the id in the path"]
-          end)
-          |> put_change(:id, id)
-
-        :error ->
-          add_error(changeset, :id, "is not a UUID")
-      end
-
-    apply_action(changeset, :validate)
+      |> PutRequest.attrs()
+    end
   end
 
   defp replace(conn, project, attrs, actor) do
@@ -231,55 +196,32 @@ defmodule LightningWeb.API.ProjectController do
           conn |> put_status(:created) |> render_project(project)
 
         {:error, changeset} ->
-          if id_taken?(changeset),
+          if PutRequest.unique_error?(changeset, :id),
             do: replace(conn, Projects.get_project(attrs.id), attrs, actor),
             else: render_create_errors(conn, changeset)
       end
     else
       {:error, messages} when is_list(messages) ->
-        render_errors(conn, %{members: messages})
+        PutRequest.render_errors(conn, %{members: messages})
 
       error ->
         error
     end
   end
 
-  # Another request created the project between our lookup and our insert.
-  defp id_taken?(changeset) do
-    Enum.any?(changeset.errors, fn {field, {_message, opts}} ->
-      field == :id and opts[:constraint] == :unique
-    end)
-  end
-
   # The project's changeset checks members as `owner` and `project_users`;
   # this API calls them `members`.
   defp render_create_errors(conn, changeset) do
-    errors = LightningWeb.CoreComponents.translate_errors(changeset)
+    errors = PutRequest.flat_errors(changeset)
 
     {member_errors, errors} = Map.split(errors, [:owner, :project_users])
 
     errors =
       if member_errors == %{},
         do: errors,
-        else: Map.put(errors, :members, messages(member_errors))
+        else: Map.put(errors, :members, Enum.concat(Map.values(member_errors)))
 
-    render_errors(conn, errors)
-  end
-
-  # A member's own errors arrive as one map per member, empty for the members
-  # that are fine.
-  defp messages(errors) when is_map(errors),
-    do: errors |> Map.values() |> messages()
-
-  defp messages(errors) when is_list(errors),
-    do: Enum.flat_map(errors, &messages/1)
-
-  defp messages(message) when is_binary(message), do: [message]
-
-  defp render_errors(conn, errors) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{errors: errors})
+    PutRequest.render_errors(conn, errors)
   end
 
   defp render_project(conn, project) do

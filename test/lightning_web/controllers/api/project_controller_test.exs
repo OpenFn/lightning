@@ -228,15 +228,6 @@ defmodule LightningWeb.API.ProjectControllerTest do
     |> put(~p"/api/projects/#{id}", Jason.encode!(body))
   end
 
-  defp with_service_account(conn, scopes) do
-    {account, _private_key} = service_account_with_key()
-    Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
-
-    token = Lightning.ServiceAccount.AccessToken.issue(account, scopes)
-
-    {put_req_header(conn, "authorization", "Bearer " <> token), account}
-  end
-
   defp with_pat(conn, user) do
     assign_bearer(conn, Lightning.Accounts.generate_api_token(user))
   end

@@ -1178,6 +1178,34 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "some updated name"
     end
 
+    test "saving only a new body records one updated event", %{
+      conn: conn,
+      user: user
+    } do
+      credential =
+        insert(:credential, user: user, name: "raw one", schema: "raw")
+        |> with_body(%{name: "main", body: %{"a" => "old"}})
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_edit_credential_modal(index_live, credential.id)
+
+      index_live
+      |> click_save(
+        %{credential: %{name: "raw one", body: ~s({"a":"new"})}},
+        "#credential-form-#{credential.id}"
+      )
+
+      assert_redirected(index_live, ~p"/credentials")
+
+      assert [%{event: "updated", metadata: %{"environments" => ["main"]}}] =
+               Repo.all(
+                 from(a in Lightning.Credentials.Audit.base_query(),
+                   where: a.item_id == ^credential.id
+                 )
+               )
+    end
+
     test "displays external_id in credentials table", %{
       conn: conn,
       user: user,
@@ -3068,6 +3096,55 @@ defmodule LightningWeb.CredentialLiveTest do
       refute Enum.find(credential.project_credentials, fn pc ->
                pc.project_id == project_1.id
              end)
+    end
+
+    test "saving an oauth credential unchanged records nothing", %{
+      conn: conn,
+      user: user
+    } do
+      oauth_client = insert(:oauth_client, user: user, userinfo_endpoint: nil)
+
+      credential =
+        insert(:credential,
+          name: "OAuth credential",
+          oauth_client: oauth_client,
+          user: user,
+          schema: "oauth"
+        )
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "access_token" => "test_access_token",
+            "refresh_token" => "test_refresh_token",
+            "token_type" => "Bearer",
+            "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
+            "scope" =>
+              String.split(oauth_client.mandatory_scopes, ",") |> Enum.join(" ")
+          }
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_edit_credential_modal(view, credential.id)
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-#{credential.id}-main"
+          )
+
+        assigns[:oauth_progress] in [:complete, :idle]
+      end)
+
+      view |> form("#credential-form-#{credential.id}") |> render_submit()
+
+      assert_redirected(view, ~p"/credentials")
+
+      assert Repo.all(
+               from(a in Lightning.Credentials.Audit.base_query(),
+                 where: a.item_id == ^credential.id
+               )
+             ) == []
     end
 
     test "reauthenticate banner is not rendered the first time we pick permissions",

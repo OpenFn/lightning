@@ -6,7 +6,6 @@ defmodule Lightning.Policies.Users do
 
   alias Lightning.Accounts
   alias Lightning.Accounts.User
-  alias Lightning.Credentials.Credential
   alias Lightning.Credentials.OauthClient
 
   @type actions ::
@@ -37,9 +36,8 @@ defmodule Lightning.Policies.Users do
     end
   end
 
-  def authorize(action, %User{} = authenticated_user, %module{} = credential)
-      when module in [Credential, OauthClient] and
-             action in [:edit_credential, :delete_credential] do
-    authenticated_user.id == credential.user_id
+  def authorize(action, %User{} = authenticated_user, %OauthClient{} = client)
+      when action in [:edit_credential, :delete_credential] do
+    authenticated_user.id == client.user_id
   end
 end
