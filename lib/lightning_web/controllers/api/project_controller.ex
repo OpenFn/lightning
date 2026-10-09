@@ -168,6 +168,7 @@ defmodule LightningWeb.API.ProjectController do
     changeset =
       {%{notify: true}, @body_types}
       |> cast(body, Map.keys(@body_types))
+      |> validate_required(:notify, message: "must be true or false")
 
     changeset =
       case Ecto.UUID.cast(id) do

@@ -524,6 +524,22 @@ defmodule LightningWeb.API.ProjectControllerTest do
       assert response["errors"] == %{"members" => ["has no seat left"]}
     end
 
+    test "refuses a notify of null, under notify", %{conn: conn} do
+      id = Ecto.UUID.generate()
+
+      response =
+        conn
+        |> put_project(id, %{
+          "name" => "acme",
+          "members" => four_members(),
+          "notify" => nil
+        })
+        |> json_response(422)
+
+      assert %{"notify" => [_]} = response["errors"]
+      refute Lightning.Repo.get(Lightning.Projects.Project, id)
+    end
+
     test "refuses a body that is not a JSON object", %{conn: conn} do
       conn = put_project(conn, Ecto.UUID.generate(), [%{"name" => "acme"}])
 
