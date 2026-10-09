@@ -135,7 +135,20 @@ defmodule LightningWeb.API.ProjectControllerTest do
     test "with token for other project", %{conn: conn} do
       other_project = insert(:project)
       conn = get(conn, ~p"/api/projects/#{other_project.id}")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "is refused with 403, not 409, on a project scheduled for deletion",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      conn = get(conn, ~p"/api/projects/#{project.id}")
+
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
     end
 
     test "shows the project with its members", %{
@@ -194,20 +207,15 @@ defmodule LightningWeb.API.ProjectControllerTest do
              }
     end
 
-    test "is refused a project scheduled for deletion with 401", %{conn: conn} do
-      project =
-        insert(:project,
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
-        )
+    test "answers 409 for a project scheduled for deletion", %{conn: conn} do
+      conn = get(conn, ~p"/api/projects/#{scheduled_project().id}")
 
-      conn = get(conn, ~p"/api/projects/#{project.id}")
-
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
     end
   end
 
   describe "show, for a repo connection" do
-    test "is refused its own project with 401", %{conn: conn} do
+    test "is refused its own project with 403", %{conn: conn} do
       project = insert(:project)
       repo_connection = insert(:project_repo_connection, project: project)
 
@@ -219,7 +227,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
         )
         |> get(~p"/api/projects/#{project.id}")
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
     end
   end
 

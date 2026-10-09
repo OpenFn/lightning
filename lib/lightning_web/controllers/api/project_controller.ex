@@ -97,6 +97,7 @@ defmodule LightningWeb.API.ProjectController do
   - `200 OK` with project JSON on success
   - `404 Not Found` if project doesn't exist
   - `403 Forbidden` if user lacks access to the project
+  - `409 Conflict` to a service account, if the project is scheduled for deletion
 
   ## Examples
 
@@ -104,15 +105,9 @@ defmodule LightningWeb.API.ProjectController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with %Lightning.Projects.Project{} = project <-
-           Projects.get_project(id),
+    with %Project{} = project <- Projects.get_project(id),
          :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             conn.assigns.current_resource,
-             project
-           ) do
+           authorize(:access_project, conn.assigns.current_resource, project) do
       render_project(conn, project)
     else
       nil -> {:error, :not_found}
@@ -177,7 +172,7 @@ defmodule LightningWeb.API.ProjectController do
   end
 
   defp replace(conn, project, attrs, actor) do
-    with :ok <- writable(project, actor),
+    with :ok <- authorize(:edit_project, actor, project),
          {:ok, project} <-
            Projects.update_project(
              project,
@@ -190,11 +185,15 @@ defmodule LightningWeb.API.ProjectController do
 
   # A service account passes every project policy, so telling it the project
   # is scheduled for deletion leaks nothing; a person gets the policy's answer.
-  defp writable(%Project{scheduled_deletion: %DateTime{}}, %ServiceAccount{}),
-    do: {:error, :scheduled_for_deletion}
+  defp authorize(
+         _action,
+         %ServiceAccount{},
+         %Project{scheduled_deletion: %DateTime{}}
+       ),
+       do: {:error, :scheduled_for_deletion}
 
-  defp writable(project, actor) do
-    if Permissions.can?(ProjectUsers, :edit_project, actor, project),
+  defp authorize(action, actor, project) do
+    if Permissions.can?(ProjectUsers, action, actor, project),
       do: :ok,
       else: {:error, :forbidden}
   end
