@@ -34,6 +34,7 @@ defmodule LightningWeb.API.CredentialController do
   alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.ServiceAccount
+  alias LightningWeb.API.PutRequest
 
   action_fallback LightningWeb.FallbackController
 
@@ -214,15 +215,14 @@ defmodule LightningWeb.API.CredentialController do
   def update(conn, %{"id" => id}) do
     actor = conn.assigns.current_resource
 
-    with :ok <- known_keys(conn.body_params),
-         {:ok, attrs} <- parse_body(conn.body_params, id),
+    with {:ok, attrs} <- parse_body(conn.body_params, id),
          {:ok, owner} <- resolve_owner(attrs, actor) do
       case Credentials.get_credential(attrs.id) do
         nil -> create_under_id(conn, attrs, owner, actor)
         credential -> replace(conn, credential, attrs, owner, actor)
       end
     else
-      {:error, :invalid, errors} -> render_errors(conn, errors)
+      {:error, :invalid, errors} -> PutRequest.render_errors(conn, errors)
       error -> error
     end
   end
@@ -236,43 +236,25 @@ defmodule LightningWeb.API.CredentialController do
     project_credentials: {:array, :map}
   }
 
-  @body_keys @body_types |> Map.keys() |> Enum.map(&to_string/1)
-
   @bodies_message "must be one body named main, holding an object"
 
-  defp known_keys(%{"_json" => _not_an_object}), do: :ok
-
-  defp known_keys(body) do
-    case Map.keys(body) -- @body_keys do
-      [] -> :ok
-      keys -> {:error, :invalid, Map.new(keys, &{&1, ["is not accepted"]})}
-    end
-  end
-
-  defp parse_body(%{"_json" => _not_an_object}, _id),
-    do: {:error, :invalid, %{body: ["must be a JSON object"]}}
-
   defp parse_body(body, id) do
-    {%{}, @body_types}
-    |> cast(body, Map.keys(@body_types))
-    |> validate_required(:credential_bodies, message: @bodies_message)
-    |> validate_change(:credential_bodies, fn :credential_bodies, bodies ->
-      if main_body_only?(bodies),
-        do: [],
-        else: [credential_bodies: @bodies_message]
-    end)
-    |> validate_change(:project_credentials, fn :project_credentials, links ->
-      if Enum.all?(links, &project_link?/1),
-        do: [],
-        else: [
-          project_credentials: "must each be an object holding a project_id"
-        ]
-    end)
-    |> put_path_id(id)
-    |> apply_action(:validate)
-    |> case do
-      {:ok, attrs} -> {:ok, attrs}
-      {:error, changeset} -> {:error, :invalid, flat_errors(changeset)}
+    with {:ok, changeset} <- PutRequest.changeset(body, id, {%{}, @body_types}) do
+      changeset
+      |> validate_required(:credential_bodies, message: @bodies_message)
+      |> validate_change(:credential_bodies, fn :credential_bodies, bodies ->
+        if main_body_only?(bodies),
+          do: [],
+          else: [credential_bodies: @bodies_message]
+      end)
+      |> validate_change(:project_credentials, fn :project_credentials, links ->
+        if Enum.all?(links, &project_link?/1),
+          do: [],
+          else: [
+            project_credentials: "must each be an object holding a project_id"
+          ]
+      end)
+      |> PutRequest.attrs()
     end
   end
 
@@ -283,31 +265,9 @@ defmodule LightningWeb.API.CredentialController do
 
   defp project_link?(%{"project_id" => project_id} = link)
        when map_size(link) == 1 and is_binary(project_id),
-       do: cast_uuid(project_id) != :error
+       do: PutRequest.cast_uuid(project_id) != :error
 
   defp project_link?(_link), do: false
-
-  defp put_path_id(changeset, id) do
-    case cast_uuid(id) do
-      {:ok, id} ->
-        changeset
-        |> validate_change(:id, fn :id, body_id ->
-          if body_id == id,
-            do: [],
-            else: [id: "does not match the id in the path"]
-        end)
-        |> put_change(:id, id)
-
-      :error ->
-        add_error(changeset, :id, "is not a UUID")
-    end
-  end
-
-  # `Ecto.UUID.cast/1` also takes any 16-byte string as a raw UUID, so a
-  # 16-character path would land under an id other than the one it names.
-  defp cast_uuid(value) do
-    with {:ok, raw} <- Ecto.UUID.dump(value), do: Ecto.UUID.load(raw)
-  end
 
   # A person's token makes the caller the owner, and may only name the caller:
   # naming anyone else is refused before the lookup, so the answer never says
@@ -346,7 +306,7 @@ defmodule LightningWeb.API.CredentialController do
           conn |> put_status(:created) |> render_credential(credential, actor)
 
         {:error, %Ecto.Changeset{} = changeset} ->
-          if id_taken?(changeset),
+          if PutRequest.unique_error?(changeset, :id),
             do:
               replace(
                 conn,
@@ -438,22 +398,11 @@ defmodule LightningWeb.API.CredentialController do
       else: {:error, :forbidden}
   end
 
-  # Another request created the credential between our lookup and our insert.
-  defp id_taken?(changeset), do: unique_error?(changeset, :id)
-
-  # The owner already holds this name under another id.
-  defp name_taken?(changeset), do: unique_error?(changeset, :name)
-
-  defp unique_error?(changeset, field) do
-    Enum.any?(changeset.errors, fn {error_field, {_message, opts}} ->
-      error_field == field and opts[:constraint] == :unique
-    end)
-  end
-
   defp render_write_error(conn, {:error, %Ecto.Changeset{} = changeset}) do
-    if name_taken?(changeset),
+    # The owner already holds this name under another id.
+    if PutRequest.unique_error?(changeset, :name),
       do: {:error, :name_taken},
-      else: render_errors(conn, flat_errors(changeset))
+      else: PutRequest.render_errors(conn, PutRequest.flat_errors(changeset))
   end
 
   defp render_write_error(_conn, {:error, :unauthorized}),
@@ -461,29 +410,7 @@ defmodule LightningWeb.API.CredentialController do
 
   # What remains is an OAuth token body the context refused.
   defp render_write_error(conn, {:error, _reason}),
-    do: render_errors(conn, %{credential_bodies: ["is invalid"]})
-
-  # Nested errors, such as a link's, arrive as one map per entry; every key
-  # answers a flat list of messages.
-  defp flat_errors(changeset) do
-    changeset
-    |> LightningWeb.CoreComponents.translate_errors()
-    |> Map.new(fn {field, errors} -> {field, messages(errors)} end)
-  end
-
-  defp messages(errors) when is_map(errors),
-    do: errors |> Map.values() |> messages()
-
-  defp messages(errors) when is_list(errors),
-    do: Enum.flat_map(errors, &messages/1)
-
-  defp messages(message) when is_binary(message), do: [message]
-
-  defp render_errors(conn, errors) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{errors: errors})
-  end
+    do: PutRequest.render_errors(conn, %{credential_bodies: ["is invalid"]})
 
   # Every link is listed, since the caller needs each link's id; a person sees
   # only the projects they belong to by name.
