@@ -190,6 +190,38 @@ defmodule Lightning.ProjectsTest do
                errors
     end
 
+    test "update_project_with_users/4 hands ownership over when the promotion is listed before the demotion" do
+      owner = insert(:user)
+      editor = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: editor, role: :editor}
+          ]
+        )
+
+      owner_pu = Enum.find(project.project_users, &(&1.user_id == owner.id))
+      editor_pu = Enum.find(project.project_users, &(&1.user_id == editor.id))
+
+      assert {:ok, _project} =
+               Projects.update_project_with_users(
+                 project,
+                 %{
+                   project_users: [
+                     %{id: editor_pu.id, role: :owner},
+                     %{id: owner_pu.id, role: :editor}
+                   ]
+                 },
+                 owner,
+                 false
+               )
+
+      assert %{role: :editor} = Repo.reload!(owner_pu)
+      assert %{role: :owner} = Repo.reload!(editor_pu)
+    end
+
     test "create_project/3 with invalid data returns error changeset" do
       user = insert(:user)
 

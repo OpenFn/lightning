@@ -299,7 +299,27 @@ defmodule Lightning.Projects.Project do
     |> cast_assoc(:project_users, required: true, sort_param: :users_sort)
     |> validate()
     |> validate_project_owner()
+    |> write_owner_last()
     |> unique_constraint(:id, name: :projects_pkey)
+  end
+
+  # Children are written in list order and the one-owner index can't be
+  # deferred, so an ownership handover only succeeds if the old owner's
+  # demotion reaches the database before the new owner's row.
+  defp write_owner_last(changeset) do
+    case get_change(changeset, :project_users) do
+      nil ->
+        changeset
+
+      project_users ->
+        {owners, others} =
+          Enum.split_with(project_users, fn project_user ->
+            project_user.action in [:insert, :update] and
+              get_field(project_user, :role) == :owner
+          end)
+
+        put_change(changeset, :project_users, others ++ owners)
+    end
   end
 
   defp validate_project_owner(changeset) do
