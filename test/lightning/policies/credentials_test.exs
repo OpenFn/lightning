@@ -615,6 +615,62 @@ defmodule Lightning.Policies.CredentialsTest do
       end
     end
 
+    test "a role in a project the credential is linked to grants neither", %{
+      owner: owner
+    } do
+      [admin, editor, viewer] = insert_list(3, :user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: admin, role: :admin},
+            %{user: editor, role: :editor},
+            %{user: viewer, role: :viewer}
+          ]
+        )
+
+      credential = insert(:credential, user: owner)
+      insert(:project_credential, project: project, credential: credential)
+
+      for user <- [admin, editor, viewer],
+          action <- [:edit_credential, :delete_credential] do
+        refute Credentials |> Bodyguard.permit?(action, user, credential),
+               "#{action} was granted through a project role"
+      end
+    end
+
+    test "linking to a project takes an owner, admin or editor there, or a service account" do
+      [owner, admin, editor, viewer, outsider] = insert_list(5, :user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: admin, role: :admin},
+            %{user: editor, role: :editor},
+            %{user: viewer, role: :viewer}
+          ]
+        )
+
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      may_link? =
+        &Bodyguard.permit?(
+          Lightning.Policies.ProjectUsers,
+          :create_project_credential,
+          &1,
+          project
+        )
+
+      assert Enum.map(
+               [owner, admin, editor, viewer, outsider, account],
+               may_link?
+             ) ==
+               [true, true, true, false, false, true]
+    end
+
     test "a service account can write any credential but never delete one", %{
       credential: credential
     } do
