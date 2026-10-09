@@ -52,7 +52,11 @@ defmodule LightningWeb.TokenExchangeControllerTest do
                "grant_types_supported" => ["client_credentials"],
                "token_endpoint_auth_methods_supported" => ["private_key_jwt"],
                "token_endpoint_auth_signing_alg_values_supported" => ["RS256"],
-               "scopes_supported" => ["users:read", "users:write"],
+               "scopes_supported" => [
+                 "users:read",
+                 "users:write",
+                 "projects:write"
+               ],
                "response_types_supported" => []
              }
 
@@ -76,7 +80,7 @@ defmodule LightningWeb.TokenExchangeControllerTest do
                "access_token" => access_token,
                "token_type" => "Bearer",
                "expires_in" => 300,
-               "scope" => "users:read users:write"
+               "scope" => "users:read users:write projects:write"
              } = json_response(conn, 200)
 
       assert get_resp_header(conn, "cache-control") == ["no-store"]
@@ -95,7 +99,7 @@ defmodule LightningWeb.TokenExchangeControllerTest do
                "aud" => aud,
                "sub" => sub,
                "client_id" => sub,
-               "scope" => "users:read users:write",
+               "scope" => "users:read users:write projects:write",
                "iat" => iat,
                "exp" => exp,
                "jti" => jti

@@ -457,6 +457,69 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
     end
   end
 
+  # The expected set is written out rather than read from the module, so a new
+  # action fails here until someone decides whether a service account gets it.
+  describe "a service account" do
+    setup do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{account: account}
+    end
+
+    test "is allowed exactly the project actions, and nothing about its own row",
+         %{account: account, project: project} do
+      expected =
+        ~w(
+          access_project
+          delete_project
+          add_project_user
+          remove_project_user
+          edit_project
+          edit_data_retention
+          edit_run_settings
+          write_webhook_auth_method
+          write_github_connection
+          create_workflow
+          edit_workflow
+          delete_workflow
+          run_workflow
+          create_project_credential
+          initiate_github_sync
+          create_channel
+          update_channel
+          delete_channel
+        )a
+
+      refused = ~w(publish_template edit_digest_alerts edit_failure_alerts)a
+
+      assert Enum.sort(ProjectUsers.actions()) ==
+               Enum.sort(expected ++ refused),
+             "classify every new action as allowed or refused for a service account"
+
+      allowed =
+        for action <- ProjectUsers.actions(),
+            Permissions.can?(ProjectUsers, action, account, project),
+            do: action
+
+      assert Enum.sort(allowed) == Enum.sort(expected)
+    end
+
+    # A %ProjectUser{} subject goes to the general clause, not the "is this
+    # row mine" one, and is refused there.
+    test "is refused the self actions given someone's membership row", %{
+      account: account,
+      project: project
+    } do
+      refute_can(
+        ProjectUsers,
+        [:edit_digest_alerts, :edit_failure_alerts],
+        account,
+        hd(project.project_users)
+      )
+    end
+  end
+
   describe "blocked_by_mfa?/1" do
     setup %{editor: editor} do
       enrolled = insert(:user, mfa_enabled: true)

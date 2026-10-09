@@ -6,8 +6,9 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
   `call/2` goes in the pipeline. It accepts only tokens issued to the service
   account registered now, so unsetting `SERVICE_ACCOUNT_PUBLIC_KEY` cuts off
   tokens already issued, and assigns the token's claims as `:access_token` and
-  the service account as `:service_account`. Each controller then names the scope its actions need with
-  `plug :require_scope, "users:read"`. Refusals follow RFC 6750 §3.
+  the service account as `:current_resource`. Each controller then names the
+  scope its actions need with `plug :require_scope, "users:read"`. Refusals
+  follow RFC 6750 §3.
   """
   import Plug.Conn
 
@@ -23,7 +24,7 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
            Lightning.Config.service_account() do
       conn
       |> assign(:access_token, claims)
-      |> assign(:service_account, service_account)
+      |> assign(:current_resource, service_account)
     else
       _other -> refuse(conn, 401, "invalid_token")
     end
