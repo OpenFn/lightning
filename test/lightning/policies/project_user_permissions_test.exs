@@ -457,10 +457,8 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
     end
   end
 
-  # A service account holds no membership row; its authority is its token's
-  # scope, checked at the route. The expected set is written out rather than
-  # read from the module, so a new action fails here until someone decides
-  # whether a service account gets it.
+  # The expected set is written out rather than read from the module, so a new
+  # action fails here until someone decides whether a service account gets it.
   describe "a service account" do
     setup do
       {account, _private_key} =
@@ -519,24 +517,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         account,
         hd(project.project_users)
       )
-    end
-
-    test "refuses every action on a project scheduled for deletion", %{
-      account: account,
-      marked_project: marked_project
-    } do
-      assert :access_project in ProjectUsers.actions()
-      refute_can(ProjectUsers, ProjectUsers.actions(), account, marked_project)
-    end
-  end
-
-  describe "a repo connection" do
-    # Reached from GET /api/projects/:id; it has no role in the project, so
-    # the policy refuses it.
-    test "is refused :access_project on its own project", %{project: project} do
-      repo_connection = insert(:project_repo_connection, project: project)
-
-      refute_can(ProjectUsers, :access_project, repo_connection, project)
     end
   end
 

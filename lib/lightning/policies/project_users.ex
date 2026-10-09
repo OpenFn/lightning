@@ -10,15 +10,19 @@ defmodule Lightning.Policies.ProjectUsers do
   standing in a wound-down project.
 
   `permitted?/2` makes the **judgement**: given that standing, is this action
-  allowed. For a person it decides on `role` and `mfa_satisfied?`; for a
-  service account it decides on `actor`, whose authority is the scope its token
-  carries, checked at the route. It never mentions `Project.scheduled_deletion`
-  or `Project.requires_mfa` — there is no shut-down project left for it to see,
-  and the MFA rule reaches it as a fact on the scope.
+  allowed. It decides on `role` and `mfa_satisfied?`, and never mentions
+  `Project.scheduled_deletion` or `Project.requires_mfa` — there is no
+  shut-down project left for it to see, and the MFA rule reaches it as a fact
+  on the scope.
 
   Adding an action means adding an atom to `@admin_actions` or
-  `@editor_actions`. It inherits the guard, and the service account is granted
-  it too, so decide whether it should be.
+  `@editor_actions`. It inherits the guard; there is nothing to remember.
+
+  A service account holds no role. Its authority is the scope its token
+  carries, which `LightningWeb.Plugs.PersonOrServiceAccountAuth` checks at the
+  route; here it may do only what `@service_account_actions` lists. That list
+  is separate and written out, so a new admin or editor action is refused to
+  the service account until it is added there.
 
   We deny by default: an action in none of the lists is refused.
   """
@@ -55,9 +59,26 @@ defmodule Lightning.Policies.ProjectUsers do
 
   @other_actions [:access_project, :delete_project, :publish_template]
 
-  @service_account_actions @admin_actions ++
-                             @editor_actions ++
-                             [:access_project, :delete_project]
+  @service_account_actions [
+    :write_webhook_auth_method,
+    :write_github_connection,
+    :edit_project,
+    :edit_data_retention,
+    :add_project_user,
+    :remove_project_user,
+    :edit_run_settings,
+    :create_workflow,
+    :edit_workflow,
+    :delete_workflow,
+    :run_workflow,
+    :create_project_credential,
+    :initiate_github_sync,
+    :create_channel,
+    :delete_channel,
+    :update_channel,
+    :access_project,
+    :delete_project
+  ]
 
   @type actions ::
           :access_project
@@ -140,11 +161,6 @@ defmodule Lightning.Policies.ProjectUsers do
   # later — without anyone having to remember @admin_actions/@editor_actions.
   def permitted?(_action, %Scope{mfa_satisfied?: false}), do: false
 
-  # A service account holds no role; its authority is its token's scope, which
-  # the route has already checked. It gets every project action except the
-  # self actions, which act on the caller's own membership row (it has none),
-  # and :publish_template, which is for support staff rather than any project
-  # role.
   def permitted?(action, %Scope{actor: %ServiceAccount{}}),
     do: action in @service_account_actions
 
