@@ -198,7 +198,7 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, index_live, html} = live(conn, ~p"/projects/#{project.id}/settings")
 
       assert html =~
-               "Export your project as code, to save this version or edit your project locally"
+               "Save your project as a YAML file to be edited locally, backed up, or deployed elsewhere"
 
       assert index_live
              |> element(~s{a[target="_blank"]}, "Export project")
@@ -5076,7 +5076,7 @@ defmodule LightningWeb.ProjectLiveTest do
         view
         |> element("#select-repos-input")
         |> render_async()
-        |> find_selected_option("#select-repos-input li")
+        |> find_selected_option("#select-repos-input li[role=option]")
 
       assert selected_repo =~ expected_repo["full_name"]
 
@@ -5095,7 +5095,7 @@ defmodule LightningWeb.ProjectLiveTest do
         view
         |> element("#select-branches-input")
         |> render_async()
-        |> find_selected_option("#select-branches-input li")
+        |> find_selected_option("#select-branches-input li[role=option]")
 
       assert selected_branch =~ expected_branch["name"]
 
@@ -5106,9 +5106,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
       html = render_async(view)
 
-      refute find_selected_option(html, "#select-repos-input li")
+      refute find_selected_option(html, "#select-repos-input li[role=option]")
 
-      refute find_selected_option(html, "#select-branches-input li")
+      refute find_selected_option(html, "#select-branches-input li[role=option]")
 
       # let us list the branches again by following the ritual again
       view
@@ -5141,7 +5141,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input li")
+        |> Floki.find("#select-branches-input li[role=option]")
 
       assert Enum.count(options) == 2
 
@@ -5168,7 +5168,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input li")
+        |> Floki.find("#select-branches-input li[role=option]")
 
       assert Enum.count(options) == 3
     end
@@ -5239,7 +5239,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input li")
+        |> Floki.find("#select-branches-input li[role=option]")
 
       # Only the "Select a branch" prompt is present; no branches leaked.
       assert Enum.count(options) == 1
@@ -5257,7 +5257,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input li")
+        |> Floki.find("#select-branches-input li[role=option]")
 
       assert Enum.count(options) == 1
     end
@@ -5317,7 +5317,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # We just have the default option
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
       [repos_input] = Floki.find(floki_fragment, "#select-repos-input")
-      options = Floki.children(repos_input)
+      options = Floki.find(repos_input, "li[role=option]")
       assert Enum.count(options) == 1
       options |> hd() |> Floki.raw_html() =~ "Select a repo"
 
@@ -5331,7 +5331,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # we should now have the repos listed
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
       [repos_input] = Floki.find(floki_fragment, "#select-repos-input")
-      options = Floki.children(repos_input)
+      options = Floki.find(repos_input, "li[role=option]")
       assert Enum.count(options) == 2
       [default_option, repo_option] = options
       Floki.raw_html(default_option) =~ "Select a repo"
@@ -5342,7 +5342,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
       [branches_input] = Floki.find(floki_fragment, "#select-branches-input")
-      options = Floki.children(branches_input)
+      options = Floki.find(branches_input, "li[role=option]")
       assert Enum.count(options) == 1
       options |> hd() |> Floki.raw_html() =~ "Select a branch"
 
@@ -5367,7 +5367,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # we should now have the branches listed
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
       [branches_input] = Floki.find(floki_fragment, "#select-branches-input")
-      options = Floki.children(branches_input)
+      options = Floki.find(branches_input, "li[role=option]")
       assert Enum.count(options) == 2
       [default_option, branch_option] = options
       Floki.raw_html(default_option) =~ "Select a branch"
