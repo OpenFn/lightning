@@ -107,21 +107,26 @@ defmodule LightningWeb.API.CollectionController do
 
   # A service account holds `:manage_collection` on every project, so telling
   # it the project is scheduled for deletion leaks nothing; a person gets the
-  # policy's answer.
-  defp authorize(actor, project) do
-    case Scope.fetch(actor, project) do
+  # policy's answer, which refuses such a project.
+  defp authorize(%ServiceAccount{} = account, project) do
+    case Scope.fetch(account, project) do
       {:ok, _scope} ->
-        if Permissions.can?(:collections, :manage_collection, actor, project),
-          do: :ok,
-          else: {:error, :forbidden}
+        can_manage(account, project)
 
-      {:error, :project_scheduled_for_deletion}
-      when is_struct(actor, ServiceAccount) ->
+      {:error, :project_scheduled_for_deletion} ->
         {:error, :scheduled_for_deletion}
 
       {:error, _reason} ->
         {:error, :forbidden}
     end
+  end
+
+  defp authorize(actor, project), do: can_manage(actor, project)
+
+  defp can_manage(actor, project) do
+    if Permissions.can?(:collections, :manage_collection, actor, project),
+      do: :ok,
+      else: {:error, :forbidden}
   end
 
   defp put_collection(conn, nil, project, attrs, actor) do
