@@ -235,9 +235,9 @@ defmodule Lightning.KickstartTest do
           scenario(),
           ["projects", Access.at(0), "members"],
           fn [owner_member, editor_member] ->
-            # The incoming owner is declared FIRST on purpose. Declared in the
-            # other order the handover succeeds even without reconcile_members/2
-            # sorting owners last, so this order is what pins the sort.
+            # Project.project_with_users_changeset/2 writes the owner row last,
+            # so the handover succeeds whatever order the members are declared
+            # in or the existing rows come back from the database in.
             [
               Map.put(editor_member, "role", "owner"),
               Map.put(owner_member, "role", "editor")

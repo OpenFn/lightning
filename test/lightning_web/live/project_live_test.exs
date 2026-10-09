@@ -153,16 +153,14 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(index_live) =~ "Project created successfully"
 
       project_name = String.replace(@create_attrs.raw_name, " ", "-")
+      subject = "You now have access to \"#{project_name}\""
 
-      assert_email_sent(
-        to: [Swoosh.Email.Recipient.format(user_1)],
-        subject: "You now have access to \"#{project_name}\""
-      )
+      for user <- [user_1, user_2] do
+        recipient = Swoosh.Email.Recipient.format(user)
 
-      assert_email_sent(
-        to: [Swoosh.Email.Recipient.format(user_2)],
-        subject: "You now have access to \"#{project_name}\""
-      )
+        assert_received {:email,
+                         %Swoosh.Email{to: [^recipient], subject: ^subject}}
+      end
     end
 
     test "project owners can delete a project from the settings page",

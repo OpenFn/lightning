@@ -285,7 +285,7 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
       workflow = insert(:workflow, project: project) |> with_snapshot()
 
       for {path, refusals} <- [
-            {~p"/api/projects/#{project.id}", [401, 403]},
+            {~p"/api/projects/#{project.id}", [403]},
             {~p"/api/projects/#{project.id}/workflows", [401, 403]},
             {~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
              [401, 403]},

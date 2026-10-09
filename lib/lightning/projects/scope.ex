@@ -83,7 +83,7 @@ defmodule Lightning.Projects.Scope do
   Whoever is asking. A `%User{}` may hold a role; a `%ProjectRepoConnection{}`
   and a `%ServiceAccount{}` never do.
   """
-  @type actor :: User.t() | ProjectRepoConnection.t() | ServiceAccount.t()
+  @type actor :: Lightning.Actor.t() | ProjectRepoConnection.t()
 
   @typedoc """
   Anything that identifies a project: a loaded `%Project{}`, a project id, or

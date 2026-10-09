@@ -31,7 +31,8 @@ defmodule LightningWeb.TokenExchangeControllerTest do
         "grant_type" => "client_credentials",
         "client_assertion_type" => @assertion_type,
         "client_assertion" =>
-          sign_assertion(private_key, assertion_claims(account, audience))
+          sign_assertion(private_key, assertion_claims(account, audience)),
+        "scope" => "users:read"
       },
       extra
     )
@@ -73,8 +74,12 @@ defmodule LightningWeb.TokenExchangeControllerTest do
       account: account,
       private_key: private_key
     } do
-      conn =
-        exchange(conn, valid_params(account, private_key, token_endpoint(conn)))
+      params =
+        valid_params(account, private_key, token_endpoint(conn), %{
+          "scope" => "users:read users:write projects:write"
+        })
+
+      conn = exchange(conn, params)
 
       assert %{
                "access_token" => access_token,
@@ -168,6 +173,20 @@ defmodule LightningWeb.TokenExchangeControllerTest do
 
       assert %{"error" => "invalid_scope"} =
                conn |> exchange(params) |> json_response(400)
+    end
+
+    test "refuses a request that names no scope with invalid_scope", %{
+      conn: conn,
+      account: account,
+      private_key: private_key
+    } do
+      params = valid_params(account, private_key, token_endpoint(conn))
+
+      for params <- [Map.delete(params, "scope"), Map.put(params, "scope", " ")] do
+        assert conn |> exchange(params) |> json_response(400) == %{
+                 "error" => "invalid_scope"
+               }
+      end
     end
 
     test "refuses a failed assertion with invalid_client", %{

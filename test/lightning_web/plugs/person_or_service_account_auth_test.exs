@@ -70,7 +70,7 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
       assert id == project.id
     end
 
-    test "refuses a non-member's personal access token with 401", %{
+    test "refuses a non-member's personal access token with 403", %{
       conn: conn
     } do
       user = insert(:user)
@@ -81,7 +81,7 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
         |> with_token(Lightning.Accounts.generate_api_token(user))
         |> get(~p"/api/projects/#{project.id}")
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
       assert get_resp_header(conn, "www-authenticate") == []
     end
 

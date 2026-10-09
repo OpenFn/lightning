@@ -2124,7 +2124,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       channel_pid = socket.channel_pid
       monitor_ref = Process.monitor(channel_pid)
 
-      revoke_support_access(project)
+      revoke_support_access(project, insert(:user))
 
       assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
     end
@@ -2143,7 +2143,7 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       log =
         capture_log(fn ->
-          revoke_support_access(project)
+          revoke_support_access(project, insert(:user))
 
           ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
           assert_reply ref, :ok, %{workflow: _}
@@ -2169,7 +2169,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       socket = join_as(support_user, project, workflow)
       assert socket.assigns.project_user
 
-      revoke_support_access(project)
+      revoke_support_access(project, insert(:user))
 
       ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
       assert_reply ref, :ok, %{workflow: _}

@@ -9,7 +9,7 @@ Repo.delete_all(Collections.Collection)
 project =
   with nil <- Repo.get_by(Projects.Project, name: "benchee") do
     user = Repo.get_by(Lightning.Accounts.User, email: "demo@openfn.org")
-    {:ok, project} = Projects.create_project(%{name: "benchee", project_users: [%{user_id: user.id, role: :owner}]})
+    {:ok, project} = Projects.create_project(%{name: "benchee", project_users: [%{user_id: user.id, role: :owner}]}, user)
     project
   end
 
