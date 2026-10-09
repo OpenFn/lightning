@@ -593,14 +593,17 @@ defmodule Lightning.Projects do
 
   ## Examples
 
-      iex> update_project(project, %{field: new_value})
+      iex> update_project(project, %{field: new_value}, actor)
       {:ok, %Project{}}
 
-      iex> update_project(project, %{field: bad_value})
+      iex> update_project(project, %{field: bad_value}, actor)
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_project(%Project{} = project, attrs, user \\ nil) do
+  @spec update_project(Project.t(), map(), Lightning.Actor.t()) ::
+          {:ok, Project.t()}
+          | {:error, Ecto.Changeset.t() | :not_related_to_project}
+  def update_project(%Project{} = project, attrs, actor) do
     changeset =
       project
       |> Project.changeset(attrs)
@@ -608,7 +611,7 @@ defmodule Lightning.Projects do
 
     Multi.new()
     |> Multi.update(:project, changeset)
-    |> maybe_audit_changes(changeset, user)
+    |> Audit.derive_events(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project}} ->
@@ -629,13 +632,6 @@ defmodule Lightning.Projects do
       {:error, _operation, _changeset, _changes_so_far} ->
         {:error, :not_related_to_project}
     end
-  end
-
-  defp maybe_audit_changes(multi, _changeset, nil), do: multi
-
-  defp maybe_audit_changes(multi, changeset, user) do
-    multi
-    |> Audit.derive_events(changeset, user)
   end
 
   @spec update_project_with_users(Project.t(), map(), User.t(), boolean()) ::

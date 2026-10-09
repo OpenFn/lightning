@@ -12,7 +12,9 @@ defmodule Lightning.Projects.Audit do
       "collaborator_role_changed",
       "created",
       "dataclip_retention_period_updated",
+      "description_updated",
       "history_retention_period_updated",
+      "name_updated",
       "requires_mfa_updated"
     ]
 
@@ -23,7 +25,9 @@ defmodule Lightning.Projects.Audit do
     [
       :allow_support_access,
       :dataclip_retention_period,
+      :description,
       :history_retention_period,
+      :name,
       :requires_mfa
     ]
     |> Enum.reduce(multi, fn field, multi ->

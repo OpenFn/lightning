@@ -3351,29 +3351,29 @@ defmodule Lightning.ProjectsTest do
       %{user: insert(:user)}
     end
 
-    test "update_project/3 with valid data updates the project" do
+    test "update_project/3 with valid data updates the project", %{user: user} do
       project = project_fixture()
       update_attrs = %{name: "some-updated-name"}
 
       assert {:ok, %Project{} = project} =
-               Projects.update_project(project, update_attrs)
+               Projects.update_project(project, update_attrs, user)
 
       assert project.name == "some-updated-name"
     end
 
-    test "update_project/3 updates the MFA requirement" do
+    test "update_project/3 updates the MFA requirement", %{user: user} do
       project = insert(:project)
 
       refute project.requires_mfa
       update_attrs = %{requires_mfa: true}
 
       assert {:ok, %Project{} = project} =
-               Projects.update_project(project, update_attrs)
+               Projects.update_project(project, update_attrs, user)
 
       assert project.requires_mfa
     end
 
-    test "update_project/3 updates the data retention periods" do
+    test "update_project/3 updates the data retention periods", %{user: user} do
       project =
         insert(:project,
           project_users:
@@ -3394,7 +3394,7 @@ defmodule Lightning.ProjectsTest do
       }
 
       assert {:ok, %Project{} = updated_project} =
-               Projects.update_project(project, update_attrs)
+               Projects.update_project(project, update_attrs, user)
 
       # admins and owners receives an email
       admins =
@@ -3438,7 +3438,7 @@ defmodule Lightning.ProjectsTest do
 
       # no email is sent when there's no change
       assert {:ok, updated_project} =
-               Projects.update_project(updated_project, update_attrs)
+               Projects.update_project(updated_project, update_attrs, user)
 
       for %{user: %{email: email}} <- project.project_users do
         refute_receive {:email,
@@ -3451,10 +3451,14 @@ defmodule Lightning.ProjectsTest do
 
       # no email is sent when there's an error in the changeset
       assert {:error, _changeset} =
-               Projects.update_project(updated_project, %{
-                 history_retention_period: "xyz",
-                 dataclip_retention_period: 7
-               })
+               Projects.update_project(
+                 updated_project,
+                 %{
+                   history_retention_period: "xyz",
+                   dataclip_retention_period: 7
+                 },
+                 user
+               )
 
       for %{user: %{email: email}} <- project.project_users do
         refute_receive {:email,
@@ -3466,7 +3470,8 @@ defmodule Lightning.ProjectsTest do
       end
     end
 
-    test "update_project/3 rejects lowering history below existing dataclip retention" do
+    test "update_project/3 rejects lowering history below existing dataclip retention",
+         %{user: user} do
       project =
         insert(:project,
           history_retention_period: 30,
@@ -3474,23 +3479,29 @@ defmodule Lightning.ProjectsTest do
         )
 
       assert {:error, changeset} =
-               Projects.update_project(project, %{history_retention_period: 7})
+               Projects.update_project(
+                 project,
+                 %{history_retention_period: 7},
+                 user
+               )
 
       assert "dataclip retention period must be less or equal to the history retention period" in errors_on(
                changeset
              ).dataclip_retention_period
     end
 
-    test "update_project/3 with invalid data returns error changeset" do
+    test "update_project/3 with invalid data returns error changeset", %{
+      user: user
+    } do
       project = project_fixture() |> unload_relation(:project_users)
 
       assert {:error, %Ecto.Changeset{}} =
-               Projects.update_project(project, @invalid_attrs)
+               Projects.update_project(project, @invalid_attrs, user)
 
       assert Repo.preload(project, :parent) == Projects.get_project!(project.id)
     end
 
-    test "update_project/2 calls the validate_changeset hook" do
+    test "update_project/3 calls the validate_changeset hook", %{user: user} do
       verify_on_exit!()
 
       project =
@@ -3512,9 +3523,13 @@ defmodule Lightning.ProjectsTest do
       )
 
       assert {:error, changeset} =
-               Projects.update_project(project, %{
-                 name: "new-name"
-               })
+               Projects.update_project(
+                 project,
+                 %{
+                   name: "new-name"
+                 },
+                 user
+               )
 
       assert errors_on(changeset) == %{name: [error_msg]}
     end
@@ -3616,24 +3631,41 @@ defmodule Lightning.ProjectsTest do
              } = Repo.get_by!(Audit, event: "requires_mfa_updated")
     end
 
-    test "does not create events if no user was provided" do
-      project =
-        insert(
-          :project,
-          dataclip_retention_period: 7,
-          history_retention_period: 30,
-          retention_policy: :retain_all
-        )
+    test "records a service account renaming the project" do
+      {%{uuid: account_uuid} = account, _key} = service_account_with_key()
+      %{id: project_id} = project = insert(:project, name: "before")
 
-      update_attrs = %{
-        dataclip_retention_period: 14,
-        history_retention_period: 90,
-        retention_policy: :retain_with_errors
-      }
+      assert {:ok, _} =
+               Projects.update_project(project, %{name: "after"}, account)
 
-      Projects.update_project(project, update_attrs)
+      assert %{
+               item_id: ^project_id,
+               actor_id: ^account_uuid,
+               actor_type: :service_account,
+               changes: %Audit.Changes{
+                 before: %{"name" => "before"},
+                 after: %{"name" => "after"}
+               }
+             } = Repo.get_by!(Audit, event: "name_updated")
+    end
 
-      assert Audit |> Repo.all() |> Enum.empty?()
+    test "records a person changing the description", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} = project = insert(:project, description: "old")
+
+      assert {:ok, _} =
+               Projects.update_project(project, %{description: "new"}, user)
+
+      assert %{
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               actor_type: :user,
+               changes: %Audit.Changes{
+                 before: %{"description" => "old"},
+                 after: %{"description" => "new"}
+               }
+             } = Repo.get_by!(Audit, event: "description_updated")
     end
 
     test "does not create events if the project change fails", %{
@@ -5107,10 +5139,14 @@ defmodule Lightning.ProjectsTest do
   end
 
   defp change_retention_periods(project) do
-    Projects.update_project(project, %{
-      history_retention_period: 14,
-      dataclip_retention_period: 7
-    })
+    Projects.update_project(
+      project,
+      %{
+        history_retention_period: 14,
+        dataclip_retention_period: 7
+      },
+      insert(:user)
+    )
   end
 
   defp data_retention_email(updated_project) do

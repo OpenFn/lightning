@@ -52,7 +52,7 @@ defmodule Lightning.ProjectsHelpers do
   @doc """
   Turns off a project's support access as `actor`, returning the updated project.
   """
-  def revoke_support_access(project, actor \\ nil) do
+  def revoke_support_access(project, actor) do
     {:ok, project} =
       Projects.update_project(project, %{allow_support_access: false}, actor)
 
