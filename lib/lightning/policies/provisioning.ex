@@ -28,10 +28,9 @@ defmodule Lightning.Policies.Provisioning do
   alias Lightning.ServiceAccount
   alias Lightning.VersionControl.ProjectRepoConnection
 
-  @type actor :: Lightning.Actor.t() | ProjectRepoConnection.t()
   @type actions :: :create_project | :provision_project | :describe_project
 
-  @spec authorize(actions(), actor(), Project.t() | nil) ::
+  @spec authorize(actions(), Scope.actor(), Project.t() | nil) ::
           boolean() | {:error, :forbidden}
 
   def authorize(:create_project, %User{role: :superuser}, _), do: true
