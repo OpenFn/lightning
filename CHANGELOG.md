@@ -17,6 +17,21 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Update Project and Workflow yaml exports to match the v4 portability spec
+  [#4718](https://github.com/OpenFn/lightning/issues/4718)
+
+### Fixed
+
+- GitHub sync now prevents two projects in the same project tree (root,
+  sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
+  pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+
+## [2.19.1-pre] - 2026-10-09
+
+### Added
+
 - The AI assistant now shows a warning banner above its chat input when the
   current workflow is live.
   [#5205](https://github.com/OpenFn/lightning/pull/5205)
@@ -46,11 +61,13 @@ and this project adheres to
   opened it, with a notice that stays until you reload or close it. Previously
   an open editor could keep running the old version for hours after a deploy.
   [#5202](https://github.com/OpenFn/lightning/pull/5202)
+- Index to improve the performance of the dataclip deletion query.
+  [#5226](https://github.com/OpenFn/lightning/issues/5226)
 
 ### Changed
 
-- Update Project and Workflow yaml exports to match the v4 portability spec
-  [#4718](https://github.com/OpenFn/lightning/issues/4718)
+- API list endpoints now return at most 100 items a page, however large the
+  `page_size` asked for. [#5232](https://github.com/OpenFn/lightning/pull/5232)
 - On Linux, database connections now detect a silently dead network path (e.g. a
   node drain during a node-pool upgrade) within about 20s, including queries run
   with no timeout, which previously could hang indefinitely. Connections use TCP
@@ -75,6 +92,13 @@ and this project adheres to
   characters or no visible characters, and names over 255 characters, as admin
   and API changes already do.
   [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- Failure alert emails no longer include the run's logs, since jobs can log
+  sensitive data. The email links to the run, where the logs are.
+  [#2663](https://github.com/OpenFn/lightning/issues/2663)
+- The workflow health page now has separate tabs for work orders and runs. The
+  donuts show the success rate and the failure count in their middle. Triage
+  rows show each failure's state and adaptor, and the step bars show each step's
+  adaptor. [#5229](https://github.com/OpenFn/lightning/pull/5229)
 
 ### Removed
 
@@ -87,9 +111,6 @@ and this project adheres to
 
 ### Fixed
 
-- GitHub sync now prevents two projects in the same project tree (root,
-  sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
-  pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
 - Leaving the workflow editor now closes its connection to the server. It used
   to stay open, reconnecting in the background, until the tab was closed.
   [#5202](https://github.com/OpenFn/lightning/pull/5202)

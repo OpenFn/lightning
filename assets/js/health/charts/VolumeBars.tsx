@@ -13,13 +13,13 @@ import type { FailureState } from '../types';
 import { FAILURE_STATES } from '../types';
 
 import { ChartTooltip } from './ChartTooltip';
-import { EMPTY } from './Donut';
+import { EMPTY, FRAME } from './Donut';
 import { CANCELLED, FAILED, SUCCESS } from './OutcomesDonut';
 
 /**
  * Run volume over the window, stacked by outcome.
  *
- * Counts runs where the donuts beside it count work orders, so the two differ
+ * Counts runs where the Work orders tab counts work orders, so the two differ
  * on purpose and the card carries no total. Buckets arrive already counted and
  * zero-filled from `Stats.runs/3` — one row per bar, one key per run state,
  * which is the shape Recharts takes as `data` — on a grid cut to the reader's
@@ -112,11 +112,10 @@ export const VolumeBars = ({
 
   return (
     <>
-      {/* The donut's `FRAME` is a fixed box and gains nothing from extra
-          room; the bars have a time axis to spread along. `flex-1` takes the
-          height the grid row stretches the card to, floored at the donut's
-          own height so a short row still lines the two up. */}
-      <div className="min-h-55 flex-1" aria-hidden="true">
+      {/* A fixed height, because `ResponsiveContainer` sizes the chart from
+          this box and the card has no height of its own to give it. The
+          same as the loading placeholder, so the card holds still. */}
+      <div className={FRAME} aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={rows}
