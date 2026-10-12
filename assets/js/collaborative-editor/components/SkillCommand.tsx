@@ -1,23 +1,16 @@
-import { cn } from '#/utils/cn';
-
 import { Tooltip } from '../../components/Tooltip';
 import type { AISkill } from '../types/sessionContext';
 
 export function SkillCommand({
   skill,
-  className,
   withTooltip = true,
 }: {
   skill: AISkill;
-  className?: string;
   /** Off in an input, where the menu has just shown the description */
   withTooltip?: boolean;
 }) {
   const command = (
-    <span
-      data-testid="skill-command"
-      className={cn('text-primary-600', className)}
-    >
+    <span data-testid="skill-command" className="text-primary-600">
       /{skill.name}
     </span>
   );

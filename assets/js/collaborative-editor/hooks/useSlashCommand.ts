@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, RefObject, UIEvent } from 'react';
 
 import type { AISkill } from '../types/sessionContext';
@@ -18,6 +18,7 @@ export function useSlashCommand(
   const [dismissedMenuFor, setDismissedMenuFor] = useState<string | null>(null);
   const commandRef = useRef<HTMLSpanElement>(null);
   const [commandWidth, setCommandWidth] = useState(0);
+  const menuId = useId();
 
   useLayoutEffect(() => {
     setCommandWidth(skill ? (commandRef.current?.offsetWidth ?? 0) : 0);
@@ -116,11 +117,11 @@ export function useSlashCommand(
     comboboxProps: {
       role: 'combobox',
       'aria-expanded': menuOpen,
-      'aria-controls': menuOpen ? 'skill-menu' : undefined,
-      'aria-activedescendant':
-        activeSkill && `skill-option-${activeSkill.name}`,
+      'aria-controls': menuOpen ? menuId : undefined,
+      'aria-activedescendant': activeSkill && `${menuId}-${activeSkill.name}`,
     },
     menuProps: {
+      id: menuId,
       matches,
       activeIndex,
       onChoose: (s: AISkill) => chooseSkill(s),

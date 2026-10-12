@@ -3,6 +3,7 @@ import { cn } from '#/utils/cn';
 import type { AISkill } from '../types/sessionContext';
 
 interface SkillMenuProps {
+  id: string;
   matches: AISkill[];
   activeIndex: number;
   onChoose: (skill: AISkill) => void;
@@ -10,6 +11,7 @@ interface SkillMenuProps {
 }
 
 export function SkillMenu({
+  id,
   matches,
   activeIndex,
   onChoose,
@@ -19,7 +21,7 @@ export function SkillMenu({
 
   return (
     <div
-      id="skill-menu"
+      id={id}
       role="listbox"
       aria-label="Skills"
       data-testid="skill-menu"
@@ -31,7 +33,7 @@ export function SkillMenu({
       {matches.map((s, i) => (
         <div
           key={s.name}
-          id={`skill-option-${s.name}`}
+          id={`${id}-${s.name}`}
           role="option"
           aria-selected={i === activeIndex}
           tabIndex={-1}

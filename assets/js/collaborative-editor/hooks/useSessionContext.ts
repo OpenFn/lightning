@@ -167,7 +167,7 @@ export const usePermissions = (): Permissions | null => {
   return useSyncExternalStore(sessionContextStore.subscribe, selectPermissions);
 };
 
-/** The skills that fit the current workflow: on a new one, not those for existing workflows. */
+/** Skills for the current workflow; a new one leaves out those for existing workflows. */
 export const useAISkills = (): AISkill[] => {
   const sessionContextStore = useSessionContextStore();
 
