@@ -34,7 +34,14 @@ login page or a blank canvas means something went wrong.
 
 Other `shoot.mjs` flags: `--password`, `--width`/`--height` (default 1440x900,
 rendered at 2x), `--full` for full-page captures, `--wait <selector>` on every
-page. It also lists any uncaught page errors at the end.
+page. It also lists any uncaught page errors at the end. `--base` and `--email`
+default to `http://localhost:4000` and `demo@openfn.org`.
+
+To click into something first (select a node, open a panel) or crop to one
+component, use `--spec shots.json`. The format is in the header of
+`shoot.mjs`. Example: select a job in the editor with
+`{"click": ".react-flow__node:has-text(\"Transform data\")"}`. Every run also
+writes `manifest.json`, which the `pr-screenshots` skill uses.
 
 To send screenshots to the user, write them into the repo working directory or
 the scratchpad (the Claude app can only open files there) and use

@@ -2,27 +2,46 @@
 // Log into a running Lightning instance and screenshot a list of pages.
 //
 //   node .claude/skills/screenshots/shoot.mjs [options] <name>=<path> ...
+//   node .claude/skills/screenshots/shoot.mjs [options] --spec shots.json
 //
 // Options (all optional):
-//   --base URL        default http://localhost:4003 (the bin/e2e port)
-//   --email EMAIL     default editor@openfn.org
+//   --base URL        default http://localhost:4000 (setup.sh's server)
+//   --email EMAIL     default demo@openfn.org
 //   --password PASS   default welcome12345 (demo + kickstart default)
 //   --out DIR         default ./screenshots
 //   --width N         default 1440
 //   --height N        default 900
 //   --full            capture the full scrollable page, not just the viewport
 //   --wait SELECTOR   extra selector to wait for on every page
+//   --spec FILE       JSON list of shots (below), instead of positional args
 //
-// Each positional arg is name=path, e.g. projects=/projects. The screenshot is
-// written to <out>/<name>.png. Use name=path@selector to wait for a specific
-// element on that page before capturing.
+// Each positional arg is name=path, e.g. projects=/projects. Use
+// name=path@selector to wait for a specific element before capturing.
+//
+// A spec file is a JSON array of shots, for when you need to click into
+// something or crop to one component:
+//
+//   [{ "name": "editor-run-panel",
+//      "path": "/projects/<id>/w/<id>",
+//      "caption": "Run panel open on the first job",   // used by PR comments
+//      "wait": "[data-testid=workflow-canvas]",         // optional
+//      "steps": [{ "click": "text=Transform data" },    // optional, in order:
+//                { "fill": ["input[name=q]", "foo"] },  //   click, fill, press,
+//                { "press": "Enter" },                  //   hover, wait (selector),
+//                { "wait": ".panel" },                  //   sleep (ms)
+//                { "sleep": 500 }],
+//      "element": ".panel",                             // optional: crop to this
+//      "full": false }]                                 // optional
+//
+// Every run writes <out>/<name>.png per shot plus <out>/manifest.json
+// ([{name, file, url, caption}]), which the pr-screenshots skill reads.
 //
 // Playwright is resolved from assets/node_modules (run `npm install --prefix
 // assets` first). The browser is CHROMIUM_PATH, defaulting to the cloud
 // container's /opt/pw-browsers/chromium, so nothing is downloaded.
 
 import { createRequire } from 'node:module';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -30,16 +49,17 @@ const require = createRequire(path.join(root, 'assets', 'package.json'));
 const { chromium } = require('@playwright/test');
 
 const opts = {
-  base: 'http://localhost:4003',
-  email: 'editor@openfn.org',
+  base: 'http://localhost:4000',
+  email: 'demo@openfn.org',
   password: 'welcome12345',
   out: 'screenshots',
   width: 1440,
   height: 900,
   full: false,
   wait: null,
+  spec: null,
 };
-const pages = [];
+let shots = [];
 
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
@@ -48,11 +68,12 @@ for (let i = 0; i < argv.length; i++) {
   else if (a.startsWith('--')) opts[a.slice(2)] = argv[++i];
   else {
     const [name, rest] = a.split(/=(.*)/s);
-    const [p, sel] = rest.split('@');
-    pages.push({ name, path: p, selector: sel });
+    const [p, wait] = rest.split('@');
+    shots.push({ name, path: p, wait });
   }
 }
-if (pages.length === 0) pages.push({ name: 'projects', path: '/projects' });
+if (opts.spec) shots = shots.concat(JSON.parse(readFileSync(opts.spec, 'utf8')));
+if (shots.length === 0) shots.push({ name: 'projects', path: '/projects' });
 
 mkdirSync(opts.out, { recursive: true });
 
@@ -106,6 +127,16 @@ async function settle(selector) {
   await page.waitForTimeout(500); // let transitions and fonts finish
 }
 
+async function runStep(step) {
+  if (step.click) await page.click(step.click);
+  else if (step.fill) await page.fill(step.fill[0], step.fill[1]);
+  else if (step.press) await page.keyboard.press(step.press);
+  else if (step.hover) await page.hover(step.hover);
+  else if (step.wait) await page.waitForSelector(step.wait, { timeout: 30000 });
+  else if (step.sleep) await page.waitForTimeout(step.sleep);
+  else throw new Error(`unknown step ${JSON.stringify(step)}`);
+}
+
 await page.goto(`${opts.base}/users/log_in`);
 await page.fill('input[type="email"]', opts.email);
 await page.fill('input[type="password"]', opts.password);
@@ -115,14 +146,26 @@ await Promise.all([
 ]);
 console.log(`logged in as ${opts.email} -> ${page.url()}`);
 
-for (const p of pages) {
-  const url = p.path.startsWith('http') ? p.path : `${opts.base}${p.path}`;
-  await page.goto(url);
-  await settle(p.selector);
-  const file = path.join(opts.out, `${p.name}.png`);
-  await page.screenshot({ path: file, fullPage: opts.full });
-  console.log(`${file}  <- ${page.url()}`);
+const manifest = [];
+let failed = 0;
+for (const s of shots) {
+  const file = path.join(opts.out, `${s.name}.png`);
+  try {
+    const url = s.path.startsWith('http') ? s.path : `${opts.base}${s.path}`;
+    await page.goto(url);
+    await settle(s.wait);
+    for (const step of s.steps || []) await runStep(step);
+    if (s.steps?.length) await page.waitForTimeout(500);
+    if (s.element) await page.locator(s.element).first().screenshot({ path: file });
+    else await page.screenshot({ path: file, fullPage: s.full ?? opts.full });
+    manifest.push({ name: s.name, file: `${s.name}.png`, url: page.url(), caption: s.caption || '' });
+    console.log(`${file}  <- ${page.url()}`);
+  } catch (e) {
+    failed++;
+    console.log(`FAILED ${s.name}: ${e.message.split('\n')[0]}`);
+  }
 }
+writeFileSync(path.join(opts.out, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
 if (errors.length) {
   console.log('\npage errors:');
@@ -130,3 +173,4 @@ if (errors.length) {
 }
 
 await browser.close();
+process.exit(failed ? 1 : 0);
