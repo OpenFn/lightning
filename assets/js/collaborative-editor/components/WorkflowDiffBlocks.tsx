@@ -17,8 +17,21 @@ import { cn } from '#/utils/cn';
 
 import type { Token } from '../utils/highlightJs';
 import { TOKEN_CLASS, tokenizeJs } from '../utils/highlightJs';
-import type { StepChange, StructuralChange } from '../utils/workflowDiff';
-import { deriveWorkflowChanges } from '../utils/workflowDiff';
+import type {
+  AddedRun,
+  StepChange,
+  StructuralChange,
+} from '../utils/workflowDiff';
+import { addedRuns, deriveWorkflowChanges } from '../utils/workflowDiff';
+
+import { AdaptorIcon } from './AdaptorIcon';
+
+/** A step to open from its diff block, and the code to highlight in it */
+export interface OpenStepTarget {
+  jobId?: string;
+  name: string;
+  added: AddedRun[];
+}
 
 const pluralize = (count: number, noun: string): string =>
   `${count} ${noun}${count === 1 ? '' : 's'}`;
@@ -80,37 +93,38 @@ const DiffBlockShell = ({
           a single hairline reads as one code block. */}
       <div
         className={cn(
-          'flex items-center gap-2 pr-2',
+          'relative flex items-center gap-2 pl-3 pr-2 py-1.5',
           expanded && 'border-b border-[#d1d9e0]'
         )}
       >
+        {/* Stretched behind the header rather than wrapping it, so the title
+            can hold a button of its own. No chevron, so the hover state is the
+            only cue that the header collapses the block. */}
         <button
           type="button"
           data-testid="diff-block-toggle"
+          aria-expanded={expanded}
+          aria-label="Toggle diff"
           onClick={() => setExpanded(prev => !prev)}
-          className={cn(
-            'flex-1 min-w-0 px-3 py-1.5 flex items-center justify-between gap-2',
-            // No chevron, so the hover state is the only cue that the header
-            // collapses the block.
-            'cursor-pointer hover:bg-[#f6f8fa]'
-          )}
+          className="absolute inset-0 cursor-pointer hover:bg-[#f6f8fa]"
+        />
+        {/* Flexed so a long step name truncates on its own rather than
+            pushing the label it belongs to out of the header. */}
+        <span
+          className="pointer-events-none relative flex-1 text-xs text-left font-medium text-[#1f2328] min-w-0 flex items-center"
+          data-testid="diff-block-header"
         >
-          {/* Flexed so a long step name truncates on its own rather than
-              pushing the label it belongs to out of the header. */}
-          <span
-            className="text-xs text-left font-medium text-[#1f2328] min-w-0 flex items-baseline"
-            data-testid="diff-block-header"
-          >
-            {title}
-          </span>
-          <span
-            className="text-xs shrink-0 font-mono tabular-nums"
-            data-testid="diff-block-summary"
-          >
-            {summary}
-          </span>
-        </button>
-        {action}
+          {title}
+        </span>
+        <span
+          className="pointer-events-none relative text-xs shrink-0 font-mono tabular-nums"
+          data-testid="diff-block-summary"
+        >
+          {summary}
+        </span>
+        {action && (
+          <div className="relative flex items-center gap-2">{action}</div>
+        )}
       </div>
       {expanded && children}
     </div>
@@ -138,22 +152,17 @@ const DiffCode = ({
 };
 
 /**
- * One unified-diff row.
- *
- * Two gutters, old and new, each blank where that side has no line: a
- * removed row exists only in the old file and an added row only in the new
- * one. Collapsing them into a single column makes a diff read as though the
- * same line number appears twice with different content.
+ * One unified-diff row. A single gutter, as Claude Code shows it: a removed
+ * row carries its old line number and every other row its new one, so the
+ * numbers match the step as it now reads in the editor.
  */
 const DiffLine = ({
-  oldLineNumber,
-  newLineNumber,
+  lineNumber,
   marker,
   content,
   tokens,
 }: {
-  oldLineNumber: number | null;
-  newLineNumber: number | null;
+  lineNumber: number;
   marker: '+' | '-' | ' ';
   content: string;
   tokens?: Token[];
@@ -174,31 +183,19 @@ const DiffLine = ({
           : 'diff-line-context'
     }
   >
-    {/* Both gutters sized to a 4-digit line number and no wider: this panel
-        is narrow and every pixel of chrome is a pixel of code lost. */}
-    {/* Both gutters sized to a 4-digit line number and no wider: this panel
-        is narrow and every pixel of chrome is a pixel of code lost. The
-        gutter carries a deeper tint than its row, as Primer does, so the
-        numbers stay legible against the line colour. */}
+    {/* Sized to a 4-digit line number and no wider: this panel is narrow and
+        every pixel of chrome is a pixel of code lost. The gutter carries a
+        deeper tint than its row, as Primer does, so the numbers stay legible
+        against the line colour. */}
     <span
       className={cn(
-        'w-7 shrink-0 pl-1 text-right select-none tabular-nums text-[#59636e]',
+        'w-8 shrink-0 px-1 text-right select-none tabular-nums text-[#59636e]',
         marker === '+' && 'bg-[#ccffd8]',
         marker === '-' && 'bg-[#ffd7d5]'
       )}
-      data-testid="diff-gutter-old"
+      data-testid="diff-gutter"
     >
-      {oldLineNumber ?? ''}
-    </span>
-    <span
-      className={cn(
-        'w-7 shrink-0 pr-1 text-right select-none tabular-nums text-[#59636e]',
-        marker === '+' && 'bg-[#ccffd8]',
-        marker === '-' && 'bg-[#ffd7d5]'
-      )}
-      data-testid="diff-gutter-new"
-    >
-      {newLineNumber ?? ''}
+      {lineNumber}
     </span>
     <span
       className={cn(
@@ -252,21 +249,19 @@ const DiffHunks = ({ step }: { step: StepChange }) => {
 
               // A removed row exists only in the old body, an added row only
               // in the new one; context rows advance both.
-              let oldLineNumber: number | null = null;
-              let newLineNumber: number | null = null;
+              let lineNumber: number;
               let tokens: Token[] | undefined;
 
               if (marker === '+') {
-                newLineNumber = newLine;
+                lineNumber = newLine;
                 tokens = newTokens[newLine - 1];
                 newLine += 1;
               } else if (marker === '-') {
-                oldLineNumber = oldLine;
+                lineNumber = oldLine;
                 tokens = oldTokens[oldLine - 1];
                 oldLine += 1;
               } else {
-                oldLineNumber = oldLine;
-                newLineNumber = newLine;
+                lineNumber = newLine;
                 tokens = oldTokens[oldLine - 1];
                 oldLine += 1;
                 newLine += 1;
@@ -275,8 +270,7 @@ const DiffHunks = ({ step }: { step: StepChange }) => {
               return (
                 <DiffLine
                   key={lineIndex}
-                  oldLineNumber={oldLineNumber}
-                  newLineNumber={newLineNumber}
+                  lineNumber={lineNumber}
                   marker={marker}
                   content={content}
                   tokens={tokens}
@@ -320,7 +314,7 @@ export const StepDiffBlock = ({
    * YAML without `id:` fields invents ids, and the apply path parses the
    * same YAML separately, so the two do not agree for a newly added step.
    */
-  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  onOpenStep?: (step: OpenStepTarget) => void;
   /**
    * Whether this step exists on the canvas. A reply whose apply failed, or
    * a step renamed since, resolves to nothing, and a link that silently
@@ -328,12 +322,21 @@ export const StepDiffBlock = ({
    */
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
 }) => {
+  const [shaking, setShaking] = useState(false);
+
   // A removed step has nowhere to go, so it gets no link.
   const canOpen = Boolean(
     onOpenStep &&
       step.type !== 'remove' &&
       (!canOpenStep || canOpenStep({ jobId: step.jobId, name: step.name }))
   );
+
+  const openStep = () =>
+    onOpenStep?.({
+      jobId: step.jobId,
+      name: step.name,
+      added: addedRuns(step.hunks),
+    });
 
   // A removed step's new body is empty; the code worth copying is the one
   // that just went away.
@@ -348,7 +351,40 @@ export const StepDiffBlock = ({
               The margin is the visual gap on top of it: a mono name set
               against sans needs more than a space's width to separate. */}
           <span className="shrink-0 mr-1">{`${stepVerb[step.type]}\u00a0`}</span>
-          <span className="font-mono truncate">{step.name}</span>
+          {/* A step that can't be opened still answers a click, with the
+              same shake a rejected password gets, so the click doesn't
+              read as missed. */}
+          <button
+            type="button"
+            data-testid="diff-block-step-pill"
+            aria-disabled={!canOpen}
+            title={
+              canOpen
+                ? 'Go to step'
+                : step.type === 'remove'
+                  ? 'This step was removed'
+                  : 'This step is no longer in the workflow'
+            }
+            onClick={() => (canOpen ? openStep() : setShaking(true))}
+            onAnimationEnd={() => setShaking(false)}
+            className={cn(
+              'pointer-events-auto inline-flex items-center gap-1.5 min-w-0 rounded-md border border-[#d1d9e0] bg-white p-0.5 pr-2',
+              canOpen
+                ? 'cursor-pointer hover:border-[#afb8c1]'
+                : 'cursor-default',
+              shaking && 'error-shake'
+            )}
+          >
+            {/* Logos are drawn edge to edge, so an inset tile gives each one
+                the same frame whatever its shape. */}
+            <span
+              className="shrink-0 flex items-center justify-center size-5 rounded bg-[#f6f8fa] overflow-hidden *:size-3.5"
+              aria-hidden="true"
+            >
+              <AdaptorIcon name={step.adaptor} size="sm" />
+            </span>
+            <span className="font-mono font-normal truncate">{step.name}</span>
+          </button>
         </>
       }
       summary={<StepCounts step={step} />}
@@ -361,12 +397,10 @@ export const StepDiffBlock = ({
             <button
               type="button"
               data-testid="diff-block-open-step"
-              onClick={() => {
-                onOpenStep?.({ jobId: step.jobId, name: step.name });
-              }}
+              onClick={openStep}
               className="shrink-0 text-xs text-[#0969da] hover:underline px-1 py-0.5"
             >
-              Open
+              Go to step
             </button>
           )}
         </>
@@ -441,7 +475,7 @@ export const WorkflowChangeBlocks = ({
 }: {
   steps: StepChange[];
   structure: StructuralChange[];
-  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  onOpenStep?: (step: OpenStepTarget) => void;
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
 }) => {
   if (steps.length === 0 && structure.length === 0) return null;
@@ -475,7 +509,7 @@ export function WorkflowDiffBlocks({
 }: {
   beforeYaml: string | null;
   afterYaml: string;
-  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  onOpenStep?: (step: OpenStepTarget) => void;
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
 }) {
   // Memoized so YAML parsing/diffing runs once per message, not per render
