@@ -597,8 +597,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           </div>
         </:failed>
         <div class="rounded-md bg-green-50 p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
+          <div class="flex items-center">
+            <div class="shrink-0">
               <Heroicons.check_circle class="h-5 w-5 text-green-400" />
             </div>
             <div class="ml-3">
