@@ -7209,7 +7209,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert flash["info"] == "Collection created"
 
-        # collection now exists, with its creator on record
+        # collection now exists
         assert collection =
                  Lightning.Repo.get_by(Lightning.Collections.Collection,
                    project_id: project.id,

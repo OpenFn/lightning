@@ -4,10 +4,10 @@ defmodule Lightning.Scope do
 
   `new/1` gives the facts about the caller alone: the `grants` its token
   carries (`:all` for a person), its `instance_role`, MFA status, and whether
-  it can own a credential (only a person can). `fetch/2`
-  adds the facts about one project, including whether it is scheduled for
-  deletion, and refuses only a project that does not exist. Whether that
-  standing is enough for an action is the policy's judgement — see
+  it can own a credential (only a person can). `fetch/2` adds the facts about
+  one project, including whether it is scheduled for deletion, and refuses a
+  project that does not exist. Whether that standing is enough for an action
+  is the policy's judgement — see
   `Lightning.Policies.ProjectUsers.permitted?/2`.
 
       {:ok, %Scope{role: :editor}}
@@ -32,9 +32,9 @@ defmodule Lightning.Scope do
   project; its `role` is always `nil`. Its `instance_role` is `:operator`, which
   `holds_role?/2` treats as holding every project role.
 
-  Scheduling deletion removes no membership rows and revokes no token, so the
-  policies refusing a scope with `scheduled_for_deletion?` set is the whole of
-  what keeps its members out during the purge window.
+  Scheduling deletion removes no membership rows and revokes no token, so
+  during the purge window only the policies' check of `scheduled_for_deletion?`
+  keeps members out.
 
   ## When not to reach for it
 
@@ -189,8 +189,8 @@ defmodule Lightning.Scope do
 
   @doc """
   Whether the caller has any standing in the scope's project at all: a role,
-  or support access. The one definition; reading a project and being blocked
-  only by MFA are both this plus or minus the MFA fact.
+  or support access. This is the one definition of standing, so reading a
+  project and being blocked by MFA can't disagree about it.
   """
   @spec has_standing?(t()) :: boolean()
   def has_standing?(%__MODULE__{} = scope),

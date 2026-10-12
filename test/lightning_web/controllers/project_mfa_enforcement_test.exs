@@ -9,8 +9,8 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
   instead, which is the only place it is written.
 
   Nearly every assertion here funnels through the same `ProjectUsers`
-  `:access_project` check and so fires the same clause —
-  `permitted?(_action, %Scope{mfa_satisfied?: false})`. Another route adds no
+  `:access_project` check and so hits the same MFA refusal in
+  `Lightning.Policies.Decision.project/4`. Another route adds no
   MFA coverage on top of that. What a route proves, and the policy unit tests
   cannot, is that it reaches the policy at all rather than authorising off a raw
   query: this file is here to catch a bypass.
@@ -209,10 +209,8 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
       }
     end
 
-    # `:access_collection` is the read half of `Policies.Collections`, and the
-    # only half that delegates to `:access_project`. The write actions go
-    # through `Scope.role_in?/3` instead and are covered by the scope unit
-    # tests, so this is the clause those do not reach.
+    # These routes only read, so they reach `:access_collection`. The write
+    # actions are held to MFA by the same check in `Policies.Decision`.
     test "are refused for a member who has not enrolled", %{
       conn: conn,
       user: user,

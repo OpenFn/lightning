@@ -38,8 +38,8 @@ defmodule LightningWeb.API.CredentialController do
 
   action_fallback LightningWeb.FallbackController
 
-  # Before the target this asks only for `credentials:write`, which listing a
-  # project's credentials (`:list_project_credentials`) needs too.
+  # Both index routes need the `credentials:write` grant, and that is all this
+  # plug checks.
   plug AuthorizeAction, {:credentials, :list_credentials} when action == :index
 
   plug AuthorizeAction,
@@ -172,8 +172,7 @@ defmodule LightningWeb.API.CredentialController do
   end
 
   @doc """
-  Shows a credential, never its body: to its owner, or to a service account
-  holding the credentials scope.
+  Shows a credential, without its body, to a caller who may edit it.
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show(conn, %{"id" => id}) do
@@ -198,8 +197,8 @@ defmodule LightningWeb.API.CredentialController do
   Creates the credential under the path's id, or replaces the name, schema and
   `main` body of the one that has it.
 
-  Links are only added: a project the body lists gains one, and a link the
-  credential already holds is kept whether or not the body lists it.
+  Links are only ever added. A project the body lists gains a link, and a link
+  the credential already holds stays even if the body leaves it out.
   """
   @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def update(conn, %{"id" => id}) do
@@ -259,9 +258,9 @@ defmodule LightningWeb.API.CredentialController do
 
   defp project_link?(_link), do: false
 
-  # A caller who may name an owner must, and the owner is looked up. Anyone
-  # else is the owner, and may only name themselves: naming anyone else is
-  # refused before the lookup, so the answer never says whether an email has an
+  # A caller who may name an owner has to name one. Anyone else owns the
+  # credential and may name only themselves. Naming someone else is refused
+  # before any lookup, so the reply never reveals whether an email has an
   # account.
   defp resolve_owner(attrs, scope) do
     case Permissions.permit(:credentials, :name_credential_owner, scope, nil) do
@@ -350,7 +349,7 @@ defmodule LightningWeb.API.CredentialController do
     end
   end
 
-  # Lightning never moves a credential to another owner to make a write fit.
+  # Lightning never moves a credential to another owner.
   defp replace(_conn, _credential, _attrs, _owner, _actor),
     do: {:error, :id_taken}
 
@@ -409,8 +408,8 @@ defmodule LightningWeb.API.CredentialController do
   defp render_write_error(conn, {:error, _reason}),
     do: PutRequest.render_errors(conn, %{credential_bodies: ["is invalid"]})
 
-  # Every link is listed, since the caller needs each link's id; a project is
-  # named only to a caller who may access it.
+  # Every link stays, because the caller needs each link's id. Only projects
+  # the caller may access are named.
   defp render_credential(conn, credential, actor) do
     credential =
       credential
@@ -427,8 +426,8 @@ defmodule LightningWeb.API.CredentialController do
     }
   end
 
-  # A list may show other owners' credentials, so their links are pruned too:
-  # a link is listed only for a project the caller may name.
+  # A list can include other owners' credentials, so it also drops each link
+  # to a project the caller may not access.
   defp hide_unseen_links(credentials, actor) do
     named =
       credentials

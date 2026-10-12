@@ -20,10 +20,7 @@ defmodule Lightning.Policies.Collections do
       itself) requires `:owner` or `:admin`. Creation is authorized against the
       `%Project{}`, since no collection exists yet.
 
-  Every action except a run's needs the `collections:write` grant (a person
-  holds every grant), and an operator holds every project role. Asked with a
-  `%Scope{}`, an otherwise-allowed caller on a project scheduled for deletion
-  gets `{:error, :scheduled_for_deletion}`; a raw actor gets `false`.
+  Every action except a run's needs the `collections:write` grant.
 
   The `*_collection_item(s)` actions target the key-value entries exposed by the
   Collections API; `:manage_collection` targets the collection record itself.
@@ -67,9 +64,9 @@ defmodule Lightning.Policies.Collections do
   def authorize(action, actor, subject),
     do: Permissions.for_actor(actor, subject, &authorize(action, &1, subject))
 
-  # Reads honour support access, as `:access_project` does. The writes below do
-  # not: `holds_role?/2` reads `role` only, so a support user with no
-  # membership row is refused.
+  # Reads admit a support user with no membership row, as `:access_project`
+  # does. The writes don't, because `Scope.holds_role?/2` ignores support
+  # access.
   defp judge(:access_collection, scope), do: Scope.has_standing?(scope)
 
   defp judge(action, scope)

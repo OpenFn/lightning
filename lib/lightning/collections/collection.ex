@@ -28,8 +28,8 @@ defmodule Lightning.Collections.Collection do
   end
 
   @doc """
-  A new collection: its project and name. The id is never cast; a caller that
-  chooses one builds the struct with it.
+  Builds a new collection from its project and name. The id is never cast, so
+  a caller that wants a particular id puts it on the struct.
   """
   def changeset(entry, attrs) do
     entry
@@ -40,7 +40,7 @@ defmodule Lightning.Collections.Collection do
   end
 
   @doc """
-  A rename. A collection never moves to another project.
+  Changes a collection's name. Only the name is cast, so it never moves project.
   """
   def rename_changeset(collection, attrs) do
     collection

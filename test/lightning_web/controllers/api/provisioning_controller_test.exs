@@ -1039,8 +1039,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response.status == 403
     end
 
-    # Creating a project needs projects:write, and a repo connection holds no
-    # grant.
+    # Creating a project needs projects:write, and a repo connection holds none.
     test "a repo connection is refused creating a new project for want of the grant",
          %{conn: conn} do
       repo_connection = insert(:project_repo_connection)
@@ -1551,8 +1550,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
   end
 
   # Scheduling deletion removes no membership row and revokes no repo-connection
-  # token, so both principals below still exist during the grace window, and
-  # hear the same 409 as `/api/projects/:id`.
+  # token, so both principals below still exist during the grace window. They
+  # get the same 409 that the projects API gives.
   describe "a project scheduled for deletion" do
     setup [:assign_bearer_for_api]
 
@@ -1646,9 +1645,9 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              "a repo-connection token exported the shut-down project as YAML"
     end
 
-    # The status code is the lesser assertion. The damage in #287 is that the
-    # import turns the triggers back on, so a fix that refuses and still writes
-    # must fail here too.
+    # The trigger check matters more than the status code. In #287 the import
+    # turned the triggers back on, so a fix that refuses but still writes must
+    # fail here too.
     test "refuses POST /api/provision for a project member, leaving the trigger disabled",
          %{conn: conn, project: project, workflow: workflow, trigger: trigger} do
       response =

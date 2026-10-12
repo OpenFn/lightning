@@ -144,8 +144,8 @@ defmodule LightningWeb.API.CredentialControllerTest do
       conn: conn,
       user: user
     } do
-      # A member who has not enrolled in MFA may not access this project, so it
-      # is not named, the same answer GET /api/credentials/:id gives.
+      # A member who has not enrolled in MFA may not access this project, so the
+      # response does not name it, just as showing one credential doesn't.
       mfa_project =
         insert(:project,
           requires_mfa: true,

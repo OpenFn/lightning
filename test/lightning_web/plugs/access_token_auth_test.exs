@@ -149,8 +149,9 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
     end
   end
 
-  # What the credential list should return to an operator is still undecided,
-  # so these routes stay closed to client tokens until it is.
+  # Only a personal or repo-connection token reaches these routes. The
+  # credential list stays closed to client tokens until we decide what it
+  # returns to an operator.
   test "the existing /api routes refuse an access token", %{
     conn: conn,
     account: account

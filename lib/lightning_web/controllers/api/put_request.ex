@@ -3,17 +3,19 @@ defmodule LightningWeb.API.PutRequest do
   The rules every create-or-replace `PUT /:id` route shares.
 
   The id comes from the path, and a body that also carries a different one is
-  refused. A body names only the keys the route takes. A refusal is a 422 of
-  `{"errors": {field: [message]}}`, each value a flat list of messages that
-  never quote a submitted value.
+  refused, and so is a body key the route doesn't take. A refusal is a 422 of
+  `{"errors": {field: [message]}}`. Messages never quote a submitted value, but
+  an unaccepted key comes back as its own field.
   """
   import Ecto.Changeset
 
   @doc """
-  Casts `body` against `types`, refusing a key outside them, with the path's
-  `id` put in as `:id`. `data` holds the defaults.
+  Casts `body` against `types`, with the path's `id` as `:id`. `data` holds
+  the defaults.
 
-  The changeset comes back for the route's own validations; `attrs/1` ends it.
+  Returns `{:ok, changeset}` for the route's own validations, to finish with
+  `attrs/1`, or `{:error, :invalid, errors}` if the body isn't a JSON object or
+  holds a key outside `types`.
   """
   @spec changeset(map(), String.t(), {map(), map()}) ::
           {:ok, Ecto.Changeset.t()} | {:error, :invalid, map()}
@@ -65,8 +67,8 @@ defmodule LightningWeb.API.PutRequest do
   end
 
   @doc """
-  Whether the write failed on `field`'s unique constraint: for `:id`, another
-  request created the record between the route's lookup and its insert.
+  Whether the write failed on `field`'s unique constraint. On `:id`, that means
+  another request created the record after the route looked it up.
   """
   @spec unique_error?(Ecto.Changeset.t(), atom()) :: boolean()
   def unique_error?(changeset, field) do
@@ -76,8 +78,8 @@ defmodule LightningWeb.API.PutRequest do
   end
 
   @doc """
-  A changeset's errors with every key answering a flat list of messages;
-  nested errors, such as an association's, arrive as one map per entry.
+  Returns a changeset's errors as one flat list of messages per field. An
+  association's nested errors are merged into that field's list.
   """
   @spec flat_errors(Ecto.Changeset.t()) :: %{atom() => [String.t()]}
   def flat_errors(changeset) do

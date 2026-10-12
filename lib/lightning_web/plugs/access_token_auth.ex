@@ -5,10 +5,10 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
 
   `call/2` goes in the pipeline. It accepts only tokens issued to the service
   account registered now, so unsetting `SERVICE_ACCOUNT_PUBLIC_KEY` cuts off
-  tokens already issued, and assigns the token's claims as `:access_token` and
-  the service account, holding the token's scopes as its `grants`, as
-  `:current_resource`. It only authenticates: whether those grants allow an
-  action is the policy's to decide. Refusals follow RFC 6750 §3.
+  tokens already issued. It assigns the token's claims as `:access_token`, and
+  the service account as `:current_resource` with the token's scopes as its
+  `grants`. It only authenticates. The policies decide whether those grants
+  allow an action. Refusals follow RFC 6750 §3.
   """
   import Plug.Conn
 

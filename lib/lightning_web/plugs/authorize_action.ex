@@ -1,15 +1,14 @@
 defmodule LightningWeb.Plugs.AuthorizeAction do
   @moduledoc """
-  Refuses an API action early, on what the caller alone decides, before the
+  Refuses an API action early, on facts about the caller alone, before the
   action parses a body or loads anything.
 
       plug AuthorizeAction, {:project_users, :access_project} when action == :show
 
-  It asks `Lightning.Policies.Permissions.permit/3` about the caller's
-  project-less scope. A refusal goes to `LightningWeb.FallbackController`; a
-  pass assigns that scope as `:scope` for the action to reuse. A pass is not
-  permission: every action behind this plug still asks `permit/4` about its
-  target.
+  It asks `Lightning.Policies.Permissions.permit/3` before any project is
+  loaded. A refusal goes to `LightningWeb.FallbackController`. A pass assigns
+  the caller's scope as `:scope` for the action to reuse, and the action still
+  asks `permit/4` about its target.
   """
   alias Lightning.Policies.Permissions
   alias Lightning.Scope

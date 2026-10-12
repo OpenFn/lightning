@@ -409,8 +409,8 @@ defmodule Lightning.ScopeTest do
     end
 
     # A connection's standing is which single project it belongs to. Refusing
-    # here rather than at the call site is what stops a policy forgetting the
-    # comparison — the same reason a shut-down project yields no scope.
+    # here rather than at the call site stops a policy forgetting the
+    # comparison.
     test "is refused a project it does not belong to", %{live_project: project} do
       other_project = insert(:project)
       repo_connection = insert(:project_repo_connection, project: other_project)
@@ -433,10 +433,9 @@ defmodule Lightning.ScopeTest do
                Scope.fetch(repo_connection, dataclip)
     end
 
-    # Ownership is checked before any other fact so that a connection cannot
-    # learn whether an unrelated project is being wound down. If this assertion
-    # ever reads {:ok, _}, fetch/2 no longer refuses first and a third party's
-    # state is leaking to a stranger.
+    # A connection is refused someone else's project before it is told the
+    # project's state, so it can't learn whether that project is being wound
+    # down.
     test "learns nothing about the state of a project that is not its own", %{
       scheduled_deleted_project: project
     } do

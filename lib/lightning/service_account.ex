@@ -7,9 +7,9 @@ defmodule Lightning.ServiceAccount do
   event's actor, is a UUIDv5 of the thumbprint's RFC 9278 URI in the RFC 4122
   URL namespace, which any stock `uuid5` implementation reproduces.
 
-  `grants` are the scopes of the access token the request came in with, set by
-  `LightningWeb.Plugs.AccessTokenAuth`. The account registered at boot holds
-  none, so it is refused everything a grant decides.
+  `grants` are the scopes of the access token the request came in with. The
+  account registered at boot holds none, so it is refused every action that
+  needs a grant.
   """
 
   @enforce_keys [:id, :uuid, :public_key]

@@ -607,7 +607,7 @@ defmodule Lightning.CredentialsTest do
       assert Repo.reload!(c).name == "before"
     end
 
-    # A screen holds the struct it loaded when it opened.
+    # A form opened before the credential was scheduled still holds this struct.
     test "cannot be updated through a struct loaded before it was scheduled",
          %{owner: owner, credential: c} do
       stale = %{c | scheduled_deletion: nil}
@@ -1150,7 +1150,7 @@ defmodule Lightning.CredentialsTest do
           }
         })
 
-      # The form never sends the refresh token back; the context keeps it.
+      # The form never sends the refresh token back, so the stored one is kept.
       save = fn access_token ->
         Credentials.update_credential(
           credential,

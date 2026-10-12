@@ -2,23 +2,21 @@ defmodule Lightning.Policies.Credentials do
   @moduledoc """
   The Bodyguard Policy module for authorizing credential actions.
 
-  Every action needs the `credentials:write` grant; a person holds every grant.
+  Every action needs the `credentials:write` grant.
 
-  A credential belongs to its owner, and ownership has no project, so its
-  actions take the caller's project-less scope: the grant, then one ownership
-  rule. Only the owner or an operator may edit a credential, and only the owner
-  may delete one. Only an operator may write a credential for someone else
-  (`:name_credential_owner`). Listing your credentials, or creating one for
-  yourself, needs a caller that can own credentials, which only a person can.
+  A credential belongs to its owner, not to a project, so these actions never
+  look at a project. Only the owner or an operator may edit a credential, and
+  only the owner may delete one. Only an operator may write a credential for
+  someone else (`:name_credential_owner`). Listing your credentials, or creating
+  one for yourself, needs a caller that can own credentials, which only a
+  person can.
 
-  Whether a credential is scheduled for deletion is not decided here: it holds
-  for every caller, so `Lightning.Credentials` refuses it after asking this
-  policy.
+  `Lightning.Credentials`, not this policy, refuses a credential scheduled for
+  deletion.
 
-  Keychain actions take a project, in the same order as
-  `Lightning.Policies.ProjectUsers`: the grant, then the project, MFA, owner or
-  admin (or support access on a consenting project), and only for a caller who
-  would otherwise be allowed, whether the project is being deleted.
+  Keychain actions take a project and decide through
+  `Lightning.Policies.Decision.project/4`. They need an owner or admin, or a
+  support user with no role on a project that allows support access.
   """
   @behaviour Bodyguard.Policy
 
@@ -90,9 +88,9 @@ defmodule Lightning.Policies.Credentials do
     authorize(action, Scope.new(actor), subject)
   end
 
-  # :create_keychain_credential is answerable from either shape. The context
-  # function holds an unsaved keychain rather than a project, and without the
-  # keychain shape it would refuse every creation, including legitimate ones.
+  # :create_keychain_credential can be asked with a project or a keychain
+  # credential. The context function holds an unsaved keychain rather than a
+  # project, so without the keychain clause it would refuse every creation.
   def authorize(action, actor, subject)
       when action in @keychain_actions and
              (is_struct(subject, Project) or

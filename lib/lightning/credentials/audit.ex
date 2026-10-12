@@ -22,7 +22,7 @@ defmodule Lightning.Credentials.Audit do
   end
 
   @doc """
-  Creates an audit event for a change `actor` made to a credential.
+  Builds the audit event changeset for a change `actor` made to a credential.
 
   For multi-environment credentials, environment body data is stored
   in metadata rather than in the changes map.

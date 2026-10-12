@@ -112,9 +112,9 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
     end
 
     # A %Project{} subject never carries a client-supplied project_user_id, so
-    # there is no "whose row is this" question to answer — Scope already
-    # resolved it to the caller's own standing. This goes through `permitted?`
-    # rather than the id == user_id clause above.
+    # there is no "whose row is this" question to answer. Scope already
+    # resolved it to the caller's own standing, so the check that a row
+    # belongs to the caller isn't consulted.
     test "can edit their own digest and failure alerts given only the project",
          %{project: project, editor: editor} do
       ~w(
@@ -387,9 +387,8 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
                "MFA: " <> Enum.join(allowed, ", ")
     end
 
-    # The sweep above passes a project, so it never reaches the clause that
-    # takes a `%ProjectUser{}`. That clause does not call permitted?/2 at all,
-    # so it needs — and has — its own MFA check.
+    # The sweep above passes a project, so it never reaches the rule for a
+    # `%ProjectUser{}` subject. This checks MFA refuses that subject too.
     test "refuses every action when the subject is the member's own row",
          context do
       actions = ProjectUsers.actions()
@@ -457,8 +456,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
     end
   end
 
-  # The expected set is written out rather than read from the module, so a new
-  # action fails here until someone decides whether an operator gets it.
   describe "an operator" do
     setup do
       {account, _private_key} =
@@ -475,6 +472,8 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
 
     test "is allowed what an owner is, but nothing about its own row",
          %{account: account, project: project} do
+      # The expected set is written out rather than read from the module, so a
+      # new action fails here until someone decides whether an operator gets it.
       expected =
         ~w(
           access_project
@@ -569,8 +568,8 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       refute ProjectUsers.permitted?(:edit_project, scope)
     end
 
-    # A %ProjectUser{} subject goes to the "is this row mine" rule, and an
-    # operator has no row.
+    # Only the row's member may change its alert settings, and an operator has
+    # no row.
     test "is refused the self actions given someone's membership row", %{
       account: account,
       project: project

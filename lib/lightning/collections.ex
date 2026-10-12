@@ -90,7 +90,8 @@ defmodule Lightning.Collections do
   @doc """
   Creates a collection, recording `actor` as having created it.
 
-  The collection hook is asked first, so a refused create writes nothing.
+  Returns `{:error, :exceeds_limit, message}`, and writes nothing, when the
+  collection hook refuses the create.
 
   ## Options
 

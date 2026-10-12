@@ -92,6 +92,7 @@ const { access_token } = await fetch(token_endpoint, {
     client_assertion_type:
       'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
     client_assertion: `${unsigned}.${signature}`,
+    scope: 'users:read users:write',
   }),
 }).then(response => response.json());
 ```
@@ -126,9 +127,9 @@ on the scopes it carries:
 - `collections:write` reads, creates and renames collections.
 - `credentials:write` reads, creates and replaces credentials.
 
-A token gets all of them unless you ask for fewer with a `scope` parameter.
-Projects, collections and credentials have no read scopes: their `GET` routes
-need the same `:write` scope as their `PUT` routes.
+Ask for the scopes you need with the `scope` parameter when you request the
+token. Projects, collections and credentials have no read scopes: their `GET`
+routes need the same `:write` scope as their `PUT` routes.
 
 The service account acts on every project, as if it held every project role,
 owner included, but only as far as its token's scopes reach. It is never a
@@ -289,8 +290,9 @@ curl -X PUT https://lightning.example.org/api/credentials/$CREDENTIAL_ID \
 
 ## When Lightning refuses
 
-- 401 with `WWW-Authenticate: Bearer error="invalid_token"`: the token is
-  missing, expired or otherwise bad.
+- 401 with `WWW-Authenticate: Bearer error="invalid_token"`: the access token is
+  expired or bad, or missing on `/api/users`. Elsewhere, a request with no token
+  gets a plain 401.
 - 403 `{"error": "insufficient_scope"}` with
   `WWW-Authenticate: Bearer error="insufficient_scope"`: the token lacks the
   scope the action needs. Lightning checks this first, so it comes before any
@@ -305,8 +307,8 @@ curl -X PUT https://lightning.example.org/api/credentials/$CREDENTIAL_ID \
   either.
 - 409 `{"error": "name_taken"}`: the project already has a collection with that
   name, or the owner already has a credential with that name.
-- 422 `{"errors": {...}}`: the body doesn't fit. Each key names a field and
-  lists what is wrong with it, without quoting what you sent.
+- 422 `{"errors": {...}}`: the body doesn't fit. Each key names a field, or a
+  key Lightning doesn't accept, and lists what is wrong without quoting values.
 - 402 `{"error": "exceeds_limit"}`: creating a collection would go over the
   instance's limit.
 

@@ -9,8 +9,8 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuth do
   answer `UserAuth.authenticate_bearer/2` and
   `UserAuth.require_authenticated_api_resource/2` give it elsewhere.
 
-  It only authenticates. What the caller may do, including whether its token
-  holds the grant an action needs, is the controller's policy's to decide.
+  It only authenticates. The policies decide what the caller may do, including
+  whether its token holds the grant an action needs.
   """
   alias Lightning.ServiceAccount.AccessToken
   alias LightningWeb.Plugs.AccessTokenAuth

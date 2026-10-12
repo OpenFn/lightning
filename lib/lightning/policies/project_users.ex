@@ -6,25 +6,15 @@ defmodule Lightning.Policies.ProjectUsers do
 
   `Lightning.Scope` establishes the **facts**: which project, and what
   standing this actor has in it, including whether the project is scheduled
-  for deletion. It refuses outright only a project that does not exist.
+  for deletion.
 
-  `authorize/3` on a `%Scope{}` makes the **judgement**, always in this order:
-  the grant the action needs, then MFA, then standing, and only for a caller
-  who would otherwise be allowed, whether the project is being deleted. So a
-  caller without the grant hears `{:error, :insufficient_scope}`, a caller
-  without standing hears `false`, and only an allowed caller learns
-  `{:error, :scheduled_for_deletion}`. It never mentions
-  `Project.scheduled_deletion` or `Project.requires_mfa` — both reach it as
+  `authorize/3` on a `%Scope{}` makes the **judgement**, in the order
+  `Lightning.Policies.Decision` sets. It never mentions
+  `Project.scheduled_deletion` or `Project.requires_mfa`. Both reach it as
   facts on the scope.
 
-  Given a raw actor instead, it resolves the scope itself and answers
-  `false` for a scheduled project, so callers that predate the 409 keep their
-  answers.
-
   Adding an action means adding an atom to `@admin_actions` or
-  `@editor_actions`. It inherits the guards; there is nothing to remember. An
-  operator holds every role through `Scope.holds_role?/2`, capped by its
-  grants.
+  `@editor_actions`. It inherits the guards; there is nothing to remember.
 
   We deny by default: an action in none of the lists is refused.
   """
@@ -107,8 +97,7 @@ defmodule Lightning.Policies.ProjectUsers do
   identifies a project — see `t:Lightning.Scope.subject/0`.
 
   Given a `%Scope{}`, the subject must be the scope's own project or one of
-  its membership rows. `:before_target` asks only about the grant, so `true`
-  for it is not permission; only `Permissions.permit/3` passes it.
+  its membership rows.
   """
   @spec authorize(actions(), Scope.t() | Scope.actor(), Scope.subject()) ::
           boolean() | {:error, :insufficient_scope | :scheduled_for_deletion}
@@ -128,8 +117,8 @@ defmodule Lightning.Policies.ProjectUsers do
   Decide an action against an already-resolved `%Scope{}`, as a boolean.
 
   Public so a caller needing several answers about one project resolves once
-  rather than once per question. It holds the scope to the grant, and is
-  `false` on a project scheduled for deletion.
+  rather than once per question. It is `false` when the scope lacks the
+  action's grant, and on a project scheduled for deletion.
   """
   @spec permitted?(actions(), Scope.t()) :: boolean()
   def permitted?(action, %Scope{} = scope),
@@ -152,8 +141,6 @@ defmodule Lightning.Policies.ProjectUsers do
       Scope.has_standing?(scope) and not mfa_satisfied? and
         not scope.scheduled_for_deletion?
 
-  # The token code issues these strings; nothing else outside policies names
-  # them.
   defp grant(action)
        when action in [:create_project_credential, :list_project_credentials],
        do: "credentials:write"
@@ -163,7 +150,7 @@ defmodule Lightning.Policies.ProjectUsers do
   # These act on a specific membership row, not on project standing. The alert
   # handlers in `ProjectLive.Settings` pass a client-supplied "project_user_id",
   # so dropping the comparison with the caller's own row is a privilege
-  # escalation — pinned by two tests in project_live_test.exs.
+  # escalation. Two tests in project_live_test.exs pin it.
   defp judge(action, %Scope{project_user: own_row}, %ProjectUser{id: id})
        when action in @self_actions,
        do: not is_nil(own_row) and own_row.id == id

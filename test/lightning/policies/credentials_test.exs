@@ -745,7 +745,7 @@ defmodule Lightning.Policies.CredentialsTest do
                %Lightning.Credentials.Credential{user_id: operator.id}
              ) == false
 
-      # Creating for a named owner is still the operator's to do.
+      # An operator can't own a credential, but can create one for a person.
       assert Credentials.authorize(
                :edit_credential,
                operator,

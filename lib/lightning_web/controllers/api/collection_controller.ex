@@ -1,7 +1,7 @@
 defmodule LightningWeb.API.CollectionController do
   @moduledoc """
-  Writes and reads a project's collection by id; the items inside a collection
-  are `LightningWeb.CollectionsController`'s.
+  Writes and reads a project's collection by id.
+  `LightningWeb.CollectionsController` serves the items inside it.
 
       GET /api/projects/:project_id/collections/:id
       PUT /api/projects/:project_id/collections/:id  {"name": "patients"}

@@ -1528,8 +1528,8 @@ defmodule LightningWeb.WorkflowChannel do
               Permissions.can?(:sandboxes, :delete_sandbox, user, project)
         }
 
-      # No such project. A scheduled one resolves, and every check above
-      # refuses it.
+      # No such project. A project scheduled for deletion loads instead, and
+      # every check above refuses it.
       {:error, _reason} ->
         %{
           can_edit_workflow: false,

@@ -45,8 +45,8 @@ defmodule LightningWeb.FallbackController do
     |> json(%{error: code})
   end
 
-  # No message: the hook writes its text for the app's own pages, and an API
-  # caller reads only the code.
+  # No message. The hook writes its text for the app's own pages, and an API
+  # caller reads only the status code.
   def call(conn, {:error, :exceeds_limit}) do
     conn
     |> put_status(:payment_required)

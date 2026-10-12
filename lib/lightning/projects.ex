@@ -554,8 +554,10 @@ defmodule Lightning.Projects do
   Resolves members given as `%{"email" => email, "role" => role}` to the
   `%{user_id: id, role: role}` rows a project's `project_users` take.
 
-  Emails match regardless of case. The messages never contain an email, so
-  they can be shown to whoever submitted the list.
+  Emails match regardless of case. Returns `{:error, messages}` when a member
+  is malformed, names an email no user holds, or names a user twice. The
+  messages never contain an email, so they can be shown to whoever submitted
+  the list.
   """
   @spec members_by_email([term()]) ::
           {:ok,
@@ -2329,10 +2331,10 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Creates a sandbox under the given `parent` by delegating to `create_project/3`.
+  Creates a sandbox under `parent` through `create_project/3`, recording
+  `actor` as having created it.
 
-  This is a convenience wrapper that sets `:parent_id` and emails no
-  collaborators.
+  Emails no collaborators.
 
   ## Notes
 

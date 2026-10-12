@@ -3513,7 +3513,7 @@ defmodule LightningWeb.RunChannelTest do
       assert_receive {:DOWN, ^monitor_ref, :process, _pid, :normal}
     end
 
-    # Project-wide, with no user on the event: `Scope` refuses a wound-down
+    # Project-wide, with no user on the event: the policies refuse a wound-down
     # project to everybody, so every browser socket streaming its runs goes.
     test "stops the channel when the project is scheduled for deletion", %{
       project: project,

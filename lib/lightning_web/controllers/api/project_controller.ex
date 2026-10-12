@@ -2,11 +2,8 @@ defmodule LightningWeb.API.ProjectController do
   @moduledoc """
   API controller for project management.
 
-  Provides read access to projects for authenticated users and API tokens.
-  Users can list projects they have access to and retrieve individual project details.
-
-  `PUT /api/projects/:id` creates the project under that id with its members,
-  or replaces the name and description of the project that has it.
+  Lists, shows, creates and replaces projects for authenticated users and API
+  tokens.
 
   ## Query Parameters (index)
 
@@ -211,8 +208,8 @@ defmodule LightningWeb.API.ProjectController do
           {:ok, project} ->
             conn |> put_status(:created) |> render_project(project)
 
-          # Created by someone else since the lookup: ask about it as the
-          # project it now is.
+          # Someone else created it since the lookup. Rerun the request so the
+          # caller is checked against that project.
           {:error, changeset} ->
             if PutRequest.unique_error?(changeset, :id),
               do: update(conn, %{"id" => attrs.id}),
@@ -224,8 +221,8 @@ defmodule LightningWeb.API.ProjectController do
     end
   end
 
-  # The project's changeset checks members as `owner` and `project_users`;
-  # this API calls them `members`.
+  # The project changeset reports member errors under `owner` and
+  # `project_users`. This API calls them `members`.
   defp render_create_errors(conn, changeset) do
     errors = PutRequest.flat_errors(changeset)
 

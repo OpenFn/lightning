@@ -41,8 +41,8 @@ defmodule Lightning.ServiceAccountHelpers do
   end
 
   @doc """
-  `conn` bearing a live access token, carrying `scopes`, for a fresh service
-  account that this Lightning registers.
+  Returns `{conn, account}`, with `conn` bearing a live access token carrying
+  `scopes` for a fresh service account that this Lightning registers.
   """
   def with_service_account(conn, scopes) do
     {account, _private_key} = service_account_with_key()

@@ -253,7 +253,7 @@ defmodule Lightning.Credentials do
   ## Returns
     * `{:ok, credential}` - Successfully updated credential
     * `{:error, :scheduled_for_deletion}` - The credential is scheduled for
-      deletion; only cancelling that, or deleting it now, may change it
+      deletion. Only cancelling that, or deleting it now, can change it
     * `{:error, error}` - Error with update process
   """
   @spec update_credential(Credential.t(), map(), Lightning.Actor.t()) ::
@@ -369,8 +369,8 @@ defmodule Lightning.Credentials do
     end
   end
 
-  # Compared after typing, so a form resending "5432" for a stored 5432 is no
-  # change.
+  # Compared after casting to the schema's types, so a form resending "5432"
+  # for a stored 5432 is no change.
   defp update_body_if_changed(%Ecto.Changeset{valid?: true, changes: changes})
        when map_size(changes) == 0,
        do: {:ok, :unchanged}
@@ -742,8 +742,8 @@ defmodule Lightning.Credentials do
     |> Multi.append(project_credentials_multi)
   end
 
-  # Audit.event reads a changeset with no changes as nothing to record, which a
-  # write that changed only a body is not.
+  # An empty changeset makes Audit.event record nothing, so a write that changed
+  # only a body passes an empty map instead.
   defp field_changes(%Ecto.Changeset{changes: changes})
        when map_size(changes) == 0,
        do: %{}
@@ -893,8 +893,8 @@ defmodule Lightning.Credentials do
 
     - `{:ok, credential}`: Returns an `:ok` tuple with the updated credential struct if the
       update was successful.
-    - `{:error, :scheduled_for_deletion}`: The credential is already scheduled;
-      scheduling it again would move the date.
+    - `{:error, :scheduled_for_deletion}`: The credential is already scheduled
+      for deletion. Scheduling it again would move the date.
     - `{:error, changeset}`: Returns an `:error` tuple with the changeset if the update failed.
 
   ## Examples
@@ -956,7 +956,7 @@ defmodule Lightning.Credentials do
 
   Takes an id rather than a struct because the screen that calls it has only the
   id to hand. It loads the credential and asks the same ownership question as
-  every other write here, so the id being caller-supplied does not matter.
+  deleting it, so the id being caller-supplied does not matter.
   """
   @spec cancel_scheduled_deletion(Ecto.UUID.t(), User.t()) ::
           {:ok, Credential.t()} | {:error, :unauthorized | Ecto.Changeset.t()}
@@ -968,16 +968,16 @@ defmodule Lightning.Credentials do
     end
   end
 
-  # Asking here rather than at each screen means a screen cannot act on someone
-  # else's credential by forgetting to check - the signature will not let it
-  # call in without saying who is asking.
+  # Authorising here rather than in each caller means no caller can act on
+  # someone else's credential by forgetting to check. Every caller has to say
+  # who is asking.
   defp authorize_credential(action, actor, %Credential{} = credential),
     do: Permissions.can(:credentials, action, actor, credential)
 
-  # A state rule for every caller, so it lives here rather than in the policy,
-  # and runs after it so a caller without rights learns nothing about the
-  # credential. Read from the database: a screen hands in the struct it loaded
-  # when it opened, which may predate the scheduling.
+  # Refused for every caller, so it lives here rather than in the policy. It
+  # runs after the policy so a caller without rights learns nothing about the
+  # credential. It reads the database because a screen may hand in a struct
+  # loaded before the deletion was scheduled.
   defp refuse_scheduled(%Credential{id: id}) do
     scheduled? =
       Repo.exists?(

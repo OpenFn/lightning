@@ -167,7 +167,7 @@ defmodule Lightning.Policies.ProvisioningTest do
                  {:error, :forbidden}
       end
 
-      # Control: the same scopes are allowed on their own project.
+      # Shows the refusals above are about the project, not the scopes.
       for action <- [:provision_project, :describe_project],
           scope <- [owner_scope, connection_scope] do
         assert Provisioning.authorize(action, scope, project) == true

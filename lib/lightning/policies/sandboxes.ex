@@ -119,10 +119,10 @@ defmodule Lightning.Policies.Sandboxes do
     end
   end
 
-  # Deliberately does not go through Scope: the subject is scheduled for
-  # deletion by definition, and the policies refuse those, so that refusal would
-  # make a sandbox scheduled for deletion impossible to restore. Same role rule as
-  # :delete_sandbox, read directly.
+  # Deliberately reads roles directly rather than through `Scope.role_in?/3`,
+  # which refuses a project scheduled for deletion. This subject is scheduled by
+  # definition, so that would make it impossible to restore. Same role rule as
+  # :delete_sandbox.
   def authorize(:cancel_scheduled_deletion, %User{} = user, %Project{} = sandbox) do
     root_project = Projects.root_of(sandbox)
 

@@ -90,7 +90,7 @@ defmodule Lightning.Policies.Permissions do
   @doc """
   Whether the caller described by `scope` may apply `action` to `subject`.
 
-  The one entry point for new API callers. Unlike `can/4`, a refusal is
+  The one entry point for API callers. Unlike `can/4`, a refusal is
   `{:error, :forbidden}`, so it renders as 403 rather than 401, and a policy's
   more specific answer (`:insufficient_scope`, `:scheduled_for_deletion`)
   reaches the caller unchanged.
@@ -106,9 +106,9 @@ defmodule Lightning.Policies.Permissions do
   end
 
   @doc """
-  Whether anything about the caller alone already refuses `action`, before
-  any target is loaded. Today that is the grant. A pass here is not
-  permission: the action still has to ask `permit/4` about its target.
+  Whether the caller's grant already refuses `action`, before any target is
+  loaded. A pass here is not permission. The action still has to ask
+  `permit/4` about its target.
   """
   @spec permit(atom(), atom(), Lightning.Scope.t()) ::
           :ok
@@ -117,10 +117,10 @@ defmodule Lightning.Policies.Permissions do
     do: permit(policy, action, scope, :before_target)
 
   @doc """
-  A policy's raw-actor clause: resolves the actor's scope on the subject's
-  project and passes it to `decide`. Bodyguard's contract is boolean, so a
-  missing project is `false`, and so is a scheduled one: only callers asking
-  with a `%Scope{}` through `permit/4` are told about the deletion.
+  Resolves `actor`'s scope on the subject's project and passes it to `decide`,
+  for a policy handed an actor rather than a `%Scope{}`. Bodyguard's contract
+  is boolean, so a missing or scheduled project is `false`. Only callers going
+  through `permit/4` with a `%Scope{}` are told about the deletion.
   """
   @spec for_actor(
           Lightning.Scope.actor(),

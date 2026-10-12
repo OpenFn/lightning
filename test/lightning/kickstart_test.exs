@@ -236,8 +236,7 @@ defmodule Lightning.KickstartTest do
           ["projects", Access.at(0), "members"],
           fn [owner_member, editor_member] ->
             # Project.project_with_users_changeset/2 writes the owner row last,
-            # so the handover succeeds whatever order the members are declared
-            # in or the existing rows come back from the database in.
+            # so the handover works whichever order the members come in.
             [
               Map.put(editor_member, "role", "owner"),
               Map.put(owner_member, "role", "editor")
