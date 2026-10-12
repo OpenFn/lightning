@@ -821,8 +821,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp accept_checkbox(assigns) do
     ~H"""
     <div class={[
-      "mt-4 bg-amber-200 flex gap-3 rounded-md p-3",
-      @form[:sync_direction].value == :deploy && "bg-red-200"
+      "mt-4 flex gap-3 rounded-md border p-3",
+      if(@form[:sync_direction].value == :deploy,
+        do: "border-red-300 bg-red-50",
+        else: "border-yellow-300 bg-yellow-50"
+      )
     ]}>
       <.input
         type="checkbox"
@@ -830,7 +833,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         required="true"
         hidden_input={false}
       />
-      <span>
+      <span class="text-sm text-gray-900">
         I understand that
         <%= if @form[:sync_direction].value == :deploy do %>
           my current OpenFn project <b>will be destroyed</b> and
@@ -838,25 +841,28 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         the following files will be committed to <b><%= @form[
           :repo
         ].value %></b>:
-        <ul class="my-2">
-          <li>
-            <.icon name="hero-document-plus" class="h-4 w-4" />
-            <code>
+        <ul class="my-2 space-y-1 text-xs text-gray-700">
+          <li class="flex items-start gap-1.5">
+            <.icon name="hero-document-plus" class="h-4 w-4 shrink-0 text-gray-500" />
+            <code class="break-all">
               .github/workflows/openfn-pull.yml -> {@default_branch}
             </code>
           </li>
-          <li>
-            <.icon name="hero-document-plus" class="h-4 w-4" />
-            <code>
+          <li class="flex items-start gap-1.5">
+            <.icon name="hero-document-plus" class="h-4 w-4 shrink-0 text-gray-500" />
+            <code class="break-all">
               .github/workflows/openfn-{@project.id}-deploy.yml -> {@form[
                 :branch
               ].value}
             </code>
           </li>
           <%= if to_string(@form[:config_path].value) == "" do %>
-            <li>
-              <.icon name="hero-document-plus" class="h-4 w-4" />
-              <code>
+            <li class="flex items-start gap-1.5">
+              <.icon
+                name="hero-document-plus"
+                class="h-4 w-4 shrink-0 text-gray-500"
+              />
+              <code class="break-all">
                 {config_filename(@form, @project.id)} -> {@form[:branch].value}
               </code>
             </li>
