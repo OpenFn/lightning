@@ -2012,8 +2012,6 @@ defmodule Lightning.Projects do
   end
 
   defp delete_dataclips(dataclips_query, batch_size) do
-    dataclips_count = Repo.aggregate(dataclips_query, :count)
-
     dataclips_delete_query =
       Dataclip
       |> with_cte("dataclips_to_delete",
@@ -2021,17 +2019,19 @@ defmodule Lightning.Projects do
       )
       |> join(:inner, [d], dtd in "dataclips_to_delete", on: d.id == dtd.id)
 
-    Stream.iterate(0, &(&1 + 1))
-    |> Stream.take(ceil(dataclips_count / batch_size))
-    |> Enum.each(fn _i ->
-      {_count, _dataclips} =
-        Repo.delete_all(dataclips_delete_query,
-          returning: false,
-          timeout: Config.default_ecto_database_timeout() * 10
-        )
-    end)
+    delete_dataclips_in_batches(dataclips_delete_query)
+  end
 
-    :ok
+  defp delete_dataclips_in_batches(dataclips_delete_query) do
+    {count, _dataclips} =
+      Repo.delete_all(dataclips_delete_query,
+        returning: false,
+        timeout: Config.default_ecto_database_timeout() * 10
+      )
+
+    if count > 0,
+      do: delete_dataclips_in_batches(dataclips_delete_query),
+      else: :ok
   end
 
   def invite_collaborators(project, collaborators, inviter) do
