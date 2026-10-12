@@ -157,6 +157,11 @@
       <div class="mt-4">
         <.sync_order_radio form={f} />
       </div>
+      <.config_format_toggle
+        :if={f[:sync_direction].value != :deploy}
+        form={f}
+        project_id={@project.id}
+      />
       <div :if={f[:sync_direction].value == :deploy} class="mt-4">
         <.input
           type="text"
@@ -178,7 +183,7 @@
           }
         />
       <% end %>
-      <div class="flex gap-4 mt-2">
+      <div class="flex gap-4 mt-4">
         <.button
           id="connect-and-sync-button"
           type="submit"
@@ -190,11 +195,6 @@
           Connect Branch & Initiate First Sync
         </.button>
       </div>
-      <.config_format_toggle
-        :if={f[:sync_direction].value != :deploy}
-        form={f}
-        project_id={@project.id}
-      />
     </.form>
   </div>
   <div :if={@action == :show}>

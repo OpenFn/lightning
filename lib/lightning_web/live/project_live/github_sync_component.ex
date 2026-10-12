@@ -737,7 +737,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp config_format_toggle(assigns) do
     ~H"""
-    <div class="mt-8">
+    <div class="mt-4">
       <.input
         id="sync-version-toggle"
         type="toggle"

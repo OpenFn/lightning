@@ -802,16 +802,16 @@
               />
               <div
                 :if={!user_has_valid_oauth_token(@current_user)}
-                class="bg-white p-4 rounded-md"
+                class="bg-white p-4 rounded-md space-y-4"
               >
                 <h6 class="font-medium text-black">
                   Connect your OpenFn account to GitHub
                 </h6>
-                <GithubComponents.sync_docs_banner class="my-3" />
-                <small class="block mt-1 text-xs text-gray-600">
+                <GithubComponents.sync_docs_banner class="" />
+                <small class="block text-xs text-gray-600">
                   Connect your OpenFn account to GitHub. Click the button below to get started.
                 </small>
-                <div class="mt-6">
+                <div>
                   <GithubComponents.connect_to_github_link
                     id="connect-github-link"
                     user={@current_user}
@@ -822,12 +822,12 @@
             </div>
           <% end %>
         <% else %>
-          <div class="bg-white p-4 rounded-md">
+          <div class="bg-white p-4 rounded-md space-y-4">
             <h6 class="font-medium text-black">
               Connect to GitHub
             </h6>
-            <GithubComponents.sync_docs_banner class="my-3" />
-            <small class="block mt-1 text-xs text-gray-600">
+            <GithubComponents.sync_docs_banner class="" />
+            <small class="block text-xs text-gray-600">
               Version Control is not configured for this Lightning instance. Contact the superuser for more information.
             </small>
           </div>
