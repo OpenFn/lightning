@@ -147,6 +147,25 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
 
       refute has_element?(view, @switch)
     end
+
+    test "the confirm box waits until a branch is picked", %{conn: conn} do
+      view = open_new_connection_form(conn)
+      confirm = ~s{input[name="connection[accept]"]}
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(
+        connection: %{github_installation_id: @installation["id"]}
+      )
+
+      refute has_element?(view, confirm)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{branch: "main"})
+
+      assert has_element?(view, confirm)
+    end
   end
 
   describe "docs banner" do

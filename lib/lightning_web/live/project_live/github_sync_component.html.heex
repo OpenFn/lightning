@@ -171,7 +171,7 @@
           class="placeholder:italic placeholder:text-slate-400"
         />
       </div>
-      <%= if f[:branch].value do %>
+      <%= if f[:branch].value not in [nil, ""] do %>
         <.accept_checkbox
           project={@project}
           form={f}
