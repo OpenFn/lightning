@@ -104,13 +104,14 @@ export function LandingScreen({
                 )}
               >
                 <SkillMenu {...slash.menuProps} />
-                <div className="flex items-start">
+                <div className="relative overflow-hidden">
                   {slash.skill && (
-                    <SkillCommand
-                      skill={slash.skill}
-                      className="shrink-0 pl-3 py-3 text-sm"
-                      withTooltip={false}
-                    />
+                    <span
+                      ref={slash.commandRef}
+                      className="pointer-events-none absolute left-3 top-3 text-sm"
+                    >
+                      <SkillCommand skill={slash.skill} withTooltip={false} />
+                    </span>
                   )}
                   <textarea
                     ref={textareaRef}
@@ -122,6 +123,7 @@ export function LandingScreen({
                     disabled={aiLimitReached}
                     value={slash.input}
                     onChange={e => slash.handleChange(e.target.value)}
+                    onScroll={slash.onScroll}
                     onKeyDown={e => {
                       if (slash.handleKeyDown(e)) return;
                       if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
@@ -136,10 +138,8 @@ export function LandingScreen({
                     }
                     rows={4}
                     {...slash.comboboxProps}
-                    className={cn(
-                      'w-full min-w-0 flex-1 rounded-t-lg border-none px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 resize-none bg-transparent disabled:cursor-not-allowed',
-                      slash.skill && 'pl-1'
-                    )}
+                    className="block w-full rounded-t-lg border-none px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 resize-none bg-transparent disabled:cursor-not-allowed"
+                    style={{ textIndent: slash.textIndent }}
                   />
                 </div>
                 <span id="build-with-ai-hint" className="sr-only">

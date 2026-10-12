@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { KeyboardEvent, RefObject } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import type { KeyboardEvent, RefObject, UIEvent } from 'react';
 
 import type { AISkill } from '../types/sessionContext';
 import { parseSlashCommand } from '../utils/slashCommand';
@@ -16,6 +16,12 @@ export function useSlashCommand(
   const [skill, setSkill] = useState<AISkill | null>(null);
   const [highlighted, setHighlighted] = useState(0);
   const [dismissedMenuFor, setDismissedMenuFor] = useState<string | null>(null);
+  const commandRef = useRef<HTMLSpanElement>(null);
+  const [commandWidth, setCommandWidth] = useState(0);
+
+  useLayoutEffect(() => {
+    setCommandWidth(skill ? (commandRef.current?.offsetWidth ?? 0) : 0);
+  }, [skill]);
 
   const content = skill
     ? `/${skill.name} ${input.trim()}`.trim()
@@ -95,6 +101,15 @@ export function useSlashCommand(
     input,
     skill,
     content,
+    // The command is laid over the textarea's first line, so only that line
+    // makes room for it and wrapped lines start at the left edge.
+    commandRef,
+    textIndent: commandWidth ? `calc(${commandWidth}px + 0.25em)` : undefined,
+    onScroll: (e: UIEvent<HTMLTextAreaElement>) => {
+      if (commandRef.current) {
+        commandRef.current.style.transform = `translateY(-${e.currentTarget.scrollTop}px)`;
+      }
+    },
     handleChange,
     handleKeyDown,
     reset,

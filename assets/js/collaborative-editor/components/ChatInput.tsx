@@ -297,13 +297,14 @@ export function ChatInput({
                   </div>
                 )}
 
-                <div className="flex items-start">
+                <div className="relative overflow-hidden">
                   {skill && (
-                    <SkillCommand
-                      skill={skill}
-                      className="shrink-0 pl-4 py-3 text-[15px]"
-                      withTooltip={false}
-                    />
+                    <span
+                      ref={slash.commandRef}
+                      className="pointer-events-none absolute left-4 top-3 text-[15px]"
+                    >
+                      <SkillCommand skill={skill} withTooltip={false} />
+                    </span>
                   )}
                   <textarea
                     ref={textareaRef}
@@ -311,18 +312,19 @@ export function ChatInput({
                     value={input}
                     onChange={e => slash.handleChange(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    onScroll={slash.onScroll}
                     placeholder={skill ? 'Add details (optional)' : placeholder}
                     disabled={isLoading || isDisabled}
                     rows={1}
                     {...slash.comboboxProps}
                     className={cn(
-                      'block w-full min-w-0 flex-1 px-4 py-3 bg-transparent resize-none',
-                      skill && 'pl-1',
+                      'block w-full px-4 py-3 bg-transparent resize-none',
                       'text-[15px] text-gray-900 placeholder:text-gray-400',
                       'border-0 outline-none focus:outline-none focus:ring-0',
                       'disabled:text-gray-400 disabled:cursor-not-allowed'
                     )}
                     style={{
+                      textIndent: slash.textIndent,
                       height: `${MIN_TEXTAREA_HEIGHT}px`,
                       minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
                       maxHeight: `${MAX_TEXTAREA_HEIGHT}px`,
