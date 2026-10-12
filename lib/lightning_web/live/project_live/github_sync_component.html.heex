@@ -161,6 +161,7 @@
         :if={f[:sync_direction].value != :deploy}
         form={f}
         project_id={@project.id}
+        myself={@myself}
       />
       <div :if={f[:sync_direction].value == :deploy} class="mt-4">
         <.input

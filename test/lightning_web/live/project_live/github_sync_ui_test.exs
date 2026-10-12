@@ -20,7 +20,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
     "account" => %{"type" => "User", "login" => "username"}
   }
 
-  @switch "#sync-version-toggle"
+  @switch "#toggle-legacy-format-switch"
+  @sync_version_input ~s{input[name="connection[sync_version]"]}
 
   defp open_new_connection_form(conn) do
     project = insert(:project)
@@ -96,36 +97,32 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
       refute has_element?(view, "#select-installations-input-searchable")
     end
 
-    test "defaults to the openfn.yaml format with the switch on",
-         %{conn: conn} do
+    test "defaults to the v2 format with the legacy switch off", %{conn: conn} do
       view = open_new_connection_form(conn)
 
-      assert has_element?(view, "#{@switch}[checked]")
+      assert has_element?(view, "#{@switch}[aria-checked=false]")
+      assert has_element?(view, ~s{#{@sync_version_input}[value=true]})
     end
 
-    test "turning the switch off selects the legacy format and back on again",
+    test "flipping the switch selects the legacy format and flips it back",
          %{conn: conn} do
       view = open_new_connection_form(conn)
 
-      view
-      |> form("#project-repo-connection-form")
-      |> render_change(connection: %{sync_version: "false"})
+      view |> element(@switch) |> render_click()
 
-      refute has_element?(view, "#{@switch}[checked]")
+      assert has_element?(view, "#{@switch}[aria-checked=true]")
+      assert has_element?(view, ~s{#{@sync_version_input}[value=false]})
 
-      view
-      |> form("#project-repo-connection-form")
-      |> render_change(connection: %{sync_version: "true"})
+      view |> element(@switch) |> render_click()
 
-      assert has_element?(view, "#{@switch}[checked]")
+      assert has_element?(view, "#{@switch}[aria-checked=false]")
+      assert has_element?(view, ~s{#{@sync_version_input}[value=true]})
     end
 
     test "the legacy choice survives changing a dropdown", %{conn: conn} do
       view = open_new_connection_form(conn)
 
-      view
-      |> form("#project-repo-connection-form")
-      |> render_change(connection: %{sync_version: "false"})
+      view |> element(@switch) |> render_click()
 
       view
       |> form("#project-repo-connection-form")
@@ -133,7 +130,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
         connection: %{github_installation_id: @installation["id"]}
       )
 
-      refute has_element?(view, "#{@switch}[checked]")
+      assert has_element?(view, "#{@switch}[aria-checked=true]")
+      assert has_element?(view, ~s{#{@sync_version_input}[value=false]})
     end
 
     test "the switch is hidden when importing from GitHub", %{conn: conn} do
