@@ -17,12 +17,21 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     )
   )
 
+  # Span events are a nested record, not a flat map: #event{system_time_native,
+  # name, attributes} at otel_span.hrl:84-88, where `attributes` is itself an
+  # #attributes{} record.
+  Record.defrecordp(
+    :event_rec,
+    :event,
+    Record.extract(:event, from_lib: "opentelemetry/include/otel_span.hrl")
+  )
+
   @canary "random-canary-niTae9zae2"
   @otel_modules [:opentelemetry_cowboy]
 
   import Mox
 
-  setup do
+  setup_all do
     # Do we have processors configured
     assert Application.get_env(:opentelemetry, :processors),
            "no :processors configured - nothing to test"
@@ -33,16 +42,12 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     refute Application.get_env(:opentelemetry, :span_processor),
            "span processor overrides :processors"
 
-    # Create a global mock that will be rechable from the cowboy process.
-    set_mox_global()
-    stub_with(Lightning.MockConfig, Lightning.Config.API)
-
     # Settings to enable tracing that is observable in the test.
     overrides =
       [
         sdk_disabled: false,
         sampler: :always_on,
-        traces_exporter: {:otel_exporter_pid, self()},
+        traces_exporter: {:otel_exporter_pid, :otel_canary_collector},
         bsp_scheduled_delay_ms: 50
       ]
 
@@ -82,6 +87,14 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
       if had_handlers?, do: :opentelemetry_cowboy.setup()
     end)
+  end
+
+  setup do
+    # Create a global mock that will be reachable from the cowboy process.
+    set_mox_global()
+    stub_with(Lightning.MockConfig, Lightning.Config.API)
+
+    Process.register(self(), :otel_canary_collector)
 
     [port: LightningWeb.Endpoint.config(:http)[:port]]
   end
@@ -101,7 +114,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
            } = :otel_attributes.map(attrs)
   end
 
-  test "confim that traces are exported with redaction", %{port: port} do
+  test "confirm that traces are exported with redaction", %{port: port} do
     response =
       Finch.build(
         :get,
@@ -129,7 +142,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     end
   end
 
-  test "a rewuest that produces an error does not leak the canary", %{
+  test "a request that produces an error does not leak the canary", %{
     port: port
   } do
     url =
@@ -147,20 +160,31 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     assert {:ok, %Finch.Response{status: 403}} = response
 
     assert_receive {:span,
-                    span_rec(kind: :server, attributes: _attrs, events: events)},
+                    span_rec(kind: :server, attributes: attrs, events: events)},
                    2_000
 
-    # assert %{"url.path": "[redacted]", "url.query": "[redacted]"} =
-    #   :otel_attributes.map(attrs)
+    otel_attrs = :otel_attributes.map(attrs)
+
+    assert %{"url.path": "[redacted]", "url.query": "[redacted]"} = otel_attrs
+
+    # Pin the provocation. `error.type` is set to the bare exception struct
+    # module, so this is an exact match and it proves *which* exception
+    # reached cowboy. Without it, a future change that raises something else
+    # — or nothing — leaves the sweep below green while testing nothing.
+    assert %{"error.type": Plug.CSRFProtection.InvalidCSRFTokenError} =
+             otel_attrs
 
     recorded = :otel_events.list(events)
 
     # Without this the sweep below is vacuous: an unrecorded exception has no
-    # canary in it either.
+    # canary in it either. 
     assert recorded != [],
            "no exception event recorded — provocation did not raise"
 
-    raise "Why is this test passing"
+    assert [event_rec(name: :exception, attributes: event_attrs)] = recorded
+
+    assert %{"exception.message": message} = :otel_attributes.map(event_attrs)
+    assert message =~ "invalid CSRF"
 
     assert leaks(recorded, @canary) == []
   end

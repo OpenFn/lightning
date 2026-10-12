@@ -1244,6 +1244,7 @@ defmodule Lightning.Config.Bootstrap do
     config :opentelemetry,
       sdk_disabled: disabled?,
       processors: [
+        {Lightning.OpenTelemetry.RedactingProcessor, %{}},
         {:otel_batch_processor, %{}}
       ],
       traces_exporter: :otlp,
