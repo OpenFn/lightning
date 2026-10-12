@@ -138,13 +138,20 @@ defmodule LightningWeb.API.ProjectControllerTest do
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
     end
 
-    test "is refused with 403, not 409, on a project scheduled for deletion",
+    test "a non-member is refused with 403, not 409, on a project scheduled for deletion",
+         %{conn: conn} do
+      conn = get(conn, ~p"/api/projects/#{scheduled_project().id}")
+
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "the owner gets 409 on a project scheduled for deletion",
          %{conn: conn, user: user} do
       project = scheduled_project([%{user: user, role: :owner}])
 
       conn = get(conn, ~p"/api/projects/#{project.id}")
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
     end
 
     test "shows the project with its members", %{
@@ -206,7 +213,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
   end
 
   describe "show, for a repo connection" do
-    test "is refused its own project with 403", %{conn: conn} do
+    test "is refused its own project for holding no grant", %{conn: conn} do
       project = insert(:project)
       repo_connection = insert(:project_repo_connection, project: project)
 
@@ -218,7 +225,11 @@ defmodule LightningWeb.API.ProjectControllerTest do
         )
         |> get(~p"/api/projects/#{project.id}")
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer error="insufficient_scope")
+             ]
     end
   end
 
@@ -622,7 +633,19 @@ defmodule LightningWeb.API.ProjectControllerTest do
       end
     end
 
-    test "is refused with 403, not 409, on a project scheduled for deletion",
+    test "a non-member is refused with 403, not 409, on a project scheduled for deletion",
+         %{conn: conn} do
+      project = scheduled_project()
+
+      conn =
+        conn
+        |> with_pat(insert(:user))
+        |> put_project(project.id, %{"name" => "renamed"})
+
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "the owner gets 409 on a project scheduled for deletion, and nothing changes",
          %{conn: conn} do
       user = insert(:user)
       project = scheduled_project([%{user: user, role: :owner}])
@@ -631,6 +654,17 @@ defmodule LightningWeb.API.ProjectControllerTest do
         conn
         |> with_pat(user)
         |> put_project(project.id, %{"name" => "renamed"})
+
+      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert Lightning.Repo.reload!(project).name == project.name
+    end
+
+    test "a non-member with a bad body is refused before the body is read",
+         %{conn: conn} do
+      conn =
+        conn
+        |> with_pat(insert(:user))
+        |> put_project(insert(:project).id, %{"nonsense" => 1})
 
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
     end

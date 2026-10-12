@@ -112,13 +112,15 @@ defmodule LightningWeb.API.CredentialPutTest do
 
       response = json_response(conn, 201)
 
+      # Without projects:write the account sees the links, but no project
+      # names.
       assert %{
                "credential" => %{
                  "id" => ^id,
                  "name" => "Acme DHIS2",
                  "schema" => "raw",
                  "user_id" => user_id,
-                 "projects" => [_, _]
+                 "projects" => []
                },
                "errors" => %{}
              } = response
@@ -478,22 +480,35 @@ defmodule LightningWeb.API.CredentialPutTest do
       assert Repo.reload!(credential).name == "Theirs"
     end
 
-    test "still replaces their own credential while it is being deleted", %{
-      conn: conn
-    } do
+    test "is refused with 409 on their own credential while it is being deleted",
+         %{conn: conn} do
       user = insert(:user)
 
       credential =
         scheduled_for_deletion(existing_credential(user, insert(:project)))
 
-      response =
+      conn =
         conn
         |> with_pat(user)
         |> put_credential(credential.id, credential_body(%{"name" => "Renamed"}))
-        |> json_response(200)
 
-      assert response["credential"]["name"] == "Renamed"
-      assert main_body(credential.id) == %{"password" => @secret}
+      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert Repo.reload!(credential).name == credential.name
+    end
+
+    test "learns only that the id is taken, not that someone else's credential is being deleted",
+         %{conn: conn} do
+      credential =
+        scheduled_for_deletion(
+          existing_credential(insert(:user), insert(:project))
+        )
+
+      conn =
+        conn
+        |> with_pat(insert(:user))
+        |> put_credential(credential.id, credential_body(%{}))
+
+      assert json_response(conn, 409) == %{"error" => "id_taken"}
     end
 
     test "links only to projects where they may create a project credential",
@@ -529,18 +544,35 @@ defmodule LightningWeb.API.CredentialPutTest do
                "credential" => %{
                  "id" => id,
                  "user_id" => user_id,
-                 "projects" => [%{"id" => project_id}]
+                 "projects" => []
                },
                "errors" => %{}
              } = response = json_response(conn, 200)
 
-      assert {id, user_id, project_id} == {credential.id, owner.id, project.id}
+      assert {id, user_id} == {credential.id, owner.id}
       assert linked_project_ids(response) == [project.id]
       refute conn.resp_body =~ "password"
 
       assert conn
              |> get(~p"/api/credentials/#{Ecto.UUID.generate()}")
              |> json_response(404)
+    end
+
+    test "a service account also holding projects:write sees the projects by name",
+         %{conn: conn} do
+      {conn, _account} =
+        with_service_account(conn, ["credentials:write", "projects:write"])
+
+      project = insert(:project)
+      credential = existing_credential(insert(:user), project)
+
+      response =
+        conn
+        |> get(~p"/api/credentials/#{credential.id}")
+        |> json_response(200)
+
+      assert [%{"id" => project_id}] = response["credential"]["projects"]
+      assert project_id == project.id
     end
 
     test "a person reads only their own, seeing every link but only their projects",
@@ -569,7 +601,7 @@ defmodule LightningWeb.API.CredentialPutTest do
   end
 
   describe "for a repo connection" do
-    test "PUT and GET are refused with 403", %{conn: conn} do
+    test "PUT and GET are refused with 403 for holding no grant", %{conn: conn} do
       project = insert(:project)
       repo_connection = insert(:project_repo_connection, project: project)
       credential = insert(:credential, user: insert(:user))
@@ -585,7 +617,10 @@ defmodule LightningWeb.API.CredentialPutTest do
             put_credential(conn, Ecto.UUID.generate(), credential_body(%{})),
             get(conn, ~p"/api/credentials/#{credential.id}")
           ] do
-        assert json_response(refused, 403) == %{"error" => "Forbidden"}
+        assert json_response(refused, 403) == %{"error" => "insufficient_scope"}
+
+        assert get_resp_header(refused, "www-authenticate") ==
+                 [~s(Bearer error="insufficient_scope")]
       end
     end
   end

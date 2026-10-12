@@ -31,15 +31,43 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
   describe "call/2" do
     test "lets an access token through with its claims and service account",
          %{conn: conn, account: account} do
-      conn = authenticate(conn, AccessToken.issue(account, ["users:read"]))
+      conn =
+        authenticate(
+          conn,
+          AccessToken.issue(account, ["users:read", "projects:write"])
+        )
 
       refute conn.halted
 
-      assert %{"sub" => sub, "scope" => "users:read"} =
+      assert %{"sub" => sub, "scope" => "users:read projects:write"} =
                conn.assigns.access_token
 
       assert sub == account.id
-      assert conn.assigns.current_resource == account
+
+      assert conn.assigns.current_resource == %{
+               account
+               | grants: MapSet.new(["users:read", "projects:write"])
+             }
+    end
+
+    test "a token with no scope claim authenticates with no grants", %{
+      conn: conn,
+      account: account
+    } do
+      {_, token} =
+        Lightning.Config.token_signer().jwk
+        |> JOSE.JWT.sign(%{"alg" => "RS256", "typ" => "at+jwt"}, %{
+          "iss" => AccessToken.issuer(),
+          "aud" => AccessToken.issuer() <> "/api",
+          "sub" => account.id,
+          "exp" => System.system_time(:second) + 300
+        })
+        |> JOSE.JWS.compact()
+
+      conn = authenticate(conn, token)
+
+      refute conn.halted
+      assert conn.assigns.current_resource.grants == MapSet.new()
     end
 
     test "refuses a token for a service account that is no longer registered",
@@ -121,35 +149,26 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
     end
   end
 
-  describe "require_scope/2" do
-    test "lets a token with the scope through", %{conn: conn, account: account} do
-      conn =
-        conn
-        |> authenticate(AccessToken.issue(account, ["users:read"]))
-        |> AccessTokenAuth.require_scope("users:read")
-
-      refute conn.halted
-    end
-
-    test "refuses a token without the scope", %{conn: conn, account: account} do
-      conn
-      |> authenticate(AccessToken.issue(account, ["users:read"]))
-      |> AccessTokenAuth.require_scope("users:write")
-      |> assert_refused(403, "insufficient_scope")
-    end
-  end
-
+  # What the credential list should return to an operator is still undecided,
+  # so these routes stay closed to client tokens until it is.
   test "the existing /api routes refuse an access token", %{
     conn: conn,
     account: account
   } do
-    token = AccessToken.issue(account, AccessToken.scopes())
-
     conn =
-      conn
-      |> put_req_header("authorization", "Bearer " <> token)
-      |> get(~p"/api/projects")
+      put_req_header(
+        conn,
+        "authorization",
+        "Bearer " <> AccessToken.issue(account, AccessToken.scopes())
+      )
 
-    assert json_response(conn, 401)
+    for refused <- [
+          get(conn, ~p"/api/projects"),
+          get(conn, ~p"/api/credentials"),
+          post(conn, ~p"/api/credentials", %{"name" => "x"}),
+          delete(conn, ~p"/api/credentials/#{Ecto.UUID.generate()}")
+        ] do
+      assert json_response(refused, 401)
+    end
   end
 end

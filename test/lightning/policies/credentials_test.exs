@@ -656,6 +656,8 @@ defmodule Lightning.Policies.CredentialsTest do
       {account, _key} =
         Lightning.ServiceAccountHelpers.service_account_with_key()
 
+      account = %{account | grants: MapSet.new(["credentials:write"])}
+
       may_link? =
         &Bodyguard.permit?(
           Lightning.Policies.ProjectUsers,
@@ -671,17 +673,84 @@ defmodule Lightning.Policies.CredentialsTest do
                [true, true, true, false, false, true]
     end
 
+    test "a service account without credentials:write cannot link to a project" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      account = %{account | grants: MapSet.new(["projects:write"])}
+
+      assert Lightning.Policies.ProjectUsers.authorize(
+               :create_project_credential,
+               account,
+               insert(:project)
+             ) == {:error, :insufficient_scope}
+    end
+
     test "a service account can write any credential but never delete one", %{
       credential: credential
     } do
       {account, _key} =
         Lightning.ServiceAccountHelpers.service_account_with_key()
 
+      account = %{account | grants: MapSet.new(["credentials:write"])}
+
       assert Credentials
              |> Bodyguard.permit?(:edit_credential, account, credential)
 
       refute Credentials
              |> Bodyguard.permit?(:delete_credential, account, credential)
+    end
+
+    test "only an operator may name another owner, and only with the grant" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      operator = %{account | grants: MapSet.new(["credentials:write"])}
+      bare = %{account | grants: MapSet.new(["projects:write"])}
+
+      assert Credentials.authorize(:name_credential_owner, operator, nil) == true
+
+      assert Credentials.authorize(:name_credential_owner, insert(:user), nil) ==
+               false
+
+      assert Credentials.authorize(:name_credential_owner, bare, nil) ==
+               {:error, :insufficient_scope}
+
+      assert Credentials.authorize(:list_credentials, insert(:user), nil) == true
+
+      assert Credentials.authorize(:edit_credential, bare, insert(:credential)) ==
+               {:error, :insufficient_scope}
+    end
+
+    test "only a person may list their credentials or create one for themselves" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      operator = %{account | grants: MapSet.new(["credentials:write"])}
+      person = insert(:user)
+
+      assert Credentials.authorize(:list_credentials, person, nil) == true
+
+      assert Credentials.authorize(
+               :edit_credential,
+               person,
+               %Lightning.Credentials.Credential{user_id: person.id}
+             ) == true
+
+      assert Credentials.authorize(:list_credentials, operator, nil) == false
+
+      assert Credentials.authorize(
+               :edit_credential,
+               operator,
+               %Lightning.Credentials.Credential{user_id: operator.id}
+             ) == false
+
+      # Creating for a named owner is still the operator's to do.
+      assert Credentials.authorize(
+               :edit_credential,
+               operator,
+               %Lightning.Credentials.Credential{user_id: person.id}
+             ) == true
     end
   end
 end

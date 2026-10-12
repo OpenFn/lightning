@@ -5,30 +5,23 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuth do
   repo connection token).
 
   A token that declares itself an access token goes to
-  `LightningWeb.Plugs.AccessTokenAuth` and must carry the `scope:` this plug is
-  given. Any other request gets exactly the answer
-  `UserAuth.authenticate_bearer/2` and
+  `LightningWeb.Plugs.AccessTokenAuth`. Any other request gets exactly the
+  answer `UserAuth.authenticate_bearer/2` and
   `UserAuth.require_authenticated_api_resource/2` give it elsewhere.
 
-  A resource opts in by adding a router pipeline that names its scope:
-
-      plug LightningWeb.Plugs.PersonOrServiceAccountAuth, scope: "projects:write"
-
-  A person's token carries no scopes, so the scope binds service accounts
-  only; for a person, the controller's policy decides.
+  It only authenticates. What the caller may do, including whether its token
+  holds the grant an action needs, is the controller's policy's to decide.
   """
   alias Lightning.ServiceAccount.AccessToken
   alias LightningWeb.Plugs.AccessTokenAuth
   alias LightningWeb.UserAuth
 
-  def init(opts), do: Keyword.fetch!(opts, :scope)
+  def init(opts), do: opts
 
-  def call(conn, scope) do
+  def call(conn, _opts) do
     with {:ok, token} <- UserAuth.get_bearer(conn),
          true <- AccessToken.access_token?(token) do
-      conn = AccessTokenAuth.call(conn, [])
-
-      if conn.halted, do: conn, else: AccessTokenAuth.require_scope(conn, scope)
+      AccessTokenAuth.call(conn, [])
     else
       _person ->
         conn

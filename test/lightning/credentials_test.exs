@@ -524,7 +524,22 @@ defmodule Lightning.CredentialsTest do
       {account, _key} =
         Lightning.ServiceAccountHelpers.service_account_with_key()
 
-      %{account: account, owner: insert(:user), project: insert(:project)}
+      %{
+        account: %{account | grants: MapSet.new(["credentials:write"])},
+        owner: insert(:user),
+        project: insert(:project)
+      }
+    end
+
+    test "are refused without credentials:write, saying so", %{
+      account: account,
+      owner: owner
+    } do
+      credential = insert(:credential, user: owner, name: "before")
+      account = %{account | grants: MapSet.new(["projects:write"])}
+
+      assert Credentials.update_credential(credential, %{"name" => "x"}, account) ==
+               {:error, :insufficient_scope}
     end
 
     test "create a credential owned by the named user and record the account as the actor",
@@ -567,6 +582,72 @@ defmodule Lightning.CredentialsTest do
 
       assert [{"updated", account.uuid, :service_account}] ==
                audit_actors(credential)
+    end
+  end
+
+  describe "a credential scheduled for deletion" do
+    setup do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential,
+          user: owner,
+          name: "before",
+          schema: "raw",
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      %{owner: owner, credential: credential}
+    end
+
+    test "cannot be updated by its owner", %{owner: owner, credential: c} do
+      assert Credentials.update_credential(c, %{"name" => "after"}, owner) ==
+               {:error, :scheduled_for_deletion}
+
+      assert Repo.reload!(c).name == "before"
+    end
+
+    # A screen holds the struct it loaded when it opened.
+    test "cannot be updated through a struct loaded before it was scheduled",
+         %{owner: owner, credential: c} do
+      stale = %{c | scheduled_deletion: nil}
+
+      assert Credentials.update_credential(stale, %{"name" => "after"}, owner) ==
+               {:error, :scheduled_for_deletion}
+    end
+
+    test "tells a stranger only that they may not", %{credential: c} do
+      assert Credentials.update_credential(c, %{"name" => "x"}, insert(:user)) ==
+               {:error, :unauthorized}
+    end
+
+    test "cannot be scheduled again, which would move the date", %{
+      owner: owner,
+      credential: c
+    } do
+      assert Credentials.schedule_credential_deletion(c, owner) ==
+               {:error, :scheduled_for_deletion}
+
+      assert Repo.reload!(c).scheduled_deletion == c.scheduled_deletion
+    end
+
+    test "can still be deleted now, or have its deletion cancelled", %{
+      owner: owner,
+      credential: c
+    } do
+      other =
+        insert(:credential,
+          user: owner,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      assert {:ok, %Credential{scheduled_deletion: nil}} =
+               Credentials.cancel_scheduled_deletion(c.id, owner)
+
+      assert {:ok, %{credential: _}} =
+               Credentials.delete_credential(other, owner)
+
+      refute Repo.get(Credential, other.id)
     end
   end
 

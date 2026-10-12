@@ -38,15 +38,16 @@ defmodule LightningWeb.API.ProjectController do
 
   import Ecto.Changeset
 
-  alias Lightning.Policies.ProjectUsers
-  alias Lightning.Policies.Provisioning
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects
-  alias Lightning.Projects.Project
-  alias Lightning.Projects.Scope
-  alias Lightning.ServiceAccount
+  alias Lightning.Scope
   alias LightningWeb.API.PutRequest
+  alias LightningWeb.Plugs.AuthorizeAction
 
   action_fallback LightningWeb.FallbackController
+
+  plug AuthorizeAction, {:project_users, :access_project} when action == :show
+  plug AuthorizeAction, {:project_users, :edit_project} when action == :update
 
   @doc """
   Lists all projects accessible to the authenticated user.
@@ -95,8 +96,10 @@ defmodule LightningWeb.API.ProjectController do
 
   - `200 OK` with project JSON on success
   - `404 Not Found` if project doesn't exist
-  - `403 Forbidden` if user lacks access to the project
-  - `409 Conflict` to a service account, if the project is scheduled for deletion
+  - `403 Forbidden` if user lacks access to the project, or the token lacks
+    `projects:write`
+  - `409 Conflict` to a caller who may see the project, if it is scheduled for
+    deletion
 
   ## Examples
 
@@ -104,13 +107,15 @@ defmodule LightningWeb.API.ProjectController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with %Project{} = project <- Projects.get_project(id),
+    with {:ok, scope} <- Scope.fetch(conn.assigns.scope, id),
          :ok <-
-           authorize(:access_project, conn.assigns.current_resource, project) do
-      render_project(conn, project)
-    else
-      nil -> {:error, :not_found}
-      error -> error
+           Permissions.permit(
+             :project_users,
+             :access_project,
+             scope,
+             scope.project
+           ) do
+      render_project(conn, scope.project)
     end
   end
 
@@ -122,17 +127,46 @@ defmodule LightningWeb.API.ProjectController do
   """
   @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def update(conn, %{"id" => id}) do
-    actor = conn.assigns.current_resource
+    with {:ok, target} <- update_target(conn, id),
+         {:ok, attrs} <- parse(conn, id) do
+      case target do
+        :new -> create(conn, attrs)
+        project -> replace(conn, project, attrs)
+      end
+    end
+  end
 
+  defp update_target(conn, id) do
+    case Scope.fetch(conn.assigns.scope, id) do
+      {:ok, scope} ->
+        with :ok <-
+               Permissions.permit(
+                 :project_users,
+                 :edit_project,
+                 scope,
+                 scope.project
+               ),
+             do: {:ok, scope.project}
+
+      {:error, :no_such_project} ->
+        with :ok <-
+               Permissions.permit(
+                 :provisioning,
+                 :create_project,
+                 conn.assigns.scope,
+                 nil
+               ),
+             do: {:ok, :new}
+
+      error ->
+        error
+    end
+  end
+
+  defp parse(conn, id) do
     case parse_body(conn.body_params, id) do
-      {:ok, attrs} ->
-        case Projects.get_project(attrs.id) do
-          nil -> create(conn, attrs, actor)
-          project -> replace(conn, project, attrs, actor)
-        end
-
-      {:error, :invalid, errors} ->
-        PutRequest.render_errors(conn, errors)
+      {:ok, attrs} -> {:ok, attrs}
+      {:error, :invalid, errors} -> PutRequest.render_errors(conn, errors)
     end
   end
 
@@ -153,59 +187,40 @@ defmodule LightningWeb.API.ProjectController do
     end
   end
 
-  defp replace(conn, project, attrs, actor) do
-    with :ok <- authorize(:edit_project, actor, project),
-         {:ok, project} <-
+  defp replace(conn, project, attrs) do
+    with {:ok, project} <-
            Projects.update_project(
              project,
              %{name: attrs[:name], description: attrs[:description]},
-             actor
+             conn.assigns.current_resource
            ) do
       render_project(conn, project)
     end
   end
 
-  # A service account passes every project policy, so telling it the project
-  # is scheduled for deletion leaks nothing; a person gets the policy's answer.
-  defp authorize(action, actor, project) do
-    case Scope.fetch(actor, project) do
-      {:ok, scope} ->
-        if ProjectUsers.permitted?(action, scope),
-          do: :ok,
-          else: {:error, :forbidden}
+  defp create(conn, attrs) do
+    actor = conn.assigns.current_resource
 
-      {:error, :project_scheduled_for_deletion}
-      when is_struct(actor, ServiceAccount) ->
-        {:error, :scheduled_for_deletion}
+    case Projects.members_by_email(attrs[:members] || []) do
+      {:ok, project_users} ->
+        attrs
+        |> Map.take([:id, :name, :description])
+        |> Map.put(:project_users, project_users)
+        |> Projects.create_project(actor, notify: attrs.notify)
+        |> case do
+          {:ok, project} ->
+            conn |> put_status(:created) |> render_project(project)
 
-      {:error, _reason} ->
-        {:error, :forbidden}
-    end
-  end
+          # Created by someone else since the lookup: ask about it as the
+          # project it now is.
+          {:error, changeset} ->
+            if PutRequest.unique_error?(changeset, :id),
+              do: update(conn, %{"id" => attrs.id}),
+              else: render_create_errors(conn, changeset)
+        end
 
-  defp create(conn, attrs, actor) do
-    with true <- Provisioning.authorize(:create_project, actor, nil),
-         {:ok, project_users} <-
-           Projects.members_by_email(attrs[:members] || []) do
-      attrs
-      |> Map.take([:id, :name, :description])
-      |> Map.put(:project_users, project_users)
-      |> Projects.create_project(actor, notify: attrs.notify)
-      |> case do
-        {:ok, project} ->
-          conn |> put_status(:created) |> render_project(project)
-
-        {:error, changeset} ->
-          if PutRequest.unique_error?(changeset, :id),
-            do: replace(conn, Projects.get_project(attrs.id), attrs, actor),
-            else: render_create_errors(conn, changeset)
-      end
-    else
-      {:error, messages} when is_list(messages) ->
+      {:error, messages} ->
         PutRequest.render_errors(conn, %{members: messages})
-
-      error ->
-        error
     end
   end
 

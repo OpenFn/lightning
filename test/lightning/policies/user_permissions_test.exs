@@ -104,4 +104,28 @@ defmodule Lightning.Policies.UserPermissionsTest do
       refute Users |> Permissions.can?(:delete_credential, superuser, client)
     end
   end
+
+  describe "the users API" do
+    test "is for an operator holding the grant each action needs" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      reader =
+        Lightning.Scope.new(%{account | grants: MapSet.new(["users:read"])})
+
+      assert Users.authorize(:read_users, reader, nil) == true
+
+      assert Users.authorize(:write_users, reader, nil) ==
+               {:error, :insufficient_scope}
+    end
+
+    test "is refused to a person, even a superuser" do
+      for user <- [insert(:user), insert(:user, role: :superuser)] do
+        scope = Lightning.Scope.new(user)
+
+        assert Users.authorize(:read_users, scope, nil) == false
+        assert Users.authorize(:write_users, scope, nil) == false
+      end
+    end
+  end
 end

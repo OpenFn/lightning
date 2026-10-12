@@ -4,34 +4,36 @@ defmodule Lightning.Policies.ProjectUsers do
 
   Two steps, deliberately separate.
 
-  `Lightning.Projects.Scope` establishes the **facts**: which project, and what
-  standing this actor has in it. It refuses outright for a project that does not
-  exist or is scheduled for deletion, so nothing downstream can be handed a
-  standing in a wound-down project.
+  `Lightning.Scope` establishes the **facts**: which project, and what
+  standing this actor has in it, including whether the project is scheduled
+  for deletion. It refuses outright only a project that does not exist.
 
-  `permitted?/2` makes the **judgement**: given that standing, is this action
-  allowed. It decides on `role` and `mfa_satisfied?`, and never mentions
-  `Project.scheduled_deletion` or `Project.requires_mfa` — there is no
-  shut-down project left for it to see, and the MFA rule reaches it as a fact
-  on the scope.
+  `authorize/3` on a `%Scope{}` makes the **judgement**, always in this order:
+  the grant the action needs, then MFA, then standing, and only for a caller
+  who would otherwise be allowed, whether the project is being deleted. So a
+  caller without the grant hears `{:error, :insufficient_scope}`, a caller
+  without standing hears `false`, and only an allowed caller learns
+  `{:error, :scheduled_for_deletion}`. It never mentions
+  `Project.scheduled_deletion` or `Project.requires_mfa` — both reach it as
+  facts on the scope.
+
+  Given a raw actor instead, it resolves the scope itself and answers
+  `false` for a scheduled project, so callers that predate the 409 keep their
+  answers.
 
   Adding an action means adding an atom to `@admin_actions` or
-  `@editor_actions`. It inherits the guard; there is nothing to remember.
-
-  A service account holds no role. Its authority is the scope its token
-  carries, which `LightningWeb.Plugs.PersonOrServiceAccountAuth` checks at the
-  route; here it may do only what `@service_account_actions` lists. That list
-  is separate and written out, so a new admin or editor action is refused to
-  the service account until it is added there.
+  `@editor_actions`. It inherits the guards; there is nothing to remember. An
+  operator holds every role through `Scope.holds_role?/2`, capped by its
+  grants.
 
   We deny by default: an action in none of the lists is refused.
   """
   @behaviour Bodyguard.Policy
 
-  alias Lightning.Accounts.User
+  alias Lightning.Policies.Decision
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects.ProjectUser
-  alias Lightning.Projects.Scope
-  alias Lightning.ServiceAccount
+  alias Lightning.Scope
 
   @admin_actions [
     :write_webhook_auth_method,
@@ -57,31 +59,20 @@ defmodule Lightning.Policies.ProjectUsers do
 
   @self_actions [:edit_digest_alerts, :edit_failure_alerts]
 
-  @other_actions [:access_project, :delete_project, :publish_template]
-
-  @service_account_actions [
-    :write_webhook_auth_method,
-    :write_github_connection,
-    :edit_project,
-    :edit_data_retention,
-    :add_project_user,
-    :remove_project_user,
-    :edit_run_settings,
-    :create_workflow,
-    :edit_workflow,
-    :delete_workflow,
-    :run_workflow,
-    :create_project_credential,
-    :initiate_github_sync,
-    :create_channel,
-    :delete_channel,
-    :update_channel,
+  @other_actions [
     :access_project,
-    :delete_project
+    :list_project_credentials,
+    :delete_project,
+    :publish_template
   ]
+
+  @owner_roles [:owner]
+  @admin_roles [:owner, :admin]
+  @editor_roles [:owner, :admin, :editor]
 
   @type actions ::
           :access_project
+          | :list_project_credentials
           | :delete_project
           | :publish_template
           | :run_workflow
@@ -112,97 +103,37 @@ defmodule Lightning.Policies.ProjectUsers do
     do: @admin_actions ++ @editor_actions ++ @self_actions ++ @other_actions
 
   @doc """
-  Whether `actor` may perform `action`, where the subject is anything that
-  identifies a project — see `t:Lightning.Projects.Scope.subject/0`.
+  Whether the caller may perform `action`, where the subject is anything that
+  identifies a project — see `t:Lightning.Scope.subject/0`.
+
+  Given a `%Scope{}`, the subject must be the scope's own project or one of
+  its membership rows. `:before_target` asks only about the grant, so `true`
+  for it is not permission; only `Permissions.permit/3` passes it.
   """
-  @spec authorize(actions(), Scope.actor(), Scope.subject()) :: boolean()
-
-  # These act on a specific membership row, not on project standing. The alert
-  # handlers in `ProjectLive.Settings` pass a client-supplied "project_user_id",
-  # so dropping the `id == user_id` comparison is a privilege escalation —
-  # pinned by two tests in project_live_test.exs.
-  def authorize(
-        action,
-        %User{id: id} = user,
-        %ProjectUser{user_id: user_id} = project_user
+  @spec authorize(actions(), Scope.t() | Scope.actor(), Scope.subject()) ::
+          boolean() | {:error, :insufficient_scope | :scheduled_for_deletion}
+  def authorize(action, %Scope{} = scope, subject),
+    do:
+      Decision.project(
+        scope,
+        subject,
+        grant(action),
+        judge(action, scope, subject)
       )
-      when action in @self_actions do
-    # This clause never reaches permitted?/2, so the guards there do not cover
-    # it and it checks the scope itself. Without that, a member the project
-    # blocks could still edit their own preferences on it.
-    id == user_id and
-      match?(
-        {:ok, %Scope{mfa_satisfied?: true}},
-        Scope.fetch(user, project_user)
-      )
-  end
 
-  def authorize(action, actor, subject) do
-    case Scope.fetch(actor, subject) do
-      {:ok, scope} ->
-        permitted?(action, scope)
-
-      # Bodyguard's contract is boolean, so the reason stops here. A caller
-      # wanting the distinction resolves Scope itself.
-      {:error, _reason} ->
-        false
-    end
-  end
+  def authorize(action, actor, subject),
+    do: Permissions.for_actor(actor, subject, &authorize(action, &1, subject))
 
   @doc """
-  Decide an action against an already-resolved `%Scope{}`.
+  Decide an action against an already-resolved `%Scope{}`, as a boolean.
 
   Public so a caller needing several answers about one project resolves once
-  rather than once per question.
+  rather than once per question. It holds the scope to the grant, and is
+  `false` on a project scheduled for deletion.
   """
   @spec permitted?(actions(), Scope.t()) :: boolean()
-
-  # First, so it denies every action this module decides — including ones added
-  # later — without anyone having to remember @admin_actions/@editor_actions.
-  def permitted?(_action, %Scope{mfa_satisfied?: false}), do: false
-
-  def permitted?(action, %Scope{actor: %ServiceAccount{}}),
-    do: action in @service_account_actions
-
-  def permitted?(:access_project, %Scope{} = scope), do: has_standing?(scope)
-
-  def permitted?(:delete_project, %Scope{role: role}), do: role == :owner
-
-  # Support-staff-only: a project owner cannot publish, and staff can publish
-  # without holding a membership row. Needs both support fields separately, so
-  # do not fold it into @editor_actions — that drops the support_user
-  # requirement silently.
-  def permitted?(:publish_template, %Scope{
-        support_user?: true,
-        role: role,
-        support?: support?
-      }),
-      do: not is_nil(role) or support?
-
-  def permitted?(:publish_template, %Scope{}), do: false
-
-  # Reached only when the subject wasn't a %ProjectUser{} — Scope resolves the
-  # caller's own standing, so there is no "which row" ambiguity here.
-  def permitted?(action, %Scope{role: role}) when action in @self_actions,
-    do: not is_nil(role)
-
-  # Admin actions have never been available to a support user without a
-  # membership row. Unchanged here.
-  def permitted?(action, %Scope{role: role}) when action in @admin_actions,
-    do: role in [:owner, :admin]
-
-  # An explicit row wins; support access only fills in for someone with no row
-  # at all. So adding a support user as a viewer gives them viewer permissions
-  # rather than their account flag overriding it. Under the opposite rule,
-  # "this person is read-only here" could not be expressed at all.
-  def permitted?(action, %Scope{role: nil, support?: support?})
-      when action in @editor_actions,
-      do: support?
-
-  def permitted?(action, %Scope{role: role}) when action in @editor_actions,
-    do: role in [:owner, :admin, :editor]
-
-  def permitted?(_action, %Scope{}), do: false
+  def permitted?(action, %Scope{} = scope),
+    do: authorize(action, scope, scope.project) == true
 
   @doc """
   Whether this actor would have standing on the project if not for the
@@ -211,16 +142,67 @@ defmodule Lightning.Policies.ProjectUsers do
   Lets a caller distinguish "no access at all" from "access except MFA" —
   `LightningWeb.Hooks` sends the first to not-found and the second to
   `/mfa_required` — without duplicating what counts as standing. It cannot ask
-  `permitted?(:access_project, ...)` for that, since the guard above answers
-  `false` for both cases.
+  `permitted?(:access_project, ...)` for that, since that answers `false` for
+  both cases. A project scheduled for deletion is not-found for everyone, so
+  it is never "blocked by MFA".
   """
   @spec blocked_by_mfa?(Scope.t()) :: boolean()
   def blocked_by_mfa?(%Scope{mfa_satisfied?: mfa_satisfied?} = scope),
-    do: has_standing?(scope) and not mfa_satisfied?
+    do:
+      Scope.has_standing?(scope) and not mfa_satisfied? and
+        not scope.scheduled_for_deletion?
 
-  # The one definition of "has any standing at all". `:access_project` is
-  # exactly this plus the MFA guard; `blocked_by_mfa?/1` is exactly this minus
-  # it. Written once so the two cannot answer differently.
-  defp has_standing?(%Scope{role: role, support?: support?}),
-    do: not is_nil(role) or support?
+  # The token code issues these strings; nothing else outside policies names
+  # them.
+  defp grant(action)
+       when action in [:create_project_credential, :list_project_credentials],
+       do: "credentials:write"
+
+  defp grant(_action), do: "projects:write"
+
+  # These act on a specific membership row, not on project standing. The alert
+  # handlers in `ProjectLive.Settings` pass a client-supplied "project_user_id",
+  # so dropping the comparison with the caller's own row is a privilege
+  # escalation — pinned by two tests in project_live_test.exs.
+  defp judge(action, %Scope{project_user: own_row}, %ProjectUser{id: id})
+       when action in @self_actions,
+       do: not is_nil(own_row) and own_row.id == id
+
+  defp judge(action, scope, _subject), do: judge(action, scope)
+
+  defp judge(action, scope)
+       when action in [:access_project, :list_project_credentials],
+       do: Scope.has_standing?(scope)
+
+  defp judge(:delete_project, scope), do: Scope.holds_role?(scope, @owner_roles)
+
+  # Support-staff-only: a project owner cannot publish, and staff can publish
+  # without holding a membership row. Needs both support fields separately, so
+  # do not fold it into @editor_actions — that drops the support_user
+  # requirement silently.
+  defp judge(:publish_template, %Scope{support_user?: true} = scope),
+    do: not is_nil(scope.role) or scope.support?
+
+  defp judge(:publish_template, _scope), do: false
+
+  # Reached only when the subject wasn't a %ProjectUser{} — Scope resolves the
+  # caller's own standing, so there is no "which row" ambiguity here. An
+  # operator has no row, so gets nothing.
+  defp judge(action, scope) when action in @self_actions,
+    do: not is_nil(scope.role)
+
+  # A support user with no membership row holds no admin action.
+  defp judge(action, scope) when action in @admin_actions,
+    do: Scope.holds_role?(scope, @admin_roles)
+
+  # An explicit row wins; support access only fills in for someone with no row
+  # at all. So adding a support user as a viewer gives them viewer permissions
+  # rather than their account flag overriding it. Under the opposite rule,
+  # "this person is read-only here" could not be expressed at all.
+  defp judge(action, scope) when action in @editor_actions,
+    do:
+      Scope.holds_role?(scope, @editor_roles) or
+        (is_nil(scope.role) and scope.support?)
+
+  defp judge(_action, _scope), do: false
 end

@@ -20,7 +20,7 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Projects.Events.WorkflowDeleted
   alias Lightning.Projects.ProjectLimiter
-  alias Lightning.Projects.Scope
+  alias Lightning.Scope
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias LightningWeb.LiveHelpers
@@ -124,8 +124,8 @@ defmodule LightningWeb.Hooks do
              redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
         end
 
-      # No such project, or one scheduled for deletion. Both were already the
-      # not-found redirect before Scope answered them here.
+      # No such project. A scheduled one reaches the `true` branch above, as
+      # neither question allows it.
       {:error, _reason} ->
         {:halt, redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
     end

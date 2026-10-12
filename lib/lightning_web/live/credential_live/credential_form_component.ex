@@ -1283,6 +1283,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         |> put_flash(:error, "You are not authorized to do that.")
         |> close_or_stay()
 
+      {:error, :scheduled_for_deletion} ->
+        socket
+        |> put_flash(
+          :error,
+          "This credential is scheduled for deletion. Cancel the deletion to edit it."
+        )
+        |> close_or_stay()
+
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
     end

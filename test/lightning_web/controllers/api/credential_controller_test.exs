@@ -140,6 +140,39 @@ defmodule LightningWeb.API.CredentialControllerTest do
       refute Map.has_key?(first_credential, "production")
     end
 
+    test "names a linked project only to a caller who may access it", %{
+      conn: conn,
+      user: user
+    } do
+      # A member who has not enrolled in MFA may not access this project, so it
+      # is not named, the same answer GET /api/credentials/:id gives.
+      mfa_project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      open_project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      insert(:credential,
+        user: user,
+        schema: "raw",
+        project_credentials: [
+          %{project_id: mfa_project.id},
+          %{project_id: open_project.id}
+        ]
+      )
+
+      assert %{"credentials" => [credential]} =
+               conn |> get(~p"/api/credentials") |> json_response(200)
+
+      assert Enum.map(credential["projects"], & &1["id"]) == [open_project.id]
+
+      assert Enum.map(credential["project_credentials"], & &1["project_id"]) ==
+               [open_project.id]
+    end
+
     test "returns empty list when user has no credentials", %{
       conn: conn,
       user: _user
@@ -330,6 +363,27 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "tells a member, and only a member, that the project is scheduled for deletion",
+         %{conn: conn, user: user} do
+      scheduled_deletion = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      member_of =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :editor}],
+          scheduled_deletion: scheduled_deletion
+        )
+
+      stranger_to = insert(:project, scheduled_deletion: scheduled_deletion)
+
+      assert conn
+             |> get(~p"/api/projects/#{member_of.id}/credentials")
+             |> json_response(409) == %{"error" => "scheduled_for_deletion"}
+
+      assert conn
+             |> get(~p"/api/projects/#{stranger_to.id}/credentials")
+             |> json_response(403) == %{"error" => "Forbidden"}
     end
 
     test "returns 404 when project does not exist", %{conn: conn, user: _user} do

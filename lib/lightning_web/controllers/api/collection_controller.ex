@@ -12,47 +12,34 @@ defmodule LightningWeb.API.CollectionController do
 
   import Ecto.Changeset
 
-  alias Lightning.Accounts.User
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Policies.Permissions
-  alias Lightning.Projects
   alias Lightning.Projects.Project
-  alias Lightning.Projects.Scope
   alias Lightning.Repo
-  alias Lightning.ServiceAccount
+  alias Lightning.Scope
   alias LightningWeb.API.PutRequest
+  alias LightningWeb.Plugs.AuthorizeAction
 
   action_fallback LightningWeb.FallbackController
 
-  # `PersonOrServiceAccountAuth` also admits a repo connection's token, which
-  # `:manage_collection` has no answer for.
-  plug :require_person_or_service_account
-
-  defp require_person_or_service_account(conn, _opts) do
-    case conn.assigns.current_resource do
-      %User{} ->
-        conn
-
-      %ServiceAccount{} ->
-        conn
-
-      _other ->
-        conn
-        |> put_status(:forbidden)
-        |> put_view(LightningWeb.ErrorView)
-        |> render(:"403")
-        |> halt()
-    end
-  end
+  plug AuthorizeAction,
+       {:collections, :manage_collection}
+       when action in [:show, :update]
 
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show(conn, %{"project_id" => project_id, "id" => id}) do
-    with {:ok, project} <- fetch_project(project_id),
-         :ok <- authorize(conn.assigns.current_resource, project),
+    with {:ok, scope} <- Scope.fetch(conn.assigns.scope, project_id),
+         :ok <-
+           Permissions.permit(
+             :collections,
+             :manage_collection,
+             scope,
+             scope.project
+           ),
          {:ok, id} <- PutRequest.cast_uuid(id),
          %Collection{} = collection <- Repo.get(Collection, id),
-         true <- collection.project_id == project.id do
+         true <- collection.project_id == scope.project.id do
       render_collection(conn, collection)
     else
       {:error, _reason} = error -> error
@@ -68,14 +55,20 @@ defmodule LightningWeb.API.CollectionController do
   def update(conn, %{"project_id" => project_id, "id" => id}) do
     actor = conn.assigns.current_resource
 
-    with {:ok, project} <- fetch_project(project_id),
-         :ok <- authorize(actor, project) do
+    with {:ok, scope} <- Scope.fetch(conn.assigns.scope, project_id),
+         :ok <-
+           Permissions.permit(
+             :collections,
+             :manage_collection,
+             scope,
+             scope.project
+           ) do
       case parse_body(conn.body_params, id) do
         {:ok, attrs} ->
           put_collection(
             conn,
             Repo.get(Collection, attrs.id),
-            project,
+            scope.project,
             attrs,
             actor
           )
@@ -94,39 +87,6 @@ defmodule LightningWeb.API.CollectionController do
       |> validate_required(:name)
       |> PutRequest.attrs()
     end
-  end
-
-  defp fetch_project(project_id) do
-    with {:ok, project_id} <- PutRequest.cast_uuid(project_id),
-         %Project{} = project <- Projects.get_project(project_id) do
-      {:ok, project}
-    else
-      _missing -> {:error, :not_found}
-    end
-  end
-
-  # A service account holds `:manage_collection` on every project, so telling
-  # it the project is scheduled for deletion leaks nothing; a person gets the
-  # policy's answer, which refuses such a project.
-  defp authorize(%ServiceAccount{} = account, project) do
-    case Scope.fetch(account, project) do
-      {:ok, _scope} ->
-        can_manage(account, project)
-
-      {:error, :project_scheduled_for_deletion} ->
-        {:error, :scheduled_for_deletion}
-
-      {:error, _reason} ->
-        {:error, :forbidden}
-    end
-  end
-
-  defp authorize(actor, project), do: can_manage(actor, project)
-
-  defp can_manage(actor, project) do
-    if Permissions.can?(:collections, :manage_collection, actor, project),
-      do: :ok,
-      else: {:error, :forbidden}
   end
 
   defp put_collection(conn, nil, project, attrs, actor) do

@@ -29,7 +29,7 @@ defmodule Lightning.Policies.Sandboxes do
   alias Lightning.Accounts.User
   alias Lightning.Projects
   alias Lightning.Projects.Project
-  alias Lightning.Projects.Scope
+  alias Lightning.Scope
 
   @type actions ::
           :delete_sandbox
@@ -100,8 +100,8 @@ defmodule Lightning.Policies.Sandboxes do
   end
 
   # The root cascade is a role rule, not a bypass: a root owner/admin counts as
-  # admin *on this sandbox*, so the sandbox still has to be operable. Resolving
-  # it first keeps the cascade unreachable for a sandbox scheduled for deletion.
+  # admin *on this sandbox*, so the sandbox still has to be operable. Refusing a
+  # scheduled sandbox first keeps the cascade unreachable for it.
   #
   # Only this branch reads `role` off the Scope directly, so only it needs the
   # MFA fact spelled out; has_root_project_permission?/2 gets the same guard for
@@ -109,17 +109,18 @@ defmodule Lightning.Policies.Sandboxes do
   def authorize(action, %User{} = user, %Project{} = sandbox)
       when action in [:delete_sandbox, :update_sandbox] do
     case Scope.fetch(user, sandbox) do
-      {:ok, %Scope{role: role, mfa_satisfied?: mfa}} ->
+      {:ok,
+       %Scope{role: role, mfa_satisfied?: mfa, scheduled_for_deletion?: false}} ->
         (role in [:owner, :admin] and mfa) or
           has_root_project_permission?(sandbox, user)
 
-      {:error, _reason} ->
+      _scheduled_or_missing ->
         false
     end
   end
 
   # Deliberately does not go through Scope: the subject is scheduled for
-  # deletion by definition, and Scope refuses those, so the liveness gate would
+  # deletion by definition, and the policies refuse those, so that refusal would
   # make a sandbox scheduled for deletion impossible to restore. Same role rule as
   # :delete_sandbox, read directly.
   def authorize(:cancel_scheduled_deletion, %User{} = user, %Project{} = sandbox) do

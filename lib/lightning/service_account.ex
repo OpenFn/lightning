@@ -6,15 +6,20 @@ defmodule Lightning.ServiceAccount do
   service account. Its `uuid`, for places that need one such as an audit
   event's actor, is a UUIDv5 of the thumbprint's RFC 9278 URI in the RFC 4122
   URL namespace, which any stock `uuid5` implementation reproduces.
+
+  `grants` are the scopes of the access token the request came in with, set by
+  `LightningWeb.Plugs.AccessTokenAuth`. The account registered at boot holds
+  none, so it is refused everything a grant decides.
   """
 
   @enforce_keys [:id, :uuid, :public_key]
-  defstruct @enforce_keys
+  defstruct @enforce_keys ++ [grants: MapSet.new()]
 
   @type t :: %__MODULE__{
           id: String.t(),
           uuid: Ecto.UUID.t(),
-          public_key: JOSE.JWK.t()
+          public_key: JOSE.JWK.t(),
+          grants: MapSet.t(String.t())
         }
 
   @url_namespace <<0x6BA7B8119DAD11D180B400C04FD430C8::128>>

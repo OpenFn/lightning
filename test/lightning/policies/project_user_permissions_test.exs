@@ -12,7 +12,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
 
   alias Lightning.Accounts
   alias Lightning.Policies.{Permissions, ProjectUsers}
-  alias Lightning.Projects.Scope
+  alias Lightning.Scope
 
   @project_user_actions ~w(
     create_workflow
@@ -458,20 +458,27 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   # The expected set is written out rather than read from the module, so a new
-  # action fails here until someone decides whether a service account gets it.
-  describe "a service account" do
+  # action fails here until someone decides whether an operator gets it.
+  describe "an operator" do
     setup do
       {account, _private_key} =
         Lightning.ServiceAccountHelpers.service_account_with_key()
 
-      %{account: account}
+      %{
+        account: %{
+          account
+          | grants: MapSet.new(["projects:write", "credentials:write"])
+        },
+        bare_account: account
+      }
     end
 
-    test "is allowed exactly the project actions, and nothing about its own row",
+    test "is allowed what an owner is, but nothing about its own row",
          %{account: account, project: project} do
       expected =
         ~w(
           access_project
+          list_project_credentials
           delete_project
           add_project_user
           remove_project_user
@@ -495,7 +502,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
 
       assert Enum.sort(ProjectUsers.actions()) ==
                Enum.sort(expected ++ refused),
-             "classify every new action as allowed or refused for a service account"
+             "classify every new action as allowed or refused for an operator"
 
       allowed =
         for action <- ProjectUsers.actions(),
@@ -505,8 +512,65 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       assert Enum.sort(allowed) == Enum.sort(expected)
     end
 
-    # A %ProjectUser{} subject goes to the general clause, not the "is this
-    # row mine" one, and is refused there.
+    test "is refused for want of the grant before anything else",
+         %{bare_account: account, project: project} do
+      projects_only = %{account | grants: MapSet.new(["projects:write"])}
+      credentials_only = %{account | grants: MapSet.new(["credentials:write"])}
+
+      assert ProjectUsers.authorize(:access_project, credentials_only, project) ==
+               {:error, :insufficient_scope}
+
+      assert ProjectUsers.authorize(
+               :list_project_credentials,
+               projects_only,
+               project
+             ) == {:error, :insufficient_scope}
+
+      assert ProjectUsers.authorize(
+               :create_project_credential,
+               projects_only,
+               project
+             ) == {:error, :insufficient_scope}
+
+      assert ProjectUsers.authorize(
+               :create_project_credential,
+               credentials_only,
+               project
+             ) == true
+
+      # The grant is about the caller alone, so it is answered before any
+      # target is loaded.
+      assert ProjectUsers.authorize(
+               :edit_project,
+               Scope.new(credentials_only),
+               :before_target
+             ) == {:error, :insufficient_scope}
+
+      assert ProjectUsers.authorize(
+               :edit_project,
+               Scope.new(projects_only),
+               :before_target
+             ) == true
+    end
+
+    test "is told a project is scheduled only when asking with a scope",
+         %{account: account} do
+      project =
+        insert(:project,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, scope} = Scope.fetch(account, project)
+
+      assert ProjectUsers.authorize(:edit_project, scope, project) ==
+               {:error, :scheduled_for_deletion}
+
+      assert ProjectUsers.authorize(:edit_project, account, project) == false
+      refute ProjectUsers.permitted?(:edit_project, scope)
+    end
+
+    # A %ProjectUser{} subject goes to the "is this row mine" rule, and an
+    # operator has no row.
     test "is refused the self actions given someone's membership row", %{
       account: account,
       project: project
@@ -517,6 +581,42 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         account,
         hd(project.project_users)
       )
+    end
+  end
+
+  describe "a person asking with a scope" do
+    test "is told a project is scheduled only once otherwise allowed" do
+      owner = insert(:user)
+      outsider = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user: owner, role: :owner}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, owner_scope} = Scope.fetch(owner, project)
+      {:ok, outsider_scope} = Scope.fetch(outsider, project)
+
+      assert ProjectUsers.authorize(:edit_project, owner_scope, project) ==
+               {:error, :scheduled_for_deletion}
+
+      assert ProjectUsers.authorize(:edit_project, outsider_scope, project) ==
+               false
+
+      assert ProjectUsers.authorize(:edit_project, owner, project) == false
+    end
+
+    test "is refused when the subject is not the scope's project" do
+      owner = insert(:user)
+      project = insert(:project, project_users: [%{user: owner, role: :owner}])
+      {:ok, scope} = Scope.fetch(owner, project)
+
+      assert ProjectUsers.authorize(:edit_project, scope, project) == true
+      assert ProjectUsers.authorize(:edit_project, scope, project.id) == true
+
+      assert ProjectUsers.authorize(:edit_project, scope, insert(:project)) ==
+               false
     end
   end
 

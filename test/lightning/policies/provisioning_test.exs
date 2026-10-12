@@ -2,7 +2,7 @@ defmodule Lightning.Policies.ProvisioningTest do
   @moduledoc """
   Tests for the provisioning API's authorization policy.
 
-  The clauses that resolve a `Lightning.Projects.Scope` are held to the
+  The clauses that resolve a `Lightning.Scope` are held to the
   project's MFA requirement; the ones that cannot be (a project that does not
   exist yet, and a machine credential) are not.
   """
@@ -144,6 +144,37 @@ defmodule Lightning.Policies.ProvisioningTest do
     end
   end
 
+  describe "a scope for one project" do
+    test "is refused another project's subject" do
+      owner = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      repo_connection = insert(:project_repo_connection, project: project)
+      other = insert(:project)
+
+      {:ok, owner_scope} = Lightning.Scope.fetch(owner, project)
+      {:ok, connection_scope} = Lightning.Scope.fetch(repo_connection, project)
+
+      for action <- [:provision_project, :describe_project],
+          scope <- [
+            owner_scope,
+            connection_scope,
+            Lightning.Scope.new(repo_connection)
+          ] do
+        assert Provisioning.authorize(action, scope, other) ==
+                 {:error, :forbidden}
+      end
+
+      # Control: the same scopes are allowed on their own project.
+      for action <- [:provision_project, :describe_project],
+          scope <- [owner_scope, connection_scope] do
+        assert Provisioning.authorize(action, scope, project) == true
+      end
+    end
+  end
+
   describe ":create_project" do
     test "is allowed for a superuser" do
       superuser = insert(:user, role: :superuser)
@@ -151,11 +182,21 @@ defmodule Lightning.Policies.ProvisioningTest do
       assert Provisioning.authorize(:create_project, superuser, nil)
     end
 
-    test "is allowed for a service account" do
+    test "is allowed for an operator holding projects:write, and only then" do
       {account, _private_key} =
         Lightning.ServiceAccountHelpers.service_account_with_key()
 
-      assert Provisioning.authorize(:create_project, account, nil)
+      assert Provisioning.authorize(
+               :create_project,
+               %{account | grants: MapSet.new(["projects:write"])},
+               nil
+             ) == true
+
+      assert Provisioning.authorize(
+               :create_project,
+               %{account | grants: MapSet.new(["users:write"])},
+               nil
+             ) == {:error, :insufficient_scope}
     end
 
     test "is refused for a user who is not a superuser, whatever roles they hold elsewhere" do
@@ -172,11 +213,12 @@ defmodule Lightning.Policies.ProvisioningTest do
       end
     end
 
+    # A repo connection holds no grant, so the grant refuses it first.
     test "is refused for a repo connection" do
       repo_connection = insert(:project_repo_connection)
 
       assert Provisioning.authorize(:create_project, repo_connection, nil) ==
-               {:error, :forbidden}
+               {:error, :insufficient_scope}
     end
   end
 end

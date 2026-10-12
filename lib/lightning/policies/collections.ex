@@ -18,9 +18,12 @@ defmodule Lightning.Policies.Collections do
       items) requires `:owner` or `:admin`.
     * `:manage_collection` (creating, renaming or deleting the collection
       itself) requires `:owner` or `:admin`. Creation is authorized against the
-      `%Project{}`, since no collection exists yet. A service account holds it
-      on any project; the route that admits one holds it to
-      `collections:write`.
+      `%Project{}`, since no collection exists yet.
+
+  Every action except a run's needs the `collections:write` grant (a person
+  holds every grant), and an operator holds every project role. Asked with a
+  `%Scope{}`, an otherwise-allowed caller on a project scheduled for deletion
+  gets `{:error, :scheduled_for_deletion}`; a raw actor gets `false`.
 
   The `*_collection_item(s)` actions target the key-value entries exposed by the
   Collections API; `:manage_collection` targets the collection record itself.
@@ -30,13 +33,12 @@ defmodule Lightning.Policies.Collections do
   """
   @behaviour Bodyguard.Policy
 
-  alias Lightning.Accounts.User
   alias Lightning.Collections.Collection
+  alias Lightning.Policies.Decision
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
-  alias Lightning.Projects.Scope
   alias Lightning.Run
-  alias Lightning.ServiceAccount
+  alias Lightning.Scope
 
   @type actions ::
           :access_collection
@@ -50,41 +52,31 @@ defmodule Lightning.Policies.Collections do
 
   @spec authorize(
           actions(),
-          User.t() | Run.t() | ServiceAccount.t(),
-          Collection.t() | Project.t()
-        ) :: :ok | {:error, :unauthorized} | boolean()
-  def authorize(:access_collection, %User{} = user, %Collection{} = collection) do
-    Permissions.can(:project_users, :access_project, user, collection)
-  end
-
-  # Reads honour support access, via `:access_project` above. The writes below
-  # do not — `Scope.role_in?/3` reads `role` only, so a support user with no
-  # membership row is refused. Inherited behaviour, not a ruling.
-  def authorize(action, %User{} = user, %Collection{} = collection)
-      when action in [:put_collection_item, :delete_collection_item] do
-    Scope.role_in?(user, collection.project_id, @editor_roles)
-  end
-
-  def authorize(
-        :delete_all_collection_items,
-        %User{} = user,
-        %Collection{} = collection
-      ) do
-    Scope.role_in?(user, collection.project_id, @admin_roles)
-  end
-
-  def authorize(:manage_collection, %User{} = user, %Project{} = project) do
-    Scope.role_in?(user, project.id, @admin_roles)
-  end
-
-  def authorize(:manage_collection, %ServiceAccount{}, %Project{}), do: true
-
-  def authorize(:manage_collection, %User{} = user, %Collection{} = collection) do
-    Scope.role_in?(user, collection.project_id, @admin_roles)
-  end
-
+          Scope.t() | Scope.actor() | Run.t(),
+          Collection.t() | Project.t() | :before_target
+        ) :: boolean() | {:error, :insufficient_scope | :scheduled_for_deletion}
   # Runs may perform any collection action within their own project.
   def authorize(_action, %Run{} = run, %Collection{} = collection) do
     Lightning.Runs.get_project_id_for_run(run) == collection.project_id
   end
+
+  def authorize(action, %Scope{} = scope, subject),
+    do:
+      Decision.project(scope, subject, "collections:write", judge(action, scope))
+
+  def authorize(action, actor, subject),
+    do: Permissions.for_actor(actor, subject, &authorize(action, &1, subject))
+
+  # Reads honour support access, as `:access_project` does. The writes below do
+  # not: `holds_role?/2` reads `role` only, so a support user with no
+  # membership row is refused.
+  defp judge(:access_collection, scope), do: Scope.has_standing?(scope)
+
+  defp judge(action, scope)
+       when action in [:put_collection_item, :delete_collection_item],
+       do: Scope.holds_role?(scope, @editor_roles)
+
+  defp judge(action, scope)
+       when action in [:delete_all_collection_items, :manage_collection],
+       do: Scope.holds_role?(scope, @admin_roles)
 end

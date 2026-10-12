@@ -26,41 +26,27 @@ defmodule LightningWeb.API.CredentialController do
   import Ecto.Changeset
 
   alias Lightning.Accounts
-  alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Repo
-  alias Lightning.ServiceAccount
+  alias Lightning.Scope
   alias LightningWeb.API.PutRequest
+  alias LightningWeb.Plugs.AuthorizeAction
 
   action_fallback LightningWeb.FallbackController
 
-  # `require_authenticated_api_resource` lets repo-connection tokens through,
-  # and a credential belongs to a person. Every action would hand a machine
-  # token to a function that only takes a user or a service account, which
-  # raises rather than refusing. Answer it once here. Only `show` and `update`
-  # sit behind the credentials scope a service account's token is held to.
-  plug :require_person_or_service_account
+  # Before the target this asks only for `credentials:write`, which listing a
+  # project's credentials (`:list_project_credentials`) needs too.
+  plug AuthorizeAction, {:credentials, :list_credentials} when action == :index
 
-  defp require_person_or_service_account(conn, _opts) do
-    case {conn.assigns.current_resource, action_name(conn)} do
-      {%User{}, _action} ->
-        conn
+  plug AuthorizeAction,
+       {:credentials, :edit_credential}
+       when action in [:create, :show, :update]
 
-      {%ServiceAccount{}, action} when action in [:show, :update] ->
-        conn
-
-      _other ->
-        conn
-        |> put_status(:forbidden)
-        |> put_view(LightningWeb.ErrorView)
-        |> render(:"403")
-        |> halt()
-    end
-  end
+  plug AuthorizeAction, {:credentials, :delete_credential} when action == :delete
 
   @doc """
   Lists credentials with optional project filtering.
@@ -95,40 +81,40 @@ defmodule LightningWeb.API.CredentialController do
   def index(conn, %{"project_id" => project_id}) do
     current_user = conn.assigns.current_resource
 
-    with project when not is_nil(project) <- Projects.get_project(project_id),
+    with {:ok, scope} <- Scope.fetch(conn.assigns.scope, project_id),
          :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             current_user,
-             project
+           Permissions.permit(
+             :project_users,
+             :list_project_credentials,
+             scope,
+             scope.project
            ) do
-      # The requested project is already access-checked above, so always show
-      # it (covers membership at any depth and support-user access).
       credentials =
-        project
+        scope.project
         |> Credentials.list_credentials()
-        |> scope_to_visible_projects(current_user, [project.id])
+        |> hide_unseen_links(current_user)
 
       render(conn, "index.json", credentials: credentials)
-    else
-      nil ->
-        {:error, :not_found}
-
-      {:error, :unauthorized} ->
-        {:error, :forbidden}
     end
   end
 
   def index(conn, _params) do
     current_user = conn.assigns.current_resource
 
-    credentials =
-      current_user
-      |> Credentials.list_credentials()
-      |> scope_to_visible_projects(current_user)
+    with :ok <-
+           Permissions.permit(
+             :credentials,
+             :list_credentials,
+             conn.assigns.scope,
+             nil
+           ) do
+      credentials =
+        current_user
+        |> Credentials.list_credentials()
+        |> hide_unseen_links(current_user)
 
-    render(conn, "index.json", credentials: credentials)
+      render(conn, "index.json", credentials: credentials)
+    end
   end
 
   @doc """
@@ -191,12 +177,16 @@ defmodule LightningWeb.API.CredentialController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show(conn, %{"id" => id}) do
-    actor = conn.assigns.current_resource
-
     with {:ok, id} <- PutRequest.cast_uuid(id),
          %Credential{} = credential <- Credentials.get_credential(id),
-         :ok <- authorize_owner(actor, credential) do
-      render_credential(conn, credential, actor)
+         :ok <-
+           Permissions.permit(
+             :credentials,
+             :edit_credential,
+             conn.assigns.scope,
+             credential
+           ) do
+      render_credential(conn, credential, conn.assigns.current_resource)
     else
       :error -> {:error, :not_found}
       nil -> {:error, :not_found}
@@ -216,7 +206,7 @@ defmodule LightningWeb.API.CredentialController do
     actor = conn.assigns.current_resource
 
     with {:ok, attrs} <- parse_body(conn.body_params, id),
-         {:ok, owner} <- resolve_owner(attrs, actor) do
+         {:ok, owner} <- resolve_owner(attrs, conn.assigns.scope) do
       case Credentials.get_credential(attrs.id) do
         nil -> create_under_id(conn, attrs, owner, actor)
         credential -> replace(conn, credential, attrs, owner, actor)
@@ -269,26 +259,35 @@ defmodule LightningWeb.API.CredentialController do
 
   defp project_link?(_link), do: false
 
-  # A person's token makes the caller the owner, and may only name the caller:
-  # naming anyone else is refused before the lookup, so the answer never says
-  # whether an email has an account. A service account must name the owner.
-  defp resolve_owner(%{owner: email}, %User{} = user) do
-    if String.downcase(email) == String.downcase(user.email),
-      do: {:ok, user},
-      else: {:error, :forbidden}
+  # A caller who may name an owner must, and the owner is looked up. Anyone
+  # else is the owner, and may only name themselves: naming anyone else is
+  # refused before the lookup, so the answer never says whether an email has an
+  # account.
+  defp resolve_owner(attrs, scope) do
+    case Permissions.permit(:credentials, :name_credential_owner, scope, nil) do
+      :ok -> look_up_owner(attrs)
+      {:error, :forbidden} -> own_email_only(attrs, scope.actor)
+      error -> error
+    end
   end
 
-  defp resolve_owner(_attrs, %User{} = user), do: {:ok, user}
-
-  defp resolve_owner(%{owner: email}, %ServiceAccount{}) do
+  defp look_up_owner(%{owner: email}) do
     case Accounts.list_users_by_emails([email]) do
       [owner] -> {:ok, owner}
       _none -> {:error, :invalid, %{owner: ["no user has this email"]}}
     end
   end
 
-  defp resolve_owner(_attrs, %ServiceAccount{}),
+  defp look_up_owner(_attrs),
     do: {:error, :invalid, %{owner: ["can't be blank"]}}
+
+  defp own_email_only(%{owner: email}, caller) do
+    if String.downcase(email) == String.downcase(caller.email),
+      do: {:ok, caller},
+      else: {:error, :forbidden}
+  end
+
+  defp own_email_only(_attrs, caller), do: {:ok, caller}
 
   defp create_under_id(conn, attrs, owner, actor) do
     project_ids = requested_project_ids(attrs)
@@ -323,24 +322,13 @@ defmodule LightningWeb.API.CredentialController do
     end
   end
 
-  # A person keeps their answer; only apply, through a service account, is
-  # told the credential is about to be deleted.
-  defp replace(
-         _conn,
-         %Credential{user_id: owner_id, scheduled_deletion: %DateTime{}},
-         _attrs,
-         %User{id: owner_id},
-         %ServiceAccount{}
-       ),
-       do: {:error, :scheduled_for_deletion}
-
   # The links the credential holds go to `update_credential` with their ids, so
   # its `cast_assoc` keeps them rather than replacing them.
   defp replace(
          conn,
          %Credential{user_id: owner_id} = credential,
          attrs,
-         %User{id: owner_id},
+         %{id: owner_id},
          actor
        ) do
     credential = Repo.preload(credential, :project_credentials)
@@ -403,12 +391,6 @@ defmodule LightningWeb.API.CredentialController do
     end
   end
 
-  defp authorize_owner(actor, credential) do
-    if Permissions.can?(:credentials, :edit_credential, actor, credential),
-      do: :ok,
-      else: {:error, :forbidden}
-  end
-
   defp render_write_error(conn, {:error, %Ecto.Changeset{} = changeset}) do
     # The owner already holds this name under another id.
     if PutRequest.unique_error?(changeset, :name),
@@ -419,12 +401,16 @@ defmodule LightningWeb.API.CredentialController do
   defp render_write_error(_conn, {:error, :unauthorized}),
     do: {:error, :forbidden}
 
+  defp render_write_error(_conn, {:error, reason} = error)
+       when reason in [:insufficient_scope, :scheduled_for_deletion],
+       do: error
+
   # What remains is an OAuth token body the context refused.
   defp render_write_error(conn, {:error, _reason}),
     do: PutRequest.render_errors(conn, %{credential_bodies: ["is invalid"]})
 
-  # Every link is listed, since the caller needs each link's id; a person sees
-  # only the projects they belong to by name.
+  # Every link is listed, since the caller needs each link's id; a project is
+  # named only to a caller who may access it.
   defp render_credential(conn, credential, actor) do
     credential =
       credential
@@ -434,16 +420,38 @@ defmodule LightningWeb.API.CredentialController do
     render(conn, "create.json", credential: credential)
   end
 
-  defp hide_unseen_projects(credential, %User{} = user) do
-    visible = user |> Projects.member_project_ids() |> MapSet.new()
-
+  defp hide_unseen_projects(credential, actor) do
     %{
       credential
-      | projects: Enum.filter(credential.projects, &(&1.id in visible))
+      | projects: Enum.filter(credential.projects, &may_name?(&1, actor))
     }
   end
 
-  defp hide_unseen_projects(credential, %ServiceAccount{}), do: credential
+  # A list may show other owners' credentials, so their links are pruned too:
+  # a link is listed only for a project the caller may name.
+  defp hide_unseen_links(credentials, actor) do
+    named =
+      credentials
+      |> Enum.flat_map(& &1.projects)
+      |> Enum.uniq_by(& &1.id)
+      |> Enum.filter(&may_name?(&1, actor))
+      |> MapSet.new(& &1.id)
+
+    Enum.map(credentials, fn credential ->
+      %{
+        credential
+        | projects: Enum.filter(credential.projects, &(&1.id in named)),
+          project_credentials:
+            Enum.filter(
+              credential.project_credentials,
+              &(&1.project_id in named)
+            )
+      }
+    end)
+  end
+
+  defp may_name?(project, actor),
+    do: Permissions.can?(:project_users, :access_project, actor, project)
 
   @doc """
   Deletes a credential owned by the authenticated user.
@@ -474,7 +482,6 @@ defmodule LightningWeb.API.CredentialController do
     with {:ok, id} <- PutRequest.cast_uuid(id),
          credential when not is_nil(credential) <-
            Credentials.get_credential(id),
-         :ok <- validate_credential_ownership(credential, current_user),
          {:ok, _} <- Credentials.delete_credential(credential, current_user) do
       send_resp(conn, :no_content, "")
     else
@@ -484,69 +491,11 @@ defmodule LightningWeb.API.CredentialController do
       nil ->
         {:error, :not_found}
 
-      {:error, :forbidden} ->
+      {:error, :unauthorized} ->
         {:error, :forbidden}
 
       error ->
         error
-    end
-  end
-
-  # A shared credential may be linked to projects in other tenants; rendering
-  # those would leak their id/name/description across the tenant boundary. Prune
-  # each credential's project associations to the caller-visible set here so the
-  # JSON view can render whatever it is handed.
-  #
-  # The visible set is the caller's memberships (any depth), matching the
-  # :access_project check so a caller's own sandbox associations are not
-  # dropped, plus any `extra_project_ids` already access-checked by the caller
-  # (e.g. the requested project on the project-scoped endpoint).
-  defp scope_to_visible_projects(
-         credentials,
-         current_user,
-         extra_project_ids \\ []
-       ) do
-    visible =
-      current_user
-      |> Projects.member_project_ids()
-      |> Enum.concat(extra_project_ids)
-      |> MapSet.new()
-
-    Enum.map(credentials, fn credential ->
-      projects =
-        filter_accessible_projects(
-          credential.projects,
-          visible,
-          fn project -> project.id end
-        )
-
-      project_credentials =
-        filter_accessible_projects(
-          credential.project_credentials,
-          visible,
-          fn project_credential -> project_credential.project_id end
-        )
-
-      %{
-        credential
-        | projects: projects,
-          project_credentials: project_credentials
-      }
-    end)
-  end
-
-  defp filter_accessible_projects(assoc, visible, key_fun) when is_list(assoc) do
-    Enum.filter(assoc, fn record -> MapSet.member?(visible, key_fun.(record)) end)
-  end
-
-  # Leave unloaded associations untouched; the view renders them as [].
-  defp filter_accessible_projects(assoc, _visible, _key_fun), do: assoc
-
-  defp validate_credential_ownership(credential, current_user) do
-    if credential.user_id == current_user.id do
-      :ok
-    else
-      {:error, :forbidden}
     end
   end
 

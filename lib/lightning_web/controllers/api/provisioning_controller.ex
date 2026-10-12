@@ -40,6 +40,8 @@ defmodule LightningWeb.API.ProvisioningController do
   - `201 Created` with project JSON on success
   - `422 Unprocessable Entity` with changeset errors on validation failure
   - `403 Forbidden` if user lacks provisioning permissions
+  - `409 Conflict` to a caller who may provision the project, if it is
+    scheduled for deletion
 
   ## Examples
 
@@ -118,6 +120,8 @@ defmodule LightningWeb.API.ProvisioningController do
   - `200 OK` with project JSON on success
   - `404 Not Found` if project doesn't exist
   - `403 Forbidden` if user lacks describe permissions
+  - `409 Conflict` to a caller who may see the project, if it is scheduled
+    for deletion
 
   ## Examples
 
@@ -175,6 +179,8 @@ defmodule LightningWeb.API.ProvisioningController do
   - `200 OK` with YAML content on success
   - `404 Not Found` if project doesn't exist
   - `403 Forbidden` if user lacks describe permissions
+  - `409 Conflict` to a caller who may see the project, if it is scheduled
+    for deletion
 
   ## Examples
 

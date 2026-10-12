@@ -1,8 +1,8 @@
-defmodule Lightning.Projects.ScopeTest do
+defmodule Lightning.ScopeTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Projects.Project
-  alias Lightning.Projects.Scope
+  alias Lightning.Scope
 
   setup do
     editor = insert(:user)
@@ -32,23 +32,36 @@ defmodule Lightning.Projects.ScopeTest do
     assert scope.actor == editor
   end
 
-  test "a scheduled-deleted project yields no scope, and says why", %{
+  test "a scope from new/1 gains the project's facts, as the actor would", %{
     editor: editor,
-    scheduled_deleted_project: project
+    live_project: project
   } do
-    assert {:error, :project_scheduled_for_deletion} =
+    assert Scope.fetch(Scope.new(editor), project) ==
              Scope.fetch(editor, project)
   end
 
-  test "a hand-built project struct cannot assert its own liveness", %{
+  test "a scheduled-deleted project resolves, and says so", %{
+    editor: editor,
+    live_project: live_project,
+    scheduled_deleted_project: project
+  } do
+    assert {:ok, %Scope{scheduled_for_deletion?: true, role: :editor}} =
+             Scope.fetch(editor, project)
+
+    assert {:ok, %Scope{scheduled_for_deletion?: false}} =
+             Scope.fetch(editor, live_project)
+  end
+
+  test "a hand-built project struct cannot hide that it is scheduled", %{
     editor: editor,
     scheduled_deleted_project: project
   } do
     # scheduled_deletion is nil on this struct because nothing read it. Without
-    # the reload it would pass a liveness check.
+    # the reload the scope would say the project is live.
     fake = %Project{id: project.id}
 
-    assert {:error, :project_scheduled_for_deletion} = Scope.fetch(editor, fake)
+    assert {:ok, %Scope{scheduled_for_deletion?: true}} =
+             Scope.fetch(editor, fake)
   end
 
   describe "subject shapes" do
@@ -113,7 +126,7 @@ defmodule Lightning.Projects.ScopeTest do
       assert scope.support? == false
     end
 
-    test "a support user is refused a scheduled-deleted project outright" do
+    test "a support user sees a scheduled-deleted project as scheduled" do
       support_user = insert(:user, support_user: true)
 
       project =
@@ -122,7 +135,7 @@ defmodule Lightning.Projects.ScopeTest do
           scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
         )
 
-      assert {:error, :project_scheduled_for_deletion} =
+      assert {:ok, %Scope{scheduled_for_deletion?: true, support?: true}} =
                Scope.fetch(support_user, project)
     end
   end
@@ -176,9 +189,125 @@ defmodule Lightning.Projects.ScopeTest do
     end
 
     # Pins the fail-closed default: a scope built without going through
-    # `build/2` should refuse, not silently pass.
-    test "defaults to false on a scope that never went through build/2" do
-      assert %Scope{}.mfa_satisfied? == false
+    # `new/1` should refuse, not silently pass.
+    test "defaults to false on a scope that never went through new/1" do
+      assert %Scope{actor: insert(:user)}.mfa_satisfied? == false
+    end
+  end
+
+  describe "new/1" do
+    test "a person holds every grant and has met no project's MFA rule yet" do
+      user = insert(:user, support_user: true, mfa_enabled: false)
+
+      assert %Scope{
+               actor: ^user,
+               grants: :all,
+               instance_role: nil,
+               support_user?: true,
+               mfa_satisfied?: true,
+               project: nil,
+               role: nil
+             } = Scope.new(user)
+    end
+
+    test "a superuser's instance role is :superuser" do
+      assert Scope.new(insert(:user, role: :superuser)).instance_role ==
+               :superuser
+    end
+
+    test "a service account holds its token's grants and is an operator" do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      account = %{account | grants: MapSet.new(["projects:write"])}
+
+      assert %Scope{
+               actor: ^account,
+               instance_role: :operator,
+               mfa_satisfied?: true
+             } = scope = Scope.new(account)
+
+      assert scope.grants == MapSet.new(["projects:write"])
+    end
+
+    test "a repo connection holds no grant and no instance role" do
+      repo_connection = insert(:project_repo_connection)
+
+      assert %Scope{
+               actor: ^repo_connection,
+               instance_role: nil,
+               mfa_satisfied?: true
+             } = scope = Scope.new(repo_connection)
+
+      assert scope.grants == MapSet.new()
+    end
+
+    test "a hand-built scope holds no grant" do
+      assert %Scope{actor: insert(:user)}.grants == MapSet.new()
+    end
+
+    test "only a person can own a credential" do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      assert Scope.new(insert(:user)).can_own_credentials?
+      refute Scope.new(account).can_own_credentials?
+      refute Scope.new(insert(:project_repo_connection)).can_own_credentials?
+      refute %Scope{actor: insert(:user)}.can_own_credentials?
+    end
+  end
+
+  describe "allows?/2" do
+    test "a person is allowed any grant" do
+      assert Scope.allows?(Scope.new(insert(:user)), "projects:write")
+    end
+
+    test "a token is allowed only the grants it carries" do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      scope = Scope.new(%{account | grants: MapSet.new(["users:read"])})
+
+      assert Scope.allows?(scope, "users:read")
+      refute Scope.allows?(scope, "users:write")
+    end
+
+    test "a repo connection is allowed nothing" do
+      refute Scope.allows?(
+               Scope.new(insert(:project_repo_connection)),
+               "projects:write"
+             )
+    end
+  end
+
+  describe "holds_role?/2 and operator?/1" do
+    test "a member holds their own role and no other", %{
+      editor: editor,
+      live_project: project
+    } do
+      {:ok, scope} = Scope.fetch(editor, project)
+
+      assert Scope.holds_role?(scope, [:editor, :admin])
+      refute Scope.holds_role?(scope, [:owner, :admin])
+      refute Scope.operator?(scope)
+    end
+
+    test "an operator holds every role", %{live_project: project} do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      {:ok, scope} = Scope.fetch(account, project)
+
+      assert Scope.operator?(scope)
+      assert Scope.holds_role?(scope, [:owner])
+    end
+
+    test "a superuser gets no project role from their instance role" do
+      superuser = insert(:user, role: :superuser)
+      {:ok, scope} = Scope.fetch(superuser, insert(:project))
+
+      refute Scope.operator?(scope)
+      refute Scope.holds_role?(scope, [:owner, :admin, :editor, :viewer])
     end
   end
 
@@ -213,6 +342,15 @@ defmodule Lightning.Projects.ScopeTest do
       assert Scope.role_in?(user, project, [:owner, :admin])
     end
 
+    test "is true for an operator on a live project, false on a scheduled one",
+         %{live_project: live_project, scheduled_deleted_project: scheduled} do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      assert Scope.role_in?(account, live_project, [:owner])
+      refute Scope.role_in?(account, scheduled, [:owner])
+    end
+
     test "is false for a scheduled-deleted project", %{
       editor: editor,
       scheduled_deleted_project: project
@@ -245,21 +383,21 @@ defmodule Lightning.Projects.ScopeTest do
       assert scope.mfa_satisfied? == true
     end
 
-    test "is refused a scheduled-deleted project, same as a user", %{
+    test "sees its own scheduled-deleted project as scheduled", %{
       scheduled_deleted_project: project
     } do
       repo_connection = insert(:project_repo_connection, project: project)
 
-      assert {:error, :project_scheduled_for_deletion} =
+      assert {:ok, %Scope{scheduled_for_deletion?: true}} =
                Scope.fetch(repo_connection, project)
     end
 
-    test "cannot assert liveness with a hand-built project either", %{
+    test "cannot hide that with a hand-built project either", %{
       scheduled_deleted_project: project
     } do
       repo_connection = insert(:project_repo_connection, project: project)
 
-      assert {:error, :project_scheduled_for_deletion} =
+      assert {:ok, %Scope{scheduled_for_deletion?: true}} =
                Scope.fetch(repo_connection, %Project{id: project.id})
     end
 
@@ -295,10 +433,10 @@ defmodule Lightning.Projects.ScopeTest do
                Scope.fetch(repo_connection, dataclip)
     end
 
-    # Ownership is checked before liveness so that a connection cannot learn
-    # whether an unrelated project is being wound down. If this assertion ever
-    # reads :project_scheduled_for_deletion, the `with` clauses in fetch/2 have
-    # been reordered and a third party's state is leaking to a stranger.
+    # Ownership is checked before any other fact so that a connection cannot
+    # learn whether an unrelated project is being wound down. If this assertion
+    # ever reads {:ok, _}, fetch/2 no longer refuses first and a third party's
+    # state is leaking to a stranger.
     test "learns nothing about the state of a project that is not its own", %{
       scheduled_deleted_project: project
     } do
@@ -327,6 +465,7 @@ defmodule Lightning.Projects.ScopeTest do
         assert {:ok, scope} = Scope.fetch(account, subject)
         assert scope.project.id == project.id
         assert scope.actor == account
+        assert scope.instance_role == :operator
         assert scope.role == nil
         assert scope.project_user == nil
         assert scope.support? == false
@@ -343,11 +482,11 @@ defmodule Lightning.Projects.ScopeTest do
       assert scope.mfa_satisfied? == true
     end
 
-    test "is refused a scheduled-deleted project, same as a user", %{
+    test "sees a scheduled-deleted project as scheduled, same as a user", %{
       account: account,
       scheduled_deleted_project: project
     } do
-      assert {:error, :project_scheduled_for_deletion} =
+      assert {:ok, %Scope{scheduled_for_deletion?: true}} =
                Scope.fetch(account, %Project{id: project.id})
     end
 

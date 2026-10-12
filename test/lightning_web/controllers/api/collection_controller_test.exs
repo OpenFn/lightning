@@ -309,7 +309,26 @@ defmodule LightningWeb.API.CollectionControllerTest do
       end
     end
 
-    test "is refused with 403 on a project scheduled for deletion", %{
+    test "is refused with 403 for a non-member on a project scheduled for deletion",
+         %{conn: conn} do
+      outsider = insert(:user)
+
+      project =
+        insert(:project,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      conn =
+        conn
+        |> with_pat(outsider)
+        |> put_collection(project.id, Ecto.UUID.generate(), %{
+          "name" => "patients"
+        })
+
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "the owner gets 409 on a project scheduled for deletion", %{
       conn: conn
     } do
       user = insert(:user)
@@ -320,14 +339,35 @@ defmodule LightningWeb.API.CollectionControllerTest do
           scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
         )
 
+      id = Ecto.UUID.generate()
+
       conn =
         conn
         |> with_pat(user)
-        |> put_collection(project.id, Ecto.UUID.generate(), %{
-          "name" => "patients"
-        })
+        |> put_collection(project.id, id, %{"name" => "patients"})
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      refute Repo.get(Collection, id)
+    end
+
+    test "the owner gets 409 reading a collection on a project scheduled for deletion",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user: user, role: :owner}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      collection = insert(:collection, project: project)
+
+      conn =
+        conn
+        |> with_pat(user)
+        |> get(~p"/api/projects/#{project.id}/collections/#{collection.id}")
+
+      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
     end
   end
 
@@ -389,7 +429,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
   end
 
   describe "for a repo connection" do
-    test "PUT and GET are refused with 403", %{conn: conn} do
+    test "PUT and GET are refused with 403 for holding no grant", %{conn: conn} do
       project = insert(:project)
       collection = insert(:collection, project: project)
       repo_connection = insert(:project_repo_connection, project: project)
@@ -410,7 +450,10 @@ defmodule LightningWeb.API.CollectionControllerTest do
               ~p"/api/projects/#{project.id}/collections/#{collection.id}"
             )
           ] do
-        assert json_response(refused, 403) == %{"error" => "Forbidden"}
+        assert json_response(refused, 403) == %{"error" => "insufficient_scope"}
+
+        assert get_resp_header(refused, "www-authenticate") ==
+                 [~s(Bearer error="insufficient_scope")]
       end
     end
   end

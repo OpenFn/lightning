@@ -252,12 +252,15 @@ defmodule Lightning.Credentials do
 
   ## Returns
     * `{:ok, credential}` - Successfully updated credential
+    * `{:error, :scheduled_for_deletion}` - The credential is scheduled for
+      deletion; only cancelling that, or deleting it now, may change it
     * `{:error, error}` - Error with update process
   """
   @spec update_credential(Credential.t(), map(), Lightning.Actor.t()) ::
           {:ok, Credential.t()} | {:error, any()}
   def update_credential(%Credential{} = credential, attrs, actor) do
-    with :ok <- authorize_credential(:edit_credential, actor, credential) do
+    with :ok <- authorize_credential(:edit_credential, actor, credential),
+         :ok <- refuse_scheduled(credential) do
       do_update_credential(credential, attrs, actor)
     end
   end
@@ -890,6 +893,8 @@ defmodule Lightning.Credentials do
 
     - `{:ok, credential}`: Returns an `:ok` tuple with the updated credential struct if the
       update was successful.
+    - `{:error, :scheduled_for_deletion}`: The credential is already scheduled;
+      scheduling it again would move the date.
     - `{:error, changeset}`: Returns an `:error` tuple with the changeset if the update failed.
 
   ## Examples
@@ -902,7 +907,8 @@ defmodule Lightning.Credentials do
 
   """
   def schedule_credential_deletion(%Credential{} = credential, %User{} = actor) do
-    with :ok <- authorize_credential(:delete_credential, actor, credential) do
+    with :ok <- authorize_credential(:delete_credential, actor, credential),
+         :ok <- refuse_scheduled(credential) do
       do_schedule_credential_deletion(credential)
     end
   end
@@ -965,12 +971,21 @@ defmodule Lightning.Credentials do
   # Asking here rather than at each screen means a screen cannot act on someone
   # else's credential by forgetting to check - the signature will not let it
   # call in without saying who is asking.
-  defp authorize_credential(action, actor, %Credential{} = credential) do
-    if Permissions.can?(:credentials, action, actor, credential) do
-      :ok
-    else
-      {:error, :unauthorized}
-    end
+  defp authorize_credential(action, actor, %Credential{} = credential),
+    do: Permissions.can(:credentials, action, actor, credential)
+
+  # A state rule for every caller, so it lives here rather than in the policy,
+  # and runs after it so a caller without rights learns nothing about the
+  # credential. Read from the database: a screen hands in the struct it loaded
+  # when it opened, which may predate the scheduling.
+  defp refuse_scheduled(%Credential{id: id}) do
+    scheduled? =
+      Repo.exists?(
+        from c in Credential,
+          where: c.id == ^id and not is_nil(c.scheduled_deletion)
+      )
+
+    if scheduled?, do: {:error, :scheduled_for_deletion}, else: :ok
   end
 
   defp maybe_revoke_oauth_tokens(%Credential{schema: "oauth"} = credential) do

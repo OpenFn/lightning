@@ -87,6 +87,56 @@ defmodule Lightning.Policies.Permissions do
     |> Bodyguard.permit?(action, user, params)
   end
 
+  @doc """
+  Whether the caller described by `scope` may apply `action` to `subject`.
+
+  The one entry point for new API callers. Unlike `can/4`, a refusal is
+  `{:error, :forbidden}`, so it renders as 403 rather than 401, and a policy's
+  more specific answer (`:insufficient_scope`, `:scheduled_for_deletion`)
+  reaches the caller unchanged.
+  """
+  @spec permit(atom(), atom(), Lightning.Scope.t(), term()) ::
+          :ok
+          | {:error, :forbidden | :insufficient_scope | :scheduled_for_deletion}
+  def permit(policy, action, %Lightning.Scope{} = scope, subject) do
+    case can(policy, action, scope, subject) do
+      {:error, :unauthorized} -> {:error, :forbidden}
+      result -> result
+    end
+  end
+
+  @doc """
+  Whether anything about the caller alone already refuses `action`, before
+  any target is loaded. Today that is the grant. A pass here is not
+  permission: the action still has to ask `permit/4` about its target.
+  """
+  @spec permit(atom(), atom(), Lightning.Scope.t()) ::
+          :ok
+          | {:error, :forbidden | :insufficient_scope | :scheduled_for_deletion}
+  def permit(policy, action, %Lightning.Scope{} = scope),
+    do: permit(policy, action, scope, :before_target)
+
+  @doc """
+  A policy's raw-actor clause: resolves the actor's scope on the subject's
+  project and passes it to `decide`. Bodyguard's contract is boolean, so a
+  missing project is `false`, and so is a scheduled one: only callers asking
+  with a `%Scope{}` through `permit/4` are told about the deletion.
+  """
+  @spec for_actor(
+          Lightning.Scope.actor(),
+          term(),
+          (Lightning.Scope.t() -> term())
+        ) :: term()
+  def for_actor(actor, subject, decide) do
+    case Lightning.Scope.fetch(actor, subject) do
+      {:ok, scope} -> scope |> decide.() |> hide_scheduled()
+      {:error, _reason} -> false
+    end
+  end
+
+  defp hide_scheduled({:error, :scheduled_for_deletion}), do: false
+  defp hide_scheduled(answer), do: answer
+
   defp resolve_policy_module(policy) when is_atom(policy) do
     if Code.ensure_loaded?(policy) do
       policy
