@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const INITIAL_LOADING_STATUSES = [
-  'Thinking about the question...',
+  'Thinking...',
   'Working on it...',
   'Processing your request...',
   'Examining your question...',
