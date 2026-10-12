@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useRef } from 'react';
 
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
+import { useSlashCommand } from '../hooks/useSlashCommand';
+import type { AISkill } from '../types/sessionContext';
 
 import { AIDisclaimerFooter } from './AIDisclaimerFooter';
+import { SkillCommand } from './SkillCommand';
+import { SkillMenu } from './SkillMenu';
 
 interface WorkflowOptionCardProps {
   icon: string;
@@ -24,6 +28,8 @@ interface LandingScreenProps {
   isBuildingFromScratch: boolean;
   onBrowseTemplates: () => void;
   onImportYAML: () => void;
+  /** Skills a leading slash command can invoke */
+  skills?: AISkill[];
 }
 
 export function LandingScreen({
@@ -35,13 +41,16 @@ export function LandingScreen({
   isBuildingFromScratch,
   onBrowseTemplates,
   onImportYAML,
+  skills = [],
 }: LandingScreenProps) {
-  const [prompt, setPrompt] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const slash = useSlashCommand(skills, textareaRef);
+  const prompt = slash.content;
 
   const disabledMessage =
     aiLimitReached && aiLimitMessage ? aiLimitMessage : undefined;
 
-  const isValid = prompt.trim().length > 0 && !aiLimitReached;
+  const isValid = prompt.length > 0 && !aiLimitReached;
 
   const handleSubmit = () => {
     if (!isValid) return;
@@ -90,29 +99,49 @@ export function LandingScreen({
             <Tooltip content={disabledMessage} side="top">
               <div
                 className={cn(
-                  'rounded-lg border border-border-subtle bg-white focus-within:shadow-card transition-shadow',
+                  'relative rounded-lg border border-border-subtle bg-white focus-within:shadow-card transition-shadow',
                   aiLimitReached && 'opacity-60'
                 )}
               >
-                <textarea
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                  autoFocus
-                  id="build-with-ai-input"
-                  data-testid="build-with-ai-input"
-                  aria-describedby="build-with-ai-hint"
-                  disabled={aiLimitReached}
-                  value={prompt}
-                  onChange={e => setPrompt(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
-                      e.preventDefault();
-                      handleSubmit();
+                <SkillMenu {...slash.menuProps} />
+                <div className="flex items-start">
+                  {slash.skill && (
+                    <SkillCommand
+                      skill={slash.skill}
+                      className="shrink-0 pl-3 py-3 text-sm"
+                      withTooltip={false}
+                    />
+                  )}
+                  <textarea
+                    ref={textareaRef}
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
+                    autoFocus
+                    id="build-with-ai-input"
+                    data-testid="build-with-ai-input"
+                    aria-describedby="build-with-ai-hint"
+                    disabled={aiLimitReached}
+                    value={slash.input}
+                    onChange={e => slash.handleChange(e.target.value)}
+                    onKeyDown={e => {
+                      if (slash.handleKeyDown(e)) return;
+                      if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+                        e.preventDefault();
+                        handleSubmit();
+                      }
+                    }}
+                    placeholder={
+                      slash.skill
+                        ? 'Add details (optional)'
+                        : 'e.g. Sync new KoboToolbox submissions into Postgres'
                     }
-                  }}
-                  placeholder="e.g. Sync new KoboToolbox submissions into Postgres"
-                  rows={4}
-                  className="w-full rounded-t-lg border-none px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 resize-none bg-transparent disabled:cursor-not-allowed"
-                />
+                    rows={4}
+                    {...slash.comboboxProps}
+                    className={cn(
+                      'w-full min-w-0 flex-1 rounded-t-lg border-none px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 resize-none bg-transparent disabled:cursor-not-allowed',
+                      slash.skill && 'pl-1'
+                    )}
+                  />
+                </div>
                 <span id="build-with-ai-hint" className="sr-only">
                   Press Enter to submit. Use Shift+Enter or Alt+Enter for a new
                   line.

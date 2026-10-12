@@ -1133,10 +1133,25 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert_skill(user, project, "/qa", %{"name" => "qa"})
     end
 
-    test "names the design skill", %{user: user, project: project} do
-      assert_skill(user, project, "/design a patient intake flow", %{
-        "name" => "design"
-      })
+    test "names the design skill on a new workflow", %{
+      user: user,
+      project: project
+    } do
+      assert_skill(
+        user,
+        project,
+        "/design a patient intake flow",
+        %{"name" => "design"},
+        new_workflow: true
+      )
+    end
+
+    test "sends no skill that does not fit the workflow", %{
+      user: user,
+      project: project
+    } do
+      assert_skill(user, project, "/design a patient intake flow", nil)
+      assert_skill(user, project, "/qa", nil, new_workflow: true)
     end
 
     test "sends no skill for an unknown command", %{
@@ -1153,8 +1168,18 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert_skill(user, project, "run /qa on this", nil)
     end
 
-    defp assert_skill(user, project, content, expected) do
+    defp assert_skill(user, project, content, expected, opts \\ []) do
       message = global_message(user, project, %{}, content)
+
+      if opts[:new_workflow] do
+        session = Repo.get!(AiAssistant.ChatSession, message.chat_session_id)
+
+        session
+        |> Ecto.Changeset.change(
+          meta: Map.put(session.meta, "unsaved_workflow", %{"is_new" => true})
+        )
+        |> Repo.update!()
+      end
 
       Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
         decoded = Jason.decode!(env.body)

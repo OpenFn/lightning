@@ -72,7 +72,13 @@ describe('MessageList', () => {
     });
 
     it('highlights a leading known skill command', () => {
-      const skills = [{ name: 'qa', description: 'Review this workflow' }];
+      const skills = [
+        {
+          name: 'qa',
+          description: 'Review this workflow',
+          workflow: 'existing' as const,
+        },
+      ];
       render(
         <MessageList
           skills={skills}

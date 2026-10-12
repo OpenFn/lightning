@@ -6,18 +6,27 @@ import type { AISkill } from '../types/sessionContext';
 export function SkillCommand({
   skill,
   className,
+  withTooltip = true,
 }: {
   skill: AISkill;
   className?: string;
+  /** Off in an input, where the menu has just shown the description */
+  withTooltip?: boolean;
 }) {
-  return (
+  const command = (
+    <span
+      data-testid="skill-command"
+      className={cn('text-primary-600', className)}
+    >
+      /{skill.name}
+    </span>
+  );
+
+  return withTooltip ? (
     <Tooltip content={skill.description} side="top">
-      <span
-        data-testid="skill-command"
-        className={cn('text-primary-600', className)}
-      >
-        /{skill.name}
-      </span>
+      {command}
     </Tooltip>
+  ) : (
+    command
   );
 }

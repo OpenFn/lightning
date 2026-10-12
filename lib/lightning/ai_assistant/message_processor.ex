@@ -169,7 +169,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       page: page,
       attachments: build_attachments(session),
       # The command stays in the content: Apollo strips it itself.
-      skill: AiAssistant.Skills.detect(message.content)
+      skill:
+        AiAssistant.Skills.detect(
+          message.content,
+          Map.has_key?(session.meta || %{}, "unsaved_workflow")
+        )
     )
   end
 

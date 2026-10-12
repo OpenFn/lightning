@@ -5,8 +5,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ChatInput } from '../../../js/collaborative-editor/components/ChatInput';
 
 const skills = [
-  { name: 'diagnose', description: 'Find out why a run failed' },
-  { name: 'qa', description: 'Review this workflow' },
+  {
+    name: 'diagnose',
+    description: 'Find out why a run failed',
+    workflow: 'existing' as const,
+  },
+  {
+    name: 'qa',
+    description: 'Review this workflow',
+    workflow: 'existing' as const,
+  },
 ];
 
 describe('ChatInput slash commands', () => {

@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
+import { useSlashCommand } from '../hooks/useSlashCommand';
 import type { AISkill } from '../types/sessionContext';
-import { parseSlashCommand } from '../utils/slashCommand';
 
 import { AIDisclaimerFooter } from './AIDisclaimerFooter';
 import { SkillCommand } from './SkillCommand';
+import { SkillMenu } from './SkillMenu';
 
 interface ChatInputProps {
   onSendMessage?:
@@ -79,27 +80,13 @@ export function ChatInput({
   selectedRunId,
   skills = [],
 }: ChatInputProps) {
-  const [input, setInput] = useState('');
-  const [skill, setSkill] = useState<AISkill | null>(null);
-  const [highlighted, setHighlighted] = useState(0);
-  const [dismissedMenuFor, setDismissedMenuFor] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const slash = useSlashCommand(skills, textareaRef);
+  const { input, skill, content } = slash;
 
-  const content = skill
-    ? `/${skill.name} ${input.trim()}`.trim()
-    : input.trim();
   const tooLong = content.length > MAX_MESSAGE_LENGTH;
   const showCount = content.length >= COUNT_FROM;
   const canSend = !!content && !isLoading && !isDisabled && !tooLong;
-
-  // A command is only one while it is the first token, so the menu closes
-  // at the first whitespace.
-  const menuMatches =
-    !skill && /^\/\S*$/.test(input) && dismissedMenuFor !== input
-      ? skills.filter(s => s.name.startsWith(input.slice(1)))
-      : [];
-  const activeIndex = Math.min(highlighted, menuMatches.length - 1);
-  const activeSkill: AISkill | undefined = menuMatches[activeIndex];
-  const menuOpen = activeSkill !== undefined;
 
   const [attachLogs, setAttachLogs] = useState(() => {
     if (!storageKey) {
@@ -127,7 +114,6 @@ export function ChatInput({
     }
   });
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isLoadingFromStorageRef = useRef(false);
 
   const attachmentState: Record<AttachmentKey, boolean> = {
@@ -226,25 +212,6 @@ export function ChatInput({
     prevIsLoadingRef.current = isLoading;
   }, [isLoading, enableAutoFocus]);
 
-  const chooseSkill = (chosen: AISkill, rest = '') => {
-    setSkill(chosen);
-    setInput(rest);
-    setHighlighted(0);
-    textareaRef.current?.focus();
-  };
-
-  const handleChange = (value: string) => {
-    // Typing the space after a known name, or pasting a whole command, turns
-    // it into a pill; a bare `/qa` stays text until then, like `/qafoo`.
-    const parsed = skill ? null : parseSlashCommand(value, skills);
-    if (parsed && /^\/\S+\s/.test(value)) {
-      chooseSkill(parsed.skill, parsed.rest);
-      return;
-    }
-    setInput(value);
-    setHighlighted(0);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSend) return;
@@ -259,43 +226,11 @@ export function ChatInput({
     }
 
     onSendMessage?.(content, options);
-    setInput('');
-    setSkill(null);
+    slash.reset();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (activeSkill) {
-      const move = { ArrowDown: 1, ArrowUp: -1 }[e.key];
-      if (move) {
-        e.preventDefault();
-        setHighlighted(
-          (activeIndex + move + menuMatches.length) % menuMatches.length
-        );
-        return;
-      }
-      if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
-        e.preventDefault();
-        chooseSkill(activeSkill);
-        return;
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setDismissedMenuFor(input);
-        return;
-      }
-    }
-
-    const { selectionStart, selectionEnd } = e.currentTarget;
-    if (
-      skill &&
-      e.key === 'Backspace' &&
-      selectionStart === 0 &&
-      selectionEnd === 0
-    ) {
-      e.preventDefault();
-      setSkill(null);
-      return;
-    }
+    if (slash.handleKeyDown(e)) return;
 
     if (
       e.key === 'Enter' &&
@@ -318,44 +253,7 @@ export function ChatInput({
             side="top"
           >
             <div className="relative">
-              {menuOpen && (
-                <div
-                  id="skill-menu"
-                  role="listbox"
-                  aria-label="Skills"
-                  data-testid="skill-menu"
-                  className={cn(
-                    'absolute bottom-full left-0 right-0 mb-2 z-10 py-1',
-                    'rounded-lg border border-gray-200 bg-white shadow-lg'
-                  )}
-                >
-                  {menuMatches.map((s, i) => (
-                    <div
-                      key={s.name}
-                      id={`skill-option-${s.name}`}
-                      role="option"
-                      aria-selected={i === activeIndex}
-                      tabIndex={-1}
-                      onMouseDown={e => {
-                        e.preventDefault();
-                        chooseSkill(s);
-                      }}
-                      onMouseEnter={() => setHighlighted(i)}
-                      className={cn(
-                        'flex items-baseline gap-2 px-3 py-2 cursor-pointer',
-                        i === activeIndex && 'bg-gray-100'
-                      )}
-                    >
-                      <span className="text-sm font-medium text-gray-900">
-                        /{s.name}
-                      </span>
-                      <span className="text-xs text-gray-500 truncate">
-                        {s.description}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <SkillMenu {...slash.menuProps} />
               <div
                 className={cn(
                   'rounded-xl border-2 transition-all duration-200',
@@ -404,23 +302,19 @@ export function ChatInput({
                     <SkillCommand
                       skill={skill}
                       className="shrink-0 pl-4 py-3 text-[15px]"
+                      withTooltip={false}
                     />
                   )}
                   <textarea
                     ref={textareaRef}
                     data-testid="chat-input"
                     value={input}
-                    onChange={e => handleChange(e.target.value)}
+                    onChange={e => slash.handleChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={skill ? 'Add details (optional)' : placeholder}
                     disabled={isLoading || isDisabled}
                     rows={1}
-                    role="combobox"
-                    aria-expanded={menuOpen}
-                    aria-controls={menuOpen ? 'skill-menu' : undefined}
-                    aria-activedescendant={
-                      activeSkill && `skill-option-${activeSkill.name}`
-                    }
+                    {...slash.comboboxProps}
                     className={cn(
                       'block w-full min-w-0 flex-1 px-4 py-3 bg-transparent resize-none',
                       skill && 'pl-1',
