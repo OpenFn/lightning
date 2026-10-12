@@ -71,7 +71,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
     test "shows the title and the docs banner", %{conn: conn} do
       view = open_new_connection_form(conn)
 
-      assert has_element?(view, "h6", "Configure Two-Way Sync to GitHub")
+      assert has_element?(view, "h6", "Configure two-way sync to GitHub")
 
       assert has_element?(
                view,

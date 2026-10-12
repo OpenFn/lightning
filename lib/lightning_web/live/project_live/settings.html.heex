@@ -743,7 +743,7 @@
       <:panel hash="vcs" class="space-y-4">
         <.section_header
           title="Sync"
-          subtitle="Sync your project to version control or other environments from here."
+          subtitle="Sync your project with GitHub, export it, or work on it with the CLI."
           permissions_message={"version control configuration#{@can_initiate_github_sync && " but you can initiate a sync." || "."}"}
           can_perform_action={@can_install_github}
         />
@@ -809,7 +809,7 @@
                 </h6>
                 <GithubComponents.sync_docs_banner class="" />
                 <small class="block text-xs text-gray-600">
-                  Connect your OpenFn account to GitHub. Click the button below to get started.
+                  You need to do this before you can set up sync.
                 </small>
                 <div>
                   <GithubComponents.connect_to_github_link
@@ -834,7 +834,7 @@
         <% end %>
         <div class="bg-white p-4 rounded-md space-y-4">
           <div>
-            <h6 class="font-medium text-black">Export your Project</h6>
+            <h6 class="font-medium text-black">Export your project</h6>
             <p class="block my-1 text-xs text-gray-600">
               Save your project as a YAML file to be edited locally, backed up, or deployed elsewhere.
             </p>
@@ -851,7 +851,12 @@
           <div>
             <h6 class="font-medium text-black">Sync with CLI</h6>
             <p class="block my-1 text-xs text-gray-600">
-              Use the CLI to push and pull this project locally
+              Use the OpenFn CLI to work on this project on your computer. Learn more in the <.link
+                target="_blank"
+                href="https://docs.openfn.org/documentation/sync"
+                class="font-medium text-indigo-600 hover:text-indigo-900"
+              >
+                CLI sync docs</.link>.
             </p>
           </div>
           <div class="space-y-3 text-sm">
@@ -887,16 +892,6 @@
               </div>
             </div>
           </div>
-          <p class="text-sm text-gray-600">
-            Learn more in the
-            <.link
-              target="_blank"
-              href="https://docs.openfn.org/documentation/sync"
-              class="font-medium text-indigo-600 hover:text-indigo-900"
-            >
-              CLI Sync Docs
-            </.link>
-          </p>
         </div>
       </:panel>
       <:panel hash="data-storage" class="space-y-4">

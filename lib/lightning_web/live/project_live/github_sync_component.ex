@@ -761,7 +761,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         Initial Setup Action
       </.label>
       <p class="text-sm text-gray-500">
-        Choose how to handle setup: you can export this project to GitHub, or import an existing project on GitHub here.
+        Export this project to GitHub, or replace it with a project that's already on GitHub.
       </p>
       <fieldset class="mt-4">
         <legend class="sr-only">Direction of <em>Initial</em> Sync</legend>
