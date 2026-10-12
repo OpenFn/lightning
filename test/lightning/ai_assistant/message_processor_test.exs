@@ -1133,24 +1133,23 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert_skill(user, project, "/qa", %{"name" => "qa"})
     end
 
-    test "names the design skill on a new workflow", %{
+    test "names the design skill on new and existing workflows", %{
       user: user,
       project: project
     } do
-      assert_skill(
-        user,
-        project,
-        "/design a patient intake flow",
-        %{"name" => "design"},
+      design = "/design a patient intake flow"
+
+      assert_skill(user, project, design, %{"name" => "design"})
+
+      assert_skill(user, project, design, %{"name" => "design"},
         new_workflow: true
       )
     end
 
-    test "sends no skill that does not fit the workflow", %{
+    test "sends no skill for existing workflows on a new one", %{
       user: user,
       project: project
     } do
-      assert_skill(user, project, "/design a patient intake flow", nil)
       assert_skill(user, project, "/qa", nil, new_workflow: true)
     end
 

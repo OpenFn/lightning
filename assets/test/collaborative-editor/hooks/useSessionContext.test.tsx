@@ -357,13 +357,13 @@ describe('Hook Integration', () => {
 
 describe('useAISkills()', () => {
   const skills = [
-    { name: 'design', description: 'Plan a workflow', workflow: 'new' },
+    { name: 'design', description: 'Plan a workflow', workflow: 'any' },
     { name: 'qa', description: 'Review this workflow', workflow: 'existing' },
   ];
 
   test.each([
     [true, ['design']],
-    [false, ['qa']],
+    [false, ['design', 'qa']],
   ])('on a new workflow (%s) offers %j', async (isNewWorkflow, expected) => {
     const store = createSessionContextStore(isNewWorkflow);
     const { mockChannel } = setupHookTest(store);

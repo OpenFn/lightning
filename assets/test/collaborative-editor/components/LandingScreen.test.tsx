@@ -256,7 +256,7 @@ describe('LandingScreen - Slash commands', () => {
     renderLandingScreen({
       onBuildWithAI,
       skills: [
-        { name: 'design', description: 'Plan a workflow', workflow: 'new' },
+        { name: 'design', description: 'Plan a workflow', workflow: 'any' },
       ],
     });
 

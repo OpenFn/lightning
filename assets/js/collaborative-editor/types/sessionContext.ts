@@ -114,8 +114,8 @@ export type Limits = z.infer<typeof LimitsSchema>;
 export const AISkillSchema = z.object({
   name: z.string(),
   description: z.string(),
-  /** Whether the skill is for a new, unsaved workflow or an existing one */
-  workflow: z.enum(['new', 'existing']),
+  /** Whether the skill fits any workflow, or only a saved one */
+  workflow: z.enum(['any', 'existing']),
 });
 
 export type AISkill = z.infer<typeof AISkillSchema>;

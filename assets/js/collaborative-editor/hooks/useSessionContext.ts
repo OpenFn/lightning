@@ -167,7 +167,7 @@ export const usePermissions = (): Permissions | null => {
   return useSyncExternalStore(sessionContextStore.subscribe, selectPermissions);
 };
 
-/** The skills that fit the current workflow, new or existing. */
+/** The skills that fit the current workflow: on a new one, not those for existing workflows. */
 export const useAISkills = (): AISkill[] => {
   const sessionContextStore = useSessionContextStore();
 
@@ -179,11 +179,12 @@ export const useAISkills = (): AISkill[] => {
     sessionContextStore.subscribe,
     selectSkills
   );
-  const workflow = useIsNewWorkflow() ? 'new' : 'existing';
+  const isNewWorkflow = useIsNewWorkflow();
 
   return useMemo(
-    () => skills.filter(s => s.workflow === workflow),
-    [skills, workflow]
+    () =>
+      isNewWorkflow ? skills.filter(s => s.workflow !== 'existing') : skills,
+    [skills, isNewWorkflow]
   );
 };
 
