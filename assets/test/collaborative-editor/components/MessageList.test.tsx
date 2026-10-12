@@ -1675,6 +1675,34 @@ describe('MessageList', () => {
       expect(screen.getByTestId('diff-line-added')).toBeInTheDocument();
     });
 
+    it('folds a step added with only a placeholder comment, and offers no copy', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Add a step',
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Added it.',
+          code: workflowYaml('// Add operations here'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      const block = screen.getAllByTestId('diff-block')[0]!;
+      expect(within(block).getByTestId('diff-block-header')).toHaveTextContent(
+        /Added step .*Transform data/
+      );
+      expect(within(block).queryByTestId('diff-hunks')).not.toBeInTheDocument();
+      expect(
+        within(block).queryByTestId('diff-block-copy')
+      ).not.toBeInTheDocument();
+    });
+
     it('renders nothing when the workflow is unchanged', () => {
       const yaml = workflowYaml('fn(state => state);');
       const messages = [

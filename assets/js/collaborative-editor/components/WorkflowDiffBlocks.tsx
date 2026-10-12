@@ -342,6 +342,17 @@ export const StepDiffBlock = ({
   // that just went away.
   const copyBody = step.type === 'remove' ? step.oldBody : step.newBody;
 
+  // A step added with only a placeholder comment, or nothing, has no code
+  // worth reading or copying, so it starts folded.
+  const isPlaceholder = useMemo(
+    () =>
+      step.type === 'add' &&
+      tokenizeJs(step.newBody)
+        .flat()
+        .every(token => token.kind === 'comment' || !token.text.trim()),
+    [step.type, step.newBody]
+  );
+
   return (
     <DiffBlockShell
       title={
@@ -383,16 +394,19 @@ export const StepDiffBlock = ({
             >
               <AdaptorIcon name={step.adaptor} size="sm" />
             </span>
-            <span className="font-mono font-normal truncate">{step.name}</span>
+            {/* Fira Code's metrics sit its glyphs high in a centred line box */}
+            <span className="font-mono font-normal truncate translate-y-px">
+              {step.name}
+            </span>
           </button>
         </>
       }
       summary={<StepCounts step={step} />}
-      defaultExpanded
+      defaultExpanded={!isPlaceholder}
       testId="diff-block"
       action={
         <>
-          <CopyStepButton body={copyBody} />
+          {!isPlaceholder && <CopyStepButton body={copyBody} />}
           {canOpen && (
             <button
               type="button"
