@@ -29,6 +29,10 @@ and this project adheres to
 - GitHub sync now prevents two projects in the same project tree (root,
   sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
   pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+- History retention no longer leaves steps behind when it deletes work orders in
+  batches, and no longer deletes steps that a kept work order still uses. A
+  migration deletes the steps it left behind, which were stopping deleted
+  workflows from being purged. A workflow purge that still fails now says why.
 
 ## [2.19.1-pre] - 2026-10-09
 

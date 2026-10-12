@@ -1915,48 +1915,7 @@ defmodule Lightning.Projects do
         project_workorders_query
       end
 
-    workorders_delete_query =
-      WorkOrder
-      |> with_cte("workorders_to_delete",
-        as: ^limit(workorders_query, ^batch_size)
-      )
-      |> join(:inner, [wo], wtd in "workorders_to_delete", on: wo.id == wtd.id)
-
-    steps_delete_query =
-      Step
-      |> join(:inner, [s], assoc(s, :runs), as: :runs)
-      |> with_cte("workorders_to_delete",
-        as: ^limit(workorders_query, ^batch_size)
-      )
-      |> join(:inner, [runs: r], wtd in "workorders_to_delete",
-        on: r.work_order_id == wtd.id
-      )
-
-    workorders_count =
-      Repo.aggregate(workorders_query, :count,
-        timeout: Config.default_ecto_database_timeout() * 3
-      )
-
-    Stream.iterate(0, &(&1 + 1))
-    |> Stream.take(ceil(workorders_count / batch_size))
-    |> Enum.each(fn _i ->
-      Repo.transaction(
-        fn ->
-          {_count, _} =
-            Repo.delete_all(steps_delete_query,
-              returning: false,
-              timeout: Config.default_ecto_database_timeout() * 3
-            )
-
-          {_count, _} =
-            Repo.delete_all(workorders_delete_query,
-              returning: false,
-              timeout: Config.default_ecto_database_timeout() * 3
-            )
-        end,
-        timeout: Config.default_ecto_database_timeout() * 6
-      )
-    end)
+    delete_workorders_in_batches(workorders_query, batch_size)
 
     # If it's on a retention cleanup, it also deletes unused snapshots after the workorders deletion.
     # Otherwise, it's a cleanup for the whole project when the snapshots are automatically deleted
@@ -1969,6 +1928,58 @@ defmodule Lightning.Projects do
     end
 
     :ok
+  end
+
+  defp delete_workorders_in_batches(workorders_query, batch_size) do
+    timeout = Config.default_ecto_database_timeout() * 3
+
+    {:ok, deleted} =
+      Repo.transaction(
+        fn ->
+          ids =
+            workorders_query
+            |> select([wo], wo.id)
+            |> limit(^batch_size)
+            |> Repo.all(timeout: timeout)
+
+          {_count, _} =
+            Repo.delete_all(steps_only_in_workorders(ids),
+              returning: false,
+              timeout: timeout
+            )
+
+          {count, _} =
+            Repo.delete_all(from(wo in WorkOrder, where: wo.id in ^ids),
+              returning: false,
+              timeout: timeout
+            )
+
+          count
+        end,
+        timeout: timeout * 2
+      )
+
+    if deleted > 0,
+      do: delete_workorders_in_batches(workorders_query, batch_size)
+  end
+
+  # A step retried from a later work order is linked to runs in both, so it
+  # is only deleted once no work order outside `ids` still uses it.
+  defp steps_only_in_workorders(ids) do
+    from(s in Step,
+      as: :step,
+      join: r in assoc(s, :runs),
+      where: r.work_order_id in ^ids,
+      where:
+        not exists(
+          from(rs in RunStep,
+            join: r2 in assoc(rs, :run),
+            where: rs.step_id == parent_as(:step).id,
+            where: r2.work_order_id not in ^ids,
+            select: 1
+          )
+        )
+    )
   end
 
   defp delete_unused_snapshots(workorders_query) do

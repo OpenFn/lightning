@@ -20,6 +20,7 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
   alias Lightning.Run
+  alias Lightning.RunStep
   alias Lightning.Workflows.Snapshot
   alias Lightning.WorkOrder
 
@@ -2600,6 +2601,47 @@ defmodule Lightning.ProjectsTest do
       refute is_nil(dataclip.wiped_at)
     end
 
+    test "deletes the steps of every expired work order across several batches" do
+      stub(Lightning.MockConfig, :activity_cleanup_chunk_size, fn -> 2 end)
+
+      project = insert(:project, history_retention_period: 7)
+      workflow = insert(:simple_workflow, project: project)
+
+      expired = for _ <- 1..7, do: insert_workorder_with_step(workflow, -8)
+      kept = insert_workorder_with_step(workflow, -1)
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      assert Repo.aggregate(steps_without_runs_query(), :count) == 0
+
+      for work_order <- expired do
+        refute Repo.get(WorkOrder, work_order.id)
+        refute Repo.get(Step, step_of(work_order).id)
+      end
+
+      assert Repo.get(WorkOrder, kept.id)
+      assert Repo.get(Step, step_of(kept).id)
+    end
+
+    test "keeps a step shared with a work order that has not expired" do
+      project = insert(:project, history_retention_period: 7)
+      workflow = insert(:simple_workflow, project: project)
+
+      expired = insert_workorder_with_step(workflow, -8)
+      step = step_of(expired)
+      kept = insert_workorder_with_step(workflow, -1, step)
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      refute Repo.get(WorkOrder, expired.id)
+      assert Repo.get(Step, step.id)
+
+      assert [%RunStep{run_id: run_id}] =
+               Repo.all(from(rs in RunStep, where: rs.step_id == ^step.id))
+
+      assert run_id == hd(kept.runs).id
+    end
+
     test "wipes dataclips past the retention period across multiple batches" do
       stub(Lightning.MockConfig, :activity_cleanup_chunk_size, fn -> 2 end)
 
@@ -5057,5 +5099,37 @@ defmodule Lightning.ProjectsTest do
     on_exit(fn -> File.rm_rf!(Path.dirname(local_path)) end)
 
     object_path
+  end
+
+  defp insert_workorder_with_step(
+         %{triggers: [trigger], jobs: [job | _]} = workflow,
+         days,
+         step \\ nil
+       ) do
+    last_activity = Timex.shift(Lightning.current_time(), days: days)
+
+    insert(:workorder,
+      workflow: workflow,
+      trigger: trigger,
+      dataclip: build(:dataclip),
+      last_activity: last_activity,
+      runs: [
+        build(:run,
+          starting_trigger: trigger,
+          dataclip: build(:dataclip),
+          steps: [step || build(:step, job: job, finished_at: last_activity)]
+        )
+      ]
+    )
+  end
+
+  defp step_of(%WorkOrder{runs: [%Run{steps: [step]}]}), do: step
+
+  defp steps_without_runs_query do
+    from(s in Step,
+      left_join: rs in RunStep,
+      on: rs.step_id == s.id,
+      where: is_nil(rs.id)
+    )
   end
 end

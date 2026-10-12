@@ -2743,6 +2743,28 @@ defmodule Lightning.WorkflowsTest do
       assert Repo.get(Step, step.id)
     end
 
+    test "fails readably when steps still point at the workflow's snapshots" do
+      workflow = insert(:simple_workflow, deleted_at: days_ago(8))
+
+      %{work_order: work_order, step: step} = insert_history(workflow)
+      Repo.delete!(work_order)
+
+      assert {:error, message} =
+               Workflows.perform(%Oban.Job{
+                 args: %{
+                   "workflow_id" => workflow.id,
+                   "type" => "purge_deleted"
+                 }
+               })
+
+      assert message ==
+               "workflow #{workflow.id} could not be purged: " <>
+                 "has steps still recorded against its snapshots"
+
+      assert Repo.get(Workflow, workflow.id)
+      assert Repo.get(Step, step.id)
+    end
+
     test "leaves a workflow that is no longer marked for deletion alone" do
       workflow = insert(:simple_workflow, deleted_at: nil)
 

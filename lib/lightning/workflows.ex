@@ -1043,6 +1043,11 @@ defmodule Lightning.Workflows do
             # between this job being enqueued and it running. Not an error:
             # tomorrow's sweep re-checks and enqueues the workflow again.
             {:cancel, :has_history}
+
+          {:error, %Ecto.Changeset{} = changeset} ->
+            {:error,
+             "workflow #{workflow_id} could not be purged: " <>
+               Enum.map_join(changeset.errors, "; ", fn {_, {msg, _}} -> msg end)}
         end
     end
   end
@@ -1103,7 +1108,13 @@ defmodule Lightning.Workflows do
         # coveralls-ignore-stop
       end)
 
-      Repo.delete(workflow)
+      workflow
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.foreign_key_constraint(:id,
+        name: :steps_snapshot_id_fkey,
+        message: "has steps still recorded against its snapshots"
+      )
+      |> Repo.delete()
     end
   end
 
