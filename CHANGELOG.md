@@ -21,6 +21,8 @@ and this project adheres to
 
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
+- The workflow version hash no longer includes a trigger's `enabled` state
+  [#5241](https://github.com/OpenFn/lightning/pull/5241)
 
 ### Fixed
 
