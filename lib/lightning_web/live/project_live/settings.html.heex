@@ -855,23 +855,30 @@
             </p>
           </div>
           <div class="space-y-3 text-sm">
-            <div>
-              <p class="text-gray-600">
-                Pull this project into a local workspace:
-              </p>
-              <pre class="mt-1 overflow-x-auto rounded-md bg-gray-100 p-2 text-xs text-black"><code>openfn project pull {@project.id}</code></pre>
-            </div>
-            <div>
-              <p class="text-gray-600">
-                Push local changes back to this project:
-              </p>
-              <pre class="mt-1 overflow-x-auto rounded-md bg-gray-100 p-2 text-xs text-black"><code>openfn project deploy</code></pre>
-            </div>
-            <div>
-              <p class="text-gray-600">
-                Run a workflow:
-              </p>
-              <pre class="mt-1 overflow-x-auto rounded-md bg-gray-100 p-2 text-xs text-black"><code>openfn &lt;workflow-name&gt;</code></pre>
+            <div :for={
+              {{label, command}, i} <-
+                Enum.with_index([
+                  {"Pull this project into a local workspace:",
+                   "openfn project pull #{@project.id}"},
+                  {"Push local changes back to this project:",
+                   "openfn project deploy"},
+                  {"Run a workflow:", "openfn <workflow-name>"}
+                ])
+            }>
+              <p class="text-gray-600">{label}</p>
+              <div class="mt-1 flex items-center gap-2 rounded-md bg-gray-100 p-2">
+                <pre class="flex-1 overflow-x-auto text-xs text-black"><code>{command}</code></pre>
+                <button
+                  id={"copy-cli-command-#{i}"}
+                  type="button"
+                  phx-hook="Copy"
+                  data-content={command}
+                  class="text-gray-500 hover:text-gray-700"
+                >
+                  <.icon name="hero-clipboard" class="h-4 w-4" />
+                  <span class="sr-only">Copy to clipboard</span>
+                </button>
+              </div>
             </div>
           </div>
           <p class="text-sm text-gray-600">

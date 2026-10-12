@@ -92,24 +92,6 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
-  def handle_event("toggle-legacy-format", _params, socket) do
-    changeset = socket.assigns.changeset
-    current = Ecto.Changeset.get_field(changeset, :sync_version)
-
-    # Form fields read from the changeset's params before its changes, so the
-    # flip has to go through the params, like the "validate" event does.
-    params =
-      (changeset.params || %{})
-      |> Map.put("project_id", socket.assigns.project.id)
-      |> Map.put("sync_version", to_string(!current))
-
-    {:noreply,
-     assign(socket,
-       changeset:
-         validate_changes(socket.assigns.project_repo_connection, params)
-     )}
-  end
-
   def handle_event("refresh-installations", _params, socket) do
     changeset = validate_changes(socket.assigns.project_repo_connection, %{})
     user = socket.assigns.user
@@ -752,45 +734,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   attr :form, :map, required: true
   attr :project_id, :string, required: true
-  attr :myself, :any, required: true
 
-  # Inverted: sync_version is true (v2) unless the legacy switch is on. The
-  # hidden input carries the current value with the form's phx-change events.
   defp config_format_toggle(assigns) do
-    assigns = assign(assigns, :legacy?, !sync_version?(assigns.form))
-
     ~H"""
-    <div class="mt-8 flex items-center">
-      <input
-        type="hidden"
-        name={@form[:sync_version].name}
-        value={to_string(!@legacy?)}
+    <div class="mt-8">
+      <.input
+        id="sync-version-toggle"
+        type="toggle"
+        field={@form[:sync_version]}
+        label="Use openfn.yaml format (turn off for legacy config.json)"
       />
-      <button
-        id="toggle-legacy-format-switch"
-        type="button"
-        role="switch"
-        aria-checked={to_string(@legacy?)}
-        aria-labelledby="legacy-format-label"
-        phx-click="toggle-legacy-format"
-        phx-target={@myself}
-        class={[
-          if(@legacy?, do: "bg-indigo-600", else: "bg-gray-200"),
-          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
-        ]}
-      >
-        <span
-          aria-hidden="true"
-          class={[
-            if(@legacy?, do: "translate-x-5", else: "translate-x-0"),
-            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-          ]}
-        >
-        </span>
-      </button>
-      <span class="ml-3 text-sm text-gray-900" id="legacy-format-label">
-        Use legacy YAML config format
-      </span>
     </div>
     """
   end

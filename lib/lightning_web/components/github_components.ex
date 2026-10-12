@@ -38,15 +38,8 @@ defmodule LightningWeb.Components.GithubComponents do
   """
   def sync_docs_banner(assigns) do
     ~H"""
-    <div
-      id="github-sync-docs-banner"
-      class={[
-        "flex items-start gap-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-black",
-        @class
-      ]}
-    >
-      <.icon name="hero-information-circle" class="h-5 w-5 shrink-0 text-blue-500" />
-      <p>
+    <Common.alert id="github-sync-docs-banner" type="info" class={@class}>
+      <:message>
         Learn more about synchronizing your project with GitHub at
         <.link
           target="_blank"
@@ -55,8 +48,8 @@ defmodule LightningWeb.Components.GithubComponents do
         >
           docs.openfn.org
         </.link>
-      </p>
-    </div>
+      </:message>
+    </Common.alert>
     """
   end
 
