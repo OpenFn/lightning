@@ -20,6 +20,7 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
   alias Lightning.Run
+  alias Lightning.RunStep
   alias Lightning.Workflows.Snapshot
   alias Lightning.WorkOrder
 
@@ -1673,6 +1674,20 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "delete_project_dataclips/2" do
+    test "deletes every dataclip in the project across several batches" do
+      project = insert(:project)
+      other = insert(:dataclip)
+
+      dataclips = for _ <- 1..5, do: insert(:dataclip, project: project)
+
+      assert :ok = Projects.delete_project_dataclips(project, 2)
+
+      for dataclip <- dataclips, do: refute(Repo.get(Dataclip, dataclip.id))
+      assert Repo.get(Dataclip, other.id)
+    end
+  end
+
   describe "list_projects_having_history_retention/0" do
     test "returns a list of projects having history_retention_period set" do
       project_1 = insert(:project, history_retention_period: 7)
@@ -2302,6 +2317,51 @@ defmodule Lightning.ProjectsTest do
       refute dataclip.request
       refute dataclip.body
       refute is_nil(dataclip.wiped_at)
+    end
+
+    test "deletes the steps of every expired work order across several batches" do
+      stub(Lightning.MockConfig, :activity_cleanup_chunk_size, fn -> 2 end)
+
+      project = insert(:project, history_retention_period: 7)
+      workflow = insert(:simple_workflow, project: project)
+
+      expired = for _ <- 1..7, do: insert_workorder_with_step(workflow, -8)
+      kept = insert_workorder_with_step(workflow, -1)
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      assert Repo.aggregate(steps_without_runs_query(), :count) == 0
+
+      for work_order <- expired do
+        refute Repo.get(WorkOrder, work_order.id)
+        refute Repo.get(Step, step_of(work_order).id)
+      end
+
+      assert Repo.get(WorkOrder, kept.id)
+      assert Repo.get(Step, step_of(kept).id)
+    end
+
+    test "deletes every expired dataclip when it takes several batches" do
+      stub(Lightning.MockConfig, :activity_cleanup_chunk_size, fn -> 2 end)
+
+      project = insert(:project, history_retention_period: 7)
+      inserted_at = Timex.shift(Lightning.current_time(), days: -8)
+
+      expired =
+        for _ <- 1..5,
+            do: insert(:dataclip, project: project, inserted_at: inserted_at)
+
+      named =
+        insert(:dataclip,
+          project: project,
+          name: "keep",
+          inserted_at: inserted_at
+        )
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      for dataclip <- expired, do: refute(Repo.get(Dataclip, dataclip.id))
+      assert Repo.get(Dataclip, named.id)
     end
 
     test "wipes dataclips past the retention period across multiple batches" do
@@ -4724,5 +4784,36 @@ defmodule Lightning.ProjectsTest do
     on_exit(fn -> File.rm_rf!(Path.dirname(local_path)) end)
 
     object_path
+  end
+
+  defp insert_workorder_with_step(
+         %{triggers: [trigger], jobs: [job | _]} = workflow,
+         days
+       ) do
+    last_activity = Timex.shift(Lightning.current_time(), days: days)
+
+    insert(:workorder,
+      workflow: workflow,
+      trigger: trigger,
+      dataclip: build(:dataclip),
+      last_activity: last_activity,
+      runs: [
+        build(:run,
+          starting_trigger: trigger,
+          dataclip: build(:dataclip),
+          steps: [build(:step, job: job, finished_at: last_activity)]
+        )
+      ]
+    )
+  end
+
+  defp step_of(%WorkOrder{runs: [%Run{steps: [step]}]}), do: step
+
+  defp steps_without_runs_query do
+    from(s in Step,
+      left_join: rs in RunStep,
+      on: rs.step_id == s.id,
+      where: is_nil(rs.id)
+    )
   end
 end
