@@ -1111,6 +1111,14 @@ defmodule Lightning.Workflows do
       workflow
       |> Ecto.Changeset.change()
       |> Ecto.Changeset.foreign_key_constraint(:id,
+        name: :work_orders_snapshot_id_fkey,
+        message: "has work orders still recorded against its snapshots"
+      )
+      |> Ecto.Changeset.foreign_key_constraint(:id,
+        name: :runs_snapshot_id_fkey,
+        message: "has runs still recorded against its snapshots"
+      )
+      |> Ecto.Changeset.foreign_key_constraint(:id,
         name: :steps_snapshot_id_fkey,
         message: "has steps still recorded against its snapshots"
       )

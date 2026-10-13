@@ -2765,6 +2765,47 @@ defmodule Lightning.WorkflowsTest do
       assert Repo.get(Step, step.id)
     end
 
+    # Stands in for history that arrives between the has_history? check and
+    # the delete: rows that hold the snapshot but aren't the workflow's own
+    # work orders.
+    test "returns a changeset when work orders or runs hold its snapshots" do
+      for {holder, message} <- [
+            {:work_order,
+             "has work orders still recorded against its snapshots"},
+            {:run, "has runs still recorded against its snapshots"}
+          ] do
+        workflow = insert(:simple_workflow, deleted_at: days_ago(8))
+        snapshot = insert(:snapshot, workflow: workflow)
+
+        %{triggers: [trigger]} = other = insert(:simple_workflow)
+        other_snapshot = insert(:snapshot, workflow: other)
+
+        insert(:workorder,
+          workflow: other,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          snapshot:
+            if(holder == :work_order, do: snapshot, else: other_snapshot),
+          runs:
+            if(holder == :run,
+              do: [
+                build(:run,
+                  starting_trigger: trigger,
+                  dataclip: build(:dataclip),
+                  snapshot: snapshot
+                )
+              ],
+              else: []
+            )
+        )
+
+        assert {:error, %Ecto.Changeset{errors: [id: {^message, _}]}} =
+                 Workflows.delete_workflow(workflow)
+
+        assert Repo.get(Workflow, workflow.id)
+      end
+    end
+
     test "leaves a workflow that is no longer marked for deletion alone" do
       workflow = insert(:simple_workflow, deleted_at: nil)
 
