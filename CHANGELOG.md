@@ -30,8 +30,7 @@ and this project adheres to
   sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
   pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
 - History retention no longer leaves steps behind when it deletes work orders in
-  batches, and no longer deletes steps that a kept work order still uses. A
-  workflow purge that still fails now says why.
+  batches. A workflow purge that still fails now says why.
   [#5242](https://github.com/OpenFn/lightning/pull/5242)
 - A background job, queued two hours after upgrading, deletes the steps that
   history retention left behind, which were stopping deleted workflows from

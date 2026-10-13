@@ -2660,25 +2660,6 @@ defmodule Lightning.ProjectsTest do
       assert Repo.get(Dataclip, named.id)
     end
 
-    test "keeps a step shared with a work order that has not expired" do
-      project = insert(:project, history_retention_period: 7)
-      workflow = insert(:simple_workflow, project: project)
-
-      expired = insert_workorder_with_step(workflow, -8)
-      step = step_of(expired)
-      kept = insert_workorder_with_step(workflow, -1, step)
-
-      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
-
-      refute Repo.get(WorkOrder, expired.id)
-      assert Repo.get(Step, step.id)
-
-      assert [%RunStep{run_id: run_id}] =
-               Repo.all(from(rs in RunStep, where: rs.step_id == ^step.id))
-
-      assert run_id == hd(kept.runs).id
-    end
-
     test "wipes dataclips past the retention period across multiple batches" do
       stub(Lightning.MockConfig, :activity_cleanup_chunk_size, fn -> 2 end)
 
@@ -5140,8 +5121,7 @@ defmodule Lightning.ProjectsTest do
 
   defp insert_workorder_with_step(
          %{triggers: [trigger], jobs: [job | _]} = workflow,
-         days,
-         step \\ nil
+         days
        ) do
     last_activity = Timex.shift(Lightning.current_time(), days: days)
 
@@ -5154,7 +5134,7 @@ defmodule Lightning.ProjectsTest do
         build(:run,
           starting_trigger: trigger,
           dataclip: build(:dataclip),
-          steps: [step || build(:step, job: job, finished_at: last_activity)]
+          steps: [build(:step, job: job, finished_at: last_activity)]
         )
       ]
     )

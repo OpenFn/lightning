@@ -1920,66 +1920,47 @@ defmodule Lightning.Projects do
     # If it's on a retention cleanup, it also deletes unused snapshots after the workorders deletion.
     # Otherwise, it's a cleanup for the whole project when the snapshots are automatically deleted
     # by the workflows deletion.
-    if retention_period_days do
-      {count, _} =
-        delete_unused_snapshots(project_workorders_query)
-
-      Logger.info("Deleted #{count} unused snapshots")
-    end
-
-    :ok
+    if retention_period_days,
+      do: delete_unused_snapshots(project_workorders_query),
+      else: :ok
   end
 
   defp delete_workorders_in_batches(workorders_query, batch_size) do
     timeout = Config.default_ecto_database_timeout() * 3
 
-    {:ok, deleted} =
-      Repo.transaction(
-        fn ->
-          ids =
-            workorders_query
-            |> select([wo], wo.id)
-            |> limit(^batch_size)
-            |> Repo.all(timeout: timeout)
+    delete_until_empty(fn ->
+      {:ok, deleted} =
+        Repo.transaction(
+          fn ->
+            ids =
+              workorders_query
+              |> select([wo], wo.id)
+              |> limit(^batch_size)
+              |> Repo.all(timeout: timeout)
 
-          {_count, _} =
-            Repo.delete_all(steps_only_in_workorders(ids),
-              returning: false,
-              timeout: timeout
-            )
+            {_count, _} =
+              Repo.delete_all(
+                from(s in Step,
+                  join: r in assoc(s, :runs),
+                  where: r.work_order_id in ^ids
+                ),
+                returning: false,
+                timeout: timeout
+              )
 
-          {count, _} =
-            Repo.delete_all(from(wo in WorkOrder, where: wo.id in ^ids),
-              returning: false,
-              timeout: timeout
-            )
+            {count, _} =
+              Repo.delete_all(from(wo in WorkOrder, where: wo.id in ^ids),
+                returning: false,
+                timeout: timeout
+              )
 
-          count
-        end,
-        timeout: timeout * 2
-      )
-
-    if deleted > 0,
-      do: delete_workorders_in_batches(workorders_query, batch_size)
-  end
-
-  # A step retried from a later work order is linked to runs in both, so it
-  # is only deleted once no work order outside `ids` still uses it.
-  defp steps_only_in_workorders(ids) do
-    from(s in Step,
-      as: :step,
-      join: r in assoc(s, :runs),
-      where: r.work_order_id in ^ids,
-      where:
-        not exists(
-          from(rs in RunStep,
-            join: r2 in assoc(rs, :run),
-            where: rs.step_id == parent_as(:step).id,
-            where: r2.work_order_id not in ^ids,
-            select: 1
-          )
+            count
+          end,
+          timeout: timeout * 2
         )
-    )
+
+      deleted
+    end)
   end
 
   defp delete_unused_snapshots(workorders_query) do
@@ -1992,23 +1973,15 @@ defmodule Lightning.Projects do
         on: wo.workflow_id == w.id
       )
 
-    total_deleted =
-      Stream.repeatedly(fn ->
-        unused_ids =
-          unused_snapshots_query |> limit(^batch_size) |> Repo.all()
+    delete_until_empty(fn ->
+      unused_ids = unused_snapshots_query |> limit(^batch_size) |> Repo.all()
 
-        if unused_ids == [], do: nil, else: unused_ids
-      end)
-      |> Stream.take_while(& &1)
-      |> Enum.reduce(0, fn ids, acc ->
-        {count, _} =
-          from(s in Snapshot, where: s.id in ^ids)
-          |> Repo.delete_all(returning: false)
+      {count, _} =
+        from(s in Snapshot, where: s.id in ^unused_ids)
+        |> Repo.delete_all(returning: false)
 
-        acc + count
-      end)
-
-    {total_deleted, nil}
+      count
+    end)
   end
 
   defp delete_dataclips(dataclips_query, batch_size) do
@@ -2019,19 +1992,19 @@ defmodule Lightning.Projects do
       )
       |> join(:inner, [d], dtd in "dataclips_to_delete", on: d.id == dtd.id)
 
-    delete_dataclips_in_batches(dataclips_delete_query)
+    delete_until_empty(fn ->
+      {count, _dataclips} =
+        Repo.delete_all(dataclips_delete_query,
+          returning: false,
+          timeout: Config.default_ecto_database_timeout() * 10
+        )
+
+      count
+    end)
   end
 
-  defp delete_dataclips_in_batches(dataclips_delete_query) do
-    {count, _dataclips} =
-      Repo.delete_all(dataclips_delete_query,
-        returning: false,
-        timeout: Config.default_ecto_database_timeout() * 10
-      )
-
-    if count > 0,
-      do: delete_dataclips_in_batches(dataclips_delete_query),
-      else: :ok
+  defp delete_until_empty(delete_batch) do
+    if delete_batch.() > 0, do: delete_until_empty(delete_batch), else: :ok
   end
 
   def invite_collaborators(project, collaborators, inviter) do
