@@ -279,6 +279,18 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
     end
   end
 
+  describe "CLI card" do
+    test "links to more CLI examples", %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      assert has_element?(
+               view,
+               ~s{#cli-more-examples-link[target="_blank"][href="https://docs.openfn.org/documentation/cli-usage"]},
+               "See more CLI examples"
+             )
+    end
+  end
+
   describe "permissions banner" do
     @permissions_banner "#vcs-permissions-banner"
 
