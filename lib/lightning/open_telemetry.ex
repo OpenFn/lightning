@@ -12,7 +12,10 @@ defmodule Lightning.OpenTelemetry do
     if Lightning.Config.otel_enabled?() do
       :opentelemetry_cowboy.setup()
       OpentelemetryPhoenix.setup(adapter: :cowboy2, liveview: false)
-      OpentelemetryOban.setup()
+
+      # Oban.Stager events can be quite noisy, so disable until we have
+      # an idea of ROI.
+      OpentelemetryOban.setup(plugin: :disabled)
 
       if Lightning.Config.otel_ecto_enabled?() do
         OpentelemetryEcto.setup([:lightning, :repo])
