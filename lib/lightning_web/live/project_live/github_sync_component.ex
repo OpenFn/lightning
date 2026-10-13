@@ -910,14 +910,15 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
               ].value}
             </code>
           </li>
-          <%= if to_string(@form[:config_path].value) == "" do %>
+          <%!-- v2 commits no config: the CLI writes openfn.yaml on pull --%>
+          <%= if to_string(@form[:config_path].value) == "" and !sync_version?(@form) do %>
             <li class="flex items-start gap-1.5">
               <.icon
                 name="hero-document-plus"
                 class="h-4 w-4 shrink-0 text-gray-500"
               />
               <code class="break-all">
-                {config_filename(@form, @project.id)} -> {@form[:branch].value}
+                openfn-{@project.id}-config.json -> {@form[:branch].value}
               </code>
             </li>
           <% end %>
@@ -926,13 +927,5 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       </span>
     </div>
     """
-  end
-
-  defp config_filename(form, project_id) do
-    if sync_version?(form) do
-      ProjectRepoConnection.path_to_openfn_yaml()
-    else
-      "openfn-#{project_id}-config.json"
-    end
   end
 end

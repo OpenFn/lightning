@@ -5403,10 +5403,7 @@ defmodule LightningWeb.ProjectLiveTest do
         expected_repo["default_branch"]
       )
 
-      # push deploy.yml + config.json
-      # deploy.yml blob
-      expect_create_blob(expected_repo["full_name"])
-      # config.json blob
+      # push deploy.yml (v2 by default: the CLI writes openfn.yaml on pull)
       expect_create_blob(expected_repo["full_name"])
       expect_get_commit(expected_repo["full_name"], expected_branch["name"])
       expect_create_tree(expected_repo["full_name"])

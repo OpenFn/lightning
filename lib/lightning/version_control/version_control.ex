@@ -202,19 +202,34 @@ defmodule Lightning.VersionControl do
              pull_yml_target_path() |> Path.basename(),
              %{
                ref: default_branch,
-               inputs:
-                 %{
-                   projectId: repo_connection.project_id,
-                   apiSecretName: api_secret_name(repo_connection),
-                   pathToConfig: config_target_path(repo_connection),
-                   branch: repo_connection.branch,
-                   commitMessage: commit_message
-                 }
-                 |> maybe_add_snapshots(snapshots)
+               inputs: pull_inputs(repo_connection, commit_message, snapshots)
              }
            ) do
       :ok
     end
+  end
+
+  # v2 pulls the live project with `openfn project pull`, which has no
+  # snapshot or config path options
+  defp pull_inputs(%{sync_version: true} = repo_connection, commit_message, _) do
+    %{
+      projectId: repo_connection.project_id,
+      apiSecretName: api_secret_name(repo_connection),
+      endpoint: LightningWeb.Endpoint.url(),
+      branch: repo_connection.branch,
+      commitMessage: commit_message
+    }
+  end
+
+  defp pull_inputs(repo_connection, commit_message, snapshots) do
+    %{
+      projectId: repo_connection.project_id,
+      apiSecretName: api_secret_name(repo_connection),
+      pathToConfig: config_target_path(repo_connection),
+      branch: repo_connection.branch,
+      commitMessage: commit_message
+    }
+    |> maybe_add_snapshots(snapshots)
   end
 
   defp list_snapshots_for_project(%{project_id: project_id}) do
@@ -625,7 +640,7 @@ defmodule Lightning.VersionControl do
            GithubClient.get_repo(client, repo_connection.repo),
          {:ok, %{status: 201, body: pull_blob}} <-
            GithubClient.create_blob(client, repo_connection.repo, %{
-             content: pull_yml()
+             content: pull_yml(repo_connection)
            }),
          {:ok, %{status: 200, body: base_commit}} <-
            GithubClient.get_commit(
@@ -662,17 +677,14 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  # v2 workspaces (openfn.yaml and friends) are written by the CLI, not here
+  defp maybe_create_config_blob(_tesla_client, %{sync_version: true}),
+    do: {:ok, nil}
+
   defp maybe_create_config_blob(tesla_client, repo_connection) do
     if is_nil(repo_connection.config_path) do
-      content =
-        if repo_connection.sync_version do
-          path_to_openfn_yaml(repo_connection)
-        else
-          config_json(repo_connection)
-        end
-
       GithubClient.create_blob(tesla_client, repo_connection.repo, %{
-        content: content
+        content: config_json(repo_connection)
       })
     else
       {:ok, nil}
@@ -694,24 +706,29 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp pull_yml do
+  defp pull_yml(repo_connection) do
     :code.priv_dir(:lightning)
-    |> Path.join("github/pull.yml")
+    |> Path.join(github_template("pull", repo_connection))
     |> File.read!()
   end
 
   defp deploy_yml(repo_connection) do
     :code.priv_dir(:lightning)
-    |> Path.join("github/deploy.yml")
+    |> Path.join(github_template("deploy", repo_connection))
     |> EEx.eval_file(
       assigns: [
         project_id: repo_connection.project_id,
         config_path: config_target_path(repo_connection),
         api_secret_name: api_secret_name(repo_connection),
-        branch: repo_connection.branch
+        branch: repo_connection.branch,
+        endpoint: LightningWeb.Endpoint.url()
       ]
     )
   end
+
+  # v2 sync uses @v2 of the GitHub actions (openfn.yaml workspaces)
+  defp github_template(name, %{sync_version: true}), do: "github/#{name}_v2.yml"
+  defp github_template(name, _repo_connection), do: "github/#{name}.yml"
 
   defp config_json(repo_connection) do
     Jason.encode!(
@@ -722,16 +739,6 @@ defmodule Lightning.VersionControl do
       },
       pretty: true
     )
-  end
-
-  defp path_to_openfn_yaml(repo_connection) do
-    project_id = repo_connection.project_id
-
-    """
-    project:
-      uuid: #{project_id}
-      endpoint: #{LightningWeb.Endpoint.url()}
-    """
   end
 
   defp pull_yml_target_path do
@@ -763,11 +770,14 @@ defmodule Lightning.VersionControl do
         deploy_yml_target_path(repo_connection)
       )
 
-      maybe_delete_file(
-        client,
-        repo_connection,
-        config_target_path(repo_connection)
-      )
+      # v2's openfn.yaml belongs to the CLI workspace, so leave it in place
+      unless repo_connection.sync_version do
+        maybe_delete_file(
+          client,
+          repo_connection,
+          config_target_path(repo_connection)
+        )
+      end
 
       GithubClient.delete_repo_secret(
         client,

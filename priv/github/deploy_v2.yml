@@ -1,0 +1,32 @@
+on:
+  push:
+    branches:
+      - <%= @branch %>
+  workflow_dispatch:
+    inputs:
+      force:
+        description:
+          'Deploy even if the project has changed in OpenFn since the last sync'
+        type: boolean
+        default: false
+
+# Shared with openfn-pull.yml so a pull and a deploy never push to the same
+# branch at once
+concurrency:
+  group: openfn-<%= @branch %>
+  cancel-in-progress: false
+
+jobs:
+  deploy-to-lightning:
+    runs-on: ubuntu-latest
+    name: A job to deploy to Lightning
+    permissions:
+      contents: write
+    steps:
+      - name: openfn deploy
+        uses: openfn/cli-deploy-action@v2
+        with:
+          secret_input: ${{ secrets.<%= @api_secret_name %> }}
+          project_id_input: '<%= @project_id %>'
+          endpoint_input: '<%= @endpoint %>'
+          force_input: ${{ inputs.force || false }}

@@ -4817,13 +4817,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert_redirect(view, ~p"/projects/#{parent.id}/w")
     end
 
-    test "commits to GitHub using YAML config when sync_version is true",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox,
-           snapshot: snapshot
-         } do
+    test "commits to GitHub with v2 inputs when sync_version is true",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
       repo_connection =
         insert(:project_repo_connection,
           project: parent,
@@ -4846,10 +4841,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           inputs: %{
             projectId: parent.id,
             apiSecretName: api_secret_name(parent),
+            endpoint: LightningWeb.Endpoint.url(),
             branch: repo_connection.branch,
-            pathToConfig: path_to_config(repo_connection),
-            commitMessage: "pre-merge commit",
-            snapshots: "#{snapshot.id}"
+            commitMessage: "pre-merge commit"
           }
         }
       )
@@ -4865,10 +4859,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           inputs: %{
             projectId: parent.id,
             apiSecretName: api_secret_name(parent),
+            endpoint: LightningWeb.Endpoint.url(),
             branch: repo_connection.branch,
-            pathToConfig: path_to_config(repo_connection),
-            commitMessage: "Merged sandbox #{sandbox.name}",
-            snapshots: "#{snapshot.id}"
+            commitMessage: "Merged sandbox #{sandbox.name}"
           }
         }
       )

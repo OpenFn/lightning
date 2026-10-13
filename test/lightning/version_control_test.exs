@@ -413,6 +413,36 @@ defmodule Lightning.VersionControlTest do
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
     end
 
+    test "leaves openfn.yaml in place when removing a v2 connection" do
+      project = insert(:project)
+      user = user_with_valid_github_oauth()
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken",
+          sync_version: true
+        )
+
+      expected_deploy_yml_path =
+        ".github/workflows/openfn-#{project.id}-deploy.yml"
+
+      expect_get_repo_content(repo_connection.repo, expected_deploy_yml_path)
+      expect_delete_repo_content(repo_connection.repo, expected_deploy_yml_path)
+
+      # no lookup or delete of openfn.yaml: Mox fails on unexpected calls
+      expect_delete_repo_secret(
+        repo_connection.repo,
+        "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      )
+
+      assert {:ok, _connection} =
+               VersionControl.remove_github_connection(repo_connection, user)
+    end
+
     test "audits the removal of the repo connection" do
       %{id: project_id} = project = insert(:project)
       %{id: user_id} = user = user_with_valid_github_oauth()
@@ -773,12 +803,8 @@ defmodule Lightning.VersionControlTest do
       assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
-    test "creates GH workflow dispatch event using YAML config (sync_version: true)",
-         %{
-           commit_message: commit_message,
-           repo_connection: repo_connection,
-           snapshots: [snapshot, other_snapshot]
-         } do
+    test "sends the endpoint and no config path or snapshots (sync_version: true)",
+         %{commit_message: commit_message, repo_connection: repo_connection} do
       yaml_connection =
         repo_connection
         |> Ecto.Changeset.change(sync_version: true)
@@ -787,11 +813,26 @@ defmodule Lightning.VersionControlTest do
       expect_create_installation_token(yaml_connection.github_installation_id)
       expect_get_repo(yaml_connection.repo)
 
-      expect_workflow_dispatch_with_snapshots(
-        yaml_connection,
-        commit_message,
-        [snapshot.id, other_snapshot.id]
-      )
+      repo = yaml_connection.repo
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{
+                                                   url:
+                                                     "https://api.github.com/repos/" <>
+                                                       ^repo <>
+                                                       "/actions/workflows/openfn-pull.yml/dispatches",
+                                                   body: body
+                                                 },
+                                                 _opts ->
+        assert Jason.decode!(body)["inputs"] == %{
+                 "projectId" => yaml_connection.project_id,
+                 "apiSecretName" => api_secret_name(yaml_connection),
+                 "endpoint" => LightningWeb.Endpoint.url(),
+                 "branch" => yaml_connection.branch,
+                 "commitMessage" => commit_message
+               }
+
+        {:ok, %Tesla.Env{status: 204, body: ""}}
+      end)
 
       assert :ok = VersionControl.initiate_sync(yaml_connection, commit_message)
     end
@@ -1053,6 +1094,12 @@ defmodule Lightning.VersionControlTest do
 
             {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
           end)
+        end,
+        pull_blob_expectation: fn ->
+          expect_blob_content(repo, "openfn/cli-pull-action@v1")
+        end,
+        deploy_blob_expectation: fn ->
+          expect_blob_content(repo, "openfn/cli-deploy-action@v1")
         end
       )
 
@@ -1060,7 +1107,7 @@ defmodule Lightning.VersionControlTest do
                VersionControl.create_github_connection(base_params, user)
     end
 
-    test "pushes YAML config blob when sync_version is true", %{
+    test "pushes v2 workflows and no config file when sync_version is true", %{
       project: project,
       user: user,
       repo: repo,
@@ -1074,13 +1121,18 @@ defmodule Lightning.VersionControlTest do
         branch,
         project.id,
         installation_id,
-        config_blob_expectation: fn ->
+        # openfn.yaml is written by the CLI on the first pull
+        config_blob_expectation: fn -> :ok end,
+        pull_blob_expectation: fn ->
+          expect_blob_content(repo, "openfn/cli-pull-action@v2")
+        end,
+        deploy_blob_expectation: fn ->
           Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
             assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
-            body = Jason.decode!(env.body)
-            assert body["content"] =~ "project:"
-            assert body["content"] =~ "uuid: #{project.id}"
-            assert body["content"] =~ LightningWeb.Endpoint.url()
+            content = Jason.decode!(env.body)["content"]
+            assert content =~ "openfn/cli-deploy-action@v2"
+            assert content =~ "project_id_input: '#{project.id}'"
+            assert content =~ "endpoint_input: '#{LightningWeb.Endpoint.url()}'"
             {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
           end)
         end
@@ -1089,6 +1141,14 @@ defmodule Lightning.VersionControlTest do
       params = Map.put(base_params, "sync_version", "true")
       assert {:ok, _} = VersionControl.create_github_connection(params, user)
     end
+  end
+
+  defp expect_blob_content(repo, expected) do
+    Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+      assert env.url == "https://api.github.com/repos/#{repo}/git/blobs"
+      assert Jason.decode!(env.body)["content"] =~ expected
+      {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
+    end)
   end
 
   # These 17 expectations share one Mox FIFO queue on the same mocked
@@ -1108,14 +1168,20 @@ defmodule Lightning.VersionControlTest do
     repo = expected_repo["full_name"]
     default_branch = expected_repo["default_branch"]
 
+    default_blob = fn -> expect_create_blob(repo) end
+
     config_blob_expectation =
-      Keyword.get(opts, :config_blob_expectation, fn ->
-        expect_create_blob(repo)
-      end)
+      Keyword.get(opts, :config_blob_expectation, default_blob)
+
+    pull_blob_expectation =
+      Keyword.get(opts, :pull_blob_expectation, default_blob)
+
+    deploy_blob_expectation =
+      Keyword.get(opts, :deploy_blob_expectation, default_blob)
 
     # push pull.yml
     expect_get_repo(repo, 200, expected_repo)
-    expect_create_blob(repo)
+    pull_blob_expectation.()
     expect_get_commit(repo, default_branch)
     expect_create_tree(repo)
     expect_create_commit(repo)
@@ -1123,7 +1189,7 @@ defmodule Lightning.VersionControlTest do
 
     # push deploy.yml + config.json
     # deploy.yml blob
-    expect_create_blob(repo)
+    deploy_blob_expectation.()
     # config.json blob
     config_blob_expectation.()
     expect_get_commit(repo, branch)
