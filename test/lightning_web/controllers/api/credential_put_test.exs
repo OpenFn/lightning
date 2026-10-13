@@ -559,6 +559,31 @@ defmodule LightningWeb.API.CredentialPutTest do
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
       refute Repo.get(Credential, id)
     end
+
+    test "keeps a link they can't see, and leaves it out of the response",
+         %{conn: conn} do
+      owner = insert(:user)
+      theirs = insert(:project, project_users: [%{user: owner, role: :owner}])
+      unseen = insert(:project)
+      credential = existing_credential(owner, unseen)
+
+      response =
+        conn
+        |> with_pat(owner)
+        |> put_credential(
+          credential.id,
+          credential_body(%{"project_credentials" => links([theirs.id])})
+        )
+        |> json_response(200)
+
+      assert linked_project_ids(response) == [theirs.id]
+      refute inspect(response) =~ unseen.id
+
+      assert Repo.get_by(Lightning.Projects.ProjectCredential,
+               project_id: unseen.id,
+               credential_id: credential.id
+             )
+    end
   end
 
   describe "GET" do
@@ -606,13 +631,22 @@ defmodule LightningWeb.API.CredentialPutTest do
       assert project_id == project.id
     end
 
-    test "a person reads only their own, seeing every link but only their projects",
+    test "a person reads only their own, seeing links only to projects they stand in",
          %{conn: conn} do
       owner = insert(:user)
       theirs = insert(:project, project_users: [%{user: owner, role: :owner}])
-      elsewhere = insert(:project)
+
+      winding_down =
+        insert(:project,
+          project_users: [%{user: owner, role: :owner}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
       credential = existing_credential(owner, theirs)
-      insert(:project_credential, credential: credential, project: elsewhere)
+
+      for project <- [insert(:project), winding_down],
+          do:
+            insert(:project_credential, credential: credential, project: project)
 
       response =
         conn
@@ -620,7 +654,7 @@ defmodule LightningWeb.API.CredentialPutTest do
         |> get(~p"/api/credentials/#{credential.id}")
         |> json_response(200)
 
-      assert linked_project_ids(response) == Enum.sort([theirs.id, elsewhere.id])
+      assert linked_project_ids(response) == [theirs.id]
       assert [%{"id" => theirs_id}] = response["credential"]["projects"]
       assert theirs_id == theirs.id
 

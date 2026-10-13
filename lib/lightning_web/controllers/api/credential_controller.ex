@@ -170,6 +170,8 @@ defmodule LightningWeb.API.CredentialController do
 
   @doc """
   Shows a credential, without its body, to a caller who may edit it.
+
+  Links to projects whose credentials the caller may not list are left out.
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show(conn, %{"id" => id}) do
@@ -195,7 +197,8 @@ defmodule LightningWeb.API.CredentialController do
   `main` body of the one that has it.
 
   Links are only ever added. A project the body lists gains a link, and a link
-  the credential already holds stays even if the body leaves it out.
+  the credential already holds stays even if the body leaves it out. The
+  response leaves out links the caller may not see, as `show/2` does.
   """
   @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def update(conn, %{"id" => id}) do
@@ -409,26 +412,31 @@ defmodule LightningWeb.API.CredentialController do
   defp render_write_error(conn, {:error, _reason}),
     do: PutRequest.render_errors(conn, %{credential_bodies: ["is invalid"]})
 
-  # Every link stays, because the caller needs each link's id. Only projects
-  # the caller may access are named.
   defp render_credential(conn, credential) do
-    credential =
-      credential
-      |> Repo.preload([:project_credentials, :projects])
-      |> hide_unseen_projects(conn.assigns.scope)
+    [credential] =
+      [Repo.preload(credential, [:project_credentials, :projects])]
+      |> hide_unseen_links(conn.assigns.scope)
 
     render(conn, "create.json", credential: credential)
   end
 
-  defp hide_unseen_projects(credential, scope) do
-    named = nameable_ids(scope, credential.projects)
-    %{credential | projects: Enum.filter(credential.projects, &(&1.id in named))}
-  end
-
-  # A list can include other owners' credentials, so it also drops each link
-  # to a project the caller may not access.
+  # A credential can be linked to projects the caller has no standing in,
+  # because its owner lost access or because a list holds someone else's
+  # credentials. Those links are left out. Naming a project also needs
+  # `:access_project`, so a service account without `projects:write` sees every
+  # link but no project names.
   defp hide_unseen_links(credentials, scope) do
-    named = nameable_ids(scope, Enum.flat_map(credentials, & &1.projects))
+    scopes =
+      Scope.fetch_all(
+        scope,
+        credentials
+        |> Enum.flat_map(& &1.project_credentials)
+        |> Enum.map(& &1.project_id)
+        |> Enum.uniq()
+      )
+
+    shown = permitted_ids(scopes, :list_project_credentials)
+    named = permitted_ids(scopes, :access_project)
 
     Enum.map(credentials, fn credential ->
       %{
@@ -437,16 +445,10 @@ defmodule LightningWeb.API.CredentialController do
           project_credentials:
             Enum.filter(
               credential.project_credentials,
-              &(&1.project_id in named)
+              &(&1.project_id in shown)
             )
       }
     end)
-  end
-
-  defp nameable_ids(scope, projects) do
-    scope
-    |> Scope.fetch_all(projects |> Enum.map(& &1.id) |> Enum.uniq())
-    |> permitted_ids(:access_project)
   end
 
   @doc """

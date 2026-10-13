@@ -20,6 +20,9 @@ defmodule LightningWeb.API.CredentialJSON do
     }
   end
 
+  # Renders every link and project the credential carries. The controller
+  # prunes both to what the caller may see, so another tenant's project ids,
+  # names and descriptions never reach this module.
   defp credential_data(%Credential{} = credential) do
     %{
       id: credential.id,
@@ -54,9 +57,6 @@ defmodule LightningWeb.API.CredentialJSON do
     }
   end
 
-  # Renders whatever projects the credential carries. The controller is
-  # responsible for pruning these to the caller-visible set before rendering, so
-  # that other tenants' project id/name/description are never disclosed here.
   defp render_projects(projects) when is_list(projects) do
     Enum.map(projects, &render_project/1)
   end
