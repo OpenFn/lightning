@@ -312,7 +312,7 @@ defmodule Lightning.Credentials do
 
   defp add_environment_deletions(multi, credential_id, delete_environments) do
     Enum.reduce(delete_environments, multi, fn env_name, acc ->
-      Multi.run(acc, :"delete_env_#{env_name}", fn _repo, _changes ->
+      Multi.run(acc, {:delete_environment, env_name}, fn _repo, _changes ->
         delete_credential_body_if_exists(credential_id, env_name)
       end)
     end)
@@ -327,8 +327,7 @@ defmodule Lightning.Credentials do
         {:ok, :not_found}
 
       credential_body ->
-        Repo.delete(credential_body)
-        {:ok, :deleted}
+        with {:ok, _} <- Repo.delete(credential_body), do: {:ok, :deleted}
     end
   end
 
@@ -753,6 +752,10 @@ defmodule Lightning.Credentials do
     |> Enum.reverse()
   end
 
+  defp extract_deleted_environments(changes) do
+    Enum.sort(for {{:delete_environment, name}, :deleted} <- changes, do: name)
+  end
+
   defp derive_events(
          multi,
          %Ecto.Changeset{data: %Credential{__meta__: %{state: state}}} =
@@ -767,17 +770,19 @@ defmodule Lightning.Credentials do
 
     multi
     |> Multi.run(:audit, fn repo, %{credential: credential} = changes ->
-      case extract_environment_bodies(changes) do
-        [] when map_size(changeset.changes) == 0 ->
+      case {extract_environment_bodies(changes),
+            extract_deleted_environments(changes)} do
+        {[], []} when map_size(changeset.changes) == 0 ->
           {:ok, nil}
 
-        env_bodies ->
+        {env_bodies, deleted} ->
           Audit.user_initiated_event(
             if(state == :built, do: "created", else: "updated"),
             credential,
             actor,
             field_changes(changeset),
-            env_bodies
+            bodies: env_bodies,
+            deleted: deleted
           )
           |> repo.insert()
       end

@@ -1092,6 +1092,59 @@ defmodule Lightning.CredentialsTest do
       refute inspect(Map.from_struct(audit), limit: :infinity) =~ "secret"
     end
 
+    test "deleting only an environment records one updated event naming it" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential, user: owner, name: "unchanged", schema: "raw")
+        |> with_body(%{name: "main", body: %{"a" => "main-secret"}})
+        |> with_body(%{name: "staging", body: %{"b" => "staging-secret"}})
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "unchanged",
+                   "delete_environments" => ["staging", "never-existed"]
+                 },
+                 owner
+               )
+
+      assert [audit] = Repo.all(audit_query(credential))
+      assert audit.event == "updated"
+      assert audit.metadata == %{"deleted_environments" => ["staging"]}
+    end
+
+    test "an edit that writes one environment and deletes another records both" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential, user: owner, name: "unchanged", schema: "raw")
+        |> with_body(%{name: "main", body: %{"a" => "old-secret"}})
+        |> with_body(%{name: "staging", body: %{"b" => "staging-secret"}})
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "unchanged",
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"a" => "new-secret"}}
+                   ],
+                   "delete_environments" => ["staging"]
+                 },
+                 owner
+               )
+
+      assert [audit] = Repo.all(audit_query(credential))
+
+      assert %{
+               "environments" => ["main"],
+               "deleted_environments" => ["staging"],
+               "credential_bodies" => %{"body:main" => _}
+             } = audit.metadata
+    end
+
     test "a typed body resent as a form sends it records nothing" do
       owner = insert(:user)
 

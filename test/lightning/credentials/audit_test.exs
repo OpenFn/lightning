@@ -113,7 +113,7 @@ defmodule Lightning.Credentials.AuditTest do
           credential,
           account,
           changeset,
-          env_bodies
+          bodies: env_bodies
         )
 
       assert %{
@@ -216,7 +216,7 @@ defmodule Lightning.Credentials.AuditTest do
           credential,
           credential.user,
           changeset,
-          env_bodies
+          bodies: env_bodies
         )
 
       assert %{
