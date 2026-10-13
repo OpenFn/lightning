@@ -740,6 +740,39 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
     end
 
+    test "refuses a link whose project_id is not a UUID with 422", %{
+      conn: conn,
+      user: user
+    } do
+      for links <- [
+            [%{"project_id" => "not-a-uuid"}],
+            [%{"project_id" => 42}],
+            [%{}],
+            %{"project_id" => Ecto.UUID.generate()}
+          ] do
+        response =
+          conn
+          |> post(~p"/api/credentials", %{
+            "name" => "Malformed Link",
+            "schema" => "raw",
+            "credential_bodies" => [%{"name" => "main", "body" => %{}}],
+            "project_credentials" => links
+          })
+          |> json_response(422)
+
+        assert response == %{
+                 "errors" => %{
+                   "project_credentials" => [
+                     "must each be an object holding a project_id"
+                   ]
+                 }
+               },
+               inspect(links)
+      end
+
+      assert Lightning.Credentials.list_credentials(user) == []
+    end
+
     test "allows access when user is support user with project access", %{
       conn: conn
     } do

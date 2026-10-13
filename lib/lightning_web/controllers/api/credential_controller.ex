@@ -158,13 +158,17 @@ defmodule LightningWeb.API.CredentialController do
   def create(conn, params) do
     current_user = conn.assigns.current_resource
 
-    with {:ok, validated_params} <-
+    with :ok <- validate_links(params),
+         {:ok, validated_params} <-
            validate_and_authorize_projects(params, conn.assigns.scope),
          {:ok, credential} <-
            Credentials.create_credential(validated_params, current_user) do
       conn
       |> put_status(:created)
       |> render("create.json", credential: credential)
+    else
+      {:error, :invalid, errors} -> PutRequest.render_errors(conn, errors)
+      error -> error
     end
   end
 
@@ -226,6 +230,7 @@ defmodule LightningWeb.API.CredentialController do
   }
 
   @bodies_message "must be one body named main, holding an object"
+  @links_message "must each be an object holding a project_id"
 
   defp parse_body(body, id) do
     with {:ok, changeset} <- PutRequest.changeset(body, id, {%{}, @body_types}) do
@@ -239,9 +244,7 @@ defmodule LightningWeb.API.CredentialController do
       |> validate_change(:project_credentials, fn :project_credentials, links ->
         if Enum.all?(links, &project_link?/1),
           do: [],
-          else: [
-            project_credentials: "must each be an object holding a project_id"
-          ]
+          else: [project_credentials: @links_message]
       end)
       |> PutRequest.attrs()
     end
@@ -252,11 +255,25 @@ defmodule LightningWeb.API.CredentialController do
 
   defp main_body_only?(_bodies), do: false
 
-  defp project_link?(%{"project_id" => project_id} = link)
-       when map_size(link) == 1 and is_binary(project_id),
+  defp project_link?(link) when map_size(link) == 1, do: names_a_project?(link)
+  defp project_link?(_link), do: false
+
+  defp names_a_project?(%{"project_id" => project_id})
+       when is_binary(project_id),
        do: PutRequest.cast_uuid(project_id) != :error
 
-  defp project_link?(_link), do: false
+  defp names_a_project?(_link), do: false
+
+  defp validate_links(%{"project_credentials" => links}) when is_list(links) do
+    if Enum.all?(links, &names_a_project?/1),
+      do: :ok,
+      else: {:error, :invalid, %{project_credentials: [@links_message]}}
+  end
+
+  defp validate_links(%{"project_credentials" => _links}),
+    do: {:error, :invalid, %{project_credentials: [@links_message]}}
+
+  defp validate_links(_params), do: :ok
 
   # A caller who may name an owner has to name one. Anyone else owns the
   # credential and may name only themselves. Naming someone else is refused
@@ -505,7 +522,6 @@ defmodule LightningWeb.API.CredentialController do
       params
       |> Map.get("project_credentials", [])
       |> Enum.map(&Map.get(&1, "project_id"))
-      |> Enum.filter(& &1)
 
     with :ok <- authorize_links(project_ids, scope),
          do: {:ok, params_with_user}
