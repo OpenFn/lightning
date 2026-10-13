@@ -129,7 +129,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     otel_attrs = :otel_attributes.map(attrs)
 
     # Confirm that the span has contents
-    # assert %{"url.path": "[redacted]", "url.query": "[redacted]"} = otel_attrs
+    assert %{"url.path": "[redacted]", "url.query": "[redacted]"} = otel_attrs
 
     # Confirm that no attributes were dropped, i..e this is not a partial export
     assert :otel_attributes.dropped(attrs) == 0

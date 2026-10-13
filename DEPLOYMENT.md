@@ -415,6 +415,12 @@ without changing the rest of its configuration.
 
 LiveView is not traced, so the workflow editor produces no spans.
 
+Request paths and query strings are not exported. Lightning puts single-use
+tokens, collection keys and caller record identifiers in URLs, so `url.path` and
+`url.query` are dropped before a span leaves the instance. Spans carry the route
+template instead, so a trace shows `GET /projects/:project_id/w` without the
+project id.
+
 Two mistakes stop the boot rather than being logged and ignored:
 
 - `OTEL_SDK_DISABLED` set to anything other than `true` or `false`.
