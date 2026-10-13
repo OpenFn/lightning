@@ -744,8 +744,6 @@
         <.section_header
           title="Sync"
           subtitle="Sync your project with GitHub, export it, or work on it with the CLI."
-          permissions_message={"version control configuration#{@can_initiate_github_sync && " but you can initiate a sync." || "."}"}
-          can_perform_action={@can_install_github}
         />
         <.sandbox_settings_banner
           :if={@sandbox?}
@@ -779,6 +777,26 @@
               }
             />
           <% else %>
+            <div
+              :if={!@can_install_github}
+              id="vcs-permissions-box"
+              class="bg-white p-4 rounded-md space-y-4"
+            >
+              <h6 class="font-medium text-black">
+                Configure two-way sync to GitHub
+              </h6>
+              <Common.alert
+                id="vcs-permissions-banner"
+                type="warning"
+                class="border border-yellow-300"
+              >
+                <:message>
+                  Role based permissions: You cannot modify this project's version control configuration{if @can_initiate_github_sync,
+                    do: " but you can initiate a sync.",
+                    else: "."}
+                </:message>
+              </Common.alert>
+            </div>
             <div :if={@can_install_github}>
               <.live_component
                 :if={user_has_valid_oauth_token(@current_user)}

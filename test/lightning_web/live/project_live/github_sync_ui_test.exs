@@ -279,6 +279,87 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
     end
   end
 
+  describe "permissions banner" do
+    @permissions_banner "#vcs-permissions-banner"
+
+    defp open_sync_tab(conn, role) do
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, role)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      view
+    end
+
+    test "viewers are told they can't change the connection", %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      assert has_element?(
+               view,
+               @permissions_banner,
+               "You cannot modify this project's version control configuration."
+             )
+
+      refute render(view) =~ "but you can initiate a sync"
+    end
+
+    test "editors are told they can still initiate a sync", %{conn: conn} do
+      view = open_sync_tab(conn, :editor)
+
+      assert has_element?(
+               view,
+               @permissions_banner,
+               "version control configuration but you can initiate a sync."
+             )
+    end
+
+    test "admins see no permissions banner", %{conn: conn} do
+      view = open_sync_tab(conn, :admin)
+
+      refute has_element?(view, @permissions_banner)
+    end
+
+    test "the message sits in a plain box where the form would be",
+         %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      assert has_element?(
+               view,
+               "#vcs-permissions-box h6",
+               "Configure two-way sync to GitHub"
+             )
+
+      assert has_element?(
+               view,
+               "#vcs-permissions-box #vcs-permissions-banner"
+             )
+
+      # the real form is not rendered, so nothing calls GitHub
+      refute has_element?(view, "#project-repo-connection-form")
+      refute has_element?(view, "#connect-github-link")
+    end
+
+    test "admins get the real form and no permissions box", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      refute has_element?(view, "#vcs-permissions-box")
+      assert has_element?(view, "#project-repo-connection-form")
+    end
+
+    test "a connected project shows its connection, not the box",
+         %{conn: conn} do
+      {view, _html} = open_connected_panel(conn, :editor, sync_version: true)
+
+      assert has_element?(view, "h6", "Connected to GitHub")
+      refute has_element?(view, "#vcs-permissions-box")
+    end
+
+    test "the message no longer sits in the section header", %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      refute has_element?(view, "#vcs-panel small.text-red-700")
+    end
+  end
+
   describe "connected panel" do
     test "v2 connections show the title and no legacy note or config path",
          %{conn: conn} do
