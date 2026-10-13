@@ -4,6 +4,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   use LightningWeb, :live_component
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
+  alias LightningWeb.Components.Common
   alias LightningWeb.Components.GithubComponents
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
@@ -760,7 +761,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     assigns = assign(assigns, :legacy?, !sync_version?(assigns.form))
 
     ~H"""
-    <div class="mt-4 flex items-center">
+    <Common.wrapper_tooltip
+      id="legacy-format"
+      placement="top"
+      class="mt-4 flex w-fit items-center"
+      tooltip="Legacy formats use config.json, state.json and spec.yaml files in your GitHub repo."
+      subtitle="If you already have a repo in the legacy format, you may prefer to keep that structure. The modern 'v2' format uses openfn.yaml and automatically expands workflows to disk."
+    >
       <input
         type="hidden"
         name={@form[:sync_version].name}
@@ -791,7 +798,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       <span class="ml-3 text-sm text-gray-900" id="legacy-format-label">
         Use legacy formats (config.json)
       </span>
-    </div>
+    </Common.wrapper_tooltip>
     """
   end
 
