@@ -1017,6 +1017,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               workflows_using_credentials={@workflows_using_credentials}
               phx_target={@myself}
             />
+            <.error :for={
+              msg <- translate_errors(@changeset.errors, :project_credentials)
+            }>
+              {msg}
+            </.error>
           </div>
 
           <div

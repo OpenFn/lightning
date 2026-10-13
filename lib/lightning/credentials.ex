@@ -193,6 +193,8 @@ defmodule Lightning.Credentials do
 
   ## Returns
     * `{:ok, credential}` - Successfully created credential
+    * `{:error, changeset}` - With an error on `project_credentials` if the
+      owner has no access to a project it links to
     * `{:error, error}` - Error with creation process
   """
   @spec create_credential(map(), Lightning.Actor.t(), [{:id, Ecto.UUID.t()}]) ::
@@ -213,7 +215,8 @@ defmodule Lightning.Credentials do
 
     with :ok <- validate_credential_bodies(credential_bodies, attrs),
          changeset <- Credential.create_changeset(%Credential{id: id}, attrs),
-         :ok <- validate_external_id(changeset) do
+         :ok <- validate_external_id(changeset),
+         :ok <- validate_owner_access(changeset) do
       build_create_multi(changeset, credential_bodies)
       |> derive_events(changeset, actor)
       |> Repo.transaction()
@@ -254,6 +257,9 @@ defmodule Lightning.Credentials do
     * `{:ok, credential}` - Successfully updated credential
     * `{:error, :scheduled_for_deletion}` - The credential is scheduled for
       deletion. Only cancelling that, or deleting it now, can change it
+    * `{:error, changeset}` - With an error on `project_credentials` if the
+      owner has no access to a project a new link points to. Links the
+      credential already holds are not checked
     * `{:error, error}` - Error with update process
   """
   @spec update_credential(Credential.t(), map(), Lightning.Actor.t()) ::
@@ -283,7 +289,8 @@ defmodule Lightning.Credentials do
       end)
 
     with :ok <- validate_credential_bodies(credential_bodies, attrs, schema),
-         :ok <- validate_external_id(changeset) do
+         :ok <- validate_external_id(changeset),
+         :ok <- validate_owner_access(changeset) do
       build_update_multi(credential, changeset, credential_bodies)
       |> derive_events(changeset, actor)
       |> Repo.transaction()
@@ -496,6 +503,42 @@ defmodule Lightning.Credentials do
     Ecto.Changeset.get_field(changeset, :project_credentials, [])
     |> Enum.map(& &1.project_id)
     |> Enum.reject(&is_nil/1)
+  end
+
+  # Only links being added are checked. Some existing links point to projects
+  # the owner has since lost access to, and the credential must stay editable.
+  # The error names projects by id because an API caller may link to a project
+  # whose name it isn't allowed to see.
+  defp validate_owner_access(%Ecto.Changeset{valid?: false}), do: :ok
+
+  defp validate_owner_access(changeset) do
+    project_ids =
+      changeset
+      |> Ecto.Changeset.get_change(:project_credentials, [])
+      |> Enum.map(&Ecto.Changeset.get_change(&1, :project_id))
+      |> Enum.reject(&is_nil/1)
+
+    owner_id = Ecto.Changeset.get_field(changeset, :user_id)
+
+    case projects_without_access(owner_id, project_ids) do
+      [] ->
+        :ok
+
+      projects ->
+        action =
+          if changeset.data.__meta__.state == :built, do: :insert, else: :update
+
+        changeset =
+          changeset
+          |> Ecto.Changeset.add_error(
+            :project_credentials,
+            "the owner has no access to these projects: " <>
+              Enum.map_join(projects, ", ", & &1.id)
+          )
+          |> Map.put(:action, action)
+
+        {:error, changeset}
+    end
   end
 
   # NOTE: This is an app-level check only (not DB-enforced). It has a TOCTOU
@@ -1856,23 +1899,53 @@ defmodule Lightning.Credentials do
     end
   end
 
-  @spec projects_blocking_credential_transfer(
-          Lightning.Credentials.Credential.t(),
-          Lightning.Accounts.User.t()
-        ) :: [Lightning.Projects.Project.t()]
-  defp projects_blocking_credential_transfer(
-         %Credential{id: credential_id},
-         %User{id: user_id}
-       ) do
-    from(p in Lightning.Projects.Project,
-      join: pc in Lightning.Projects.ProjectCredential,
-      on: pc.project_id == p.id and pc.credential_id == ^credential_id,
-      left_join: pu in Lightning.Projects.ProjectUser,
-      on: pu.project_id == p.id and pu.user_id == ^user_id,
-      where: is_nil(pu.id),
-      distinct: true,
-      select: p
-    )
+  defp projects_blocking_credential_transfer(%Credential{id: id}, %User{} = user) do
+    project_ids =
+      from(pc in Lightning.Projects.ProjectCredential,
+        where: pc.credential_id == ^id,
+        select: pc.project_id
+      )
+      |> Repo.all()
+
+    projects_without_access(user.id, project_ids, support_access: false)
+  end
+
+  @doc """
+  Returns the projects among `project_ids` that the user has no access to.
+
+  A user has access to a project they are a member of. A support user also has
+  access to a project that allows support access, unless `support_access: false`
+  is given. Returns `[]` for a user that doesn't exist.
+  """
+  @spec projects_without_access(Ecto.UUID.t(), [Ecto.UUID.t()], [
+          {:support_access, boolean()}
+        ]) :: [Project.t()]
+  def projects_without_access(user_id, project_ids, opts \\ [])
+
+  def projects_without_access(_user_id, [], _opts), do: []
+
+  def projects_without_access(user_id, project_ids, opts) do
+    query =
+      from(p in Project,
+        join: u in User,
+        on: u.id == ^user_id,
+        left_join: pu in Lightning.Projects.ProjectUser,
+        on: pu.project_id == p.id and pu.user_id == u.id,
+        where: p.id in ^project_ids and is_nil(pu.id),
+        order_by: p.name,
+        select: p
+      )
+
+    if Keyword.get(opts, :support_access, true) do
+      where(
+        query,
+        [p, u],
+        not (coalesce(u.support_user, false) and
+               coalesce(p.allow_support_access, false))
+      )
+    else
+      query
+    end
     |> Repo.all()
   end
 

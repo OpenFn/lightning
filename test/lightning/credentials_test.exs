@@ -399,7 +399,9 @@ defmodule Lightning.CredentialsTest do
         user_id: user.id,
         schema: "raw",
         project_credentials: [
-          %{project_id: insert(:project).id}
+          %{
+            project_id: insert(:project, project_users: [%{user_id: user.id}]).id
+          }
         ],
         credential_bodies: [
           %{
@@ -460,7 +462,9 @@ defmodule Lightning.CredentialsTest do
         user_id: user.id,
         schema: "postgresql",
         project_credentials: [
-          %{project_id: insert(:project).id}
+          %{
+            project_id: insert(:project, project_users: [%{user_id: user.id}]).id
+          }
         ],
         # ✅ Use new credential_bodies structure
         credential_bodies: [
@@ -524,10 +528,12 @@ defmodule Lightning.CredentialsTest do
       {account, _key} =
         Lightning.ServiceAccountHelpers.service_account_with_key()
 
+      owner = insert(:user)
+
       %{
         account: %{account | grants: MapSet.new(["credentials:write"])},
-        owner: insert(:user),
-        project: insert(:project)
+        owner: owner,
+        project: insert(:project, project_users: [%{user_id: owner.id}])
       }
     end
 
@@ -775,7 +781,7 @@ defmodule Lightning.CredentialsTest do
         Enum.at(credential.project_credentials, 0)
         |> Map.from_struct()
 
-      new_project = insert(:project)
+      new_project = insert(:project, project_users: [%{user_id: user.id}])
 
       update_attrs = %{
         body: %{},
@@ -1183,7 +1189,9 @@ defmodule Lightning.CredentialsTest do
 
     test "existing links passed back with their ids are kept beside a new one" do
       owner = insert(:user)
-      [linked, added] = insert_list(2, :project)
+
+      [linked, added] =
+        insert_list(2, :project, project_users: [%{user_id: owner.id}])
 
       credential =
         insert(:credential,
@@ -1219,6 +1227,52 @@ defmodule Lightning.CredentialsTest do
                |> Repo.all()
                |> Enum.map(& &1.event)
                |> Enum.sort()
+    end
+
+    test "refuses a new link to a project the owner has no access to" do
+      owner = insert(:user)
+      elsewhere = insert(:project)
+      credential = insert(:credential, user: owner, schema: "raw")
+
+      assert {:error, changeset} =
+               Credentials.update_credential(
+                 credential,
+                 %{"project_credentials" => [%{"project_id" => elsewhere.id}]},
+                 owner
+               )
+
+      assert errors_on(changeset).project_credentials == [
+               "the owner has no access to these projects: #{elsewhere.id}"
+             ]
+
+      assert Repo.preload(credential, :project_credentials, force: true).project_credentials ==
+               []
+    end
+
+    test "keeps editable a credential already linked to a project the owner has no access to" do
+      owner = insert(:user)
+      elsewhere = insert(:project)
+
+      credential =
+        insert(:credential,
+          user: owner,
+          schema: "raw",
+          project_credentials: [%{project_id: elsewhere.id}]
+        )
+
+      [existing] = credential.project_credentials
+
+      assert {:ok, %Credential{name: "Renamed"}} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "Renamed",
+                   "project_credentials" => [
+                     %{"id" => existing.id, "project_id" => elsewhere.id}
+                   ]
+                 },
+                 owner
+               )
     end
   end
 
@@ -2656,8 +2710,8 @@ defmodule Lightning.CredentialsTest do
     test "same external_id in different projects is allowed" do
       user1 = insert(:user)
       user2 = insert(:user)
-      project1 = insert(:project)
-      project2 = insert(:project)
+      project1 = insert(:project, project_users: [%{user_id: user1.id}])
+      project2 = insert(:project, project_users: [%{user_id: user2.id}])
 
       attrs1 = %{
         name: "cred one",
@@ -2684,7 +2738,11 @@ defmodule Lightning.CredentialsTest do
     test "cross-user duplicate external_id in the same project is rejected" do
       user1 = insert(:user)
       user2 = insert(:user)
-      project = insert(:project)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user1.id}, %{user_id: user2.id}]
+        )
 
       attrs1 = %{
         name: "cred one",
@@ -2716,8 +2774,8 @@ defmodule Lightning.CredentialsTest do
 
     test "removing a project association resolves the conflict in that project" do
       user = insert(:user)
-      project1 = insert(:project)
-      project2 = insert(:project)
+      project1 = insert(:project, project_users: [%{user_id: user.id}])
+      project2 = insert(:project, project_users: [%{user_id: user.id}])
 
       # Create our credential in both projects (no conflict yet)
       {:ok, credential} =
@@ -2772,6 +2830,7 @@ defmodule Lightning.CredentialsTest do
 
       # Now another user can use the same external_id in project1
       other_user = insert(:user)
+      insert(:project_user, project: project1, user: other_user)
 
       {:ok, _other} =
         Credentials.create_credential(
@@ -2790,8 +2849,13 @@ defmodule Lightning.CredentialsTest do
     test "removing credential from a conflicting project allows the update" do
       user_a = insert(:user)
       user_b = insert(:user)
-      shared_project = insert(:project)
-      other_project = insert(:project)
+
+      shared_project =
+        insert(:project,
+          project_users: [%{user_id: user_a.id}, %{user_id: user_b.id}]
+        )
+
+      other_project = insert(:project, project_users: [%{user_id: user_b.id}])
 
       # User A has a credential with external_id "conflict-id" in shared_project
       {:ok, _cred_a} =
@@ -2887,6 +2951,8 @@ defmodule Lightning.CredentialsTest do
           env: "staging"
         })
 
+      insert(:project_user, project: sandbox, user: user2)
+
       # User A adds credential with external_id directly to sandbox
       {:ok, _sandbox_cred} =
         Credentials.create_credential(
@@ -2923,7 +2989,7 @@ defmodule Lightning.CredentialsTest do
 
     test "updating a credential keeps its own external_id without error" do
       user = insert(:user)
-      project = insert(:project)
+      project = insert(:project, project_users: [%{user_id: user.id}])
 
       {:ok, credential} =
         Credentials.create_credential(

@@ -52,23 +52,16 @@ defmodule LightningWeb.API.CredentialPutTest do
   end
 
   # A credential with a staging body beside its main one, linked to `project`.
+  # Inserted directly, so the owner needn't have access to `project`.
   defp existing_credential(owner, project) do
-    {:ok, credential} =
-      Credentials.create_credential(
-        %{
-          "name" => "Acme DHIS2",
-          "schema" => "raw",
-          "user_id" => owner.id,
-          "credential_bodies" => [
-            %{"name" => "main", "body" => %{"password" => "old"}},
-            %{"name" => "staging", "body" => %{"password" => "staging"}}
-          ],
-          "project_credentials" => [%{"project_id" => project.id}]
-        },
-        owner
-      )
-
-    credential
+    insert(:credential,
+      name: "Acme DHIS2",
+      schema: "raw",
+      user: owner,
+      project_credentials: [%{project_id: project.id}]
+    )
+    |> with_body(%{name: "main", body: %{"password" => "old"}})
+    |> with_body(%{name: "staging", body: %{"password" => "staging"}})
   end
 
   defp scheduled_for_deletion(credential) do
@@ -128,7 +121,10 @@ defmodule LightningWeb.API.CredentialPutTest do
       conn: conn
     } do
       owner = insert(:user, email: "alice@example.com")
-      [project_a, project_b] = insert_pair(:project)
+
+      [project_a, project_b] =
+        insert_pair(:project, project_users: [%{user: owner}])
+
       id = Ecto.UUID.generate()
 
       conn =
@@ -168,7 +164,8 @@ defmodule LightningWeb.API.CredentialPutTest do
     test "replaces name, schema and main body; keeps other bodies and every link",
          %{conn: conn} do
       owner = insert(:user)
-      [earlier, requested] = insert_pair(:project)
+      earlier = insert(:project)
+      requested = insert(:project, project_users: [%{user: owner}])
       credential = existing_credential(owner, earlier)
 
       conn =
@@ -215,7 +212,7 @@ defmodule LightningWeb.API.CredentialPutTest do
       conn: conn
     } do
       owner = insert(:user)
-      project = insert(:project)
+      project = insert(:project, project_users: [%{user: owner}])
       id = Ecto.UUID.generate()
 
       body =
@@ -408,6 +405,53 @@ defmodule LightningWeb.API.CredentialPutTest do
         assert errors != %{}
         refute conn.resp_body =~ planted
       end
+    end
+
+    test "refuses with 422 a link to a project the owner has no access to", %{
+      conn: conn
+    } do
+      owner = insert(:user)
+      elsewhere = insert(:project)
+      id = Ecto.UUID.generate()
+
+      conn =
+        put_credential(
+          conn,
+          id,
+          credential_body(%{
+            "owner" => owner.email,
+            "project_credentials" => links([elsewhere.id])
+          })
+        )
+
+      assert json_response(conn, 422) == %{
+               "errors" => %{
+                 "project_credentials" => [
+                   "the owner has no access to these projects: #{elsewhere.id}"
+                 ]
+               }
+             }
+
+      refute Repo.get(Credential, id)
+    end
+
+    test "links a support user's credential to a project allowing support access",
+         %{conn: conn} do
+      owner = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: true)
+      id = Ecto.UUID.generate()
+
+      conn =
+        put_credential(
+          conn,
+          id,
+          credential_body(%{
+            "owner" => owner.email,
+            "project_credentials" => links([project.id])
+          })
+        )
+
+      assert linked_project_ids(json_response(conn, 201)) == [project.id]
     end
 
     test "refuses a listed project that does not exist with 403", %{conn: conn} do

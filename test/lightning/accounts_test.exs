@@ -846,7 +846,11 @@ defmodule Lightning.AccountsTest do
 
     test "purging a user sets all project credentials that use their credentials to nil" do
       user = insert(:user)
-      project = Lightning.ProjectsFixtures.project_fixture()
+
+      project =
+        Lightning.ProjectsFixtures.project_fixture(
+          project_users: [%{user_id: user.id}]
+        )
 
       project_credential_1 =
         CredentialsFixtures.project_credential_fixture(
