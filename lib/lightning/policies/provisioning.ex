@@ -13,8 +13,8 @@ defmodule Lightning.Policies.Provisioning do
   Only a superuser or an operator holding `projects:write` can create a
   project, whether through `:create_project` or by provisioning one that does
   not exist yet. Owners and admins can update an existing one.
-  `:provision_project` and `:describe_project` on an existing project need no
-  grant, because a repo connection holds none and must keep provisioning.
+  `:provision_project` and `:describe_project` on an existing project need
+  `projects:provision`, the one grant a repo connection holds.
   """
   @behaviour Bodyguard.Policy
 
@@ -49,16 +49,10 @@ defmodule Lightning.Policies.Provisioning do
   def authorize(:provision_project, actor_or_scope, %Project{id: nil}),
     do: authorize(:create_project, actor_or_scope, nil)
 
-  # Not `Decision.project/4`, which needs a grant a repo connection never holds.
-  # It keeps the same order, so only an allowed caller learns of the deletion.
   def authorize(action, %Scope{} = scope, %Project{} = project)
       when action in [:provision_project, :describe_project] do
-    cond do
-      not Scope.describes?(scope, project) -> {:error, :forbidden}
-      not judge(action, scope) -> {:error, :forbidden}
-      scope.scheduled_for_deletion? -> {:error, :scheduled_for_deletion}
-      true -> true
-    end
+    Decision.project(scope, project, "projects:provision", judge(action, scope)) ||
+      {:error, :forbidden}
   end
 
   def authorize(action, actor, %Project{} = project)
@@ -76,7 +70,7 @@ defmodule Lightning.Policies.Provisioning do
   defp judge(_action, %Scope{actor: %ProjectRepoConnection{}}), do: true
 
   defp judge(:provision_project, scope),
-    do: scope.mfa_satisfied? and Scope.holds_role?(scope, [:owner, :admin])
+    do: Scope.holds_role?(scope, [:owner, :admin])
 
   # Delegated rather than copied, so it cannot drift from `:access_project`.
   # It answers `:scheduled_for_deletion` only to a caller it would allow.

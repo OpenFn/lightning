@@ -13,6 +13,7 @@ defmodule Lightning.Policies.ProvisioningTest do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Provisioning
   alias Lightning.Projects.Project
+  alias Lightning.ServiceAccount.AccessToken
 
   describe ":provision_project on a project that requires MFA" do
     test "is refused for an unenrolled :owner or :admin" do
@@ -175,6 +176,71 @@ defmodule Lightning.Policies.ProvisioningTest do
     end
   end
 
+  describe "an operator on an existing project" do
+    setup do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{account: account, project: insert(:project)}
+    end
+
+    test "is refused both actions without projects:provision, whatever else it holds",
+         %{account: account, project: project} do
+      account = %{
+        account
+        | grants: MapSet.new(AccessToken.scopes() -- ["projects:provision"])
+      }
+
+      for action <- [:provision_project, :describe_project] do
+        assert Provisioning.authorize(action, account, project) ==
+                 {:error, :insufficient_scope}
+      end
+    end
+
+    test "may provision with projects:provision", %{
+      account: account,
+      project: project
+    } do
+      account = %{account | grants: MapSet.new(["projects:provision"])}
+
+      assert Provisioning.authorize(:provision_project, account, project) == true
+    end
+
+    test "needs projects:write as well to describe, as :access_project does", %{
+      account: account,
+      project: project
+    } do
+      provision_only = %{account | grants: MapSet.new(["projects:provision"])}
+
+      both = %{
+        account
+        | grants: MapSet.new(["projects:provision", "projects:write"])
+      }
+
+      assert Provisioning.authorize(:describe_project, provision_only, project) ==
+               {:error, :forbidden}
+
+      assert Provisioning.authorize(:describe_project, both, project) == true
+    end
+
+    test "hears the project is scheduled for deletion only once allowed", %{
+      account: account
+    } do
+      project =
+        insert(:project,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.add(1, :day)
+        )
+
+      assert Provisioning.authorize(:provision_project, account, project) ==
+               {:error, :insufficient_scope}
+
+      account = %{account | grants: MapSet.new(["projects:provision"])}
+
+      assert Provisioning.authorize(:provision_project, account, project) ==
+               {:error, :scheduled_for_deletion}
+    end
+  end
+
   describe ":create_project" do
     test "is allowed for a superuser" do
       superuser = insert(:user, role: :superuser)
@@ -213,7 +279,7 @@ defmodule Lightning.Policies.ProvisioningTest do
       end
     end
 
-    # A repo connection holds no grant, so the grant refuses it first.
+    # A repo connection holds no `projects:write`, so the grant refuses it first.
     test "is refused for a repo connection" do
       repo_connection = insert(:project_repo_connection)
 

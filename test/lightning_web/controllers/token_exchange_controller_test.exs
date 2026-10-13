@@ -57,6 +57,7 @@ defmodule LightningWeb.TokenExchangeControllerTest do
                  "users:read",
                  "users:write",
                  "projects:write",
+                 "projects:provision",
                  "credentials:write",
                  "collections:write"
                ],

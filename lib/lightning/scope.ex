@@ -141,9 +141,14 @@ defmodule Lightning.Scope do
     }
   end
 
-  # A repo connection holds no grant, so every grant-checked action refuses it.
+  # A repo connection holds only `projects:provision`, so every other
+  # grant-checked action refuses it.
   def new(%ProjectRepoConnection{} = repo_connection) do
-    %__MODULE__{actor: repo_connection, mfa_satisfied?: true}
+    %__MODULE__{
+      actor: repo_connection,
+      grants: MapSet.new(["projects:provision"]),
+      mfa_satisfied?: true
+    }
   end
 
   @doc """

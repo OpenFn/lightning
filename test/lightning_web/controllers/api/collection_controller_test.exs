@@ -429,7 +429,9 @@ defmodule LightningWeb.API.CollectionControllerTest do
   end
 
   describe "for a repo connection" do
-    test "PUT and GET are refused with 403 for holding no grant", %{conn: conn} do
+    test "PUT and GET are refused with 403 for not holding collections:write", %{
+      conn: conn
+    } do
       project = insert(:project)
       collection = insert(:collection, project: project)
       repo_connection = insert(:project_repo_connection, project: project)

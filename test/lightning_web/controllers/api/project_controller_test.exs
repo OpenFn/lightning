@@ -213,7 +213,9 @@ defmodule LightningWeb.API.ProjectControllerTest do
   end
 
   describe "show, for a repo connection" do
-    test "is refused its own project for holding no grant", %{conn: conn} do
+    test "is refused its own project for not holding projects:write", %{
+      conn: conn
+    } do
       project = insert(:project)
       repo_connection = insert(:project_repo_connection, project: project)
 

@@ -15,8 +15,8 @@ defmodule LightningWeb.API.JobControllerTest do
     assert %{"error" => "Unauthorized"} == json_response(conn, 401)
   end
 
-  # A repo connection holds no grants, so it can't read jobs even in its own
-  # project.
+  # A repo connection holds no `projects:write`, so it can't read jobs even in
+  # its own project.
   test "a repo connection is refused its own project's jobs", %{conn: conn} do
     project = insert(:project)
     repo_connection = insert(:project_repo_connection, project: project)

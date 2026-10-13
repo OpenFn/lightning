@@ -259,7 +259,7 @@ defmodule Lightning.ScopeTest do
       assert scope.grants == MapSet.new(["projects:write"])
     end
 
-    test "a repo connection holds no grant and no instance role" do
+    test "a repo connection holds only projects:provision and no instance role" do
       repo_connection = insert(:project_repo_connection)
 
       assert %Scope{
@@ -268,7 +268,7 @@ defmodule Lightning.ScopeTest do
                mfa_satisfied?: true
              } = scope = Scope.new(repo_connection)
 
-      assert scope.grants == MapSet.new()
+      assert scope.grants == MapSet.new(["projects:provision"])
     end
 
     test "a hand-built scope holds no grant" do
