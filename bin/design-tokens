@@ -1,0 +1,178 @@
+#!/usr/bin/env node
+// Turns the Figma variables exports in assets/design-tokens/ into Tailwind
+// theme variables, written to assets/css/ui/tokens.css.
+//
+// Dark.tokens.json isn't read: most of its colours are still white
+// placeholders in Figma, and the app has no dark mode.
+//
+// Each token goes in the namespace of the utility it's for, so the class
+// reads like the Figma name:
+//
+//   bg/action/primary/hover  --background-color-action-primary-hover  bg-action-primary-hover
+//   text/subtle              --text-color-subtle                      text-subtle
+//   icon/warning             --text-color-icon-warning                text-icon-warning
+//   border/muted             --border-color-muted                     border-muted
+//   space/sm                 --padding-sm, --margin-sm                p-sm, m-sm
+//   gap/sm                   --gap-sm                                 gap-sm
+//   radius/pill              --radius-pill                            rounded-pill
+//   border/sm (Static)       --border-width-sm                        border-sm
+//   Type/weight/body/sm/*    --text-body-sm, --text-body-sm--*        text-body-sm
+//
+// Icons get text colours because hero icons are drawn in currentColor. Space
+// doesn't go in --spacing-*: --spacing-sm would also become max-w-sm and w-sm.
+//
+// Usage: bin/design-tokens
+
+import { readFileSync, writeFileSync } from 'node:fs';
+
+const DIR = new URL('../assets/design-tokens/', import.meta.url);
+const OUT = new URL('../assets/css/ui/tokens.css', import.meta.url);
+const FILES = ['Light.tokens.json', 'Static.tokens.json'];
+
+// Variables that take over a Tailwind class (rounded-md, font-bold,
+// text-white), so a Figma change would restyle every existing use of it.
+// Most have different values from Tailwind's, and app.css sets the font
+// stacks.
+const REDEFINES_DEFAULT = new Set([
+  '--radius-none',
+  '--radius-sm',
+  '--radius-md',
+  '--radius-lg',
+  '--font-weight-medium',
+  '--font-weight-semibold',
+  '--font-weight-bold',
+  '--text-color-white',
+  '--font-sans',
+  '--font-mono',
+  '--border-width-none',
+]);
+
+// Light and Static both have a border group: colours in one, widths in the
+// other. A number is a width.
+const COLOUR_NAMESPACES = {
+  bg: 'background-color',
+  text: 'text-color',
+  icon: 'text-color',
+  border: 'border-color',
+};
+
+const NUMBER_NAMESPACES = {
+  space: ['padding', 'margin'],
+  gap: ['gap'],
+  radius: ['radius'],
+};
+
+const round = n => +n.toFixed(4);
+const rem = px => (px === 0 ? '0' : `${round(px / 16)}rem`);
+const px = n => (n === 0 ? '0' : `${round(n)}px`);
+
+const colour = ({ hex, alpha = 1 }) =>
+  (alpha < 1
+    ? hex + Math.round(alpha * 255).toString(16).padStart(2, '0')
+    : hex
+  ).toLowerCase();
+
+// ['action', 'primary', 'default'] -> 'action-primary'
+const slug = path =>
+  path
+    .filter((key, i) => !(key === 'default' && i > 0))
+    .join('-')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
+
+// [['bg', 'action', 'primary', 'default'], token], ...
+const flatten = (group, path = []) =>
+  Object.entries(group).flatMap(([key, value]) => {
+    if (key.startsWith('$')) return [];
+    if ('$value' in value) return [[[...path, key], value]];
+    return flatten(value, [...path, key]);
+  });
+
+// Follows aliases like "{Type.weight.semibold}" to the value they point at.
+const resolver = tokens => {
+  const resolve = value => {
+    const alias = typeof value === 'string' && value.match(/^\{(.+)\}$/);
+    if (!alias) return value;
+
+    const token = alias[1].split('.').reduce((group, key) => group?.[key], tokens);
+    if (!token) throw new Error(`${value} doesn't point at a token`);
+    return resolve(token.$value);
+  };
+  return resolve;
+};
+
+const TYPE_PROPERTIES = {
+  size: ['', rem],
+  'line-height': ['--line-height', rem],
+  'letter-spacing': ['--letter-spacing', px],
+  weight: ['--font-weight', String],
+};
+
+const toVariables = ([group, ...path], value) => {
+  if (group === 'border' && typeof value === 'number') {
+    return [[`--border-width-${slug(path)}`, px(value)]];
+  }
+
+  if (COLOUR_NAMESPACES[group]) {
+    const name = group === 'icon' ? ['icon', ...path] : path;
+    return [[`--${COLOUR_NAMESPACES[group]}-${slug(name)}`, colour(value)]];
+  }
+
+  if (NUMBER_NAMESPACES[group]) {
+    return NUMBER_NAMESPACES[group].map(ns => [`--${ns}-${slug(path)}`, rem(value)]);
+  }
+
+  if (group === 'Type') {
+    // Type/sans, Type/weight/medium, Type/weight/<style>/<property>
+    // Falls back to the app's font until the Figma one is loaded.
+    if (path.length === 1) return [[`--font-${slug(path)}`, `'${value}', var(--font-sans)`]];
+    if (path.length === 2) return [[`--font-weight-${slug(path.slice(1))}`, String(value)]];
+
+    const property = path.at(-1);
+    // Tailwind's --text-* can't carry a font family, so "style" is dropped.
+    if (property === 'style') return [];
+
+    const [suffix, format] = TYPE_PROPERTIES[property];
+    return [[`--text-${slug(path.slice(1, -1))}${suffix}`, format(value)]];
+  }
+
+  return null;
+};
+
+const variables = new Map();
+
+for (const file of FILES) {
+  const tokens = JSON.parse(readFileSync(new URL(file, DIR), 'utf8'));
+  const resolve = resolver(tokens);
+
+  for (const [path, token] of flatten(tokens)) {
+    const result = toVariables(path, resolve(token.$value));
+
+    if (!result) {
+      console.warn(`skipped ${path.join('/')}: no rule for it`);
+      continue;
+    }
+
+    for (const [key, value] of result) {
+      if (REDEFINES_DEFAULT.has(key)) {
+        console.warn(`skipped ${path.join('/')}: ${key} redefines a Tailwind default`);
+        continue;
+      }
+      if (variables.has(key) && variables.get(key) !== value) {
+        console.error(`${path.join('/')} is ${value}, but ${key} is already ${variables.get(key)}`);
+        process.exit(1);
+      }
+      variables.set(key, value);
+    }
+  }
+}
+
+const lines = [...variables].map(([key, value]) => `  ${key}: ${value};`);
+
+writeFileSync(
+  OUT,
+  `/* Generated by bin/design-tokens from ${FILES.join(' and ')}. Don't edit by hand. */\n` +
+    `@theme {\n${lines.join('\n')}\n}\n`
+);
+
+console.log(`wrote ${variables.size} tokens to assets/css/ui/tokens.css`);
