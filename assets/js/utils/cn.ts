@@ -1,5 +1,17 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+// The design token classes (text-body-sm, p-sm, border-sm), written by
+// bin/design-tokens. Without them tailwind-merge guesses, and drops
+// text-body-sm next to text-subtle because it takes both for colours.
+import tokens from './token-names.json';
+
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: tokens.theme,
+    classGroups: { 'border-w': [{ border: tokens.borderWidth }] },
+  },
+});
 
 /**
  * Utility function for merging Tailwind CSS classes conditionally
