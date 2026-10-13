@@ -32,9 +32,11 @@ and this project adheres to
 - History retention no longer leaves steps behind when it deletes work orders in
   batches, and no longer deletes steps that a kept work order still uses. A
   workflow purge that still fails now says why.
+  [#5242](https://github.com/OpenFn/lightning/pull/5242)
 - A background job, queued two hours after upgrading, deletes the steps that
   history retention left behind, which were stopping deleted workflows from
   being purged. It runs on a new `maintenance` Oban queue.
+  [#5242](https://github.com/OpenFn/lightning/pull/5242)
 
 ## [2.19.1-pre] - 2026-10-09
 
