@@ -13,7 +13,6 @@ defmodule Lightning.ServiceAccount.AccessToken do
     "users:read",
     "users:write",
     "projects:write",
-    "projects:provision",
     "credentials:write",
     "collections:write"
   ]

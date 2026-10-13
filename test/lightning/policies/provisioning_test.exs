@@ -186,10 +186,7 @@ defmodule Lightning.Policies.ProvisioningTest do
 
     test "is refused both actions without projects:provision, whatever else it holds",
          %{account: account, project: project} do
-      account = %{
-        account
-        | grants: MapSet.new(AccessToken.scopes() -- ["projects:provision"])
-      }
+      account = %{account | grants: MapSet.new(AccessToken.scopes())}
 
       for action <- [:provision_project, :describe_project] do
         assert Provisioning.authorize(action, account, project) ==

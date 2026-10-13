@@ -57,7 +57,6 @@ defmodule LightningWeb.TokenExchangeControllerTest do
                  "users:read",
                  "users:write",
                  "projects:write",
-                 "projects:provision",
                  "credentials:write",
                  "collections:write"
                ],
@@ -172,6 +171,20 @@ defmodule LightningWeb.TokenExchangeControllerTest do
       params =
         valid_params(account, private_key, token_endpoint(conn), %{
           "scope" => "users:read projects:delete"
+        })
+
+      assert %{"error" => "invalid_scope"} =
+               conn |> exchange(params) |> json_response(400)
+    end
+
+    test "refuses projects:provision, which only a repo connection holds", %{
+      conn: conn,
+      account: account,
+      private_key: private_key
+    } do
+      params =
+        valid_params(account, private_key, token_endpoint(conn), %{
+          "scope" => "projects:provision"
         })
 
       assert %{"error" => "invalid_scope"} =
