@@ -100,9 +100,4 @@ Application.put_env(
 )
 
 ExUnit.start()
-
-# Data migrations enqueue jobs when the test database is migrated; tests
-# assert on enqueued jobs, so start from an empty queue.
-Lightning.Repo.delete_all(Oban.Job)
-
 Ecto.Adapters.SQL.Sandbox.mode(Lightning.Repo, :manual)

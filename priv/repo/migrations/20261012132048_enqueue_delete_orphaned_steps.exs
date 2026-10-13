@@ -10,11 +10,7 @@ defmodule Lightning.Repo.Migrations.EnqueueDeleteOrphanedSteps do
     INSERT INTO oban_jobs (state, queue, worker, args, max_attempts, scheduled_at)
     SELECT 'scheduled', 'maintenance', 'Lightning.Invocation.DeleteOrphanedSteps',
            '{}', 5, timezone('UTC', now()) + interval '2 hours'
-    WHERE NOT EXISTS (
-      SELECT 1 FROM oban_jobs
-      WHERE worker = 'Lightning.Invocation.DeleteOrphanedSteps'
-        AND state IN ('available', 'scheduled', 'executing', 'retryable')
-    )
+    WHERE EXISTS (SELECT 1 FROM steps)
     """)
   end
 

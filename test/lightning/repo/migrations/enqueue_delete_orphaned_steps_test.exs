@@ -2,6 +2,7 @@ defmodule Lightning.Repo.Migrations.EnqueueDeleteOrphanedStepsTest do
   use Lightning.DataCase, async: true
 
   import Ecto.Query
+  import Lightning.Factories
 
   alias Lightning.Repo
 
@@ -10,7 +11,8 @@ defmodule Lightning.Repo.Migrations.EnqueueDeleteOrphanedStepsTest do
   @worker "Lightning.Invocation.DeleteOrphanedSteps"
 
   test "enqueues one cleanup job on the maintenance queue, two hours out" do
-    migrate()
+    insert(:step)
+
     migrate()
 
     assert [job] = Repo.all(from(j in Oban.Job, where: j.worker == @worker))
@@ -22,6 +24,12 @@ defmodule Lightning.Repo.Migrations.EnqueueDeleteOrphanedStepsTest do
 
     in_two_hours = DateTime.add(DateTime.utc_now(), 2, :hour)
     assert abs(DateTime.diff(job.scheduled_at, in_two_hours)) < 60
+  end
+
+  test "enqueues nothing when there are no steps" do
+    migrate()
+
+    assert Repo.all(from(j in Oban.Job, where: j.worker == @worker)) == []
   end
 
   # Runs the INSERT read straight out of the migration file, so an edit to the
