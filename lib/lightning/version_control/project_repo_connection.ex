@@ -204,7 +204,9 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     validate_change(changeset, :sync_direction, fn _field, value ->
       path = get_field(changeset, :config_path)
 
-      if value == :deploy and is_nil(path) do
+      # v2 syncs always use openfn.yaml, so only legacy ones need a path
+      if value == :deploy and is_nil(path) and
+           not get_field(changeset, :sync_version) do
         [config_path: "you must specify a path to an existing config file"]
       else
         []

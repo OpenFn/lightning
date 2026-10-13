@@ -789,7 +789,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         </span>
       </button>
       <span class="ml-3 text-sm text-gray-900" id="legacy-format-label">
-        Use legacy YAML config format
+        Use legacy formats (config.json)
       </span>
     </div>
     """

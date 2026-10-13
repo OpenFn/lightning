@@ -22,6 +22,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
 
   @switch "#toggle-legacy-format-switch"
   @sync_version_input ~s{input[name="connection[sync_version]"]}
+  @config_path_input ~s{input[name="connection[config_path]"]}
 
   defp open_new_connection_form(conn) do
     project = insert(:project)
@@ -134,16 +135,73 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
       assert has_element?(view, ~s{#{@sync_version_input}[value=false]})
     end
 
-    test "the switch is hidden when importing from GitHub", %{conn: conn} do
+    test "the switch stays visible when importing from GitHub", %{conn: conn} do
       view = open_new_connection_form(conn)
-
-      assert has_element?(view, @switch)
 
       view
       |> form("#project-repo-connection-form")
       |> render_change(connection: %{sync_direction: "deploy"})
 
-      refute has_element?(view, @switch)
+      assert has_element?(view, @switch)
+    end
+
+    test "a v2 import has no path to config input", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{sync_direction: "deploy"})
+
+      assert has_element?(view, "#{@switch}[aria-checked=false]")
+      refute has_element?(view, @config_path_input)
+    end
+
+    test "a legacy import asks for the path to config", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{sync_direction: "deploy"})
+
+      view |> element(@switch) |> render_click()
+
+      assert has_element?(view, @config_path_input)
+
+      view |> element(@switch) |> render_click()
+
+      refute has_element?(view, @config_path_input)
+    end
+
+    test "an export-first v2 sync has no path to config", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      refute has_element?(view, @config_path_input)
+    end
+
+    test "an export-first legacy sync shows an optional path to config",
+         %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view |> element(@switch) |> render_click()
+
+      assert has_element?(view, @config_path_input)
+      assert render(view) =~ "Path to config (optional)"
+
+      view |> element(@switch) |> render_click()
+
+      refute has_element?(view, @config_path_input)
+    end
+
+    test "a legacy import marks the path to config as required", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{sync_direction: "deploy"})
+
+      view |> element(@switch) |> render_click()
+
+      assert render(view) =~ "Path to config (required)"
     end
 
     test "the confirm box waits until a branch is picked", %{conn: conn} do

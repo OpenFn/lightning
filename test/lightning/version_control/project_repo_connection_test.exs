@@ -233,6 +233,58 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
     end
   end
 
+  describe "config path when importing from GitHub (configure_changeset/2)" do
+    setup do
+      %{
+        attrs: %{
+          project_id: insert(:project).id,
+          repo: "openfn/example",
+          branch: "main",
+          github_installation_id: "1234",
+          sync_direction: "deploy",
+          accept: true
+        }
+      }
+    end
+
+    test "a legacy import needs a path to config", %{attrs: attrs} do
+      changeset =
+        ProjectRepoConnection.configure_changeset(
+          %ProjectRepoConnection{},
+          Map.put(attrs, :sync_version, false)
+        )
+
+      refute changeset.valid?
+
+      assert {"you must specify a path to an existing config file", _} =
+               changeset.errors[:config_path]
+    end
+
+    test "a legacy import is valid with a path", %{attrs: attrs} do
+      changeset =
+        ProjectRepoConnection.configure_changeset(
+          %ProjectRepoConnection{},
+          Map.merge(attrs, %{sync_version: false, config_path: "./config.json"})
+        )
+
+      assert changeset.valid?
+    end
+
+    test "a v2 import needs no path and uses openfn.yaml", %{attrs: attrs} do
+      changeset =
+        ProjectRepoConnection.configure_changeset(
+          %ProjectRepoConnection{},
+          Map.put(attrs, :sync_version, true)
+        )
+
+      assert changeset.valid?
+
+      assert ProjectRepoConnection.config_path(
+               Ecto.Changeset.apply_changes(changeset)
+             ) == "openfn.yaml"
+    end
+  end
+
   describe "tree_branch_conflict?/4" do
     test "returns false when no other connection in the tree uses the (repo, branch)" do
       root = insert(:project)
