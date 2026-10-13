@@ -30,7 +30,6 @@ defmodule LightningWeb.API.CredentialController do
   alias Lightning.Credentials.Credential
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Scope
   alias LightningWeb.API.PutRequest
@@ -79,8 +78,6 @@ defmodule LightningWeb.API.CredentialController do
   """
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, %{"project_id" => project_id}) do
-    current_user = conn.assigns.current_resource
-
     with {:ok, scope} <- Scope.fetch(conn.assigns.scope, project_id),
          :ok <-
            Permissions.permit(
@@ -92,7 +89,7 @@ defmodule LightningWeb.API.CredentialController do
       credentials =
         scope.project
         |> Credentials.list_credentials()
-        |> hide_unseen_links(current_user)
+        |> hide_unseen_links(conn.assigns.scope)
 
       render(conn, "index.json", credentials: credentials)
     end
@@ -111,7 +108,7 @@ defmodule LightningWeb.API.CredentialController do
       credentials =
         current_user
         |> Credentials.list_credentials()
-        |> hide_unseen_links(current_user)
+        |> hide_unseen_links(conn.assigns.scope)
 
       render(conn, "index.json", credentials: credentials)
     end
@@ -162,7 +159,7 @@ defmodule LightningWeb.API.CredentialController do
     current_user = conn.assigns.current_resource
 
     with {:ok, validated_params} <-
-           validate_and_authorize_projects(params, current_user),
+           validate_and_authorize_projects(params, conn.assigns.scope),
          {:ok, credential} <-
            Credentials.create_credential(validated_params, current_user) do
       conn
@@ -185,7 +182,7 @@ defmodule LightningWeb.API.CredentialController do
              conn.assigns.scope,
              credential
            ) do
-      render_credential(conn, credential, conn.assigns.current_resource)
+      render_credential(conn, credential)
     else
       :error -> {:error, :not_found}
       nil -> {:error, :not_found}
@@ -291,7 +288,7 @@ defmodule LightningWeb.API.CredentialController do
   defp create_under_id(conn, attrs, owner, actor) do
     project_ids = requested_project_ids(attrs)
 
-    with :ok <- authorize_links(project_ids, actor) do
+    with :ok <- authorize_links(project_ids, conn.assigns.scope) do
       attrs
       |> credential_params()
       |> Map.merge(%{
@@ -301,7 +298,7 @@ defmodule LightningWeb.API.CredentialController do
       |> Credentials.create_credential(actor, id: attrs.id)
       |> case do
         {:ok, credential} ->
-          conn |> put_status(:created) |> render_credential(credential, actor)
+          conn |> put_status(:created) |> render_credential(credential)
 
         {:error, %Ecto.Changeset{} = changeset} ->
           if PutRequest.unique_error?(changeset, :id),
@@ -334,7 +331,7 @@ defmodule LightningWeb.API.CredentialController do
     held = credential.project_credentials
     new_ids = requested_project_ids(attrs) -- Enum.map(held, & &1.project_id)
 
-    with :ok <- authorize_links(new_ids, actor) do
+    with :ok <- authorize_links(new_ids, conn.assigns.scope) do
       links =
         Enum.map(held, &%{"id" => &1.id, "project_id" => &1.project_id}) ++
           Enum.map(new_ids, &%{"project_id" => &1})
@@ -343,7 +340,7 @@ defmodule LightningWeb.API.CredentialController do
         attrs |> credential_params() |> Map.put("project_credentials", links)
 
       case Credentials.update_credential(credential, params, actor) do
-        {:ok, credential} -> render_credential(conn, credential, actor)
+        {:ok, credential} -> render_credential(conn, credential)
         error -> render_write_error(conn, error)
       end
     end
@@ -369,25 +366,29 @@ defmodule LightningWeb.API.CredentialController do
     |> Enum.uniq()
   end
 
-  defp authorize_links(project_ids, actor) do
-    if Enum.all?(project_ids, &can_link?(&1, actor)),
+  defp authorize_links(project_ids, scope) do
+    linkable =
+      scope
+      |> Scope.fetch_all(project_ids)
+      |> permitted_ids(:create_project_credential)
+
+    if Enum.all?(project_ids, &linkable?(&1, linkable)),
       do: :ok,
       else: {:error, :forbidden}
   end
 
-  defp can_link?(project_id, actor) do
-    case Projects.get_project(project_id) do
-      nil ->
-        false
-
-      project ->
-        Permissions.can?(
-          ProjectUsers,
-          :create_project_credential,
-          actor,
-          project
-        )
+  defp linkable?(project_id, linkable) do
+    case Ecto.UUID.cast(project_id) do
+      {:ok, id} -> id in linkable
+      :error -> false
     end
+  end
+
+  defp permitted_ids(scopes, action) do
+    for {id, project_scope} <- scopes,
+        ProjectUsers.permitted?(action, project_scope),
+        into: MapSet.new(),
+        do: id
   end
 
   defp render_write_error(conn, {:error, %Ecto.Changeset{} = changeset}) do
@@ -410,31 +411,24 @@ defmodule LightningWeb.API.CredentialController do
 
   # Every link stays, because the caller needs each link's id. Only projects
   # the caller may access are named.
-  defp render_credential(conn, credential, actor) do
+  defp render_credential(conn, credential) do
     credential =
       credential
       |> Repo.preload([:project_credentials, :projects])
-      |> hide_unseen_projects(actor)
+      |> hide_unseen_projects(conn.assigns.scope)
 
     render(conn, "create.json", credential: credential)
   end
 
-  defp hide_unseen_projects(credential, actor) do
-    %{
-      credential
-      | projects: Enum.filter(credential.projects, &may_name?(&1, actor))
-    }
+  defp hide_unseen_projects(credential, scope) do
+    named = nameable_ids(scope, credential.projects)
+    %{credential | projects: Enum.filter(credential.projects, &(&1.id in named))}
   end
 
   # A list can include other owners' credentials, so it also drops each link
   # to a project the caller may not access.
-  defp hide_unseen_links(credentials, actor) do
-    named =
-      credentials
-      |> Enum.flat_map(& &1.projects)
-      |> Enum.uniq_by(& &1.id)
-      |> Enum.filter(&may_name?(&1, actor))
-      |> MapSet.new(& &1.id)
+  defp hide_unseen_links(credentials, scope) do
+    named = nameable_ids(scope, Enum.flat_map(credentials, & &1.projects))
 
     Enum.map(credentials, fn credential ->
       %{
@@ -449,8 +443,11 @@ defmodule LightningWeb.API.CredentialController do
     end)
   end
 
-  defp may_name?(project, actor),
-    do: Permissions.can?(:project_users, :access_project, actor, project)
+  defp nameable_ids(scope, projects) do
+    scope
+    |> Scope.fetch_all(projects |> Enum.map(& &1.id) |> Enum.uniq())
+    |> permitted_ids(:access_project)
+  end
 
   @doc """
   Deletes a credential owned by the authenticated user.
@@ -498,9 +495,9 @@ defmodule LightningWeb.API.CredentialController do
     end
   end
 
-  defp validate_and_authorize_projects(params, current_user) do
+  defp validate_and_authorize_projects(params, scope) do
     # Ensure user_id is set to the current authenticated user
-    params_with_user = Map.put(params, "user_id", current_user.id)
+    params_with_user = Map.put(params, "user_id", scope.actor.id)
 
     project_ids =
       params
@@ -508,7 +505,7 @@ defmodule LightningWeb.API.CredentialController do
       |> Enum.map(&Map.get(&1, "project_id"))
       |> Enum.filter(& &1)
 
-    with :ok <- authorize_links(project_ids, current_user),
+    with :ok <- authorize_links(project_ids, scope),
          do: {:ok, params_with_user}
   end
 end

@@ -6,9 +6,9 @@ defmodule Lightning.Scope do
   carries (`:all` for a person), its `instance_role`, MFA status, and whether
   it can own a credential (only a person can). `fetch/2` adds the facts about
   one project, including whether it is scheduled for deletion, and refuses a
-  project that does not exist. Whether that standing is enough for an action
-  is the policy's judgement — see
-  `Lightning.Policies.ProjectUsers.permitted?/2`.
+  project that does not exist. `fetch_all/2` does the same for several projects
+  in one query. Whether that standing is enough for an action is the policy's
+  judgement — see `Lightning.Policies.ProjectUsers.permitted?/2`.
 
       {:ok, %Scope{role: :editor}}
       {:ok, %Scope{role: nil}}                      no membership row
@@ -159,17 +159,31 @@ defmodule Lightning.Scope do
   A `%ServiceAccount{}` resolves any project, with no role.
   """
   @spec fetch(t() | actor(), subject()) :: {:ok, t()} | {:error, error()}
-  # Ownership before any other fact, deliberately, and pinned by a test.
-  # Reversed, a connection asking about someone else's project would be told
-  # whether that project is being wound down.
-  def fetch(%__MODULE__{actor: actor} = scope, subject) do
-    with {:ok, project} <- resolve_project(subject),
-         :ok <- connection_owns?(actor, project) do
-      {:ok, put_project(scope, project)}
+  def fetch(%__MODULE__{} = scope, subject) do
+    case resolve(scope, List.wrap(subject_id(subject))) do
+      [result] -> result
+      [] -> {:error, :no_such_project}
     end
   end
 
   def fetch(actor, subject), do: fetch(new(actor), subject)
+
+  @doc """
+  The actor's standing in each of several projects, read in one query, as a
+  map from project id to the scope `fetch/2` would give.
+
+  An id that is malformed, names no project, or names a project a
+  `%ProjectRepoConnection{}` actor does not belong to is absent from the map.
+  """
+  @spec fetch_all(t() | actor(), [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => t()}
+  def fetch_all(%__MODULE__{} = scope, project_ids) do
+    for {:ok, %__MODULE__{project: project} = project_scope} <-
+          resolve(scope, project_ids),
+        into: %{},
+        do: {project.id, project_scope}
+  end
+
+  def fetch_all(actor, project_ids), do: fetch_all(new(actor), project_ids)
 
   @doc "Whether the caller's token carries `grant`. A person holds every grant."
   @spec allows?(t(), String.t()) :: boolean()
@@ -248,35 +262,51 @@ defmodule Lightning.Scope do
 
   defp connection_owns?(_actor, %Project{}), do: :ok
 
+  # Ownership before any other fact, deliberately, and pinned by a test.
+  # Reversed, a connection asking about someone else's project would be told
+  # whether that project is being wound down.
+  defp resolve(%__MODULE__{actor: actor} = scope, project_ids) do
+    for {project, project_user} <- load(actor, project_ids) do
+      with :ok <- connection_owns?(actor, project),
+           do: {:ok, put_project(scope, project, project_user)}
+    end
+  end
+
   # A subject names a project; it does not describe one. Even a `%Project{}` is
   # read for its id and reloaded, so no caller can assert its own standing from
   # a struct it happens to hold — whether assembled in code or loaded before the
   # facts changed.
-  defp resolve_project(%Project{id: id}), do: load(id)
-  defp resolve_project(%{project_id: id}), do: load(id)
-  defp resolve_project(id) when is_binary(id), do: load(id)
-  defp resolve_project(_), do: {:error, :no_such_project}
+  defp subject_id(%Project{id: id}), do: id
+  defp subject_id(%{project_id: id}), do: id
+  defp subject_id(id) when is_binary(id), do: id
+  defp subject_id(_), do: nil
 
-  # Repo.get raises Ecto.Query.CastError on a malformed binary_id, which would
-  # turn a denial into a 500. Cast first.
-  defp load(id) when is_binary(id) do
-    with {:ok, uuid} <- Ecto.UUID.cast(id),
-         %Project{} = project <- Repo.get(Project, uuid) do
-      {:ok, project}
-    else
-      _ -> {:error, :no_such_project}
+  # Each project comes with the user's own membership row, or nil. Querying a
+  # malformed binary_id raises Ecto.Query.CastError, which would turn a denial
+  # into a 500, so ids are cast first.
+  defp load(actor, project_ids) do
+    case for(id <- project_ids, {:ok, uuid} <- [Ecto.UUID.cast(id)], do: uuid) do
+      [] -> []
+      uuids -> Repo.all(load_query(actor, uuids))
     end
   end
 
-  defp load(_), do: {:error, :no_such_project}
+  defp load_query(%User{id: user_id}, uuids) do
+    from p in Project,
+      where: p.id in ^uuids,
+      left_join: pu in ProjectUser,
+      on: pu.project_id == p.id and pu.user_id == ^user_id,
+      select: {p, pu}
+  end
 
-  defp put_project(%__MODULE__{actor: %User{} = user} = scope, project) do
-    project_user =
-      Repo.one(
-        from pu in ProjectUser,
-          where: pu.project_id == ^project.id and pu.user_id == ^user.id
-      )
+  defp load_query(_actor, uuids),
+    do: from(p in Project, where: p.id in ^uuids, select: {p, nil})
 
+  defp put_project(
+         %__MODULE__{actor: %User{} = user} = scope,
+         project,
+         project_user
+       ) do
     %{
       scope
       | project: project,
@@ -288,10 +318,10 @@ defmodule Lightning.Scope do
     }
   end
 
-  # No membership row to look up, and no support-user or MFA concept: a machine
-  # credential cannot enrol, so `new/1` sets the exemption where a reviewer can
-  # see it.
-  defp put_project(%__MODULE__{} = scope, project),
+  # Any other actor has no membership row, and no support-user or MFA concept.
+  # A machine credential cannot enrol, so `new/1` sets the exemption where a
+  # reviewer can see it.
+  defp put_project(%__MODULE__{} = scope, project, _project_user),
     do: %{scope | project: project, scheduled_for_deletion?: scheduled?(project)}
 
   defp scheduled?(%Project{scheduled_deletion: scheduled_deletion}),

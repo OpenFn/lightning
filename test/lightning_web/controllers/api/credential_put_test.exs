@@ -79,6 +79,37 @@ defmodule LightningWeb.API.CredentialPutTest do
     |> Repo.update!()
   end
 
+  defp count_queries(fun) do
+    parent = self()
+    ref = make_ref()
+    handler = "count-queries-#{inspect(ref)}"
+
+    :telemetry.attach(
+      handler,
+      [:lightning, :repo, :query],
+      fn _event, _measurements, _meta, _config ->
+        if self() == parent, do: send(parent, {ref, :query})
+      end,
+      nil
+    )
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
+    end
+
+    Stream.repeatedly(fn ->
+      receive do
+        {^ref, :query} -> :query
+      after
+        0 -> :done
+      end
+    end)
+    |> Enum.take_while(&(&1 == :query))
+    |> length()
+  end
+
   defp audit_ids(credential_id) do
     Repo.all(
       from a in Lightning.Credentials.Audit.base_query(),
@@ -598,6 +629,28 @@ defmodule LightningWeb.API.CredentialPutTest do
              |> get(~p"/api/credentials/#{credential.id}")
              |> json_response(403)
     end
+  end
+
+  test "GET costs the same number of queries however many projects it links",
+       %{conn: conn} do
+    owner = insert(:user)
+
+    [first | rest] =
+      insert_list(3, :project, project_users: [%{user: owner, role: :owner}])
+
+    credential = existing_credential(owner, first)
+    conn = with_pat(conn, owner)
+
+    show = fn ->
+      conn |> get(~p"/api/credentials/#{credential.id}") |> json_response(200)
+    end
+
+    one_link = count_queries(show)
+
+    for project <- rest,
+        do: insert(:project_credential, credential: credential, project: project)
+
+    assert count_queries(show) == one_link
   end
 
   describe "for a repo connection" do

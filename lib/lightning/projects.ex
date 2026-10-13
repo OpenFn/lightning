@@ -1250,17 +1250,6 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns the ids of every project the user holds a membership on, at any
-  depth. Unlike `get_projects_for_user/1` (top-level roots only), this includes
-  sandboxes, so it matches the membership check used by `:access_project`.
-  """
-  @spec member_project_ids(User.t()) :: [Ecto.UUID.t()]
-  def member_project_ids(%User{id: user_id}) do
-    from(pu in ProjectUser, where: pu.user_id == ^user_id, select: pu.project_id)
-    |> Repo.all()
-  end
-
-  @doc """
   Returns the user-visible project tree as a list of `ProjectTreeItem`s
   ready for a hierarchical render (walk by grouping on `parent_id`).
 

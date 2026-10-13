@@ -97,6 +97,35 @@ defmodule Lightning.ScopeTest do
     end
   end
 
+  describe "fetch_all/2" do
+    test "gives each project the scope fetch/2 would, leaving out ids it can't resolve",
+         %{editor: editor, live_project: project} do
+      elsewhere = insert(:project)
+
+      scopes =
+        Scope.fetch_all(editor, [
+          project.id,
+          elsewhere.id,
+          Ecto.UUID.generate(),
+          "not-a-uuid"
+        ])
+
+      assert Map.keys(scopes) |> Enum.sort() ==
+               Enum.sort([project.id, elsewhere.id])
+
+      for id <- [project.id, elsewhere.id],
+          do: assert({:ok, scopes[id]} == Scope.fetch(editor, id))
+    end
+
+    test "leaves out every project but a repo connection's own" do
+      [own, other] = insert_pair(:project)
+      repo_connection = insert(:project_repo_connection, project: own)
+
+      assert Map.keys(Scope.fetch_all(repo_connection, [own.id, other.id])) ==
+               [own.id]
+    end
+  end
+
   describe "non-members" do
     test "get no role but still resolve", %{live_project: project} do
       stranger = insert(:user)
