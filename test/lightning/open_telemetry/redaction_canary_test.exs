@@ -71,7 +71,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     # Detach any handlers that may have been attached by the application
     Enum.each(otel_handlers(), &:telemetry.detach/1)
-    :opentelemetry_cowboy.setup()
+    :opentelemetry_cowboy.setup(%{public_endpoint: true})
 
     on_exit(fn ->
       Enum.each(otel_handlers(), &:telemetry.detach/1)
@@ -85,7 +85,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
       {:ok, _} = Application.ensure_all_started(:opentelemetry)
 
-      if had_handlers?, do: :opentelemetry_cowboy.setup()
+      if had_handlers?, do: :opentelemetry_cowboy.setup(%{public_endpoint: true})
     end)
   end
 

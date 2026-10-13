@@ -10,7 +10,12 @@ defmodule Lightning.OpenTelemetry do
 
   def setup do
     if Lightning.Config.otel_enabled?() do
-      :opentelemetry_cowboy.setup()
+      # When changing the cowboy configuration, please look for any
+      # calls to :opentelemetry_cowboy.setup/1 in the tests and update them
+      # appropriately. As of October 2026, this would be
+      # Lightning.OpenTelemetry.RedactionCanaryTest.
+      :opentelemetry_cowboy.setup(%{public_endpoint: true})
+
       OpentelemetryPhoenix.setup(adapter: :cowboy2, liveview: false)
 
       # Oban.Stager events can be quite noisy, so disable until we have
