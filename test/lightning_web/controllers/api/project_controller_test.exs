@@ -400,6 +400,27 @@ defmodule LightningWeb.API.ProjectControllerTest do
       assert members_of(project.id) == [{owner.email, :owner}]
     end
 
+    test "refuses a blank name on replace as it does on create", %{conn: conn} do
+      project = insert(:project, name: "before")
+
+      replaced =
+        conn
+        |> put_project(project.id, %{"name" => ""})
+        |> json_response(422)
+
+      created =
+        conn
+        |> put_project(Ecto.UUID.generate(), %{
+          "name" => "",
+          "members" => four_members()
+        })
+        |> json_response(422)
+
+      assert %{"errors" => %{"name" => [_]}} = replaced
+      assert replaced == created
+      assert Lightning.Repo.reload!(project).name == "before"
+    end
+
     test "refuses a body id that differs from the path", %{conn: conn} do
       conn =
         put_project(conn, Ecto.UUID.generate(), %{

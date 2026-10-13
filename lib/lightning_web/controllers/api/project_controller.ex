@@ -185,13 +185,25 @@ defmodule LightningWeb.API.ProjectController do
   end
 
   defp replace(conn, project, attrs) do
-    with {:ok, project} <-
-           Projects.update_project(
-             project,
-             %{name: attrs[:name], description: attrs[:description]},
-             conn.assigns.current_resource
-           ) do
-      render_project(conn, project)
+    project
+    |> Projects.update_project(
+      %{name: attrs[:name], description: attrs[:description]},
+      conn.assigns.current_resource
+    )
+    |> case do
+      {:ok, project} ->
+        render_project(conn, project)
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        render_changeset_errors(conn, changeset)
+
+      # Some other step of the write failed, such as its audit event. Nothing
+      # in the request can fix that.
+      {:error, :not_related_to_project} ->
+        conn
+        |> put_status(:internal_server_error)
+        |> put_view(LightningWeb.ErrorView)
+        |> render(:"500")
     end
   end
 
@@ -213,7 +225,7 @@ defmodule LightningWeb.API.ProjectController do
           {:error, changeset} ->
             if PutRequest.unique_error?(changeset, :id),
               do: update(conn, %{"id" => attrs.id}),
-              else: render_create_errors(conn, changeset)
+              else: render_changeset_errors(conn, changeset)
         end
 
       {:error, messages} ->
@@ -223,7 +235,7 @@ defmodule LightningWeb.API.ProjectController do
 
   # The project changeset reports member errors under `owner` and
   # `project_users`. This API calls them `members`.
-  defp render_create_errors(conn, changeset) do
+  defp render_changeset_errors(conn, changeset) do
     errors = PutRequest.flat_errors(changeset)
 
     {member_errors, errors} = Map.split(errors, [:owner, :project_users])
