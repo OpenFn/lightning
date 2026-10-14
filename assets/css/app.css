@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@import './ui/tokens.css';
 @import './ui/tabs.css';
 
 @plugin "@tailwindcss/forms";
