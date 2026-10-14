@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 
 import { LandingScreen } from '../../../js/collaborative-editor/components/LandingScreen';
+import type { AISkill } from '../../../js/collaborative-editor/types/sessionContext';
 
 // =============================================================================
 // HELPERS
@@ -25,6 +26,7 @@ function renderLandingScreen(props: {
   isBuildingFromScratch?: boolean;
   onBrowseTemplates?: () => void;
   onImportYAML?: () => void;
+  skills?: AISkill[];
 }) {
   const defaults = {
     aiAssistantEnabled: true,
@@ -245,5 +247,26 @@ describe('LandingScreen - AI limit reached', () => {
   test('leaves the input enabled when the limit is not reached', () => {
     renderLandingScreen({ aiLimitReached: false });
     expect(screen.getByTestId('build-with-ai-input')).not.toBeDisabled();
+  });
+});
+
+describe('LandingScreen - Slash commands', () => {
+  test('sends a skill chosen from the slash menu as a command', async () => {
+    const onBuildWithAI = vi.fn();
+    renderLandingScreen({
+      onBuildWithAI,
+      skills: [
+        { name: 'design', description: 'Plan a workflow', workflow: 'any' },
+      ],
+    });
+
+    await userEvent.type(screen.getByTestId('build-with-ai-input'), '/');
+    await userEvent.click(screen.getByRole('option', { name: /\/design/ }));
+    await userEvent.type(
+      screen.getByTestId('build-with-ai-input'),
+      'a Kobo sync{Enter}'
+    );
+
+    expect(onBuildWithAI).toHaveBeenCalledWith('/design a Kobo sync');
   });
 });

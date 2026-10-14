@@ -650,7 +650,7 @@ describe('ChatInput', () => {
       render(<ChatInput />);
 
       const textarea = screen.getByPlaceholderText('Ask me anything...');
-      const container = textarea.parentElement!;
+      const container = textarea.closest('.rounded-xl')!;
 
       // Initially no content
       expect(container).toHaveClass('border-gray-200');
