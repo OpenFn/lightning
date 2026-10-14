@@ -9,6 +9,8 @@
 @source './js/**/*.{js,jsx,ts,tsx}';
 @source '../lib/**/*.{ex,exs}';
 
+@import './design-tokens.css';
+
 @theme {
   --font-sans:
     'Inter var', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
