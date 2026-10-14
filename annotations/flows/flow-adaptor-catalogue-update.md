@@ -20,6 +20,7 @@ trigger:
     - controller:adaptor-icons                 # GET /adaptors/icons/:name/:filename, 200 or 302 to the current sha (router.ex:81-83; adaptor_icon_controller.ex:64-156)
     - workflow-editor-inspectors               # store refetches and re-renders pickers, version list and icons (createAdaptorStore.ts:272-321)
     - workflow-editor-ide                      # same store, IDE header pickers
+    - workflow-editor-canvas   # added by lead: picker and node icons
   reachable_when:
     - operator entry: the viewer is a superuser on /settings/maintenance (admin-maintenance section 3)
     - scheduled entry: `refresh_interval` > 0; the first tick is one interval after the newest `checked_at`, or at once on an empty catalogue (scheduler.ex:179-211, :835-841)

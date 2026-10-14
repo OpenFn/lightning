@@ -140,6 +140,7 @@ flows:
   - flow-account-revocation-teardown
   - flow-restore-version-open-editor
   - flow-edit-in-sandbox
+  - flow-adaptor-catalogue-update
 ---
 
 ## 1. Purpose

@@ -75,6 +75,7 @@ flows:
   - flow-sso-login
   - flow-forgot-password
   - flow-log-out
+  - flow-admin-created-account-confirm
 ---
 
 ## 1. Purpose

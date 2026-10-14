@@ -138,6 +138,7 @@ flows:
   - flow-workflow-api-edit-conflict
   - flow-restore-version-open-editor
   - flow-editor-credentials-broadcast
+  - flow-adaptor-catalogue-update
 ---
 
 ## 1. Purpose

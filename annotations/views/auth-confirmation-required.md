@@ -68,6 +68,7 @@ flows:
   - flow-resend-account-confirmation  # the resend button feeds its confirm step (its S08); shares its `confirmation_resend` allowance (its S03)
   - flow-login-return-to              # a signed-out visit is sent to log in first (shared-authenticated-session S01)
   - flow-log-out
+  - flow-admin-created-account-confirm
 ---
 
 ## 1. Purpose

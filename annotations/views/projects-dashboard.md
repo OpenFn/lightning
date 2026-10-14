@@ -79,6 +79,7 @@ flows:
   - flow-forgot-password
   - flow-sso-login
   - flow-first-superuser-sign-in
+  - flow-admin-created-account-confirm
 ---
 
 ## 1. Purpose

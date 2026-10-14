@@ -80,6 +80,7 @@ flows:
   - flow-resend-account-confirmation  # referenced; owns the email, the confirm step end to end, wrong-user and expired links (its S01, S04 to S08)
   - flow-login-return-to              # referenced; S05 hands off to it
   - flow-change-email-confirm         # referenced; owns confirm_email, which lives in this controller
+  - flow-admin-created-account-confirm
 ---
 
 ## 1. Purpose
