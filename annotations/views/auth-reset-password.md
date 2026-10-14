@@ -382,7 +382,6 @@ Feature: Reset password
 - Should accounts on SSO instances be able to set a local password here (6.5)? (owner: security)
 - Should requests and refused links land on /users/log_in directly instead of bouncing through /projects (6.2)? (owner: product)
 - Should "Send instructions" be offered at all when no mail provider is configured (6.2)? (owner: product)
-- flow-invite-new-collaborator names the login view `auth-login`; this file and auth-login use `auth-login`. Which id is canonical? (owner: catalogue lead)
 
 ## Proposed flows
 
@@ -396,3 +395,4 @@ none. Referenced: shared-authenticated-session (the :browser pipeline and its S1
 ## Lead resolution (batch 8)
 
 - `flow-forgot-password` created. auth-reset-password added to flow-account-revocation-teardown surfaces; whether a reset should be a full entry stays an open question there.
+- flow-invite-new-collaborator used the id `auth-log-in`; renamed to `auth-login` everywhere by the lead. The open question this file raised about it is resolved and removed.

@@ -433,7 +433,6 @@ Feature: Log in
 - Should the disabled and scheduled-for-deletion messages be replaced with the generic message, given they confirm a correct password (6.2)? (owner: security)
 - Should "Forgot your password?" be hidden when no mail provider is configured (6.2)? (owner: product)
 - Should the external provider button name the provider, and should more than one provider ever be offered (6.2)? (owner: product)
-- flow-invite-new-collaborator names this view `auth-login` in its `surfaces` and comments; flow lint will not match it to `auth-login`. Which id is canonical? (owner: catalogue lead)
 
 ## Proposed flows
 
@@ -447,3 +446,4 @@ none. Referenced: shared-authenticated-session (the :browser pipeline and its S1
 ## Lead resolution (batch 8)
 
 - `flow-sso-login` created.
+- flow-invite-new-collaborator used the id `auth-log-in`; renamed to `auth-login` everywhere by the lead. The open question this file raised about it is resolved and removed.
