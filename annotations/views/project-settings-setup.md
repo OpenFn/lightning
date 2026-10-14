@@ -95,6 +95,7 @@ related:
 flows:
   - flow-export-project-yaml
   - flow-schedule-project-deletion
+  - flow-sandbox-scheduled-deletion
 ---
 
 ## 1. Purpose

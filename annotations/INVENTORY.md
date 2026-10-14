@@ -126,7 +126,7 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | workflow-editor-inspectors | flow-oauth-credential-authorize, shared-webhook-auth-method-form, flow-webhook-auth-method-enforcement; keychain form home is project-settings-credentials |
 | workflow-editor-ide | flow-oauth-credential-authorize, flow-open-run-in-editor (step inspect link lands here), shared-log-viewer (hosts the run viewer logs) |
 | workflow-editor-run-viewer | shared-dataclip-body-viewer, flow-zero-persistence-runs (shows raw null; see the flow's 6.1), flow-open-run-in-editor (exit), shared-log-viewer |
-| workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor |
+| workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor, flow-sandbox-scheduled-deletion (archive_sandbox, workflow_channel.ex:501-513), flow-sandbox-merge |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
 | profile-github | flow-github-connect |
 | profile-mfa | flow-require-project-mfa |
@@ -150,6 +150,10 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 
 ## Overlaps to clean up
 
+- dataclip-show S03 to S06 and the viewer steps in run-show S07: now owned by shared-dataclip-body-viewer.
+- history-work-orders `url_params`: add workflow-health to `set_by` for the status and date filters; its flow summary should mention the donut links.
+- workflow-health S15: point to flow-workflow-health-drilldown S10 and S11.
+- shared-authenticated-session Proposed flows: rename controller:user-session to auth-login.
 - run-show: its dataclip input and output rendering is now owned by shared-dataclip-body-viewer.
 - shared-project-header: projects-dashboard inherits it for the picker and menus on a page with no project; check its scenarios say which parts apply without a project.
 - run-show S10 to S13 and its highlighting, save-log-filter and level-scoring rows: now owned by shared-log-viewer.

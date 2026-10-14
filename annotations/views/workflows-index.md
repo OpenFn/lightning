@@ -82,6 +82,8 @@ flows:
   - flow-invite-new-collaborator
   - flow-require-project-mfa
   - flow-github-sync-actions
+  - flow-login-return-to
+  - flow-sandbox-merge
 ---
 
 ## 1. Purpose

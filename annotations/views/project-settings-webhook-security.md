@@ -77,6 +77,7 @@ related:
   - lib/lightning_web/plugs/channel_proxy_plug.ex       # enforces client methods on channels
 flows:
   - flow-webhook-auth-method-enforcement
+  - flow-channel-proxy-request
 ---
 
 ## 1. Purpose

@@ -20,6 +20,7 @@ inherits:
   - shared-usage-limits-banner            # on_mount :check_limits (settings.ex:52)
   - shared-project-header
   - shared-project-settings-tab-chrome    # tab navigation (S01 to S04), role notice (S06 row "editor | Collections"), sandbox editable banner (S08 row "Collections", collections_component.ex:290-294)
+  - shared-dataclip-body-viewer
 
 url_params:
   - name: "#collections (URL fragment)"

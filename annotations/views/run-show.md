@@ -22,6 +22,7 @@ inherits:
   - shared-local-datetime
   - shared-hash-tabs
   - shared-log-viewer
+  - shared-dataclip-body-viewer
 
 url_params:
   - name: project_id
