@@ -6,12 +6,13 @@ status: not-started
 owner:
 
 trigger:
-  old_route: any LiveView that imports LightningWeb.RunLive.Components or calls RunLive.CancelHelper
+  old_route: any LiveView that imports LightningWeb.RunLive.Components or calls RunLive.CancelHelper, and the collaborative editor's run viewer (React ports under assets/js/collaborative-editor/components/run-viewer/)
   new_route:
   old_route_disposition: unchanged
   reachable_when:
     - the host page passed the project scope gate (shared-project-scope)
     - the host page supplies `can_run_workflow`, `can_edit_data_retention` and `experimental_features` itself; nothing in this module computes them (`index.ex:90-102`, `show.ex:311-344`)
+    - React ports only, when the editor has loaded a run that passed `RunDetailSchema` (`createHistoryStore.ts:362-386`); the run viewer's own gates are owned by workflow-editor-run-viewer
 
 inherits:
   - shared-project-scope            # who can open the host page; not repeated here
@@ -29,6 +30,11 @@ inventory:
   js_hooks:
     - ElapsedIndicator               # assets/js/hooks/ElapsedIndicator.ts
     - Tooltip                        # used by clone markers, rerun tag and retention tooltips; each view also lists it
+  react_components:                  # React ports rendered by workflow-editor-run-viewer (RunTabPanel.tsx:13-15, :91, :98-101, :167; StepItem.tsx:8-9, :69, :93-96)
+    - collaborative-editor/components/run-viewer/StatePill.tsx          # port of state_pill/1 and display_text_from_state/1
+    - collaborative-editor/components/run-viewer/StepIcon.tsx           # port of step_icon/1
+    - collaborative-editor/components/run-viewer/ElapsedIndicator.tsx   # port of the ElapsedIndicator hook
+    - collaborative-editor/components/run-viewer/StepItem.tsx clone marker only (StepItem.tsx:54-90); the row's click, job name and selection are owned by workflow-editor-run-viewer
   policies:
     - Lightning.Policies.ProjectUsers :run_workflow          # evaluated by the host, read here as can_run_workflow
     - Lightning.Policies.ProjectUsers :edit_data_retention   # evaluated by the host, read here as can_edit_data_retention
@@ -40,11 +46,14 @@ inventory:
   not_reachable_here:
     - RunLive.Components.bulk_cancel_modal/1, bulk_rerun_modal/1 and the humanize_* helpers (components.ex:638-1000), rendered only by history-work-orders, which owns them
     - RunLive.Components.async_filler/1 (components.ex:347-356), rendered only by history-work-orders
+    - "workflow-editor-run-viewer: cancel, the step rerun icon, retention tooltips and the version and inspect links have no React port (no cancel in collaborative-editor/; StepItem.tsx:57-98 renders none of them); S07 to S14 do not apply there"
+    - MiniHistory's own StatePill and StatusIndicator (MiniHistory.tsx:75-133), a separate copy owned by workflow-editor-versions-and-promote; see 6.1
 
 related:
   - history-work-orders
   - run-show
   - history-channel-logs
+  - workflow-editor-run-viewer
 flows:
   - flow-history-live-updates
 ---
@@ -55,7 +64,10 @@ People investigating a failed or slow integration read the same run vocabulary o
 the run page: a state pill, a per-step outcome icon, a live duration, a link back to the workflow
 as it was when the run executed, and a cancel action for runs not yet picked up. Getting these
 wrong means misreading what happened to health data (a crash shown as a failure, a kill shown as
-success), inspecting code that didn't run, or cancelling work that is already executing.
+success), inspecting code that didn't run, or cancelling work that is already executing. The
+collaborative editor's run viewer renders React copies of the pill, the step icon, the duration
+and the clone marker; they must read the same as History and the run page, or a builder looking at
+a run next to its code sees a different story from the person who sent them the link.
 
 ## 2. What it does
 
@@ -68,6 +80,7 @@ success), inspecting code that didn't run, or cancelling work that is already ex
 - Editors cannot cancel a run outside the current project
 - Anyone sees why a step whose input was not kept can't be rerun, and admins get a link to change retention
 - Anyone sees that a step whose job was deleted can't be rerun
+- Anyone viewing a run in the workflow editor sees the same state labels, step icons, durations and clone markers
 
 ## 3. Who can do what
 
@@ -80,6 +93,7 @@ policy; each host evaluates it and passes booleans in.
 | See the step rerun icon (enabled or disabled) | no | yes | yes | yes | no | yes, when support access is on |
 | Cancel an available run | no | yes | yes | yes | no | yes, when support access is on |
 | Get the data storage settings link in retention tooltips | no | no | yes | yes | no | no |
+| See the React ports in the editor run viewer (`:access_project` on run channel join, `run_channel.ex:76`) | yes | yes | yes | yes | no | yes, when support access is on |
 
 **Preconditions beyond role**
 - Cancel needs the run to belong to the current project (`cancel_helper.ex:12-16`, `runs.ex:74-84`).
@@ -87,17 +101,20 @@ policy; each host evaluates it and passes booleans in.
 - The step rerun icon renders only for a step that has finished (`components.ex:474`).
 - The step rerun icon is only clickable when the step's input dataclip exists and is not wiped and its job still exists (`components.ex:503-514`).
 - Experimental features change the version link shape (`components.ex:304-313`).
+- The React ports read no policy and no config; their host has already joined the run channel (`StatePill.tsx:8-51`, `StepIcon.tsx:7-62`, `ElapsedIndicator.tsx:21-55`).
 
 ## 4. What it touches
 
 **Reads**: `runs` joined through `work_orders` and `workflows` to scope by project (`runs.ex:74-84`); everything else is preloaded by the host (steps with `job`, `input_dataclip`, `snapshot`: `invocation.ex:688-703`, `index.ex:280-291`, `streaming.ex:19-22`)
 
-**Writes**: `runs.state` to `cancelled` with `updated_at` (`runs.ex:466-492`); `work_orders.state` recomputed (`runs.ex:261-265`, `work_orders.ex:830-839`)
+React ports read only props: the run and steps from `fetch:run` on the run channel (`run_channel.ex:261-275`), encoded by `Step`'s `Jason.Encoder` (`invocation/step.ex:37-49`) and parsed by `RunDetailSchema` (`types/history.ts:99-150`, `createHistoryStore.ts:362-386`)
+
+**Writes**: React ports write nothing. `runs.state` to `cancelled` with `updated_at` (`runs.ex:466-492`); `work_orders.state` recomputed (`runs.ex:261-265`, `work_orders.ex:830-839`)
 
 **Immediate side effects**
 - Broadcast `Runs.Events.RunUpdated` on the run topic and `WorkOrders.Events` run updated on the project topic after a cancel (`runs.ex:269-287`)
 - Broadcast `WorkOrders.Events` work order updated on the project topic (`work_orders.ex:836`)
-- Rendering a step killed with an unrecognised error type logs a warning and sends a Sentry message (`components.ex:592`, `:627-636`)
+- Rendering a step killed with an unrecognised error type logs a warning and sends a Sentry message (`components.ex:592`, `:627-636`); the React port only writes a browser console warning (`StepIcon.tsx:44-47`)
 
 **Deferred side effects**
 - none
@@ -109,7 +126,7 @@ policy; each host evaluates it and passes booleans in.
 - `user.preferences.experimental_features` (`components.ex:308-309`, `show.ex:327-328`)
 
 **Product limits**
-- Durations are shown in whole ms, s or m only; there is no hour unit (`ElapsedIndicator.ts:3-13`)
+- Durations are shown in whole ms, s or m only; there is no hour unit (`ElapsedIndicator.ts:3-13`, ported unchanged at `ElapsedIndicator.tsx:9-19`)
 
 ## 5. Scenarios
 
@@ -262,6 +279,53 @@ Feature: Run display components
     Then the icon is greyed out and not clickable
     And the tooltip says "This step has been deleted and cannot be retried"
     # components.ex:503, :510-522
+
+  # S15 to S18: the React ports in the editor run viewer. Each restates a LiveView scenario above
+  # for the editor so the two cannot drift; differences are in 6.1 and 6.2.
+
+  @S15 @pending
+  Scenario: The editor run viewer labels run states as History does
+    # Value: a builder opening a run in the editor reads the same state as the person who sent them the link.
+    Given run "R" is in state "available"
+    When I view "R" in the workflow editor's run viewer
+    Then its status pill reads "Enqueued"
+    And in state "claimed" it reads "Starting", in "started" "Running" and in "failed" "Failed"
+    And each pill has the same colour as on the run page
+    # StatePill.tsx:9-38 (port of components.ex:110-138, :162-174); RunTabPanel.tsx:88-93
+    # no test renders StatePill
+
+  @S16 @pending
+  Scenario: The editor run viewer shows the same step outcome icons
+    # Value: the failing step, and why a step was killed, look the same in the editor as on the run page.
+    Given a run with a pending, a successful, a failed and a crashed step
+    And a step killed with "TimeoutError", one with "SecurityError" and one with "OOMError"
+    When I view the run in the editor's run viewer
+    Then they show a grey icon, a green check, a red cross, an orange cross, a clock, a shield and an exclamation icon
+    # StepIcon.tsx:14-54 (port of components.ex:579-625); StepItem.tsx:69
+    # StepIcon.test.tsx:11-26 asserts only the exclamation icon and yellow-800 class for OOMError, StateTooLargeError and an unknown type
+
+  @S17 @pending
+  Scenario: Editor durations count up while running and settle when finished
+    # Value: someone watching a run from the editor sees it is still going, and the final time once it ends.
+    Given step "Fetch" started 5 seconds ago and has not finished
+    When I view its run in the editor's run viewer
+    Then "Fetch" reads "5 s" and a second later "6 s"
+    When "Fetch" finishes after 90 seconds
+    Then it reads "1 m" and stops changing
+    And a run that has not started reads "Not started" as its duration
+    # ElapsedIndicator.tsx:21-55 (port of ElapsedIndicator.ts:3-41); StepItem.tsx:92-97; RunTabPanel.tsx:95-103
+    # no test renders ElapsedIndicator.tsx
+
+  @S18 @pending
+  Scenario: The editor run viewer marks steps carried over from an earlier run
+    # Value: after a rerun from a step, a builder in the editor can tell which steps actually ran again.
+    Given run "R2" was rerun from the last step of run "R1"
+    When I view "R2" in the editor's run viewer
+    Then the steps reused from "R1" are faded with a paperclip labelled "Cloned from previous run"
+    And its tooltip says it "was originally executed in a previous run"
+    And the step that ran in "R2" has no paperclip
+    # StepItem.tsx:54-90 (port of components.ex:236-253, :411-418); StepList.tsx:24-28
+    # no test covers the clone marker
 ```
 
 ## 6. Unclear value
@@ -277,6 +341,9 @@ Feature: Run display components
 | The step rerun icon's DOM id is the bare step id, and a step carried into a rerun is listed under both runs | `components.ex:508`, `:527` | duplicate ids; a tooltip can attach to the wrong icon | fix |
 | `step_item` assigns a fresh random tooltip id on every render (`assign_new` never sees a passed value) | `components.ex:213-215` | the clone tooltip element is replaced on each update, so an open tooltip can vanish | fix |
 | The step-level retention tooltip says "This work order cannot be rerun" on a per-step rerun icon | `components.ex:552` | copy that names the wrong thing | fix |
+| MiniHistory carries a third pill copy that capitalises the raw state instead of using these labels | `MiniHistory.tsx:93-114`, `:260`, `:429` | in the editor the same run reads "Available" or "Claimed" in the history list and "Enqueued" or "Starting" in the run viewer | fix |
+| React port: `StepIcon` falls back to the grey pending icon for any unrecognised exit reason, where the LiveView raises (row 1) | `StepIcon.tsx:55-59` | a finished step with a new worker reason looks as if it has not run yet | decide |
+| React port: the run's state must be one of `ALL_RUN_STATES`, or `RunDetailSchema` rejects the whole payload | `types/history.ts:63-74`, `:124`; `createHistoryStore.ts:379-384`; `runs/run.ex:44-56` | a state added to `Run` without the client list turns the editor run viewer into "Invalid run data" | decide |
 
 ### 6.2 Quirks and implementation details
 
@@ -284,7 +351,7 @@ Feature: Run display components
 |------|-------|-------------|
 | Run and work order labels differ from state names: pending and available read "Enqueued", claimed "Starting", started "Running"; others are capitalised atoms | `components.ex:162-174` | preserve |
 | Channel request pill says "In Progress" for `pending`, where the run pill says "Enqueued" | `components.ex:147` vs `:166` | decide |
-| `cancelled` pill is `bg-gray-500 text-gray-800`, low contrast compared with the others | `components.ex:123` | decide |
+| `cancelled` pill is `bg-gray-500 text-gray-800`, low contrast compared with the others (ported as is) | `components.ex:123`, `StatePill.tsx:18` | decide |
 | The not-claimed flash differs by host: "it has already been claimed by a worker" on the run page, "it is no longer available" on History, both as info flashes | `show.ex:379-386`, `index.ex:631-638` | decide |
 | CancelHelper does no authorization; each host checks `can_run_workflow` itself before calling it | `cancel_helper.ex:12-17`, `show.ex:371`, `index.ex:623` | preserve |
 | A run that a worker is locking at the instant of cancel is skipped (`SKIP LOCKED`) and reported as not available | `runs.ex:471` | preserve |
@@ -294,7 +361,13 @@ Feature: Run display components
 | Retention tooltips carry HTML in `aria-label` and rely on the Tooltip hook's `allowHTML`, so screen readers read raw markup | `components.ex:531-537`, `index.ts:583-590` | fix |
 | The retention link is a plain `href` (full page load) to the settings hash | `components.ex:563` | preserve |
 | The step list item shows the raw exit reason and error type in monospace (`fail:TimeoutError`) next to the icon | `components.ex:492-494` | preserve |
-| A carried-over step is detected by `step.inserted_at < run.inserted_at`, not by an explicit flag | `components.ex:411-413`, `show.ex:217-219` | decide |
+| A carried-over step is detected by `step.inserted_at < run.inserted_at`, not by an explicit flag; the React port compares the JSON timestamps in the browser | `components.ex:411-413`, `show.ex:217-219`, `StepItem.tsx:55` | decide |
+| React port: `StepIcon` shows the triangle for `exception` with any error type; the LiveView matches only an empty one | `StepIcon.tsx:48-51` vs `components.ex:593` | decide |
+| React port: an unknown kill error type only writes a browser console warning; nothing reaches Logger or Sentry | `StepIcon.tsx:44-47` vs `components.ex:627-636`; `StepIcon.test.tsx:28-40` | decide |
+| React port: the duration timer stops once the item has finished, unlike the hook, which keeps ticking | `ElapsedIndicator.tsx:45-51` vs `ElapsedIndicator.ts:18-20` | preserve |
+| React port: the duration parses ISO timestamps from the run channel, with the same browser clock skew as the hook | `ElapsedIndicator.tsx:33-37` | decide |
+| React port: `StatePill` covers run states only; the work order labels (`rejected`, `pending`, `running`) are not ported | `StatePill.tsx:9-35` vs `components.ex:112-115`, `:164-167` | preserve |
+| React port: the clone marker uses the Radix `Tooltip` component, so the LiveView id problems (6.1) don't apply; its accessible name is "Cloned from previous run", where the LiveView puts the whole sentence in `aria-label` | `StepItem.tsx:77-88` vs `components.ex:236-253` | decide |
 
 ### 6.3 Unreachable or dead code
 
@@ -302,17 +375,18 @@ Feature: Run display components
 |------|-------|-----------------|
 | `run_id` branch of the elapsed indicator id | `components.ex:40-43` | neither `Step` nor `Run` has a `run_id` field, so `Map.get` is always nil |
 | `job_id` attr of `step_item` (hides the inspect link for the current job) | `components.ex:199`, `:256` | no caller passes it; run page uses the default nil |
+| React `StatePill` fallback class for an unknown state | `StatePill.tsx:37` | `RunDetailSchema` rejects any state outside `ALL_RUN_STATES` before the pill renders (`types/history.ts:124`) |
 
 ### 6.4 Performance and operational limits
 
 | What | Where | User-visible? | Disposition |
 |------|-------|---------------|-------------|
-| Every rendered duration runs its own 1-second timer | `ElapsedIndicator.ts:18-20` | no | preserve |
+| Every rendered duration runs its own 1-second timer (React port: only while unfinished) | `ElapsedIndicator.ts:18-20`, `ElapsedIndicator.tsx:45-49` | no | preserve |
 | An unknown kill error type sends a Sentry message on every render, not once | `components.ex:627-636` | no | decide |
 
 ### 6.5 Things seen but not understood
 
-- Runs use worker reason "ok" for success (`run.ex:80-88`), while `step_icon` matches step reason "success" (`components.ex:583`). Tests use "success" for steps; the worker's actual step vocabulary was not checked in this repo.
+- Runs use worker reason "ok" for success (`run.ex:80-88`), while `step_icon` matches step reason "success" (`components.ex:583`). Tests use "success" for steps; the worker's actual step vocabulary was not checked in this repo. The React port copies the same match (`StepIcon.tsx:17`).
 - `step_icon` matches `{"exception", ""}` only (`components.ex:593`); unclear whether the worker ever sends an empty error type, or why that was chosen over a wildcard.
 
 ## 7. Not migrating
@@ -325,8 +399,12 @@ Feature: Run display components
 - Should a step with an unrecognised exit reason render a fallback icon rather than crash? (6.1)
 - Should the two hosts use one not-claimed message? (6.2)
 - history-work-orders S13, S14 and S22 restate S07, S08 and S13 here; should they be reduced to inheritance?
+- Should the LiveView and React copies share one behaviour for an unrecognised exit reason and an unknown kill type (6.1, 6.2)?
+- workflow-editor-run-viewer S02 to S04 restate S15 to S18 here; should they be reduced to inheritance?
 
 ## Proposed flows
+
+No new flows for the React ports; their live updates are owned by flow-manual-run-live-follow, and run links into the editor by flow-open-run-in-editor (both referenced, not proposed here).
 
 - **flow-open-run-in-editor**: a workflow or step inspect link from History or the run page opens the collaborative editor on the run's snapshot (`v=`) or the run itself (`as_run=`), with the run panel and job selected. This file asserts only the link. Surfaces: history-work-orders, run-show, workflow-editor.
 - **flow-run-show-live-updates**: after a cancel (or any run change), `Runs.Events` on the run topic updates an open run page's state pill and removes the cancel button (`show_test.exs:563-568`). History's half is owned by flow-history-live-updates. Surfaces: run-show (or history-work-orders), pubsub:run:<run_id>, run-show.

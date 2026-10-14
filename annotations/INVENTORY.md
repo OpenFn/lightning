@@ -119,10 +119,13 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 
 | view | must reference |
 |------|----------------|
-| auth-login | flow-invite-new-collaborator, flow-login-return-to |
-| auth-confirm-account | flow-resend-account-confirmation, flow-change-email-confirm |
+| auth-login | flow-invite-new-collaborator, flow-login-return-to, flow-account-revocation-teardown (exit) |
+| auth-confirm-account | flow-resend-account-confirmation |
 | auth-confirmation-required | flow-change-email-confirm (also starts it) |
-| admin-users | flow-account-revocation-teardown |
+| admin-users | flow-account-revocation-teardown, flow-change-email-confirm (admins change email without confirmation; cross-reference) |
+| admin-user-edit | flow-account-revocation-teardown (disabling happens here), flow-change-email-confirm (cross-reference) |
+| profile-tokens | flow-account-revocation-teardown |
+| auth-reset-password | flow-account-revocation-teardown (reset revokes the same way; candidate entry) |
 | profile-delete-account | flow-account-revocation-teardown |
 | auth-register | flow-register-first-workflow (proposed; create with this view) |
 | auth-reset-password | flow-invite-new-collaborator |
@@ -146,6 +149,9 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 
 ## Overlaps to clean up
 
+- workflow-editor-run-viewer S02 to S04: now owned by shared-run-components S15 to S18.
+- workflow-editor-versions-and-promote S09 ("shows a new v3") conflicts with flow-restore-version-open-editor 6.1 (the restorer's publishes list is never refreshed; the view's tests mock the list). Fix the view.
+- flow-change-email-confirm exit: the controller redirects to /projects, not the profile.
 - mfa-required S03 duplicates flow-require-project-mfa S05; keep one.
 - Ctrl/Cmd+H is claimed by both workflow-editor-versions-and-promote and shared-editor-session; one owner.
 - workflow-editor-versions-and-promote row lists VersionPicker.tsx (adaptor picker, owned by shared-adaptor-credential-config) and WorkflowDiffBlocks.tsx (AI assistant); inventory row should drop them.

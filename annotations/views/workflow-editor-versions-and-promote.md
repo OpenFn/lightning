@@ -22,6 +22,7 @@ inherits:
   - shared-project-scope             # S03 is what a "Continue in a sandbox" join lands on for a non-member (6.1); S11 is the archive landing
   - shared-editor-session            # S10 read-only pinned views, S14 refused pinned joins, S20 unload warning skipped for "Edit in sandbox", S07 workflow_saved
   - shared-dataclip-body-viewer      # GET /dataclip/body/:id access rules for the run input loaded in "Edit in sandbox" (EditInSandboxPicker.tsx:656); none of the viewer UI
+  - shared-run-components
 
 url_params:
   - name: v

@@ -95,6 +95,7 @@ flows:
   - flow-sandbox-merge
   - flow-sandbox-scheduled-deletion
   - flow-github-sync-actions           # referenced; sandboxes-index needs adding to its surfaces as a third entry (merge dispatches openfn-pull.yml)
+  - flow-edit-in-sandbox
 ---
 
 ## 1. Purpose

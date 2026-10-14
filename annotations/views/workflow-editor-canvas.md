@@ -136,6 +136,10 @@ flows:
   - flow-resend-account-confirmation
   - flow-workflow-api-edit-conflict
   - flow-legacy-editor-redirect
+  - flow-ai-session-collaborators
+  - flow-account-revocation-teardown
+  - flow-restore-version-open-editor
+  - flow-edit-in-sandbox
 ---
 
 ## 1. Purpose

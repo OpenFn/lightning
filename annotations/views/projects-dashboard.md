@@ -74,6 +74,8 @@ flows:
   - flow-invite-new-collaborator      # passes through: the invitee's signed-in landing, then the row into workflows-index
   - flow-collaborator-added-email     # referenced: creating a project here does NOT start it (project_creation_modal.ex:55)
   - flow-login-return-to
+  - flow-account-revocation-teardown
+  - flow-change-email-confirm
 ---
 
 ## 1. Purpose

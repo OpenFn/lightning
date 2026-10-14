@@ -94,6 +94,7 @@ related:
 flows:
   - flow-manual-run-live-follow
   - flow-history-live-updates         # referenced; this view publishes work order and run events to it but is not yet in its surfaces (see Proposed flows)
+  - flow-edit-in-sandbox
 ---
 
 ## 1. Purpose

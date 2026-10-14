@@ -73,6 +73,7 @@ flows:
   - flow-credential-transfer
   - flow-oauth-credential-authorize
   - flow-credential-scheduled-deletion
+  - flow-editor-credentials-broadcast
 ---
 
 ## 1. Purpose

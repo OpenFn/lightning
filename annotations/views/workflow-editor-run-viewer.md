@@ -126,6 +126,7 @@ flows:
   - flow-open-run-in-editor                 # exit here: run links land with run=<id> (its S01 to S05, S07)
   - flow-zero-persistence-runs              # Input and Output tabs show a raw null for wiped dataclips (its 6.1); no scenario here until fixed
   - flow-workflow-api-edit-conflict         # opening a run on a pinned version starts a view-only session that still holds the API edit lock (its 6.2)
+  - flow-account-revocation-teardown
 ---
 
 ## 1. Purpose
