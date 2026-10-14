@@ -100,8 +100,8 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 | admin-audit | `live /settings/audit` | `AuditLive.Index` | `live/audit_live/index.ex`, `.html.heex` | done-with-decides |
 | admin-maintenance | `live /settings/maintenance` | `MaintenanceLive.Index` | `live/maintenance_live/index.ex`, `.html.heex` | done-with-decides |
 | admin-auth-providers | `live /settings/authentication`, `/new` | `AuthProvidersLive.Index` | `live/auth_providers/{index,form_component}.ex` | done-with-decides |
-| admin-collections | `live /settings/collections` | `CollectionLive.Index` | `live/collection_live/{index,components,collection_creation_modal}.ex` | todo |
-| admin-live-dashboard | `live_dashboard /dashboard` | `Phoenix.LiveDashboard` (third party) | `router.ex:362` | todo |
+| admin-collections | `live /settings/collections` | `CollectionLive.Index` | `live/collection_live/{index,components,collection_creation_modal}.ex` | done-with-decides |
+| admin-live-dashboard | `live_dashboard /dashboard` | `Phoenix.LiveDashboard` (third party) | `router.ex:362` | done-with-decides |
 
 ## Not catalogued as views
 

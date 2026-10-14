@@ -25,6 +25,7 @@ trigger:
     - auth-login
     - profile-tokens   # added by lead
     - auth-reset-password   # added by lead: a reset revokes sessions the same way (see auth-reset-password 6.5)
+    - admin-live-dashboard   # added by lead
   reachable_when:
     - the actor is signed in (shared-authenticated-session)
     - admin entries: the actor is a superuser (`hooks.ex:40-51`; `policies/users.ex:19-21`)
