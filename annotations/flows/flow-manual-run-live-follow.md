@@ -16,6 +16,7 @@ trigger:
     - controller:run-channel                 # worker side "run:start", "step:start", "step:complete", "run:log", "run:batch_logs", "run:complete"; browser side join, "fetch:run", "fetch:logs" and the forwarders (run_channel.ex:67-95, :112-258, :261-323)
     - pubsub:run_events:<run_id>             # Lightning.Runs.Events (runs/events.ex:29-68)
     - workflow-editor-run-viewer             # the editor following run=<id>: canvas step painting and the run history list, or the IDE's run viewer panel
+    - workflow-editor-versions-and-promote   # added by lead
   reachable_when:
     - the editor is on an existing workflow and the person can run it (shared-run-retry-controls S10; workflow_controller.ex:68-93)
     - the editor's workflow channel is connected; following waits for it (useHistory.ts:155-162, :325-334)
