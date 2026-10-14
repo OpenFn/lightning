@@ -17,6 +17,23 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Update Project and Workflow yaml exports to match the v4 portability spec
+  [#4718](https://github.com/OpenFn/lightning/issues/4718)
+- The workflow version hash no longer includes a trigger's `enabled` state
+  [#5241](https://github.com/OpenFn/lightning/pull/5241)
+
+### Fixed
+
+- GitHub sync now prevents two projects in the same project tree (root,
+  sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
+  pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+
+## [2.19.1-pre] - 2026-10-09
+
+### Added
+
 - The AI assistant now shows a warning banner above its chat input when the
   current workflow is live.
   [#5205](https://github.com/OpenFn/lightning/pull/5205)
@@ -51,8 +68,8 @@ and this project adheres to
 
 ### Changed
 
-- Update Project and Workflow yaml exports to match the v4 portability spec
-  [#4718](https://github.com/OpenFn/lightning/issues/4718)
+- API list endpoints now return at most 100 items a page, however large the
+  `page_size` asked for. [#5232](https://github.com/OpenFn/lightning/pull/5232)
 - On Linux, database connections now detect a silently dead network path (e.g. a
   node drain during a node-pool upgrade) within about 20s, including queries run
   with no timeout, which previously could hang indefinitely. Connections use TCP
@@ -99,9 +116,6 @@ and this project adheres to
 
 ### Fixed
 
-- GitHub sync now prevents two projects in the same project tree (root,
-  sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
-  pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
 - Leaving the workflow editor now closes its connection to the server. It used
   to stay open, reconnecting in the background, until the tab was closed.
   [#5202](https://github.com/OpenFn/lightning/pull/5202)

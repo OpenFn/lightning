@@ -5,7 +5,7 @@ defmodule LightningWeb.API.LogLinesController do
   ## Query Parameters
 
   - `page` - Page number (default: 1)
-  - `page_size` - Number of items per page (default: 10)
+  - `page_size` - Number of items per page (default: 10, at most 100)
   - `timestamp_after` - Filter logs after this ISO8601 datetime
   - `timestamp_before` - Filter logs before this ISO8601 datetime
   - `project_id` - Filter by project UUID

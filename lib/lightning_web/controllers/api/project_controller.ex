@@ -8,7 +8,7 @@ defmodule LightningWeb.API.ProjectController do
   ## Query Parameters (index)
 
   - `page` - Page number (default: 1)
-  - `page_size` - Number of items per page (default: 10)
+  - `page_size` - Number of items per page (default: 10, at most 100)
 
   ## Examples
 

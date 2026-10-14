@@ -721,6 +721,53 @@ defmodule LightningWeb.API.UserControllerTest do
                conn |> get(~p"/api/users?page_size=2") |> json_response(200)
     end
 
+    test "never answers with more than 100 users a page", %{conn: conn} do
+      insert_list(101, :user)
+
+      assert %{"data" => data, "links" => %{"next" => next}} =
+               conn
+               |> get(~p"/api/users?page_size=100000000")
+               |> json_response(200)
+
+      assert length(data) == 100
+      assert next =~ "page=2"
+    end
+
+    test "falls back to the default page for page params it can't read", %{
+      conn: conn
+    } do
+      insert_list(11, :user)
+
+      for query <- [
+            "page=abc&page_size=xyz",
+            "page[]=2&page_size[]=2",
+            "page=-1&page_size=0"
+          ] do
+        assert %{"data" => data, "links" => %{"prev" => nil}} =
+                 conn |> get("/api/users?" <> query) |> json_response(200)
+
+        assert length(data) == 10, query
+      end
+    end
+
+    test "answers a page number past the end with the last page", %{conn: conn} do
+      insert_list(11, :user)
+
+      assert %{"data" => [_ | _], "links" => %{"next" => nil}} =
+               conn
+               |> get(~p"/api/users?page=99999999999999999999")
+               |> json_response(200)
+    end
+
+    test "answers 422 for an email filter that isn't a string", %{conn: conn} do
+      insert(:user, email: "x@example.com")
+
+      assert %{"errors" => %{"email" => ["is invalid"]}} =
+               conn
+               |> get(~p"/api/users?email[]=x@example.com")
+               |> json_response(422)
+    end
+
     test "needs users:read", %{conn: conn, account: account} do
       conn =
         conn
