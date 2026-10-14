@@ -120,7 +120,7 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | view | must reference |
 |------|----------------|
 | admin-auth-providers | shared-admin-space, flow-sso-login (its 6.1 row 2, provider removal clears only one node's cache, belongs here) |
-| admin-user-edit | shared-admin-space, flow-account-revocation-teardown (disabling happens here), flow-change-email-confirm (cross-reference) |
+| admin-user-edit | shared-admin-space, flow-first-superuser-sign-in 6.5 (can the last superuser be demoted or disabled? check here), flow-account-revocation-teardown (disabling happens here), flow-change-email-confirm (cross-reference) |
 | admin-projects | shared-admin-space, flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
 
 ## Proposed, not yet created
@@ -137,6 +137,8 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 
 ## Overlaps to clean up
 
+- shared-flash-messages: every view should inherit it. Add it to `inherits` on all views in the final pass; the admin views note that the settings layout keeps toasts until clicked.
+- auth-login S16 repeats flow-log-out S01's landing message.
 - auth-confirmation-required S10 duplicates flow-change-email-confirm S08.
 - shared-authenticated-session cites `first_setup.ex:127-149`; the plug is 34 lines. Re-cite.
 - flow-forgot-password 6.1 (timing oracle, silent mailer failure) duplicates auth-reset-password 6.1; keep in the view.

@@ -74,6 +74,7 @@ flows:
   - flow-account-revocation-teardown     # exit: revoked browsers land here (S15)
   - flow-sso-login
   - flow-forgot-password
+  - flow-log-out
 ---
 
 ## 1. Purpose

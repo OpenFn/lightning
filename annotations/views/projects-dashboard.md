@@ -78,6 +78,7 @@ flows:
   - flow-change-email-confirm
   - flow-forgot-password
   - flow-sso-login
+  - flow-first-superuser-sign-in
 ---
 
 ## 1. Purpose
