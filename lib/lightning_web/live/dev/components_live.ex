@@ -30,13 +30,72 @@ defmodule LightningWeb.Dev.ComponentsLive do
     {"output", "Output", "hero-arrow-up-on-square"}
   ]
 
+  @avatar_cases [
+    %{
+      title: "Initials",
+      type: "initials",
+      first_name: "Ada",
+      last_name: "Lovelace"
+    },
+    %{title: "First name only", type: "first-name", first_name: "Ada"},
+    %{title: "Image", type: "image", src: "/images/user.png"},
+    %{
+      title: "Broken image",
+      type: "broken-image",
+      first_name: "Ada",
+      last_name: "Lovelace",
+      src: "/images/missing.png"
+    },
+    %{title: "Icon", type: "icon", icon: "hero-rocket-launch"},
+    %{title: "No name", type: "no-name"}
+  ]
+
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, cases: @cases, tabs: @tabs)
+    assigns =
+      assign(assigns, cases: @cases, tabs: @tabs, avatar_cases: @avatar_cases)
 
     ~H"""
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-y-6">
       <h2 class="text-xl font-bold">Components</h2>
+      <div id="avatar-showcase" class="overflow-hidden rounded-md bg-white shadow">
+        <div class="px-6 py-4">
+          <h3 class="text-lg font-bold">Avatar</h3>
+          <p class="font-mono text-xs text-gray-500">
+            Styling: assets/css/ui/avatar.css
+          </p>
+        </div>
+        <div
+          :for={c <- @avatar_cases}
+          class="grid grid-cols-2 gap-x-8 border-t border-gray-200 px-6 py-4"
+        >
+          <div>
+            <p class="mb-2 text-xs text-gray-400">LiveView, {c.title}</p>
+            <div class="flex items-center gap-4">
+              <.avatar
+                :for={size <- ~w(large medium small)}
+                size={size}
+                first_name={c[:first_name]}
+                last_name={c[:last_name]}
+                src={c[:src]}
+                icon={c[:icon] || "hero-user"}
+              />
+            </div>
+          </div>
+          <div>
+            <p class="mb-2 text-xs text-gray-400">React, {c.title}</p>
+            <div
+              id={"react-avatar-#{c.type}"}
+              phx-hook="ReactComponent"
+              phx-update="ignore"
+              data-react-name="AvatarShowcase"
+              data-react-file={~p"/assets/js/dev/AvatarShowcase.js"}
+              data-type={c.type}
+            >
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="overflow-hidden rounded-md bg-white shadow">
         <div class="px-6 py-4">
           <h3 class="text-lg font-bold">Tabs</h3>

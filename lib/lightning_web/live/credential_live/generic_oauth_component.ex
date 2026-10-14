@@ -477,7 +477,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           authorize_url={@authorize_url}
           myself={@myself}
           scopes_changed={@scopes_changed}
-          socket={@socket}
         />
       </div>
     </div>

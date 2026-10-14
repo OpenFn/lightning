@@ -1,0 +1,32 @@
+/* Shared avatar styling. Both stacks emit .ui-avatar. The initials or icon
+   always render, and an image sits on top of them, so they show if it fails
+   to load. */
+@layer components {
+  .ui-avatar {
+    @apply relative inline-flex size-ds-lg shrink-0 select-none items-center justify-center overflow-hidden rounded-ds-pill bg-ds-subtle font-ds-sans text-ds-type-body-xl font-ds-weight-medium text-ds-primary;
+  }
+
+  .ui-avatar--small {
+    @apply size-ds-base text-ds-type-code;
+  }
+
+  .ui-avatar--large {
+    @apply size-ds-xl text-ds-type-h1;
+  }
+
+  .ui-avatar__image {
+    @apply absolute inset-0 size-full object-cover;
+  }
+}
+
+/* hero-* icons are utilities with a fixed size, and utilities beat
+   components, so the icon size has to live here. */
+@layer utilities {
+  .ui-avatar > .ui-avatar__icon {
+    @apply size-ds-sm;
+  }
+
+  .ui-avatar--large > .ui-avatar__icon {
+    @apply size-ds-base;
+  }
+}

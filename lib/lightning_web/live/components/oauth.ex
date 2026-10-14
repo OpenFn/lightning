@@ -170,7 +170,6 @@ defmodule LightningWeb.Components.Oauth do
   attr :userinfo, :map, default: nil
   attr :error, :any, default: nil
   attr :scopes_changed, :boolean, default: false
-  attr :socket, :any, default: nil
 
   def oauth_status(assigns) do
     ~H"""
@@ -195,11 +194,7 @@ defmodule LightningWeb.Components.Oauth do
             </.text_ping_loader>
           <% :complete -> %>
             <%= if @userinfo do %>
-              <.userinfo_card
-                socket={@socket}
-                userinfo={@userinfo}
-                provider={@provider}
-              />
+              <.userinfo_card userinfo={@userinfo} provider={@provider} />
             <% else %>
               <.success_without_userinfo provider={@provider} />
             <% end %>
@@ -334,16 +329,7 @@ defmodule LightningWeb.Components.Oauth do
     ~H"""
     <div class="bg-green-50 border border-green-200 rounded-lg p-4">
       <div class="flex items-center">
-        <img
-          src={@userinfo["picture"]}
-          alt={@userinfo["name"] || "Unknown"}
-          class="h-16 w-16 rounded-full"
-          onerror={"this.onerror=null;this.src='#{Routes.static_path(
-              @socket,
-              "/images/user.png"
-            )
-          }';"}
-        />
+        <.avatar src={@userinfo["picture"]} size="large" />
         <div class="ml-4">
           <h3 class="text-base font-semibold text-gray-900">
             {@userinfo["name"] || "Unknown User"}

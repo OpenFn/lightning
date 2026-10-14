@@ -81,6 +81,9 @@ describe('ActiveCollaborators - Basic Rendering', () => {
     expect(container.firstChild).not.toBeNull();
     expect(screen.getByText('JD')).toBeInTheDocument();
     expect(screen.getByText('JS')).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Jane Smith (jane@example.com)' })
+    ).toBeInTheDocument();
   });
 
   test('renders correct number of avatars matching remote users count', () => {
@@ -132,8 +135,8 @@ describe('ActiveCollaborators - Basic Rendering', () => {
 
     render(<ActiveCollaborators />);
 
-    // Single-word name should result in "??" (no last name)
-    expect(screen.getByText('??')).toBeInTheDocument();
+    // Single-word name shows its one initial
+    expect(screen.getByText('M')).toBeInTheDocument();
   });
 
   test('renders correct initials for multi-part names (uses first and last parts)', () => {
@@ -442,7 +445,7 @@ describe('ActiveCollaborators - Cache Behavior', () => {
 
     // Should still show as active (green border) because < 12 seconds
     expect(screen.getByText('JS')).toBeInTheDocument();
-    expect(screen.getByText('JS').closest('div')?.parentElement).toHaveClass(
+    expect(screen.getByText('JS').parentElement).toHaveClass(
       'border-green-500'
     );
   });
@@ -631,10 +634,10 @@ describe('ActiveCollaborators - Edge Cases', () => {
       }),
     ];
 
-    render(<ActiveCollaborators />);
+    const { container } = render(<ActiveCollaborators />);
 
-    // Should show fallback "??"
-    expect(screen.getByText('??')).toBeInTheDocument();
+    // No name parts, so the avatar shows the user icon
+    expect(container.querySelector('svg.ui-avatar__icon')).not.toBeNull();
   });
 
   test('handles names with only whitespace', () => {
@@ -649,9 +652,9 @@ describe('ActiveCollaborators - Edge Cases', () => {
       }),
     ];
 
-    render(<ActiveCollaborators />);
+    const { container } = render(<ActiveCollaborators />);
 
-    // Should show fallback "??" because trimmed name parts are empty
-    expect(screen.getByText('??')).toBeInTheDocument();
+    // Trimmed name parts are empty, so the avatar shows the user icon
+    expect(container.querySelector('svg.ui-avatar__icon')).not.toBeNull();
   });
 });

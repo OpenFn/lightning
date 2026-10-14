@@ -303,7 +303,6 @@ Tests for React components using React Testing Library:
 
 Tests for pure utility functions:
 
-- **avatar.test.ts**: Avatar initials generation
 - **dateFormatting.test.ts**: Deadline calculation and formatting
 - **sessionContext.test.ts**: Zod schema validation
 

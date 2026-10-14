@@ -9,6 +9,17 @@ defmodule LightningWeb.LayoutComponentsTest do
   alias LightningWeb.Components.Menu
 
   describe "user_menu_dropdown/1" do
+    test "shows the user's initials in a small avatar" do
+      html =
+        render_component(&LayoutComponents.user_menu_dropdown/1, %{
+          current_user: build(:user, first_name: "John", last_name: "Doe")
+        })
+        |> Floki.parse_fragment!()
+
+      assert [avatar] = Floki.find(html, "#user-menu-trigger .ui-avatar--small")
+      assert Floki.text(avatar) =~ "JD"
+    end
+
     test "says what the experimental mode means and offers the way out" do
       html =
         render_component(&LayoutComponents.user_menu_dropdown/1, %{
@@ -29,38 +40,6 @@ defmodule LightningWeb.LayoutComponentsTest do
         })
 
       refute html =~ "Experimental"
-    end
-  end
-
-  describe "user_avatar/1" do
-    test "renders initials from first and last name" do
-      html =
-        (&LayoutComponents.user_avatar/1)
-        |> render_component(%{first_name: "John", last_name: "Doe"})
-
-      assert html =~ "JD"
-    end
-
-    test "renders initial from first name only when no last name" do
-      html =
-        (&LayoutComponents.user_avatar/1)
-        |> render_component(%{first_name: "John", last_name: nil})
-
-      # Only first initial when no last name
-      refute html =~ "JD"
-      assert html =~ "J\n"
-    end
-
-    test "applies custom class" do
-      html =
-        (&LayoutComponents.user_avatar/1)
-        |> render_component(%{
-          first_name: "John",
-          last_name: nil,
-          class: "custom-class"
-        })
-
-      assert html =~ "custom-class"
     end
   end
 

@@ -5,46 +5,6 @@ defmodule LightningWeb.LayoutComponents do
   alias LightningWeb.Components.Menu
   alias Phoenix.LiveView.JS
 
-  @doc """
-  Renders a user avatar with initials.
-
-  ## Examples
-
-      <.user_avatar first_name="John" last_name="Doe" />
-      <.user_avatar first_name="John" />
-  """
-  attr :first_name, :string, required: true
-  attr :last_name, :string, default: nil
-  attr :size, :string, default: "xs", values: ~w(xs sm)
-  attr :class, :string, default: nil
-
-  def user_avatar(assigns) do
-    initials =
-      String.at(assigns.first_name, 0) <>
-        if assigns.last_name, do: String.at(assigns.last_name, 0), else: ""
-
-    assigns =
-      assigns
-      |> assign(:initials, String.upcase(initials))
-      |> assign(
-        :size_class,
-        case assigns.size do
-          "xs" -> "h-5 w-5 text-[10px]"
-          "sm" -> "h-8 w-8 text-sm"
-        end
-      )
-
-    ~H"""
-    <div class={[
-      "rounded-full bg-gray-100 flex items-center justify-center font-semibold text-gray-500",
-      @size_class,
-      @class
-    ]}>
-      {@initials}
-    </div>
-    """
-  end
-
   attr :current_user, Lightning.Accounts.User, required: true
 
   def user_menu_dropdown(assigns) do
@@ -80,7 +40,8 @@ defmodule LightningWeb.LayoutComponents do
         aria-haspopup="true"
       >
         <div class="user-menu-content flex items-center w-full min-w-0">
-          <.user_avatar
+          <.avatar
+            size="small"
             first_name={@current_user.first_name}
             last_name={@current_user.last_name}
             class="shrink-0"

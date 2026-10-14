@@ -1,8 +1,7 @@
+import { Tooltip } from '../../components/Tooltip';
+import { Avatar } from '../../ui/Avatar';
 import { cn } from '../../utils/cn';
 import { useAwareness } from '../hooks/useAwareness';
-import { getAvatarInitials } from '../utils/avatar';
-
-import { Tooltip } from '../../components/Tooltip';
 
 function lessthanmin(val: number, mins: number) {
   const now = Date.now();
@@ -29,13 +28,6 @@ export function ActiveCollaborators({ className }: ActiveCollaboratorsProps) {
         const lastName =
           nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
-        const userForInitials = {
-          first_name: firstName,
-          last_name: lastName,
-        };
-
-        const initials = getAvatarInitials(userForInitials as any);
-
         const tooltipContent =
           user.connectionCount && user.connectionCount > 1
             ? `${user.user.name} (${user.user.email}) - ${user.connectionCount} tabs`
@@ -46,16 +38,18 @@ export function ActiveCollaborators({ className }: ActiveCollaboratorsProps) {
             <div
               className={`relative inline-flex items-center justify-center rounded-full border-2 ${user.lastSeen && lessthanmin(user.lastSeen, 0.2) ? 'border-green-500' : 'border-gray-500 '}`}
             >
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center font-normal text-[9px] font-semibold text-white cursor-default"
+              <Avatar
+                size="small"
+                firstName={firstName}
+                lastName={lastName}
+                label={tooltipContent}
+                className="cursor-default text-white"
                 style={{
                   backgroundColor: user.user.color,
                   textShadow:
                     '1px 0 0 rgba(0, 0, 0, 0.5), 0 -1px 0 rgba(0, 0, 0, 0.5), 0 1px 0 rgba(0, 0, 0, 0.5), -1px 0 0 rgba(0, 0, 0, 0.5)',
                 }}
-              >
-                {initials}
-              </div>
+              />
             </div>
           </Tooltip>
         );
