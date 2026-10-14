@@ -146,6 +146,9 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 
 ## Overlaps to clean up
 
+- profile-delete-account S01, S03, S05, S06, S07 and its modal-level 6.2 rows: now owned by shared-user-deletion-modal.
+- profile-tokens 6.5 claims /api does not reject locked-out accounts; flow-personal-access-token-use found `user_auth.ex:362-363` does. Correct the view.
+- flow-login-return-to: cross-reference flow-reauth-backup-codes 6.1 row 3 (a stale `user_return_to` survives logout).
 - workflow-editor-run-viewer S02 to S04: now owned by shared-run-components S15 to S18.
 - workflow-editor-versions-and-promote S09 ("shows a new v3") conflicts with flow-restore-version-open-editor 6.1 (the restorer's publishes list is never refreshed; the view's tests mock the list). Fix the view.
 - flow-change-email-confirm exit: the controller redirects to /projects, not the profile.
