@@ -120,6 +120,7 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | view | must reference |
 |------|----------------|
 | auth-confirm-access | flow-reauth-backup-codes |
+| admin-auth-providers | flow-sso-login (its 6.1 row 2, provider removal clears only one node's cache, belongs here) |
 | auth-confirm-account | flow-resend-account-confirmation (first confirmation email and resends) |
 | auth-confirmation-required | flow-change-email-confirm (also starts it) |
 | admin-users | shared-user-deletion-modal, flow-account-revocation-teardown, flow-change-email-confirm (admins change email without confirmation; cross-reference) |
@@ -140,6 +141,10 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 
 ## Overlaps to clean up
 
+- flow-forgot-password 6.1 (timing oracle, silent mailer failure) duplicates auth-reset-password 6.1; keep in the view.
+- flow-login-return-to: list flow-forgot-password (the request hop overwrites the stored return path, so a deep link is lost).
+- flow-invite-new-collaborator S03 goes through flow-forgot-password; reference it.
+- flow-resend-account-confirmation `not_reachable_here` still excludes the welcome email, and auth-register's proposed-flow text and flow-register-first-workflow 6.5 say the same; all now out of date.
 - profile-delete-account S01, S03, S05, S06, S07 and its modal-level 6.2 rows: now owned by shared-user-deletion-modal.
 - profile-tokens 6.5 claims /api does not reject locked-out accounts; flow-personal-access-token-use found `user_auth.ex:362-363` does. Correct the view.
 - flow-login-return-to: cross-reference flow-reauth-backup-codes 6.1 row 3 (a stale `user_return_to` survives logout).

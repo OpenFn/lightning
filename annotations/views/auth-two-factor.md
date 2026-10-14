@@ -81,6 +81,8 @@ related:
 flows:
   - flow-login-return-to                 # this view is its two-factor hop (S10)
   - flow-sso-login
+  - flow-spend-backup-code
+  - flow-forgot-password
 ---
 
 ## 1. Purpose

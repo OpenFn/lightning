@@ -73,6 +73,7 @@ flows:
   - flow-invite-new-collaborator         # a successful password set lands here (S14)
   - flow-account-revocation-teardown     # exit: revoked browsers land here (S15)
   - flow-sso-login
+  - flow-forgot-password
 ---
 
 ## 1. Purpose

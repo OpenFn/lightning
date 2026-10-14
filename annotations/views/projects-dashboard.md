@@ -76,6 +76,8 @@ flows:
   - flow-login-return-to
   - flow-account-revocation-teardown
   - flow-change-email-confirm
+  - flow-forgot-password
+  - flow-sso-login
 ---
 
 ## 1. Purpose

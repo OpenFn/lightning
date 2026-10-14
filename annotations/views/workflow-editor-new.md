@@ -106,7 +106,7 @@ related:
   - assets/test/collaborative-editor/components/yaml-import/{YAMLImportModal,YAMLFileDropzone}.test.tsx
   - assets/test/collaborative-editor/stores/createUIStore.{landing-screen,modals}.test.ts
 flows:
-  - flow-register-first-workflow   # proposed, held for auth-register
+  - flow-register-first-workflow
   - flow-legacy-editor-redirect
   - flow-workflow-api-edit-conflict
 ---
