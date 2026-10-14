@@ -23,6 +23,9 @@ and this project adheres to
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
   [#5241](https://github.com/OpenFn/lightning/pull/5241)
+- Bump decimal to 3.2.0 and cowlib to 2.21.0 for security fixes, and ignore two
+  Cloak advisories that don't affect us
+  [#5246](https://github.com/OpenFn/lightning/pull/5246)
 
 ### Fixed
 
