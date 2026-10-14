@@ -7,6 +7,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+import { Tabs } from '#/ui/Tabs';
 import _logger from '#/utils/logger';
 
 import { FilterTypes } from '../../manual-run-panel/types';
@@ -33,7 +34,6 @@ import { InspectorFooter } from './inspector/InspectorFooter';
 import { InspectorLayout } from './inspector/InspectorLayout';
 import { SelectedDataclipView } from './manual-run/SelectedDataclipView';
 import { RunRetryButton } from './RunRetryButton';
-import { Tabs } from './Tabs';
 
 const logger = _logger.ns('ManualRunPanel').seal();
 
@@ -602,6 +602,7 @@ export function ManualRunPanel({
       <Tabs
         className="mx-3"
         variant="pills"
+        size="small"
         value={selectedTab}
         onChange={value => setSelectedTab(value)}
         options={[
@@ -633,6 +634,7 @@ export function ManualRunPanel({
               <div className="flex-1">
                 <Tabs
                   variant="pills"
+                  size="small"
                   value={selectedTab}
                   onChange={value => setSelectedTab(value)}
                   options={[

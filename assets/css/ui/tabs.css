@@ -1,0 +1,66 @@
+/* Shared tabs styling. Both stacks emit .ui-tabs and .ui-tab.
+   The current tab is aria-selected="true" (React tabs, and hash tabs through
+   TabbedContainer) or aria-current="page" (LiveView links). */
+@layer components {
+  .ui-tabs {
+    @apply flex gap-ds-md;
+  }
+
+  .ui-tabs--pills {
+    @apply rounded-ds-md bg-ds-muted p-ds-xs;
+  }
+
+  .ui-tabs--vertical {
+    @apply flex-none flex-col gap-ds-sm pr-ds-lg;
+  }
+
+  .ui-tab {
+    @apply inline-flex cursor-pointer items-center gap-ds-sm whitespace-nowrap border-b-ds-width-lg border-b-ds-transparent px-ds-xs py-ds-sm font-ds-sans text-ds-type-body-lg font-ds-weight-medium text-ds-subtle focus-visible:outline-ds-width-lg focus-visible:outline-offset-2 focus-visible:outline-ds-action-primary;
+  }
+
+  .ui-tabs--pills .ui-tab {
+    @apply flex-1 justify-center rounded-ds-md border-b-0 px-ds-sm transition-all duration-200;
+  }
+
+  .ui-tabs--small .ui-tab {
+    @apply py-ds-xs text-ds-type-body-md;
+  }
+
+  /* :where() keeps hover from outranking the active rules below, and the
+     current tab gets no hover background. */
+  .ui-tab:where(
+      :not([data-disabled]):not(:disabled):not([aria-disabled='true']):not(
+          [aria-selected='true']
+        ):not([aria-current='page'])
+    ):hover {
+    @apply rounded-ds-md bg-ds-subtle text-ds-default;
+  }
+
+  .ui-tab[data-disabled],
+  .ui-tab:disabled,
+  .ui-tab[aria-disabled='true'] {
+    @apply cursor-not-allowed text-ds-muted;
+  }
+
+  .ui-tab[aria-selected='true'],
+  .ui-tab[aria-current='page'] {
+    @apply border-b-ds-action-primary text-ds-brand;
+  }
+
+  .ui-tabs--pills .ui-tab[aria-selected='true'],
+  .ui-tabs--pills .ui-tab[aria-current='page'] {
+    @apply bg-ds-white;
+  }
+}
+
+/* hero-* icons are utilities with a fixed size, and utilities beat
+   components, so the icon size has to live here. */
+@layer utilities {
+  .ui-tab > .ui-tab__icon {
+    @apply size-ds-base;
+  }
+
+  .ui-tabs--small .ui-tab > .ui-tab__icon {
+    @apply size-ds-sm;
+  }
+}
