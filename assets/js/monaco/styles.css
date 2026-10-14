@@ -41,6 +41,7 @@
   animation: ai-change-pulse 0.6s ease-in-out 2;
 }
 
+/* Same pulse under another name, so a repeat highlight restarts it */
 .monaco-editor .ai-change-highlight.ai-change-replay {
   animation-name: ai-change-pulse-replay;
 }

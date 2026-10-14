@@ -389,10 +389,10 @@ export const StepDiffBlock = ({
             {/* Logos are drawn edge to edge, so an inset tile gives each one
                 the same frame whatever its shape. */}
             <span
-              className="shrink-0 flex items-center justify-center size-5 rounded bg-[#f6f8fa] overflow-hidden *:size-3.5"
+              className="shrink-0 flex items-center justify-center size-5 rounded bg-[#f6f8fa] overflow-hidden"
               aria-hidden="true"
             >
-              <AdaptorIcon name={step.adaptor} size="sm" />
+              <AdaptorIcon name={step.adaptor} size="xs" />
             </span>
             {/* Fira Code's metrics sit its glyphs high in a centred line box */}
             <span className="font-mono font-normal truncate translate-y-px">

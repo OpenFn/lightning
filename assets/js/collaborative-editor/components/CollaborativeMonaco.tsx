@@ -212,10 +212,10 @@ export const CollaborativeMonaco = forwardRef<
       return nearest ? [nearest] : [];
     });
 
-    replayRef.current = !replayRef.current;
     const className = replayRef.current
-      ? 'ai-change-highlight'
-      : 'ai-change-highlight ai-change-replay';
+      ? 'ai-change-highlight ai-change-replay'
+      : 'ai-change-highlight';
+    replayRef.current = !replayRef.current;
     highlightRef.current?.clear();
     highlightRef.current = editor.createDecorationsCollection(
       ranges.map(range => ({
