@@ -23,6 +23,9 @@ and this project adheres to
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
   [#5241](https://github.com/OpenFn/lightning/pull/5241)
+- Tabs use the new design system styles, with a rounded hover and a clearer
+  active tab. Tabs in History, the run page, workflow health, the manual run
+  panel, the code editor's docs panel and credential environments are smaller.
 
 ### Fixed
 
