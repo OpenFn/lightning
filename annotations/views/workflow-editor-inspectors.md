@@ -24,6 +24,7 @@ inherits:
   - shared-editor-session
   - shared-adaptor-credential-config
   - shared-run-retry-controls
+  - shared-workflow-yaml-format
 
 url_params:
   - name: job

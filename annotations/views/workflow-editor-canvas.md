@@ -135,6 +135,7 @@ flows:
   - flow-open-run-in-editor                 # ?run=, ?v=, ?as_run= land on this route (collaborate.ex:94-116)
   - flow-resend-account-confirmation
   - flow-workflow-api-edit-conflict
+  - flow-legacy-editor-redirect
 ---
 
 ## 1. Purpose

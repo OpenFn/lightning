@@ -108,6 +108,7 @@ related:
 flows:
   - flow-register-first-workflow   # proposed, held for auth-register
   - flow-legacy-editor-redirect
+  - flow-workflow-api-edit-conflict
 ---
 
 ## 1. Purpose

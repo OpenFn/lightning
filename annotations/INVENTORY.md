@@ -123,12 +123,13 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | auth-confirm-account | flow-resend-account-confirmation |
 | auth-register | flow-register-first-workflow (proposed; create with this view) |
 | auth-reset-password | flow-invite-new-collaborator |
-| workflow-editor-run-viewer | shared-editor-session, flow-manual-run-live-follow (exit), shared-run-retry-controls, shared-dataclip-body-viewer, flow-zero-persistence-runs (shows raw null; see the flow's 6.1), flow-open-run-in-editor (exit), shared-log-viewer |
+| workflow-editor-run-viewer | shared-editor-session, flow-workflow-api-edit-conflict, flow-manual-run-live-follow (exit), shared-run-retry-controls, shared-dataclip-body-viewer, flow-zero-persistence-runs (shows raw null; see the flow's 6.1), flow-open-run-in-editor (exit), shared-log-viewer |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
 | profile-github | flow-github-connect |
 | profile-mfa | flow-require-project-mfa |
 | mfa-required | flow-require-project-mfa (exit) |
-| workflow-editor-versions-and-promote | shared-editor-session, flow-github-sync-actions (GitHubSyncModal), flow-sandbox-merge (PromoteDialog) |
+| workflow-editor-ai-assistant | shared-editor-session, shared-workflow-yaml-format (AI apply), flow-workflow-api-edit-conflict |
+| workflow-editor-versions-and-promote | shared-editor-session, flow-workflow-api-edit-conflict, flow-github-sync-actions (GitHubSyncModal), flow-sandbox-merge (PromoteDialog) |
 | profile-backup-codes | shared-authenticated-session (mounted via `:sudo_auth`), flow-require-project-mfa (first enrolment lands here) |
 
 ## Proposed, not yet created
@@ -138,6 +139,9 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 | id | proposed by | note |
 |----|-------------|------|
 | shared-project-mail-recipients | flow-history-export | reads as a capability (who may receive mail); deferred to the capabilities pass |
+| flow-editor-credentials-broadcast | shared-adaptor-credential-config | credential created elsewhere appearing in an open editor; consolidate after batch 6 |
+| flow-adaptor-catalogue-refresh | shared-adaptor-credential-config | likely a capability (/adaptors/catalogue); decide after batch 6 |
+| flow-workflow-yaml-copy | shared-workflow-yaml-format | consolidate after batch 6 |
 | flow-register-first-workflow | workflow-editor-new | revisit with auth-register |
 | flow-account-revocation-teardown | shared-authenticated-session | revisit with admin-users and profile-delete-account |
 | capability:webhook-auth-method-purge | project-settings-webhook-security | capabilities pass |
@@ -146,6 +150,12 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 
 ## Overlaps to clean up
 
+- workflow-editor-manual-run S12, S15 to S19, S22, S23 and six 6.2 rows: now owned by shared-run-retry-controls.
+- workflow-editor-ide metadata rows in 6.1: now owned by shared-adaptor-credential-config; its inspectors citations for AdaptorSelector, AdaptorDisplay and the confirmation hook were wrong and are corrected there.
+- workflow-editor-canvas 6.x rows on session plumbing: now owned by shared-editor-session (see its section 8). Canvas cites `LoadingBoundary.tsx:284-330`; the file is 72 lines.
+- flow-schedule-project-deletion S04, S05: editor-channel half now owned by shared-editor-session.
+- workflow-editor-new: its 6.1 row on v1 `enabled` defaults is unreachable and its 6.3 `deduplicateJobNames` entry is wrong for v2 (see shared-workflow-yaml-format).
+- workflow-editor-canvas S29 Value line overstates: `/api/provision` (CLI deploy, GitHub sync) does not check presence. Consider a flow for that gap.
 - workflow-editor-inspectors S04 to S15: now owned by shared-adaptor-credential-config.
 - shared-channel-project-scope folded into shared-editor-session (editor channels); run and AI channel teardown to be checked when those views are catalogued.
 - dataclip-show S03 to S06 and the viewer steps in run-show S07: now owned by shared-dataclip-body-viewer.
