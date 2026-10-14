@@ -111,3 +111,21 @@ These are routes but not screens. They belong in `capabilities/` or appear as ho
 - Controller hops: `/users/log_out`, `/authenticate/*` (OIDC), `/oauth/:provider/callback`, `/setup_vcs`, `/credentials/transfer/:token`, `/profile/confirm_email/:token`, `/users/token_exchange/:token`, `/w/new/legacy` and `/w/:id/legacy` redirects, downloads, dataclip JSON endpoints: flow surfaces.
 - `/health_check`, `/adaptors/icons/*`, `/adaptors/catalogue`: capabilities.
 - `/dev/*` (`router.ex:376`): dev build only, out of scope.
+
+## Pending cross-references
+
+Flows and shared annotations that name a view not yet catalogued. Each is passed to that view's
+cataloguer with its inventory row, and removed from here once the view lists it.
+
+| view | must reference |
+|------|----------------|
+| auth-login | flow-invite-new-collaborator |
+| auth-reset-password | flow-invite-new-collaborator |
+| projects-dashboard | flow-invite-new-collaborator, flow-collaborator-added-email (project creation queues it), flow-schedule-project-deletion (exit) |
+| run-show | flow-failure-alert-email (email links to the run) |
+| workflow-health | flow-failure-alert-email, flow-digest-email, flow-workflow-health-drilldown (entry), flow-delete-open-workflow (its page also leaves) |
+| workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor |
+| admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
+| project-settings-history-exports | flow-history-export (exit) |
+
+Proposed but not yet created: `shared-project-mail-recipients` (from flow-history-export). It reads as a capability (who may receive mail), so it is deferred to the capabilities pass.

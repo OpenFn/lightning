@@ -115,6 +115,7 @@ flows:
   - flow-workflow-health-drilldown
   - flow-failure-alert-email
   - flow-digest-email
+  - flow-dashboard-history-drilldown
 ---
 
 ## 1. Purpose

@@ -77,6 +77,8 @@ flows:
   - flow-delete-open-workflow
   - flow-toggle-workflow-open-editor
   - flow-dashboard-history-drilldown
+  - flow-collaborator-added-email
+  - flow-invite-new-collaborator
 ---
 
 ## 1. Purpose
