@@ -37,7 +37,10 @@ trailing `default` is dropped.
 | `border/lg` (width)             | `border-ds-width-lg`, `ring-ds-width-lg`, `outline-ds-width-lg`                       |
 | font families                   | `font-ds-sans`, `font-ds-mono`, `font-ds-display`                                     |
 | font weights                    | `font-ds-weight-medium` and the others                                                |
-| text styles                     | `text-ds-type-body-lg` sets size, line height, letter spacing and weight              |
+| text styles                     | `text-ds-type-body-lg` sets font, size, line height, letter spacing and weight        |
+
+A text style sets its own font, and a `font-ds-*` class beside it doesn't
+override it. Use `!font-ds-mono` if you need to.
 
 `space/` and `gap/` have different scales: `space/xs` is 8px, `gap/xs` is 4px.
 

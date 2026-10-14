@@ -197,9 +197,9 @@
   --outline-width-ds-width-lg: 2px;
 
   /* font */
-  --font-ds-sans: 'Inter', sans-serif;
-  --font-ds-mono: 'Fira Code', monospace;
-  --font-ds-display: 'Sora', sans-serif;
+  --font-ds-sans: var(--font-sans);
+  --font-ds-mono: var(--font-mono);
+  --font-ds-display: 'Sora', var(--font-sans);
 
   /* font-weight */
   --font-weight-ds-weight-regular: 400;
@@ -268,4 +268,64 @@
   --text-ds-type-code--line-height: 1.25rem;
   --text-ds-type-code--letter-spacing: 0;
   --text-ds-type-code--font-weight: 400;
+}
+
+@utility text-ds-type-display-md {
+  font-family: var(--font-ds-display);
+}
+
+@utility text-ds-type-display-sm {
+  font-family: var(--font-ds-display);
+}
+
+@utility text-ds-type-h1 {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-h2 {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-h3 {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-body-xl {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-body-lg {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-body-md {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-body-sm {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-body-xs {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-label {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-badge {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-badge-upper {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-caption {
+  font-family: var(--font-ds-sans);
+}
+
+@utility text-ds-type-code {
+  font-family: var(--font-ds-mono);
 }

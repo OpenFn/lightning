@@ -47,6 +47,14 @@ const STATIC_GROUPS: Record<string, { namespaces: string[]; word?: string }> = {
   },
 };
 
+// The app loads the variable versions of Figma's fonts (css/app.css), so a
+// family it already has reuses that stack instead of loading a second set.
+// Any other family (Sora) falls back to the app's stack until it is loaded.
+const APP_FONTS: Record<string, string> = {
+  Inter: 'var(--font-sans)',
+  'Fira Code': 'var(--font-mono)',
+};
+
 const DIR = `${dirname(fileURLToPath(import.meta.url))}/`;
 export const OUTPUT = `${DIR}../css/design-tokens.css`;
 
@@ -107,6 +115,8 @@ export function build(light: Json, statics: Json) {
   // --var -> the token path that claimed it, for clash detection
   const owners = new Map<string, string>();
   const warnings: string[] = [];
+  // @utility blocks written after the theme
+  const utilities: string[] = [];
 
   function emit(
     section: string,
@@ -203,9 +213,10 @@ export function build(light: Json, statics: Json) {
 
     if (token.path.length === 2 && typeof value === 'string') {
       const name = tokenName(token.path.slice(1));
-      // A generic fallback, so a font that isn't loaded doesn't become Times
-      const generic = name === 'mono' ? 'monospace' : 'sans-serif';
-      emit('font', `font-ds-${name}`, `'${value}', ${generic}`, id);
+      const stack =
+        APP_FONTS[value] ??
+        `'${value}', var(--font-${name === 'mono' ? 'mono' : 'sans'})`;
+      emit('font', `font-ds-${name}`, stack, id);
     } else if (
       token.path[1] === 'weight' &&
       token.path.length === 3 &&
@@ -224,8 +235,10 @@ export function build(light: Json, statics: Json) {
 
   for (const groupPath of styleGroups) {
     const id = groupPath.join('/');
+    const find = (key: string) =>
+      typeTokens.find(t => t.path.join('/') === `${id}/${key}`);
     const part = (key: string) => {
-      const t = typeTokens.find(t => t.path.join('/') === `${id}/${key}`);
+      const t = find(key);
       return t ? resolveStatic(t) : undefined;
     };
     const name = `type-${tokenName(groupPath.filter(s => s !== 'Type' && s !== 'weight'))}`;
@@ -249,9 +262,21 @@ export function build(light: Json, statics: Json) {
     if (typeof weight === 'number') {
       emit('text', `${variable}--font-weight`, String(weight), id);
     }
+    // Tailwind's text-* can't set a font, so the style's family ("{Type.mono}")
+    // goes in a utility of the same name, which Tailwind merges into the class
+    const family = /^\{Type\.([^.}]+)\}$/.exec(String(find('style')?.value));
+    if (family) {
+      utilities.push(
+        '',
+        `@utility ${variable} {`,
+        `  font-family: var(--font-ds-${tokenName([family[1]])});`,
+        '}'
+      );
+    }
     const missing = ['line-height', 'letter-spacing', 'weight'].filter(
       k => part(k) === undefined
     );
+    if (!family) missing.push('style');
     if (missing.length) {
       warnings.push(`${id}: missing or unresolved ${missing.join(', ')}`);
     }
@@ -268,6 +293,7 @@ export function build(light: Json, statics: Json) {
       ...lines.map(l => `  ${l}`),
     ]),
     '}',
+    ...utilities,
     '',
   ].join('\n');
 
