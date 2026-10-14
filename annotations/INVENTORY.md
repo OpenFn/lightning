@@ -22,6 +22,7 @@ Paths below are relative to `lib/lightning_web/` unless they start with `assets/
 | auth-confirmation-required | `live /users/confirm-required` (`:confirmation_required` session, no on_mount) | `UserConfirmationRequiredLive` | `live/user_confirmation_required_live.ex`, `.html.heex` | todo |
 | auth-confirm-access | `live /auth/confirm_access` | `ReAuthenticateLive.New` | `live/re_authenticate_live/new.ex`, `new.html.heex` | todo |
 | first-setup | `live /first_setup`; blocked by `:allow_first_setup`, forced by `Plugs.FirstSetup` | `FirstSetupLive.Superuser` | `live/first_setup_live/superuser.ex`, `superuser.html.heex` | todo |
+| projects-dashboard | `live /projects` (config-injected); `/` redirects here | `DashboardLive.Index` | `live/dashboard_live/{index,components,project_creation_modal,user_projects_section}.ex` | done-with-decides |
 
 ## Projects and workflows
 
@@ -29,7 +30,9 @@ Paths below are relative to `lib/lightning_web/` unless they start with `assets/
 |----|-------|--------|------------|--------|
 | mfa-required | `live /mfa_required` | `ProjectLive.MFARequired` | `live/project_live/mfa_required.ex`, `.html.heex` | todo |
 | workflows-index | `live /projects/:project_id/w` | `WorkflowLive.Index` | `live/workflow_live/{index,dashboard_components,helpers}.ex` | done-with-decides |
+| workflow-health | `live /projects/:project_id/w/:id/health` | `WorkflowLive.Health` | `live/workflow_live/health.ex`, `controllers/api/workflow_health_controller.ex`, React mount it renders | done-with-decides |
 | sandboxes-index | `live /projects/:project_id/sandboxes`, `/new`, `/:id/edit` | `SandboxLive.Index` | `live/sandbox_live/{index,form_component,components}.ex` | done-with-decides |
+| channels-index | `live /projects/:project_id/channels`, `/new`, `/:id/edit` | `ChannelLive.Index` | `live/channel_live/{index,form_component,helpers}.ex` | done-with-decides |
 
 ## Collaborative workflow editor
 
@@ -39,11 +42,11 @@ Split by panel; each sub-view shares the route and differs by URL params or UI s
 
 | id | Route / state | Module | Main files | Status |
 |----|---------------|--------|------------|--------|
-| workflow-editor-canvas | `live /projects/:project_id/w/:id` (diagram, header, save, presence, read-only states) | `WorkflowLive.Collaborate` | `collaborate.ex`, `CollaborativeEditor.tsx`, `components/{Header,WorkflowEditor,ActiveCollaborators,Cursors,ReadOnlyWarning,StaleBuildNotice,SandboxIndicatorBanner,EmailVerificationBanner,Breadcrumbs}.tsx`, `components/diagram/`, `stores/`, `lib/lightning_web/channels/workflow_channel.ex` | todo |
-| workflow-editor-new | `live /projects/:project_id/w/new` (landing, templates, YAML import) | `WorkflowLive.Collaborate :new` | `components/{LandingScreen,TemplateBrowserModal,YAMLImportModal}.tsx`, `components/yaml-import/` | todo |
-| workflow-editor-inspectors | `?job=`, trigger, edge, workflow settings side panels | (React) | `components/inspector/`, `components/{AdaptorSelectionModal,ConfigureAdaptorModal,AdaptorSelector}.tsx`, webhook auth modals in `collaborate.ex:331` | todo |
-| workflow-editor-ide | `?panel=editor&job=` full-screen code editor | (React) | `components/ide/FullScreenIDE.tsx`, `components/CollaborativeMonaco.tsx` | todo |
-| workflow-editor-manual-run | manual run panel (run from a job or trigger with a chosen input) | (React) | `components/{ManualRunPanel,NewRunButton,RunRetryButton}.tsx`, `components/manual-run/`, `controllers/workflow_controller.ex` (`create_run`, `retry_run`), `controllers/dataclip_controller.ex` | todo |
+| workflow-editor-canvas | `live /projects/:project_id/w/:id` (diagram, header, save, presence, read-only states) | `WorkflowLive.Collaborate` | `collaborate.ex`, `CollaborativeEditor.tsx`, `components/{Header,WorkflowEditor,ActiveCollaborators,Cursors,ReadOnlyWarning,StaleBuildNotice,SandboxIndicatorBanner,EmailVerificationBanner,Breadcrumbs}.tsx`, `components/diagram/`, `stores/`, `lib/lightning_web/channels/workflow_channel.ex` | done-with-decides |
+| workflow-editor-new | `live /projects/:project_id/w/new` (landing, templates, YAML import) | `WorkflowLive.Collaborate :new` | `components/{LandingScreen,TemplateBrowserModal,YAMLImportModal}.tsx`, `components/yaml-import/` | done-with-decides |
+| workflow-editor-inspectors | `?job=`, trigger, edge, workflow settings side panels | (React) | `components/inspector/`, `components/{AdaptorSelectionModal,ConfigureAdaptorModal,AdaptorSelector}.tsx`, webhook auth modals in `collaborate.ex:331` | done-with-decides |
+| workflow-editor-ide | `?panel=editor&job=` full-screen code editor | (React) | `components/ide/FullScreenIDE.tsx`, `components/CollaborativeMonaco.tsx` | done-with-decides |
+| workflow-editor-manual-run | manual run panel (run from a job or trigger with a chosen input) | (React) | `components/{ManualRunPanel,NewRunButton,RunRetryButton}.tsx`, `components/manual-run/`, `controllers/workflow_controller.ex` (`create_run`, `retry_run`), `controllers/dataclip_controller.ex` | done-with-decides |
 | workflow-editor-run-viewer | `?run=` run panel (steps, input, output, logs) | (React) | `components/run-viewer/`, `controllers/workflow_controller.ex` (`get_run_steps`) | todo |
 | workflow-editor-ai-assistant | `?chat=` AI assistant panel | (React) | `components/{AIAssistantPanel,AIAssistantPanelWrapper,ChatInput,MessageList,SessionList,AIButton}.tsx`, `controllers/api/ai_assistant_controller.ex`, AI channel | todo |
 | workflow-editor-versions-and-promote | version picker, history, restore, diff; GitHub sync modal; sandbox promote and edit-in-sandbox | (React) | `components/{VersionPicker,VersionDropdown,SnapshotVersionDropdown,RestoreVersionDialog,WorkflowDiffBlocks,GitHubSyncModal,PromoteDialog,PromotedNotice,EditInSandboxPicker}.tsx`, `components/diagram/MiniHistory.tsx` | todo |
@@ -85,10 +88,6 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 | profile-experimental-features | `/profile` experimental features card | `ProfileLive.ExperimentalFeaturesComponent` | `live/profile_live/experimental_features_component.ex`, `.html.heex` | todo |
 | profile-delete-account | `live /profile/:id/delete` | `ProfileLive.Edit :delete` | `live/components/user_deletion_modal.ex` (config-injected `delete_modal`) | todo |
 | profile-tokens | `live /profile/tokens`, `/profile/tokens/:id/delete` | `TokensLive.Index` | `live/tokens_live/index.ex`, `index.html.heex`, `live/components/token_deletion_modal.ex` | todo |
-| profile-github | flow-github-connect |
-| profile-mfa | flow-require-project-mfa |
-| mfa-required | flow-require-project-mfa (exit) |
-| workflow-editor-versions-and-promote | flow-github-sync-actions (GitHubSyncModal), flow-sandbox-merge (PromoteDialog) |
 | profile-backup-codes | `live /profile/auth/backup_codes` (sudo), `GET /profile/auth/backup_codes/print` | `BackupCodesLive.Index` | `live/backup_codes_live/index.ex`, `.html.heex`, `controllers/backup_codes_controller.ex`, `backup_codes_html/print.html.heex` | todo |
 
 ## Admin (superuser, `on_mount :ensure_admin`)
@@ -121,17 +120,15 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | view | must reference |
 |------|----------------|
 | auth-login | flow-invite-new-collaborator, flow-login-return-to |
+| auth-confirm-account | flow-resend-account-confirmation |
+| auth-register | flow-register-first-workflow (proposed; create with this view) |
 | auth-reset-password | flow-invite-new-collaborator |
-| workflow-editor-inspectors | flow-oauth-credential-authorize, shared-webhook-auth-method-form, flow-webhook-auth-method-enforcement; keychain form home is project-settings-credentials |
-| workflow-editor-manual-run | shared-dataclip-body-viewer |
-| workflow-editor-ide | flow-oauth-credential-authorize, flow-open-run-in-editor (step inspect link lands here), shared-log-viewer (hosts the run viewer logs) |
-| workflow-editor-run-viewer | shared-dataclip-body-viewer, flow-zero-persistence-runs (shows raw null; see the flow's 6.1), flow-open-run-in-editor (exit), shared-log-viewer |
-| workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor, flow-sandbox-scheduled-deletion (archive_sandbox, workflow_channel.ex:501-513), flow-sandbox-merge |
+| workflow-editor-run-viewer | shared-editor-session, flow-manual-run-live-follow (exit), shared-run-retry-controls, shared-dataclip-body-viewer, flow-zero-persistence-runs (shows raw null; see the flow's 6.1), flow-open-run-in-editor (exit), shared-log-viewer |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
 | profile-github | flow-github-connect |
 | profile-mfa | flow-require-project-mfa |
 | mfa-required | flow-require-project-mfa (exit) |
-| workflow-editor-versions-and-promote | flow-github-sync-actions (GitHubSyncModal), flow-sandbox-merge (PromoteDialog) |
+| workflow-editor-versions-and-promote | shared-editor-session, flow-github-sync-actions (GitHubSyncModal), flow-sandbox-merge (PromoteDialog) |
 | profile-backup-codes | shared-authenticated-session (mounted via `:sudo_auth`), flow-require-project-mfa (first enrolment lands here) |
 
 ## Proposed, not yet created
@@ -141,15 +138,16 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 | id | proposed by | note |
 |----|-------------|------|
 | shared-project-mail-recipients | flow-history-export | reads as a capability (who may receive mail); deferred to the capabilities pass |
+| flow-register-first-workflow | workflow-editor-new | revisit with auth-register |
 | flow-account-revocation-teardown | shared-authenticated-session | revisit with admin-users and profile-delete-account |
-| flow-resend-account-confirmation | shared-project-header | revisit with auth-confirm-account |
 | capability:webhook-auth-method-purge | project-settings-webhook-security | capabilities pass |
 | capability:data-retention-cleanup | project-settings-data-storage | capabilities pass |
 | capability:collection-api-name-resolution | project-settings-collections | capabilities pass |
-| shared-channel-project-scope | flow-schedule-project-deletion | editor, run and AI channels leaving a deleted project; revisit with the editor batch |
 
 ## Overlaps to clean up
 
+- workflow-editor-inspectors S04 to S15: now owned by shared-adaptor-credential-config.
+- shared-channel-project-scope folded into shared-editor-session (editor channels); run and AI channel teardown to be checked when those views are catalogued.
 - dataclip-show S03 to S06 and the viewer steps in run-show S07: now owned by shared-dataclip-body-viewer.
 - history-work-orders `url_params`: add workflow-health to `set_by` for the status and date filters; its flow summary should mention the donut links.
 - workflow-health S15: point to flow-workflow-health-drilldown S10 and S11.

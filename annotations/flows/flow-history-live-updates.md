@@ -17,6 +17,7 @@ trigger:
     - history-work-orders                   # a second tab: cancel, cancel run, rerun from a step
     - pubsub:project:<project_id>           # Lightning.WorkOrders.Events (workorders/events.ex:24-60)
     - history-work-orders                   # the open page that receives the events
+    - workflow-editor-manual-run   # added by lead
   reachable_when:
     - the receiving page is history-work-orders with live_action :index (index.ex:275, :306-309, :325-328); the channel logs tab ignores these events (index.ex:360-368)
     - the receiving page passed the project scope gate (shared-project-scope); it subscribes in mount (index.ex:82)
