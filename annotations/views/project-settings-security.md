@@ -294,7 +294,7 @@ Feature: Project MFA requirement
 
 ## 8. Open questions
 
-- Should an admin who hasn't enrolled be blocked from turning on the requirement, or warned that they will lose access (6.1)? Product owns the intended behaviour (Brandon's team).
+- Should an admin who hasn't enrolled be blocked from turning on the requirement, or warned that they will lose access (6.1)? (owner: product)
 - Should turning on the requirement move unenrolled members off pages they already have open, as removing a member does (shared-project-scope S07), rather than waiting for their next request?
 - Should a sandbox follow its parent's MFA requirement live, or keep its own copy and say so (6.1, shared chrome row)?
 - Which reason and message does the hosted usage limiter actually return for `:require_mfa` (6.5)? The commercial adapter is not in this repository.

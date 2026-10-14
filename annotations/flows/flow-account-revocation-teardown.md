@@ -23,6 +23,7 @@ trigger:
     - controller:user-log-out             # /users/log_out, own-deletion tab only (router.ex:71)
     - projects-dashboard                  # where the password-change tab lands (user_auth.ex:514)
     - auth-login
+    - profile-tokens   # added by lead
   reachable_when:
     - the actor is signed in (shared-authenticated-session)
     - admin entries: the actor is a superuser (`hooks.ex:40-51`; `policies/users.ex:19-21`)
@@ -317,7 +318,7 @@ not restated here.
 
 ## 8. Open questions
 
-- Should revoking API tokens on a user's own password change be kept, and made consistent with admin changes (6.2)? Product owns the intended behaviour; Brandon's team is the source of truth.
+- Should revoking API tokens on a user's own password change be kept, and made consistent with admin changes (6.2)? (owner: product)
 - Does the password-change tab actually land on "/projects" in a real browser, and does the self-disconnect need to move after the redirect (6.1)?
 - Should signed-out browsers be told why they were signed out (6.2)?
 - Should confirming an email change sign out other sessions as an admin email change does (6.2)?

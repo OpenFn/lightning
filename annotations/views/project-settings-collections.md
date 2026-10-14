@@ -482,9 +482,9 @@ Feature: Project collections
 
 ## 8. Open questions
 
-- Renaming or deleting a collection gives no warning that jobs referring to it by name will stop finding it. Should the rebuild show which workflows use a collection, or warn on rename and delete? Product (Brandon's team) owns the intended behaviour.
+- Renaming or deleting a collection gives no warning that jobs referring to it by name will stop finding it. Should the rebuild show which workflows use a collection, or warn on rename and delete? (owner: product)
 - Should create, rename and delete be audited (6.2)?
-- In a sandbox, the banner says changes sync to the parent on merge, but merge only creates missing names and never renames or deletes (`sandboxes.ex:1448-1470`); a rename in a sandbox therefore adds a second, empty collection to the parent. This is the collections half of shared-project-settings-tab-chrome 6.1; Product (Brandon's team) to decide which side changes.
+- In a sandbox, the banner says changes sync to the parent on merge, but merge only creates missing names and never renames or deletes (`sandboxes.ex:1448-1470`); a rename in a sandbox therefore adds a second, empty collection to the parent. This is the collections half of shared-project-settings-tab-chrome 6.1; (owner: product) to decide which side changes.
 - Should the list paginate (6.4), and should sort state live in the URL once the tab has its own route?
 - Is the 6.1 `project_id` cast on rename covered by any security review? It should be fixed before or during migration either way.
 

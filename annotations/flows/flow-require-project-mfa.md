@@ -265,7 +265,7 @@ flow-digest-email S04 and flow-failure-alert-email S05.
 
 ## 8. Open questions
 
-- Should an unenrolled owner or admin be blocked or warned before turning the requirement on, and who can lift it if every owner is locked out (6.1)? Product owns the intended behaviour (Brandon's team).
+- Should an unenrolled owner or admin be blocked or warned before turning the requirement on, and who can lift it if every owner is locked out (6.1)? (owner: product)
 - Should turning on the requirement move unenrolled members off pages they already have open, as removing a member does (6.2)?
 - Should `/mfa_required` name the project and return the member to it after enrolling (6.2)?
 

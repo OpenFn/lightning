@@ -607,7 +607,7 @@ Feature: Sync a project to GitHub
 - Should unrelated projects be allowed to share a repo branch (6.2)? Today only a sandbox family is guarded.
 - Should disconnect tell the admin when GitHub cleanup was skipped or failed?
 - Should reconnect be audited like connect and remove?
-- Is putting the user's email in GitHub commit messages intended? Product (Brandon's team) owns the intended behaviour.
+- Is putting the user's email in GitHub commit messages intended? (owner: product)
 - In the rebuild, does the limit banner disable every control on the tab or only connect and sync?
 
 ## Proposed flows

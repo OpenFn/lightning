@@ -429,7 +429,7 @@ Feature: Sync a project to and from GitHub
 
 - Should Save & Sync save and dispatch as one unit, or report "saved, but the sync failed" when only the dispatch fails (6.1)?
 - Should Lightning learn the outcome of the Actions run (for example by polling the run, or from the deploy's POST) instead of reporting success at dispatch?
-- Should a deploy from GitHub reconcile open editors (6.2)? Product owns this; Brandon's team.
+- Should a deploy from GitHub reconcile open editors (6.2)? (owner: product)
 - Should repo connection tokens expire or rotate, and should the read endpoint respect the GitHub sync limit?
 
 ## Proposed flows

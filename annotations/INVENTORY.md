@@ -83,11 +83,11 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 |----|-------|--------|------------|--------|
 | credentials-index | `live /credentials` | `CredentialLive.Index` | `live/credential_live/index.ex`, `index.html.heex`, inherits shared-credential-index-component | done-with-decides |
 | profile-account | `live /profile` (config-injected) | `ProfileLive.Edit` + `ProfileLive.FormComponent` | `live/profile_live/{edit,components,form_component}.ex`, `form_component.html.heex`; GDPR preferences card is config-only (`config.exs:291`, off by default) | done-with-decides |
-| profile-mfa | `/profile` MFA card | `ProfileLive.MfaComponent` | `live/profile_live/mfa_component.ex`, `.html.heex` | todo |
-| profile-github | `/profile` GitHub card | `ProfileLive.GithubComponent` | `live/profile_live/github_component.ex`, `components/github_components.ex` | todo |
-| profile-experimental-features | `/profile` experimental features card | `ProfileLive.ExperimentalFeaturesComponent` | `live/profile_live/experimental_features_component.ex`, `.html.heex` | todo |
-| profile-delete-account | `live /profile/:id/delete` | `ProfileLive.Edit :delete` | `live/components/user_deletion_modal.ex` (config-injected `delete_modal`) | todo |
-| profile-tokens | `live /profile/tokens`, `/profile/tokens/:id/delete` | `TokensLive.Index` | `live/tokens_live/index.ex`, `index.html.heex`, `live/components/token_deletion_modal.ex` | todo |
+| profile-mfa | `/profile` MFA card | `ProfileLive.MfaComponent` | `live/profile_live/mfa_component.ex`, `.html.heex` | done-with-decides |
+| profile-github | `/profile` GitHub card | `ProfileLive.GithubComponent` | `live/profile_live/github_component.ex`, `components/github_components.ex` | done-with-decides |
+| profile-experimental-features | `/profile` experimental features card | `ProfileLive.ExperimentalFeaturesComponent` | `live/profile_live/experimental_features_component.ex`, `.html.heex` | done-with-decides |
+| profile-delete-account | `live /profile/:id/delete` | `ProfileLive.Edit :delete` | `live/components/user_deletion_modal.ex` (config-injected `delete_modal`) | done-with-decides |
+| profile-tokens | `live /profile/tokens`, `/profile/tokens/:id/delete` | `TokensLive.Index` | `live/tokens_live/index.ex`, `index.html.heex`, `live/components/token_deletion_modal.ex` | done-with-decides |
 | profile-backup-codes | `live /profile/auth/backup_codes` (sudo), `GET /profile/auth/backup_codes/print` | `BackupCodesLive.Index` | `live/backup_codes_live/index.ex`, `.html.heex`, `controllers/backup_codes_controller.ex`, `backup_codes_html/print.html.heex` | todo |
 
 ## Admin (superuser, `on_mount :ensure_admin`)
@@ -119,20 +119,17 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 
 | view | must reference |
 |------|----------------|
+| auth-confirm-access | flow-reauth-backup-codes |
 | auth-login | flow-invite-new-collaborator, flow-login-return-to, flow-account-revocation-teardown (exit) |
 | auth-confirm-account | flow-resend-account-confirmation |
 | auth-confirmation-required | flow-change-email-confirm (also starts it) |
-| admin-users | flow-account-revocation-teardown, flow-change-email-confirm (admins change email without confirmation; cross-reference) |
+| admin-users | shared-user-deletion-modal, flow-account-revocation-teardown, flow-change-email-confirm (admins change email without confirmation; cross-reference) |
 | admin-user-edit | flow-account-revocation-teardown (disabling happens here), flow-change-email-confirm (cross-reference) |
-| profile-tokens | flow-account-revocation-teardown |
 | auth-reset-password | flow-account-revocation-teardown (reset revokes the same way; candidate entry) |
-| profile-delete-account | flow-account-revocation-teardown |
 | auth-register | flow-register-first-workflow (proposed; create with this view) |
 | auth-reset-password | flow-invite-new-collaborator |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
-| profile-github | flow-github-connect |
-| profile-mfa | flow-require-project-mfa |
-| profile-backup-codes | shared-authenticated-session (mounted via `:sudo_auth`), flow-require-project-mfa (first enrolment lands here) |
+| profile-backup-codes | flow-reauth-backup-codes (exit), shared-authenticated-session (mounted via `:sudo_auth`), flow-require-project-mfa (first enrolment lands here) |
 
 ## Proposed, not yet created
 

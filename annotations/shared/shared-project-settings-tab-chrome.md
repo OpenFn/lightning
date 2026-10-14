@@ -311,7 +311,7 @@ Feature: Project settings tab chrome
 
 ## 8. Open questions
 
-- Should the editable and inherited banner copy be changed to match what merge actually does (6.1), or should merge and MFA propagation change to match the copy? Product (Brandon's team) owns the intended behaviour.
+- Should the editable and inherited banner copy be changed to match what merge actually does (6.1), or should merge and MFA propagation change to match the copy? (owner: product)
 - In the rebuild each tab gets its own route (`/settings/<tab>`); should the old `#<tab>` fragments redirect to those routes, given how many emails and pages link to them (url_params)?
 - Should a tab that renders nothing useful for a role (none today) be hidden, or keep the "see everything, change some" model of S05?
 - `Tabbed.container` is also used by the run page (`run_live/show.ex:228`). Does its tab behaviour (S01 to S04) need its own shared annotation, or does the run view catalogue it?

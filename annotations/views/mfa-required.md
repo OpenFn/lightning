@@ -204,7 +204,7 @@ and S17-S18.
 
 ## 8. Open questions
 
-- Should `/mfa_required` refuse or redirect users who have no MFA-required project, or name the project that sent them (6.1, 6.2)? Product owns the intended behaviour (Brandon's team).
+- Should `/mfa_required` refuse or redirect users who have no MFA-required project, or name the project that sent them (6.1, 6.2)? (owner: product)
 - S03 here and flow-require-project-mfa S05 describe the same single-page behaviour; the lead should keep one and reference it from the other.
 
 ## Proposed flows

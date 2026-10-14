@@ -289,7 +289,7 @@ Feature: Delete a sandbox
 
 - Should deleting from sandbox settings schedule the subtree like the list does, or should the modal stop promising a grace period?
 - Should restoring a child be refused, or cascade upward, while its parent is scheduled?
-- Where should a viewer land after deleting a sandbox they are in: parent's sandboxes, root's workflows, or their access root? Product (Brandon's team) for the list; this flow needs one answer for both entries.
+- Where should a viewer land after deleting a sandbox they are in: parent's sandboxes, root's workflows, or their access root? (owner: product) for the list; this flow needs one answer for both entries.
 - Should sandbox members be emailed, as root-project members are?
 - Is the editor's "archive sandbox" an entry to this flow or to flow-sandbox-merge?
 
