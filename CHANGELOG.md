@@ -23,9 +23,9 @@ and this project adheres to
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
   [#5241](https://github.com/OpenFn/lightning/pull/5241)
-- Tabs now look and behave the same on the History, project settings and run
-  pages, in workflow health and in the code editor. Workflow health tabs no
-  longer move with the arrow keys. Press Tab to reach each one.
+- Tabs now look the same across the app, with a rounded hover, a clearer active
+  tab and a smaller size in most places. Workflow health tabs are reached with
+  Tab instead of the arrow keys.
   [#5233](https://github.com/OpenFn/lightning/pull/5233)
 
 ### Fixed
