@@ -43,7 +43,10 @@ const javascriptFiles = [
   ...commonJsExtensions(javascriptExtensions),
   ...esmExtensions(javascriptExtensions),
 ].map(ext => `**/*.${ext}`);
-const nodeFiles = allExtensions.map(ext => `*.${ext}`);
+const nodeFiles = allExtensions.flatMap(ext => [
+  `*.${ext}`,
+  `design-tokens/**/*.${ext}`,
+]);
 const browserFiles = allExtensions.flatMap(ext =>
   ['js', 'vendor', 'dev-server', 'test'].map(dir => `${dir}/**/*.${ext}`)
 );

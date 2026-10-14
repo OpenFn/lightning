@@ -12,6 +12,7 @@
   "include": [
     "*.d.ts",
     "test/**/*",
+    "design-tokens/**/*",
     "js/**/*",
     "vitest.config.ts",
     "playwright.config.ts"
