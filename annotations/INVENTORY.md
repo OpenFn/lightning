@@ -29,7 +29,7 @@ Paths below are relative to `lib/lightning_web/` unless they start with `assets/
 |----|-------|--------|------------|--------|
 | projects-dashboard | `live /projects` (config-injected); `/` redirects here | `DashboardLive.Index` | `live/dashboard_live/{index,components,project_creation_modal,user_projects_section}.ex` | todo |
 | mfa-required | `live /mfa_required` | `ProjectLive.MFARequired` | `live/project_live/mfa_required.ex`, `.html.heex` | todo |
-| workflows-index | `live /projects/:project_id/w` | `WorkflowLive.Index` | `live/workflow_live/{index,dashboard_components,components,helpers}.ex` | todo |
+| workflows-index | `live /projects/:project_id/w` | `WorkflowLive.Index` | `live/workflow_live/{index,dashboard_components,helpers}.ex` | done-with-decides |
 | workflow-health | `live /projects/:project_id/w/:id/health` | `WorkflowLive.Health` | `live/workflow_live/health.ex`, `controllers/api/workflow_health_controller.ex`, React mount it renders | todo |
 | sandboxes-index | `live /projects/:project_id/sandboxes`, `/new`, `/:id/edit` | `SandboxLive.Index` | `live/sandbox_live/{index,form_component,components}.ex` | todo |
 | channels-index | `live /projects/:project_id/channels`, `/new`, `/:id/edit` | `ChannelLive.Index` | `live/channel_live/{index,form_component,helpers}.ex` | todo |
@@ -55,7 +55,7 @@ Split by panel; each sub-view shares the route and differs by URL params or UI s
 
 | id | Route | Module | Main files | Status |
 |----|-------|--------|------------|--------|
-| history-work-orders | `live /projects/:project_id/history` | `RunLive.Index :index` | `live/run_live/{index,index.html.heex,workorder_component,rerun_job_component,export_confirmation_modal,components}.ex` | todo |
+| history-work-orders | `live /projects/:project_id/history` | `RunLive.Index :index` | `live/run_live/{index,index.html.heex,workorder_component,rerun_job_component,export_confirmation_modal,components}.ex` | done-with-decides |
 | history-channel-logs | `live /projects/:project_id/history/channels` | `RunLive.Index :channel_logs` | `live/run_live/channel_logs_component.ex` | todo |
 | channel-request-show | `live /projects/:project_id/history/channels/:id` | `ChannelRequestLive.Show` | `live/channel_request_live/{show,components,helpers,timing}.ex` | todo |
 | run-show | `live /projects/:project_id/runs/:id` | `RunLive.Show` | `live/run_live/{show,streaming,components,cancel_helper}.ex` | todo |
@@ -67,11 +67,11 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 
 | id | Route | Module | Main files | Status |
 |----|-------|--------|------------|--------|
-| project-settings-setup | `#project`; also `live /projects/:project_id/settings/delete` | `ProjectLive.Settings` | `settings.html.heex:67-313`, `project_live/concurrency_input_component.ex`, `live/components/project_deletion_modal.ex` | todo |
+| project-settings-setup | `#project`; also `live /projects/:project_id/settings/delete` | `ProjectLive.Settings` | `settings.html.heex:67-313`, `project_live/concurrency_input_component.ex`, `live/components/project_deletion_modal.ex` | done-with-decides |
 | project-settings-credentials | `#credentials` | `ProjectLive.Settings` | `settings.html.heex:315-365`, inherits shared-credential-index-component | todo |
 | project-settings-collections | `#collections` | `ProjectLive.Settings` | `settings.html.heex:367-376`, `project_live/collections_component.ex` | todo |
-| project-settings-webhook-security | `#webhook_security` | `ProjectLive.Settings` | `settings.html.heex:378-568`, `workflow_live/webhook_auth_method_form_component.ex`, `workflow_live/webhook_auth_method_delete_modal.ex` | todo |
-| project-settings-collaborators | `#collaboration` | `ProjectLive.Settings` | `settings.html.heex:570-679`, `project_live/{collaborators,invited_collaborators,new_collaborator_component,invite_collaborator_component}.ex` | todo |
+| project-settings-webhook-security | `#webhook_security` | `ProjectLive.Settings` | `settings.html.heex:378-568`, `workflow_live/webhook_auth_method_form_component.ex`, `workflow_live/webhook_auth_method_delete_modal.ex`, `workflow_live/components.ex` | todo |
+| project-settings-collaborators | `#collaboration` | `ProjectLive.Settings` | `settings.html.heex:570-679`, `project_live/{collaborators,invited_collaborators,new_collaborator_component,invite_collaborator_component}.ex` | done-with-decides |
 | project-settings-security | `#security` (require MFA) | `ProjectLive.Settings` | `settings.html.heex:681-756` | todo |
 | project-settings-github-sync | `#vcs` | `ProjectLive.Settings` | `settings.html.heex:758-860`, `project_live/github_sync_component.ex`, `.html.heex`, `components/github_components.ex` | todo |
 | project-settings-data-storage | `#data-storage` (retention, dataclip storage) | `ProjectLive.Settings` | `settings.html.heex:862-1053` | todo |
@@ -81,7 +81,7 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 
 | id | Route | Module | Main files | Status |
 |----|-------|--------|------------|--------|
-| credentials-index | `live /credentials` | `CredentialLive.Index` | `live/credential_live/index.ex`, `index.html.heex`, inherits shared-credential-index-component | todo |
+| credentials-index | `live /credentials` | `CredentialLive.Index` | `live/credential_live/index.ex`, `index.html.heex`, inherits shared-credential-index-component | done-with-decides |
 | profile-account | `live /profile` (config-injected) | `ProfileLive.Edit` + `ProfileLive.FormComponent` | `live/profile_live/{edit,components,form_component}.ex`, `form_component.html.heex`; GDPR preferences card is config-only (`config.exs:291`, off by default) | todo |
 | profile-mfa | `/profile` MFA card | `ProfileLive.MfaComponent` | `live/profile_live/mfa_component.ex`, `.html.heex` | todo |
 | profile-github | `/profile` GitHub card | `ProfileLive.GithubComponent` | `live/profile_live/github_component.ex`, `components/github_components.ex` | todo |
