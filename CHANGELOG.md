@@ -23,6 +23,10 @@ and this project adheres to
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
   [#5241](https://github.com/OpenFn/lightning/pull/5241)
+- Tabs now look and behave the same on the History, project settings and run
+  pages, in workflow health and in the code editor. Workflow health tabs no
+  longer move with the arrow keys. Press Tab to reach each one.
+  [#5233](https://github.com/OpenFn/lightning/pull/5233)
 
 ### Fixed
 
@@ -101,9 +105,6 @@ and this project adheres to
   donuts show the success rate and the failure count in their middle. Triage
   rows show each failure's state and adaptor, and the step bars show each step's
   adaptor. [#5229](https://github.com/OpenFn/lightning/pull/5229)
-- Tabs now look and behave the same on the History, project settings and run
-  pages, in workflow health and in the code editor. Workflow health tabs no
-  longer move with the arrow keys. Press Tab to reach each one.
 
 ### Removed
 
