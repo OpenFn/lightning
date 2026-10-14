@@ -122,10 +122,36 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | auth-login | flow-invite-new-collaborator |
 | auth-reset-password | flow-invite-new-collaborator |
 | projects-dashboard | flow-invite-new-collaborator, flow-collaborator-added-email (project creation queues it), flow-schedule-project-deletion (exit) |
-| run-show | flow-failure-alert-email (email links to the run) |
+| run-show | flow-failure-alert-email (email links to the run), shared-run-components |
+| channel-request-show | shared-run-components (channel_state_pill) |
+| history-channel-logs | shared-run-components |
+| project-settings-credentials | shared-credential-index-component, flow-credential-transfer, flow-oauth-credential-authorize, flow-credential-scheduled-deletion |
+| workflow-editor-inspectors | flow-oauth-credential-authorize |
+| workflow-editor-ide | flow-oauth-credential-authorize |
 | workflow-health | flow-failure-alert-email, flow-digest-email, flow-workflow-health-drilldown (entry), flow-delete-open-workflow (its page also leaves) |
 | workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
+| profile-backup-codes | shared-authenticated-session (mounted via `:sudo_auth`) |
 | project-settings-history-exports | flow-history-export (exit) |
 
-Proposed but not yet created: `shared-project-mail-recipients` (from flow-history-export). It reads as a capability (who may receive mail), so it is deferred to the capabilities pass.
+## Proposed, not yet created
+
+Held until the views they touch are catalogued, then deduplicated with those batches' proposals.
+
+| id | proposed by | note |
+|----|-------------|------|
+| shared-project-mail-recipients | flow-history-export | reads as a capability (who may receive mail); deferred to the capabilities pass |
+| flow-login-return-to | shared-authenticated-session | revisit with auth-login |
+| flow-account-revocation-teardown | shared-authenticated-session | revisit with admin-users and profile-delete-account |
+| flow-resend-account-confirmation | shared-project-header | revisit with auth-confirm-account |
+| flow-open-run-in-editor | shared-run-components | revisit with run-show and workflow-editor-run-viewer |
+| flow-run-show-live-updates | shared-run-components | revisit with run-show |
+| shared-channel-project-scope | flow-schedule-project-deletion | editor, run and AI channels leaving a deleted project; revisit with the editor batch |
+
+## Overlaps to clean up
+
+Scenarios written in a view before the shared annotation that now owns them existed. Remove from the view in the final pass.
+
+- project-settings-setup S13, S14 and its modal rows in 6.1 to 6.3: now owned by shared-project-deletion-modal
+- history-work-orders S13, S14, S22: now owned by shared-run-components S07, S08, S13; its 6.1 cites `cancel_helper.ex:310-315`, should be `:12-17`
+- shared-usage-limits-banner section 2 book-a-demo line: now owned by shared-authenticated-session S08
