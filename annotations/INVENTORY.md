@@ -18,10 +18,10 @@ Paths below are relative to `lib/lightning_web/` unless they start with `assets/
 | auth-register | `GET/POST /users/register` | `UserRegistrationController` (controller view); blocked by `:allow_signup` (`router.ex:31`) | `controllers/user_registration_controller.ex`, `controllers/user_registration_html/new.html.heex` | done-with-decides |
 | auth-reset-password | `GET/POST /users/reset_password`, `GET/PUT /users/reset_password/:token` | `UserResetPasswordController` (controller view) | `controllers/user_reset_password_controller.ex`, `controllers/user_reset_password_html/{new,edit}.html.heex` | done-with-decides |
 | auth-two-factor | `GET/POST /users/two-factor` | `UserTOTPController` (controller view) | `controllers/user_totp_controller.ex`, `controllers/user_totp_html/new.html.heex` | done-with-decides |
-| auth-confirm-account | `GET/POST /users/confirm`, `GET/POST /users/confirm/:token`, `GET /users/send-confirmation-email` | `UserConfirmationController` (controller view) | `controllers/user_confirmation_controller.ex`, `controllers/user_confirmation_html/{new,edit}.html.heex` | todo |
-| auth-confirmation-required | `live /users/confirm-required` (`:confirmation_required` session, no on_mount) | `UserConfirmationRequiredLive` | `live/user_confirmation_required_live.ex`, `.html.heex` | todo |
-| auth-confirm-access | `live /auth/confirm_access` | `ReAuthenticateLive.New` | `live/re_authenticate_live/new.ex`, `new.html.heex` | todo |
-| first-setup | `live /first_setup`; blocked by `:allow_first_setup`, forced by `Plugs.FirstSetup` | `FirstSetupLive.Superuser` | `live/first_setup_live/superuser.ex`, `superuser.html.heex` | todo |
+| auth-confirm-account | `GET/POST /users/confirm`, `GET/POST /users/confirm/:token`, `GET /users/send-confirmation-email` | `UserConfirmationController` (controller view) | `controllers/user_confirmation_controller.ex`, `controllers/user_confirmation_html/{new,edit}.html.heex` | done-with-decides |
+| auth-confirmation-required | `live /users/confirm-required` (`:confirmation_required` session, no on_mount) | `UserConfirmationRequiredLive` | `live/user_confirmation_required_live.ex`, `.html.heex` | done-with-decides |
+| auth-confirm-access | `live /auth/confirm_access` | `ReAuthenticateLive.New` | `live/re_authenticate_live/new.ex`, `new.html.heex` | done-with-decides |
+| first-setup | `live /first_setup`; blocked by `:allow_first_setup`, forced by `Plugs.FirstSetup` | `FirstSetupLive.Superuser` | `live/first_setup_live/superuser.ex`, `superuser.html.heex` | done-with-decides |
 | projects-dashboard | `live /projects` (config-injected); `/` redirects here | `DashboardLive.Index` | `live/dashboard_live/{index,components,project_creation_modal,user_projects_section}.ex` | done-with-decides |
 
 ## Projects and workflows
@@ -94,7 +94,7 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 
 | id | Route | Module | Main files | Status |
 |----|-------|--------|------------|--------|
-| admin-users | `live /settings/users` (config-injected), `/settings/users/:id/delete` | `UserLive.Index` | `live/user_live/{index,table_component,components}.ex`, `index.html.heex` | todo |
+| admin-users | `live /settings/users` (config-injected), `/settings/users/:id/delete` | `UserLive.Index` | `live/user_live/{index,table_component,components}.ex`, `index.html.heex` | done-with-decides |
 | admin-user-edit | `live /settings/users/new`, `/settings/users/:id` | `UserLive.Edit` | `live/user_live/{edit,form_component}.ex`, `.html.heex` | todo |
 | admin-projects | `live /settings/projects`, `/new`, `/:id`, `/:id/delete` | `ProjectLive.Index` | `live/project_live/{index,form_component}.ex`, `.html.heex` | todo |
 | admin-audit | `live /settings/audit` | `AuditLive.Index` | `live/audit_live/index.ex`, `.html.heex` | todo |
@@ -119,13 +119,9 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 
 | view | must reference |
 |------|----------------|
-| auth-confirm-access | flow-reauth-backup-codes |
-| admin-auth-providers | flow-sso-login (its 6.1 row 2, provider removal clears only one node's cache, belongs here) |
-| auth-confirm-account | flow-resend-account-confirmation (first confirmation email and resends) |
-| auth-confirmation-required | flow-change-email-confirm (also starts it) |
-| admin-users | shared-user-deletion-modal, flow-account-revocation-teardown, flow-change-email-confirm (admins change email without confirmation; cross-reference) |
-| admin-user-edit | flow-account-revocation-teardown (disabling happens here), flow-change-email-confirm (cross-reference) |
-| admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
+| admin-auth-providers | shared-admin-space, flow-sso-login (its 6.1 row 2, provider removal clears only one node's cache, belongs here) |
+| admin-user-edit | shared-admin-space, flow-account-revocation-teardown (disabling happens here), flow-change-email-confirm (cross-reference) |
+| admin-projects | shared-admin-space, flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
 
 ## Proposed, not yet created
 
@@ -141,6 +137,8 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 
 ## Overlaps to clean up
 
+- auth-confirmation-required S10 duplicates flow-change-email-confirm S08.
+- shared-authenticated-session cites `first_setup.ex:127-149`; the plug is 34 lines. Re-cite.
 - flow-forgot-password 6.1 (timing oracle, silent mailer failure) duplicates auth-reset-password 6.1; keep in the view.
 - flow-login-return-to: list flow-forgot-password (the request hop overwrites the stored return path, so a deep link is lost).
 - flow-invite-new-collaborator S03 goes through flow-forgot-password; reference it.

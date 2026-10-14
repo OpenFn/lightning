@@ -15,6 +15,7 @@ trigger:
     - email:update-email-instructions       # "Please confirm your new email", to the new address (user_notifier.ex:270-284)
     - controller:confirm-email              # GET /profile/confirm_email/:token (router.ex:232-234; user_confirmation_controller.ex:34-49)
     - projects-dashboard                    # where the controller lands, with the flash
+    - admin-users   # added by lead: cross-reference, admins change email without confirmation
   reachable_when:
     - the user is signed in; the confirm link sits behind :require_authenticated_user (router.ex:189-190, :232-234; user_auth.ex:288-299)
     - the link is opened within 7 days of the request (user_token.ex:33, :207-217)

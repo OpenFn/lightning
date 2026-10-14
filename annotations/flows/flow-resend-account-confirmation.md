@@ -17,6 +17,7 @@ trigger:
     - auth-confirm-account                   # GET/POST /users/confirm/:token (router.ex:229-230; user_confirmation_controller.ex:89-104)
     - projects-dashboard                     # where a confirmation lands, without the banner
     - profile-account   # added by lead: profile-account names this flow
+    - auth-confirmation-required   # added by lead
   reachable_when:
     - first send: self-signup is allowed and the visitor registers (auth-register reachable_when); the email goes out under every verification setting (accounts.ex:583-588)
     - resend: the instance requires email verification, so the banner renders (layout_components.ex:261-265; workflow_channel.ex:1409-1415; EmailVerificationBanner.tsx:21)
