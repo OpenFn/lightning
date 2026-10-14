@@ -116,6 +116,8 @@ flows:
   - flow-failure-alert-email
   - flow-digest-email
   - flow-dashboard-history-drilldown
+  - flow-webhook-auth-method-enforcement
+  - flow-zero-persistence-runs
 ---
 
 ## 1. Purpose

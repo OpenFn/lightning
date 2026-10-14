@@ -79,6 +79,8 @@ flows:
   - flow-dashboard-history-drilldown
   - flow-collaborator-added-email
   - flow-invite-new-collaborator
+  - flow-require-project-mfa
+  - flow-github-sync-actions
 ---
 
 ## 1. Purpose

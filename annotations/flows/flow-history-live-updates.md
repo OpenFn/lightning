@@ -6,10 +6,10 @@ status: not-started
 owner:
 
 trigger:
-  entry: controller:webhook                 # any of the sources below can start it
+  entry: controller:webhooks                 # any of the sources below can start it
   exit: history-work-orders
   surfaces:
-    - controller:webhook                    # POST /i/*path, WebhooksController.create (router.ex:332-336, webhooks_controller.ex:39-69)
+    - controller:webhooks                    # POST /i/*path, WebhooksController.create (router.ex:332-336, webhooks_controller.ex:39-69)
     - controller:worker-channel             # "claim" on worker:queue (worker_channel.ex:45-49); the hop that removes the cancel button
     - controller:run-channel                # "run:start", "run:complete" on run:<id> (run_channel.ex:112-130)
     - oban:RetryManyWorkOrdersJob           # retry_many_workorders_job.ex:1-26

@@ -131,6 +131,8 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | history-channel-logs | shared-run-components |
 | workflow-editor-inspectors | flow-oauth-credential-authorize, shared-webhook-auth-method-form, flow-webhook-auth-method-enforcement; keychain form home is project-settings-credentials |
 | workflow-editor-ide | flow-oauth-credential-authorize |
+| workflow-editor-run-viewer | flow-zero-persistence-runs (shows raw null; see the flow's 6.1) |
+| channels-index | flow-channel-client-auth-enforcement and flow-zero-persistence-channel-requests are proposed; create with this batch |
 | workflow-health | flow-failure-alert-email, flow-digest-email, flow-workflow-health-drilldown (entry), flow-delete-open-workflow (its page also leaves) |
 | workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
@@ -138,7 +140,7 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | profile-mfa | flow-require-project-mfa |
 | mfa-required | flow-require-project-mfa (exit) |
 | workflow-editor-versions-and-promote | flow-github-sync-actions (GitHubSyncModal) |
-| profile-backup-codes | shared-authenticated-session (mounted via `:sudo_auth`) |
+| profile-backup-codes | shared-authenticated-session (mounted via `:sudo_auth`), flow-require-project-mfa (first enrolment lands here) |
 | project-settings-history-exports | flow-history-export (exit) |
 
 ## Proposed, not yet created
@@ -155,10 +157,14 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 | flow-run-show-live-updates | shared-run-components | revisit with run-show |
 | capability:webhook-auth-method-purge | project-settings-webhook-security | capabilities pass |
 | capability:data-retention-cleanup | project-settings-data-storage | capabilities pass |
+| flow-channel-client-auth-enforcement | flow-webhook-auth-method-enforcement | revisit with channels-index |
+| flow-zero-persistence-channel-requests | flow-zero-persistence-runs | revisit with channels-index and channel-request-show |
 | shared-channel-project-scope | flow-schedule-project-deletion | editor, run and AI channels leaving a deleted project; revisit with the editor batch |
 
 ## Overlaps to clean up
 
+- project-settings-webhook-security: form scenarios and form 6.x rows now owned by shared-webhook-auth-method-form.
+- flow-delete-open-workflow: add the GitHub deploy (flow-github-sync-actions) as a second entry that sends WorkflowDeleted.
 - flow-oauth-credential-authorize says "Add new" is hidden for viewers on the credentials tab; project-settings-credentials found it always enabled with only its options disabled. Correct the flow.
 
 Scenarios written in a view before the shared annotation that now owns them existed. Remove from the view in the final pass.
