@@ -64,6 +64,7 @@ related:
 flows:
   - flow-data-retention-change-email
   - flow-zero-persistence-runs
+  - flow-zero-persistence-channel-requests
 ---
 
 ## 1. Purpose

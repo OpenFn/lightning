@@ -127,10 +127,10 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | auth-reset-password | flow-invite-new-collaborator |
 | projects-dashboard | flow-invite-new-collaborator, flow-collaborator-added-email (project creation queues it), flow-schedule-project-deletion (exit) |
 | workflow-editor-inspectors | flow-oauth-credential-authorize, shared-webhook-auth-method-form, flow-webhook-auth-method-enforcement; keychain form home is project-settings-credentials |
-| workflow-editor-ide | flow-oauth-credential-authorize |
-| workflow-editor-run-viewer | flow-zero-persistence-runs (shows raw null; see the flow's 6.1), flow-open-run-in-editor (exit), shared-log-viewer if it shares the log component |
+| workflow-editor-ide | flow-oauth-credential-authorize, flow-open-run-in-editor (step inspect link lands here), shared-log-viewer (hosts the run viewer logs) |
+| workflow-editor-run-viewer | flow-zero-persistence-runs (shows raw null; see the flow's 6.1), flow-open-run-in-editor (exit), shared-log-viewer |
 | channels-index | flow-channel-client-auth-enforcement and flow-zero-persistence-channel-requests are proposed; create with this batch |
-| workflow-health | shared-hash-tabs if it uses Tabbed.container, flow-failure-alert-email, flow-digest-email, flow-workflow-health-drilldown (entry), flow-delete-open-workflow (its page also leaves) |
+| workflow-health | flow-failure-alert-email, flow-digest-email, flow-workflow-health-drilldown (entry), flow-delete-open-workflow (its page also leaves) |
 | workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
 | profile-github | flow-github-connect |
@@ -157,6 +157,9 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 
 ## Overlaps to clean up
 
+- run-show S10 to S13 and its highlighting, save-log-filter and level-scoring rows: now owned by shared-log-viewer.
+- shared-project-settings-tab-chrome S01 to S04: repeat shared-hash-tabs S01, S02, S03, S05; make them references.
+- flow-run-show-live-updates: drop its note that shared-log-viewer does not exist yet.
 - shared-project-settings-tab-chrome: tab navigation now owned by shared-hash-tabs; reference it.
 - project-settings-webhook-security: form scenarios and form 6.x rows now owned by shared-webhook-auth-method-form.
 - flow-delete-open-workflow: add the GitHub deploy (flow-github-sync-actions) as a second entry that sends WorkflowDeleted.

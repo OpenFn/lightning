@@ -17,6 +17,7 @@ inherits:
   - shared-usage-limits-banner      # :check_limits on_mount and the :banner slot (index.ex:16, :38-44)
   - shared-authenticated-session
   - shared-project-header
+  - shared-local-datetime
 
 url_params:
   - name: q
