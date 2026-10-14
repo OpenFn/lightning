@@ -22,17 +22,37 @@ defmodule Lightning.Credentials.Audit do
   end
 
   @doc """
-  Creates a user-initiated audit event for credential operations.
+  Builds the audit event changeset for a change `actor` made to a credential.
 
-  For multi-environment credentials, environment body data is stored
-  in metadata rather than in the changes map.
+  Environment changes go in metadata rather than in the changes map:
+
+    * `:bodies` - `{name, body}` for each environment written. The bodies are
+      stored encrypted and their names listed under `environments`
+    * `:deleted` - names of environments removed, listed under
+      `deleted_environments`
   """
-  def user_initiated_event(event, credential, changes \\ %{}, env_bodies \\ []) do
-    %{id: id, user: user} = Lightning.Repo.preload(credential, :user)
+  @spec user_initiated_event(
+          String.t(),
+          Lightning.Credentials.Credential.t(),
+          Lightning.Actor.t(),
+          map() | Ecto.Changeset.t(),
+          bodies: [{String.t(), map()}],
+          deleted: [String.t()]
+        ) :: Ecto.Changeset.t()
+  def user_initiated_event(
+        event,
+        credential,
+        actor,
+        changes \\ %{},
+        environments \\ []
+      ) do
+    metadata =
+      environments
+      |> Keyword.get(:bodies, [])
+      |> build_metadata_with_bodies()
+      |> put_deleted_environments(Keyword.get(environments, :deleted, []))
 
-    metadata = build_metadata_with_bodies(env_bodies)
-
-    event(event, id, user, changes, metadata)
+    event(event, credential.id, actor, changes, metadata)
   end
 
   defp build_metadata_with_bodies([]), do: %{}
@@ -50,6 +70,11 @@ defmodule Lightning.Credentials.Audit do
       environments: Enum.map(env_bodies, fn {name, _} -> name end)
     }
   end
+
+  defp put_deleted_environments(metadata, []), do: metadata
+
+  defp put_deleted_environments(metadata, deleted),
+    do: Map.put(metadata, :deleted_environments, deleted)
 
   defp encrypt_body_for_audit(body) when is_map(body) do
     {:ok, encrypted} = Lightning.Encrypted.Map.dump(body)

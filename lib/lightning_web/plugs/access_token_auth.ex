@@ -5,9 +5,10 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
 
   `call/2` goes in the pipeline. It accepts only tokens issued to the service
   account registered now, so unsetting `SERVICE_ACCOUNT_PUBLIC_KEY` cuts off
-  tokens already issued, and assigns the token's claims as `:access_token` and
-  the service account as `:service_account`. Each controller then names the scope its actions need with
-  `plug :require_scope, "users:read"`. Refusals follow RFC 6750 §3.
+  tokens already issued. It assigns the token's claims as `:access_token`, and
+  the service account as `:current_resource` with the token's scopes as its
+  `grants`. It only authenticates. The policies decide whether those grants
+  allow an action. Refusals follow RFC 6750 §3.
   """
   import Plug.Conn
 
@@ -21,21 +22,19 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
          {:ok, %{"sub" => sub} = claims} <- AccessToken.verify(token),
          %ServiceAccount{id: ^sub} = service_account <-
            Lightning.Config.service_account() do
+      grants = claims |> Map.get("scope", "") |> String.split() |> MapSet.new()
+
       conn
       |> assign(:access_token, claims)
-      |> assign(:service_account, service_account)
+      |> assign(:current_resource, %{service_account | grants: grants})
     else
       _other -> refuse(conn, 401, "invalid_token")
     end
   end
 
-  def require_scope(conn, scope) do
-    if scope in String.split(conn.assigns.access_token["scope"]),
-      do: conn,
-      else: refuse(conn, 403, "insufficient_scope")
-  end
-
-  defp refuse(conn, status, error) do
+  @doc "Refuses the request in the RFC 6750 §3 shape, and halts."
+  @spec refuse(Plug.Conn.t(), Plug.Conn.status(), String.t()) :: Plug.Conn.t()
+  def refuse(conn, status, error) do
     conn
     |> put_resp_header("www-authenticate", ~s(Bearer error="#{error}"))
     |> put_status(status)

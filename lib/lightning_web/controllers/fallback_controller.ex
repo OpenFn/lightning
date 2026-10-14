@@ -38,6 +38,31 @@ defmodule LightningWeb.FallbackController do
     })
   end
 
+  def call(conn, {:error, code})
+      when code in [:scheduled_for_deletion, :id_taken, :name_taken] do
+    conn
+    |> put_status(:conflict)
+    |> json(%{error: code})
+  end
+
+  # No message. The hook writes its text for the app's own pages, and an API
+  # caller reads only the status code.
+  def call(conn, {:error, :exceeds_limit}) do
+    conn
+    |> put_status(:payment_required)
+    |> json(%{error: :exceeds_limit})
+  end
+
+  def call(conn, {:error, :insufficient_scope}),
+    do:
+      LightningWeb.Plugs.AccessTokenAuth.refuse(conn, 403, "insufficient_scope")
+
+  def call(conn, {:error, :no_such_project}),
+    do: call(conn, {:error, :not_found})
+
+  def call(conn, {:error, :connection_not_for_this_project}),
+    do: call(conn, {:error, :forbidden})
+
   def call(conn, {:error, :forbidden}) do
     conn
     |> put_status(:forbidden)

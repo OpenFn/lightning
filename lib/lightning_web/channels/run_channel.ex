@@ -323,7 +323,7 @@ defmodule LightningWeb.RunChannel do
   end
 
   # This run's project changed who may see it. Re-derive the permission instead
-  # of matching on the event: `Projects.Scope` re-reads the project, so one
+  # of matching on the event: `Lightning.Scope` re-reads the project, so one
   # clause covers a membership being revoked and a support user losing the
   # support access that was their only standing. A role change cannot take
   # `:access_project` away, so it resolves to a no-op here.

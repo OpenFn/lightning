@@ -53,6 +53,15 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
           {:error, :unauthorized} ->
             {:noreply, unauthorized(socket)}
 
+          {:error, :scheduled_for_deletion} ->
+            {:noreply,
+             socket
+             |> put_flash(
+               :error,
+               "This credential is already scheduled for deletion"
+             )
+             |> push_navigate(to: socket.assigns.return_to)}
+
           {:error, %Ecto.Changeset{} = _changeset} ->
             {:noreply, socket}
         end

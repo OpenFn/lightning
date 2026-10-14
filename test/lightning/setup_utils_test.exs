@@ -66,10 +66,10 @@ defmodule Lightning.SetupUtilsTest do
       assert viewer.email == "viewer@openfn.org"
       User.valid_password?(viewer, "welcome12345")
 
-      assert Enum.map(
-               openhie_project.project_users,
-               fn project_user -> project_user.user_id end
-             ) == [super_user.id, admin.id, editor.id, viewer.id]
+      assert openhie_project.project_users
+             |> Enum.map(fn project_user -> project_user.user_id end)
+             |> Enum.sort() ==
+               Enum.sort([super_user.id, admin.id, editor.id, viewer.id])
 
       assert Enum.map(
                dhis2_project.project_users,

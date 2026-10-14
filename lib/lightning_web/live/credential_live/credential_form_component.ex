@@ -1017,6 +1017,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               workflows_using_credentials={@workflows_using_credentials}
               phx_target={@myself}
             />
+            <.error :for={
+              msg <- translate_errors(@changeset.errors, :project_credentials)
+            }>
+              {msg}
+            </.error>
           </div>
 
           <div
@@ -1281,6 +1286,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       {:error, :unauthorized} ->
         socket
         |> put_flash(:error, "You are not authorized to do that.")
+        |> close_or_stay()
+
+      {:error, :scheduled_for_deletion} ->
+        socket
+        |> put_flash(
+          :error,
+          "This credential is scheduled for deletion. Cancel the deletion to edit it."
+        )
         |> close_or_stay()
 
       {:error, %Ecto.Changeset{} = changeset} ->

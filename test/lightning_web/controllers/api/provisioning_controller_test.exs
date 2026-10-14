@@ -1039,6 +1039,30 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response.status == 403
     end
 
+    # Creating a project needs projects:write, and a repo connection holds none.
+    test "a repo connection is refused creating a new project for want of the grant",
+         %{conn: conn} do
+      repo_connection = insert(:project_repo_connection)
+      id = Ecto.UUID.generate()
+      %{body: body} = valid_payload(id)
+
+      response =
+        conn
+        |> Plug.Conn.put_req_header(
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+        |> post(~p"/api/provision", body)
+
+      assert json_response(response, 403) == %{"error" => "insufficient_scope"}
+
+      assert Plug.Conn.get_resp_header(response, "www-authenticate") == [
+               ~s(Bearer error="insufficient_scope")
+             ]
+
+      refute Lightning.Repo.get(Lightning.Projects.Project, id)
+    end
+
     test "fails with 403 when repo_connection is limited by github_sync", %{
       conn: conn
     } do
@@ -1525,14 +1549,9 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     end
   end
 
-  # `Policies.Provisioning` never mentions
-  # `scheduled_deletion`. Its `%User{}` clauses decide on
-  # `Projects.get_project_user_role/2` alone, and its
-  # `%ProjectRepoConnection{}` clauses check only
-  # `repo_connection.project_id == project.id`, which is trivially true.
-  #
   # Scheduling deletion removes no membership row and revokes no repo-connection
-  # token, so both principals below still exist during the grace window.
+  # token, so both principals below still exist during the grace window. They
+  # get the same 409 that the projects API gives.
   describe "a project scheduled for deletion" do
     setup [:assign_bearer_for_api]
 
@@ -1569,59 +1588,66 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
     test "refuses GET /api/provision/:id for a project member", %{
       conn: conn,
-      project: project,
-      workflow: workflow
+      project: project
     } do
       response = get(conn, ~p"/api/provision/#{project.id}")
 
-      assert response.status == 403,
+      assert json_response(response, 409) == %{
+               "error" => "scheduled_for_deletion"
+             },
              "a project member read the shut-down project's state"
+    end
 
-      refute response.resp_body =~ workflow.name
+    test "tells a non-member nothing about the deletion", %{project: project} do
+      %{conn: outsider} = assign_bearer_for_api(%{conn: build_conn()})
+
+      for path <- [
+            ~p"/api/provision/#{project.id}",
+            ~p"/api/provision/yaml?#{%{id: project.id}}"
+          ] do
+        assert get(outsider, path).status == 403
+      end
     end
 
     test "refuses GET /api/provision/:id for a repo-connection token", %{
       prc_conn: prc_conn,
-      project: project,
-      workflow: workflow
+      project: project
     } do
       response = get(prc_conn, ~p"/api/provision/#{project.id}")
 
-      assert response.status == 403,
+      assert json_response(response, 409) == %{
+               "error" => "scheduled_for_deletion"
+             },
              "a repo-connection token read the shut-down project's state"
-
-      refute response.resp_body =~ workflow.name
     end
 
     test "refuses GET /api/provision/yaml for a project member", %{
       conn: conn,
-      project: project,
-      workflow: workflow
+      project: project
     } do
       response = get(conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
 
-      assert response.status == 403,
+      assert json_response(response, 409) == %{
+               "error" => "scheduled_for_deletion"
+             },
              "a project member exported the shut-down project as YAML"
-
-      refute response.resp_body =~ workflow.name
     end
 
     test "refuses GET /api/provision/yaml for a repo-connection token", %{
       prc_conn: prc_conn,
-      project: project,
-      workflow: workflow
+      project: project
     } do
       response = get(prc_conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
 
-      assert response.status == 403,
+      assert json_response(response, 409) == %{
+               "error" => "scheduled_for_deletion"
+             },
              "a repo-connection token exported the shut-down project as YAML"
-
-      refute response.resp_body =~ workflow.name
     end
 
-    # The status code is the lesser assertion. The damage in #287 is that the
-    # import turns the triggers back on, so a fix that returns 403 and still
-    # writes must fail here too.
+    # The trigger check matters more than the status code. In #287 the import
+    # turned the triggers back on, so a fix that refuses but still writes must
+    # fail here too.
     test "refuses POST /api/provision for a project member, leaving the trigger disabled",
          %{conn: conn, project: project, workflow: workflow, trigger: trigger} do
       response =
@@ -1634,7 +1660,9 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert Lightning.Repo.reload!(trigger).enabled == false,
              "the import re-enabled a trigger that project shutdown had disabled"
 
-      assert response.status == 403,
+      assert json_response(response, 409) == %{
+               "error" => "scheduled_for_deletion"
+             },
              "a project member wrote to the shut-down project"
     end
 
@@ -1655,7 +1683,9 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert Lightning.Repo.reload!(trigger).enabled == false,
              "the import re-enabled a trigger that project shutdown had disabled"
 
-      assert response.status == 403,
+      assert json_response(response, 409) == %{
+               "error" => "scheduled_for_deletion"
+             },
              "a repo-connection token wrote to the shut-down project"
     end
   end

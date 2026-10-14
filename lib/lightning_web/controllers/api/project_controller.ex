@@ -2,8 +2,8 @@ defmodule LightningWeb.API.ProjectController do
   @moduledoc """
   API controller for project management.
 
-  Provides read access to projects for authenticated users and API tokens.
-  Users can list projects they have access to and retrieve individual project details.
+  Lists, shows, creates and replaces projects for authenticated users and API
+  tokens.
 
   ## Query Parameters (index)
 
@@ -33,11 +33,18 @@ defmodule LightningWeb.API.ProjectController do
   """
   use LightningWeb, :controller
 
+  import Ecto.Changeset
+
   alias Lightning.Policies.Permissions
-  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias Lightning.Scope
+  alias LightningWeb.API.PutRequest
+  alias LightningWeb.Plugs.AuthorizeAction
 
   action_fallback LightningWeb.FallbackController
+
+  plug AuthorizeAction, {:project_users, :access_project} when action == :show
+  plug AuthorizeAction, {:project_users, :edit_project} when action == :update
 
   @doc """
   Lists all projects accessible to the authenticated user.
@@ -86,7 +93,10 @@ defmodule LightningWeb.API.ProjectController do
 
   - `200 OK` with project JSON on success
   - `404 Not Found` if project doesn't exist
-  - `403 Forbidden` if user lacks access to the project
+  - `403 Forbidden` if user lacks access to the project, or the token lacks
+    `projects:write`
+  - `409 Conflict` to a caller who may see the project, if it is scheduled for
+    deletion
 
   ## Examples
 
@@ -94,19 +104,154 @@ defmodule LightningWeb.API.ProjectController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with %Lightning.Projects.Project{} = project <-
-           Projects.get_project(id),
+    with {:ok, scope} <- Scope.fetch(conn.assigns.scope, id),
          :ok <-
-           ProjectUsers
-           |> Permissions.can(
+           Permissions.permit(
+             :project_users,
              :access_project,
-             conn.assigns.current_resource,
-             project
+             scope,
+             scope.project
            ) do
-      render(conn, "show.json", project: project, conn: conn)
-    else
-      nil -> {:error, :not_found}
-      error -> error
+      render_project(conn, scope.project)
     end
+  end
+
+  @doc """
+  Creates the project under the path's id, or replaces the name and description
+  of the one that has it.
+
+  `members` and `notify` only apply when the project is created.
+  """
+  @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def update(conn, %{"id" => id}) do
+    with {:ok, target} <- update_target(conn, id),
+         {:ok, attrs} <- parse(conn, id) do
+      case target do
+        :new -> create(conn, attrs)
+        project -> replace(conn, project, attrs)
+      end
+    end
+  end
+
+  defp update_target(conn, id) do
+    case Scope.fetch(conn.assigns.scope, id) do
+      {:ok, scope} ->
+        with :ok <-
+               Permissions.permit(
+                 :project_users,
+                 :edit_project,
+                 scope,
+                 scope.project
+               ),
+             do: {:ok, scope.project}
+
+      {:error, :no_such_project} ->
+        with :ok <-
+               Permissions.permit(
+                 :provisioning,
+                 :create_project,
+                 conn.assigns.scope,
+                 nil
+               ),
+             do: {:ok, :new}
+
+      error ->
+        error
+    end
+  end
+
+  defp parse(conn, id) do
+    case parse_body(conn.body_params, id) do
+      {:ok, attrs} -> {:ok, attrs}
+      {:error, :invalid, errors} -> PutRequest.render_errors(conn, errors)
+    end
+  end
+
+  @body_types %{
+    id: :binary_id,
+    name: :string,
+    description: :string,
+    members: {:array, :map},
+    notify: :boolean
+  }
+
+  defp parse_body(body, id) do
+    with {:ok, changeset} <-
+           PutRequest.changeset(body, id, {%{notify: true}, @body_types}) do
+      changeset
+      |> validate_required(:notify, message: "must be true or false")
+      |> PutRequest.attrs()
+    end
+  end
+
+  defp replace(conn, project, attrs) do
+    project
+    |> Projects.update_project(
+      %{name: attrs[:name], description: attrs[:description]},
+      conn.assigns.current_resource
+    )
+    |> case do
+      {:ok, project} ->
+        render_project(conn, project)
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        render_changeset_errors(conn, changeset)
+
+      # Some other step of the write failed, such as its audit event. Nothing
+      # in the request can fix that.
+      {:error, :not_related_to_project} ->
+        conn
+        |> put_status(:internal_server_error)
+        |> put_view(LightningWeb.ErrorView)
+        |> render(:"500")
+    end
+  end
+
+  defp create(conn, attrs) do
+    actor = conn.assigns.current_resource
+
+    case Projects.members_by_email(attrs[:members] || []) do
+      {:ok, project_users} ->
+        attrs
+        |> Map.take([:id, :name, :description])
+        |> Map.put(:project_users, project_users)
+        |> Projects.create_project(actor, notify: attrs.notify)
+        |> case do
+          {:ok, project} ->
+            conn |> put_status(:created) |> render_project(project)
+
+          # Someone else created it since the lookup. Rerun the request so the
+          # caller is checked against that project.
+          {:error, changeset} ->
+            if PutRequest.unique_error?(changeset, :id),
+              do: update(conn, %{"id" => attrs.id}),
+              else: render_changeset_errors(conn, changeset)
+        end
+
+      {:error, messages} ->
+        PutRequest.render_errors(conn, %{members: messages})
+    end
+  end
+
+  # The project changeset reports member errors under `owner` and
+  # `project_users`. This API calls them `members`.
+  defp render_changeset_errors(conn, changeset) do
+    errors = PutRequest.flat_errors(changeset)
+
+    {member_errors, errors} = Map.split(errors, [:owner, :project_users])
+
+    errors =
+      if member_errors == %{},
+        do: errors,
+        else: Map.put(errors, :members, Enum.concat(Map.values(member_errors)))
+
+    PutRequest.render_errors(conn, errors)
+  end
+
+  defp render_project(conn, project) do
+    render(conn, "show.json",
+      project: Lightning.Repo.preload(project, project_users: :user),
+      conn: conn
+    )
   end
 end

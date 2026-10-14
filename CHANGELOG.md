@@ -23,6 +23,10 @@ and this project adheres to
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
   [#5241](https://github.com/OpenFn/lightning/pull/5241)
+- Service-account token requests must now name the scopes they want. A request
+  to `POST /api/oauth/token` without `scope`, or with an empty one, is refused
+  with `invalid_scope` instead of getting every scope.
+  [#5239](https://github.com/OpenFn/lightning/pull/5239)
 
 ### Fixed
 

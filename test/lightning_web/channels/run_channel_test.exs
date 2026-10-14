@@ -3480,7 +3480,7 @@ defmodule LightningWeb.RunChannelTest do
     end
 
     test "stops a support user's channel when the project withdraws support access",
-         %{project: project, run: run} do
+         %{actor: actor, project: project, run: run} do
       Mox.stub(
         Lightning.Extensions.MockProjectHook,
         :handle_project_validation,
@@ -3488,7 +3488,11 @@ defmodule LightningWeb.RunChannelTest do
       )
 
       {:ok, project} =
-        Lightning.Projects.update_project(project, %{allow_support_access: true})
+        Lightning.Projects.update_project(
+          project,
+          %{allow_support_access: true},
+          actor
+        )
 
       support_user = insert(:user, support_user: true)
 
@@ -3500,14 +3504,16 @@ defmodule LightningWeb.RunChannelTest do
       monitor_ref = Process.monitor(socket.channel_pid)
 
       {:ok, _project} =
-        Lightning.Projects.update_project(project, %{
-          allow_support_access: false
-        })
+        Lightning.Projects.update_project(
+          project,
+          %{allow_support_access: false},
+          actor
+        )
 
       assert_receive {:DOWN, ^monitor_ref, :process, _pid, :normal}
     end
 
-    # Project-wide, with no user on the event: `Scope` refuses a wound-down
+    # Project-wide, with no user on the event: the policies refuse a wound-down
     # project to everybody, so every browser socket streaming its runs goes.
     test "stops the channel when the project is scheduled for deletion", %{
       project: project,

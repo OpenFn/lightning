@@ -24,8 +24,8 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.Sandboxes
-  alias Lightning.Projects.Scope
   alias Lightning.Repo
+  alias Lightning.Scope
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows
@@ -1528,7 +1528,8 @@ defmodule LightningWeb.WorkflowChannel do
               Permissions.can?(:sandboxes, :delete_sandbox, user, project)
         }
 
-      # No such project, or one scheduled for deletion.
+      # No such project. A project scheduled for deletion loads instead, and
+      # every check above refuses it.
       {:error, _reason} ->
         %{
           can_edit_workflow: false,

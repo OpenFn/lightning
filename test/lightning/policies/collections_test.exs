@@ -1,15 +1,7 @@
 defmodule Lightning.Policies.CollectionsTest do
   @moduledoc """
-  Collections access is gated on the caller's project role.
-
-  Read (`:access_collection`) routes through `:project_users, :access_project`,
-  which loads the project and therefore sees `scheduled_deletion`. The write
-  actions do not: `Policies.Collections.has_project_role?/3` builds a
-  `%Project{id: project_id}` and asks `Projects.get_project_user_role/2` about
-  it, so whether the project is still operable is never consulted.
-
-  The result is that writes are *more* permissive than reads on a project that
-  has been shut down.
+  Collections access is decided by the caller's project role, and every action
+  is refused on a project scheduled for deletion, reads and writes alike.
   """
   use Lightning.DataCase, async: true
 
@@ -65,9 +57,6 @@ defmodule Lightning.Policies.CollectionsTest do
       # below is about the project's lifecycle and not about the role.
       assert_can(:put_collection_item, editor, collection)
 
-      # Control: read access is ALREADY refused, because `:access_collection`
-      # delegates to `:access_project`, which loads the project. The writes
-      # below are therefore more permissive than the read.
       refute_can(:access_collection, editor, scheduled_collection)
 
       assert allowed_writes(editor, scheduled_collection) == []
@@ -93,6 +82,146 @@ defmodule Lightning.Policies.CollectionsTest do
       # since a collection being created does not exist yet.
       refute_can(:manage_collection, admin, scheduled_project)
     end
+  end
+
+  describe ":manage_collection on a project" do
+    test "is held by its owner and admins, not its editors or viewers" do
+      [owner, admin, editor, viewer, outsider] = insert_list(5, :user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: owner.id, role: :owner},
+            %{user_id: admin.id, role: :admin},
+            %{user_id: editor.id, role: :editor},
+            %{user_id: viewer.id, role: :viewer}
+          ]
+        )
+
+      assert_can(:manage_collection, owner, project)
+      assert_can(:manage_collection, admin, project)
+      refute_can(:manage_collection, editor, project)
+      refute_can(:manage_collection, viewer, project)
+      refute_can(:manage_collection, outsider, project)
+    end
+
+    test "is held by a service account on any project" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      account = %{account | grants: MapSet.new(["collections:write"])}
+
+      assert Permissions.can?(
+               Collections,
+               :manage_collection,
+               account,
+               insert(:project)
+             )
+    end
+  end
+
+  describe "an operator holding collections:write" do
+    setup do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      project = insert(:project)
+
+      %{
+        account: %{account | grants: MapSet.new(["collections:write"])},
+        project: project,
+        collection: insert(:collection, project: project)
+      }
+    end
+
+    test "may manage a project or a collection, and put items", %{
+      account: account,
+      project: project,
+      collection: collection
+    } do
+      assert Collections.authorize(:manage_collection, account, project) == true
+
+      assert Collections.authorize(:manage_collection, account, collection) ==
+               true
+
+      assert Collections.authorize(:put_collection_item, account, collection) ==
+               true
+    end
+
+    test "may read items, needing no grant but its own", %{
+      account: account,
+      collection: collection
+    } do
+      assert Collections.authorize(:access_collection, account, collection) ==
+               true
+    end
+
+    test "without the grant, is refused as insufficient_scope", %{
+      account: account,
+      project: project
+    } do
+      account = %{account | grants: MapSet.new(["projects:write"])}
+      {:ok, scope} = Lightning.Scope.fetch(account, project)
+
+      assert Collections.authorize(:manage_collection, scope, project) ==
+               {:error, :insufficient_scope}
+    end
+  end
+
+  describe "asked with a scope, on a project scheduled for deletion" do
+    setup %{scheduled_project: scheduled_project} do
+      owner = insert(:user)
+
+      insert(:project_user,
+        project: scheduled_project,
+        user: owner,
+        role: :owner
+      )
+
+      %{owner: owner}
+    end
+
+    test "an owner is told, a raw owner or non-member is not", %{
+      owner: owner,
+      scheduled_project: scheduled_project
+    } do
+      {:ok, scope} = Lightning.Scope.fetch(owner, scheduled_project)
+
+      assert Collections.authorize(:manage_collection, scope, scheduled_project) ==
+               {:error, :scheduled_for_deletion}
+
+      assert Collections.authorize(:manage_collection, owner, scheduled_project) ==
+               false
+
+      scheduled_collection = insert(:collection, project: scheduled_project)
+
+      assert Collections.authorize(
+               :access_collection,
+               scope,
+               scheduled_collection
+             ) == {:error, :scheduled_for_deletion}
+
+      {:ok, outsider_scope} =
+        Lightning.Scope.fetch(insert(:user), scheduled_project)
+
+      assert Collections.authorize(
+               :manage_collection,
+               outsider_scope,
+               scheduled_project
+             ) == false
+    end
+  end
+
+  test "a scope for one project is refused another project's subject" do
+    owner = insert(:user)
+
+    project =
+      insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+    other = insert(:project)
+    {:ok, scope} = Lightning.Scope.fetch(owner, project)
+
+    assert Collections.authorize(:manage_collection, scope, other) == false
   end
 
   defp allowed_writes(user, collection) do

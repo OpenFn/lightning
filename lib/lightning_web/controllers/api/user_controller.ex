@@ -17,47 +17,56 @@ defmodule LightningWeb.API.UserController do
   """
   use LightningWeb, :controller
 
-  import LightningWeb.Plugs.AccessTokenAuth, only: [require_scope: 2]
-
   alias Lightning.Accounts
   alias Lightning.Accounts.User
+  alias Lightning.Policies.Permissions
+  alias LightningWeb.Plugs.AuthorizeAction
 
   action_fallback LightningWeb.FallbackController
 
   @create_fields ~w(email password first_name last_name role confirmed)
   @update_fields ~w(first_name last_name role password confirmed)
 
-  plug :require_scope, "users:read" when action in [:index, :show]
-  plug :require_scope, "users:write" when action in [:create, :update]
+  plug AuthorizeAction, {:users, :read_users} when action in [:index, :show]
+  plug AuthorizeAction, {:users, :write_users} when action in [:create, :update]
 
   def index(conn, params) do
-    with {:ok, page} <- Accounts.paginate_users(params) do
+    with :ok <- permit(conn, :read_users),
+         {:ok, page} <- Accounts.paginate_users(params) do
       render(conn, "index.json", page: page, conn: conn)
     end
   end
 
   def show(conn, %{"id" => id}) do
-    with {:ok, user} <- fetch_user(id) do
+    with :ok <- permit(conn, :read_users),
+         {:ok, user} <- fetch_user(id) do
       render(conn, "show.json", user: user, conn: conn)
     end
   end
 
   def update(conn, %{"id" => id} = params) do
-    with {:ok, user} <- fetch_user(id),
+    with :ok <- permit(conn, :write_users),
+         {:ok, user} <- fetch_user(id),
          {:ok, user} <-
            Accounts.update_user(
              user,
              Map.take(params, @update_fields),
-             conn.assigns.service_account
+             conn.assigns.current_resource
            ) do
       render(conn, "show.json", user: user, conn: conn)
     end
   end
 
   def create(conn, params) do
+    with :ok <- permit(conn, :write_users) do
+      create_user(conn, params)
+    end
+  end
+
+  defp create_user(conn, params) do
     case Accounts.create_user(
            Map.take(params, @create_fields),
-           conn.assigns.service_account
+           conn.assigns.current_resource
          ) do
       {:ok, user} ->
         conn
@@ -88,6 +97,9 @@ defmodule LightningWeb.API.UserController do
     if taken?,
       do: Accounts.get_user_by_email(Ecto.Changeset.get_field(changeset, :email))
   end
+
+  defp permit(conn, action),
+    do: Permissions.permit(:users, action, conn.assigns.scope, nil)
 
   defp fetch_user(id) do
     with {:ok, id} <- Ecto.UUID.cast(id),

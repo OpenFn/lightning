@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.JobControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import Lightning.Factories
   import Lightning.JobsFixtures
   import Lightning.ProjectsFixtures
 
@@ -12,6 +13,27 @@ defmodule LightningWeb.API.JobControllerTest do
     conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}/jobs")
 
     assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+  end
+
+  # A repo connection holds no `projects:write`, so it can't read jobs even in
+  # its own project.
+  test "a repo connection is refused its own project's jobs", %{conn: conn} do
+    project = insert(:project)
+    repo_connection = insert(:project_repo_connection, project: project)
+
+    conn =
+      conn
+      |> put_req_header(
+        "authorization",
+        "Bearer " <> repo_connection.access_token
+      )
+      |> get(~p"/api/projects/#{project.id}/jobs")
+
+    assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+
+    assert get_resp_header(conn, "www-authenticate") == [
+             ~s(Bearer error="insufficient_scope")
+           ]
   end
 
   describe "with invalid token" do
