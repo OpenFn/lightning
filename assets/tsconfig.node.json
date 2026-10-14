@@ -12,7 +12,7 @@
       "tailwindcss/*": ["./node_modules/tailwindcss/*"]
     }
   },
-  "include": ["*", "*.d.ts"],
+  "include": ["*", "*.d.ts", "design-tokens/**/*"],
   "exclude": [
     "playwright.config.ts",
     "node_modules/**",

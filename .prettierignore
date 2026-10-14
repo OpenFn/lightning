@@ -15,3 +15,8 @@ assets/package-lock.json
 
 # Exported from Grafana, which rewrites it on every dashboard save.
 tooling/observability/channel-proxy-dashboard.json
+
+# Figma exports, kept exactly as exported, and the CSS generated from them.
+# test/design-tokens.test.ts compares the CSS byte for byte with the script.
+assets/design-tokens/*.json
+assets/css/design-tokens.css
