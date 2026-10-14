@@ -42,7 +42,6 @@ Split by panel; each sub-view shares the route and differs by URL params or UI s
 | workflow-editor-canvas | `live /projects/:project_id/w/:id` (diagram, header, save, presence, read-only states) | `WorkflowLive.Collaborate` | `collaborate.ex`, `CollaborativeEditor.tsx`, `components/{Header,WorkflowEditor,ActiveCollaborators,Cursors,ReadOnlyWarning,StaleBuildNotice,SandboxIndicatorBanner,EmailVerificationBanner,Breadcrumbs}.tsx`, `components/diagram/`, `stores/`, `lib/lightning_web/channels/workflow_channel.ex` | todo |
 | workflow-editor-new | `live /projects/:project_id/w/new` (landing, templates, YAML import) | `WorkflowLive.Collaborate :new` | `components/{LandingScreen,TemplateBrowserModal,YAMLImportModal}.tsx`, `components/yaml-import/` | todo |
 | workflow-editor-inspectors | `?job=`, trigger, edge, workflow settings side panels | (React) | `components/inspector/`, `components/{AdaptorSelectionModal,ConfigureAdaptorModal,AdaptorSelector}.tsx`, webhook auth modals in `collaborate.ex:331` | todo |
-| workflow-editor-manual-run | shared-dataclip-body-viewer if it renders DataclipViewer |
 | workflow-editor-ide | `?panel=editor&job=` full-screen code editor | (React) | `components/ide/FullScreenIDE.tsx`, `components/CollaborativeMonaco.tsx` | todo |
 | workflow-editor-manual-run | manual run panel (run from a job or trigger with a chosen input) | (React) | `components/{ManualRunPanel,NewRunButton,RunRetryButton}.tsx`, `components/manual-run/`, `controllers/workflow_controller.ex` (`create_run`, `retry_run`), `controllers/dataclip_controller.ex` | todo |
 | workflow-editor-run-viewer | `?run=` run panel (steps, input, output, logs) | (React) | `components/run-viewer/`, `controllers/workflow_controller.ex` (`get_run_steps`) | todo |
@@ -124,6 +123,7 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | auth-login | flow-invite-new-collaborator, flow-login-return-to |
 | auth-reset-password | flow-invite-new-collaborator |
 | workflow-editor-inspectors | flow-oauth-credential-authorize, shared-webhook-auth-method-form, flow-webhook-auth-method-enforcement; keychain form home is project-settings-credentials |
+| workflow-editor-manual-run | shared-dataclip-body-viewer |
 | workflow-editor-ide | flow-oauth-credential-authorize, flow-open-run-in-editor (step inspect link lands here), shared-log-viewer (hosts the run viewer logs) |
 | workflow-editor-run-viewer | shared-dataclip-body-viewer, flow-zero-persistence-runs (shows raw null; see the flow's 6.1), flow-open-run-in-editor (exit), shared-log-viewer |
 | workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor, flow-sandbox-scheduled-deletion (archive_sandbox, workflow_channel.ex:501-513), flow-sandbox-merge |
