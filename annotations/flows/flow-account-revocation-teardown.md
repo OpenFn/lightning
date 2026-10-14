@@ -24,6 +24,7 @@ trigger:
     - projects-dashboard                  # where the password-change tab lands (user_auth.ex:514)
     - auth-login
     - profile-tokens   # added by lead
+    - auth-reset-password   # added by lead: a reset revokes sessions the same way (see auth-reset-password 6.5)
   reachable_when:
     - the actor is signed in (shared-authenticated-session)
     - admin entries: the actor is a superuser (`hooks.ex:40-51`; `policies/users.ex:19-21`)

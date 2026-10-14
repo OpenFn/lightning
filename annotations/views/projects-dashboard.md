@@ -422,7 +422,7 @@ Feature: Projects
 
 ## Proposed flows
 
-- `flow-login-return-to` (already proposed by the lead; referenced, not created here): signing in without a stored return path lands on `/projects`. Surfaces: auth-log-in (`user_auth.ex:61-70`), projects-dashboard (`user_auth.ex:514`).
+- `flow-login-return-to` (already proposed by the lead; referenced, not created here): signing in without a stored return path lands on `/projects`. Surfaces: auth-login (`user_auth.ex:61-70`), projects-dashboard (`user_auth.ex:514`).
 
 ## Proposed shared
 

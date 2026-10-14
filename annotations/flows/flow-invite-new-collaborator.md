@@ -7,14 +7,14 @@ owner:
 
 trigger:
   entry: project-settings-collaborators
-  exit: workflows-index               # the reset itself lands on auth-log-in, then /projects (projects-dashboard); see 6.2
+  exit: workflows-index               # the reset itself lands on auth-login, then /projects (projects-dashboard); see 6.2
   surfaces:
     - project-settings-collaborators  # invite form submit (invite_collaborator_component.ex:45-75)
     - pubsub:project:<project_id>     # ProjectUserAdded (projects.ex:2020-2024, :757-762)
     - email:project-invitation        # "Join <project> on OpenFn as a collaborator" (user_notifier.ex:452-464)
     - auth-reset-password             # GET/PUT /users/reset_password/:token (router.ex:185-186)
     - email:password-reset            # recovery branch only, when the invitation link has lapsed (accounts.ex:1268-1282)
-    - auth-log-in                     # where a successful reset lands (user_reset_password_controller.ex:38-41)
+    - auth-login                     # where a successful reset lands (user_reset_password_controller.ex:38-41)
     - projects-dashboard              # /projects, the signed-in landing (user_auth.ex:514)
     - workflows-index                 # /projects/:id/w, reached from the dashboard row (dashboard_live/components.ex:114)
 
@@ -249,5 +249,5 @@ none
 
 none
 
-Views this flow passes through that have no annotation yet: `auth-reset-password`, `auth-log-in`,
+Views this flow passes through that have no annotation yet: `auth-reset-password`, `auth-login`,
 `projects-dashboard`, and capability `email:password-reset`; `email:project-invitation` is owned by this flow.

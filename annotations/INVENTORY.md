@@ -14,10 +14,10 @@ Paths below are relative to `lib/lightning_web/` unless they start with `assets/
 
 | id | Route | Module | Main files | Status |
 |----|-------|--------|------------|--------|
-| auth-login | `GET/POST /users/log_in` | `UserSessionController` (controller view) | `controllers/user_session_controller.ex`, `controllers/user_session_html/new.html.heex`, `controllers/user_auth.ex`, `controllers/oidc_controller.ex` (SSO buttons) | todo |
-| auth-register | `GET/POST /users/register` | `UserRegistrationController` (controller view); blocked by `:allow_signup` (`router.ex:31`) | `controllers/user_registration_controller.ex`, `controllers/user_registration_html/new.html.heex` | todo |
-| auth-reset-password | `GET/POST /users/reset_password`, `GET/PUT /users/reset_password/:token` | `UserResetPasswordController` (controller view) | `controllers/user_reset_password_controller.ex`, `controllers/user_reset_password_html/{new,edit}.html.heex` | todo |
-| auth-two-factor | `GET/POST /users/two-factor` | `UserTOTPController` (controller view) | `controllers/user_totp_controller.ex`, `controllers/user_totp_html/new.html.heex` | todo |
+| auth-login | `GET/POST /users/log_in` | `UserSessionController` (controller view) | `controllers/user_session_controller.ex`, `controllers/user_session_html/new.html.heex`, `controllers/user_auth.ex`, `controllers/oidc_controller.ex` (SSO buttons) | done-with-decides |
+| auth-register | `GET/POST /users/register` | `UserRegistrationController` (controller view); blocked by `:allow_signup` (`router.ex:31`) | `controllers/user_registration_controller.ex`, `controllers/user_registration_html/new.html.heex` | done-with-decides |
+| auth-reset-password | `GET/POST /users/reset_password`, `GET/PUT /users/reset_password/:token` | `UserResetPasswordController` (controller view) | `controllers/user_reset_password_controller.ex`, `controllers/user_reset_password_html/{new,edit}.html.heex` | done-with-decides |
+| auth-two-factor | `GET/POST /users/two-factor` | `UserTOTPController` (controller view) | `controllers/user_totp_controller.ex`, `controllers/user_totp_html/new.html.heex` | done-with-decides |
 | auth-confirm-account | `GET/POST /users/confirm`, `GET/POST /users/confirm/:token`, `GET /users/send-confirmation-email` | `UserConfirmationController` (controller view) | `controllers/user_confirmation_controller.ex`, `controllers/user_confirmation_html/{new,edit}.html.heex` | todo |
 | auth-confirmation-required | `live /users/confirm-required` (`:confirmation_required` session, no on_mount) | `UserConfirmationRequiredLive` | `live/user_confirmation_required_live.ex`, `.html.heex` | todo |
 | auth-confirm-access | `live /auth/confirm_access` | `ReAuthenticateLive.New` | `live/re_authenticate_live/new.ex`, `new.html.heex` | todo |
@@ -88,7 +88,7 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 | profile-experimental-features | `/profile` experimental features card | `ProfileLive.ExperimentalFeaturesComponent` | `live/profile_live/experimental_features_component.ex`, `.html.heex` | done-with-decides |
 | profile-delete-account | `live /profile/:id/delete` | `ProfileLive.Edit :delete` | `live/components/user_deletion_modal.ex` (config-injected `delete_modal`) | done-with-decides |
 | profile-tokens | `live /profile/tokens`, `/profile/tokens/:id/delete` | `TokensLive.Index` | `live/tokens_live/index.ex`, `index.html.heex`, `live/components/token_deletion_modal.ex` | done-with-decides |
-| profile-backup-codes | `live /profile/auth/backup_codes` (sudo), `GET /profile/auth/backup_codes/print` | `BackupCodesLive.Index` | `live/backup_codes_live/index.ex`, `.html.heex`, `controllers/backup_codes_controller.ex`, `backup_codes_html/print.html.heex` | todo |
+| profile-backup-codes | `live /profile/auth/backup_codes` (sudo), `GET /profile/auth/backup_codes/print` | `BackupCodesLive.Index` | `live/backup_codes_live/index.ex`, `.html.heex`, `controllers/backup_codes_controller.ex`, `backup_codes_html/print.html.heex` | done-with-decides |
 
 ## Admin (superuser, `on_mount :ensure_admin`)
 
@@ -120,16 +120,11 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | view | must reference |
 |------|----------------|
 | auth-confirm-access | flow-reauth-backup-codes |
-| auth-login | flow-invite-new-collaborator, flow-login-return-to, flow-account-revocation-teardown (exit) |
-| auth-confirm-account | flow-resend-account-confirmation |
+| auth-confirm-account | flow-resend-account-confirmation (first confirmation email and resends) |
 | auth-confirmation-required | flow-change-email-confirm (also starts it) |
 | admin-users | shared-user-deletion-modal, flow-account-revocation-teardown, flow-change-email-confirm (admins change email without confirmation; cross-reference) |
 | admin-user-edit | flow-account-revocation-teardown (disabling happens here), flow-change-email-confirm (cross-reference) |
-| auth-reset-password | flow-account-revocation-teardown (reset revokes the same way; candidate entry) |
-| auth-register | flow-register-first-workflow (proposed; create with this view) |
-| auth-reset-password | flow-invite-new-collaborator |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
-| profile-backup-codes | flow-reauth-backup-codes (exit), shared-authenticated-session (mounted via `:sudo_auth`), flow-require-project-mfa (first enrolment lands here) |
 
 ## Proposed, not yet created
 
@@ -139,7 +134,6 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 |----|-------------|------|
 | shared-project-mail-recipients | flow-history-export | reads as a capability (who may receive mail); deferred to the capabilities pass |
 | capability:adaptor-catalogue-refresh | shared-adaptor-credential-config | capabilities pass |
-| flow-register-first-workflow | workflow-editor-new | revisit with auth-register |
 | capability:webhook-auth-method-purge | project-settings-webhook-security | capabilities pass |
 | capability:data-retention-cleanup | project-settings-data-storage | capabilities pass |
 | capability:collection-api-name-resolution | project-settings-collections | capabilities pass |
