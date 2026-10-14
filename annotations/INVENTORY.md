@@ -95,11 +95,11 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 | id | Route | Module | Main files | Status |
 |----|-------|--------|------------|--------|
 | admin-users | `live /settings/users` (config-injected), `/settings/users/:id/delete` | `UserLive.Index` | `live/user_live/{index,table_component,components}.ex`, `index.html.heex` | done-with-decides |
-| admin-user-edit | `live /settings/users/new`, `/settings/users/:id` | `UserLive.Edit` | `live/user_live/{edit,form_component}.ex`, `.html.heex` | todo |
-| admin-projects | `live /settings/projects`, `/new`, `/:id`, `/:id/delete` | `ProjectLive.Index` | `live/project_live/{index,form_component}.ex`, `.html.heex` | todo |
-| admin-audit | `live /settings/audit` | `AuditLive.Index` | `live/audit_live/index.ex`, `.html.heex` | todo |
-| admin-maintenance | `live /settings/maintenance` | `MaintenanceLive.Index` | `live/maintenance_live/index.ex`, `.html.heex` | todo |
-| admin-auth-providers | `live /settings/authentication`, `/new` | `AuthProvidersLive.Index` | `live/auth_providers/{index,form_component}.ex` | todo |
+| admin-user-edit | `live /settings/users/new`, `/settings/users/:id` | `UserLive.Edit` | `live/user_live/{edit,form_component}.ex`, `.html.heex` | done-with-decides |
+| admin-projects | `live /settings/projects`, `/new`, `/:id`, `/:id/delete` | `ProjectLive.Index` | `live/project_live/{index,form_component}.ex`, `.html.heex` | done-with-decides |
+| admin-audit | `live /settings/audit` | `AuditLive.Index` | `live/audit_live/index.ex`, `.html.heex` | done-with-decides |
+| admin-maintenance | `live /settings/maintenance` | `MaintenanceLive.Index` | `live/maintenance_live/index.ex`, `.html.heex` | done-with-decides |
+| admin-auth-providers | `live /settings/authentication`, `/new` | `AuthProvidersLive.Index` | `live/auth_providers/{index,form_component}.ex` | done-with-decides |
 | admin-collections | `live /settings/collections` | `CollectionLive.Index` | `live/collection_live/{index,components,collection_creation_modal}.ex` | todo |
 | admin-live-dashboard | `live_dashboard /dashboard` | `Phoenix.LiveDashboard` (third party) | `router.ex:362` | todo |
 
@@ -119,9 +119,6 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 
 | view | must reference |
 |------|----------------|
-| admin-auth-providers | shared-admin-space, flow-sso-login (its 6.1 row 2, provider removal clears only one node's cache, belongs here) |
-| admin-user-edit | shared-admin-space, flow-first-superuser-sign-in 6.5 (can the last superuser be demoted or disabled? check here), flow-account-revocation-teardown (disabling happens here), flow-change-email-confirm (cross-reference) |
-| admin-projects | shared-admin-space, flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
 
 ## Proposed, not yet created
 
@@ -130,7 +127,6 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 | id | proposed by | note |
 |----|-------------|------|
 | shared-project-mail-recipients | flow-history-export | reads as a capability (who may receive mail); deferred to the capabilities pass |
-| capability:adaptor-catalogue-refresh | shared-adaptor-credential-config | capabilities pass |
 | capability:webhook-auth-method-purge | project-settings-webhook-security | capabilities pass |
 | capability:data-retention-cleanup | project-settings-data-storage | capabilities pass |
 | capability:collection-api-name-resolution | project-settings-collections | capabilities pass |
