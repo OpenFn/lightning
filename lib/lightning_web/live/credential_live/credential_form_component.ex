@@ -872,8 +872,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             <%!-- Deprecated: not the shared <.tabs> component, and not a pattern
             to copy. It borrows the shared tab styles until environments are
             redesigned, and the "+" button is deprecated with it. --%>
-            <div class="flex items-end gap-4 border-b border-gray-200">
-              <div role="tablist" aria-label="Environments" class="ui-tabs">
+            <div class="flex items-center gap-4 border-b border-gray-200">
+              <div
+                role="tablist"
+                aria-label="Environments"
+                class="ui-tabs ui-tabs--small"
+              >
                 <button
                   :for={env <- @credential_environments}
                   type="button"
@@ -905,7 +909,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                   phx-target={@myself}
                   disabled={length(@credential_environments) >= 5}
                   class={[
-                    "py-2 px-1 transition-colors",
+                    "flex py-2 px-1 transition-colors",
                     if(length(@credential_environments) >= 5,
                       do: "text-gray-300 cursor-not-allowed",
                       else: "text-gray-400 hover:text-gray-600 cursor-pointer"

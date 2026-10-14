@@ -1071,6 +1071,7 @@ export function FullScreenIDE({
                                 value={selectedDocsTab}
                                 onChange={tab => setSelectedDocsTab(tab)}
                                 variant="pills"
+                                size="small"
                                 options={[
                                   {
                                     value: 'docs',

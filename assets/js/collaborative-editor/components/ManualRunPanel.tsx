@@ -602,6 +602,7 @@ export function ManualRunPanel({
       <Tabs
         className="mx-3"
         variant="pills"
+        size="small"
         value={selectedTab}
         onChange={value => setSelectedTab(value)}
         options={[
@@ -633,6 +634,7 @@ export function ManualRunPanel({
               <div className="flex-1">
                 <Tabs
                   variant="pills"
+                  size="small"
                   value={selectedTab}
                   onChange={value => setSelectedTab(value)}
                   options={[

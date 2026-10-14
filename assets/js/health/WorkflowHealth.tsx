@@ -87,6 +87,7 @@ export const WorkflowHealth = ({
       <div className="flex flex-col gap-6">
         <Tabs
           aria-label="Count by"
+          size="small"
           value={tab}
           onChange={setTab}
           options={TAB_OPTIONS}
