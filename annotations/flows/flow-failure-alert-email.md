@@ -15,6 +15,8 @@ trigger:
     - capability:failure-alerter                # Lightning.FailureAlerter (pipeline/failure_alerter.ex)
     - email:failure-alert                       # Lightning.FailureEmail + failure_alert.html.heex
     - history-work-orders
+    - run-show                                  # alternate exit: "view run" link, added by lead
+    - workflow-health                           # alternate exit: health link, added by lead
   reachable_when:
     - the member has a project_users row with failure_alert true (accounts.ex:1349-1355)
     - a run of one of the project's workflows reaches a final state other than success (failure_alerter.ex:12-17)
@@ -311,6 +313,8 @@ case no longer emailed, since recipients are re-read per failure.
 |------|--------|------------|------|
 
 ## 8. Open questions
+
+- Lead: run-show and workflow-health are now listed as alternate exits (see 6.5). Add a handoff scenario for each before this flow can be marked migrated.
 
 - Should cancelled and killed runs send a "failed" alert, or a differently worded one, or none?
 - Should the alerter move off the run channel into a background job, and should failed deliveries be retried?

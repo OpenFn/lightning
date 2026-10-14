@@ -56,9 +56,9 @@ Split by panel; each sub-view shares the route and differs by URL params or UI s
 | id | Route | Module | Main files | Status |
 |----|-------|--------|------------|--------|
 | history-work-orders | `live /projects/:project_id/history` | `RunLive.Index :index` | `live/run_live/{index,index.html.heex,workorder_component,rerun_job_component,export_confirmation_modal,components}.ex` | done-with-decides |
-| history-channel-logs | `live /projects/:project_id/history/channels` | `RunLive.Index :channel_logs` | `live/run_live/channel_logs_component.ex` | todo |
-| channel-request-show | `live /projects/:project_id/history/channels/:id` | `ChannelRequestLive.Show` | `live/channel_request_live/{show,components,helpers,timing}.ex` | todo |
-| run-show | `live /projects/:project_id/runs/:id` | `RunLive.Show` | `live/run_live/{show,streaming,components,cancel_helper}.ex` | todo |
+| history-channel-logs | `live /projects/:project_id/history/channels` | `RunLive.Index :channel_logs` | `live/run_live/channel_logs_component.ex` | done-with-decides |
+| channel-request-show | `live /projects/:project_id/history/channels/:id` | `ChannelRequestLive.Show` | `live/channel_request_live/{show,components,helpers,timing}.ex` | done-with-decides |
+| run-show | `live /projects/:project_id/runs/:id` | `RunLive.Show` | `live/run_live/{show,streaming,components,cancel_helper}.ex` | done-with-decides |
 | dataclip-show | `live /projects/:project_id/dataclips/:id/show` | `DataclipLive.Show` | `live/dataclip_live/show.ex`, `form_component.html.heex` | todo |
 
 ## Project settings (`live /projects/:project_id/settings`, config-injected, `ProjectLive.Settings`)
@@ -69,13 +69,13 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 |----|-------|--------|------------|--------|
 | project-settings-setup | `#project`; also `live /projects/:project_id/settings/delete` | `ProjectLive.Settings` | `settings.html.heex:67-313`, `project_live/concurrency_input_component.ex`, `live/components/project_deletion_modal.ex` | done-with-decides |
 | project-settings-credentials | `#credentials` | `ProjectLive.Settings` | `settings.html.heex:315-365`, inherits shared-credential-index-component | done-with-decides |
-| project-settings-collections | `#collections` | `ProjectLive.Settings` | `settings.html.heex:367-376`, `project_live/collections_component.ex` | todo |
+| project-settings-collections | `#collections` | `ProjectLive.Settings` | `settings.html.heex:367-376`, `project_live/collections_component.ex` | done-with-decides |
 | project-settings-webhook-security | `#webhook_security` | `ProjectLive.Settings` | `settings.html.heex:378-568`, `workflow_live/webhook_auth_method_form_component.ex`, `workflow_live/webhook_auth_method_delete_modal.ex`, `workflow_live/components.ex` | done-with-decides |
 | project-settings-collaborators | `#collaboration` | `ProjectLive.Settings` | `settings.html.heex:570-679`, `project_live/{collaborators,invited_collaborators,new_collaborator_component,invite_collaborator_component}.ex` | done-with-decides |
 | project-settings-security | `#security` (require MFA) | `ProjectLive.Settings` | `settings.html.heex:681-756` | done-with-decides |
 | project-settings-github-sync | `#vcs` | `ProjectLive.Settings` | `settings.html.heex:758-860`, `project_live/github_sync_component.ex`, `.html.heex`, `components/github_components.ex` | done-with-decides |
 | project-settings-data-storage | `#data-storage` (retention, dataclip storage) | `ProjectLive.Settings` | `settings.html.heex:862-1053` | done-with-decides |
-| project-settings-history-exports | `#history-exports` | `ProjectLive.Settings` | `settings.html.heex:1055-1103`, `controllers/project_file_controller.ex` | todo |
+| project-settings-history-exports | `#history-exports` | `ProjectLive.Settings` | `settings.html.heex:1055-1103`, `controllers/project_file_controller.ex` | done-with-decides |
 
 ## User settings
 
@@ -126,14 +126,11 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | auth-login | flow-invite-new-collaborator |
 | auth-reset-password | flow-invite-new-collaborator |
 | projects-dashboard | flow-invite-new-collaborator, flow-collaborator-added-email (project creation queues it), flow-schedule-project-deletion (exit) |
-| run-show | flow-failure-alert-email (email links to the run), shared-run-components, flow-zero-persistence-runs |
-| channel-request-show | shared-run-components (channel_state_pill) |
-| history-channel-logs | shared-run-components |
 | workflow-editor-inspectors | flow-oauth-credential-authorize, shared-webhook-auth-method-form, flow-webhook-auth-method-enforcement; keychain form home is project-settings-credentials |
 | workflow-editor-ide | flow-oauth-credential-authorize |
-| workflow-editor-run-viewer | flow-zero-persistence-runs (shows raw null; see the flow's 6.1) |
+| workflow-editor-run-viewer | flow-zero-persistence-runs (shows raw null; see the flow's 6.1), flow-open-run-in-editor (exit), shared-log-viewer if it shares the log component |
 | channels-index | flow-channel-client-auth-enforcement and flow-zero-persistence-channel-requests are proposed; create with this batch |
-| workflow-health | flow-failure-alert-email, flow-digest-email, flow-workflow-health-drilldown (entry), flow-delete-open-workflow (its page also leaves) |
+| workflow-health | shared-hash-tabs if it uses Tabbed.container, flow-failure-alert-email, flow-digest-email, flow-workflow-health-drilldown (entry), flow-delete-open-workflow (its page also leaves) |
 | workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
 | profile-github | flow-github-connect |
@@ -141,7 +138,6 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | mfa-required | flow-require-project-mfa (exit) |
 | workflow-editor-versions-and-promote | flow-github-sync-actions (GitHubSyncModal) |
 | profile-backup-codes | shared-authenticated-session (mounted via `:sudo_auth`), flow-require-project-mfa (first enrolment lands here) |
-| project-settings-history-exports | flow-history-export (exit) |
 
 ## Proposed, not yet created
 
@@ -153,16 +149,15 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 | flow-login-return-to | shared-authenticated-session | revisit with auth-login |
 | flow-account-revocation-teardown | shared-authenticated-session | revisit with admin-users and profile-delete-account |
 | flow-resend-account-confirmation | shared-project-header | revisit with auth-confirm-account |
-| flow-open-run-in-editor | shared-run-components | revisit with run-show and workflow-editor-run-viewer |
-| flow-run-show-live-updates | shared-run-components | revisit with run-show |
 | capability:webhook-auth-method-purge | project-settings-webhook-security | capabilities pass |
 | capability:data-retention-cleanup | project-settings-data-storage | capabilities pass |
 | flow-channel-client-auth-enforcement | flow-webhook-auth-method-enforcement | revisit with channels-index |
-| flow-zero-persistence-channel-requests | flow-zero-persistence-runs | revisit with channels-index and channel-request-show |
+| capability:collection-api-name-resolution | project-settings-collections | capabilities pass |
 | shared-channel-project-scope | flow-schedule-project-deletion | editor, run and AI channels leaving a deleted project; revisit with the editor batch |
 
 ## Overlaps to clean up
 
+- shared-project-settings-tab-chrome: tab navigation now owned by shared-hash-tabs; reference it.
 - project-settings-webhook-security: form scenarios and form 6.x rows now owned by shared-webhook-auth-method-form.
 - flow-delete-open-workflow: add the GitHub deploy (flow-github-sync-actions) as a second entry that sends WorkflowDeleted.
 - flow-oauth-credential-authorize says "Add new" is hidden for viewers on the credentials tab; project-settings-credentials found it always enabled with only its options disabled. Correct the flow.
