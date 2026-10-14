@@ -812,10 +812,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     ~H"""
     <div class="mb-4">
       <.label>
-        Initial Setup Action
+        Initial Setup
       </.label>
       <p class="text-sm text-gray-500">
-        Export this project to GitHub, or replace it with a project that's already on GitHub.
+        Choose the direction of the first sync: export this project to GitHub, or import an existing project from GitHub.
       </p>
       <fieldset class="mt-4">
         <legend class="sr-only">Direction of <em>Initial</em> Sync</legend>
@@ -837,7 +837,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
               </label>
 
               <p id="pull_first_sync_option_description" class="text-gray-500">
-                This option will commit a copy of your current OpenFn project to GitHub. It does not affect any workflows or configuration here.
+                Commit a copy of your current OpenFn project to GitHub. This does not affect any workflows or configuration here.
               </p>
             </div>
           </div>
@@ -858,7 +858,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                 Import from GitHub (overwrite this project)
               </label>
               <p id="deploy_first_sync_option_description" class="text-gray-500">
-                This option will replace this project with the workflows, collections and channels that are already committed to GitHub.
+                Replace this OpenFn project with the workflows, collections and channels that are already committed to GitHub.
               </p>
             </div>
           </div>
