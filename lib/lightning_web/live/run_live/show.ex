@@ -226,6 +226,7 @@ defmodule LightningWeb.RunLive.Show do
               <.tabs
                 id={"run-#{run.id}-tabbed-container"}
                 label="Step details"
+                size="small"
                 class="run-tab-container"
                 default_hash="log"
               >
