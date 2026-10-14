@@ -6,7 +6,7 @@ Lightning.Extensions.Routing` in `config/config.exs:50`, the tabs in
 `lib/lightning_web/live/project_live/settings.html.heex:31`, and the cards in
 `lib/lightning_web/live/profile_live/components.ex:35`.
 
-Status: `todo` | `batch-N` (in flight) | `done` | `done-with-decides` (has section 6 items at `decide`).
+Status: `todo` | `batch-N` (in flight) | `done` | `done-with-decides` (has section 6 items at `decide`). All 52 are catalogued; see [REPORT.md](REPORT.md).
 
 Paths below are relative to `lib/lightning_web/` unless they start with `assets/`.
 

@@ -73,6 +73,7 @@ related:
   - lib/lightning/projects/sandboxes.ex     # sandbox creation clones collection names empty (:1409-1414); merge creates missing names, never deletes (:1448-1470)
 flows:
   - flow-download-collection
+  - flow-admin-collection-reaches-project   # added by lead (link lint)
 ---
 
 ## 1. Purpose
