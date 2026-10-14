@@ -178,6 +178,9 @@ export const CollaborativeMonaco = forwardRef<
   }, []);
 
   const highlightRef = useRef<editor.IEditorDecorationsCollection>();
+  // Monaco keeps a decoration's DOM when its markup is unchanged, so a
+  // repeat highlight alternates class names to restart the flash.
+  const replayRef = useRef(false);
   const { pendingHighlight, setPendingHighlight } = usePendingHighlight();
 
   // Runs after the binding effect, so the model already holds this ytext.
@@ -209,11 +212,15 @@ export const CollaborativeMonaco = forwardRef<
       return nearest ? [nearest] : [];
     });
 
+    replayRef.current = !replayRef.current;
+    const className = replayRef.current
+      ? 'ai-change-highlight'
+      : 'ai-change-highlight ai-change-replay';
     highlightRef.current?.clear();
     highlightRef.current = editor.createDecorationsCollection(
       ranges.map(range => ({
         range,
-        options: { className: 'ai-change-highlight' },
+        options: { className },
       }))
     );
     if (ranges[0]) editor.revealRangeInCenterIfOutsideViewport(ranges[0]);
