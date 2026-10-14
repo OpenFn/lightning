@@ -105,12 +105,13 @@ describe('CronShowPanel', () => {
     workflowMap.set('deleted_at', null);
   });
 
-  test('renders the cron badge, Frequency label, and the humanized schedule', async () => {
+  test('renders the cron badge, Frequency label, UTC note, and the humanized schedule', async () => {
     const workflowStore = createConnectedWorkflowStore(ydoc);
     await setup(makeCronTrigger(), workflowStore);
 
     expect(screen.getByText('Schedule / Cron')).toBeInTheDocument();
     expect(screen.getByText('Frequency')).toBeInTheDocument();
+    expect(screen.getByText('All times in UTC')).toBeInTheDocument();
     expect(screen.getByText('At 09:00 AM')).toBeInTheDocument();
   });
 

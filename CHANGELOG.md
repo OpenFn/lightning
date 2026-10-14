@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- The cron trigger panels now say that schedule times are in UTC
+  [#5247](https://github.com/OpenFn/lightning/issues/5247)
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
