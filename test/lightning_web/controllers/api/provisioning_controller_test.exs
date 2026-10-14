@@ -837,6 +837,23 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response.status == 200
     end
 
+    test "returns the project yaml to an owner's personal access token", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      workflow = insert(:simple_workflow, project: project)
+
+      response =
+        conn
+        |> get(~p"/api/provision/yaml?#{%{id: project.id}}")
+        |> response(200)
+
+      assert response =~ workflow.name
+    end
+
     test "returns valid project yaml for snapshots provided" do
       project = insert(:project)
       repo_connection = insert(:project_repo_connection, project: project)
