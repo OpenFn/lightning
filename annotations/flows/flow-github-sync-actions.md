@@ -20,6 +20,7 @@ trigger:
     - controller:api-provision-create       # POST /api/provision (router.ex:115; provisioning_controller.ex:62-100)
     - pubsub:project_events:<project_id>#WorkflowDeleted   # provisioner.ex:132-134; receiving end owned by flow-delete-open-workflow
     - workflows-index
+    - sandboxes-index   # added by lead
   reachable_when:
     - the project has a GitHub connection (version_control.ex:158-160); without one the editor shows a plain Save button (Header.tsx:90-128) and the settings tab shows the connect form
     - the GitHub app is configured on the instance (version_control.ex:562-568); otherwise the settings tab shows only the "not configured" notice (project-settings-github-sync S16)

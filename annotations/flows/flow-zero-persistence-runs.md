@@ -18,6 +18,7 @@ trigger:
     - history-work-orders                         # wiped work order input: retry and select disabled (history-work-orders S21, S22)
     - workflow-editor-run-viewer                  # Input and Output tabs (InputTabPanel.tsx, OutputTabPanel.tsx)
     - project-settings-data-storage               # admins follow "this policy" back to the tab (viewers.ex:333-347)
+    - dataclip-show   # added by lead
   reachable_when:
     - the actor passes `:edit_data_retention` on the entry view (project_users.ex:29-37; settings.ex:366-378)
     - project.retention_policy is `:erase_all` when the run is created, not when it executes (run.ex:169, :185; work_orders.ex:228-245)

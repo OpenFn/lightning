@@ -93,7 +93,7 @@ flows:
   - flow-zero-persistence-runs
   - flow-run-show-live-updates
   - flow-open-run-in-editor
-  - flow-login-return-to               # proposed
+  - flow-login-return-to
 ---
 
 ## 1. Purpose

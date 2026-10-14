@@ -17,6 +17,7 @@ trigger:
     - history-channel-logs                      # path cell reads "—" (channel_logs_component.ex:163, :200-201)
     - channel-request-show                      # request/response wiped viewer (show.ex:94-101; viewers.ex:309-339)
     - project-settings-data-storage             # admins follow "this policy" back to the tab (viewers.ex:331-339)
+    - channels-index   # added by lead
   reachable_when:
     - the actor passes `:edit_data_retention` on the entry view (project_users.ex:29-37; settings.ex:366-378)
     - project.retention_policy is `:erase_all` when the proxy receives the request (channel_proxy_plug.ex:223-224; projects.ex:425-435)

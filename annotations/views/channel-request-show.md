@@ -61,7 +61,7 @@ related:
   - project-settings-data-storage
 flows:
   - flow-zero-persistence-channel-requests
-  - flow-channel-client-auth-enforcement     # proposed
+  - flow-channel-proxy-request
 ---
 
 ## 1. Purpose
@@ -263,7 +263,7 @@ Feature: Channel request detail
     Then client auth reads "Prod API key (API key)"
     And destination auth reads "Destination API"
     And a request with no client auth configured reads "None"
-    And the flow "flow-channel-client-auth-enforcement" is what recorded the matched method
+    And the flow "flow-channel-proxy-request" is what recorded the matched method
     # show.ex:176-186, :203-214; helpers.ex:99-140
     # test/lightning_web/live/channel_request_live/show_test.exs:591-661
 
@@ -424,7 +424,7 @@ Feature: Channel request detail
 ## Proposed flows
 
 - **flow-zero-persistence-channel-requests** (already proposed by flow-zero-persistence-runs; referenced here, not created): when the project keeps no data, the proxy drops paths, headers, bodies and client IP before insert and marks the request wiped; this page shows the combined wiped viewer (S16, S17). Surfaces: project-settings-data-storage, controller:channel-proxy-plug (`channel_proxy_plug.ex`, `persistence_policy.ex:12-38`), history-channel-logs, channel-request-show.
-- **flow-channel-client-auth-enforcement** (already proposed by flow-webhook-auth-method-enforcement; referenced here, not created): the proxy checks the client's credentials against the channel's webhook auth methods and records which one matched; this page shows the recorded method and type (S13, S14). Surfaces: channels-index, controller:channel-proxy-plug, history-channel-logs, channel-request-show.
+- **flow-channel-proxy-request** (already proposed by flow-webhook-auth-method-enforcement; referenced here, not created): the proxy checks the client's credentials against the channel's webhook auth methods and records which one matched; this page shows the recorded method and type (S13, S14). Surfaces: channels-index, controller:channel-proxy-plug, history-channel-logs, channel-request-show.
 
 ## Proposed shared
 
@@ -432,4 +432,4 @@ Feature: Channel request detail
 
 ## Lead resolution (batch 3)
 
-- `flow-zero-persistence-channel-requests` and `shared-local-datetime` created. `flow-channel-client-auth-enforcement` is held for the channels-index batch.
+- `flow-zero-persistence-channel-requests` and `shared-local-datetime` created. `flow-channel-proxy-request` is held for the channels-index batch.
