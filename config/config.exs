@@ -139,7 +139,14 @@ config :esbuild,
             args ++ ["--define:ENABLE_DEVTOOLS=false"]
 
           _ ->
-            args ++ ["--jsx-dev", "--define:ENABLE_DEVTOOLS=true"]
+            # The /dev/components showcases only exist in dev, so prod skips
+            # them. esbuild expands the glob itself.
+            args ++
+              [
+                "--jsx-dev",
+                "--define:ENABLE_DEVTOOLS=true",
+                "js/dev/*.tsx"
+              ]
         end
       end),
     cd: Path.expand("../assets", __DIR__),
