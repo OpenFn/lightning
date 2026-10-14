@@ -68,13 +68,13 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 | id | Route | Module | Main files | Status |
 |----|-------|--------|------------|--------|
 | project-settings-setup | `#project`; also `live /projects/:project_id/settings/delete` | `ProjectLive.Settings` | `settings.html.heex:67-313`, `project_live/concurrency_input_component.ex`, `live/components/project_deletion_modal.ex` | done-with-decides |
-| project-settings-credentials | `#credentials` | `ProjectLive.Settings` | `settings.html.heex:315-365`, inherits shared-credential-index-component | todo |
+| project-settings-credentials | `#credentials` | `ProjectLive.Settings` | `settings.html.heex:315-365`, inherits shared-credential-index-component | done-with-decides |
 | project-settings-collections | `#collections` | `ProjectLive.Settings` | `settings.html.heex:367-376`, `project_live/collections_component.ex` | todo |
-| project-settings-webhook-security | `#webhook_security` | `ProjectLive.Settings` | `settings.html.heex:378-568`, `workflow_live/webhook_auth_method_form_component.ex`, `workflow_live/webhook_auth_method_delete_modal.ex`, `workflow_live/components.ex` | todo |
+| project-settings-webhook-security | `#webhook_security` | `ProjectLive.Settings` | `settings.html.heex:378-568`, `workflow_live/webhook_auth_method_form_component.ex`, `workflow_live/webhook_auth_method_delete_modal.ex`, `workflow_live/components.ex` | done-with-decides |
 | project-settings-collaborators | `#collaboration` | `ProjectLive.Settings` | `settings.html.heex:570-679`, `project_live/{collaborators,invited_collaborators,new_collaborator_component,invite_collaborator_component}.ex` | done-with-decides |
-| project-settings-security | `#security` (require MFA) | `ProjectLive.Settings` | `settings.html.heex:681-756` | todo |
-| project-settings-github-sync | `#vcs` | `ProjectLive.Settings` | `settings.html.heex:758-860`, `project_live/github_sync_component.ex`, `.html.heex`, `components/github_components.ex` | todo |
-| project-settings-data-storage | `#data-storage` (retention, dataclip storage) | `ProjectLive.Settings` | `settings.html.heex:862-1053` | todo |
+| project-settings-security | `#security` (require MFA) | `ProjectLive.Settings` | `settings.html.heex:681-756` | done-with-decides |
+| project-settings-github-sync | `#vcs` | `ProjectLive.Settings` | `settings.html.heex:758-860`, `project_live/github_sync_component.ex`, `.html.heex`, `components/github_components.ex` | done-with-decides |
+| project-settings-data-storage | `#data-storage` (retention, dataclip storage) | `ProjectLive.Settings` | `settings.html.heex:862-1053` | done-with-decides |
 | project-settings-history-exports | `#history-exports` | `ProjectLive.Settings` | `settings.html.heex:1055-1103`, `controllers/project_file_controller.ex` | todo |
 
 ## User settings
@@ -88,6 +88,10 @@ All panels share `live/project_live/settings.ex` and `settings.html.heex`. Line 
 | profile-experimental-features | `/profile` experimental features card | `ProfileLive.ExperimentalFeaturesComponent` | `live/profile_live/experimental_features_component.ex`, `.html.heex` | todo |
 | profile-delete-account | `live /profile/:id/delete` | `ProfileLive.Edit :delete` | `live/components/user_deletion_modal.ex` (config-injected `delete_modal`) | todo |
 | profile-tokens | `live /profile/tokens`, `/profile/tokens/:id/delete` | `TokensLive.Index` | `live/tokens_live/index.ex`, `index.html.heex`, `live/components/token_deletion_modal.ex` | todo |
+| profile-github | flow-github-connect |
+| profile-mfa | flow-require-project-mfa |
+| mfa-required | flow-require-project-mfa (exit) |
+| workflow-editor-versions-and-promote | flow-github-sync-actions (GitHubSyncModal) |
 | profile-backup-codes | `live /profile/auth/backup_codes` (sudo), `GET /profile/auth/backup_codes/print` | `BackupCodesLive.Index` | `live/backup_codes_live/index.ex`, `.html.heex`, `controllers/backup_codes_controller.ex`, `backup_codes_html/print.html.heex` | todo |
 
 ## Admin (superuser, `on_mount :ensure_admin`)
@@ -122,15 +126,18 @@ cataloguer with its inventory row, and removed from here once the view lists it.
 | auth-login | flow-invite-new-collaborator |
 | auth-reset-password | flow-invite-new-collaborator |
 | projects-dashboard | flow-invite-new-collaborator, flow-collaborator-added-email (project creation queues it), flow-schedule-project-deletion (exit) |
-| run-show | flow-failure-alert-email (email links to the run), shared-run-components |
+| run-show | flow-failure-alert-email (email links to the run), shared-run-components, flow-zero-persistence-runs |
 | channel-request-show | shared-run-components (channel_state_pill) |
 | history-channel-logs | shared-run-components |
-| project-settings-credentials | shared-credential-index-component, flow-credential-transfer, flow-oauth-credential-authorize, flow-credential-scheduled-deletion |
-| workflow-editor-inspectors | flow-oauth-credential-authorize |
+| workflow-editor-inspectors | flow-oauth-credential-authorize, shared-webhook-auth-method-form, flow-webhook-auth-method-enforcement; keychain form home is project-settings-credentials |
 | workflow-editor-ide | flow-oauth-credential-authorize |
 | workflow-health | flow-failure-alert-email, flow-digest-email, flow-workflow-health-drilldown (entry), flow-delete-open-workflow (its page also leaves) |
 | workflow-editor-canvas | flow-delete-open-workflow, flow-toggle-workflow-open-editor |
 | admin-projects | flow-collaborator-added-email, flow-schedule-project-deletion, shared-project-deletion-modal |
+| profile-github | flow-github-connect |
+| profile-mfa | flow-require-project-mfa |
+| mfa-required | flow-require-project-mfa (exit) |
+| workflow-editor-versions-and-promote | flow-github-sync-actions (GitHubSyncModal) |
 | profile-backup-codes | shared-authenticated-session (mounted via `:sudo_auth`) |
 | project-settings-history-exports | flow-history-export (exit) |
 
@@ -146,9 +153,13 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 | flow-resend-account-confirmation | shared-project-header | revisit with auth-confirm-account |
 | flow-open-run-in-editor | shared-run-components | revisit with run-show and workflow-editor-run-viewer |
 | flow-run-show-live-updates | shared-run-components | revisit with run-show |
+| capability:webhook-auth-method-purge | project-settings-webhook-security | capabilities pass |
+| capability:data-retention-cleanup | project-settings-data-storage | capabilities pass |
 | shared-channel-project-scope | flow-schedule-project-deletion | editor, run and AI channels leaving a deleted project; revisit with the editor batch |
 
 ## Overlaps to clean up
+
+- flow-oauth-credential-authorize says "Add new" is hidden for viewers on the credentials tab; project-settings-credentials found it always enabled with only its options disabled. Correct the flow.
 
 Scenarios written in a view before the shared annotation that now owns them existed. Remove from the view in the final pass.
 

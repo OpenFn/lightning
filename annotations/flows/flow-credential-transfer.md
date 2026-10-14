@@ -14,6 +14,7 @@ trigger:
     - controller:credential-transfer-confirm
     - email:credential-transfer-completed
     - credentials-index
+    - project-settings-credentials            # second entry, added by lead
   reachable_when:
     - the actor owns the credential (credentials-index S20; shared-credential-index-component S01)
     - the credential has no pending transfer, so its menu item reads "Transfer" (credential_index_component.html.heex:87-94, transfer_credential_modal.ex:12)

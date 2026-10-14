@@ -13,6 +13,7 @@ trigger:
     - email:credential-deletion-scheduled
     - capability:credentials-purge-deleted
     - credentials-index
+    - project-settings-credentials            # second entry, added by lead
   reachable_when:
     - credentials-index: the signed-in user owns the credential (`credential_index_component.html.heex:72`, `policies/users.ex:42-44`)
 
