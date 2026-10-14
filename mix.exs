@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.19.0",
+      version: "2.19.1-pre",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -71,20 +71,23 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # cowlib advisories we have checked and accepted. Each names a function on
-  # cowlib's header-building path, and nothing in our tree calls any of them. The
-  # parse side of two of them is reachable through cowboy_req, so recheck by
-  # function rather than by module. No patched cowlib release exists yet. Hex
-  # matches an advisory's primary ID or any alias, so the CVE form also silences
-  # the GHSA and EEF variants. Detail in #5102.
+  # Advisories we have checked and accepted. Hex matches an advisory's primary ID
+  # or any alias, so the CVE form also silences the GHSA and EEF variants.
+  #
+  # cowlib: names a function on cowlib's header-building path that nothing in
+  # our tree calls. No patched cowlib release exists yet. Detail in #5102.
   defp hex_audit do
     [
       ignore_advisories: [
-        # cowlib
         # cow_http_struct_hd:escape_string/2
         "CVE-2026-43966",
-        # cow_cookie:cookie/1
-        "CVE-2026-43969"
+        # cloak and cloak_ecto, no patched release exists. Our only cipher is
+        # Cloak.Ciphers.AES.GCM (Lightning.Vault), which authenticates its
+        # ciphertext, and we define no Cloak.Ecto.PBKDF2 fields.
+        # Cloak.Ciphers.AES.CTR, no MAC
+        "CVE-2026-95105",
+        # Cloak.Ecto.PBKDF2 ignores :iterations
+        "CVE-2026-94206"
       ]
     ]
   end
@@ -112,7 +115,7 @@ defmodule Lightning.MixProject do
       {:ecto_psql_extras, "~> 0.8.2"},
       {:ecto_sql, "~> 3.13"},
       {:esbuild, "~> 0.9", runtime: Mix.env() == :dev},
-      {:ex_doc, "~> 0.39", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.11.2"},
       {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
@@ -266,13 +269,28 @@ defmodule Lightning.MixProject do
         "DEPLOYMENT.md": [title: "Deployment"],
         "tooling/benchmarking/README.md": [
           title: "Benchmarking",
-          filename: "benchmarking.md"
+          filename: "benchmarking"
         ],
         "WORKERS.md": [title: "Workers"],
         "PROVISIONING.md": [title: "Provisioning"],
+        "SERVICE_ACCOUNTS.md": [title: "Service Accounts"],
         "CHANGELOG.md": [title: "Changelog"]
       ],
       source_url: "https://github.com/OpenFn/lightning",
+      # Docs name these internals for code readers; they are hidden from the
+      # published docs, so there is nothing to link to.
+      skip_code_autolink_to: [
+        "Lightning.Application",
+        "Lightning.DigestEmailWorker",
+        "Lightning.Workflows.Events",
+        "LightningWeb.ConfirmationLockout",
+        "LightningWeb.Components.UserDeletionModal",
+        "LightningWeb.Hooks.handle_project_user_event/2",
+        "LightningWeb.RunChannel.maybe_send_after_completion_response/2",
+        "LightningWeb.WorkflowLive.DashboardComponents"
+      ],
+      # Changelog entries describe the API as it was at the time.
+      skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       homepage_url: "https://openfn.github.io/lightning",
       groups_for_modules: [
         API: [

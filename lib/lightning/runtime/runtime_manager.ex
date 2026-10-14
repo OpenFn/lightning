@@ -118,7 +118,8 @@ defmodule Lightning.Runtime.RuntimeManager do
     @moduledoc """
     Behaviour for runtime clients to improve testability.
     """
-    @callback start_runtime(state :: map()) :: state :: map()
+    @callback start_runtime(state :: map()) ::
+                {:ok, state :: map()} | {:error, term()}
 
     @callback stop_runtime(state :: map()) :: any()
   end
@@ -163,7 +164,10 @@ defmodule Lightning.Runtime.RuntimeManager do
 
   @impl GenServer
   def handle_continue(:start_runtime, %{runtime_client: runtime_client} = state) do
-    {:noreply, runtime_client.start_runtime(state)}
+    case runtime_client.start_runtime(state) do
+      {:ok, state} -> {:noreply, state}
+      {:error, reason} -> {:stop, {:runtime_not_started, reason}, state}
+    end
   end
 
   @impl GenServer
@@ -252,16 +256,15 @@ defmodule Lightning.Runtime.RuntimeManager do
       "Starting runtime: #{inspect([cmd | args])} in #{state.config.cd}"
     )
 
-    {:ok, port, os_pid} =
-      Lightning.OsProcess.open(cmd, args,
-        cd: state.config.cd,
-        line: 1024,
-        env: Config.to_env(state.config)
-      )
-
-    :persistent_term.put(:runtime_os_pid, os_pid)
-
-    %{state | runtime_port: port, runtime_os_pid: os_pid}
+    with {:ok, port, os_pid} <-
+           Lightning.OsProcess.open(cmd, args,
+             cd: state.config.cd,
+             line: 1024,
+             env: Config.to_env(state.config)
+           ) do
+      :persistent_term.put(:runtime_os_pid, os_pid)
+      {:ok, %{state | runtime_port: port, runtime_os_pid: os_pid}}
+    end
   end
 
   @impl RuntimeClient

@@ -82,6 +82,12 @@ defmodule LightningWeb.ProfileLiveTest do
              )
              |> render_submit() =~ "This field can&#39;t be blank"
 
+      assert profile_live
+             |> form("#basic-info-form",
+               user: %{first_name: "Kylian\u0007", last_name: "Mbappe"}
+             )
+             |> render_submit() =~ "can&#39;t contain control characters"
+
       {:ok, profile_live, html} =
         profile_live
         |> form("#basic-info-form",

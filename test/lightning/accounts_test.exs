@@ -648,16 +648,43 @@ defmodule Lightning.AccountsTest do
 
       assert user.contact_preference == :any
     end
+
+    test "stores the hash of the given password, never a supplied hash" do
+      supplied = Bcrypt.hash_pwd_salt("a different password")
+
+      assert {:ok, user} =
+               Accounts.register_user(
+                 valid_user_attributes(hashed_password: supplied)
+               )
+
+      stored = Repo.get!(User, user.id).hashed_password
+
+      refute stored == supplied
+      assert Bcrypt.verify_pass(valid_user_password(), stored)
+    end
   end
 
   describe "register_superuser/1" do
-    test "requires email and password to be set" do
+    test "requires email, password and both names to be set" do
       {:error, changeset} = Accounts.register_superuser(%{})
 
       assert %{
                password: ["can't be blank"],
-               email: ["can't be blank"]
+               email: ["can't be blank"],
+               first_name: ["can't be blank"],
+               last_name: ["can't be blank"]
              } = errors_on(changeset)
+    end
+
+    test "refuses names that are only whitespace" do
+      attrs = valid_user_attributes(first_name: "  ", last_name: "\t")
+
+      {:error, changeset} = Accounts.register_superuser(attrs)
+
+      assert %{first_name: ["can't be blank"], last_name: ["can't be blank"]} =
+               errors_on(changeset)
+
+      refute Accounts.get_user_by_email(attrs.email)
     end
 
     test "validates email and password when given" do
@@ -687,6 +714,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_superuser(%{
           email: email,
           first_name: "Sizwe",
+          last_name: "Super",
           password: valid_user_password()
         })
 
@@ -726,7 +754,7 @@ defmodule Lightning.AccountsTest do
       assert %Ecto.Changeset{} =
                changeset = Accounts.change_superuser_registration()
 
-      assert changeset.required == [:password, :email]
+      assert changeset.required == [:password, :first_name, :last_name, :email]
     end
 
     test "allows fields to be set" do
@@ -1320,7 +1348,38 @@ defmodule Lightning.AccountsTest do
     end
   end
 
-  describe "update_user_details/2" do
+  describe "create_user/2" do
+    test "without an actor records nothing, and still reports a superuser" do
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:lightning, :accounts, :superuser_changed]
+        ])
+
+      assert {:ok, user} =
+               Accounts.create_user(%{
+                 email: "root@example.com",
+                 password: "a long enough password",
+                 first_name: "Root",
+                 last_name: "Admin",
+                 role: :superuser
+               })
+
+      user_id = user.id
+
+      assert_receive {[:lightning, :accounts, :superuser_changed], ^ref,
+                      %{count: 1},
+                      %{
+                        change: :created,
+                        user_id: ^user_id,
+                        actor_type: nil,
+                        actor_id: nil
+                      }}
+
+      assert %{entries: []} = Lightning.Auditing.list_all()
+    end
+  end
+
+  describe "update_user/3" do
     # A disable or a privilege change is reversible, so the PAT stays (the
     # request-time gate re-reads the user); only the session is dropped.
     for {change, attrs} <- [
@@ -1337,7 +1396,7 @@ defmodule Lightning.AccountsTest do
         watch_transports(user)
 
         {:ok, user} =
-          Accounts.update_user_details(user, unquote(Macro.escape(attrs)))
+          Accounts.update_user(user, unquote(Macro.escape(attrs)))
 
         refute Accounts.get_user_by_session_token(session_token)
         assert Repo.get_by(UserToken, token: api_token, context: "api")
@@ -1352,7 +1411,7 @@ defmodule Lightning.AccountsTest do
       watch_transports(user)
 
       {:ok, _user} =
-        Accounts.update_user_details(user, %{
+        Accounts.update_user(user, %{
           "scheduled_deletion" =>
             DateTime.utc_now() |> DateTime.truncate(:second)
         })
@@ -1368,7 +1427,7 @@ defmodule Lightning.AccountsTest do
       watch_transports(user)
 
       {:ok, _user} =
-        Accounts.update_user_details(user, %{"first_name" => "Renamed"})
+        Accounts.update_user(user, %{"first_name" => "Renamed"})
 
       assert Accounts.get_user_by_session_token(session_token)
       refute_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
@@ -1557,7 +1616,7 @@ defmodule Lightning.AccountsTest do
       refute Accounts.get_user_by_api_token("oops")
     end
 
-    # Set the field directly, not via update_user_details/2: that helper also
+    # Set the field directly, not via update_user/3: that helper also
     # deletes the PAT row, which would pass the test for the wrong reason. We
     # want the token to survive so this proves the resolver drops the blocked
     # user.

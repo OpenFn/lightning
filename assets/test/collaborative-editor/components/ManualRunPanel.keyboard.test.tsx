@@ -318,7 +318,6 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
     // Create mock channel and connect session context store
     mockChannel = createMockPhoenixChannel();
     const mockProvider = createMockPhoenixChannelProvider(mockChannel);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     stores.sessionContextStore._connectChannel(mockProvider as any);
 
     // Clear followed run state on the NEW stores

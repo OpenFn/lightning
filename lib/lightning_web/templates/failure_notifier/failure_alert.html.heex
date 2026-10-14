@@ -5,7 +5,7 @@
     A "{@workflow_name}" run just failed in "{@project_name}". <br /> Click
     <a href={@work_order_url}>here</a>
     to view the state of the work order and <a href={@run_url}>here</a>
-    to inspect the run or view the logs at the bottom of this email.
+    to inspect the run and its logs.
   </p>
 
   <%= if @count > 1 do %>
@@ -22,12 +22,4 @@
   </p>
 
   <p>OpenFn</p>
-
-  <p>
-    <pre style="background-color: #ededed; padding: 16px; margin: 8px 0">
-      <%= Enum.map(@run_logs, fn(log) -> %>
-        <%= log.message %>
-      <% end) %>
-    </pre>
-  </p>
 </div>

@@ -1,8 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
+import { FAILURE_COLORS } from '#/health/charts/FailureBreakdownDonut';
 import { TriageTable } from '#/health/charts/TriageTable';
-import type { ErrorSignature } from '#/health/types';
+import type { ErrorSignature, FailureState } from '#/health/types';
 
 import { signature } from './counts';
 
@@ -24,12 +25,14 @@ const table = (signatures: ErrorSignature[], emptyMessage = 'No failures') =>
   );
 
 describe('TriageTable', () => {
-  test('renders the full signature grammar for a step-level failure, adaptor version dropped', () => {
+  test('lays the signature out on three lines, adaptor named as the diagram names it', () => {
     table([signature()]);
 
-    expect(rowText(/RuntimeError/)).toContain(
-      'fail:RuntimeError @ Map-beneficiary [@openfn/language-common]'
-    );
+    expect(screen.getByText('failed')).toBeVisible();
+    expect(
+      screen.getByText('fail:RuntimeError @ Map-beneficiary')
+    ).toBeVisible();
+    expect(screen.getByText('common adaptor')).toBeVisible();
     expect(screen.getByRole('cell', { name: '62' })).toBeVisible();
     expect(
       screen.getByRole('columnheader', { name: 'Work orders' })
@@ -117,7 +120,7 @@ describe('TriageTable', () => {
 
   // A worker can report the type as an empty string rather than omitting it.
   // `??` let that through, rendering the signature as a bare `fail:` and a
-  // "Tip: " with no sentence after it.
+  // suggestion with no sentence in it.
   test('treats an empty error type as a missing one', () => {
     table([signature({ error_type: '' })]);
 
@@ -142,7 +145,7 @@ describe('TriageTable', () => {
       table([signature()]);
 
       const link = screen.getByRole('link', {
-        name: 'View (opens in a new tab)',
+        name: 'View history (opens in a new tab)',
       });
       expect(link).toHaveAttribute(
         'href',
@@ -173,7 +176,7 @@ describe('TriageTable', () => {
       ]);
 
       const link = screen.getByRole('link', {
-        name: 'View (opens in a new tab)',
+        name: 'View history (opens in a new tab)',
       });
       expect(link).toHaveAttribute(
         'href',
@@ -199,7 +202,7 @@ describe('TriageTable', () => {
       ]);
 
       const link = screen.getByRole('link', {
-        name: 'View (opens in a new tab)',
+        name: 'View history (opens in a new tab)',
       });
       expect(link).toHaveAttribute(
         'href',
@@ -216,8 +219,38 @@ describe('TriageTable', () => {
       table([signature({ exit_reason: '' })]);
 
       expect(
-        screen.queryByRole('link', { name: 'View (opens in a new tab)' })
+        screen.queryByRole('link', {
+          name: 'View history (opens in a new tab)',
+        })
       ).toBeNull();
     });
+  });
+});
+
+describe('TriageTable failure state', () => {
+  test.each<[string, FailureState]>([
+    ['fail', 'failed'],
+    ['crash', 'crashed'],
+    ['kill', 'killed'],
+    ['exception', 'exception'],
+    ['lost', 'lost'],
+    ['rejected', 'rejected'],
+  ])(
+    'names a %s exit reason "%s", with its donut colour',
+    (exit_reason, state) => {
+      table([signature({ exit_reason })]);
+
+      expect(
+        screen.getByText(state).querySelector('[aria-hidden="true"]')
+      ).toHaveStyle({ backgroundColor: FAILURE_COLORS[state] });
+    }
+  );
+
+  test('names an unlisted exit reason by its error type, with no dot', () => {
+    table([signature({ exit_reason: 'timeout', error_type: 'TimeoutError' })]);
+
+    expect(
+      screen.getByText('TimeoutError').querySelector('[aria-hidden="true"]')
+    ).toBeNull();
   });
 });

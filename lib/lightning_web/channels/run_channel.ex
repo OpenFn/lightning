@@ -126,7 +126,7 @@ defmodule LightningWeb.RunChannel do
         # instead of blocking the channel.
         run_with_preloads =
           run
-          |> Repo.preload([:log_lines, work_order: [:workflow]])
+          |> Repo.preload(work_order: [:workflow])
 
         run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()

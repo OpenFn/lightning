@@ -1,10 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
-import {
-  StepFailureBars,
-  stepFailureTotal,
-} from '#/health/charts/StepFailureBars';
+import { StepFailureBars } from '#/health/charts/StepFailureBars';
 import type { ErrorSignature } from '#/health/types';
 
 import { signature } from './counts';
@@ -34,7 +31,7 @@ const bar = (label: string) =>
   screen.getByTitle(label).closest('li')!.querySelector('[aria-hidden] > div');
 
 describe('StepFailureBars', () => {
-  test('lists one row per step, heaviest first', () => {
+  test('lists one row per step, heaviest first, with its adaptor', () => {
     bars([
       signature({ count: 36, job_id: 'job-b', step_name: 'Post-to-Punto' }),
       signature({ count: 62, job_id: 'job-a', step_name: 'Map-beneficiary' }),
@@ -42,42 +39,42 @@ describe('StepFailureBars', () => {
     ]);
 
     expect(rows()).toEqual([
-      'Map-beneficiary62',
-      'Post-to-Punto36',
-      'Fetch-households12',
+      'Map-beneficiarycommon adaptor62',
+      'Post-to-Puntocommon adaptor36',
+      'Fetch-householdscommon adaptor12',
     ]);
   });
 
   // Triage splits a job by exit reason and error type; a step is one place to
   // go and look however many ways it broke.
+  test('shows an adaptor it cannot name as its package, without the version', () => {
+    bars([signature({ adaptor: '@acme/custom-thing@1.2.0' })]);
+
+    expect(rows()).toEqual(['Map-beneficiary@acme/custom-thing adaptor62']);
+  });
+
   test('folds a step together across its exit reasons and error types', () => {
     bars([
       signature({ count: 40, error_type: 'RuntimeError' }),
       signature({ count: 22, exit_reason: 'crash', error_type: 'OOMError' }),
     ]);
 
-    expect(rows()).toEqual(['Map-beneficiary62']);
+    expect(rows()).toEqual(['Map-beneficiarycommon adaptor62']);
   });
 
-  // The whole point of the "no step" row: these failures would otherwise be
+  // The whole point of the "No failing step" row: these failures would otherwise be
   // invisible, since there is no job to file them under.
-  test('counts failures with no failing step in their own row, and says so', () => {
+  test('counts failures with no failing step in their own row', () => {
     bars([
       signature({ count: 62 }),
       runLevel({ count: 20 }),
       runLevel({ count: 4, exit_reason: 'rejected' }),
     ]);
 
-    expect(rows()).toEqual(['Map-beneficiary62', '(no step)24']);
-    expect(
-      screen.getByText(/24 failures have no failing step/)
-    ).toBeInTheDocument();
-  });
-
-  test('says nothing about unattributed failures when every one has a step', () => {
-    bars([signature()]);
-
-    expect(screen.queryByText(/no failing step/)).not.toBeInTheDocument();
+    expect(rows()).toEqual([
+      'Map-beneficiarycommon adaptor62',
+      'No failing step24',
+    ]);
   });
 
   // Bars rank the rows against each other, not against the total: against a
@@ -100,27 +97,13 @@ describe('StepFailureBars', () => {
   });
 
   // A job that resolved off no snapshot in the window still has to render as
-  // something, and it is not the same row as "no step".
-  test('labels a step whose name never resolved without merging it into (no step)', () => {
+  // something, and it is not the same row as "No failing step".
+  test('labels a step whose name never resolved without merging it into the no failing step row', () => {
     bars([signature({ count: 3, step_name: null }), runLevel({ count: 2 })]);
 
-    expect(rows()).toEqual(['(unknown step)3', '(no step)2']);
-  });
-});
-
-describe('stepFailureTotal', () => {
-  // The sum of what is drawn, which is signatures and not work orders: a work
-  // order that broke in two branches is counted under each step.
-  test('sums every signature, formatted', () => {
-    expect(
-      stepFailureTotal([
-        signature({ count: 1000 }),
-        signature({ count: 287, job_id: 'job-b' }),
-      ])
-    ).toBe('1,287 total');
-  });
-
-  test('is zero with no failures', () => {
-    expect(stepFailureTotal([])).toBe('0 total');
+    expect(rows()).toEqual([
+      '(unknown step)common adaptor3',
+      'No failing step2',
+    ]);
   });
 });

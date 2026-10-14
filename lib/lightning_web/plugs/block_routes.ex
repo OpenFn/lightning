@@ -25,14 +25,9 @@ defmodule LightningWeb.Plugs.BlockRoutes do
 
   defp get_route_flag_and_message(path_segments, routes_flags) do
     Enum.find_value(routes_flags, :allow, fn {route, flag, message} ->
-      if path_matches?(path_segments, segments(route)) do
-        if Lightning.Config.check_flag?(flag) do
-          :allow
-        else
-          {:block, message}
-        end
-      else
-        :allow
+      if path_matches?(path_segments, segments(route)) and
+           !Lightning.Config.check_flag?(flag) do
+        {:block, message}
       end
     end)
   end

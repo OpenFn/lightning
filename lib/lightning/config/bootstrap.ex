@@ -227,6 +227,12 @@ defmodule Lightning.Config.Bootstrap do
           end
         end)
 
+    service_account =
+      env!("SERVICE_ACCOUNT_PUBLIC_KEY", &decode_service_account!/1, nil)
+
+    config :lightning, :service_account, service_account
+    config :lightning, :allow_first_setup, is_nil(service_account)
+
     release = release_info()
 
     config :lightning, :release, release
@@ -284,6 +290,7 @@ defmodule Lightning.Config.Bootstrap do
       {"* * * * *", ObanPruner},
       {"*/5 * * * *", Lightning.Janitor},
       {"*/5 * * * *", Lightning.AiAssistant.StuckMessageReaper},
+      {"*/10 * * * *", Lightning.ServiceAccount.Assertion},
       {"0 10 * * *", Lightning.DigestEmailWorker,
        args: %{"type" => "daily_project_digest"}},
       {"0 10 * * 1", Lightning.DigestEmailWorker,
@@ -331,6 +338,10 @@ defmodule Lightning.Config.Bootstrap do
         workflow_failures: 1,
         background: 1,
         history_exports: 1,
+        # One-off data repairs enqueued by migrations. A queue of its own means
+        # nodes still on the previous release during a blue-green deploy never
+        # poll it, so they can't pick up a worker they don't have.
+        maintenance: 1,
         ai_assistant: 10,
         # Shared by Lightning.LogLines.SearchVectorWorker and
         # Lightning.Invocation.DataclipSearchVectorWorker. Concurrency 2 gives
@@ -1166,6 +1177,19 @@ defmodule Lightning.Config.Bootstrap do
     case get_env(app) |> get_in(keys) do
       nil -> Application.get_all_env(app) |> get_in(keys)
       value -> value
+    end
+  end
+
+  defp decode_service_account!(encoded) do
+    with {:ok, pem} <- Base.decode64(encoded, padding: false),
+         {:ok, service_account} <- Lightning.ServiceAccount.from_pem(pem) do
+      service_account
+    else
+      :error ->
+        raise "SERVICE_ACCOUNT_PUBLIC_KEY is not unpadded base64"
+
+      {:error, reason} ->
+        raise "SERVICE_ACCOUNT_PUBLIC_KEY #{reason}"
     end
   end
 

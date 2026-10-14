@@ -44,7 +44,7 @@ defmodule Lightning.Janitor do
         case Runs.mark_run_lost(run) do
           {:ok, _updated_run} ->
             run
-            |> Repo.preload([:log_lines, work_order: [:workflow]])
+            |> Repo.preload(work_order: [:workflow])
             |> Lightning.FailureAlerter.alert_on_failure()
 
           {:error, :already_completed} ->

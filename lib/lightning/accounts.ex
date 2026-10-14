@@ -11,6 +11,7 @@ defmodule Lightning.Accounts do
 
   alias Ecto.Changeset
   alias Ecto.Multi
+  alias Lightning.Accounts.Audit
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
@@ -20,6 +21,7 @@ defmodule Lightning.Accounts do
   alias Lightning.Credentials
   alias Lightning.Projects
   alias Lightning.Repo
+  alias Lightning.ServiceAccount
   alias Lightning.Services.AccountHook
 
   require Logger
@@ -135,10 +137,145 @@ defmodule Lightning.Accounts do
     :ok
   end
 
-  def create_user(attrs) do
+  @doc """
+  Creates a user through the account hook. With an actor, the audit event is
+  recorded in the same transaction.
+  """
+  @spec create_user(map(), User.t() | ServiceAccount.t() | nil) ::
+          {:ok, User.t()} | {:error, Changeset.t()}
+  def create_user(attrs, actor \\ nil) do
     Repo.transact(fn ->
-      AccountHook.handle_create_user(attrs)
+      with {:ok, user} <- AccountHook.handle_create_user(attrs),
+           {:ok, _audit} <- audit_created(user, actor) do
+        {:ok, user}
+      end
     end)
+    |> tap(fn
+      {:ok, %User{role: :superuser} = user} ->
+        superuser_changed(:created, user, actor)
+
+      _not_a_superuser ->
+        :ok
+    end)
+  end
+
+  defp audit_created(_user, nil), do: {:ok, nil}
+
+  defp audit_created(user, actor),
+    do: user |> Audit.user_created(actor) |> Repo.insert()
+
+  @doc """
+  Changes a user. With an actor, the audit event is recorded in the same
+  transaction when anything changed.
+
+  Scheduling a deletion revokes every token the user has. Disabling them, or
+  changing their password, email, role or support access, signs them out of
+  every session but keeps their API tokens.
+  """
+  @spec update_user(User.t(), map(), User.t() | ServiceAccount.t() | nil) ::
+          {:ok, User.t()} | {:error, Changeset.t()}
+  def update_user(%User{} = user, attrs, actor \\ nil) do
+    user |> User.details_changeset(attrs) |> write_user(actor)
+  end
+
+  defp write_user(%Changeset{data: user} = changeset, actor) do
+    revoke_contexts = revoke_contexts(changeset)
+
+    Multi.new()
+    |> Multi.update(:user, changeset)
+    |> maybe_audit_update(changeset, actor)
+    |> maybe_revoke_tokens(user, revoke_contexts)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: updated}} ->
+        if revoke_contexts,
+          do: LightningWeb.UserAuth.disconnect_user_sockets(updated)
+
+        for {change, true} <- superuser_changes(changeset),
+            do: superuser_changed(change, updated, actor)
+
+        {:ok, updated}
+
+      {:error, _step, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
+  defp revoke_contexts(changeset) do
+    cond do
+      not is_nil(Changeset.get_change(changeset, :scheduled_deletion)) ->
+        :all
+
+      Changeset.get_change(changeset, :disabled) == true ->
+        ["session"]
+
+      Enum.any?(
+        [:hashed_password, :email, :role, :support_user],
+        &Changeset.changed?(changeset, &1)
+      ) ->
+        ["session"]
+
+      true ->
+        nil
+    end
+  end
+
+  defp maybe_audit_update(multi, _changeset, nil), do: multi
+
+  defp maybe_audit_update(multi, changeset, actor) do
+    Multi.run(multi, :audit, fn repo, _changes ->
+      changeset
+      |> Audit.user_updated(actor)
+      |> Lightning.Auditing.Audit.save(repo)
+    end)
+  end
+
+  defp superuser_changes(%Changeset{data: user} = changeset) do
+    [
+      granted: Changeset.get_change(changeset, :role) == :superuser,
+      password_changed:
+        Changeset.changed?(changeset, :hashed_password) and
+          :superuser in [user.role, Changeset.get_field(changeset, :role)]
+    ]
+  end
+
+  defp superuser_changed(change, user, actor) do
+    {actor_type, actor_id} =
+      case actor do
+        %ServiceAccount{id: id} -> {:service_account, id}
+        %User{id: id} -> {:user, id}
+        nil -> {nil, nil}
+      end
+
+    :telemetry.execute(
+      [:lightning, :accounts, :superuser_changed],
+      %{count: 1},
+      %{
+        change: change,
+        user_id: user.id,
+        actor_type: actor_type,
+        actor_id: actor_id
+      }
+    )
+  end
+
+  @doc """
+  A page of users, optionally only the one whose email matches `"email"` in
+  any case.
+  """
+  @spec paginate_users(map()) ::
+          {:ok, Scrivener.Page.t()} | {:error, Changeset.t()}
+  def paginate_users(params) do
+    with {:ok, filters} <-
+           {%{}, %{email: :string}}
+           |> Changeset.cast(params, [:email], empty_values: [])
+           |> Changeset.apply_action(:validate) do
+      User
+      |> where(^Map.to_list(filters))
+      |> order_by([:inserted_at, :id])
+      |> Repo.paginate(Map.take(params, ["page", "page_size"]))
+      |> then(&{:ok, &1})
+    end
   end
 
   @doc """
@@ -462,43 +599,6 @@ defmodule Lightning.Accounts do
   """
   def change_user_registration(attrs \\ %{}) do
     User.user_registration_changeset(attrs, hash_password: false)
-  end
-
-  def update_user_details(%User{} = user, attrs \\ %{}) do
-    changeset = User.details_changeset(user, attrs)
-
-    revoke_contexts =
-      cond do
-        not is_nil(Changeset.get_change(changeset, :scheduled_deletion)) ->
-          :all
-
-        Changeset.get_change(changeset, :disabled) == true ->
-          ["session"]
-
-        Enum.any?(
-          [:hashed_password, :email, :role, :support_user],
-          &Changeset.changed?(changeset, &1)
-        ) ->
-          ["session"]
-
-        true ->
-          nil
-      end
-
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(:user, changeset)
-    |> maybe_revoke_tokens(user, revoke_contexts)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{user: user}} ->
-        if revoke_contexts,
-          do: LightningWeb.UserAuth.disconnect_user_sockets(user)
-
-        {:ok, user}
-
-      {:error, :user, changeset, _} ->
-        {:error, changeset}
-    end
   end
 
   defp maybe_revoke_tokens(multi, _user, nil), do: multi

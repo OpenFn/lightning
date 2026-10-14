@@ -35,6 +35,7 @@ defmodule Lightning.Projects do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.YamlFormat.V2
   alias Lightning.WorkOrder
 
   require Logger
@@ -1048,6 +1049,44 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Returns the topmost ancestor (root) project id for the given project. For a
+  root project (`parent_id == nil`) returns its own id. Returns `nil` if the
+  project does not exist.
+
+  Used by the GitHub-sync guard to ensure no two projects sharing the same
+  ultimate root claim the same `(repo, branch)` pair.
+  """
+  @spec root_id(Project.t() | Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def root_id(%Project{id: id, parent_id: nil}) when is_binary(id), do: id
+
+  def root_id(%Project{id: id, parent_id: parent_id})
+      when is_binary(parent_id) and is_binary(id) do
+    root_id(id)
+  end
+
+  def root_id(project_id) when is_binary(project_id) do
+    initial =
+      from(p in Project,
+        where: p.id == ^project_id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    recursion =
+      from(p in Project,
+        join: a in "project_chain",
+        on: a.parent_id == p.id,
+        select: %{id: p.id, parent_id: p.parent_id}
+      )
+
+    "project_chain"
+    |> recursive_ctes(true)
+    |> with_cte("project_chain", as: ^union_all(initial, ^recursion))
+    |> where([c], is_nil(c.parent_id))
+    |> select([c], type(c.id, Ecto.UUID))
+    |> Repo.one()
+  end
+
+  @doc """
   Returns every descendant project of `project_id`, ordered by name.
 
   Unlike `list_workspace_projects/2`, the input is treated as the subtree
@@ -1553,9 +1592,19 @@ defmodule Lightning.Projects do
   @doc """
   Exports a project as yaml.
 
+  The `format` is required and selects the serializer:
+    * `:v1` — legacy Lightning format (`Lightning.ExportUtils`). Hard-wired
+      for the provisioner API so external CLIs that consume
+      `GET /api/provision/yaml` keep working.
+    * `:v2` — portability spec format (`Lightning.Workflows.YamlFormat.V2`).
+      Used by the in-app "Export project as YAML" download.
+
+  `snapshot_ids` may be `nil` (export current workflows) or a list of
+  snapshot ids (export those specific snapshots).
+
   ## Examples
 
-      iex> export_project(:yaml, project_id)
+      iex> export_project(:yaml, project_id, nil, :v2)
       {:ok, string}
 
   Returns `{:error, message}` when two entities in the project would be written
@@ -1563,9 +1612,10 @@ defmodule Lightning.Projects do
   `Lightning.ExportUtils.DuplicateKeyError`.
 
   """
-  @spec export_project(atom(), Ecto.UUID.t(), [Ecto.UUID.t()] | nil) ::
+  @spec export_project(:yaml, Ecto.UUID.t(), [Ecto.UUID.t()] | nil, :v1 | :v2) ::
           {:ok, binary} | {:error, binary}
-  def export_project(:yaml, project_id, snapshot_ids \\ nil) do
+  def export_project(:yaml, project_id, snapshot_ids, format)
+      when format in [:v1, :v2] do
     project = get_project!(project_id)
 
     snapshots =
@@ -1573,7 +1623,10 @@ defmodule Lightning.Projects do
         do: Snapshot.get_all_by_ids(snapshot_ids, project_id),
         else: nil
 
-    ExportUtils.generate_new_yaml(project, snapshots)
+    case format do
+      :v1 -> ExportUtils.generate_new_yaml(project, snapshots)
+      :v2 -> V2.serialize_project(project, snapshots)
+    end
   end
 
   @doc """
@@ -1862,60 +1915,52 @@ defmodule Lightning.Projects do
         project_workorders_query
       end
 
-    workorders_delete_query =
-      WorkOrder
-      |> with_cte("workorders_to_delete",
-        as: ^limit(workorders_query, ^batch_size)
-      )
-      |> join(:inner, [wo], wtd in "workorders_to_delete", on: wo.id == wtd.id)
-
-    steps_delete_query =
-      Step
-      |> join(:inner, [s], assoc(s, :runs), as: :runs)
-      |> with_cte("workorders_to_delete",
-        as: ^limit(workorders_query, ^batch_size)
-      )
-      |> join(:inner, [runs: r], wtd in "workorders_to_delete",
-        on: r.work_order_id == wtd.id
-      )
-
-    workorders_count =
-      Repo.aggregate(workorders_query, :count,
-        timeout: Config.default_ecto_database_timeout() * 3
-      )
-
-    Stream.iterate(0, &(&1 + 1))
-    |> Stream.take(ceil(workorders_count / batch_size))
-    |> Enum.each(fn _i ->
-      Repo.transaction(
-        fn ->
-          {_count, _} =
-            Repo.delete_all(steps_delete_query,
-              returning: false,
-              timeout: Config.default_ecto_database_timeout() * 3
-            )
-
-          {_count, _} =
-            Repo.delete_all(workorders_delete_query,
-              returning: false,
-              timeout: Config.default_ecto_database_timeout() * 3
-            )
-        end,
-        timeout: Config.default_ecto_database_timeout() * 6
-      )
-    end)
+    delete_workorders_in_batches(workorders_query, batch_size)
 
     # If it's on a retention cleanup, it also deletes unused snapshots after the workorders deletion.
     # Otherwise, it's a cleanup for the whole project when the snapshots are automatically deleted
     # by the workflows deletion.
-    if retention_period_days do
-      {count, _} =
-        delete_unused_snapshots(project_workorders_query)
+    if retention_period_days,
+      do: delete_unused_snapshots(project_workorders_query),
+      else: :ok
+  end
 
-      Logger.info("Deleted #{count} unused snapshots")
-    end
+  defp delete_workorders_in_batches(workorders_query, batch_size) do
+    timeout = Config.default_ecto_database_timeout() * 3
 
-    :ok
+    delete_until_empty(fn ->
+      {:ok, deleted} =
+        Repo.transaction(
+          fn ->
+            ids =
+              workorders_query
+              |> select([wo], wo.id)
+              |> limit(^batch_size)
+              |> Repo.all(timeout: timeout)
+
+            {_count, _} =
+              Repo.delete_all(
+                from(s in Step,
+                  join: r in assoc(s, :runs),
+                  where: r.work_order_id in ^ids
+                ),
+                returning: false,
+                timeout: timeout
+              )
+
+            {count, _} =
+              Repo.delete_all(from(wo in WorkOrder, where: wo.id in ^ids),
+                returning: false,
+                timeout: timeout
+              )
+
+            count
+          end,
+          timeout: timeout * 2
+        )
+
+      deleted
+    end)
   end
 
   defp delete_unused_snapshots(workorders_query) do
@@ -1928,28 +1973,18 @@ defmodule Lightning.Projects do
         on: wo.workflow_id == w.id
       )
 
-    total_deleted =
-      Stream.repeatedly(fn ->
-        unused_ids =
-          unused_snapshots_query |> limit(^batch_size) |> Repo.all()
+    delete_until_empty(fn ->
+      unused_ids = unused_snapshots_query |> limit(^batch_size) |> Repo.all()
 
-        if unused_ids == [], do: nil, else: unused_ids
-      end)
-      |> Stream.take_while(& &1)
-      |> Enum.reduce(0, fn ids, acc ->
-        {count, _} =
-          from(s in Snapshot, where: s.id in ^ids)
-          |> Repo.delete_all(returning: false)
+      {count, _} =
+        from(s in Snapshot, where: s.id in ^unused_ids)
+        |> Repo.delete_all(returning: false)
 
-        acc + count
-      end)
-
-    {total_deleted, nil}
+      count
+    end)
   end
 
   defp delete_dataclips(dataclips_query, batch_size) do
-    dataclips_count = Repo.aggregate(dataclips_query, :count)
-
     dataclips_delete_query =
       Dataclip
       |> with_cte("dataclips_to_delete",
@@ -1957,17 +1992,19 @@ defmodule Lightning.Projects do
       )
       |> join(:inner, [d], dtd in "dataclips_to_delete", on: d.id == dtd.id)
 
-    Stream.iterate(0, &(&1 + 1))
-    |> Stream.take(ceil(dataclips_count / batch_size))
-    |> Enum.each(fn _i ->
-      {_count, _dataclips} =
+    delete_until_empty(fn ->
+      {count, _dataclips} =
         Repo.delete_all(dataclips_delete_query,
           returning: false,
           timeout: Config.default_ecto_database_timeout() * 10
         )
-    end)
 
-    :ok
+      count
+    end)
+  end
+
+  defp delete_until_empty(delete_batch) do
+    if delete_batch.() > 0, do: delete_until_empty(delete_batch), else: :ok
   end
 
   def invite_collaborators(project, collaborators, inviter) do

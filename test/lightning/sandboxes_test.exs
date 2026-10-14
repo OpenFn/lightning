@@ -81,7 +81,9 @@ defmodule Lightning.Projects.SandboxesTest do
         workflow: w1,
         enabled: true,
         type: :webhook,
-        custom_path: "parent-partner-feed"
+        custom_path: "parent-partner-feed",
+        webhook_reply: :after_completion,
+        webhook_response_config: %{success_code: 202, error_code: 422}
       })
 
     j1 =
@@ -403,6 +405,13 @@ defmodule Lightning.Projects.SandboxesTest do
       # end to end in `Lightning.Workflows.WebhookTriggerPathTest`.
       assert "parent-partner-feed" in Enum.map(s_triggers, & &1.custom_path),
              "a sandbox trigger keeps the parent's custom_path"
+
+      assert Enum.any?(s_triggers, fn t ->
+               t.webhook_reply == :after_completion and
+                 t.webhook_response_config.success_code == 202 and
+                 t.webhook_response_config.error_code == 422
+             end),
+             "a sandbox trigger keeps the parent's webhook_reply and response config"
 
       parent_custom_paths =
         from(t in Trigger,

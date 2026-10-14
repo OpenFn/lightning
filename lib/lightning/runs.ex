@@ -538,6 +538,7 @@ defmodule Lightning.Runs do
     {:ok, updated_count}
   end
 
+  @doc "Subscribes to the events of a single run."
   defdelegate subscribe(run), to: Events
 
   @doc """

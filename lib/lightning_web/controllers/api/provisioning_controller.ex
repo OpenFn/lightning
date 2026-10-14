@@ -196,7 +196,7 @@ defmodule LightningWeb.API.ProvisioningController do
              project
            ),
          {:ok, yaml} <-
-           Projects.export_project(:yaml, id, params["snapshots"]) do
+           Projects.export_project(:yaml, id, params["snapshots"], :v1) do
       conn
       |> put_resp_content_type("text/yaml")
       |> put_root_layout(false)
