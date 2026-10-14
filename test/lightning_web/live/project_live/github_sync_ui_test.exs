@@ -280,6 +280,21 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
   end
 
   describe "CLI card" do
+    test "warns that a personal access token is needed", %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      assert has_element?(
+               view,
+               "#cli-auth-banner",
+               "You'll need to configure a Personal Access Token"
+             )
+
+      assert has_element?(
+               view,
+               ~s{#cli-auth-banner a[target="_blank"][href="https://docs.openfn.org/documentation/sync#authorization"]}
+             )
+    end
+
     test "links to more CLI examples", %{conn: conn} do
       view = open_sync_tab(conn, :viewer)
 

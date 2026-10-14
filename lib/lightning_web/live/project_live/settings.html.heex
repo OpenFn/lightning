@@ -877,6 +877,18 @@
                 CLI sync docs</.link>.
             </p>
           </div>
+          <Common.alert id="cli-auth-banner" type="info" class="">
+            <:message>
+              You'll need to configure a Personal Access Token and add it to your environment for these commands to work: see
+              <.link
+                target="_blank"
+                href="https://docs.openfn.org/documentation/sync#authorization"
+                class="font-medium underline"
+              >
+                Authorization docs
+              </.link>
+            </:message>
+          </Common.alert>
           <div class="space-y-3 text-sm">
             <div :for={
               {{label, command}, i} <-
