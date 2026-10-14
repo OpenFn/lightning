@@ -286,7 +286,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
       assert has_element?(
                view,
                ~s{#cli-more-examples-link[target="_blank"][href="https://docs.openfn.org/documentation/cli-usage"]},
-               "See more CLI examples"
+               "See more CLI commands"
              )
     end
   end
