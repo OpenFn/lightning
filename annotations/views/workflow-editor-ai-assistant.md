@@ -20,6 +20,7 @@ inherits:
   - shared-project-scope            # LiveView half of removal (S07), role change (S08), support revoked (S09), deletion (S10)
   - shared-editor-session           # the shared Y.Doc AI changes land in, the Save that commits them, read-only states, limits in the session context
   - shared-workflow-yaml-format     # parsing, validation and the YAML-to-Y.Doc write behind apply, revert and restore (its S01-S11, and its 6.2 note on error copy here)
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: chat

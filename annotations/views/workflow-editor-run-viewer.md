@@ -24,6 +24,7 @@ inherits:
   - shared-dataclip-body-viewer     # the "Input" and "Output" tab bodies once a step has a dataclip id (its S01, S02, S04)
   - shared-run-retry-controls       # Retry for the loaded run reads the followed run and the selected job's step (its S02, S04); not restated here
   - shared-run-components
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: run
@@ -127,6 +128,7 @@ flows:
   - flow-zero-persistence-runs              # Input and Output tabs show a raw null for wiped dataclips (its 6.1); no scenario here until fixed
   - flow-workflow-api-edit-conflict         # opening a run on a pinned version starts a view-only session that still holds the API edit lock (its 6.2)
   - flow-account-revocation-teardown
+  - flow-legacy-editor-redirect   # added by lead (link lint)
 ---
 
 ## 1. Purpose

@@ -20,6 +20,7 @@ inherits:
   - shared-project-header           # show.ex:55-76 (project picker plus "History" and "Channels" breadcrumbs); side menu marked History via active_menu_item :runs (show.ex:31)
   - shared-run-components           # channel_state_pill (run_live/components.ex:140-160) via state_pill_with_tooltip (components.ex:182-195, :189, :192)
   - shared-local-datetime
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: project_id

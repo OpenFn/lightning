@@ -16,6 +16,7 @@ trigger:
 
 inherits:
   - shared-authenticated-session     # the :browser pipeline only (fetch_current_user writes live_socket_id, router.ex:28; user_auth.ex:175-192) and its S11 first-setup gate. Its S01 to S06 gates do not run here: this scope has no :require_authenticated_user
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: token (path segment of /users/reset_password/:token)

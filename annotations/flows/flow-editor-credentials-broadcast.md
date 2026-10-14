@@ -14,6 +14,7 @@ trigger:
     - workflow-editor-inspectors              # tab A: credential saved from "Configure connection" (collaborate.ex:393-430)
     - pubsub:workflow:collaborate:<workflow_id>#credentials_updated   # collaborate.ex:519-532
     - workflow-editor-inspectors              # tab B: channel forwards, store replaces the list (workflow_channel.ex:950-954; createCredentialStore.ts:295-303)
+    - workflow-editor-ide   # added by lead (link lint)
   reachable_when:
     - sending side: the LiveView accepted `open_credential_modal` and rendered CredentialFormComponent with `on_save` (collaborate.ex:145-187, :289-324)
     - receiving side: a WorkflowChannel joined on exactly `workflow:collaborate:<workflow_id>`, i.e. the latest view of the same workflow, not a pinned version or release (workflow_channel.ex:44-55, :2152-2160)

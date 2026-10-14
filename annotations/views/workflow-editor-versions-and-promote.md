@@ -23,6 +23,7 @@ inherits:
   - shared-editor-session            # S10 read-only pinned views, S14 refused pinned joins, S20 unload warning skipped for "Edit in sandbox", S07 workflow_saved
   - shared-dataclip-body-viewer      # GET /dataclip/body/:id access rules for the run input loaded in "Edit in sandbox" (EditInSandboxPicker.tsx:656); none of the viewer UI
   - shared-run-components
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: v

@@ -133,7 +133,7 @@ Held until the views they touch are catalogued, then deduplicated with those bat
 
 ## Overlaps to clean up
 
-- shared-flash-messages: every view should inherit it. Add it to `inherits` on all views in the final pass; the admin views note that the settings layout keeps toasts until clicked.
+- Done: shared-flash-messages added to `inherits` on every view except auth-confirm-access and auth-two-factor (no flash rendered) and admin-live-dashboard (third-party page).
 - auth-login S16 repeats flow-log-out S01's landing message.
 - auth-confirmation-required S10 duplicates flow-change-email-confirm S08.
 - shared-authenticated-session cites `first_setup.ex:127-149`; the plug is 34 lines. Re-cite.

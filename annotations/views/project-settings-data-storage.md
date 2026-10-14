@@ -20,6 +20,7 @@ inherits:
   - shared-usage-limits-banner            # on_mount :check_limits (settings.ex:52)
   - shared-project-header
   - shared-project-settings-tab-chrome    # tab navigation (S02, S04 use this tab), role notice (S06 row "editor | Data Storage"), sandbox Local banner (S08 row "Data Storage")
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: "#data-storage (URL fragment)"

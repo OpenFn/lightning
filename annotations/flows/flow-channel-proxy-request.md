@@ -17,6 +17,7 @@ trigger:
     - external:channel-client                   # receives the destination's response, with Lightning's security headers (channel_proxy_plug.ex:302-308)
     - history-channel-logs                      # the request is listed (history-channel-logs S01, S04, S13)
     - channel-request-show                      # the request's detail, including client auth and destination credential used (channel-request-show S13)
+    - project-settings-webhook-security   # added by lead (link lint)
   reachable_when:
     - any HTTP client holding the proxy URL; no Lightning session is needed and none is checked (endpoint.ex:76; channel_proxy_plug.ex:72-131)
     - the channel exists and is enabled (channel_proxy_plug.ex:318-323)

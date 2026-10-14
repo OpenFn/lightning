@@ -12,6 +12,7 @@ trigger:
     - first-setup                         # "Save" on /first_setup creates the superuser and redirects (superuser.ex:44-62)
     - controller:token-exchange           # GET /users/token_exchange/:token, UserSessionController.exchange_token/2 (router.ex:180; user_session_controller.ex:55-67); shared with flow-account-revocation-teardown
     - projects-dashboard                  # /projects, where the new superuser lands with "Superuser account created." (user_auth.ex:514)
+    - admin-user-edit   # added by lead (link lint)
   reachable_when:
     - first-setup-open: `allow_first_setup` is true, which bootstrap sets whenever `SERVICE_ACCOUNT_PUBLIC_KEY` is unset (`bootstrap.ex:230-234`); otherwise first-setup refuses the page (its S09, S10)
     - no user has role superuser when /first_setup is loaded (`superuser.ex:69-73`; `accounts.ex:1341-1344`); save does not re-check (first-setup 6.1)

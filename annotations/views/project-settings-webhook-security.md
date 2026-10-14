@@ -21,6 +21,7 @@ inherits:
   - shared-project-header
   - shared-project-settings-tab-chrome    # tab navigation, role notice (S06 row "editor | Webhook Security"), sandbox banner rules
   - shared-webhook-auth-method-form
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: "#webhook_security (URL fragment)"

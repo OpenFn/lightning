@@ -15,6 +15,7 @@ trigger:
     - pubsub:project_events:<project_id>#ProjectDeletionScheduled
     - projects-dashboard
     - oban:purge_deleted
+    - workflow-editor-ai-assistant   # added by lead (link lint)
   reachable_when:
     - project-settings-setup: viewer is an owner and the project is not a sandbox (settings.html.heex:304, settings.ex:262-267)
     - admin-projects: viewer is a superuser (index.ex:7, hooks.ex:40-53, policies/users.ex:19-21)

@@ -20,6 +20,7 @@ inherits:
   - shared-project-header
   - shared-project-settings-tab-chrome
   - shared-project-deletion-modal
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: project_id

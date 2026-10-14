@@ -13,6 +13,8 @@ trigger:
     - pubsub:project_events:<project_id>#WorkflowDeleted
     - workflow-editor-canvas
     - workflows-index
+    - workflow-health   # added by lead (link lint)
+    - workflow-editor-ai-assistant   # added by lead (link lint)
   reachable_when:
     - deleting side: viewer may `:delete_workflow` (index.ex:93-99, :289, project_users.ex:39-42, :166-172)
     - receiving side: a LiveView mounted with `{LightningWeb.Hooks, :ensure_workflow_belongs_to_project}` on that workflow's id (collaborate.ex:26, health.ex:11, hooks.ex:138-151)

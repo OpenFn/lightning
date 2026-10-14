@@ -21,6 +21,7 @@ inherits:
   - shared-project-header           # index.html.heex:10-21, side menu marked History (index.ex:144)
   - shared-run-components           # channel_state_pill (components.ex:140-160) in the Status column (channel_logs_component.ex:179)
   - shared-local-datetime
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: filters[channel_id]
@@ -67,6 +68,7 @@ related:
   - channels-index
 flows:
   - flow-zero-persistence-channel-requests
+  - flow-channel-proxy-request   # added by lead (link lint)
 ---
 
 ## 1. Purpose

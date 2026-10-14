@@ -22,6 +22,7 @@ inherits:
   - shared-editor-session
   - shared-adaptor-credential-config
   - shared-run-retry-controls
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: panel

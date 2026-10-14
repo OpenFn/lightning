@@ -15,6 +15,7 @@ trigger:
 
 inherits:
   - shared-authenticated-session     # the :browser pipeline it shares (fetch_current_user writes live_socket_id, router.ex:28; user_auth.ex:175-192) and the first-setup redirect (its S11). Its S01 to S06 gates do not run here: this scope has no :require_authenticated_user
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []                        # nothing is read from the query string; the return path lives in the session (flow-login-return-to)
 

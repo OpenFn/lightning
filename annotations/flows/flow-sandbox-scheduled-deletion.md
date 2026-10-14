@@ -15,6 +15,7 @@ trigger:
     - controller:webhooks
     - workflows-index
     - oban:purge_deleted
+    - workflow-editor-canvas   # added by lead (link lint)
   reachable_when:
     - sandboxes-index: the row is a sandbox (not the workspace root), not already scheduled, and the viewer is owner or admin on it or on the root (index.ex:107-127, :718-735; policies/sandboxes.ex:155-166)
     - project-settings-setup: the project is a sandbox and the viewer is its owner (settings.ex:262-276, settings.html.heex:296-303)

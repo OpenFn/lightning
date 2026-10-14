@@ -18,6 +18,7 @@ trigger:
 inherits:
   - shared-authenticated-session    # both routes: login redirect S01, disabled account S02, two-factor pending S03, lockout S04 to S06. The LiveView mounts InitAssigns through the unnamed `:sudo_auth` live_session (router.ex:258-262); the print page is a controller, so only the router-plug scenarios apply to it
   - shared-project-header           # LiveView only, no-project parts as profile-account cites them: global picker S11, S12; confirmation banner S13, S14; role menu S17; account menu S18 (layout_components.ex:259-296, menu.ex:89-110). The print page renders in the bare app layout (layouts/app.html.heex:1-5)
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: sudo_token

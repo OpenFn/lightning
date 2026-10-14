@@ -20,6 +20,7 @@ inherits:
   - shared-usage-limits-banner            # on_mount :check_limits (settings.ex:52)
   - shared-project-header
   - shared-project-settings-tab-chrome    # tab navigation, role notice (S06 row "editor | Security"), sandbox inherited banner (S09)
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: "#security (URL fragment)"

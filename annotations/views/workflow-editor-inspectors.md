@@ -25,6 +25,7 @@ inherits:
   - shared-adaptor-credential-config
   - shared-run-retry-controls
   - shared-workflow-yaml-format
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: job

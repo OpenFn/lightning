@@ -21,6 +21,7 @@ inherits:
   - shared-project-header
   - shared-project-settings-tab-chrome    # tab navigation (S01 to S04), role notice (S06 row "editor | Collections"), sandbox editable banner (S08 row "Collections", collections_component.ex:290-294)
   - shared-dataclip-body-viewer
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: "#collections (URL fragment)"

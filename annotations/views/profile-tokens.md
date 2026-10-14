@@ -18,6 +18,7 @@ inherits:
   - shared-authenticated-session    # login redirect S01, revoked session S02, TOTP pending S03, lockout S04 (confirmation_lockout_live_test.exs:79-97 covers this route), sidebar S07, book-a-demo banner S08 in the :banner slot (index.html.heex:2-8; book_demo_banner_test.exs:143-158), GDPR banner S10
   - shared-project-header           # no-project header only: global picker S11, S12; role menu S17; account menu S18 ("API Tokens" entry, layout_components.ex:165-170); confirmation banner S13, S14 (layout_components.ex:259-296)
   - shared-local-datetime           # "Created on" and "Last Used at" (index.html.heex:88, :95); S01, S02, S04, S05
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: id (path segment of /profile/tokens/:id/delete)

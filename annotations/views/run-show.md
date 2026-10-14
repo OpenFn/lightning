@@ -23,6 +23,7 @@ inherits:
   - shared-hash-tabs
   - shared-log-viewer
   - shared-dataclip-body-viewer
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: project_id

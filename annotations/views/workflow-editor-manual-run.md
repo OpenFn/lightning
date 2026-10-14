@@ -22,6 +22,7 @@ inherits:
   - shared-usage-limits-banner        # the page banner; run-limit refusal in this panel is S19 and S21 here
   - shared-editor-session
   - shared-run-retry-controls
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: panel=run

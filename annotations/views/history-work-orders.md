@@ -20,6 +20,7 @@ inherits:
   - shared-project-header
   - shared-run-components
   - shared-local-datetime
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: filters

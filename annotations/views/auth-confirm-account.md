@@ -19,6 +19,7 @@ trigger:
 
 inherits:
   - shared-authenticated-session     # plug half only, on the token and resend routes: S01 (login redirect), S02 (disabled account), S03 (TOTP pending), S05 and the lockout allow-list (confirmation_lockout.ex:18-33); S11 (first setup) applies to all three routes. This is a controller view, so InitAssigns and its chrome (S06 to S10) do not apply
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: token (path segment of /users/confirm/:token)

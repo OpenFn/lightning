@@ -17,6 +17,7 @@ trigger:
 
 inherits:
   - shared-authenticated-session     # the :browser pipeline only (fetch_current_user, router.ex:28) and its S11 first-setup redirect, which is how visitors arrive here. Its S01 to S06 gates and InitAssigns do not run: no :require_authenticated_user and no on_mount on this route (router.ex:66-69)
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []                        # mount and handle_params ignore params (superuser.ex:14, :25-27, :69)
 

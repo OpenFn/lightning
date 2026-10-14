@@ -13,6 +13,7 @@ trigger:
     - mfa-required
     - profile-mfa
     - workflows-index
+    - profile-backup-codes   # added by lead (link lint)
   reachable_when:
     - the actor is an owner or admin on the project and passes the usage limiter for `:require_mfa` (project-settings-security S01, S06; settings.ex:411-414)
     - the project is not a sandbox (project-settings-security S07; settings.html.heex:731-732)

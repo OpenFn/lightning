@@ -16,6 +16,12 @@ trigger:
     - controller:oidc-callback       # only under sso-provider (oidc_controller.ex:242-261)
     - auth-two-factor                # only for accounts with MFA enabled
     - projects-dashboard             # fallback exit
+    - workflows-index   # added by lead (link lint)
+    - auth-confirmation-required   # added by lead (link lint)
+    - auth-confirm-account   # added by lead (link lint)
+    - profile-mfa   # added by lead (link lint)
+    - auth-register   # added by lead (link lint)
+    - auth-confirm-access   # added by lead (link lint)
   reachable_when:
     - the visitor has no valid session or remember-me cookie (user_auth.ex:175-206, :290)
     - the request is a browser GET; JSON requests get a 401 and other methods store nothing (user_auth.ex:291-293, :490-494)

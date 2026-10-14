@@ -13,6 +13,11 @@ trigger:
     - capability:api-workflows-update                     # PUT/PATCH /api/projects/:project_id/workflows/:id (router.ex:119; workflows_controller.ex:307-319)
     - controller:api-workflows-update                     # 409 back to the API caller (workflows_controller.ex:580-591)
     - workflow-editor-canvas                              # after the editor closes: the API write lands and the next editor opens on it
+    - workflow-editor-run-viewer   # added by lead (link lint)
+    - workflow-editor-new   # added by lead (link lint)
+    - workflow-editor-ai-assistant   # added by lead (link lint)
+    - workflow-editor-versions-and-promote   # added by lead (link lint)
+    - workflow-editor-ide   # added by lead (link lint)
   reachable_when:
     - API side: a bearer token whose user may :edit_workflow on the project (router.ex:109-112, :119; workflows_controller.ex:311, :546-548, :558-567)
     - editor side: somebody holds a collaboration Session on the workflow id, in any view (latest, version, release or run) (workflow_channel.ex:62-72; collaboration.ex:39-72; workflow_resolver.ex:161-199)

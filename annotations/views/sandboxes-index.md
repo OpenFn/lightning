@@ -19,6 +19,7 @@ inherits:
   - shared-project-scope            # on_mount :project_scope (index.ex:27); access_root and project_label come from it (hooks.ex:104-119); S10 and S11 are the receiving end when a sandbox is deleted or merged here
   - shared-usage-limits-banner      # on_mount :check_limits and the :banner slot (index.ex:28, :556-562)
   - shared-project-header           # breadcrumbs, project picker, side menu with :sandboxes active (index.ex:36, :563-577)
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: project_id

@@ -19,6 +19,7 @@ inherits:
   - shared-authenticated-session
   - shared-project-header
   - shared-project-settings-tab-chrome
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []                      # the tab is selected by URL hash, not params; apply_action(:index) ignores params (settings.ex:233)
 

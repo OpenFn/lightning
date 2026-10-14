@@ -16,6 +16,7 @@ trigger:
 inherits:
   - shared-authenticated-session    # login redirect and session handling for /profile; S01 to S10
   - shared-project-header           # no-project parts only, as profile-account: account menu S18; experimental mode indicators S16 (menu.ex:18-37, layout_components.ex:111-134)
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []
 

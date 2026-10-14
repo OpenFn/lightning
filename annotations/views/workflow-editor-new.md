@@ -19,6 +19,7 @@ inherits:
   - shared-usage-limits-banner        # on_mount :check_limits and the :banner slot (collaborate.ex:27, :238-242)
   - shared-editor-session
   - shared-workflow-yaml-format
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: id

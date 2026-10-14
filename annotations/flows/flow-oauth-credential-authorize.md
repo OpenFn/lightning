@@ -14,6 +14,9 @@ trigger:
     - controller:oidc-callback              # GET /authenticate/callback, OidcController.new (router.ex:75); see 6.5 on the scope's /oauth/:provider/callback
     - pubsub:oauth_credential:<socket id>   # oauth_credential_helper.ex:51-53, :72-82
     - credentials-index                     # the originating LiveView's handle_info({:forward, ...}) and GenericOauthComponent
+    - workflow-editor-inspectors   # added by lead (link lint)
+    - project-settings-credentials   # added by lead (link lint)
+    - workflow-editor-ide   # added by lead (link lint)
   reachable_when:
     - the credential form is open with an OAuth client selected, as a new credential (credentials-index S27) or an existing one being edited
     - the client is offered to this user: own or global on /credentials, shared with the project or global elsewhere (oauth_clients.ex:60-89; credential_form_component.ex:1359-1362)

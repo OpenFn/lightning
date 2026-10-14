@@ -15,6 +15,7 @@ trigger:
     - controller:oidc-callback               # GET /authenticate/:provider/callback, OidcController.new (router.ex:77; oidc_controller.ex:46-73, :89-263)
     - auth-two-factor                        # only for accounts with MFA enabled (oidc_controller.ex:250-256)
     - projects-dashboard                     # default exit (user_auth.ex:63-70, :514)
+    - admin-auth-providers   # added by lead (link lint)
   reachable_when:
     - an auth provider is configured and its handler is in the node's handler cache, so the login page renders the link (user_session_controller.ex:75-86; auth_providers/store.ex:13-19); the routes themselves also build an uncached handler from the `auth_providers` row (auth_providers.ex:49-51, :91-94; store.ex:23-34)
     - the visitor is not signed in; a signed-in visitor to /authenticate/:provider is sent to /projects (oidc_controller.ex:20-21; user_auth.ex:271-279)

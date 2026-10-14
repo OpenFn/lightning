@@ -17,6 +17,7 @@ inherits:
   - shared-authenticated-session    # login redirect, lockout, sidebar toggle, book-a-demo banner in the :banner slot (index.ex:22-27, init_assigns.ex:46-54)
   - shared-local-datetime           # "Last Updated" column (components.ex:136-139)
   - shared-project-header           # global project picker (Ctrl/Cmd+P, "View all projects"), account menu and role-dependent menu only; see not_reachable_here and 6.5
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []                      # sort state lives in component assigns, not the URL (user_projects_section.ex:20, :24-37)
 
@@ -80,6 +81,7 @@ flows:
   - flow-sso-login
   - flow-first-superuser-sign-in
   - flow-admin-created-account-confirm
+  - flow-resend-account-confirmation   # added by lead (link lint)
 ---
 
 ## 1. Purpose

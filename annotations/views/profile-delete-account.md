@@ -20,6 +20,7 @@ inherits:
   - shared-project-header           # no-project header only: S11, S12, S13, S14, S17, S18, as profile-account
   - shared-local-datetime           # the "Created" date on the profile behind the modal (components.ex:17); S01, S04, S05
   - shared-user-deletion-modal
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: id (path segment)

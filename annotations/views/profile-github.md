@@ -17,6 +17,7 @@ trigger:
 inherits:
   - shared-authenticated-session    # page host; S01, S02, S03 (login redirect, disabled account, pending second factor)
   - shared-project-header           # no-project header and side menu of the host page, as profile-account; S11, S12, S17, S18
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []
 

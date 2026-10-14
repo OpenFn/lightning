@@ -15,6 +15,7 @@ trigger:
     - workflow-editor-versions-and-promote          # the pinned version (v=) or as-executed view (as_run=) the editor opens on
     - workflow-editor-ide                           # step inspect links carry panel=editor and job=<job id>
     - workflow-editor-run-viewer
+    - workflow-editor-canvas   # added by lead (link lint)
   reachable_when:
     - the run's workflow has not been deleted (hooks.ex:139-157, query.ex:35-40)
     - the run belongs to the project in the URL, for the run to be loaded (collaborate.ex:106-114; runs.ex:73-84)

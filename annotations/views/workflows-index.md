@@ -18,6 +18,7 @@ inherits:
   - shared-authenticated-session
   - shared-project-header
   - shared-local-datetime
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: q
@@ -84,6 +85,7 @@ flows:
   - flow-github-sync-actions
   - flow-login-return-to
   - flow-sandbox-merge
+  - flow-sandbox-scheduled-deletion   # added by lead (link lint)
 ---
 
 ## 1. Purpose

@@ -17,6 +17,7 @@ trigger:
 inherits:
   - shared-authenticated-session    # via the host page: login redirect S01, disabled account S02, two-factor pending S03 (a TOTP-pending session never reaches this card), lockout S04 to S06
   - shared-project-header           # via the host page, no-project parts only, as profile-account lists them; this card adds no chrome
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []
 

@@ -14,6 +14,7 @@ trigger:
     - email:project-addition
     - workflows-index
     - admin-projects   # added by lead: superuser project form also queues this email
+    - projects-dashboard   # added by lead (link lint)
   reachable_when:
     - the actor can add collaborators on the entry view (project-settings-collaborators S02)
     - at least one submitted email belongs to a registered user who is not yet on the project

@@ -21,6 +21,7 @@ inherits:
   - shared-authenticated-session      # login redirect, revoked sessions, TOTP and lockout gates, sidebar; S01 to S07 and S11. S08 to S10 do not apply (6.3)
   - shared-project-header             # no-project parts only: the confirmation banner in LayoutComponents.header (S13, S14), the global project picker opened by keyboard (S04, S06, S08, S10, S11, S12), the account menu (S18)
   - shared-user-deletion-modal        # the /delete route; is_current_user false, logout false, return_to /settings/users (user_live/components.ex:17-27); S01 to S09
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: id (path segment of /settings/users/:id/delete)

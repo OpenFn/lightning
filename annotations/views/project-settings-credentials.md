@@ -20,6 +20,7 @@ inherits:
   - shared-project-header
   - shared-project-settings-tab-chrome    # tab strip, "available credentials." notice (S06 row "viewer | Credentials"), sandbox "will sync to the parent project on merge" banner (S08 row "Credentials")
   - shared-credential-index-component     # the three tables, owner-only row actions (S01, S02), editor without keychain actions (S03), keychain delete (S04), cancel deletion (S05), forged-action refusal (S06)
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []                            # the tab is chosen by fragment; apply_action(:index) ignores params (settings.ex:233)
 

@@ -18,6 +18,7 @@ inherits:
   - shared-authenticated-session    # router.ex:189-190 (require_authenticated_user), :288 (live_session :default, InitAssigns)
   - shared-project-scope            # health.ex:10; its S12 is the deleted-workflow redirect, which this page takes via health.ex:11
   - shared-project-header           # health.ex:28-46 (project picker, "Workflows" and workflow crumbs, "Health")
+  - shared-flash-messages   # added by lead (final pass)
   # Not inherited: shared-usage-limits-banner (no :check_limits on_mount, no :banner slot; health.ex:10-11, :28-63),
   # shared-local-datetime and shared-run-components (nothing on this page renders Common.datetime or run components).
 

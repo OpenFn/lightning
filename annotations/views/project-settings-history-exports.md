@@ -21,6 +21,7 @@ inherits:
   - shared-project-header
   - shared-project-settings-tab-chrome    # tab navigation (S01-S05), no role notice (section 3 row "Notice on History exports"), sandbox Local banner (S08 row "History Exports"), no banner outside a sandbox (S10)
   - shared-local-datetime
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: "#history-exports (URL fragment)"

@@ -12,6 +12,7 @@ trigger:
     - workflow-editor-versions-and-promote       # picker: create a sandbox (with no input, the open run's reviewed input, or a saved input) or continue in one
     - workflow-editor-canvas                     # the sandbox's copy, opened by a LiveView navigate (react-component.tsx:80-86; EditInSandboxPicker.tsx:384-393)
     - workflow-editor-manual-run                 # only when an input was carried: panel=run&dataclip=<id> (EditInSandboxPicker.tsx:355-365)
+    - sandboxes-index   # added by lead (link lint)
   reachable_when:
     - experimental features on for the viewer (Header.tsx:255-259)
     - the open workflow is live, saved, and not in a sandbox (Header.tsx:836)

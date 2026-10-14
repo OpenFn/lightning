@@ -22,6 +22,7 @@ inherits:
   - shared-usage-limits-banner            # on_mount :check_limits (settings.ex:52); the GitHub-specific limit banner is this view's own (see S27)
   - shared-project-header
   - shared-project-settings-tab-chrome    # tab navigation; role notice (S06 rows "viewer | Sync to GitHub" and "editor | Sync to GitHub"); sandbox banner (S08 row "Sync to GitHub")
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: "#vcs (URL fragment)"

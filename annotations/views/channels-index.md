@@ -21,6 +21,7 @@ inherits:
   - shared-usage-limits-banner      # index.ex:14, :20-26
   - shared-project-header           # index.ex:27-40; side menu marked Channels via active_menu_item :channels (index.ex:113)
   - shared-local-datetime           # Last activity column (index.ex:382)
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: project_id

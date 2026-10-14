@@ -14,6 +14,7 @@ trigger:
     - capability:mail-recipients
     - email:project-digest
     - history-work-orders
+    - workflow-health   # added by lead (link lint)
   reachable_when:
     - the member has a project_users row on the project (support users without a row have no digest; digest_email_worker.ex:45-52)
     - the member set their own digest to Daily, Weekly or Monthly (project-settings-collaborators S23)

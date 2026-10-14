@@ -17,6 +17,7 @@ trigger:
 inherits:
   - shared-authenticated-session    # login redirect, lockout, sidebar toggle, GDPR banner; InitAssigns runs before this view's own on_mount (router.ex:288)
   - shared-project-header           # side menu (Menu.profile_items here), account menu, global project picker and confirmation banner in the live layout; per batch 4 lead resolution it owns these on non-project pages too
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []                      # takes no params; nothing records which project sent the user here (hooks.ex:100-101)
 

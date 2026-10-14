@@ -18,6 +18,7 @@ inherits:
   - shared-authenticated-session    # login redirect, lockout, sidebar, book-a-demo banner in the :banner slot (edit.html.heex:2-8), GDPR banner; S01 to S10
   - shared-project-header           # no-project header only: global picker S11, S12; role menu S17; account menu S18; confirmation banner S13, S14 (layout_components.ex:259-296)
   - shared-local-datetime           # "Created" date (components.ex:17); S01, S04, S05
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params: []
 

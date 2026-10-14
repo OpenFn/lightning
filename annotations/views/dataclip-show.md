@@ -20,6 +20,7 @@ inherits:
   - shared-project-header           # show.ex:48-67 (project picker, "Dataclip" breadcrumb)
   - shared-local-datetime           # show.ex:92-94, :100-102, :109-111 (Created, Updated, Wiped)
   - shared-dataclip-body-viewer
+  - shared-flash-messages   # added by lead (final pass)
 
 url_params:
   - name: project_id
