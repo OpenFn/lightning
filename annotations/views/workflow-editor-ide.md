@@ -152,18 +152,30 @@ the editor, guessing which input and which version of the code actually ran.
 
 ## 2. What it does
 
-- Members open a step's code full screen from the canvas, a run link or the AI assistant, and close it back to the canvas
-- Editors type job code; collaborators see each other's text and named cursors live
-- Viewers, and anyone on an older version, read the code without being able to change it
-- Members switch between the workflow's steps without leaving the IDE
-- Members read the adaptor's documentation for the job's adaptor version; editors add an example to the code
-- Members browse metadata from the job's credential; editors get metadata and type suggestions while typing
-- Members collapse, reopen and re-orient the docs panel
-- Editors change the job's adaptor, version and credential from the IDE header, and connect a new credential
-- Members open run history, pick a run and read it beside the code
-- Editors open the run panel and run or retry from the IDE, including by keyboard
-- People in a sandbox see that they are in one
-- Members see when the job isn't in the version they opened
+- **Open and move around** (members)
+  - Members open a step's code full screen from the canvas, a run link or the AI assistant, and close it back to the canvas
+  - Members switch between the workflow's steps without leaving the IDE, and see when the job isn't in the version they opened
+  - People in a sandbox see that they are in one
+- **Write code together** (editors)
+  - Editors type job code and see collaborators' text and named cursors live; viewers and anyone on an older version can read but not change it
+  - Editors change the job's adaptor, version and credential from the IDE header, and connect a new credential
+- **Get help while writing**
+  - Members read the adaptor's documentation for the job's adaptor version, and editors add an example to the code
+  - Members browse metadata from the job's credential, and editors get metadata and type suggestions while typing
+  - Members collapse, reopen and re-orient the docs panel
+- **Use runs beside the code**
+  - Members open run history, pick a run and read it beside the code
+  - Editors open the run panel and run or retry from the IDE, including by keyboard
+
+**Straightforwardness: 3 of 5.** Writing code is simple, but the metadata panel works from the last saved job and its credential in ways you need explained, and it fails with a single misleading message.
+
+### Most surprising behaviours
+
+- **(2)** Metadata comes from the job as last saved, not from the adaptor or credential you just changed. After a change you see the old adaptor's metadata, or "No metadata found", with no way to refresh until you save and reopen. (6.1)
+- **(2)** Every metadata problem, from a missing or broken credential to a busy server, a keychain credential or a sandbox with no environment, shows the same "No metadata found… this adaptor does not support magic functions yet", which blames the adaptor. (6.1, 6.2)
+- **(3)** A viewer simply opening the IDE can make the server log in to the external system with the project's credential, and can even refresh an expired OAuth token, which writes to the credential and the audit log. (6.2)
+- **(3)** The code becomes read-only whenever the connection drops, so you can't keep typing through a brief reconnect, even though the code seems meant to allow offline editing. (6.1)
+- **(3)** When metadata finishes loading while the Metadata tab is open, the IDE may go blank. This is suspected from the code, not seen. (6.1)
 
 ## 3. Who can do what
 

@@ -91,13 +91,25 @@ instance-wide access.
 
 ## 2. What it does
 
-- Superusers see every account with its name, email, role, enabled state, support flag and scheduled deletion date
-- Superusers filter the list by name, email or role
-- Superusers sort the list by any column and reverse the order
-- Superusers open the deletion dialog for a non-superuser account
-- Superusers cancel a scheduled deletion, which re-enables the account
-- Superuser accounts are never offered an active delete action
-- Superusers go from the list to create a user or edit one
+- **See every account**
+  - Superusers see every account with its name, email, role, enabled state, support flag and scheduled deletion date
+  - Superusers filter the list by name, email or role, and sort it by any column in either direction
+- **Remove or rescue accounts**
+  - Superusers open the deletion dialog for a non-superuser account, or "delete now" one already scheduled
+  - Superusers cancel a scheduled deletion, which re-enables the account
+  - Superuser accounts are never offered an active delete action
+- **Create or change accounts**
+  - Superusers go from the list to create a user or edit one
+
+**Straightforwardness: 3 of 5.** A plain admin list on the surface, but cancelling a deletion does less, and sometimes more, than the word "cancel" suggests.
+
+### Most surprising behaviours
+
+- **(2)** Cancelling a deletion may not save the account: if the nightly sweep has already queued it for purging, the page says "User deletion canceled" and the account and its credentials are removed anyway. This was read from the code, not run. (6.1)
+- **(3)** Cancelling always re-enables the account, even one an admin had disabled on purpose before it was scheduled, and it leaves no audit record, unlike other admin edits. (6.1, 6.2)
+- **(3)** A rescued user can sign in again, but their API tokens and sessions stay revoked, so their scripts and integrations still fail. (S07)
+- **(3)** The list never refreshes. Another admin's deletions, or the nightly purge, only show after you navigate away, and cancelling an account that has already gone seems to crash and reload the page rather than show an error. (6.1, 6.2)
+- **(4)** Filtering by "user" also shows every superuser, and scheduled deletion dates are shown in UTC with no year and no label saying so. (6.2)
 
 ## 3. Who can do what
 

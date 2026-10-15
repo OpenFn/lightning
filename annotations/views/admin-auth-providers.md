@@ -68,15 +68,27 @@ plaintext endpoint, lets someone who is not the account holder sign in as them.
 
 ## 2. What it does
 
-- Superusers with no provider configured land on an empty provider form
-- Superusers create a provider with name, discovery URL, client ID, client secret and redirect host
-- Superusers see the redirect URI to register with the provider, built from the host and name
-- Superusers can't save a provider with a missing field or a malformed name
-- Superusers test that the discovery document is reachable and usable before relying on it
-- Superusers can't get a passing test from a plaintext discovery URL
-- Superusers edit the existing provider, and sign-ins use the new settings
-- Superusers choose whether to trust unverified emails from the provider (off by default)
-- Superusers remove the provider, which turns off SSO
+- **Set up the provider**
+  - Superusers with no provider configured land on an empty form, and create one with name, discovery URL, client ID, client secret and redirect host
+  - Superusers see the redirect URI to register with the provider, built from the host and name
+  - Superusers can't save a provider with a missing field or a malformed name
+- **Check it works**
+  - Superusers test that the discovery document is reachable and usable before relying on it
+  - Superusers can't get a passing test from a plaintext discovery URL
+- **Change or remove it**
+  - Superusers edit the existing provider, and sign-ins use the new settings
+  - Superusers choose whether to trust unverified emails from the provider (off by default)
+  - Superusers remove the provider, which turns off SSO
+
+**Straightforwardness: 2 of 5.** A short form, but when a change actually takes effect depends on caching you have to think hard about, and several settings matter for security without the page saying so.
+
+### Most surprising behaviours
+
+- **(2)** Changes don't reach every server at once. On a multi-server install, removing the provider can leave SSO working on some servers for up to 30 minutes, and a renamed provider's old name keeps working too. (6.1)
+- **(2)** A newly created provider doesn't show "via external provider" on the login page for up to 30 minutes, so an admin who signs out to try it finds no SSO button. (6.1)
+- **(2)** A passing test doesn't mean SSO works: it never checks the client ID or secret, and Save doesn't need a passing test, so a plaintext discovery URL can be saved and then fail every sign-in. (6.2)
+- **(2)** The stored client secret is sent to the browser on the edit page and kept unencrypted, and nothing here, including switching on "trust unverified emails", leaves an audit record. (6.1, 6.2)
+- **(3)** The "Authentication" menu link always opens a blank form, and saving it creates a second provider, after which the edit page crashes. Remove has no confirmation. (6.1, 6.2)
 
 ## 3. Who can do what
 

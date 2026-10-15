@@ -105,13 +105,26 @@ change, and an instance admin has no single view of what projects exist and who 
 
 ## 2. What it does
 
-- Superusers see every project with its creation date, description, owner and scheduled deletion date
-- Superusers see which projects have no owner
-- Superusers filter the list by name, description or owner, and sort it by any column
-- Superusers create a project with a name and a set of members, one of them the owner, without joining it
-- Superusers rename a project and add, re-role or remove its members
-- Superusers are stopped from saving a project without exactly one owner
-- Superusers schedule a project for deletion, cancel a scheduled deletion, or purge a scheduled project now
+- **See every project**
+  - Superusers see every project with its creation date, description, owner and scheduled deletion date, and which have no owner
+  - Superusers filter the list by name, description or owner, and sort it by any column
+- **Create a project**
+  - Superusers create a project with a name and a set of members, one of them the owner, without joining it
+- **Change a project**
+  - Superusers rename a project and add, re-role or remove its members
+  - Superusers are stopped from saving a project without exactly one owner
+- **Retire a project**
+  - Superusers schedule a project for deletion, cancel a scheduled deletion, or purge a scheduled project now
+
+**Straightforwardness: 3 of 5.** The list and the deletion actions are simple; the member form is where things go quietly wrong, and its effects reach well beyond this page.
+
+### Most surprising behaviours
+
+- **(2)** Filtering the member list inside the form seems to drop the hidden people from what gets saved: on edit the page may crash, and on a new project an owner picked before filtering can silently vanish. Read from the code, not run. (6.1)
+- **(2)** Handing a project to a new owner in one save may fail with no visible message, so "Save" appears to do nothing. Read from the code, not run. (6.1)
+- **(3)** Removing a member also takes their own credentials off the project, with no confirmation or warning, so workflows using those credentials may stop working. Project settings warns about this; this page doesn't. (S09, 6.2)
+- **(3)** A superuser can manage any project here but may be refused when they try to open it, because admin access and project access are separate. (6.5)
+- **(3)** A project already scheduled for deletion can still be edited, and anyone added gets an access email whose link leads to "Not Found". Disabled accounts can be added and emailed too. (6.1)
 
 ## 3. Who can do what
 

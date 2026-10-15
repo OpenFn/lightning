@@ -86,15 +86,26 @@ environment, and actions that could take the instance down.
 
 ## 2. What it does
 
-- Superusers open the dashboard and see a summary of the running system
-- Superusers browse OS, memory, application, process, port, socket, ETS and Postgres statistics
-- Superusers watch Lightning's chosen request, database, VM and page-load metrics live
-- Superusers capture the server log lines of chosen requests
-- Superusers inspect other nodes in the cluster
-- Environment variables are not shown
-- Processes and database connections cannot be killed from the page
-- Non-superusers and signed-out visitors can't open it (inherited)
-- A superuser who is demoted loses the open dashboard
+- **Look at the running system**
+  - Superusers open the dashboard and see a summary of the running system
+  - Superusers browse OS, memory, application, process, port, socket, ETS and Postgres statistics, on this or any other node in the cluster
+- **Watch and trace**
+  - Superusers watch Lightning's chosen request, database, VM and page-load metrics live
+  - Superusers capture the server log lines of chosen requests
+- **What it refuses**
+  - Environment variables are not shown
+  - Processes and database connections cannot be killed from the page
+- **Who gets in**
+  - Non-superusers and signed-out visitors can't open it, and a superuser who is demoted loses the open dashboard
+
+**Straightforwardness: 3 of 5.** Most of it is a read-only monitoring screen you get at a glance, but the request log capture reaches well beyond the page and needs explaining.
+
+### Most surprising behaviours
+
+- **(2)** A request log link works for whoever opens it, signed in or not, for an hour, and it works on every route including webhooks and the API. So a superuser can watch the server logs of another user's or an anonymous caller's requests. (6.2, 8)
+- **(3)** The metrics charts start empty and only show what happens while the page is open; a reload loses them. The two webhook charts never show anything, however much webhook traffic arrives. (6.4, 6.1)
+- **(3)** The database statistics may show real SQL text from live queries, and every refresh runs statistics queries against the production database. Not checked whether any personal data appears. (6.4, 6.5)
+- **(4)** The dashboard has its own look with no Lightning menu or Back link, and its home page shows the dashboard library's name and version rather than Lightning's. (6.2)
 
 ## 3. Who can do what
 

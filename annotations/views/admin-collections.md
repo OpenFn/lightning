@@ -75,20 +75,31 @@ project, data that must be removed) would have nobody able to do it outside the 
 
 ## 2. What it does
 
-- Superusers see every collection on the instance with its project and used storage
-- An instance with no collections shows an empty state that opens the create form
-- Superusers create a collection in any project, with its URL-safe name shown before saving
-- A name that isn't URL safe can't be saved
-- Collection names are unique within a project
-- The same name can be used in different projects
-- On a plan that limits collections, creating one past the limit is refused with the plan's message
-- Superusers rename a collection
-- Superusers move a collection to another project
-- A move into a project that already has that name is refused
-- Superusers delete a collection and all its records, after confirming
-- Superusers close a form or confirmation without changing anything
-- Superusers sort the list by name or used storage
-- A change made here is what the owning project's members see on their collections tab
+- **See every collection**
+  - Superusers see every collection on the instance with its project and used storage, and sort by name or storage
+  - An instance with no collections shows an empty state that opens the create form
+- **Create a collection**
+  - Superusers create a collection in any project, with its URL-safe name shown before saving; a name that isn't URL safe can't be saved
+  - Names are unique within a project, but the same name can be used in different projects
+  - On a plan that limits collections, creating one past the limit is refused with the plan's message
+- **Rename or move a collection**
+  - Superusers rename a collection, or move it to another project, keeping its records
+  - A move into a project that already has that name is refused
+- **Delete a collection**
+  - Superusers delete a collection and all its records, after confirming
+  - Superusers close a form or confirmation without changing anything
+- **Effect on projects**
+  - A change made here is what the owning project's members see on their collections tab
+
+**Straightforwardness: 3 of 5.** The page itself is a simple list with forms; the surprises come from it acting on any project with none of that project's own rules, and from what a rename or move does to the jobs using the collection.
+
+### Most surprising behaviours
+
+- **(2)** Renaming, moving or deleting a collection gives no warning that jobs referring to it by name will stop finding it. Creating a same-name collection in a second project can also break API calls that look it up by name alone. (8, 4)
+- **(3)** Moving a collection skips the plan limit checks, so on a limited plan it can push a project past its collection or storage limit while the old project keeps the usage. (6.1)
+- **(3)** Superusers can change or delete any project's collections without being a member and without MFA, even on a project that requires it, and none of it is audited. (6.2)
+- **(3)** The form says names must be unique across the whole instance, but they only need to be unique within a project. The project picker also starts on the first project alphabetically, so it's easy to create a collection in the wrong place. (6.1, 6.2)
+- **(4)** Project members with the collections tab already open keep seeing the old list until they reload. (4)
 
 ## 3. Who can do what
 

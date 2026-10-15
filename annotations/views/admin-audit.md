@@ -89,6 +89,15 @@ be indistinguishable from changes made by people.
 - Superusers can tell automated actors (GitHub, a trigger, a service account) from people, and still see who acted after that account or actor was deleted
 - Superusers page through the full history ten events at a time
 
+**Straightforwardness: 4 of 5.** A read-only list you understand at a glance; the surprises are about what it leaves out or shows by accident, not how it works.
+
+### Most surprising behaviours
+
+- **(2)** OAuth client IDs and secrets in the trail are only lightly encoded, not encrypted, so anyone reading the page can recover them, unlike webhook secrets on the same page. (6.1)
+- **(3)** A password change shows up as a user "updated" event with "No changes", so it's effectively invisible. Token refreshes and failures, service account scopes and export filters also read as "No changes". (6.1, 4)
+- **(3)** There is no filter or search, the subject is just a type and a short id with no name or link, and every event pill is green, so a failed token refresh or a removal looks like any other event. (6.1, 6.2)
+- **(4)** Nothing is ever deleted, and every workflow save adds an event, so on a busy instance the trail grows without limit and is mostly workflow snapshots. (6.4)
+
 ## 3. Who can do what
 
 | Action | Signed out | Regular user | Support user | Superuser |

@@ -122,16 +122,27 @@ mean rebuilding it by hand, and a half-created workflow could exist only in the 
 
 ## 2. What it does
 
-- Editors and above see a landing screen with the ways to start a workflow
-- People who cannot create workflows are sent back to the workflow list
-- Editors build a blank workflow (webhook trigger, one empty step) in one click
-- Editors browse, search and preview templates, then create a workflow from one
-- Editors import a workflow from a pasted or uploaded YAML file, with validation errors shown before creating
-- On instances with the AI assistant, editors describe a workflow and hand it to the assistant
-- A created workflow is saved straight away under a name unique in the project, and the editor moves to its address
-- Creation that cannot reach the server, or fails to save, tells the user and can be retried
-- At the workflow activation limit, a new workflow is still created but with its triggers off
-- When the AI assistant quota is spent, the AI prompt is disabled with the limit message
+- **Get to the starting screen**
+  - Editors and above see a landing screen with the ways to start a workflow
+  - People who cannot create workflows are sent back to the workflow list
+- **Choose a starting point** (editors)
+  - Editors build a blank workflow (webhook trigger, one empty step) in one click
+  - Editors browse, search and preview templates and create from one, or import a pasted or uploaded YAML file, with validation errors shown before creating
+  - On instances with the AI assistant, editors describe a workflow and hand it to the assistant; when the AI quota is spent the prompt is disabled with the limit message
+- **Create and save it**
+  - A created workflow is saved straight away under a name unique in the project, and the editor moves to its address
+  - Creation that cannot reach the server, or fails to save, tells the user and can be retried
+  - At the workflow activation limit, a new workflow is still created but with its triggers off
+
+**Straightforwardness: 3 of 5.** Four clear ways in, but what a new workflow actually does the moment it is created (live triggers, silently disabled ones, a shared template catalogue) needs explaining.
+
+### Most surprising behaviours
+
+- **(2)** Every new workflow is created with its triggers switched on. A blank workflow's webhook URL accepts requests at once, and the "Scheduled workflow" template starts running every night at midnight against a placeholder address. With experimental features it can even read as Draft while its trigger is live. (6.1)
+- **(3)** At the activation limit the new workflow's triggers are switched off without any message, so the user just finds a workflow that doesn't start and no reason why. (S27, 6.1)
+- **(3)** Choosing "Build with AI" can't be undone: the landing screen is gone and the AI panel has no close button, so switching to a template or import needs a page reload. (6.2)
+- **(3)** The template catalogue seems to be shared across the whole instance, so every editor can see every published template, job code included, whichever project it came from. (6.5)
+- **(4)** After creating, the browser tab keeps saying "New Workflow" until a reload, and if someone deletes the new workflow this tab may not be sent away. (6.1)
 
 ## 3. Who can do what
 

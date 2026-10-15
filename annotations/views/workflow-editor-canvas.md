@@ -154,23 +154,33 @@ version that isn't the current one, or change a workflow that is live in product
 
 ## 2. What it does
 
-- Members see the workflow as a diagram of its triggers, steps and paths
-- Editors add a step from a step's plus button or by dragging a path onto empty canvas
-- Editors connect two steps with a path
-- Editors cannot draw a path to themselves, to a trigger, back up the workflow or twice between the same steps
-- Members select a step or path to open its inspector, and click empty canvas to close it
-- Editors undo and redo canvas edits
-- Editors switch between automatic and manual layout, drag steps in manual layout and re-run automatic layout
-- Members fit the diagram to the screen
-- Viewers, readers of an older version and (with experimental features) editors of a live workflow get a read-only canvas
-- Editors switch the workflow on or off from the header (without experimental features)
-- With experimental features, editors see a Live or Draft badge and go live or switch to draft with confirmation
-- With experimental features in a sandbox, editors turn the sandbox's copy on or off
-- Members see the project path, environment and workflow name in the header, and the title returns them to the bare canvas
-- Members open workflow settings from the header, which turns red when settings are invalid
-- Members are told when a newer build of Lightning has been deployed
-- Unconfirmed users are told to confirm their account (require-email-verification)
-- The editor follows a workflow switched, deleted or archived elsewhere (flows)
+- **See the workflow** (members)
+  - Members see the workflow as a diagram of its triggers, steps and paths, and fit it to the screen
+  - Members click a step or path to open its inspector, and empty canvas to close it
+  - Members see the project path, environment and workflow name in the header (the name returns them to the bare canvas), and open workflow settings, which turn red when invalid
+- **Build and arrange** (editors)
+  - Editors add a step from a step's plus button or by dragging a path onto empty canvas, and connect two steps; paths to the same step, to a trigger, back up the workflow or duplicates are refused
+  - Editors undo and redo canvas edits
+  - Editors switch between automatic and manual layout, drag steps in manual layout and re-run automatic layout
+- **Switch it on, off or live** (editors)
+  - Without experimental features, editors switch the workflow on or off from the header
+  - With experimental features, editors see a Live or Draft badge and go live or switch to draft after confirming
+  - With experimental features in a sandbox, editors turn the sandbox's copy on or off
+- **Read-only canvas**
+  - Viewers, anyone reading an older version and (with experimental features) editors of a live workflow get a canvas they can look at but not change
+- **Stay in step with the outside world**
+  - Members are told when a newer build of Lightning has been deployed, and unconfirmed users are told to confirm their account
+  - The editor follows a workflow switched off, deleted or archived elsewhere
+
+**Straightforwardness: 2 of 5.** The diagram itself is easy, but whether you can edit, and how you turn a workflow on, depends on your role, the version you opened, a personal experimental setting and whether you're in a sandbox, and those combine in ways you have to think through.
+
+### Most surprising behaviours
+
+- **(2)** Whether a live workflow is locked depends on each person's own experimental setting, not the workflow. In the same session one colleague sees it locked while another can edit and save it straight into production. (6.2)
+- **(2)** Pressing Ctrl+Z or Ctrl+Y while typing in any field on the page undoes or redoes changes to the workflow, not the text you were typing. (6.2)
+- **(3)** Going live saves whatever is on screen, including edits nobody has saved yet, so half-finished changes can go straight into production. (S15)
+- **(3)** Just having the workflow open, even as a viewer or on an old version, blocks anyone from updating it through the API, so a deploy script can fail because someone left a tab open. (S29, 6.5)
+- **(3)** If two people save at almost the same moment, the second save may fail with a vague "internal error" rather than telling them someone else saved first. (6.1)
 
 ## 3. Who can do what
 

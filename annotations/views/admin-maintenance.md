@@ -72,14 +72,24 @@ access intervenes.
 ## 2. What it does
 
 - Superusers see the two maintenance actions on one page
-- Superusers start an adaptor registry refresh and are told it was queued
-- Superusers are told when a registry refresh could not be started
-- A registry refresh started while another is running joins it instead of starting a second
-- Superusers start an icon refresh and see its result, with counts, when it finishes
-- Superusers are told when an icon refresh fails
-- An icon refresh changes icons only, never adaptor versions or metadata
-- Under the local adaptors strategy, an icon refresh reads icons from the local adaptors repo
-- Changes from either refresh reach open workflow editors, node caches and credentials elsewhere on the instance
+- **Refresh the adaptor registry**
+  - Superusers start a registry refresh and are told it was queued, or that it could not be started
+  - A refresh started while another is running joins it instead of starting a second
+- **Refresh adaptor icons**
+  - Superusers start an icon refresh and see its result, with counts, or an error if it fails
+  - An icon refresh changes icons only, never adaptor versions or metadata
+  - Under the local adaptors strategy, icons are read from the local adaptors repo
+- **Effects across the instance**
+  - Changes from either refresh reach open workflow editors, node caches and credentials elsewhere on the instance
+
+**Straightforwardness: 3 of 5.** Two buttons, but what each one reports doesn't always match what actually happened, and the effects land on every open editor on the instance.
+
+### Most surprising behaviours
+
+- **(2)** "Adaptor refresh queued." is the only message the registry refresh ever gives. If the refresh then fails upstream, the page says nothing, so the admin believes it worked. (6.1)
+- **(2)** An icon refresh that takes over two minutes is reported as failed, but it keeps running and may still change the icons shortly after. On failure the "started" message also stays up beside the error. (6.1)
+- **(3)** The registry card says "Re-fetch", but it only refetches adaptors whose version changed or whose schema is still missing; it can't force a fix for an adaptor that looks current. (6.2, 6.5)
+- **(3)** Neither button is disabled while it runs, and each extra icon click starts another full refetch of every icon. Neither action leaves an audit record of who ran it. (6.2, 4)
 
 ## 3. Who can do what
 

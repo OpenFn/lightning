@@ -147,29 +147,35 @@ overwrite another's.
 
 ## 2. What it does
 
-- Anyone on the project opens a step, trigger, path or the workflow settings in a side panel from the canvas or a link
-- Editors rename a step and see collaborators' changes to it live
-- Editors pick a step's adaptor, version and credential in one dialog, with matching credentials offered first
-- Editors are warned that changing adaptor clears the step's credential
-- Editors create a credential from the step and have it attached when saved; only a credential's owner can edit it from here
-- Admins create keychain credentials from the step; others cannot
-- Editors delete a step, except one other steps depend on or the first step
-- Editors jump from a step to its code editor or a manual run from it
-- Anyone sees a webhook trigger's URLs, attached authentication and response behaviour, and copies the URLs
-- Editors change a trigger in a draft wizard that writes nothing until Finish
-- Editors give a webhook a custom URL path, checked for format and uniqueness before Finish
-- Editors choose when a webhook responds and its default status codes
-- Admins attach and detach webhook authentication methods, and create new ones from the trigger
-- Editors switch a trigger between webhook and schedule without re-enabling it
-- Editors build a cron schedule from presets or a raw expression, and choose its input source
-- Editors set a path's condition, label and JavaScript expression, and disable or delete job-to-job paths
-- Editors rename the workflow, toggle console logging and cap concurrency within the project limit
-- Editors reset the workflow to its last saved snapshot for everyone
-- Anyone views, copies and downloads the workflow as YAML
-- Support users publish or update the workflow as a template
-- Read-only viewers see every panel with editing controls disabled and a reason
-- Escape closes the topmost layer, one at a time
-- A panel for a node someone else deleted closes
+- **Open and read the panels** (anyone on the project)
+  - Anyone opens a step, trigger, path or the workflow settings in a side panel from the canvas or a link; Escape closes the topmost layer one at a time, and a panel for something a collaborator deleted closes
+  - Anyone sees a webhook trigger's URLs, attached authentication and response behaviour, and copies the URLs
+  - Read-only viewers see every panel with editing controls disabled and a reason
+- **Configure a step** (editors)
+  - Editors rename a step and see collaborators' changes live, delete it unless other steps depend on it or it is the first step, and jump to its code editor or a manual run
+  - Editors pick the adaptor, version and credential in one dialog, with matching credentials first, and are warned that changing adaptor clears the credential
+  - Editors create a credential from the step and have it attached; only a credential's owner can edit it here, and only admins can create keychain credentials
+- **Configure a trigger** (editors, in a draft that writes nothing until Finish)
+  - Editors give a webhook a custom URL path, checked for format and uniqueness before Finish, and choose when it responds and its default status codes
+  - Admins attach and detach webhook authentication methods, and create new ones from the trigger
+  - Editors switch a trigger between webhook and schedule without re-enabling it, and build a cron schedule from presets or a raw expression, with its input source
+- **Configure paths and the workflow** (editors)
+  - Editors set a path's condition, label and JavaScript expression, and disable or delete paths between steps
+  - Editors rename the workflow, toggle console logging and cap concurrency within the project limit
+  - Editors reset the workflow to its last saved version for everyone
+- **Share it**
+  - Anyone views, copies and downloads the workflow as YAML
+  - Support users publish or update the workflow as a template
+
+**Straightforwardness: 3 of 5.** Each panel makes sense on its own, but you need it explained that some changes wait for the workflow save while others take effect straight away, and that credential and adaptor choices have quiet knock-on effects.
+
+### Most surprising behaviours
+
+- **(2)** Webhook authentication changes are saved to the database the moment you click Finish, while every other trigger change waits for the workflow save. Protection can be added or removed for real even if the rest of your edits are never saved, and Cancel can't undo it. (6.2, S27)
+- **(3)** Editors are offered the keychain credential option, can fill in the whole form, and then nothing happens when they save, because only admins may create one. (6.1)
+- **(3)** Picking a new adaptor sets it to "latest", but just reopening the connection dialog quietly pins it to today's newest version, so the step stops picking up future releases. (6.2)
+- **(3)** Editing a credential that is shared with several projects may point the step at another project's copy of it, which then fails on save. (6.1)
+- **(3)** Webhook status codes accept any number, such as 999 or -5, and the reply to the partner system may then fail. (6.1)
 
 ## 3. Who can do what
 
