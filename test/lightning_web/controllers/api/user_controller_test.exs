@@ -364,6 +364,19 @@ defmodule LightningWeb.API.UserControllerTest do
       refute inspect(audit.changes) =~ @password
     end
 
+    test "answers 400 malformed for a body that is not a JSON object", %{
+      conn: conn
+    } do
+      for body <- [[%{"email" => "array@example.com"}], "user", 7] do
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post(~p"/api/users", Jason.encode!(body))
+        |> assert_problem(400, :malformed, [])
+      end
+
+      refute Accounts.get_user_by_email("array@example.com")
+    end
+
     test "needs users:write", %{conn: conn, account: account} do
       conn =
         conn
@@ -401,6 +414,20 @@ defmodule LightningWeb.API.UserControllerTest do
         )
 
       %{conn: with_scopes(conn, account, ["users:write"]), user: user}
+    end
+
+    test "answers 400 malformed for a body that is not a JSON object", %{
+      conn: conn,
+      user: user
+    } do
+      for body <- [[%{"first_name" => "Grace"}], "Grace", 7] do
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> patch(~p"/api/users/#{user.id}", Jason.encode!(body))
+        |> assert_problem(400, :malformed, [])
+      end
+
+      assert Repo.reload!(user).first_name == "Ada"
     end
 
     test "changes the names and role and answers 200 as a create would", %{

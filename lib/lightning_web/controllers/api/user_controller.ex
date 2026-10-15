@@ -13,6 +13,8 @@ defmodule LightningWeb.API.UserController do
   with the user rendered as a 201 renders one. The email can't be changed, and
   `confirmed` only ever confirms.
 
+  Either answers 400 `malformed` to a body that isn't a JSON object.
+
   `GET /api/users` is paginated, at most 100 a page, and filters by `?email=`
   without regard to case. An `email` that isn't a string answers 400
   `invalid_parameter`.
@@ -26,6 +28,7 @@ defmodule LightningWeb.API.UserController do
   alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
   alias LightningWeb.API.Problem
+  alias LightningWeb.API.PutBody
   alias LightningWeb.Plugs.AuthorizeAction
 
   action_fallback FallbackController
@@ -60,6 +63,7 @@ defmodule LightningWeb.API.UserController do
   def update(conn, %{"id" => id} = params) do
     with :ok <- permit(conn, :write_users),
          {:ok, user} <- fetch_user(id),
+         :ok <- PutBody.check_object(conn.body_params),
          {:ok, user} <-
            Accounts.update_user(
              user,
@@ -71,7 +75,8 @@ defmodule LightningWeb.API.UserController do
   end
 
   def create(conn, params) do
-    with :ok <- permit(conn, :write_users) do
+    with :ok <- permit(conn, :write_users),
+         :ok <- PutBody.check_object(conn.body_params) do
       case Accounts.create_user(
              Map.take(params, @create_fields),
              conn.assigns.current_resource

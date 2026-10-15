@@ -30,6 +30,9 @@ and this project adheres to
     of the entries, instead of 409.
   - `POST /api/users` and `PATCH /api/users/:id` answer a field error with 422
     `invalid` instead of `{"errors": {"<field>": ["<message>"]}}`.
+  - `POST /api/users` and `PATCH /api/users/:id` with a body that isn't a JSON
+    object, such as an array, answer 400 `malformed`, where a create answered
+    422 and an update changed nothing and answered 200.
   - `GET /api/users` with an `email` that isn't a string answers 400
     `invalid_parameter` with an entry naming the `email` parameter, instead
     of 422.
@@ -73,6 +76,8 @@ and this project adheres to
     refuses (`#/credential_bodies/0/body/host`), where every refusal used to be
     one `"Environment 1: body Invalid body types"`, and an OAuth token's at the
     field it refuses, where the request used to fail with a 500.
+  - `POST /api/credentials` with a body that isn't a JSON object, such as an
+    array, answers 400 `malformed` instead of 422.
   - `POST /api/credentials` with a name the user already holds, or an external
     ID already in use, answers 409 `taken` with an entry at `#/name` or
     `#/external_id`, instead of 422.

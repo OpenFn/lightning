@@ -625,6 +625,20 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert project2.id in project_ids
     end
 
+    test "answers 400 malformed for a body that is not a JSON object", %{
+      conn: conn,
+      user: user
+    } do
+      for body <- [[%{"name" => "Listed", "schema" => "raw"}], "Listed", 7] do
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post(~p"/api/credentials", Jason.encode!(body))
+        |> assert_problem(400, :malformed, [])
+      end
+
+      assert Lightning.Credentials.list_credentials(user) == []
+    end
+
     test "links a project named twice once", %{conn: conn, user: user} do
       project =
         insert(:project, project_users: [%{user_id: user.id, role: :editor}])

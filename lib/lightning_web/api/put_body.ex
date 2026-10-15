@@ -2,7 +2,8 @@ defmodule LightningWeb.API.PutBody do
   @moduledoc """
   What every create-or-replace `PUT /:id` route shares: the checks on its path
   id and body before the body reaches a changeset (error-format spec §7 item 8,
-  §9.5, §9.6), and telling when its insert lost a race for the id.
+  §9.5, §9.6), and telling when its insert lost a race for the id. Other API
+  routes use the path id and JSON object checks too.
   """
   alias LightningWeb.API.Errors
   alias LightningWeb.API.Problem
@@ -19,17 +20,27 @@ defmodule LightningWeb.API.PutBody do
   """
   @spec check(map(), Ecto.UUID.t(), [atom()]) ::
           {:ok, [Errors.entry()]} | {:error, Problem.t()}
-  def check(%{"_json" => _not_an_object}, _path_id, _accepted),
+  def check(body, path_id, accepted) do
+    with :ok <- check_object(body) do
+      unknown =
+        (Map.keys(body) -- Enum.map(accepted, &Atom.to_string/1))
+        |> Enum.sort()
+        |> Enum.map(&Errors.entry([&1], {"is not accepted", code: :unknown_key}))
+
+      {:ok, unknown ++ id_mismatch(body, path_id)}
+    end
+  end
+
+  @doc """
+  `:ok` when `body`, a request's body params, was a JSON object. Otherwise a
+  400 `malformed` problem, for any route that takes an object (spec §9.5).
+  Plug.Parsers puts any other JSON value under `"_json"`.
+  """
+  @spec check_object(map()) :: :ok | {:error, Problem.t()}
+  def check_object(%{"_json" => _not_an_object}),
     do: {:error, Problem.new(:malformed)}
 
-  def check(body, path_id, accepted) do
-    unknown =
-      (Map.keys(body) -- Enum.map(accepted, &Atom.to_string/1))
-      |> Enum.sort()
-      |> Enum.map(&Errors.entry([&1], {"is not accepted", code: :unknown_key}))
-
-    {:ok, unknown ++ id_mismatch(body, path_id)}
-  end
+  def check_object(_body), do: :ok
 
   @doc """
   The path's id, written out as a UUID.

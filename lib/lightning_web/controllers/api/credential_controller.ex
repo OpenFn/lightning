@@ -147,6 +147,7 @@ defmodule LightningWeb.API.CredentialController do
   ## Returns
 
   - `201 Created` with credential JSON including body
+  - `400 Bad Request` (`malformed`) when the body isn't a JSON object
   - `422 Unprocessable Entity` on validation errors, with one entry for each
     project link the user may not make
 
@@ -174,9 +175,10 @@ defmodule LightningWeb.API.CredentialController do
     scope = conn.assigns.scope
     owner = scope.actor
 
-    {link_entries, project_ids} = check_links(params, [], {:ok, owner}, scope)
-
-    with :ok <- Errors.refuse(link_entries),
+    with :ok <- PutBody.check_object(conn.body_params),
+         {link_entries, project_ids} =
+           check_links(params, [], {:ok, owner}, scope),
+         :ok <- Errors.refuse(link_entries),
          {:ok, credential} <-
            Credentials.create_credential(
              Map.merge(params, %{
