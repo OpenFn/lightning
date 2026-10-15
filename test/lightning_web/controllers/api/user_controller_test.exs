@@ -116,7 +116,7 @@ defmodule LightningWeb.API.UserControllerTest do
       assert Accounts.get_user_by_email_and_password(user.email, @password)
     end
 
-    test "answers 409 with the existing user when the email is taken in any case",
+    test "answers 409 taken with only the existing user's id when the email is taken in any case",
          %{conn: conn} do
       existing =
         insert(:user,
@@ -135,65 +135,131 @@ defmodule LightningWeb.API.UserControllerTest do
           role: "user"
         })
 
-      assert json_response(conn, 409) == %{
-               "data" => %{
-                 "type" => "users",
-                 "id" => existing.id,
-                 "attributes" => %{
-                   "email" => "taken@example.com",
-                   "first_name" => "Tak",
-                   "last_name" => "En",
-                   "role" => "superuser"
-                 },
-                 "links" => %{"self" => user_url(existing.id)}
-               }
-             }
+      body =
+        assert_problem(conn, 409, :taken, [
+          %{
+            "pointer" => "#/email",
+            "code" => "taken",
+            "detail" => "has already been taken"
+          }
+        ])
+
+      assert body["existing"] == %{"id" => existing.id}
+
+      assert body |> Map.keys() |> Enum.sort() ==
+               ~w(code detail errors existing status title type)
     end
 
-    test "answers 422 keyed by the request's field names", %{conn: conn} do
-      assert json_response(
-               post(conn, ~p"/api/users", %{
-                 email: "not-an-email",
-                 password: "short",
-                 role: "admin",
-                 confirmed: "perhaps",
-                 first_name: String.duplicate("a", 256),
-                 last_name: "Long"
-               }),
-               422
-             ) == %{
-               "errors" => %{
-                 "first_name" => ["should be at most 255 character(s)"],
-                 "email" => ["Email address not valid."],
-                 "password" => ["Password minimum length is 12 characters."],
-                 "role" => ["is invalid"],
-                 "confirmed" => ["is invalid"]
-               }
-             }
+    test "answers 422 when the email is taken and another field is wrong", %{
+      conn: conn
+    } do
+      insert(:user, email: "taken@example.com")
 
-      assert json_response(
-               post(conn, ~p"/api/users", %{
-                 email: "nul@example.com",
-                 password: "abcdefghijkl\0anything",
-                 first_name: "Nul",
-                 last_name: "a\0b"
-               }),
-               422
-             ) == %{
-               "errors" => %{
-                 "password" => ["can't contain a NUL character"],
-                 "last_name" => ["can't contain control characters"]
-               }
-             }
+      conn =
+        post(conn, ~p"/api/users", %{
+          email: "taken@example.com",
+          password: "short",
+          first_name: "Other",
+          last_name: "Person"
+        })
 
-      assert json_response(post(conn, ~p"/api/users", %{}), 422) == %{
-               "errors" => %{
-                 "email" => ["This field can't be blank."],
-                 "password" => ["This field can't be blank."],
-                 "first_name" => ["This field can't be blank."],
-                 "last_name" => ["This field can't be blank."]
-               }
-             }
+      body =
+        assert_problem(conn, 422, :invalid, [
+          %{
+            "pointer" => "#/email",
+            "code" => "taken",
+            "detail" => "has already been taken"
+          },
+          %{
+            "pointer" => "#/password",
+            "code" => "too_short",
+            "detail" => "should be at least 12 character(s)"
+          }
+        ])
+
+      refute Map.has_key?(body, "existing")
+    end
+
+    test "answers 422 with an entry at each field the request got wrong", %{
+      conn: conn
+    } do
+      conn
+      |> post(~p"/api/users", %{
+        email: "not-an-email",
+        password: "short",
+        role: "admin",
+        confirmed: "perhaps",
+        first_name: String.duplicate("a", 256),
+        last_name: "Long"
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/first_name",
+          "code" => "too_long",
+          "detail" => "should be at most 255 character(s)"
+        },
+        %{
+          "pointer" => "#/email",
+          "code" => "format",
+          "detail" => "must be a valid email address"
+        },
+        %{
+          "pointer" => "#/password",
+          "code" => "too_short",
+          "detail" => "should be at least 12 character(s)"
+        },
+        %{
+          "pointer" => "#/role",
+          "code" => "not_allowed",
+          "detail" => "is invalid"
+        },
+        %{"pointer" => "#/confirmed", "code" => "type", "detail" => "is invalid"}
+      ])
+
+      conn
+      |> post(~p"/api/users", %{
+        email: "nul@example.com",
+        password: "abcdefghijkl\0anything",
+        first_name: "Nul",
+        last_name: "a\0b"
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/password",
+          "code" => "format",
+          "detail" => "can't contain a NUL character"
+        },
+        %{
+          "pointer" => "#/last_name",
+          "code" => "format",
+          "detail" => "can't contain control characters"
+        }
+      ])
+
+      conn
+      |> post(~p"/api/users", %{})
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/email",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/password",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/first_name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/last_name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ])
     end
 
     test "answers 422 for a user without both names, for either role", %{
@@ -215,8 +281,20 @@ defmodule LightningWeb.API.UserControllerTest do
             Map.merge(%{email: email, password: @password, role: role}, names)
           )
 
-        assert %{"errors" => errors} = json_response(conn, 422)
-        assert errors |> Map.keys() |> Enum.sort() == blank
+        assert_problem(
+          conn,
+          422,
+          :invalid,
+          Enum.map(
+            blank,
+            &%{
+              "pointer" => "#/" <> &1,
+              "code" => "required",
+              "detail" => "can't be blank"
+            }
+          )
+        )
+
         refute Accounts.get_user_by_email(email)
       end
     end
@@ -374,14 +452,15 @@ defmodule LightningWeb.API.UserControllerTest do
       conn: conn,
       user: user
     } do
-      assert json_response(
-               patch(conn, ~p"/api/users/#{user.id}", %{
-                 password: "hello world!\0anything"
-               }),
-               422
-             ) == %{
-               "errors" => %{"password" => ["can't contain a NUL character"]}
-             }
+      conn
+      |> patch(~p"/api/users/#{user.id}", %{password: "hello world!\0anything"})
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/password",
+          "code" => "format",
+          "detail" => "can't contain a NUL character"
+        }
+      ])
     end
 
     test "signs the user out when its role changes", %{conn: conn, user: user} do
@@ -467,41 +546,59 @@ defmodule LightningWeb.API.UserControllerTest do
       assert Accounts.get_user_by_email_and_password(user.email, "hello world!")
     end
 
-    test "answers 422 keyed by the request's field names", %{
+    test "answers 422 with an entry at each field the request got wrong", %{
       conn: conn,
       user: user
     } do
-      assert json_response(
-               patch(conn, ~p"/api/users/#{user.id}", %{
-                 first_name: "  ",
-                 last_name: "a\0b",
-                 password: "short",
-                 role: "admin",
-                 confirmed: "perhaps"
-               }),
-               422
-             ) == %{
-               "errors" => %{
-                 "first_name" => ["This field can't be blank."],
-                 "last_name" => ["can't contain control characters"],
-                 "password" => ["Password minimum length is 12 characters."],
-                 "role" => ["is invalid"],
-                 "confirmed" => ["is invalid"]
-               }
-             }
+      conn
+      |> patch(~p"/api/users/#{user.id}", %{
+        first_name: "  ",
+        last_name: "a\0b",
+        password: "short",
+        role: "admin",
+        confirmed: "perhaps"
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/first_name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/last_name",
+          "code" => "format",
+          "detail" => "can't contain control characters"
+        },
+        %{
+          "pointer" => "#/password",
+          "code" => "too_short",
+          "detail" => "should be at least 12 character(s)"
+        },
+        %{
+          "pointer" => "#/role",
+          "code" => "not_allowed",
+          "detail" => "is invalid"
+        },
+        %{"pointer" => "#/confirmed", "code" => "type", "detail" => "is invalid"}
+      ])
 
-      assert json_response(
-               patch(conn, ~p"/api/users/#{user.id}", %{
-                 last_name: "",
-                 password: "abcdefghijkl\0anything"
-               }),
-               422
-             ) == %{
-               "errors" => %{
-                 "last_name" => ["This field can't be blank."],
-                 "password" => ["can't contain a NUL character"]
-               }
-             }
+      conn
+      |> patch(~p"/api/users/#{user.id}", %{
+        last_name: "",
+        password: "abcdefghijkl\0anything"
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/last_name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/password",
+          "code" => "format",
+          "detail" => "can't contain a NUL character"
+        }
+      ])
 
       assert %User{first_name: "Ada", last_name: "Lovelace", role: :user} =
                Accounts.get_user(user.id)
@@ -511,13 +608,13 @@ defmodule LightningWeb.API.UserControllerTest do
     end
 
     test "answers 404 for a user that doesn't exist", %{conn: conn} do
-      assert conn
-             |> patch(~p"/api/users/#{Ecto.UUID.generate()}", %{first_name: "A"})
-             |> json_response(404)
+      conn
+      |> patch(~p"/api/users/#{Ecto.UUID.generate()}", %{first_name: "A"})
+      |> assert_problem(404, :not_found)
 
-      assert conn
-             |> patch(~p"/api/users/not-a-uuid", %{first_name: "A"})
-             |> json_response(404)
+      conn
+      |> patch(~p"/api/users/not-a-uuid", %{first_name: "A"})
+      |> assert_problem(404, :not_found)
     end
 
     test "records what changed, with the service account as the actor", %{
@@ -770,13 +867,15 @@ defmodule LightningWeb.API.UserControllerTest do
                |> json_response(200)
     end
 
-    test "answers 422 for an email filter that isn't a string", %{conn: conn} do
+    test "answers 400 invalid_parameter for an email filter that isn't a string",
+         %{conn: conn} do
       insert(:user, email: "x@example.com")
 
-      assert %{"errors" => %{"email" => ["is invalid"]}} =
-               conn
-               |> get(~p"/api/users?email[]=x@example.com")
-               |> json_response(422)
+      conn
+      |> get(~p"/api/users?email[]=x@example.com")
+      |> assert_problem(400, :invalid_parameter, [
+        %{"parameter" => "email", "code" => "type", "detail" => "is invalid"}
+      ])
     end
 
     test "needs users:read", %{conn: conn, account: account} do
@@ -804,6 +903,52 @@ defmodule LightningWeb.API.UserControllerTest do
     end
   end
 
+  describe "error answers on every users route" do
+    setup %{conn: conn, account: account} do
+      %{
+        conn: with_scopes(conn, account, ["users:read", "users:write"]),
+        planted:
+          plant_sentinel(%{
+            "email" => nil,
+            "password" => nil,
+            "first_name" => nil,
+            "last_name" => nil,
+            "role" => nil,
+            "confirmed" => nil
+          })
+      }
+    end
+
+    test "never quote a value from the request", %{conn: conn, planted: planted} do
+      user = insert(:user)
+
+      conn
+      |> post(~p"/api/users", planted)
+      |> refute_sentinel()
+      |> assert_problem(422, :invalid)
+
+      conn
+      |> patch(~p"/api/users/#{user.id}", Map.delete(planted, "email"))
+      |> refute_sentinel()
+      |> assert_problem(422, :invalid)
+
+      conn
+      |> patch(~p"/api/users/#{planted["email"]}", %{first_name: "A"})
+      |> refute_sentinel()
+      |> assert_problem(404, :not_found)
+
+      conn
+      |> get("/api/users?email[]=" <> planted["email"])
+      |> refute_sentinel()
+      |> assert_problem(400, :invalid_parameter)
+
+      conn
+      |> get(~p"/api/users/#{planted["email"]}")
+      |> refute_sentinel()
+      |> assert_problem(404, :not_found)
+    end
+  end
+
   describe "GET /api/users/:id" do
     test "shows the user its self link names", %{conn: conn, account: account} do
       user = insert(:user, email: "shown@example.com")
@@ -815,11 +960,11 @@ defmodule LightningWeb.API.UserControllerTest do
       assert id == user.id
       assert self == user_url(user.id)
 
-      assert conn
-             |> get(~p"/api/users/#{Ecto.UUID.generate()}")
-             |> json_response(404)
+      conn
+      |> get(~p"/api/users/#{Ecto.UUID.generate()}")
+      |> assert_problem(404, :not_found)
 
-      assert conn |> get(~p"/api/users/not-a-uuid") |> json_response(404)
+      conn |> get(~p"/api/users/not-a-uuid") |> assert_problem(404, :not_found)
     end
   end
 end

@@ -21,6 +21,21 @@ and this project adheres to
   `"code": "insufficient_scope"` instead of `{"error": "insufficient_scope"}`,
   and its `WWW-Authenticate` header names the one scope the request needed, as
   in `Bearer error="insufficient_scope", scope="credentials:write"`.
+- `/api/users` answers every error with a problem document, whose `errors` list
+  has one entry per field, each with a `pointer`, a `code` and a `detail`:
+  - `POST /api/users` with an email already taken answers 409 with
+    `"code": "taken"`, an entry at `#/email` and the existing user's id in
+    `existing.id`, instead of the existing user as `{"data": {...}}`. When
+    another field is also wrong it answers 422 `invalid`, with the email as one
+    of the entries, instead of 409.
+  - `POST /api/users` and `PATCH /api/users/:id` answer a field error with 422
+    `invalid` instead of `{"errors": {"<field>": ["<message>"]}}`.
+  - `GET /api/users` with an `email` that isn't a string answers 400
+    `invalid_parameter` with an entry naming the `email` parameter, instead
+    of 422.
+  - `GET /api/users/:id` and `PATCH /api/users/:id` for a user that doesn't
+    exist, or an id that isn't a UUID, answer 404 `not_found` instead of
+    `{"error": "Not Found"}`.
 
 ### Added
 
