@@ -618,7 +618,13 @@ defmodule Lightning.Credentials do
         {:error, changeset}
 
       {:error, {:credential_body, index}, %Ecto.Changeset{} = failed, _changes} ->
-        {:error, put_body_errors(credential_changeset, index, failed)}
+        {:error,
+         nest_errors(
+           credential_changeset,
+           :credential_bodies,
+           [:credential_bodies, index],
+           failed.errors
+         )}
 
       {:error, _op, error, _changes} ->
         {:error, error}
@@ -636,17 +642,17 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp put_body_errors(credential_changeset, index, body_changeset) do
-    Enum.reduce(body_changeset.errors, credential_changeset, fn
-      {field, {message, opts}}, acc ->
-        key = [:credential_bodies, index | List.wrap(opts[:key] || field)]
+  defp nest_errors(changeset, field, prefix, child_errors) do
+    Enum.reduce(child_errors, changeset, fn
+      {child_field, {message, opts}}, acc ->
+        key = prefix ++ List.wrap(opts[:key] || child_field)
 
-        # The options are the body changeset's own, so they already carry a
+        # The options are the child changeset's own, so they already carry a
         # code or Ecto's validation options.
         # credo:disable-for-next-line Lightning.Credo.Check.ChangesetErrorCode
         Ecto.Changeset.add_error(
           acc,
-          :credential_bodies,
+          field,
           message,
           Keyword.put(opts, :key, key)
         )
@@ -724,17 +730,14 @@ defmodule Lightning.Credentials do
         Ecto.Changeset.put_change(changeset, :body, updated_body)
 
       {:error, %Ecto.Changeset{errors: typed_errors}} ->
-        Enum.reduce(typed_errors, changeset, fn {field, {message, opts}}, acc ->
-          # The schema's own errors, which carry a code or Ecto's validation
-          # options, at the body key they are about.
-          # credo:disable-for-next-line Lightning.Credo.Check.ChangesetErrorCode
-          Ecto.Changeset.add_error(
-            acc,
-            :body,
-            message,
-            Keyword.put(opts, :key, [:body, Atom.to_string(field)])
-          )
-        end)
+        nest_errors(
+          changeset,
+          :body,
+          [:body],
+          Enum.map(typed_errors, fn {field, error} ->
+            {Atom.to_string(field), error}
+          end)
+        )
 
       {:error, reason} when reason in [:not_ready, :timeout, :unavailable] ->
         Ecto.Changeset.add_error(
