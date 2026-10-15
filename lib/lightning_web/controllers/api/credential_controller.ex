@@ -413,19 +413,23 @@ defmodule LightningWeb.API.CredentialController do
   defp link_refusal(nil, _owner_unreachable?), do: Errors.not_visible()
 
   defp link_refusal(project_scope, owner_unreachable?) do
-    cond do
-      not Scope.has_standing?(project_scope) ->
+    case ProjectUsers.authorize(
+           :create_project_credential,
+           project_scope,
+           project_scope.project
+         ) do
+      {:error, :no_standing} ->
         Errors.not_visible()
 
-      not ProjectUsers.permitted?(:create_project_credential, project_scope) ->
-        {"you may not link a credential to this project", code: :no_access}
-
-      owner_unreachable? ->
+      true when owner_unreachable? ->
         {"the credential's owner is not a member of this project",
          code: :no_access}
 
       true ->
         nil
+
+      _refused ->
+        {"you may not link a credential to this project", code: :no_access}
     end
   end
 
