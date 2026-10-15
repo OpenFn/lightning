@@ -114,6 +114,26 @@ defmodule LightningWeb.API.ErrorsTest do
              ]
     end
 
+    test "places a new project's member errors by request position, with the owner first" do
+      changeset =
+        Project.project_with_users_changeset(%Project{}, %{
+          "name" => "members",
+          "project_users" => [
+            %{"user_id" => insert(:user).id, "role" => "owner"},
+            %{"user_id" => insert(:user).id, "role" => "editor"},
+            %{"user_id" => insert(:user).id, "role" => "boss"}
+          ]
+        })
+
+      assert Errors.from_changeset(changeset, %{project_users: :members}) == [
+               %{
+                 pointer: "#/members/2/role",
+                 code: :not_allowed,
+                 detail: "is invalid"
+               }
+             ]
+    end
+
     test "codes a value outside an ecto_enum defenum's set not_allowed, not type" do
       changeset =
         ProjectUser.changeset(%ProjectUser{}, %{

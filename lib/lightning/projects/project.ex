@@ -306,7 +306,12 @@ defmodule Lightning.Projects.Project do
 
   # Children are written in list order and the one-owner index can't be
   # deferred, so an ownership handover only succeeds if the old owner's
-  # demotion reaches the database before the new owner's row.
+  # demotion reaches the database before the new owner's row. A new project
+  # has no owner to demote, so its members keep the request's order, which
+  # the API places their errors by (error-format spec §7 item 3).
+  defp write_owner_last(%{data: %{__meta__: %{state: :built}}} = changeset),
+    do: changeset
+
   defp write_owner_last(changeset) do
     case get_change(changeset, :project_users) do
       nil ->
