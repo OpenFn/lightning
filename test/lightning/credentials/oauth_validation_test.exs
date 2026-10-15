@@ -259,7 +259,9 @@ defmodule Lightning.Credentials.OauthValidationTest do
         {%{"scope" => nil, "scopes" => planted}, :type, "scopes"},
         {%{"expires_in" => planted}, :type, "expires_in"},
         {%{"expires_in" => 999_999_999}, :out_of_range, "expires_in"},
-        {%{"expires_in" => nil, "expires_at" => planted}, :format, "expires_at"}
+        {%{"expires_in" => nil, "expires_at" => planted}, :format, "expires_at"},
+        {%{"expires_in" => nil, "expires_at" => "1700000000\n"}, :format,
+         "expires_at"}
       ]
 
       for {overrides, code, field} <- refused do

@@ -542,21 +542,22 @@ defmodule Lightning.Credentials.OauthValidation do
 
   defp validate_expires_at(expires_at)
        when is_binary(expires_at) and byte_size(expires_at) > 0 do
-    cond do
-      Regex.match?(~r/^\d+$/, expires_at) ->
-        expires_at |> String.to_integer() |> validate_expires_at()
+    case Integer.parse(expires_at) do
+      {timestamp, ""} ->
+        validate_expires_at(timestamp)
 
-      String.contains?(expires_at, ["T", "Z"]) or
-          String.match?(expires_at, ~r/\d{4}-\d{2}-\d{2}/) ->
-        :ok
-
-      true ->
-        refuse(
-          :invalid_expiration,
-          "expires_at",
-          "expires_at must be a Unix timestamp or ISO 8601 date string",
-          code: :format
-        )
+      _not_a_timestamp ->
+        if String.contains?(expires_at, ["T", "Z"]) or
+             String.match?(expires_at, ~r/\d{4}-\d{2}-\d{2}/) do
+          :ok
+        else
+          refuse(
+            :invalid_expiration,
+            "expires_at",
+            "expires_at must be a Unix timestamp or ISO 8601 date string",
+            code: :format
+          )
+        end
     end
   end
 
