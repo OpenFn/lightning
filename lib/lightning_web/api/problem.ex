@@ -23,8 +23,6 @@ defmodule LightningWeb.API.Problem do
   Options:
 
     * `:errors` - the entries, from `LightningWeb.API.Errors`.
-    * `:status` - overrides the code's status. Only `/i/*` needs it, to keep
-      429 for a plan limit (spec §12).
     * `:extensions` - members the spec names for this answer, such as
       `existing` or `work_order_id`.
     * `:headers` - response headers that belong to the answer, such as
@@ -34,7 +32,7 @@ defmodule LightningWeb.API.Problem do
   def new(code, opts \\ []) do
     %__MODULE__{
       code: code,
-      status: Keyword.get_lazy(opts, :status, fn -> Codes.status(code) end),
+      status: Codes.status(code),
       errors: Keyword.get(opts, :errors, []),
       extensions: Keyword.get(opts, :extensions, %{}),
       headers: Keyword.get(opts, :headers, [])

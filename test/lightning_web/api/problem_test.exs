@@ -67,12 +67,6 @@ defmodule LightningWeb.API.ProblemTest do
       assert get_resp_header(conn, "retry-after") == ["5"]
       assert %{"work_order_id" => "wo-1"} = assert_problem(conn, 503, :not_ready)
     end
-
-    test "a status override keeps the code's detail" do
-      conn = respond(nil, Problem.new(:exceeds_limit, status: 429))
-
-      assert_problem(conn, 429, :exceeds_limit)
-    end
   end
 
   describe "FallbackController" do
