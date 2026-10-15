@@ -12,7 +12,6 @@ defmodule LightningWeb.API.ErrorsTest do
   alias Lightning.Workflows.Workflow
   alias LightningWeb.API.Errors
   alias LightningWeb.API.Problem
-  alias LightningWeb.API.PutRequest
 
   @adaptor "@openfn/language-common@latest"
 
@@ -192,14 +191,22 @@ defmodule LightningWeb.API.ErrorsTest do
     end
 
     test "raises on an error with no code" do
-      {:ok, changeset} =
-        PutRequest.changeset(%{}, "not-a-uuid", {%{}, %{id: :binary_id}})
+      changeset =
+        {%{}, %{id: :binary_id}}
+        |> Ecto.Changeset.cast(%{}, [])
+        |> Ecto.Changeset.add_error(:id, "is not a UUID")
 
       assert_raise ArgumentError,
                    ~r/"is not a UUID" at \[:id\] has no code/,
-                   fn ->
-                     Errors.from_changeset(changeset)
-                   end
+                   fn -> Errors.from_changeset(changeset) end
+    end
+  end
+
+  describe "entry/2" do
+    test "raises on an error with no code" do
+      assert_raise ArgumentError,
+                   ~r/"is not accepted" at \[:colour\] has no code/,
+                   fn -> Errors.entry([:colour], {"is not accepted", []}) end
     end
   end
 
