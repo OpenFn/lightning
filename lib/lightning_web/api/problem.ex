@@ -5,6 +5,7 @@ defmodule LightningWeb.API.Problem do
   """
   alias LightningWeb.API.Codes
   alias LightningWeb.API.Errors
+  alias Plug.Conn.Utils
 
   @enforce_keys [:status, :code]
   defstruct [:status, :code, errors: [], extensions: %{}, headers: []]
@@ -77,11 +78,11 @@ defmodule LightningWeb.API.Problem do
     asks_for_problem? =
       conn
       |> Plug.Conn.get_req_header("accept")
-      |> Enum.flat_map(&Plug.Conn.Utils.list/1)
+      |> Enum.flat_map(&Utils.list/1)
       |> Enum.any?(
         &match?(
           {:ok, "application", "problem+json", _params},
-          Plug.Conn.Utils.media_type(&1)
+          Utils.media_type(&1)
         )
       )
 
