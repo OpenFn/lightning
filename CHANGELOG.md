@@ -40,12 +40,14 @@ and this project adheres to
   - A project that doesn't exist answers 404 `not_found` instead of
     `{"error": "Not Found"}`, and so does an id that isn't a UUID, instead of
     400 `{"error": "Bad Request"}`.
-  - A caller who isn't a member of the project, or hasn't met its MFA
-    requirement, gets 403 `forbidden` instead of 401
+  - A caller who isn't a member of the project gets 404 `not_found`, the same
+    answer as for a project that doesn't exist, and a member who hasn't met its
+    MFA requirement gets 403 `forbidden`, both instead of 401
     `{"error": "Unauthorized"}`.
   - A project scheduled for deletion answers 409 `scheduled_for_deletion` to a
-    caller who may see the project, and 403 `forbidden` to anyone else, instead
-    of 401 `{"error": "Unauthorized"}`.
+    caller who may see the project, 404 `not_found` to a non-member and 403
+    `forbidden` to a member who hasn't met its MFA requirement, instead of 401
+    `{"error": "Unauthorized"}`.
 - `/api/credentials` answers every error with a problem document, whose `errors`
   list has one entry per refused field, each with a `pointer`, a `code` and a
   `detail`:
@@ -55,9 +57,10 @@ and this project adheres to
   - `GET /api/projects/:project_id/credentials` (and `?project_id=`) for a
     project that doesn't exist answers 404 `not_found` instead of
     `{"error": "Not Found"}`, and so does an id that isn't a UUID, instead of
-    400 `{"error": "Bad Request"}`. A caller who isn't a member gets 403
-    `forbidden` instead of `{"error": "Forbidden"}`. A project scheduled for
-    deletion answers 409 `scheduled_for_deletion` to a member, instead of 403.
+    400 `{"error": "Bad Request"}`. A caller who isn't a member gets 404
+    `not_found`, the same answer as for a project that doesn't exist, instead of
+    403 `{"error": "Forbidden"}`. A project scheduled for deletion answers 409
+    `scheduled_for_deletion` to a member, instead of 403.
   - `POST /api/credentials` with a link to a project the caller can't see, or
     that doesn't exist, answers 422 `invalid` with a `not_found` entry at that
     link's `project_id`, and a link to a project where the caller may not add
