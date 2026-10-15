@@ -67,6 +67,21 @@ defmodule LightningWeb.API.PutBodyTest do
               ]}
   end
 
+  test "gives a mismatch for a 16-byte body id whose raw bytes are the path's id" do
+    raw = "aaaaaaaaaaaaaaaa"
+    path_id = Ecto.UUID.cast!(raw)
+
+    assert PutBody.check(%{"id" => raw}, path_id, @accepted) ==
+             {:ok,
+              [
+                %{
+                  pointer: "#/id",
+                  code: :mismatch,
+                  detail: "does not match the id in the path"
+                }
+              ]}
+  end
+
   describe "path_id/1" do
     test "takes a UUID written out, in any case" do
       assert PutBody.path_id(String.upcase(@id)) == {:ok, @id}
