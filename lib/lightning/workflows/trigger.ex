@@ -276,7 +276,8 @@ defmodule Lightning.Workflows.Trigger do
       add_error(
         changeset,
         :custom_path,
-        "needs a project, which comes from the trigger's workflow"
+        "needs a project, which comes from the trigger's workflow",
+        code: :required
       )
     else
       changeset
@@ -309,7 +310,10 @@ defmodule Lightning.Workflows.Trigger do
         <<_::288>> ->
           case Ecto.UUID.cast(path) do
             {:ok, _} ->
-              [custom_path: {"cannot be a UUID", custom_path_shape: true}]
+              [
+                custom_path:
+                  {"cannot be a UUID", custom_path_shape: true, code: :format}
+              ]
 
             :error ->
               []
@@ -327,7 +331,7 @@ defmodule Lightning.Workflows.Trigger do
       Crontab.CronExpression.Parser.parse(cron_expression)
       |> case do
         {:error, error_message} ->
-          [{:cron_expression, error_message}]
+          [{:cron_expression, {error_message, code: :format}}]
 
         {:ok, _exp} ->
           []
@@ -372,7 +376,8 @@ defmodule Lightning.Workflows.Trigger do
       add_error(
         changeset,
         :custom_path,
-        "must only contain lowercase letters, numbers, hyphens and underscores"
+        "must only contain lowercase letters, numbers, hyphens and underscores",
+        code: :format
       )
     else
       _usable_or_not_a_webhook -> changeset

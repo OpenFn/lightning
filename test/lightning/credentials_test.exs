@@ -1981,7 +1981,9 @@ defmodule Lightning.CredentialsTest do
       result =
         Credentials.validate_credential_transfer(changeset, sender, credential)
 
-      assert {:email, {"You cannot transfer a credential to yourself", []}} in result.errors
+      assert {:email,
+              {"You cannot transfer a credential to yourself",
+               [code: :not_allowed]}} in result.errors
     end
 
     test "adds error when recipient does not exist" do
@@ -1994,7 +1996,7 @@ defmodule Lightning.CredentialsTest do
       result =
         Credentials.validate_credential_transfer(changeset, sender, credential)
 
-      assert {:email, {"User does not exist", []}} in result.errors
+      assert {:email, {"User does not exist", [code: :not_found]}} in result.errors
     end
 
     test "adds error when recipient lacks access to required projects" do
@@ -2013,7 +2015,8 @@ defmodule Lightning.CredentialsTest do
         Credentials.validate_credential_transfer(changeset, sender, credential)
 
       assert {:email,
-              {"User doesn't have access to these projects: Secret Project", []}} in result.errors
+              {"User doesn't have access to these projects: Secret Project",
+               [code: :no_access]}} in result.errors
     end
   end
 
@@ -3404,7 +3407,7 @@ defmodule Lightning.CredentialsTest do
       assert [
                credential_bodies:
                  {"Environment 1: body adaptor catalogue is not ready yet, try again shortly",
-                  []}
+                  [code: :not_ready]}
              ] = changeset.errors
     end
   end

@@ -67,6 +67,47 @@ defmodule Lightning.Validators do
   # a varchar: in codepoints.
   @column_limit 255
 
+  # `not_ready` is set with `code:` too, but it is not listed here. It never
+  # reaches the client as an entry, only as the 503 response code (spec §6.2).
+  @entry_codes [
+    :credential_not_allowed,
+    :cycle,
+    :dataclip_wiped,
+    :deleting,
+    :discovery_failed,
+    :duplicate,
+    :exceeds_limit,
+    :exclusive,
+    :invalid,
+    :missing_trigger_edge,
+    :mismatch,
+    :no_access,
+    :not_found,
+    :not_supported,
+    :one_body,
+    :one_enabled,
+    :one_enabled_edge,
+    :one_owner,
+    :scheduled_for_deletion,
+    :single_target,
+    :storage_failed,
+    :too_many_secrets,
+    :tree_branch_conflict,
+    :trigger_removed,
+    :unchanged,
+    :unknown_key
+  ]
+
+  @doc """
+  The entry codes Lightning sets with `code:` on a changeset error, beside the
+  codes the API maps from Ecto's own validation options.
+
+  A code is part of the API's contract, so renaming or removing one is a
+  breaking change (error-format spec §6.4).
+  """
+  @spec entry_codes() :: [atom()]
+  def entry_codes, do: @entry_codes
+
   @doc """
   Normalises a name field and rejects any control character in it.
 
@@ -82,10 +123,12 @@ defmodule Lightning.Validators do
     changeset
     |> update_change(field, &normalize_name/1)
     |> validate_change(field, fn ^field, value ->
-      if valid_name?(value), do: [], else: [{field, message}]
+      if valid_name?(value), do: [], else: [{field, {message, code: :format}}]
     end)
     |> validate_change(field, fn ^field, value ->
-      if invisible_only?(value), do: [{field, "can't be blank"}], else: []
+      if invisible_only?(value),
+        do: [{field, {"can't be blank", code: :required}}],
+        else: []
     end)
   end
 
@@ -114,7 +157,9 @@ defmodule Lightning.Validators do
           Ecto.Changeset.t()
   def validate_no_null_bytes(changeset, field, message) do
     validate_change(changeset, field, fn ^field, value ->
-      if storable_in_jsonb?(value), do: [], else: [{field, message}]
+      if storable_in_jsonb?(value),
+        do: [],
+        else: [{field, {message, code: :format}}]
     end)
   end
 
@@ -128,7 +173,7 @@ defmodule Lightning.Validators do
           Ecto.Changeset.t()
   def validate_no_null_bytes_deep(changeset, field, message) do
     validate_change(changeset, field, fn ^field, value ->
-      if jsonb_safe?(value), do: [], else: [{field, message}]
+      if jsonb_safe?(value), do: [], else: [{field, {message, code: :format}}]
     end)
   end
 
@@ -210,7 +255,7 @@ defmodule Lightning.Validators do
           |> Enum.find(fn [_, {kind, _}] -> kind == :changes end)
           |> List.first()
 
-        add_error(changeset, error_field, message)
+        add_error(changeset, error_field, message, code: :exclusive)
       else
         changeset
       end
@@ -228,7 +273,7 @@ defmodule Lightning.Validators do
     |> Enum.reject(&is_nil/1)
     |> case do
       [] ->
-        add_error(changeset, fields |> List.first(), message)
+        add_error(changeset, fields |> List.first(), message, code: :required)
 
       _any ->
         changeset
@@ -251,7 +296,7 @@ defmodule Lightning.Validators do
     |> get_field(assoc)
     |> case do
       nil ->
-        add_error(changeset, assoc, message)
+        add_error(changeset, assoc, message, code: :required)
 
       _any ->
         changeset
@@ -302,7 +347,9 @@ defmodule Lightning.Validators do
 
   def validate_uuid(changeset, field) when is_atom(field) do
     validate_change(changeset, field, fn _, value ->
-      if valid_uuid?(value), do: [], else: [{field, "is not a valid UUID"}]
+      if valid_uuid?(value),
+        do: [],
+        else: [{field, {"is not a valid UUID", code: :format}}]
     end)
   end
 
@@ -323,22 +370,22 @@ defmodule Lightning.Validators do
            {:ok, uri} <- URI.new(url) do
         cond do
           uri.scheme not in ["http", "https"] ->
-            [{field, "must be either a http or https URL"}]
+            [{field, {"must be either a http or https URL", code: :format}}]
 
           is_nil(uri.host) or byte_size(uri.host) == 0 ->
-            [{field, "host can't be blank"}]
+            [{field, {"host can't be blank", code: :format}}]
 
           byte_size(uri.host) > 255 ->
-            [{field, "host must be less than 255 characters"}]
+            [{field, {"host must be less than 255 characters", code: :format}}]
 
           not valid_host?(uri.host) ->
-            [{field, "host has invalid characters"}]
+            [{field, {"host has invalid characters", code: :format}}]
 
           true ->
             []
         end
       else
-        _ -> [{field, "must be a valid URL"}]
+        _ -> [{field, {"must be a valid URL", code: :format}}]
       end
     end)
   end

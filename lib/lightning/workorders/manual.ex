@@ -39,7 +39,7 @@ defmodule Lightning.WorkOrders.Manual do
     |> validate_change(:workflow, fn _field, workflow ->
       case workflow do
         %{__meta__: %{state: :built}} ->
-          [:workflow, "Workflow must be saved first."]
+          [workflow: {"Workflow must be saved first.", code: :not_allowed}]
 
         _other ->
           []
@@ -62,9 +62,14 @@ defmodule Lightning.WorkOrders.Manual do
 
       body ->
         case Jason.decode(body) do
-          {:ok, body} when is_map(body) -> changeset
-          {:ok, _} -> add_error(changeset, field, "Must be an object")
-          {:error, _} -> add_error(changeset, field, "Invalid JSON")
+          {:ok, body} when is_map(body) ->
+            changeset
+
+          {:ok, _} ->
+            add_error(changeset, field, "Must be an object", code: :type)
+
+          {:error, _} ->
+            add_error(changeset, field, "Invalid JSON", code: :type)
         end
     end
   end
@@ -79,7 +84,9 @@ defmodule Lightning.WorkOrders.Manual do
          Lightning.Invocation.dataclip_in_project?(dataclip_id, project.id) do
       changeset
     else
-      add_error(changeset, :dataclip_id, "does not belong to this project")
+      add_error(changeset, :dataclip_id, "does not belong to this project",
+        code: :not_found
+      )
     end
   end
 

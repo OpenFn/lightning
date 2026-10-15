@@ -127,7 +127,7 @@ defmodule Lightning.Projects.Project do
 
   defp disallow_self_parent(changeset) do
     if get_field(changeset, :parent_id) == changeset.data.id,
-      do: add_error(changeset, :parent_id, "cannot be self"),
+      do: add_error(changeset, :parent_id, "cannot be self", code: :not_allowed),
       else: changeset
   end
 
@@ -262,7 +262,8 @@ defmodule Lightning.Projects.Project do
       add_error(
         changeset,
         :dataclip_retention_period,
-        "dataclip retention period must be less or equal to the history retention period"
+        "dataclip retention period must be less or equal to the history retention period",
+        code: :out_of_range
       )
     else
       changeset
@@ -337,11 +338,14 @@ defmodule Lightning.Projects.Project do
         add_error(
           changeset,
           :owner,
-          "Every project must have exactly one owner. Please specify one below."
+          "Every project must have exactly one owner. Please specify one below.",
+          code: :one_owner
         )
 
       _more_than_1 ->
-        add_error(changeset, :owner, "A project can have only one owner.")
+        add_error(changeset, :owner, "A project can have only one owner.",
+          code: :one_owner
+        )
     end
   end
 end

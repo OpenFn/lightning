@@ -91,7 +91,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
       if accept do
         []
       else
-        [accept: "please tick the box"]
+        [accept: {"please tick the box", code: :must_accept}]
       end
     end)
     |> validate_sync_direction()
@@ -205,7 +205,11 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
       path = get_field(changeset, :config_path)
 
       if value == :deploy and is_nil(path) do
-        [config_path: "you must specify a path to an existing config file"]
+        [
+          config_path:
+            {"you must specify a path to an existing config file",
+             code: :required}
+        ]
       else
         []
       end

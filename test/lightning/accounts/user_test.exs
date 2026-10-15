@@ -441,7 +441,8 @@ defmodule Lightning.Accounts.UserTest do
         changeset = apply(User, unquote(fun), [%User{}, attrs])
 
         assert changeset.errors[:email] ==
-                 {"has already been taken", validation: :unsafe_unique}
+                 {"has already been taken",
+                  validation: :unsafe_unique, code: :taken}
 
         assert [%{field: :email, type: :unique}] = changeset.constraints
       end

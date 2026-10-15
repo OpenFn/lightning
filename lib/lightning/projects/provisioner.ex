@@ -309,13 +309,17 @@ defmodule Lightning.Projects.Provisioner do
 
     case get_change(channel_cs, :destination_auth_method) do
       nil ->
-        add_error(channel_cs, :project_credential_id, message)
+        add_error(channel_cs, :project_credential_id, message,
+          code: :credential_not_allowed
+        )
 
       auth_method_cs ->
         put_change(
           channel_cs,
           :destination_auth_method,
-          add_error(auth_method_cs, :project_credential_id, message)
+          add_error(auth_method_cs, :project_credential_id, message,
+            code: :credential_not_allowed
+          )
         )
     end
   end
@@ -566,7 +570,7 @@ defmodule Lightning.Projects.Provisioner do
           changeset
 
         {:error, _reason, %{text: message}} ->
-          add_error(changeset, :id, message)
+          add_error(changeset, :id, message, code: :exceeds_limit)
       end
     end)
     |> then(fn changeset ->
@@ -575,7 +579,7 @@ defmodule Lightning.Projects.Provisioner do
           changeset
 
         {:error, _reason, %{text: message}} ->
-          add_error(changeset, :id, message)
+          add_error(changeset, :id, message, code: :exceeds_limit)
       end
     end)
   end
@@ -764,7 +768,8 @@ defmodule Lightning.Projects.Provisioner do
         changeset,
         :delete,
         "channel deletion is not supported via the provisioning API; " <>
-          "delete from the dashboard instead"
+          "delete from the dashboard instead",
+        code: :not_supported
       )
     else
       changeset
@@ -888,7 +893,10 @@ defmodule Lightning.Projects.Provisioner do
 
       if is_map(attrs) and
            (Map.has_key?(attrs, key) or Map.has_key?(attrs, field)) do
-        add_error(acc, :base, "extraneous parameters: %{params}", params: key)
+        add_error(acc, :base, "extraneous parameters: %{params}",
+          params: key,
+          code: :unknown_key
+        )
       else
         acc
       end
@@ -916,7 +924,9 @@ defmodule Lightning.Projects.Provisioner do
 
       {true, others} when map_size(others) > 0 ->
         changeset
-        |> add_error(:delete, "cannot change or add a record while deleting")
+        |> add_error(:delete, "cannot change or add a record while deleting",
+          code: :deleting
+        )
 
       _ ->
         changeset
@@ -932,7 +942,9 @@ defmodule Lightning.Projects.Provisioner do
 
       {true, others} when map_size(others) > 0 ->
         changeset
-        |> add_error(:delete, "cannot change or add a record while deleting")
+        |> add_error(:delete, "cannot change or add a record while deleting",
+          code: :deleting
+        )
 
       _ ->
         changeset
@@ -981,7 +993,8 @@ defmodule Lightning.Projects.Provisioner do
             })
             |> add_error(
               :credential,
-              "No credential found with name #{cred_params["name"]}"
+              "No credential found with name #{cred_params["name"]}",
+              code: :not_found
             )
           end
         end)
@@ -1020,7 +1033,8 @@ defmodule Lightning.Projects.Provisioner do
 
     if MapSet.size(extraneous_params) > 0 do
       add_error(changeset, :base, "extraneous parameters: %{params}",
-        params: MapSet.to_list(extraneous_params) |> Enum.join(", ")
+        params: MapSet.to_list(extraneous_params) |> Enum.join(", "),
+        code: :unknown_key
       )
     else
       changeset

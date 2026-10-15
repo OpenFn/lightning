@@ -142,7 +142,7 @@ defmodule Lightning.Workflows.Job do
       validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
         if Adaptors.valid_format?(adaptor),
           do: [],
-          else: [adaptor: "adaptor has invalid format"]
+          else: [adaptor: {"adaptor has invalid format", code: :format}]
       end)
 
     if changeset.valid? do
@@ -164,10 +164,14 @@ defmodule Lightning.Workflows.Job do
         []
       else
         {:error, reason} when reason in [:not_found, :invalid_format] ->
-          [adaptor: "is not a recognised adaptor"]
+          [adaptor: {"is not a recognised adaptor", code: :not_found}]
 
         {:error, _reason} ->
-          [adaptor: "adaptor catalogue is not ready yet, try again shortly"]
+          [
+            adaptor:
+              {"adaptor catalogue is not ready yet, try again shortly",
+               code: :not_ready}
+          ]
       end
     end)
   end
@@ -193,7 +197,8 @@ defmodule Lightning.Workflows.Job do
               add_error(
                 changeset,
                 :keychain_credential_id,
-                Scoping.violation_message(:keychain_credential_id)
+                Scoping.violation_message(:keychain_credential_id),
+                code: :credential_not_allowed
               )
 
             _ ->

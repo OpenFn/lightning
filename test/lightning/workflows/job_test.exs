@@ -33,7 +33,7 @@ defmodule Lightning.Workflows.JobTest do
         })
 
       refute changeset.valid?
-      assert changeset.errors[:id] == {"is not a valid UUID", []}
+      assert changeset.errors[:id] == {"is not a valid UUID", [code: :format]}
     end
 
     test "malformed FK ids are changeset errors, not Ecto.ChangeError on save" do
@@ -49,10 +49,12 @@ defmodule Lightning.Workflows.JobTest do
         })
 
       refute changeset.valid?
-      assert changeset.errors[:workflow_id] == {"is not a valid UUID", []}
+
+      assert changeset.errors[:workflow_id] ==
+               {"is not a valid UUID", [code: :format]}
 
       assert changeset.errors[:keychain_credential_id] ==
-               {"is not a valid UUID", []}
+               {"is not a valid UUID", [code: :format]}
 
       # project_credential_id in isolation (no keychain set).
       project_changeset =
@@ -66,7 +68,7 @@ defmodule Lightning.Workflows.JobTest do
       refute project_changeset.valid?
 
       assert project_changeset.errors[:project_credential_id] ==
-               {"is not a valid UUID", []}
+               {"is not a valid UUID", [code: :format]}
     end
 
     test "FKs left unset stay valid" do
@@ -125,7 +127,8 @@ defmodule Lightning.Workflows.JobTest do
 
       # The validate_exclusive function adds the error to the field that was changed
       assert changeset.errors[:project_credential_id] ==
-               {"cannot be set when the other credential type is also set", []}
+               {"cannot be set when the other credential type is also set",
+                [code: :exclusive]}
     end
 
     test "validates that keychain credential belongs to the same project as the job" do
@@ -150,7 +153,8 @@ defmodule Lightning.Workflows.JobTest do
       refute changeset.valid?
 
       assert changeset.errors[:keychain_credential_id] ==
-               {"must belong to the same project as the job", []}
+               {"must belong to the same project as the job",
+                [code: :credential_not_allowed]}
     end
 
     test "allows both credential fields to be null" do

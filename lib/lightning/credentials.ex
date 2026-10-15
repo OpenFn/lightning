@@ -532,7 +532,8 @@ defmodule Lightning.Credentials do
           |> Ecto.Changeset.add_error(
             :project_credentials,
             "the owner has no access to these projects: " <>
-              Enum.map_join(projects, ", ", & &1.id)
+              Enum.map_join(projects, ", ", & &1.id),
+            code: :no_access
           )
           |> Map.put(:action, action)
 
@@ -577,7 +578,7 @@ defmodule Lightning.Credentials do
 
         changeset =
           changeset
-          |> Ecto.Changeset.add_error(:external_id, message)
+          |> Ecto.Changeset.add_error(:external_id, message, code: :taken)
           |> Map.put(:action, action)
 
         {:error, changeset}
@@ -608,6 +609,9 @@ defmodule Lightning.Credentials do
         changeset_with_errors =
           Enum.reduce(errors, credential_changeset, fn {field, {msg, opts}},
                                                        acc ->
+            # The options are the body changeset's own, so they already carry
+            # a code or Ecto's validation options.
+            # credo:disable-for-next-line Lightning.Credo.Check.ChangesetErrorCode
             Ecto.Changeset.add_error(
               acc,
               :credential_bodies,
@@ -708,11 +712,14 @@ defmodule Lightning.Credentials do
         Ecto.Changeset.add_error(
           changeset,
           :body,
-          "adaptor catalogue is not ready yet, try again shortly"
+          "adaptor catalogue is not ready yet, try again shortly",
+          code: :not_ready
         )
 
       {:error, _reason} ->
-        Ecto.Changeset.add_error(changeset, :body, "Invalid body types")
+        Ecto.Changeset.add_error(changeset, :body, "Invalid body types",
+          code: :type
+        )
     end
   end
 
@@ -1897,7 +1904,8 @@ defmodule Lightning.Credentials do
       Ecto.Changeset.add_error(
         changeset,
         :email,
-        "User doesn't have access to these projects: #{project_names}"
+        "User doesn't have access to these projects: #{project_names}",
+        code: :no_access
       )
     else
       _ -> changeset
@@ -1965,11 +1973,14 @@ defmodule Lightning.Credentials do
         Ecto.Changeset.add_error(
           changeset,
           :email,
-          "You cannot transfer a credential to yourself"
+          "You cannot transfer a credential to yourself",
+          code: :not_allowed
         )
 
       !Lightning.Repo.exists?(User |> where(email: ^recipient_email)) ->
-        Ecto.Changeset.add_error(changeset, :email, "User does not exist")
+        Ecto.Changeset.add_error(changeset, :email, "User does not exist",
+          code: :not_found
+        )
 
       true ->
         changeset
