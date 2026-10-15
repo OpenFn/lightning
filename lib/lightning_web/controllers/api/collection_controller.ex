@@ -10,25 +10,62 @@ defmodule LightningWeb.API.CollectionController do
   """
   use LightningWeb, :controller
 
-  import Ecto.Changeset
-
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Scope
-  alias LightningWeb.API.PutRequest
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Problem
+  alias LightningWeb.API.PutBody
   alias LightningWeb.Plugs.AuthorizeAction
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
 
   plug AuthorizeAction,
-       {:collections, :manage_collection}
+       {:collections, :manage_collection, fallback: FallbackController}
        when action in [:show, :update]
+
+  @accepted [:id, :name]
 
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show(conn, %{"project_id" => project_id, "id" => id}) do
+    with {:ok, project} <- fetch_project(conn, project_id),
+         {:ok, id} <- PutBody.path_id(id),
+         {:ok, collection} <- fetch_collection(id, project) do
+      render_collection(conn, collection)
+    end
+  end
+
+  @doc """
+  Creates the collection under the path's id in the project, or renames the
+  project's collection that has it, keeping its items.
+
+  An id held by another project's collection answers 409 `id_taken`, since
+  Lightning never moves a collection between projects. A refused body answers
+  one 422 with its keys and the collection's fields together, before the plan
+  limit is asked (error-format spec §4, D13).
+  """
+  @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def update(conn, %{"project_id" => project_id, "id" => id}) do
+    body = conn.body_params
+
+    with {:ok, project} <- fetch_project(conn, project_id),
+         {:ok, id} <- PutBody.path_id(id),
+         {:ok, target} <- update_target(id, project),
+         {:ok, entries} <- PutBody.check(body, id, @accepted) do
+      attrs = %{"name" => body["name"]}
+
+      case target do
+        :new -> create(conn, project, id, attrs, entries)
+        collection -> rename(conn, collection, attrs, entries)
+      end
+    end
+  end
+
+  defp fetch_project(conn, project_id) do
     with {:ok, scope} <- Scope.fetch(conn.assigns.scope, project_id),
          :ok <-
            Permissions.permit(
@@ -37,104 +74,66 @@ defmodule LightningWeb.API.CollectionController do
              scope,
              scope.project
            ),
-         {:ok, id} <- PutRequest.cast_uuid(id),
-         %Collection{} = collection <- Repo.get(Collection, id),
-         true <- collection.project_id == scope.project.id do
-      render_collection(conn, collection)
-    else
-      {:error, _reason} = error -> error
-      _missing -> {:error, :not_found}
+         do: {:ok, scope.project}
+  end
+
+  defp fetch_collection(id, project) do
+    case Repo.get_by(Collection, id: id, project_id: project.id) do
+      nil -> {:error, :not_found}
+      collection -> {:ok, collection}
     end
   end
 
-  @doc """
-  Creates the collection under the path's id in the project, or renames the
-  project's collection that has it, keeping its items.
-  """
-  @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def update(conn, %{"project_id" => project_id, "id" => id}) do
-    actor = conn.assigns.current_resource
+  defp update_target(id, %Project{id: project_id}) do
+    case Repo.get(Collection, id) do
+      nil -> {:ok, :new}
+      %Collection{project_id: ^project_id} = collection -> {:ok, collection}
+      %Collection{} -> {:error, :id_taken}
+    end
+  end
 
-    with {:ok, scope} <- Scope.fetch(conn.assigns.scope, project_id),
-         :ok <-
-           Permissions.permit(
-             :collections,
-             :manage_collection,
-             scope,
-             scope.project
+  defp create(conn, project, id, attrs, entries) do
+    attrs = Map.put(attrs, "project_id", project.id)
+
+    with :ok <- refuse(entries, Collection.changeset(%Collection{id: id}, attrs)) do
+      case Collections.create_collection(
+             attrs,
+             conn.assigns.current_resource,
+             id: id
            ) do
-      case parse_body(conn.body_params, id) do
-        {:ok, attrs} ->
-          put_collection(
-            conn,
-            Repo.get(Collection, attrs.id),
-            scope.project,
-            attrs,
-            actor
-          )
+        {:ok, collection} ->
+          conn |> put_status(:created) |> render_collection(collection)
 
-        {:error, :invalid, errors} ->
-          PutRequest.render_errors(conn, errors)
+        {:error, :exceeds_limit, _message} ->
+          {:error, :exceeds_limit}
+
+        # Someone else created it since the lookup. Rerun the request so it
+        # meets that collection.
+        {:error, changeset} ->
+          if PutBody.id_taken?(changeset),
+            do: update(conn, %{"project_id" => project.id, "id" => id}),
+            else: {:error, changeset}
       end
     end
   end
 
-  @body_types %{id: :binary_id, name: :string}
-
-  defp parse_body(body, id) do
-    with {:ok, changeset} <- PutRequest.changeset(body, id, {%{}, @body_types}) do
-      changeset
-      |> validate_required(:name)
-      |> PutRequest.attrs()
+  defp rename(conn, collection, attrs, entries) do
+    with :ok <- refuse(entries, Collection.rename_changeset(collection, attrs)),
+         {:ok, collection} <-
+           Collections.update_collection(
+             collection,
+             attrs,
+             conn.assigns.current_resource
+           ) do
+      render_collection(conn, collection)
     end
   end
 
-  defp put_collection(conn, nil, project, attrs, actor) do
-    %{"project_id" => project.id, "name" => attrs.name}
-    |> Collections.create_collection(actor, id: attrs.id)
-    |> case do
-      {:ok, collection} ->
-        conn |> put_status(:created) |> render_collection(collection)
-
-      {:error, :exceeds_limit, _message} ->
-        {:error, :exceeds_limit}
-
-      {:error, changeset} ->
-        if PutRequest.unique_error?(changeset, :id) do
-          # Another request created it between our lookup and our insert.
-          existing = Repo.get(Collection, attrs.id)
-          put_collection(conn, existing, project, attrs, actor)
-        else
-          render_write_error(conn, changeset)
-        end
+  defp refuse(entries, changeset) do
+    case entries ++ Errors.from_changeset(changeset) do
+      [] -> :ok
+      entries -> {:error, Problem.new(:invalid, errors: entries)}
     end
-  end
-
-  defp put_collection(
-         conn,
-         %Collection{project_id: project_id} = collection,
-         %Project{id: project_id},
-         attrs,
-         actor
-       ) do
-    case Collections.update_collection(
-           collection,
-           %{"name" => attrs.name},
-           actor
-         ) do
-      {:ok, collection} -> render_collection(conn, collection)
-      {:error, changeset} -> render_write_error(conn, changeset)
-    end
-  end
-
-  # Lightning never moves a collection to another project.
-  defp put_collection(_conn, %Collection{}, _project, _attrs, _actor),
-    do: {:error, :id_taken}
-
-  defp render_write_error(conn, changeset) do
-    if PutRequest.unique_error?(changeset, :name),
-      do: {:error, :name_taken},
-      else: PutRequest.render_errors(conn, PutRequest.flat_errors(changeset))
   end
 
   defp render_collection(conn, collection) do

@@ -104,31 +104,40 @@ defmodule LightningWeb.API.CollectionControllerTest do
       assert audit.changes.after == %{"name" => "people"}
     end
 
-    test "answers name_taken when another collection in the project has the name",
+    test "answers 409 taken at the name when another collection in the project has it",
          %{conn: conn, project: project} do
       insert(:collection, project: project, name: "patients")
       other = insert(:collection, project: project, name: "visits")
       id = Ecto.UUID.generate()
 
+      taken = [
+        %{
+          "pointer" => "#/name",
+          "code" => "taken",
+          "detail" => "A collection with this name already exists"
+        }
+      ]
+
       created = put_collection(conn, project.id, id, %{"name" => "patients"})
-      assert json_response(created, 409) == %{"error" => "name_taken"}
+      assert_problem(created, 409, :taken, taken)
       refute Repo.get(Collection, id)
 
       renamed =
         put_collection(conn, project.id, other.id, %{"name" => "patients"})
 
-      assert json_response(renamed, 409) == %{"error" => "name_taken"}
+      assert_problem(renamed, 409, :taken, taken)
       assert Repo.reload!(other).name == "visits"
     end
 
-    test "answers id_taken for an id held by a collection in another project",
+    test "answers 409 id_taken for an id held by a collection in another project, whatever the body",
          %{conn: conn, project: project} do
       elsewhere = insert(:collection, name: "patients")
 
-      conn =
-        put_collection(conn, project.id, elsewhere.id, %{"name" => "patients"})
+      for body <- [%{"name" => "patients"}, %{"name" => "Not Safe", "x" => 1}] do
+        conn = put_collection(conn, project.id, elsewhere.id, body)
+        assert_problem(conn, 409, :id_taken, [])
+      end
 
-      assert json_response(conn, 409) == %{"error" => "id_taken"}
       assert Repo.reload!(elsewhere).project_id != project.id
       assert audits(elsewhere.id) == []
     end
@@ -149,67 +158,172 @@ defmodule LightningWeb.API.CollectionControllerTest do
       id = Ecto.UUID.generate()
       conn = put_collection(conn, project.id, id, %{"name" => "patients"})
 
-      assert json_response(conn, 402) == %{"error" => "exceeds_limit"}
+      assert_problem(conn, 402, :exceeds_limit, [])
       refute Repo.get(Collection, id)
       assert audits(id) == []
     end
 
-    test "refuses a body it cannot take with 422, flat and under its key", %{
+    test "refuses a body it cannot take with one 422, each error at its key", %{
       conn: conn,
       project: project
     } do
+      unknown =
+        &%{
+          "pointer" => "#/" <> &1,
+          "code" => "unknown_key",
+          "detail" => "is not accepted"
+        }
+
+      blank = %{
+        "pointer" => "#/name",
+        "code" => "required",
+        "detail" => "can't be blank"
+      }
+
+      unsafe = %{
+        "pointer" => "#/name",
+        "code" => "format",
+        "detail" => "Collection name must be URL safe"
+      }
+
       refused = [
-        unknown_key: {%{"name" => "patients", "items" => []}, "items"},
+        unknown_key:
+          {%{"name" => "patients", "items" => []}, [unknown.("items")]},
         project_key:
           {%{"name" => "patients", "project_id" => insert(:project).id},
-           "project_id"},
-        other_id: {%{"name" => "patients", "id" => Ecto.UUID.generate()}, "id"},
-        missing_name: {%{}, "name"},
-        blank_name: {%{"name" => ""}, "name"},
-        unsafe_name: {%{"name" => "Not Safe"}, "name"},
-        name_not_string: {%{"name" => 7}, "name"}
+           [unknown.("project_id")]},
+        other_id:
+          {%{"name" => "patients", "id" => Ecto.UUID.generate()},
+           [
+             %{
+               "pointer" => "#/id",
+               "code" => "mismatch",
+               "detail" => "does not match the id in the path"
+             }
+           ]},
+        missing_name: {%{}, [blank]},
+        blank_name: {%{"name" => ""}, [blank]},
+        unsafe_name: {%{"name" => "Not Safe"}, [unsafe]},
+        name_not_string:
+          {%{"name" => 7},
+           [%{"pointer" => "#/name", "code" => "type", "detail" => "is invalid"}]},
+        all_at_once:
+          {%{"name" => "Not Safe", "colour" => "red"},
+           [unknown.("colour"), unsafe]}
       ]
 
-      for {case_name, {body, key}} <- refused do
+      for {case_name, {body, entries}} <- refused do
         id = Ecto.UUID.generate()
+        conn = put_collection(conn, project.id, id, body)
 
-        response =
-          conn |> put_collection(project.id, id, body) |> json_response(422)
-
-        assert %{"errors" => %{^key => [_ | _] = messages} = errors} = response,
-               "#{case_name}: #{inspect(response)}"
-
-        assert map_size(errors) == 1 and Enum.all?(messages, &is_binary/1),
-               "#{case_name}: #{inspect(response)}"
-
+        assert conn.status == 422, "#{case_name}: #{conn.resp_body}"
+        assert_problem(conn, 422, :invalid, entries)
         refute Repo.get(Collection, id), "#{case_name} created a collection"
-      end
-
-      for path_id <- ["not-a-uuid", "abcdefghijklmnop"] do
-        assert %{"errors" => %{"id" => [_]}} =
-                 conn
-                 |> put_collection(project.id, path_id, %{"name" => "patients"})
-                 |> json_response(422),
-               path_id
       end
     end
 
-    test "never quotes a submitted value in a 422", %{
+    test "refuses a renaming body the same way, leaving the name", %{
       conn: conn,
       project: project
     } do
-      planted = "PLANTED-VALUE"
+      collection = insert(:collection, project: project, name: "patients")
+
+      conn =
+        put_collection(conn, project.id, collection.id, %{
+          "name" => "Not Safe",
+          "id" => Ecto.UUID.generate()
+        })
+
+      assert_problem(conn, 422, :invalid, [
+        %{
+          "pointer" => "#/id",
+          "code" => "mismatch",
+          "detail" => "does not match the id in the path"
+        },
+        %{
+          "pointer" => "#/name",
+          "code" => "format",
+          "detail" => "Collection name must be URL safe"
+        }
+      ])
+
+      assert Repo.reload!(collection).name == "patients"
+    end
+
+    test "answers 400 malformed for a body that is not a JSON object", %{
+      conn: conn,
+      project: project
+    } do
+      for body <- [["patients"], "patients", 7] do
+        id = Ecto.UUID.generate()
+        conn = put_collection(conn, project.id, id, body)
+
+        assert_problem(conn, 400, :malformed, [])
+        refute Repo.get(Collection, id)
+      end
+    end
+
+    test "answers 422 rather than 402 for a refused body, when the plan limit is also reached",
+         %{conn: conn, project: project} do
+      Mox.stub(
+        Lightning.Extensions.MockCollectionHook,
+        :handle_create,
+        fn _attrs ->
+          {:error, :exceeds_limit, %Lightning.Extensions.Message{text: "full"}}
+        end
+      )
+
+      conn = put_collection(conn, project.id, Ecto.UUID.generate(), %{})
+
+      assert_problem(conn, 422, :invalid, [
+        %{
+          "pointer" => "#/name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ])
+    end
+
+    test "answers 404 for a path id that is not a UUID", %{
+      conn: conn,
+      project: project
+    } do
+      for path_id <- ["not-a-uuid", "abcdefghijklmnop"] do
+        conn = put_collection(conn, project.id, path_id, %{"name" => "patients"})
+        assert_problem(conn, 404, :not_found, [])
+      end
+    end
+
+    test "never quotes a value from the request, on any route", %{
+      conn: conn,
+      project: project
+    } do
+      collection = insert(:collection, project: project, name: "patients")
 
       for body <- [
-            %{"name" => planted <> "\u0007"},
-            %{"name" => String.duplicate(planted, 10) <> " "},
-            %{"name" => "ok", "id" => planted}
-          ] do
-        conn = put_collection(conn, project.id, Ecto.UUID.generate(), body)
+            %{"name" => "Not Safe", "id" => "x"},
+            %{"name" => "x", "colour" => "x"},
+            %{"name" => ["x"]}
+          ],
+          id <- [Ecto.UUID.generate(), collection.id] do
+        conn
+        |> put_collection(project.id, id, plant_sentinel(body))
+        |> refute_sentinel()
+        |> assert_problem(422, :invalid)
+      end
 
-        assert %{"errors" => errors} = json_response(conn, 422)
-        assert errors != %{}
-        refute conn.resp_body =~ planted
+      sentinel = plant_sentinel(%{"v" => "x"})["v"]
+
+      for project_id <- [project.id, sentinel] do
+        conn
+        |> put_collection(project_id, sentinel, %{"name" => "patients"})
+        |> refute_sentinel()
+        |> assert_problem(404, :not_found, [])
+
+        conn
+        |> get(~p"/api/projects/#{project_id}/collections/#{sentinel}")
+        |> refute_sentinel()
+        |> assert_problem(404, :not_found, [])
       end
     end
 
@@ -220,7 +334,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
             "name" => "patients"
           })
 
-        assert json_response(conn, 404)
+        assert_problem(conn, 404, :not_found, [])
       end
     end
 
@@ -235,7 +349,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
       id = Ecto.UUID.generate()
       conn = put_collection(conn, project.id, id, %{"name" => "patients"})
 
-      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert_problem(conn, 409, :scheduled_for_deletion, [])
       refute Repo.get(Collection, id)
     end
   end
@@ -309,7 +423,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
           |> with_pat(user)
           |> put_collection(project.id, id, %{"name" => "patients"})
 
-        assert json_response(conn, 403) == %{"error" => "Forbidden"}
+        assert_problem(conn, 403, :forbidden, [])
         refute Repo.get(Collection, id)
       end
     end
@@ -330,7 +444,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
           "name" => "patients"
         })
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 403, :forbidden, [])
     end
 
     test "the owner gets 409 on a project scheduled for deletion", %{
@@ -351,7 +465,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
         |> with_pat(user)
         |> put_collection(project.id, id, %{"name" => "patients"})
 
-      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert_problem(conn, 409, :scheduled_for_deletion, [])
       refute Repo.get(Collection, id)
     end
 
@@ -372,7 +486,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
         |> with_pat(user)
         |> get(~p"/api/projects/#{project.id}/collections/#{collection.id}")
 
-      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert_problem(conn, 409, :scheduled_for_deletion, [])
     end
   end
 
@@ -407,7 +521,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
 
       for id <- [elsewhere.id, Ecto.UUID.generate(), "not-a-uuid"] do
         conn = get(conn, ~p"/api/projects/#{project.id}/collections/#{id}")
-        assert json_response(conn, 404)
+        assert_problem(conn, 404, :not_found, [])
       end
     end
 
@@ -428,8 +542,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
 
       assert json_response(conn |> with_pat(admin) |> get(path), 200)
 
-      assert json_response(conn |> with_pat(editor) |> get(path), 403) ==
-               %{"error" => "Forbidden"}
+      assert_problem(conn |> with_pat(editor) |> get(path), 403, :forbidden, [])
     end
   end
 
