@@ -126,17 +126,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
      )}
   end
 
-  def handle_event("use-suggested-alias", %{"alias" => alias}, socket) do
-    params =
-      (socket.assigns.changeset.params || %{})
-      |> Map.put("project_id", socket.assigns.project.id)
-      |> Map.put("local_alias", alias)
+  def handle_event("toggle-advanced", _params, socket) do
+    {:noreply, update(socket, :show_advanced, &(!&1))}
+  end
 
-    {:noreply,
-     assign(socket,
-       changeset:
-         validate_changes(socket.assigns.project_repo_connection, params)
-     )}
+  def handle_event("show-advanced", _params, socket) do
+    {:noreply, assign(socket, show_advanced: true)}
   end
 
   def handle_event("refresh-status", _params, socket) do
@@ -190,7 +185,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end)
     # branches are grouped using the repo
     |> assign_async(:branches, fn -> {:ok, %{branches: %{}}} end)
-    |> assign(workspace_check: nil, workspace_key: nil)
+    |> assign(workspace_check: nil, workspace_key: nil, show_advanced: false)
   end
 
   defp apply_action(socket, :show, %{
@@ -830,7 +825,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       <div class="flex items-center gap-3">
         <.check_icon_tag check={@check} />
         <span class="text-sm text-gray-900">{@label}</span>
-        <span class="ml-auto flex items-center gap-2 text-xs text-gray-500">
+        <span class="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-gray-500">
           {render_slot(@summary)}
         </span>
       </div>
@@ -891,14 +886,14 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           <.tracking_row check={@checks[:tracking]} can_reconnect={@can_reconnect} />
           <.run_row
             id="last-pull-run"
-            label="Last sync from OpenFn"
+            label="Last sync: OpenFn --> GitHub"
             check={@checks[:last_pull]}
             sync_status={@sync_status}
             key={:last_pull}
           />
           <.run_row
             id="last-deploy-run"
-            label="Last deploy to OpenFn"
+            label="Last deploy: GitHub --> OpenFn"
             check={@checks[:last_deploy]}
             sync_status={@sync_status}
             key={:last_deploy}
@@ -1090,9 +1085,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     <.check_row id={@id} label={@label} check={@check}>
       <:summary>
         <%= if @run do %>
-          <.pill color={run_color(@run)}>{run_state(@run)}</.pill>
           <Common.datetime :if={@run.created_at} datetime={@run.created_at} />
           <.link href={@run.url} target="_blank" class="link">View run</.link>
+          <.pill color={run_color(@run)}>{run_state(@run)}</.pill>
         <% else %>
           <span :if={@check == :none}>No runs yet</span>
         <% end %>
@@ -1115,6 +1110,24 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   defp pull_workflow_other_format(_workspace_check, _form), do: nil
+
+  # The project whose workspace an export to GitHub would take over. Importing
+  # (deploy) from a workspace that tracks another project is the normal case.
+  defp replaces_project(
+         %AsyncResult{
+           ok?: true,
+           result: %{tracking: {:other_project, _}} = check
+         },
+         form
+       ) do
+    if sync_version?(form) and form[:sync_direction].value != :deploy,
+      do: tracked_project_name(check) || "another project"
+  end
+
+  defp replaces_project(_workspace_check, _form), do: nil
+
+  defp tracked_project_name(%{tracking: {:other_project, uuid}} = check),
+    do: find_project(check.projects, uuid)[:name]
 
   # The alias of this project's local copy in the workspace, once synced
   defp workspace_alias(%AsyncResult{ok?: true, result: status}, project_id),
@@ -1188,82 +1201,124 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp pull_alias_check(assigns) do
     %{check: check, form: form, project: project} = assigns
 
-    # an invalid alias won't be used, so check against what will. Its error
-    # isn't on the field until the form is submitted, so read the changeset.
-    alias_error = form.source.errors[:local_alias]
+    %{alias: alias, clashes: clashes, error: error} =
+      form_alias(check, form, project)
 
-    requested =
-      if !alias_error, do: Ecto.Changeset.get_field(form.source, :local_alias)
-
-    alias = project_alias(check.projects, project.id, requested)
+    takeover_uuid =
+      case check.tracking do
+        {:other_project, uuid} -> uuid
+        _tracking -> nil
+      end
 
     assigns =
       assign(assigns,
         alias: alias,
-        clashes: alias_clashes(check.projects, project.id, alias),
-        alias_error: alias_error && elem(alias_error, 0),
-        suggested: Lightning.Helpers.url_safe_name(project.name)
+        clashes: clashes,
+        alias_error: error,
+        takeover_uuid: takeover_uuid
       )
 
     ~H"""
-    <%= case @check.tracking do %>
-      <% {:other_project, uuid} -> %>
-        <Common.alert id="workspace-tracks-other-project" type="warning">
-          <:message>
-            This branch and workspace already track another project:
-            <.project_label
-              uuid={uuid}
-              name={find_project(@check.projects, uuid)[:name]}
-            />.
-            Pick a different workspace folder or branch for this project.
-          </:message>
-        </Common.alert>
-      <% _ -> %>
-        <Common.alert
+    <%!-- One box for both problems: taking over another project's folder,
+    and an alias the CLI can't tell apart from another copy --%>
+    <Common.alert
+      :if={@takeover_uuid || @clashes != []}
+      id="workspace-warning"
+      type="warning"
+      header={
+        if(@takeover_uuid,
+          do:
+            "#{tracked_project_name(@check) || "Another project"} already syncs to this folder",
+          else: "Another project in this folder is already saved as \"#{@alias}\""
+        )
+      }
+    >
+      <:message>
+        <div :if={@takeover_uuid} id="workspace-tracks-other-project">
+          <p>
+            If you connect, this project's syncs and theirs will keep
+            overwriting each other's files. To keep them apart, pick a
+            different branch, or a different workspace folder under
+            <.advanced_link myself={@myself} />.
+          </p>
+          <p class="mt-1 text-xs">Project <code>{@takeover_uuid}</code></p>
+        </div>
+        <div
           :if={@clashes != []}
           id="workspace-alias-clash"
-          type="warning"
-          header={"This workspace already has a project under the alias \"#{@alias}\""}
+          class={@takeover_uuid && "mt-3"}
         >
-          <:message>
-            <.clash_list clashes={@clashes} />
-            <p class="mt-2">
-              Pick a different workspace folder, or set a local alias for this
-              project.
-            </p>
-          </:message>
-          <:message>
-            <.button
-              id="use-suggested-alias-button"
-              type="button"
-              theme="secondary"
-              class="mt-2"
-              phx-click="use-suggested-alias"
-              phx-value-alias={@suggested}
-              phx-target={@myself}
-            >
-              Use the alias "{@suggested}"
-            </.button>
-          </:message>
-        </Common.alert>
-        <p
-          :if={@alias_error}
-          id="local-alias-error"
-          class="mt-1 text-xs text-red-600"
-        >
-          Local alias: {@alias_error}
-        </p>
-        <p
-          :if={@clashes == []}
-          id="workspace-alias-note"
-          class="mt-1 text-xs text-gray-500"
-        >
-          This project will be saved in the workspace as <code
-            id="workspace-alias"
-            class="font-mono"
-          >{@alias}</code>.
-        </p>
-    <% end %>
+          <p :if={@takeover_uuid}>
+            This project would also be saved as "{@alias}", which is taken:
+          </p>
+          <.clash_list clashes={@clashes} />
+          <p class="mt-2">
+            Connecting is disabled until this project is saved under a
+            different name. Set a local alias or pick a different workspace
+            folder under <.advanced_link myself={@myself} />.
+          </p>
+        </div>
+      </:message>
+    </Common.alert>
+    <p :if={@alias_error} id="local-alias-error" class="mt-1 text-xs text-red-600">
+      Local alias: {@alias_error}
+    </p>
+    <p
+      :if={@clashes == []}
+      id="workspace-alias-note"
+      class="mt-1 text-xs text-gray-500"
+    >
+      This project will be saved in the workspace as <code
+        id="workspace-alias"
+        class="font-mono"
+      >{@alias}</code>.
+    </p>
+    """
+  end
+
+  # The alias the first pull will file this project under, and what it clashes
+  # with. An invalid alias won't be used, so check against what will. Its
+  # error isn't on the field until the form is submitted, so read the
+  # changeset.
+  defp form_alias(check, form, project) do
+    error = form.source.errors[:local_alias]
+
+    requested =
+      if !error, do: Ecto.Changeset.get_field(form.source, :local_alias)
+
+    alias = project_alias(check.projects, project.id, requested)
+
+    %{
+      alias: alias,
+      clashes: alias_clashes(check.projects, project.id, alias),
+      error: error && elem(error, 0)
+    }
+  end
+
+  # The CLI won't pull while the alias clashes, so don't let them connect
+  defp alias_clash?(
+         %AsyncResult{ok?: true, result: %{projects: _} = check},
+         form,
+         project
+       ) do
+    sync_version?(form) and form[:sync_direction].value != :deploy and
+      form_alias(check, form, project).clashes != []
+  end
+
+  defp alias_clash?(_workspace_check, _form, _project), do: false
+
+  attr :myself, :any, required: true
+
+  defp advanced_link(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class="font-medium underline"
+      phx-click="show-advanced"
+      phx-target={@myself}
+    >
+      Advanced settings
+    </button>
     """
   end
 
@@ -1442,7 +1497,6 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   attr :form, :map, required: true
-  slot :inner_block
 
   defp workspace_fields(assigns) do
     ~H"""
@@ -1472,7 +1526,6 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           pull.
         </p>
       </div>
-      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -1547,6 +1600,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   attr :project, :map, required: true
   attr :default_branch, :string
   attr :pull_workflow_other_format, :string, default: nil
+  attr :replaces_project, :string, default: nil
 
   defp accept_checkbox(assigns) do
     ~H"""
@@ -1567,6 +1621,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         I understand that
         <%= if @form[:sync_direction].value == :deploy do %>
           my current OpenFn project <b>will be destroyed</b> and
+        <% end %>
+        <%= if @replaces_project do %>
+          <b id="replaces-project">{"#{@replaces_project}'s files in this folder will be replaced"}</b>, and
         <% end %>
         the following files will be committed to <b><%= @form[
           :repo

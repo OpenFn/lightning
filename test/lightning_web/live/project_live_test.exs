@@ -6005,19 +6005,108 @@ defmodule LightningWeb.ProjectLiveTest do
       end
 
       change.(%{})
-      change.(%{branch: "main", workspace_path: "ws"})
+      change.(%{branch: "main", workspace_path: "ws", accept: "true"})
 
       assert view |> element("#workspace-alias-clash") |> render() =~ other_id
+      # the CLI won't pull while the alias clashes
+      assert has_element?(view, "#connect-and-sync-button[disabled]")
 
-      view |> element("#use-suggested-alias-button") |> render_click()
+      # the warning's link opens the section with the alias field
+      assert has_element?(view, "#advanced-settings.hidden")
+
+      view
+      |> element("#workspace-alias-clash button", "Advanced settings")
+      |> render_click()
+
+      refute has_element?(view, "#advanced-settings.hidden")
+
+      change.(%{
+        branch: "main",
+        workspace_path: "ws",
+        accept: "true",
+        local_alias: "my-project"
+      })
 
       refute has_element?(view, "#workspace-alias-clash")
       assert view |> element("#workspace-alias") |> render() =~ "my-project"
+      refute has_element?(view, "#connect-and-sync-button[disabled]")
 
       # a fresh workspace has nothing to clash with
       change.(%{branch: "main", workspace_path: "other", local_alias: ""})
 
       assert view |> element("#workspace-alias") |> render() =~ "main"
+    end
+
+    test "asks to confirm taking over a folder another project syncs to",
+         %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+      other_id = Ecto.UUID.generate()
+      contents = "https://api.github.com/repos/someaccount/somerepo/contents/"
+      copy = "main@app.example.org.yaml"
+
+      stub_connect_form(%{
+        (contents <> "ws/.openfn/branches/main/checkout.yaml") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"content" => Base.encode64("uuid: #{other_id}\n")}
+           }},
+        (contents <> "ws/.projects") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: [%{"name" => copy, "path" => "ws/.projects/" <> copy}]
+           }},
+        (contents <> "ws/.projects/" <> copy) =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "content" =>
+                 Base.encode64(
+                   "name: their-project\nopenfn:\n  uuid: #{other_id}\n"
+                 )
+             }
+           }}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      change = fn params ->
+        view
+        |> form("#project-repo-connection-form")
+        |> render_change(
+          connection:
+            Map.merge(
+              %{github_installation_id: "1234", repo: "someaccount/somerepo"},
+              params
+            )
+        )
+
+        render_async(view)
+      end
+
+      change.(%{})
+      change.(%{branch: "main", workspace_path: "ws"})
+
+      assert view |> element("#workspace-warning") |> render() =~
+               "their-project already syncs to this folder"
+
+      # their copy is also saved as "main", so the alias clashes too
+      assert view |> element("#workspace-alias-clash") |> render() =~
+               "This project would also be saved as"
+
+      assert view |> element("#replaces-project") |> render() =~
+               "their-project&#39;s files in this folder will be replaced"
+
+      # importing that project into this one is the normal case
+      change.(%{branch: "main", workspace_path: "ws", sync_direction: "deploy"})
+
+      refute has_element?(view, "#workspace-tracks-other-project")
+      refute has_element?(view, "#replaces-project")
     end
 
     test "warns that connecting replaces a pull workflow of the other format",
