@@ -27,10 +27,6 @@ defmodule LightningWeb.API.FallbackController do
   def call(conn, {:error, :no_such_project}),
     do: Problem.respond(conn, Problem.new(:not_found))
 
-  # A repo connection naming another project has no standing on it (plan D16).
-  def call(conn, {:error, :connection_not_for_this_project}),
-    do: Problem.respond(conn, Problem.new(:not_found))
-
   def call(conn, {:error, :forbidden}),
     do: Problem.respond(conn, Problem.new(:forbidden))
 

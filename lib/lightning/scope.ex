@@ -13,8 +13,8 @@ defmodule Lightning.Scope do
       {:ok, %Scope{role: :editor}}
       {:ok, %Scope{role: nil}}                      no membership row
       {:ok, %Scope{scheduled_for_deletion?: true}}  winding down
-      {:error, :no_such_project}
-      {:error, :connection_not_for_this_project}    repo-connection actor only
+      {:error, :no_such_project}                    also a repo connection's
+                                                    answer for another project
 
   So `{:ok, _}` is not itself an authorisation result — a non-member of a live
   project gets `role: nil`, which support access can still make meaningful.
@@ -111,9 +111,7 @@ defmodule Lightning.Scope do
           | %{:project_id => Ecto.UUID.t(), optional(any()) => any()}
           | nil
 
-  @type error ::
-          :no_such_project
-          | :connection_not_for_this_project
+  @type error :: :no_such_project
 
   @doc """
   The facts about the caller alone, with no project.
@@ -156,10 +154,10 @@ defmodule Lightning.Scope do
   the project's facts to it rather than building it again.
 
   Returns `{:error, :no_such_project}` when the subject does not identify a
-  project that exists, and — for a `%ProjectRepoConnection{}` actor —
-  `{:error, :connection_not_for_this_project}` when the resolved project is not
-  the one the connection belongs to. A project scheduled for deletion resolves,
-  with `scheduled_for_deletion?` set; refusing it is the policy's call.
+  project that exists, or, for a `%ProjectRepoConnection{}` actor, when it
+  names a project other than the connection's own. A project scheduled for
+  deletion resolves, with `scheduled_for_deletion?` set; refusing it is the
+  policy's call.
 
   A `%ServiceAccount{}` resolves any project, with no role.
   """
@@ -259,11 +257,14 @@ defmodule Lightning.Scope do
 
   # Answered here rather than at the call site so no policy can forget the
   # comparison. The repeated `id` binds both patterns to the same value.
+  # Another project is answered as one that doesn't exist: the connection has
+  # no standing on it, and a distinct refusal would confirm it exists (plan
+  # D16).
   defp connection_owns?(%ProjectRepoConnection{project_id: id}, %Project{id: id}),
     do: :ok
 
   defp connection_owns?(%ProjectRepoConnection{}, %Project{}),
-    do: {:error, :connection_not_for_this_project}
+    do: {:error, :no_such_project}
 
   defp connection_owns?(_actor, %Project{}), do: :ok
 

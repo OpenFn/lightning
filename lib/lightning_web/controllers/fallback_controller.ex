@@ -59,9 +59,6 @@ defmodule LightningWeb.FallbackController do
   def call(conn, {:error, :no_such_project}),
     do: call(conn, {:error, :not_found})
 
-  def call(conn, {:error, :connection_not_for_this_project}),
-    do: call(conn, {:error, :forbidden})
-
   def call(conn, {:error, :forbidden}) do
     conn
     |> put_status(:forbidden)

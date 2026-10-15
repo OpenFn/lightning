@@ -74,7 +74,6 @@ defmodule LightningWeb.API.ProblemTest do
       for {result, status, code} <- [
             {{:error, :not_found}, 404, :not_found},
             {{:error, :no_such_project}, 404, :not_found},
-            {{:error, :connection_not_for_this_project}, 404, :not_found},
             {{:error, :forbidden}, 403, :forbidden},
             {{:error, {:insufficient_scope, "users:read"}}, 403,
              :insufficient_scope},

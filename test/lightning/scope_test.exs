@@ -437,28 +437,31 @@ defmodule Lightning.ScopeTest do
                Scope.fetch(repo_connection, Ecto.UUID.generate())
     end
 
-    # A connection's standing is which single project it belongs to. Refusing
-    # here rather than at the call site stops a policy forgetting the
-    # comparison.
-    test "is refused a project it does not belong to", %{live_project: project} do
-      other_project = insert(:project)
-      repo_connection = insert(:project_repo_connection, project: other_project)
-
-      assert {:error, :connection_not_for_this_project} =
-               Scope.fetch(repo_connection, project)
-    end
-
-    test "is refused another project by id, and by anything carrying its id", %{
+    # A connection's standing is which single project it belongs to, and
+    # another project is answered as if it didn't exist, so a refusal can't
+    # confirm it does.
+    test "gets no such project for a project it does not belong to", %{
       live_project: project
     } do
       other_project = insert(:project)
       repo_connection = insert(:project_repo_connection, project: other_project)
+
+      assert {:error, :no_such_project} =
+               Scope.fetch(repo_connection, project)
+    end
+
+    test "gets no such project for another project by id, and by anything carrying its id",
+         %{
+           live_project: project
+         } do
+      other_project = insert(:project)
+      repo_connection = insert(:project_repo_connection, project: other_project)
       dataclip = insert(:dataclip, project: project)
 
-      assert {:error, :connection_not_for_this_project} =
+      assert {:error, :no_such_project} =
                Scope.fetch(repo_connection, project.id)
 
-      assert {:error, :connection_not_for_this_project} =
+      assert {:error, :no_such_project} =
                Scope.fetch(repo_connection, dataclip)
     end
 
@@ -471,7 +474,7 @@ defmodule Lightning.ScopeTest do
       other_project = insert(:project)
       repo_connection = insert(:project_repo_connection, project: other_project)
 
-      assert {:error, :connection_not_for_this_project} =
+      assert {:error, :no_such_project} =
                Scope.fetch(repo_connection, project)
     end
   end
