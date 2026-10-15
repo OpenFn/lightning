@@ -229,10 +229,50 @@ defmodule Lightning.Credentials.OauthValidationTest do
 
       result = OauthValidation.validate_token_data(token_data)
 
-      assert {:error, %Error{type: :unsupported_token_type, message: message}} =
-               result
+      assert {:error,
+              %Error{
+                type: :unsupported_token_type,
+                code: :not_allowed,
+                field: "token_type",
+                message: "Unsupported token type. Expected 'Bearer'",
+                details: %{token_type: "Basic"}
+              }} = result
+    end
 
-      assert message == "Unsupported token type: 'Basic'. Expected 'Bearer'"
+    test "codes every refusal and quotes no value from the token" do
+      valid = %{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "token_type" => "Bearer",
+        "expires_in" => 3600,
+        "scope" => "read write"
+      }
+
+      planted = "planted-1234"
+
+      refused = [
+        {%{"access_token" => [planted]}, :type, "access_token"},
+        {%{"refresh_token" => %{"x" => planted}}, :type, "refresh_token"},
+        {%{"token_type" => planted}, :not_allowed, "token_type"},
+        {%{"token_type" => [planted]}, :type, "token_type"},
+        {%{"scope" => [planted]}, :type, "scope"},
+        {%{"scope" => nil, "scopes" => planted}, :type, "scopes"},
+        {%{"expires_in" => planted}, :type, "expires_in"},
+        {%{"expires_in" => 999_999_999}, :out_of_range, "expires_in"},
+        {%{"expires_in" => nil, "expires_at" => planted}, :format, "expires_at"}
+      ]
+
+      for {overrides, code, field} <- refused do
+        assert {:error, %Error{code: ^code, field: ^field, message: message}} =
+                 valid
+                 |> Map.merge(overrides)
+                 |> Map.reject(fn {_key, value} -> is_nil(value) end)
+                 |> OauthValidation.validate_token_data(),
+               inspect(overrides)
+
+        refute message =~ planted
+        refute message =~ "999999999"
+      end
     end
 
     test "rejects token without scope or scopes" do
@@ -529,10 +569,10 @@ defmodule Lightning.Credentials.OauthValidationTest do
       assert details.expected_scopes == ["read", "write", "admin"]
 
       assert message ==
-               "Missing required scopes: write, admin. Please reauthorize and grant all selected permissions."
+               "Missing required scopes. Please reauthorize and grant all selected permissions."
     end
 
-    test "preserves original case in error messages" do
+    test "preserves original case in the missing scopes" do
       token_data = %{"scope" => "read"}
       expected_scopes = ["read", "WRITE", "Admin"]
 
@@ -543,9 +583,7 @@ defmodule Lightning.Credentials.OauthValidationTest do
                result
 
       assert details.missing_scopes == ["WRITE", "Admin"]
-
-      assert message ==
-               "Missing required scopes: WRITE, Admin. Please reauthorize and grant all selected permissions."
+      refute message =~ "WRITE"
     end
 
     test "fails when token has no scope data" do
@@ -958,16 +996,19 @@ defmodule Lightning.Credentials.OauthValidationTest do
       assert ["a", "b"] = OauthValidation.normalize_scopes("A   B   ")
     end
 
-    test "validates error message formatting for missing scopes" do
+    test "tags missing scopes with an entry code, naming none of them in the message" do
       token_data = %{"scope" => "read"}
       expected_scopes = ["read", "write", "admin", "delete"]
 
       result = OauthValidation.validate_scope_grant(token_data, expected_scopes)
 
-      assert {:error, %Error{message: message}} = result
-
-      assert message ==
-               "Missing required scopes: write, admin, delete. Please reauthorize and grant all selected permissions."
+      assert {:error,
+              %Error{
+                code: :scope_not_granted,
+                field: "scope",
+                message:
+                  "Missing required scopes. Please reauthorize and grant all selected permissions."
+              }} = result
     end
 
     test "handles token with both expires_in and expires_at (expires_in takes precedence)" do

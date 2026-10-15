@@ -84,6 +84,7 @@ defmodule Lightning.Validators do
     :not_found,
     :not_supported,
     :one_owner,
+    :scope_not_granted,
     :storage_failed,
     :too_many_secrets,
     :tree_branch_conflict,

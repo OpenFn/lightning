@@ -147,6 +147,16 @@ defmodule Lightning.CredentialsTest do
       assert job.project_credential_id == nil
     end
 
+    test "delete_credential/2 answers not_found for a credential deleted since it was loaded" do
+      user = insert(:user)
+      credential = insert(:credential, user: user)
+
+      assert {:ok, _deleted} = Credentials.delete_credential(credential, user)
+
+      assert Credentials.delete_credential(credential, user) ==
+               {:error, :not_found}
+    end
+
     test "schedule_credential_deletion/1 schedules a deletion date according to the :purge_deleted_after_days env" do
       days = Lightning.Config.purge_deleted_after_days()
 
@@ -685,7 +695,17 @@ defmodule Lightning.CredentialsTest do
         insert(:credential, schema: "raw", user: user)
         |> with_body(%{name: "main", body: %{"foo" => 1}})
 
-      assert {:error, %{type: :missing_access_token}} =
+      assert {:error,
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {_message,
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "access_token"]
+                     ]}
+                ]
+              }} =
                Credentials.update_credential(
                  credential,
                  %{
@@ -698,6 +718,50 @@ defmodule Lightning.CredentialsTest do
                )
 
       assert Repo.reload!(credential).schema == "raw"
+    end
+
+    test "refuses a typed body at each key its schema refuses" do
+      user = insert(:user)
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               Credentials.create_credential(
+                 %{
+                   "name" => "typed",
+                   "schema" => "postgresql",
+                   "user_id" => user.id,
+                   "credential_bodies" => [
+                     %{
+                       "name" => "main",
+                       "body" => %{
+                         "host" => "https://a.example",
+                         "port" => 5432,
+                         "database" => "acme"
+                       }
+                     },
+                     %{"name" => "staging", "body" => %{"host" => "b.example"}}
+                   ]
+                 },
+                 user
+               )
+
+      assert Enum.sort(errors) ==
+               Enum.sort(
+                 credential_bodies:
+                   {"can't be blank",
+                    [
+                      key: [:credential_bodies, 1, :body, "port"],
+                      code: :required
+                    ]},
+                 credential_bodies:
+                   {"can't be blank",
+                    [
+                      key: [:credential_bodies, 1, :body, "database"],
+                      code: :required
+                    ]},
+                 credential_bodies:
+                   {"expected to be a URI or an IPv4 address",
+                    [key: [:credential_bodies, 1, :body, "host"], code: :type]}
+               )
     end
 
     test "updates an OAuth credential with new scopes" do
@@ -2055,9 +2119,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_scope,
-                message: "Missing required OAuth field: scope or scopes"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required OAuth field: scope or scopes",
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "scope"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
     end
 
@@ -2101,9 +2171,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_scope,
-                message: "Missing required OAuth field: scope or scopes"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required OAuth field: scope or scopes",
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "scope"]
+                     ]}
+                ]
               }} = Credentials.update_credential(credential, update_attrs, user)
     end
   end
@@ -2137,10 +2213,14 @@ defmodule Lightning.CredentialsTest do
 
       assert {:error, changeset} = Credentials.create_credential(attrs, user)
 
-      # Error should be on :credential_bodies with environment info
-      assert [credential_bodies: {msg, _}] = changeset.errors
-      assert msg =~ "Environment 1"
-      assert msg =~ "must be a short slug"
+      assert [
+               credential_bodies:
+                 {"must be a short slug",
+                  [
+                    key: [:credential_bodies, 0, :name],
+                    validation: :format
+                  ]}
+             ] = changeset.errors
     end
 
     test "returns credential changeset error when second credential body fails" do
@@ -2158,10 +2238,14 @@ defmodule Lightning.CredentialsTest do
 
       assert {:error, changeset} = Credentials.create_credential(attrs, user)
 
-      # Error should reference Environment 2 (second body at index 1)
-      assert [credential_bodies: {msg, _}] = changeset.errors
-      assert msg =~ "Environment 2"
-      assert msg =~ "must be a short slug"
+      assert [
+               credential_bodies:
+                 {"must be a short slug",
+                  [
+                    key: [:credential_bodies, 1, :name],
+                    validation: :format
+                  ]}
+             ] = changeset.errors
     end
   end
 
@@ -2259,9 +2343,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_access_token,
-                message: "Missing required OAuth field: access_token"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required OAuth field: access_token",
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "access_token"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
 
       # ✅ Test missing refresh_token
@@ -2283,9 +2373,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_refresh_token,
-                message: "Missing required OAuth field: refresh_token"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required OAuth field: refresh_token",
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "refresh_token"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
 
       # ✅ Test missing expiration fields
@@ -2308,10 +2404,16 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_expiration,
-                message:
-                  "Missing expiration field: either expires_in or expires_at is required"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies: {
+                    "Missing expiration field: either expires_in or expires_at is required",
+                    [
+                      code: :required,
+                      key: [:credential_bodies, 0, :body, "expires_in"]
+                    ]
+                  }
+                ]
               }} = Credentials.create_credential(attrs, user)
 
       # ✅ Test valid token data
@@ -2362,13 +2464,16 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_scopes,
-                message: message,
-                details: %{missing_scopes: ["write"]}
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required scopes. Please reauthorize and grant all selected permissions.",
+                     [
+                       code: :scope_not_granted,
+                       key: [:credential_bodies, 0, :body, "scope"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
-
-      assert message =~ "Missing required scopes: write"
     end
   end
 
@@ -2559,9 +2664,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :unsupported_token_type,
-                message: "Unsupported token type: 'Basic'. Expected 'Bearer'"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Unsupported token type. Expected 'Bearer'",
+                     [
+                       code: :not_allowed,
+                       key: [:credential_bodies, 0, :body, "token_type"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
     end
 
@@ -3406,8 +3517,8 @@ defmodule Lightning.CredentialsTest do
 
       assert [
                credential_bodies:
-                 {"Environment 1: body adaptor catalogue is not ready yet, try again shortly",
-                  [code: :not_ready]}
+                 {"adaptor catalogue is not ready yet, try again shortly",
+                  [key: [:credential_bodies, 0, :body], code: :not_ready]}
              ] = changeset.errors
     end
   end

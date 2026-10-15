@@ -111,6 +111,43 @@ the line of the error the validator returns, which is where the code goes.
 | lib/lightning/workorders/manual.ex:67                        | add_error       | "Invalid JSON"                                                                    | type                   |
 | lib/lightning/workorders/manual.ex:82                        | add_error       | "does not belong to this project"                                                 | not_found              |
 
-One site carries no code of its own. `lib/lightning/credentials.ex:611` re-adds
-a credential body's errors onto the credential with their options unchanged, so
-each keeps the code its producer gave it; the check is disabled on that line.
+Two sites carry no code of their own, and the check is disabled on each. In
+`lib/lightning/credentials.ex`, `handle_transaction_result/2` re-adds a
+credential body's errors onto the credential, and `cast_credential_body_change`
+re-adds a typed body's schema errors onto the body. Both keep the options
+unchanged, so each error keeps the code its producer gave it, and add `key:` to
+place it in the request.
+
+## Added with the credentials API's problem answers
+
+OAuth token refusals are not changeset errors where they are made. Each
+`Lightning.Credentials.OauthValidation.Error` carries `code:` and the token
+`field:` it is about, and `validate_credential_bodies` in
+`lib/lightning/credentials.ex` adds it to the credential at
+`#/credential_bodies/<i>/body/<field>`. The message is the entry's detail, so
+none quotes a value from the token.
+
+| type                     | field         | code              | message                                                                                                        |
+| ------------------------ | ------------- | ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| `invalid_token_format`   | (the body)    | type              | "OAuth token must be a valid map"                                                                              |
+| `invalid_token_format`   | token_type    | type              | "token_type must be a string"                                                                                  |
+| `missing_access_token`   | access_token  | required          | "Missing required OAuth field: access_token"                                                                   |
+| `invalid_access_token`   | access_token  | type              | "access_token must be a non-empty string"                                                                      |
+| `invalid_access_token`   | access_token  | required          | "access_token cannot be empty"                                                                                 |
+| `missing_refresh_token`  | refresh_token | required          | "Missing required OAuth field: refresh_token"                                                                  |
+| `invalid_refresh_token`  | refresh_token | type              | "refresh_token must be a non-empty string"                                                                     |
+| `invalid_refresh_token`  | refresh_token | required          | "refresh_token cannot be empty"                                                                                |
+| `missing_token_type`     | token_type    | required          | "Missing required OAuth field: token_type"                                                                     |
+| `unsupported_token_type` | token_type    | not_allowed       | "Unsupported token type. Expected 'Bearer'"                                                                    |
+| `missing_scope`          | scope         | required          | "Missing required OAuth field: scope or scopes"; "scope field cannot be empty"                                 |
+| `missing_scope`          | scopes        | required          | "scopes array cannot be empty"                                                                                 |
+| `invalid_oauth_response` | scope         | type              | "scope must be a string"                                                                                       |
+| `invalid_oauth_response` | scope         | required          | "OAuth token missing scope information"                                                                        |
+| `invalid_oauth_response` | scopes        | type              | "scopes must be a list"; "scopes array must contain only strings"                                              |
+| `missing_expiration`     | expires_in    | required          | "Missing expiration field: either expires_in or expires_at is required"                                        |
+| `invalid_expiration`     | expires_in    | out_of_range      | "expires_in must be greater than 0 seconds"; "expires_in seems unreasonably long"                              |
+| `invalid_expiration`     | expires_in    | type              | "expires_in string must represent a valid positive integer"; "expires_in must be a positive integer (seconds)" |
+| `invalid_expiration`     | expires_at    | out_of_range      | "expires_at timestamp appears to be too far in the past (possible clock skew)"; "... too far in the future"    |
+| `invalid_expiration`     | expires_at    | format            | "expires_at must be a Unix timestamp or ISO 8601 date string"                                                  |
+| `invalid_expiration`     | expires_at    | type              | "expires_at must be an integer timestamp or date string"                                                       |
+| `missing_scopes`         | scope         | scope_not_granted | "Missing required scopes. Please reauthorize and grant all selected permissions."                              |
