@@ -1575,7 +1575,6 @@ defmodule Lightning.VersionControlTest do
     test "only deploys a v2 workspace folder when it changes", %{
       project: project,
       user: user,
-      repo: repo,
       branch: branch,
       installation_id: installation_id,
       base_params: base_params,
