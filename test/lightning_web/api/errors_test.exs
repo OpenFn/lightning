@@ -210,6 +210,24 @@ defmodule LightningWeb.API.ErrorsTest do
                Errors.from_changeset(changeset, %{project: :parent})
     end
 
+    test "places an error at the keys and positions its key: option lists" do
+      changeset =
+        {%{}, %{credential_bodies: {:array, :map}}}
+        |> Ecto.Changeset.cast(%{}, [])
+        |> Ecto.Changeset.add_error(:credential_bodies, "can't be blank",
+          code: :required,
+          key: [:credential_bodies, 1, :body, "host"]
+        )
+
+      assert Errors.from_changeset(changeset) == [
+               %{
+                 pointer: "#/credential_bodies/1/body/host",
+                 code: :required,
+                 detail: "can't be blank"
+               }
+             ]
+    end
+
     test "raises on an error with no code" do
       changeset =
         {%{}, %{id: :binary_id}}

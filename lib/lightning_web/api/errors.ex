@@ -45,7 +45,9 @@ defmodule LightningWeb.API.Errors do
   Every error in `changeset` and its children, as entries.
 
   `renames` maps an Ecto field to the request's key, at any depth:
-  `%{project_users: :members}`.
+  `%{project_users: :members}`. An error whose options carry `key:` is placed
+  there instead of at its field: one request key, or a list of the request's
+  keys and positions below the error's level.
 
   Raises `ArgumentError` for an error with no code, and for an error on a
   child the request didn't send, since neither can be placed in the request.
@@ -276,11 +278,17 @@ defmodule LightningWeb.API.Errors do
     do: path ++ List.wrap(opts[:key])
 
   defp error_location(changeset, path, field, {_message, opts}, renames) do
-    key =
-      opts[:key] || Map.get(renames, field) ||
-        request_key(changeset, field, opts[:constraint])
+    case opts[:key] do
+      nil ->
+        path ++
+          [
+            Map.get(renames, field) ||
+              request_key(changeset, field, opts[:constraint])
+          ]
 
-    path ++ [key]
+      key ->
+        path ++ List.wrap(key)
+    end
   end
 
   # assoc_constraint puts its error on the association, but the request sent
