@@ -22,13 +22,21 @@ defmodule LightningWeb.API.PutBody do
           {:ok, [Errors.entry()]} | {:error, Problem.t()}
   def check(body, path_id, accepted) do
     with :ok <- check_object(body) do
-      unknown =
-        (Map.keys(body) -- Enum.map(accepted, &Atom.to_string/1))
-        |> Enum.sort()
-        |> Enum.map(&Errors.entry([&1], {"is not accepted", code: :unknown_key}))
-
-      {:ok, unknown ++ id_mismatch(body, path_id)}
+      {:ok, unknown_keys(body, [], accepted) ++ id_mismatch(body, path_id)}
     end
+  end
+
+  @doc """
+  One `unknown_key` entry for each key of `object` outside `accepted`, in key
+  order, each under `path`.
+  """
+  @spec unknown_keys(map(), [Errors.segment()], [atom()]) :: [Errors.entry()]
+  def unknown_keys(object, path, accepted) do
+    (Map.keys(object) -- Enum.map(accepted, &Atom.to_string/1))
+    |> Enum.sort()
+    |> Enum.map(
+      &Errors.entry(path ++ [&1], {"is not accepted", code: :unknown_key})
+    )
   end
 
   @doc """

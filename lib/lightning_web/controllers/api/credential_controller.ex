@@ -335,12 +335,9 @@ defmodule LightningWeb.API.CredentialController do
   # A PUT link holds a project_id and nothing else.
   defp link_key_entries(%{"project_credentials" => links}) when is_list(links) do
     for {%{} = link, index} <- Enum.with_index(links),
-        key <- link |> Map.keys() |> List.delete("project_id") |> Enum.sort(),
-        do:
-          Errors.entry(
-            [:project_credentials, index, key],
-            {"is not accepted", code: :unknown_key}
-          )
+        entry <-
+          PutBody.unknown_keys(link, [:project_credentials, index], [:project_id]),
+        do: entry
   end
 
   defp link_key_entries(_body), do: []
