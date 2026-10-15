@@ -359,6 +359,17 @@ defmodule LightningWeb.API.ErrorsTest do
     end
   end
 
+  describe "refuse/1" do
+    test "passes no entries and refuses any as one 422 invalid" do
+      entry = Errors.entry([:name], {"can't be blank", code: :required})
+
+      assert Errors.refuse([]) == :ok
+
+      assert Errors.refuse([entry]) ==
+               {:error, Problem.new(:invalid, errors: [entry])}
+    end
+  end
+
   describe "parameters/1" do
     defp query(params) do
       types = %{

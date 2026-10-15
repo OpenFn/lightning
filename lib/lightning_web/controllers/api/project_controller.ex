@@ -43,7 +43,6 @@ defmodule LightningWeb.API.ProjectController do
   alias Lightning.Scope
   alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
-  alias LightningWeb.API.Problem
   alias LightningWeb.API.PutBody
   alias LightningWeb.Plugs.AuthorizeAction
 
@@ -190,7 +189,10 @@ defmodule LightningWeb.API.ProjectController do
   end
 
   defp replace(conn, project, fields, entries) do
-    with :ok <- refuse(entries, Project.changeset(project, fields)),
+    changeset = Project.changeset(project, fields)
+
+    with :ok <-
+           Errors.refuse(entries ++ Errors.from_changeset(changeset, @renames)),
          {:ok, project} <-
            Projects.update_project(
              project,
@@ -212,10 +214,11 @@ defmodule LightningWeb.API.ProjectController do
       {:ok, project_users} ->
         fields = Map.put(fields, :project_users, project_users)
 
+        changeset = Project.project_with_users_changeset(%Project{}, fields)
+
         with :ok <-
-               refuse(
-                 entries,
-                 Project.project_with_users_changeset(%Project{}, fields)
+               Errors.refuse(
+                 entries ++ Errors.from_changeset(changeset, @renames)
                ) do
           insert(conn, fields, notify: get_field(request, :notify))
         end
@@ -226,10 +229,7 @@ defmodule LightningWeb.API.ProjectController do
         project_entries =
           Errors.from_changeset(Project.changeset(%Project{}, fields))
 
-        {:error,
-         Problem.new(:invalid,
-           errors: entries ++ member_entries ++ project_entries
-         )}
+        Errors.refuse(entries ++ member_entries ++ project_entries)
     end
   end
 
@@ -244,13 +244,6 @@ defmodule LightningWeb.API.ProjectController do
         if PutBody.id_taken?(changeset),
           do: update(conn, %{"id" => attrs.id}),
           else: {:error, Errors.problem(changeset, @renames)}
-    end
-  end
-
-  defp refuse(entries, validated) do
-    case entries ++ Errors.from_changeset(validated, @renames) do
-      [] -> :ok
-      entries -> {:error, Problem.new(:invalid, errors: entries)}
     end
   end
 

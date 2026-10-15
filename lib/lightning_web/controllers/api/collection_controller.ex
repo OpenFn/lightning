@@ -18,7 +18,6 @@ defmodule LightningWeb.API.CollectionController do
   alias Lightning.Scope
   alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
-  alias LightningWeb.API.Problem
   alias LightningWeb.API.PutBody
   alias LightningWeb.Plugs.AuthorizeAction
 
@@ -95,7 +94,9 @@ defmodule LightningWeb.API.CollectionController do
   defp create(conn, project, id, attrs, entries) do
     attrs = Map.put(attrs, "project_id", project.id)
 
-    with :ok <- refuse(entries, Collection.changeset(%Collection{id: id}, attrs)) do
+    changeset = Collection.changeset(%Collection{id: id}, attrs)
+
+    with :ok <- Errors.refuse(entries ++ Errors.from_changeset(changeset)) do
       case Collections.create_collection(
              attrs,
              conn.assigns.current_resource,
@@ -118,7 +119,9 @@ defmodule LightningWeb.API.CollectionController do
   end
 
   defp rename(conn, collection, attrs, entries) do
-    with :ok <- refuse(entries, Collection.rename_changeset(collection, attrs)),
+    changeset = Collection.rename_changeset(collection, attrs)
+
+    with :ok <- Errors.refuse(entries ++ Errors.from_changeset(changeset)),
          {:ok, collection} <-
            Collections.update_collection(
              collection,
@@ -126,13 +129,6 @@ defmodule LightningWeb.API.CollectionController do
              conn.assigns.current_resource
            ) do
       render_collection(conn, collection)
-    end
-  end
-
-  defp refuse(entries, changeset) do
-    case entries ++ Errors.from_changeset(changeset) do
-      [] -> :ok
-      entries -> {:error, Problem.new(:invalid, errors: entries)}
     end
   end
 

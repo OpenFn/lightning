@@ -32,7 +32,6 @@ defmodule LightningWeb.API.CredentialController do
   alias Lightning.Scope
   alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
-  alias LightningWeb.API.Problem
   alias LightningWeb.API.PutBody
   alias LightningWeb.Plugs.AuthorizeAction
 
@@ -175,8 +174,9 @@ defmodule LightningWeb.API.CredentialController do
     scope = conn.assigns.scope
     owner = scope.actor
 
-    with {:ok, _project_ids} <-
-           refuse_entries(check_links(params, [], {:ok, owner}, scope)),
+    {link_entries, _project_ids} = check_links(params, [], {:ok, owner}, scope)
+
+    with :ok <- Errors.refuse(link_entries),
          {:ok, credential} <-
            Credentials.create_credential(
              Map.put(params, "user_id", owner.id),
@@ -301,7 +301,7 @@ defmodule LightningWeb.API.CredentialController do
         owner_entries(owner) ++ link_entries ++ link_key_entries(body)
 
     # Every refused owner has an entry, so it is refused with the rest.
-    with {:ok, project_ids} <- refuse_entries({entries, project_ids}),
+    with :ok <- Errors.refuse(entries),
          {:ok, owner} <- owner,
          do: {:ok, {owner, project_ids}}
   end
@@ -460,11 +460,6 @@ defmodule LightningWeb.API.CredentialController do
     |> Credentials.projects_without_access(Enum.uniq(project_ids))
     |> Enum.map(& &1.id)
   end
-
-  defp refuse_entries({[], result}), do: {:ok, result}
-
-  defp refuse_entries({entries, _result}),
-    do: {:error, Problem.new(:invalid, errors: entries)}
 
   defp create_under_id(conn, id, body, owner, project_ids) do
     body

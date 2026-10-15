@@ -100,6 +100,14 @@ defmodule LightningWeb.API.Errors do
   end
 
   @doc """
+  `:ok` when there are no entries, otherwise a 422 `invalid` problem holding
+  them all, for a producer that checks the request itself (spec §9.6).
+  """
+  @spec refuse([entry()]) :: :ok | {:error, Problem.t()}
+  def refuse([]), do: :ok
+  def refuse(entries), do: {:error, Problem.new(:invalid, errors: entries)}
+
+  @doc """
   The 400 `invalid_parameter` problem for a refused changeset over a route's
   query parameters, with one entry per error, each naming its parameter
   (spec §9.4).
