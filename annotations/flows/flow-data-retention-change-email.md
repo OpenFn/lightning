@@ -64,6 +64,8 @@ link to reset it if they didn't approve it. Without it, a retention policy agree
 could be shortened, lengthened or cleared by one person and nobody else would know until data
 went missing or was kept too long.
 
+## 2. What it does
+
 1. A project admin or owner saves a new history or input/output data retention period on the data storage tab.
    - A save that changes no period, or that is rejected, sends nothing
 2. Straight away, every admin and owner on the project, including the one who made the change, is emailed the new policy with a link back to the tab to reset it.

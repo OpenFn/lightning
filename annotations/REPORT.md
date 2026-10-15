@@ -11,6 +11,22 @@ Every scenario is `@pending`. Nothing has been run against the app yet.
 
 All 990 `decide` items are listed by file in [DECIDES.md](DECIDES.md).
 
+## Straightforwardness
+
+Every view, flow and shared annotation has a straightforwardness rating and a list of its most surprising behaviours in section 2. 5 means it does what it says on the tin, 1 means it's full of surprising edge cases.
+
+| | 2 | 3 | 4 | Total |
+|---|---|---|---|---|
+| Views | 9 | 36 | 7 | 52 |
+| Flows | 9 | 37 | 6 | 52 |
+| Shared | 5 | 10 | 5 | 20 |
+
+Nothing was rated 1 or 5. These are rated 2, where attention should go first:
+
+- **Views**: [admin-auth-providers](views/admin-auth-providers.md), [admin-user-edit](views/admin-user-edit.md), [credentials-index](views/credentials-index.md), [history-work-orders](views/history-work-orders.md), [project-settings-github-sync](views/project-settings-github-sync.md), [sandboxes-index](views/sandboxes-index.md), [workflow-editor-ai-assistant](views/workflow-editor-ai-assistant.md), [workflow-editor-canvas](views/workflow-editor-canvas.md), [workflow-editor-versions-and-promote](views/workflow-editor-versions-and-promote.md)
+- **Flows**: [flow-admin-created-account-confirm](flows/flow-admin-created-account-confirm.md), [flow-ai-session-collaborators](flows/flow-ai-session-collaborators.md), [flow-github-sync-actions](flows/flow-github-sync-actions.md), [flow-history-live-updates](flows/flow-history-live-updates.md), [flow-oauth-credential-authorize](flows/flow-oauth-credential-authorize.md), [flow-restore-version-open-editor](flows/flow-restore-version-open-editor.md), [flow-sandbox-merge](flows/flow-sandbox-merge.md), [flow-sandbox-scheduled-deletion](flows/flow-sandbox-scheduled-deletion.md), [flow-zero-persistence-runs](flows/flow-zero-persistence-runs.md)
+- **Shared**: [shared-adaptor-credential-config](shared/shared-adaptor-credential-config.md), [shared-dataclip-body-viewer](shared/shared-dataclip-body-viewer.md), [shared-editor-session](shared/shared-editor-session.md), [shared-run-retry-controls](shared/shared-run-retry-controls.md), [shared-workflow-yaml-format](shared/shared-workflow-yaml-format.md)
+
 ## Views
 
 Straightforwardness is the section 2 rating: 5 does what it says on the tin, 1 is full of surprising edge cases. Each view's section 2 lists its most surprising behaviours.

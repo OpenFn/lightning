@@ -67,12 +67,25 @@ arrive.
 
 ## 2. What it does
 
-- Anyone who can open a run reads its log lines in time order, each prefixed with its source
-- Anyone reads JSON a job logged as indented, multi-line text
-- Anyone filters lines by level (debug, info, warn, error), starting at info
-- On the run page, the chosen level is saved and applied to every run the person opens next
-- Anyone who selects a step sees that step's lines marked and scrolled into view
-- Anyone opening a finished run that logged nothing is told so
+- **Read the log** (anyone who can open a run)
+  - Read its log lines in time order, each prefixed with where it came from
+  - Read JSON a job logged as indented, multi-line text
+  - Get told when a finished run logged nothing
+- **Filter by level**
+  - Anyone filters lines by level (debug, info, warn, error), starting at info
+  - On the run page, the chosen level is saved and applied to every run the person opens next
+- **Find a step's lines**
+  - Anyone who selects a step sees that step's lines marked and scrolled into view
+
+**Straightforwardness: 3 of 5.** Reading and filtering are what you'd expect, but the run page and the workflow editor behave differently, and step highlighting and empty logs aren't always what they seem.
+
+### Most surprising behaviours
+
+- **(3)** In the workflow editor, a log that fails to load may show "No logs were received for this run", so someone can conclude a run logged nothing when it did. (6.1)
+- **(3)** Step highlighting may start one line early and, when steps run side by side, can also mark other steps' lines in between. (6.1)
+- **(3)** The level you choose on the run page is remembered for every run, but the workflow editor ignores it and always starts at info. (6.2)
+- **(3)** Opening a run with a step already chosen marks that step's lines but may leave the log scrolled to the top. (6.1)
+- **(4)** Some lines, like "success" lines, show whatever level is picked, even with the filter set to error. (6.2)
 
 ## 3. Who can do what
 

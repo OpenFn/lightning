@@ -71,16 +71,27 @@ a run next to its code sees a different story from the person who sent them the 
 
 ## 2. What it does
 
-- Anyone on the project sees each run and work order state as a labelled pill
-- Anyone sees each step's outcome as an icon, including why a step was killed
-- Anyone sees how long a run or step has taken, counting up while it runs
-- Anyone sees which steps were carried over from an earlier run
-- Anyone following a run or step link to the workflow lands on the version that ran
-- Editors cancel a run that no worker has claimed yet
-- Editors cannot cancel a run outside the current project
-- Anyone sees why a step whose input was not kept can't be rerun, and admins get a link to change retention
-- Anyone sees that a step whose job was deleted can't be rerun
-- Anyone viewing a run in the workflow editor sees the same state labels, step icons, durations and clone markers
+- **Show what happened**
+  - Anyone on the project sees each run and work order state as a labelled pill, and each step's outcome as an icon, including why a step was killed
+  - Anyone sees how long a run or step has taken, counting up while it runs, and which steps were carried over from an earlier run
+  - Anyone viewing a run in the workflow editor sees the same state labels, step icons, durations and carried-over markers
+- **Open the code that ran**
+  - Anyone following a run or step link to the workflow lands on the version that ran
+- **Cancel queued work**
+  - Editors cancel a run that no worker has claimed yet, and never one outside the current project
+- **Explain why a step can't be rerun**
+  - Anyone sees why a step whose input was not kept can't be rerun, and admins get a link to change retention
+  - Anyone sees that a step whose job was deleted can't be rerun
+
+**Straightforwardness: 3 of 5.** Each piece is simple on its own, but the same run is drawn by several copies of these pieces that don't always agree, and some unusual step outcomes break them.
+
+### Most surprising behaviours
+
+- **(2)** A step that ends with an outcome the page doesn't recognise may crash the whole history row or run page, while the editor shows the same step as if it hadn't run yet. (6.1)
+- **(3)** In the workflow editor, the same run reads "Available" or "Claimed" in its history list but "Enqueued" or "Starting" in the run viewer next to it. (6.1)
+- **(3)** Cancel only works until a worker picks the run up. If that happens while you're looking, you're told it couldn't be cancelled, in different words on History and on the run page. (S10, 6.2)
+- **(3)** Running times are worked out from the viewer's own computer clock, so a wrong clock shows wrong durations, and there's no hours unit, so a three-hour run reads "180 m". (6.2, 4)
+- **(4)** History shows no duration for queued or cancelled runs, while the run page says "Not started" for the same run. (6.2)
 
 ## 3. Who can do what
 

@@ -69,6 +69,8 @@ form creates the account, grants the role and emails the person a link to choose
 Without it, an admin would need a superuser to create the account first, or would have to set and
 share a password themselves, and a new team member could not start work on the project's data.
 
+## 2. What it does
+
 1. A project admin or owner invites someone who has no OpenFn account, choosing a viewer, editor or admin role.
 2. The account is created and added to the project straight away, and the person is emailed "Join <project> on OpenFn as a collaborator" with a link.
 3. They open the link while signed out and choose their own password.

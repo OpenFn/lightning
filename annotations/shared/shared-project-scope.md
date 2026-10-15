@@ -51,13 +51,24 @@ changed membership takes effect on pages people already have open.
 
 ## 2. What it does
 
-- Signed-out visitors are sent to log in
-- Members of the project get in
-- Members who haven't met the project's MFA requirement are sent to `/mfa_required`
-- Non-members, and visitors to deleted or unknown projects, are sent to `/projects` with a Not Found screen
-- Open pages re-check access when the viewer's own membership or support access changes
-- Open pages leave the project when it is scheduled for deletion
-- An open workflow page leaves when that workflow is deleted
+- **Let the right people in**
+  - Signed-out visitors are sent to log in; members of the project get in
+  - Members who haven't met the project's MFA requirement are sent to set up MFA
+  - Non-members, and visitors to deleted or unknown projects, are sent to the projects list with a Not Found screen
+- **Keep open pages in step**
+  - Open pages re-check access when the viewer's own membership or support access changes
+  - Open pages leave the project when it is scheduled for deletion
+  - An open workflow page leaves when that workflow is deleted
+
+**Straightforwardness: 3 of 5.** The gate itself is what you'd expect; the surprises are in who counts as "on the project" and in how open pages react when something changes elsewhere.
+
+### Most surprising behaviours
+
+- **(3)** Superusers who aren't members get "Not Found", even though they can manage the same project from the admin pages. (6.1)
+- **(3)** Support users get in without being members whenever the project has support access turned on, and are thrown out the moment it's turned off. (S06, S09)
+- **(3)** Any change to your own membership reloads your open page, even being given more access, and if the page hasn't fully settled it may drop you on the workflow list instead. (6.2)
+- **(3)** When a sandbox is archived, people editing in it land on the matching workflow in the parent project, but only if they have experimental features on; everyone else just sees "Project deleted." (S11, 6.2)
+- **(4)** Even the owner gets "Not Found" once a project is scheduled for deletion, so it looks gone days before it actually is. (S04)
 
 ## 3. Who can do what
 

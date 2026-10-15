@@ -84,6 +84,8 @@ working. This flow lets each member choose a daily, weekly or monthly summary of
 failed work orders per workflow, and gives them a link that opens History on exactly that workflow
 and window. Without it, a failing integration goes unnoticed until someone downstream complains.
 
+## 2. What it does
+
 1. A project member sets their own digest to daily, weekly or monthly (or never) on the collaborators tab; nobody can set it for someone else.
 2. At 10:00 UTC on the matching day, each member who chose that frequency is emailed a summary of the period.
    - Per workflow: how many work orders succeeded and how many failed, counting every kind of failure and leaving out work still in progress

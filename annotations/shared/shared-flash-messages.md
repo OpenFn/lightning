@@ -107,13 +107,25 @@ it.
 
 ## 2. What it does
 
-- Pages in the live layout show info and error flashes as a toast at the bottom of the screen
-- Live-layout toasts hide themselves after about 5 seconds; pointing at one restarts the timer
-- Anyone can dismiss a toast by clicking it
-- A flash set before a redirect or live navigation shows on the page the user lands on
-- A `:nav` flash replaces the page content with a "Not Found" or "No Access" card, with or without a Back button
-- Admin pages (settings layout) show toasts that stay until clicked, and never show the `:nav` card
-- Sign-in and account forms served by controllers show the flash inline at the top of the form
+- **Show toasts on everyday pages**
+  - Pages in the main app layout show info and error messages as a toast at the bottom of the screen
+  - Toasts hide themselves after about 5 seconds; pointing at one restarts the timer
+  - Anyone can dismiss a toast by clicking it
+- **Carry a message to the next page**
+  - A message set before a redirect or page change shows on the page the user lands on
+  - A "Not Found" or "No Access" message replaces the page content with a card, with or without a Back button
+- **Show messages differently elsewhere**
+  - Admin pages show toasts that stay until clicked, and never show the Not Found or No Access card
+  - Sign-in and account forms show the message inline at the top of the form
+
+**Straightforwardness: 3 of 5.** The idea is simple, but there are three different behaviours depending on which kind of page you're on, and a few cases where a message quietly goes missing.
+
+### Most surprising behaviours
+
+- **(3)** Error toasts disappear after 5 seconds just like success ones, so a failure reported after a redirect is easy to miss entirely. (6.2)
+- **(3)** Dismissing an error toast also clears any success toast showing at the same time, and the Not Found or No Access card if one is up. (6.1)
+- **(3)** Some pages never show messages at all; for example, someone sent to confirm their password again gets no explanation of why. (6.1)
+- **(3)** The Back button on the Not Found or No Access card does nothing when the link was opened in a fresh tab, such as from an email. (6.1)
 
 ## 3. Who can do what
 

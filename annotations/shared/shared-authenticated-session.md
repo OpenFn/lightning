@@ -77,15 +77,29 @@ and one that forgot would expose data to a logged-out or blocked account.
 
 ## 2. What it does
 
-- Signed-out visitors are sent to log in
-- Sessions for disabled, deleted or expired accounts stop opening pages
-- Sessions still waiting on a second factor are sent to finish it
-- Unconfirmed accounts past the confirmation deadline are sent to the confirmation page
-- Unconfirmed accounts inside the deadline see when they must confirm by
-- Users collapse or expand the sidebar, and it stays that way
-- Users on instances with the book-a-demo banner see it until they dismiss it or book a call
-- Users on instances with a GDPR banner see it on app pages
-- Instances with no superuser send every page to first setup
+- **Turn away sessions that shouldn't see app pages**
+  - Signed-out visitors are sent to log in
+  - Sessions for disabled, deleted or expired accounts stop opening pages
+  - Sessions still waiting on a second factor are sent to finish it
+- **Enforce email confirmation** (instances that require it)
+  - Unconfirmed accounts past the confirmation deadline are sent to the confirmation page
+  - Unconfirmed accounts inside the deadline see when they must confirm by
+- **Remember the sidebar**
+  - Users collapse or expand the sidebar, and it stays that way
+- **Show instance banners**
+  - Users on instances with the book-a-demo banner see it until they dismiss it or book a call
+  - Users on instances with a GDPR banner see it on app pages
+- **Send a fresh install to setup**
+  - Instances with no superuser send every page to first setup
+
+**Straightforwardness: 3 of 5.** Each rule makes sense on its own, but which check catches you depends on whether you've just loaded the page or had it open for a while, and the banners don't reach every page.
+
+### Most surprising behaviours
+
+- **(3)** When a session expires on a page that's already open, the user is sent to log in with no explanation, and after logging in lands on their projects list rather than where they were. (6.1)
+- **(3)** The GDPR consent banner never appears on the admin pages, and the book-a-demo banner only appears on some pages, so "shown on app pages" isn't quite true. (6.2)
+- **(3)** A page left open when the 48-hour confirmation deadline passes keeps working until it reconnects; only a fresh load locks the user out. (6.2)
+- **(3)** If booking a demo call fails to reach the team's workflow, the page crashes and reloads, the banner stays put and the user never gets to the booking page. (6.1)
 
 ## 3. Who can do what
 

@@ -67,14 +67,26 @@ on the wrong row, or while its records still anchor a project's history.
 
 ## 2. What it does
 
-- Shows what will be deleted and asks for the account's email address
-- Refuses to schedule until the typed email matches the account's
-- Refuses to schedule a superuser account
-- Schedules a matching account for deletion and signs the user out (own account) or returns to the users list (admin)
-- Warns when the account has created runs
-- Purges an already scheduled account immediately (admin users list only)
-- Refuses to purge an account whose runs, project files or keychain credentials remain
+- **Confirm the right account** (users deleting their own account from their profile, superusers from the admin users list)
+  - They see what will be deleted and type the account's email address; nothing is scheduled until it matches
+  - Superuser accounts can't be scheduled for deletion
+  - They're warned when the account has created runs
+- **Schedule deletion**
+  - A matching account is scheduled for deletion; users deleting their own account are signed out, superusers return to the users list
+- **Purge now** (superusers, admin users list only)
+  - An already scheduled account is purged immediately
+  - The purge is refused while the account's runs, project files or keychain credentials remain
 - Cancel or the close button returns to the host's page with nothing changed
+
+**Straightforwardness: 3 of 5.** Scheduling works as you'd expect; the immediate purge looks identical but skips the safety check, and what blocks a purge isn't fully shown up front.
+
+### Most surprising behaviours
+
+- **(2)** When purging an already scheduled account, the dialog still shows the email field, but ignores it. One click on "Delete account" with the field empty or wrong deletes the account for good. (6.1)
+- **(2)** If another superuser cancels the deletion while the dialog is open, confirming still purges the account, because the dialog doesn't check again. (6.1)
+- **(3)** Purging deletes the person's credentials too, so jobs in other projects that use them quietly lose their credential. (4)
+- **(3)** The warning and the up-front block only count runs. Project files or keychain credentials also block a purge, but you only find out from a failure message after you click. (6.2, S08)
+- **(4)** The email has to match exactly, so typing it with capitals is refused. (6.2)
 
 ## 3. Who can do what
 

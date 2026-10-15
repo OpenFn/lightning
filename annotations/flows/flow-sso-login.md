@@ -105,6 +105,8 @@ routes: that flow's `state` is an encrypted pointer to a LiveView, its callback 
 anyone in (oidc_controller.ex:75-83, :269-294). This flow's `state` is a random value bound to the
 browser session, and its callback signs the user in.
 
+## 2. What it does
+
 1. A signed-out visitor clicks "via external provider" on the login page and is sent to their organisation's sign-in page.
 2. They sign in there and are sent back to Lightning, which checks the answer really came from the provider for this login.
    - Anything that doesn't check out (a wrong or reused link, a bad token, an email the provider hasn't verified) goes back to the login page with a generic "couldn't sign you in"

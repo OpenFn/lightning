@@ -79,6 +79,8 @@ every opted-in member who may still see the project gets an email naming the wor
 and its link opens History on that failed work order, already expanded. Without it, a failed
 delivery of health data is noticed only when someone downstream complains.
 
+## 2. What it does
+
 1. A project member turns on their own failure alerts on the collaborators tab; alerts start off for everyone.
 2. A run ends without succeeding, either reported by the worker or, for a run that stopped reporting, marked lost by a check every five minutes.
 3. Every opted-in member who could still open the project is emailed straight away, naming the workflow and project.

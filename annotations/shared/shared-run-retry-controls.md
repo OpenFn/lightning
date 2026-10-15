@@ -82,18 +82,29 @@ input they didn't mean, or click a button that silently does nothing.
 
 ## 2. What it does
 
-- Editors start a quick run of the whole workflow from the header
-- Editors retry a loaded, finished run from the header
-- Editors retry a followed run from a step, but only with the input that run used
-- Editors choose between retrying on the same work order and starting a new work order
-- Editors run and retry from the keyboard, and the key acts on the innermost open surface
-- The editor saves the workflow before a run or retry, and doesn't run if the save fails
-- A live workflow or a pinned view runs or retries without saving (experimental)
-- Retrying from a pinned version says it runs on the latest version (experimental)
-- Everyone sees why a run control is disabled
-- Run limits refuse a run up front and on the server
-- The server only runs or retries for people allowed to run, within the project
-- A control starts at most one run per click and stays busy while that run is processing
+- **Start a run** (editors)
+  - Editors start a quick run of the whole workflow from the header, or run from the keyboard, where the key acts on the innermost open surface
+  - The editor saves the workflow first and doesn't run if the save fails; a live workflow or a pinned view runs without saving (experimental)
+- **Retry a run** (editors)
+  - Editors retry a loaded, finished run from the header
+  - Editors retry a followed run from a step, but only with the input that run used, and choose between the same work order and a new one
+  - Retrying from a pinned version says it runs on the latest version (experimental)
+- **Refuse with a reason**
+  - Everyone sees why a run control is disabled
+  - Run limits refuse a run up front and again on the server
+  - The server only runs or retries for people allowed to run, within the project
+- **No accidental duplicates**
+  - A control starts at most one run per click and stays busy while that run is processing
+
+**Straightforwardness: 2 of 5.** The same "Run" and "Retry" exist in four places that look alike but follow different rules, and the keyboard shortcuts don't mean the same thing everywhere.
+
+### Most surprising behaviours
+
+- **(2)** The step inspector's "Run From Here" shows Ctrl/Cmd+Enter as its shortcut, but pressing it runs the whole workflow from the first trigger with an empty input. (6.1)
+- **(2)** A retry always runs the latest version of the workflow, not the one the original run used. People are only told this when they're viewing a pinned older version. (S03, 6.2)
+- **(2)** Retry in the header and Retry in the panel are different things: the header restarts a finished run from its first step, while the panel retries from the chosen step, only with the same input, whatever state the run is in. (6.2)
+- **(2)** Ctrl/Cmd+Shift+Enter opens the custom input panel from the header, but forces a new work order in the panel and the full-screen editor. (6.2)
+- **(3)** Hovering a disabled Run button in the header, panel or full-screen editor may show no reason at all; only the step inspector reliably explains itself. (6.1)
 
 ## 3. Who can do what
 

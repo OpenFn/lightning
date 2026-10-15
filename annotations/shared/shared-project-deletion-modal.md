@@ -66,11 +66,23 @@ misclick or on the wrong row.
 
 ## 2. What it does
 
-- Shows the project name to type and when the project will be deleted
-- Refuses to act until the typed name matches
-- Schedules an unscheduled project for deletion and returns to the host's "after delete" page
-- Starts an immediate purge of an already scheduled project and returns to the host's "after delete" page
-- Cancel or the close button returns to the host's "cancel" page with nothing changed
+- **Confirm the right project** (owners from project settings, superusers from the admin projects list)
+  - They see the project's name to type and when the project will be deleted
+  - Nothing happens until the typed name matches
+- **Delete**
+  - A project not yet scheduled gets scheduled for deletion, and they land on the host's "after delete" page
+  - A project already scheduled (only reachable from the admin list) is purged straight away instead
+- Cancel or the close button goes back to the host's "cancel" page with nothing changed
+
+**Straightforwardness: 3 of 5.** A simple type-the-name dialog, but the same dialog quietly does two very different things depending on the project's state, and it leans on whichever page shows it for permissions.
+
+### Most surprising behaviours
+
+- **(2)** On a project that's already scheduled, the dialog still says it will be deleted "7 days from today", then confirming purges it within minutes. Same title, same button, nothing says which action will run. (S04, 6.1)
+- **(2)** If someone else cancels the deletion while the dialog is open, confirming still purges the project for good, because neither the dialog nor the purge checks again. (6.1)
+- **(3)** The dialog checks no permissions of its own. Any page that shows it lets that person delete, so every new place it's used has to do its own gating. (3)
+- **(3)** If scheduling fails, clicking "Delete project" seems to do nothing, with no message. (6.1)
+- **(3)** Escape or clicking outside may hide the dialog without leaving the delete address, so a reload brings it back. (6.1)
 
 ## 3. Who can do what
 

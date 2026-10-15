@@ -72,17 +72,30 @@ one, and to move between them without losing their place.
 
 ## 2. What it does
 
-- Everyone on the project sees a breadcrumb trail ending in the current page, with links back up
-- Everyone sees the current project's name on the picker button, and sandboxes stand out in their colour
-- Everyone opens the picker by button or Ctrl/Cmd+P and sees only the projects and sandboxes they can reach
-- Everyone searches the picker by project path
-- Everyone switches project and lands on the same section, or the nearest page that exists
-- Everyone reaches the full projects list from the picker
-- Unconfirmed users on verifying instances can ask for a new confirmation email from the header
-- Everyone moves between the project's areas from the side menu, with the current one marked
-- Users with experimental features on see Channels in the menu and are told the mode is on
-- Superusers reach the admin pages from the menu; everyone else reaches documentation, community and support
-- Everyone reaches their profile, credentials, API tokens and log out from the account menu
+- **Know where you are**
+  - Everyone on the project sees a breadcrumb trail ending in the current page, with links back up
+  - Everyone sees the current project's name on the picker button, and sandboxes stand out in their colour
+- **Switch project**
+  - Everyone opens the picker by button or Ctrl/Cmd+P, sees only the projects and sandboxes they can reach, and searches by project path
+  - Everyone switches project and lands on the same section, or the nearest page that exists
+  - Everyone reaches the full projects list from the picker
+- **Move around the project**
+  - Everyone moves between the project's areas from the side menu, with the current one marked
+  - Users with experimental features on see Channels in the menu and are told the mode is on
+  - Superusers reach the admin pages from the menu; everyone else reaches documentation, community and support
+- **Your account**
+  - Everyone reaches their profile, credentials, API tokens and log out from the account menu
+  - Unconfirmed users on instances that require verification can ask for a new confirmation email from the header
+
+**Straightforwardness: 4 of 5.** It's the frame you'd expect around every project page; the oddities are small and mostly about the picker not keeping up.
+
+### Most surprising behaviours
+
+- **(3)** The picker's list is fixed when the page loads. If you're added to or removed from a project while the page is open, the picker doesn't show it until you move to another page. (6.2)
+- **(3)** Superusers lose the documentation, community and support links, and the support link may email a placeholder address if the instance never set one. (S17, 6.2)
+- **(4)** Support users see customer projects in their picker without being members, as long as the project allows support access. (S07)
+- **(4)** A sandbox you're on, under a sandbox you're not on, shows up directly under the top project, so the tree you see isn't the real one. (S05)
+- **(4)** Ctrl/Cmd+P opens the picker instead of the browser's print dialog, and switching from channel logs lands on the work orders tab, not channel logs. (6.2)
 
 ## 3. Who can do what
 

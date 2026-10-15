@@ -65,12 +65,24 @@ Without it, people do time zone arithmetic in their heads and get it wrong.
 
 ## 2. What it does
 
-- Anyone sees a timestamp converted to their browser's time zone
-- Anyone sees the year when a timestamp is from a different year
-- Anyone sees seconds where the host page asks for detailed relative time
-- Anyone hovering a timestamp sees the exact UTC value
-- Anyone clicking a timestamp copies the exact UTC value and is told it was copied
-- Anyone sees a placeholder when the host page passes no timestamp
+- **Show times in the viewer's local time**
+  - Anyone sees a timestamp converted to their browser's time zone
+  - Anyone sees the year when a timestamp is from a different year
+  - Anyone sees seconds where the host page asks for detailed relative time
+- **Get the exact UTC value**
+  - Anyone hovering a timestamp sees the exact UTC value
+  - Anyone clicking a timestamp copies the exact UTC value and is told it was copied
+- **Show when there's no time yet**
+  - Anyone sees a placeholder when the host page passes no timestamp
+
+**Straightforwardness: 4 of 5.** A small component that does what it says; the surprises are about where it sits on a page and what it doesn't adapt to.
+
+### Most surprising behaviours
+
+- **(3)** On rows you can click to open something, like the projects list, clicking the timestamp copies it instead of opening the row. (6.2)
+- **(3)** Some browsers may fail to read the stored time, in which case the user sees a grey bar where the time should be. (6.1)
+- **(4)** "Today at 10:30 AM" stays "today" after midnight until the page refreshes that row. (6.2)
+- **(4)** Times are always shown in English with a 12-hour clock, whatever language or clock the viewer uses. (6.2)
 
 ## 3. Who can do what
 

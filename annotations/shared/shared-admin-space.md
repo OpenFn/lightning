@@ -72,13 +72,25 @@ admins would have no single place to move between these jobs and back to their o
 
 ## 2. What it does
 
-- Superusers open any admin page
-- Superusers move between admin areas from one side menu and see which one they are in
-- Superusers leave the admin space back to their projects
-- Non-superusers who reach an admin page are sent to their projects and told they have no access
-- Non-superusers can't reach the system dashboard, over HTTP or the websocket
-- A superuser who is demoted loses their open admin pages
-- Deployments add their own items to the admin menu
+- **Work in the admin space** (superusers)
+  - Open any admin page
+  - Move between admin areas from one side menu and see which one they are in
+  - Leave the admin space back to their projects
+- **Keep everyone else out**
+  - Non-superusers who reach an admin page are sent to their projects and told they have no access
+  - Non-superusers can't reach the system dashboard, whether by loading the page or by reconnecting to it directly
+  - A superuser who is demoted loses the admin pages they already have open
+- **Extend the menu**
+  - Deployments add their own items to the admin menu
+
+**Straightforwardness: 4 of 5.** It's one gate and one menu, and it behaves as you'd expect; the oddities are small inconsistencies between admin pages.
+
+### Most surprising behaviours
+
+- **(3)** The gate is set up page by page rather than once for the whole admin space, so a new admin page added without it would open to every signed-in user. (6.2)
+- **(3)** The "Authentication" menu item opens an empty new-provider form even when a login provider is already set up, rather than showing the existing one. (6.2)
+- **(3)** While a superuser edits a project in the admin space, the project picker at the top marks that project as the one they're "in". (6.2)
+- **(4)** The system dashboard has none of the admin frame: no side menu, no Back link, and a refused user there gets a slightly different message from the other admin pages. (S04, 6.2)
 
 ## 3. Who can do what
 

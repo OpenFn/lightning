@@ -73,6 +73,8 @@ every member: those already enrolled carry on, and those who aren't are stopped 
 why, sent to enrol, and let back in once they have. Without it the requirement would either not be
 enforced, or would lock people out with no explanation and no way back.
 
+## 2. What it does
+
 1. A project owner or admin turns on "Require MFA?" on the project's security settings.
 2. Members who already use multi-factor authentication carry on as normal.
 3. A member who hasn't set it up is sent, on their next project page, to a page explaining that the project requires it.

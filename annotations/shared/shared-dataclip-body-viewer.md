@@ -70,12 +70,26 @@ payload at all or would expose secrets to everyone who can read the project.
 
 ## 2. What it does
 
-- Anyone who can open a host page reads a dataclip's body, formatted, in a read-only viewer
-- Anyone copies the body to the clipboard
-- Anyone sees a webhook request's data and request metadata together, with the webhook's secret masked
-- Anyone sees a step's output with the credential values used in that run masked
-- Nobody without access to the dataclip's own project can load its body, from any page
-- Anyone is told when a body is missing or could not be loaded
+- **Read and copy a body** (anyone who can open a host page)
+  - Read a dataclip's body, formatted, in a read-only viewer
+  - Copy the body to the clipboard
+- **Keep secrets out of view**
+  - A webhook request's data and request details are shown together, with the webhook's secret masked
+  - A step's output is shown with the credential values used in that run masked
+- **Keep other projects' data out**
+  - Nobody without access to the dataclip's own project can load its body, from any page
+- **Say when there's nothing to show**
+  - Anyone is told when a body is missing or could not be loaded
+
+**Straightforwardness: 2 of 5.** Showing a payload sounds simple, but the masking and the reformatting both have gaps that can show a secret or change the data, and you have to think hard to see when.
+
+### Most surprising behaviours
+
+- **(2)** A secret that contains a line break, quote or backslash, such as a private key, may never be masked and can show in full in a step's output. (6.1)
+- **(2)** Masking uses each credential's current values, so after someone rotates a secret, older outputs may show the old one unmasked. (6.1)
+- **(2)** Very large numbers, like long ids, are quietly rounded on screen and in what gets copied, so someone can paste a wrong id into a manual run. (6.1)
+- **(3)** Switching steps quickly may leave the previous step's body showing under the newly selected step. (6.1)
+- **(3)** A body that has been wiped, or from a project the user was just removed from, may keep showing for up to a day in the same browser. (6.1)
 
 ## 3. Who can do what
 

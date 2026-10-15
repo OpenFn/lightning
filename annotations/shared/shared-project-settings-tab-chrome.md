@@ -75,13 +75,24 @@ setting believing it will merge back when it won't, or the reverse.
 
 ## 2. What it does
 
-- Opening project settings shows the Setup tab
-- A link to a tab opens that tab, and the address bar names the open tab
-- The open tab stays open while the page updates
-- Every member who can open the project sees all nine tabs
-- Members whose role can't change a tab are told so at the top of it
-- In a sandbox, each tab says whether its changes stay local, sync to the parent on merge, or are inherited from the parent
-- Outside a sandbox, no sandbox banner shows
+- **Open the right tab**
+  - Opening project settings shows the Setup tab, and a link to a tab opens that tab
+  - The address bar names the open tab, and the tab stays open while the page updates
+- **Show members where they stand**
+  - Every member who can open the project sees all nine tabs
+  - Members whose role can't change a tab are told so at the top of it
+- **Say what a sandbox change does**
+  - In a sandbox, each tab says whether its changes stay local, sync to the parent on merge, or are inherited from the parent
+  - Outside a sandbox, no sandbox banner shows
+
+**Straightforwardness: 3 of 5.** The tabs and role notices are what you'd expect; the catch is that the sandbox banners make promises about merging that the merge doesn't fully keep.
+
+### Most surprising behaviours
+
+- **(2)** In a sandbox, the Security tab says its settings are inherited from the parent, but MFA seems to be copied only once when the sandbox is made. Turning MFA on in the parent later may not protect the sandbox, which still says "inherited". (6.1)
+- **(2)** The Credentials and Collections banners say changes "will sync to the parent on merge", but merging only brings across the credentials you pick and never removes anything from the parent, so a deleted credential or collection stays live. (6.1)
+- **(3)** A link to a tab name that doesn't exist, from a typo or an old email, opens settings with no tab selected and an empty page body. (6.1)
+- **(4)** The "you cannot modify" notice is only a message; it's each tab's job to actually lock its controls, and in a sandbox the Security and Webhook security tabs show read-only members no notice at all. (6.2)
 
 ## 3. Who can do what
 

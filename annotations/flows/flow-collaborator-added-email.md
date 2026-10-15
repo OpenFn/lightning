@@ -67,6 +67,8 @@ project they can now reach and with what role, and gives them a link that opens 
 workflows. Without it, the admin has to tell each new collaborator out of band, and the new
 collaborator has to find the project themselves.
 
+## 2. What it does
+
 1. A project admin or owner adds people who already have OpenFn accounts on the collaborators tab.
 2. Shortly afterwards, each newly added person (and only them) gets an email "You now have access to <project>" that names their role.
    - Existing members and the admin aren't emailed; people invited without an account get a different email instead

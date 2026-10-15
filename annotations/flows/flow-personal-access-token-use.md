@@ -75,6 +75,8 @@ being used, and that deleting it there cuts it off everywhere. Without it a user
 dead token from a live one, and a leaked token they "deleted" could keep reading and writing
 project data.
 
+## 2. What it does
+
 1. A user generates a personal access token on the tokens page of their profile.
 2. A script uses it to call the main API and the collections API, with the user's own project access.
    - It can't be used to manage user accounts

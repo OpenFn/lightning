@@ -62,11 +62,19 @@ delete) are behaviour of their own and are catalogued by the views that host thi
 
 ## 2. What it does
 
-- Lists credentials, OAuth clients and (in a project) keychain credentials
+- Anyone who can see the page sees the credentials, OAuth clients and, in a project, keychain credentials
 - Owners open edit, delete and transfer for their own credentials and OAuth clients
-- Project admins and owners create, edit and delete keychain credentials
 - Owners cancel a scheduled credential deletion
-- Anyone else gets "You are not authorized to perform this action" if they reach an action
+- Project admins and owners create, edit and delete keychain credentials
+- Anyone else who reaches one of these actions gets "You are not authorized to perform this action"
+
+**Straightforwardness: 4 of 5.** A list with owner-only actions; the one thing to get your head around is that ordinary credentials follow who owns them while keychains follow project role.
+
+### Most surprising behaviours
+
+- **(3)** Project admins can't edit, delete or transfer a credential someone else shared into their project; only the person who owns it can, whatever their role. (S02)
+- **(4)** Deleting a credential doesn't remove it straight away: it waits a configured number of days before it's purged, and its owner can cancel in the meantime. (S05, 4)
+- **(4)** Any refused action closes whatever dialog was open, so the user loses what they were looking at along with seeing the error. (6.2)
 
 ## 3. Who can do what
 

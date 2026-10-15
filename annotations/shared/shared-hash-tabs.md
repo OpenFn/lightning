@@ -70,12 +70,24 @@ save would throw the user back to it mid-task.
 
 ## 2. What it does
 
-- A host page with no fragment opens on its default tab
-- A link with a fragment opens that tab
-- Choosing a tab puts its name in the address bar, so a reload or a shared link reopens it
-- Browser Back and Forward move between tabs already visited
-- The open tab stays open while the server re-renders the page
-- A disabled tab cannot be opened by clicking it
+- **Open on the right tab**
+  - Anyone opening a tabbed page with no tab in the link lands on its default tab
+  - A link that names a tab opens that tab
+- **Keep the address bar in step**
+  - Choosing a tab puts its name in the address bar, so a reload or a shared link reopens it
+  - Browser Back and Forward move between tabs already visited
+- **Stay on the tab you chose**
+  - The open tab stays open while the page updates itself
+  - A disabled tab cannot be opened by clicking it
+
+**Straightforwardness: 3 of 5.** Normal clicking works as you'd expect; links and the Back button are where it gets confusing, because the address bar and the open tab can disagree.
+
+### Most surprising behaviours
+
+- **(3)** A link naming a tab that doesn't exist, such as an old link or a typo, opens the page with an empty body until the user clicks a tab. (6.1)
+- **(3)** Pressing Back to the page's plain address leaves the last tab open, so the address bar and the screen disagree, and a reload then jumps to the default tab. (6.1)
+- **(3)** A link that names a disabled tab may open it anyway, showing a panel the page meant to keep closed. (6.1)
+- **(3)** On the run page, picking a step seems to drop the tab from the address, so a reload goes back to the default tab. (6.5)
 
 ## 3. Who can do what
 

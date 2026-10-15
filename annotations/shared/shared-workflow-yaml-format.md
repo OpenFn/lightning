@@ -85,17 +85,27 @@ trigger that starts accepting data nobody asked for.
 
 ## 2. What it does
 
-- Accepts both workflow formats: v1 (`jobs`, `triggers`, `edges` maps) and v2 (one `steps` list)
-- Keeps a workflow's steps, triggers and edge logic the same through export and re-import
-- Refuses a file that is not valid YAML, with the parser's message
-- Refuses a file that does not match the format, naming the field and its path
-- Refuses an edge that points at a step or trigger the file does not define
-- Refuses (v1) two steps whose names would export to the same key
-- Refuses a trigger type other than webhook or cron
-- Leaves triggers off unless the file turns them on
-- Never takes over another workflow by the id in the file
-- Keeps an existing webhook path when a re-applied file does not mention one
-- Shows import errors with a code, a readable message and the path
+- **Read either format** (anyone importing a file, picking a template, or applying AI-written YAML)
+  - Both workflow formats are accepted: v1 (separate jobs, triggers and edges) and v2 (one list of steps)
+  - A workflow's steps, triggers and edge logic stay the same through export and re-import
+- **Refuse what it can't represent**
+  - Files that aren't valid YAML, don't match the format, or use a trigger type other than webhook or cron are refused
+  - Edges to a step or trigger the file doesn't define are refused, and so (v1) are two steps whose names would export to the same key
+  - Errors show with a code, a readable message and the path to the problem
+- **Import safely** (editors, when the result is written into the workflow)
+  - Triggers stay off unless the file turns them on
+  - The id in a file never takes over another workflow
+  - A re-applied file that doesn't mention a webhook path keeps the existing one
+
+**Straightforwardness: 2 of 5.** Two formats, a browser-side check that is the only check, and duplicate-name rules that disagree between import and export, so a round trip can quietly lose or break things.
+
+### Most surprising behaviours
+
+- **(2)** In v2, a second step with the same id silently replaces the first. The code view can produce such a file when two step names differ only in case or a space versus a hyphen, so export then re-import loses a step with no error. (6.1)
+- **(2)** Steps named "Fetch" and "fetch" import and save fine, but the project's YAML export then fails with a duplicate error. (6.1)
+- **(2)** "Triggers stay off unless the file says so" doesn't help in practice: the blank workflow and both built-in templates turn their trigger on, so a new webhook is live and the sample schedule runs daily against example.com, even though the workflow is still a draft. (6.2)
+- **(3)** Credentials in a file are accepted and quietly dropped, and templates published from the canvas lose their layout. (6.2)
+- **(3)** Published templates are shared across the whole instance, so every editor can see the job code of templates from projects they're not on. (6.2)
 
 ## 3. Who can do what
 

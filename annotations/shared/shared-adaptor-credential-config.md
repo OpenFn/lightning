@@ -89,15 +89,30 @@ adaptor release ships, or runs with a credential its builder had no right to cha
 
 ## 2. What it does
 
-- Anyone on the project sees a step's adaptor, version and credential, and whether the credential is missing or gone
-- Editors pick an adaptor from the catalogue, by search or keyboard, with an HTTP suggestion when nothing matches
-- Editors are warned that changing a step's adaptor clears its credential, and can back out
-- Editors pin a step to an adaptor version or leave it on latest
-- Editors pick or clear a step's credential, project or keychain, with credentials matching the adaptor offered first
-- Editors create a credential from the step and have it attached when saved
-- Only a credential's owner can open it for editing from the step
-- Admins create keychain credentials from the step; others cannot
-- Escape and Back close one dialog at a time and return to the one beneath
+- **See how a step connects**
+  - Anyone on the project sees a step's adaptor, version and credential, and whether the credential is missing or gone
+- **Choose the adaptor and version** (editors)
+  - Pick an adaptor from the catalogue by search or keyboard, with HTTP suggested when nothing matches
+  - Get warned that changing a step's adaptor clears its credential, and back out if they want
+  - Pin the step to an adaptor version or leave it on latest
+- **Choose the credential** (editors)
+  - Pick or clear a step's credential, either a project credential or a keychain, with ones matching the adaptor offered first
+- **Create or edit credentials without leaving the step**
+  - Editors create a credential and have it attached to the step when saved
+  - Only a credential's owner can open it for editing from the step
+  - Admins create keychain credentials from the step; others cannot
+- **Step back through the dialogs**
+  - Escape and Back close one dialog at a time and return to the one beneath
+
+**Straightforwardness: 2 of 5.** The happy path is simple, but the stacked dialogs, the link to the credential form and the way choices are saved later produce several outcomes you'd only predict after careful thought.
+
+### Most surprising behaviours
+
+- **(2)** Editing a credential that's shared with several projects, or unticking this project in the form, may leave the step showing "Not found" and the workflow refusing to save. (6.1, S16)
+- **(2)** In the code editor, opening "Configure connection" after switching to a step with a different adaptor may quietly change that step's version to the newest numbered release. (6.1)
+- **(2)** After editing a credential or creating a keychain, the page seems to think a dialog is still open: Escape stops closing the step panel or the code editor, and "Configure connection" doesn't come back. (6.1)
+- **(3)** Viewers and editors are offered "Keychain" in the advanced credential setup, but when they save, nothing happens and nothing tells them why. (6.1, S15)
+- **(3)** Saving an edit to any credential in the list also makes it the step's credential, even if the step was using a different one. (6.2)
 
 ## 3. Who can do what
 

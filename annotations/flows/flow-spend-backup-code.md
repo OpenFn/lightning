@@ -71,6 +71,8 @@ printed or saved recovery codes to finish signing in. Each code must open the ac
 so a code that has been seen, photographed or left in an old printout is useless after its first
 use, and the user must be able to tell afterwards which of their codes are already spent.
 
+## 2. What it does
+
 1. A user with two-factor turned on enters their password and lands on the two-factor page.
 2. They switch to "Use your backup code", type one of their unused recovery codes and are signed in.
    - A mistyped code is refused and nothing is used up

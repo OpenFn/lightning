@@ -48,9 +48,17 @@ what to do. Self-hosted instances run with a limiter that never objects, so the 
 
 ## 2. What it does
 
-- Project pages show the limiter's banner when the project is over a limit
+- Everyone on a project sees the plan limits banner on its pages when the project is over a limit
 - Pages show nothing extra when the project is within its limits
 - Users on instances with the book-a-demo banner enabled see it until they dismiss it
+
+**Straightforwardness: 4 of 5.** A banner that appears when you're over a limit; the only catches are when it checks and what happens when two banners want the same spot.
+
+### Most surprising behaviours
+
+- **(3)** Limits are only checked when a page opens. Someone who leaves a page open while the project hits its limit sees no banner until they move to another page. (6.2)
+- **(3)** The limits banner and the book-a-demo banner share one spot, so when both apply the limits banner replaces the demo one. (6.1)
+- **(4)** Self-hosted instances never show the limits banner at all, and the wording and the limits themselves come from the hosted service, not from this app. (1, 8)
 
 ## 3. Who can do what
 

@@ -107,20 +107,31 @@ their access was taken away.
 
 ## 2. What it does
 
-- Members open a workflow and see it once the shared copy has fully loaded
-- Collaborators see each other's edits as they make them, without saving
-- Unsaved edits survive a reload and are there for the next person who opens the workflow
-- A shared draft older than the last save is thrown away in favour of the saved workflow
-- A dropped connection keeps the workflow on screen, blocks saving and resyncs on reconnect
-- Editors save the shared copy, and everyone in the room learns the new saved version
-- A save that fails says why, writes field errors where everyone sees them, and offers a retry
-- Viewers, older versions and demoted users cannot change the shared copy, on the client or the server
-- Non-members and unenrolled members of MFA projects cannot join the room
-- Removal, revoked support access, project deletion and workflow deletion close the session
-- Members see who else has the workflow open, and where their pointer is on the canvas
-- Editors see when they have unsaved changes, and (experimental) are warned before leaving with them
-- Editors save with Ctrl/Cmd+S from anywhere on the page
-- A tab left open across a deploy keeps its connection when it sends an event the server no longer knows
+- **Work on one live, shared copy**
+  - Members open a workflow and see it once the shared copy has fully loaded
+  - Collaborators see each other's edits as they make them, without saving
+  - Members see who else has the workflow open, and where their pointer is on the canvas
+- **Keep unsaved work safe**
+  - Unsaved edits survive a reload and are there for the next person, unless the workflow has been saved since, in which case the saved version wins
+  - A dropped connection keeps the workflow on screen, blocks saving and resyncs on reconnect; a tab left open across a deploy stays connected
+  - Editors see when they have unsaved changes, and (experimental) are warned before leaving with them
+- **Save** (editors)
+  - Editors save with the button or Ctrl/Cmd+S from anywhere on the page, and everyone in the room learns the new saved version
+  - A save that fails says why, shows field errors to everyone, and offers a retry
+- **Control who can change it and who can stay**
+  - Viewers, people on older versions and demoted users cannot change the shared copy, even with a modified browser
+  - Non-members and members of MFA projects who haven't enrolled cannot join
+  - Removal, revoked support access, project deletion and workflow deletion close the session
+
+**Straightforwardness: 2 of 5.** "Unsaved" here means shared and stored but not yet live, which takes some explaining, and the failure cases around simultaneous saves, lost connections and refused access don't behave the way you'd expect.
+
+### Most surprising behaviours
+
+- **(2)** When two people save the same workflow at nearly the same moment, the second may get "An internal error occurred" and their editor drops and reconnects, rather than being told someone else just saved. (6.1)
+- **(2)** "Unsaved" doesn't mean private or at risk: your half-finished edits are stored and shown to the next person who opens the workflow, and the leave-page warning only exists with experimental features on. (S03, 6.2)
+- **(3)** Someone who can't join the workflow, or whose session fails to start, may just see "Loading workflow" forever with no reason given. (6.1, 6.2)
+- **(3)** After a run pushes the project over its run limit, the run button stays enabled and the next run is simply refused, instead of the limit being explained up front. (6.1)
+- **(3)** While disconnected, the unsaved-changes marker disappears even though there are unsaved edits, and Ctrl/Cmd+S can try a save the disabled Save button wouldn't allow. (6.2)
 
 ## 3. Who can do what
 
