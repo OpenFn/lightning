@@ -91,7 +91,24 @@ competing questions, or collaborators reading a record of changes that never rea
 
 ## 2. What it does
 
-Tab A starts a conversation or asks a question → `ai_session_created` puts it in tab B's list → tab B in the conversation sees the question, the streamed reply and the processing lock → tab A alone applies the reply, broadcasting `workflow_applying` / `workflow_applied` around the write → tab B sees the change on its canvas through the shared Y.Doc and cannot Save or revert while the apply runs.
+1. Someone with the workflow open starts a conversation with the AI assistant, or asks a question in one.
+   - A colleague with the same workflow open sees the new conversation appear at the top of their list without reloading.
+2. Everyone in the conversation sees the question, who asked it, and the reply as it streams in.
+   - Nobody can send another message while a question is being answered.
+   - If the reply fails, everyone sees the failure, and a retry by anyone clears "Try again" for all.
+3. Only the asker's browser applies the reply to the shared workflow.
+   - Colleagues see the change appear on their canvas, and their Save shows unsaved changes.
+4. While any apply is running, everyone else's Save, "Revert changes" and "Try again" are locked, and unlock when it finishes.
+
+**Straightforwardness: 2 of 5.** The happy path is easy to picture, but the lock that protects it can get stuck, can be skipped, and several people's screens can end up showing changes that never happened.
+
+### Most surprising behaviours
+
+- **(2)** When the reply lands it replaces the whole workflow with the asker's copy from when they asked, so a colleague's edits made in the meantime quietly disappear from their canvas. (6.1)
+- **(2)** If the asker closes their tab or drops off mid-apply, everyone else's Save seems to stay disabled until they reload. (6.1)
+- **(2)** Two people in different conversations on the same workflow may both have replies auto-apply at once, ignoring the lock, and the last one wins. (6.1)
+- **(2)** Colleagues can be shown a list of changes, with a "Revert changes" button, for edits that never reached the workflow, because the asker's apply failed or the asker couldn't edit. (6.1, 6.2)
+- **(3)** With several people in one conversation, streamed text may repeat once per extra person, and someone starting a conversation elsewhere at the same moment could briefly see another conversation's status. (6.1)
 
 ## 3. Who can do what
 

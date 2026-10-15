@@ -73,7 +73,20 @@ undone by that person's next save. The API caller needs a clear refusal it can r
 
 ## 2. What it does
 
-Someone has the workflow open in the editor → a client PUTs or PATCHes it through the workflows API → the API answers 409 "Cannot save a workflow (<name>) while it is being edited on the App UI" and nothing is written; the open editor is untouched → once every editor session on it has ended, the same call saves and the next editor opens on the API's version.
+1. Someone has a workflow open in the editor.
+2. A script or integration with editor rights tries to update that workflow through the workflows API.
+   - The API refuses with a "being edited on the App UI" conflict, saves nothing, and the person in the editor sees nothing.
+3. Once everyone has closed the workflow, the same call goes through.
+4. The next person to open the editor sees the API's version, and any unsaved draft left from before is gone.
+
+**Straightforwardness: 3 of 5.** A simple lock on paper, but what counts as "being edited" is much broader than the message suggests, and other ways of changing the workflow skip the lock entirely.
+
+### Most surprising behaviours
+
+- **(2)** Anyone merely looking at the workflow holds the lock: a viewer, someone on an old version or a run, even the API caller's own idle tab. The script is told someone is editing when nobody can. (6.1, 6.2)
+- **(2)** Deploys from the CLI and GitHub sync don't check the lock at all; they write straight into the open editor, so only this one API is protected. (6.5)
+- **(3)** A tab closed without a clean disconnect keeps blocking the API for a while after the last person has left. (6.4)
+- **(3)** Unsaved edits someone left in a closed editor are silently dropped once the API saves its change. (S03)
 
 ## 3. Who can do what
 

@@ -85,7 +85,21 @@ the product.
 
 ## 2. What it does
 
-Visitor submits the registration form; the server creates the user, emails a confirmation link, signs them in, creates a `<first name>-demo` project they own, and redirects to `/projects/<id>/w/new`, where the landing screen offers the ways to start a workflow.
+1. On instances that give new users a starter project, a visitor fills in the registration form.
+2. Their account is created, a confirmation email is sent, and they're signed in.
+3. They get a new, empty project of their own named after their first name (for example "amara-demo"), as its owner.
+   - Two people with the same first name each get their own separate project with the same name.
+4. They land on that project's new-workflow screen, with "User created successfully." and the choice to build from scratch or browse templates.
+   - Where email verification is required, they can start building straight away, still unconfirmed.
+
+**Straightforwardness: 3 of 5.** One form submission doing several things in a row is easy to follow, but a failure partway through leaves people in a confusing half-made state.
+
+### Most surprising behaviours
+
+- **(2)** Anyone whose first name has an accent, an apostrophe or non-Latin letters ("José", "O'Brien") gets an error page. Their account and confirmation email already exist but they have no project and aren't signed in, and trying again says the email "has already been taken". (6.1)
+- **(3)** Where email verification is required, the first page gives no hint that they have 48 hours to confirm; the warning only appears once they save a workflow or go elsewhere. (6.1)
+- **(3)** A page they were trying to reach before signing up is ignored but remembered, so it may pop up at their next login in the same browser, even after logging out. (6.2)
+- **(4)** The confirmation email is sent before the project is made, so a slow mail server makes the Register button slow. (6.4)
 
 ## 3. Who can do what
 

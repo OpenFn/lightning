@@ -72,7 +72,19 @@ that no longer exists.
 
 ## 2. What it does
 
-Editor confirms "Delete" on workflows-index → `WorkflowDeleted` on the project topic → any other session holding that workflow open lands on the workflow list with "Workflow deleted." and its editor and AI assistant channels close.
+1. An editor deletes a workflow from the workflow list and confirms.
+   - Their own tab shows "Workflow successfully deleted." and the workflow's triggers stop starting new work.
+2. Anyone else with that workflow open, in the editor or on its health page, is moved to the workflow list with "Workflow deleted."
+   - Their live editing and AI assistant connections for that workflow close.
+3. People on other workflows or other pages in the same project carry on undisturbed, and if the delete fails nobody is moved.
+
+**Straightforwardness: 4 of 5.** It does what you'd expect; the only real catch is what a colleague loses when they're moved.
+
+### Most surprising behaviours
+
+- **(3)** A colleague's unsaved edits in the editor are thrown away with no prompt or chance to copy them when they're moved to the list. (6.5)
+- **(3)** A workflow removed by a GitHub sync or a CLI deploy throws open editors out in exactly the same way, so people can be moved with no one in the app having clicked Delete. (6.2)
+- **(4)** Someone whose connection dropped at the moment of deletion gets "Workflow not found" as an error when they reconnect, not the friendlier "Workflow deleted.", and neither message says which workflow or who deleted it. (6.2)
 
 ## 3. Who can do what
 

@@ -103,7 +103,22 @@ wrote it.
 
 ## 2. What it does
 
-Anyone on the project follows a run's workflow or step link from the run page or History (or an old `?a=` bookmark) → the editor opens on the version that run executed, read-only, with the run loaded in the run viewer and, from a step link, the IDE open on that step's job.
+1. Anyone on the project follows a run's workflow link, or a step's inspect link, from the run page or History.
+   - An old bookmark from the retired editor still works and keeps its run.
+2. The editor opens on the version of the workflow that run actually used, with the run loaded in the run viewer.
+   - If the run used an older version, the canvas is read-only; if it used the current one, editors can edit straight away.
+   - With experimental features on, it opens the workflow exactly as the run executed it, even an unreleased draft.
+3. From a step link, the code editor opens on that step's job with the run's step selected.
+4. A run from another project, or from a different workflow, isn't loaded.
+
+**Straightforwardness: 3 of 5.** "Open the run at the version it ran" is easy to explain, but retries, deleted workflows and odd links each bend it in ways you wouldn't guess.
+
+### Most surprising behaviours
+
+- **(2)** Opening a retried work order from History shows the original version with the retry's results painted on it, plus a version mismatch warning, because a retry runs on the latest version. (6.1)
+- **(3)** A run from another project that the user can see elsewhere may still end up painted on this workflow's canvas once the page fetches it, even though the first load refuses it. (6.1)
+- **(3)** History still lists and links runs of deleted workflows, and following the link gives "Workflow not found". (6.1)
+- **(3)** A mistyped or truncated run link crashes the editor page rather than just opening without the run. (6.1)
 
 ## 3. Who can do what
 

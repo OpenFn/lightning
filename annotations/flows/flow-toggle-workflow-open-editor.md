@@ -69,7 +69,20 @@ just stopped, and its next save writes the old trigger state back, silently undo
 
 ## 2. What it does
 
-Editor clicks a workflow's switch on the list → triggers and state saved → the saved trigger changes are written into the workflow's live Y.Doc → every open editor on the latest version shows the new on/off state, and its next save keeps it.
+1. An editor flips a workflow's on/off switch on the workflow list.
+   - If the plan's limit refuses it, they see the reason and nothing changes anywhere.
+2. Anyone with that workflow open in the editor on the latest version sees its switch change to match.
+   - Their next save keeps the new state rather than writing the old one back.
+3. Anyone looking at an older version keeps seeing that version as it was.
+
+**Straightforwardness: 3 of 5.** Easy to follow once explained, but the update reaches into the open editor more bluntly than you'd expect and can clobber or confuse what's there.
+
+### Most surprising behaviours
+
+- **(2)** An unsaved edit to a trigger's schedule or webhook path in the open editor is reverted when someone flips the switch on the list. (6.1)
+- **(3)** The open editor may then show "unsaved changes" for a change that's already been saved. (6.1)
+- **(3)** If someone in the editor has deleted a trigger but not saved, flipping the switch on the list saves but then something crashes, either the list page or the open editor. (6.1, 6.5)
+- **(3)** With experimental features on, the editor's Live/Draft badge doesn't update, so it can keep showing the old state. (6.2)
 
 ## 3. Who can do what
 

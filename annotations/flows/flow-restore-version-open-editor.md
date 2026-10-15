@@ -75,9 +75,23 @@ rollback is undone without anyone noticing.
 
 ## 2. What it does
 
-Editor restores v<n> in tab A → the snapshot is written as the workflow and recorded as a new
-publish → the live shared document is reset from the database → every open editor on Latest shows
-the restored workflow, code included, and every open editor's version list refetches on next open.
+1. An editor (with experimental features on) restores an earlier published version of a workflow.
+   - If they're refused, or someone else saves at the same moment, they see "Could not restore" and nobody else is affected.
+2. The old version becomes the workflow again and is recorded as a new publish, "Restored v1", under their name.
+3. Everyone with the workflow open on the latest version sees it switch to the restored content.
+   - That includes the canvas and any step code they have open, with no unsaved changes marker.
+   - A colleague who then edits and saves keeps the rollback rather than undoing it.
+4. Anyone reading an older version stays on it, and everyone's version list shows the new publish next time they open it.
+
+**Straightforwardness: 2 of 5.** "Everyone switches to the restored version" sounds simple, but what happens to colleagues' unsaved work, read-only views and the restorer's own list takes real thought.
+
+### Most surprising behaviours
+
+- **(2)** A colleague who can edit has their unsaved changes wiped by the restore, with no message telling them why. (6.2)
+- **(2)** If switching open editors over fails, colleagues may still be told the save happened, see their old content marked as unsaved changes, and undo the rollback by saving. (6.1)
+- **(2)** Someone reading an older, read-only version may be told they have unsaved changes and warned when leaving, on a page they can't edit. This happens after any save, not just a restore. (6.1)
+- **(3)** The person who restored doesn't see the new publish in their own version list until they reload. (6.1)
+- **(3)** A colleague with a step open that the restore removed is told it "didn't exist in this version", as if they'd switched versions themselves, and open screens may flash an empty workflow during the switch. (6.1, 6.2)
 
 ## 3. Who can do what
 

@@ -72,7 +72,19 @@ every such link would 404 and they would have to find the workflow again by name
 
 ## 2. What it does
 
-Anyone with an old `/w/:id/legacy` or `/w/new/legacy` link opens it → a server redirect sends them to `/w/:id` or `/w/new` in the collaborative editor with the query string carried over and `a` renamed to `run`.
+1. Someone opens an old link to the retired legacy editor, either to a workflow or to "new workflow".
+   - If they're signed out, they log in first and then carry on with the same link.
+2. They're sent straight to the same workflow, or the new workflow screen, in the current editor.
+   - The rest of the link comes along with it, and an old link to a run opens that run.
+3. Whether they can actually see the page is decided there as usual: non-members are turned away, and only people who can create workflows get the new workflow screen.
+
+**Straightforwardness: 4 of 5.** It's a redirect that does what you'd expect; the surprises are odd links breaking it, not the normal case.
+
+### Most surprising behaviours
+
+- **(3)** An old link with certain bracketed bits in its address shows an error page instead of opening the workflow. (6.1)
+- **(3)** A specially crafted link that looks like a workflow link may send someone to another page on the site instead, such as logging them out. (6.1)
+- **(4)** Old links that pointed at a selected step or a particular mode open the workflow but lose that selection, since the new editor ignores the old settings. (6.2)
 
 ## 3. Who can do what
 

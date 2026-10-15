@@ -100,7 +100,23 @@ they could start, and might test against production systems by accident.
 
 ## 2. What it does
 
-An editor on a live workflow chooses "Edit in sandbox" → creates a sandbox (optionally carrying the open run's reviewed input or a saved input) or picks one that holds this workflow → lands on the sandbox's copy of the same workflow, editable, with the run panel open on the carried input → later promotes it back through flow-sandbox-merge.
+1. An editor looking at a live workflow chooses "Edit in sandbox" (only with experimental features turned on).
+2. They either create a new sandbox or continue in an existing one that has a copy of this workflow.
+   - A new sandbox can carry a starting input: the open run's input after they review it, or a saved input, which is copied into the sandbox.
+   - If the workflow's copy can't be found, they see "Could not create a sandbox" and no stray sandbox is left behind.
+3. They land in the editor on the sandbox's copy of the same workflow, editable, with its triggers off and production untouched.
+   - If they carried an input, the run panel opens with it already selected; continuing in an existing sandbox carries nothing.
+4. Runs in the new sandbox use the credentials' sandbox ("dev") values, not production's.
+5. When they're done, "Promote" hands them on to merging the sandbox back.
+
+**Straightforwardness: 3 of 5.** The idea is simple once explained, but where unsaved edits end up and which credentials a sandbox run uses both catch people out.
+
+### Most surprising behaviours
+
+- **(2)** If you have unsaved edits and choose "Save and switch", the sandbox is copied before the save, so your edits go to production and are missing from the sandbox you made for them. (6.1)
+- **(2)** Runs in a sandbox made this way can't use a credential that has no "dev" value, so a fix tried with production data may simply fail until someone adds one. (S05, 6.5)
+- **(3)** The list of sandboxes to continue in includes ones you aren't a member of; picking one doesn't get you in. (3)
+- **(4)** The run panel opens titled "Pick a custom input" even though your carried input is already selected. (6.1)
 
 ## 3. Who can do what
 
