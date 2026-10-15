@@ -96,25 +96,12 @@ defmodule LightningWeb.API.ProjectController do
   end
 
   @doc """
-  Retrieves a specific project by ID.
+  Shows a project to a caller who may access it.
 
-  Returns detailed information about a single project if the authenticated
-  user has access to it.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `id` - Project UUID (required)
-
-  ## Returns
-
-  - `200 OK` with project JSON on success
-  - `404 Not Found` if project doesn't exist
-  - `403 Forbidden` if user lacks access to the project, or the token lacks
-    `projects:write`
-  - `409 Conflict` to a caller who may see the project, if it is scheduled for
-    deletion
+  A project the caller isn't a member of answers 404 `not_found`, as if it
+  didn't exist. A member who hasn't met its MFA requirement, or a token without
+  `projects:write`, gets 403. A project scheduled for deletion answers 409
+  `scheduled_for_deletion` to a caller who may see it.
 
   ## Examples
 

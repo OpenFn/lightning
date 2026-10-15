@@ -63,25 +63,11 @@ defmodule LightningWeb.API.CredentialController do
   @nothing_visible {"names nothing you can see", code: :not_found}
 
   @doc """
-  Lists credentials with optional project filtering.
+  Lists credentials, without their bodies.
 
-  This function has two variants:
-  - With `project_id`: Returns all credentials for a specific project (regardless of owner)
-  - Without `project_id`: Returns only credentials owned by the authenticated user
-
-  Credential bodies are excluded from responses for security.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `project_id` - Project UUID (optional, filters to specific project)
-
-  ## Returns
-
-  - `200 OK` with list of credentials (bodies excluded)
-  - `404 Not Found` if project doesn't exist (when project_id provided)
-  - `403 Forbidden` if user lacks project access (when project_id provided)
+  With `project_id`, lists every credential linked to that project, whoever
+  owns it. A project the caller isn't a member of answers 404 `not_found`, as
+  if it didn't exist. Without `project_id`, lists the caller's own credentials.
 
   ## Examples
 
