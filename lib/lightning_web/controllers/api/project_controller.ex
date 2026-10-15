@@ -204,33 +204,32 @@ defmodule LightningWeb.API.ProjectController do
   end
 
   defp create(conn, fields, request, entries) do
-    # A members list of the wrong type is already among the request's entries.
-    members =
-      if Keyword.has_key?(request.errors, :members),
-        do: {:error, []},
-        else: resolve_members(get_field(request, :members) || [])
+    {member_entries, fields, changeset} =
+      case members(request) do
+        {:ok, project_users} ->
+          fields = Map.put(fields, :project_users, project_users)
+          {[], fields, Project.project_with_users_changeset(%Project{}, fields)}
 
-    case members do
-      {:ok, project_users} ->
-        fields = Map.put(fields, :project_users, project_users)
+        # Without its members a new project can't be checked for an owner, so
+        # only its own fields are.
+        {:error, member_entries} ->
+          {member_entries, fields, Project.changeset(%Project{}, fields)}
+      end
 
-        changeset = Project.project_with_users_changeset(%Project{}, fields)
-
-        with :ok <-
-               Errors.refuse(
-                 entries ++ Errors.from_changeset(changeset, @renames)
-               ) do
-          insert(conn, fields, notify: get_field(request, :notify))
-        end
-
-      # Without its members a new project can't be checked for an owner, so
-      # only its own fields are.
-      {:error, member_entries} ->
-        project_entries =
-          Errors.from_changeset(Project.changeset(%Project{}, fields))
-
-        Errors.refuse(entries ++ member_entries ++ project_entries)
+    with :ok <-
+           Errors.refuse(
+             entries ++
+               member_entries ++ Errors.from_changeset(changeset, @renames)
+           ) do
+      insert(conn, fields, notify: get_field(request, :notify))
     end
+  end
+
+  # A members list of the wrong type is already among the request's entries.
+  defp members(request) do
+    if Keyword.has_key?(request.errors, :members),
+      do: {:error, []},
+      else: resolve_members(get_field(request, :members) || [])
   end
 
   defp insert(conn, attrs, opts) do
