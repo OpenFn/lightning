@@ -308,7 +308,8 @@ A flow uses the same file with these changes:
 
 - `type: flow`, and `surfaces:` lists every annotation it passes through, in order, including
   emails and controllers.
-- Section 2 is the journey in one line.
+- Section 2 is the journey as at most five numbered steps (each with at most three sub-bullets),
+  followed by the same straightforwardness rating and most surprising behaviours as a view.
 - Section 5 scenarios may step across tabs, emails and pages. Use steps like
   `When I open the link in the "Confirm your new email" email` and
   `Then the original tab shows "Connected to GitHub"`.
