@@ -4,6 +4,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   use LightningWeb, :live_component
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
+  alias LightningWeb.Components.Common
+  alias LightningWeb.Components.GithubComponents
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
@@ -91,6 +93,24 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
+  def handle_event("toggle-legacy-format", _params, socket) do
+    changeset = socket.assigns.changeset
+    current = Ecto.Changeset.get_field(changeset, :sync_version)
+
+    # Form fields read from the changeset's params before its changes, so the
+    # flip has to go through the params, like the "validate" event does.
+    params =
+      (changeset.params || %{})
+      |> Map.put("project_id", socket.assigns.project.id)
+      |> Map.put("sync_version", to_string(!current))
+
+    {:noreply,
+     assign(socket,
+       changeset:
+         validate_changes(socket.assigns.project_repo_connection, params)
+     )}
+  end
+
   def handle_event("refresh-installations", _params, socket) do
     changeset = validate_changes(socket.assigns.project_repo_connection, %{})
     user = socket.assigns.user
@@ -120,7 +140,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
        }) do
     socket
     |> assign(
-      changeset: ProjectRepoConnection.configure_changeset(repo_connection, %{})
+      # New connections default to the v2 YAML format.
+      changeset:
+        ProjectRepoConnection.configure_changeset(repo_connection, %{
+          sync_version: true
+        })
     )
     |> assign_async([:installations, :repos], fn ->
       # repos are grouped using the installation_id
@@ -509,7 +533,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp verify_connection_banner(assigns) do
     ~H"""
-    <div id={@id} class="mb-2">
+    <div id={@id} class="mb-4">
       <.async_result assign={@verify_connection}>
         <:loading>
           <div class="rounded-md bg-blue-50 p-4">
@@ -592,8 +616,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           </div>
         </:failed>
         <div class="rounded-md bg-green-50 p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
+          <div class="flex items-center">
+            <div class="shrink-0">
               <Heroicons.check_circle class="h-5 w-5 text-green-400" />
             </div>
             <div class="ml-3">
@@ -729,40 +753,52 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   attr :form, :map, required: true
   attr :project_id, :string, required: true
+  attr :myself, :any, required: true
 
+  # Inverted: sync_version is true (v2) unless the legacy switch is on. The
+  # hidden input carries the current value with the form's phx-change events.
   defp config_format_toggle(assigns) do
+    assigns = assign(assigns, :legacy?, !sync_version?(assigns.form))
+
     ~H"""
-    <div class="mt-4">
+    <Common.wrapper_tooltip
+      id="legacy-format"
+      placement="top"
+      class="mt-4 flex w-fit items-center"
+      tooltip="Legacy formats use config.json, state.json and spec.yaml files in your GitHub repo."
+      subtitle="If you already have a repo in the legacy format, you may prefer to keep that structure. The modern 'v2' format uses openfn.yaml and automatically expands workflows to disk."
+    >
+      <input
+        type="hidden"
+        name={@form[:sync_version].name}
+        value={to_string(!@legacy?)}
+      />
       <button
+        id="toggle-legacy-format-switch"
         type="button"
-        class="cursor-pointer text-sm text-gray-500 hover:text-gray-700 select-none flex items-center gap-1"
-        phx-click={
-          JS.toggle(to: "#sync-version-content")
-          |> JS.toggle_class("rotate-90", to: "#sync-version-chevron")
-        }
+        role="switch"
+        aria-checked={to_string(@legacy?)}
+        aria-labelledby="legacy-format-label"
+        phx-click="toggle-legacy-format"
+        phx-target={@myself}
+        class={[
+          if(@legacy?, do: "bg-indigo-600", else: "bg-gray-200"),
+          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+        ]}
       >
-        <.icon
-          id="sync-version-chevron"
-          name="hero-chevron-right-mini"
-          class="h-4 w-4 transition-transform"
-        /> Advanced: use new YAML config format
+        <span
+          aria-hidden="true"
+          class={[
+            if(@legacy?, do: "translate-x-5", else: "translate-x-0"),
+            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+          ]}
+        >
+        </span>
       </button>
-      <div
-        id="sync-version-content"
-        class="hidden mt-2 ml-5 p-3 bg-gray-50 rounded-md border border-gray-200"
-      >
-        <label class="flex items-center gap-3 cursor-pointer">
-          <.input type="checkbox" field={@form[:sync_version]} hidden_input={false} />
-          <span class="text-sm text-gray-700">
-            Use new <code>openfn.yaml</code> format
-          </span>
-        </label>
-        <p class="mt-1 ml-6 text-xs text-gray-500">
-          Only enable this if you want to use the new <code>openfn.yaml</code>
-          format instead of the legacy JSON config.
-        </p>
-      </div>
-    </div>
+      <span class="ml-3 text-sm text-gray-900" id="legacy-format-label">
+        Use legacy formats (config.json)
+      </span>
+    </Common.wrapper_tooltip>
     """
   end
 
@@ -776,12 +812,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     ~H"""
     <div class="mb-4">
       <.label>
-        Initial Setup Action
+        Initial Setup
       </.label>
       <p class="text-sm text-gray-500">
-        Do you want to initialize this 2-way sync by committing your current
-        OpenFn project to GitHub or do you want to overwrite your current OpenFn
-        project, importing a previously created project from a GitHub repo?
+        Choose the direction of the first sync: export this project to GitHub, or import an existing project from GitHub.
       </p>
       <fieldset class="mt-4">
         <legend class="sr-only">Direction of <em>Initial</em> Sync</legend>
@@ -799,12 +833,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             </div>
             <div class="ml-3 text-sm leading-6">
               <label for="pull_first_sync_option" class="text-gray-900">
-                <span class="font-medium">OpenFn --> GitHub:</span>
-                Export to GitHub (default, non-destructive)
+                <span class="font-medium">OpenFn --> GitHub:</span> Export to GitHub
               </label>
 
               <p id="pull_first_sync_option_description" class="text-gray-500">
-                This option will commit a copy of your current OpenFn project to a GitHub repo.
+                Commit a copy of your current OpenFn project to GitHub. This does not affect any workflows or configuration here.
               </p>
             </div>
           </div>
@@ -825,10 +858,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                 Import from GitHub (overwrite this project)
               </label>
               <p id="deploy_first_sync_option_description" class="text-gray-500">
-                If you already have an <code>openfn.yaml</code>
-                (or legacy <code>config.json</code>)
-                tracked on GitHub and you want to <b>overwrite</b>
-                this project on OpenFn, you can choose this advanced option.
+                Replace this OpenFn project with the workflows, collections and channels that are already committed to GitHub.
               </p>
             </div>
           </div>
@@ -845,8 +875,11 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp accept_checkbox(assigns) do
     ~H"""
     <div class={[
-      "mt-4 bg-amber-200 flex gap-3 rounded-md p-3",
-      @form[:sync_direction].value == :deploy && "bg-red-200"
+      "mt-4 flex gap-3 rounded-md border p-3",
+      if(@form[:sync_direction].value == :deploy,
+        do: "border-red-300 bg-red-50",
+        else: "border-yellow-300 bg-yellow-50"
+      )
     ]}>
       <.input
         type="checkbox"
@@ -854,7 +887,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         required="true"
         hidden_input={false}
       />
-      <span>
+      <span class="text-sm text-gray-900">
         I understand that
         <%= if @form[:sync_direction].value == :deploy do %>
           my current OpenFn project <b>will be destroyed</b> and
@@ -862,31 +895,34 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         the following files will be committed to <b><%= @form[
           :repo
         ].value %></b>:
-        <ul class="my-2">
-          <li>
-            <.icon name="hero-document-plus" class="h-4 w-4" />
-            <code>
+        <ul class="my-2 space-y-1 text-xs text-gray-700">
+          <li class="flex items-start gap-1.5">
+            <.icon name="hero-document-plus" class="h-4 w-4 shrink-0 text-gray-500" />
+            <code class="break-all">
               .github/workflows/openfn-pull.yml -> {@default_branch}
             </code>
           </li>
-          <li>
-            <.icon name="hero-document-plus" class="h-4 w-4" />
-            <code>
+          <li class="flex items-start gap-1.5">
+            <.icon name="hero-document-plus" class="h-4 w-4 shrink-0 text-gray-500" />
+            <code class="break-all">
               .github/workflows/openfn-{@project.id}-deploy.yml -> {@form[
                 :branch
               ].value}
             </code>
           </li>
           <%= if to_string(@form[:config_path].value) == "" do %>
-            <li>
-              <.icon name="hero-document-plus" class="h-4 w-4" />
-              <code>
+            <li class="flex items-start gap-1.5">
+              <.icon
+                name="hero-document-plus"
+                class="h-4 w-4 shrink-0 text-gray-500"
+              />
+              <code class="break-all">
                 {config_filename(@form, @project.id)} -> {@form[:branch].value}
               </code>
             </li>
           <% end %>
         </ul>
-        Existing versions of these files on these branches will be overwritten. (I'll be able to find them in my git history if needed.)
+        Existing versions of these files on these branches will be overwritten (but will still exist in git history).
       </span>
     </div>
     """

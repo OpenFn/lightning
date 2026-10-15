@@ -25,6 +25,7 @@ import {
 } from './KeyHandlers';
 import LogLineHighlight from './LogLineHighlight';
 import type { PhoenixHook } from './PhoenixHook';
+import { SearchableSelect } from './SearchableSelect';
 import { TabbedContainer } from './TabbedContainer';
 
 export {
@@ -34,6 +35,7 @@ export {
   TemplateToWorkflow,
   ElapsedIndicator,
   TabbedContainer,
+  SearchableSelect,
   SaveViaCtrlS,
   InspectorSaveViaCtrlS,
   OpenSyncModalViaCtrlShiftS,
