@@ -351,7 +351,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
                [sandbox.id]
     end
 
-    test "returns 403 when user lacks access to project", %{
+    test "returns 404 when user is not a member of the project", %{
       conn: conn,
       user: _user
     } do
@@ -363,7 +363,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
         )
 
       conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
-      assert_problem(conn, 403, :forbidden, [])
+      assert_problem(conn, 404, :not_found, [])
     end
 
     test "tells a member, and only a member, that the project is scheduled for deletion",
@@ -384,7 +384,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       conn
       |> get(~p"/api/projects/#{stranger_to.id}/credentials")
-      |> assert_problem(403, :forbidden, [])
+      |> assert_problem(404, :not_found, [])
     end
 
     test "returns 404 when project does not exist", %{conn: conn, user: _user} do

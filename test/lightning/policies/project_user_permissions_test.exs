@@ -601,7 +601,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
                {:error, :scheduled_for_deletion}
 
       assert ProjectUsers.authorize(:edit_project, outsider_scope, project) ==
-               false
+               {:error, :no_standing}
 
       assert ProjectUsers.authorize(:edit_project, owner, project) == false
     end

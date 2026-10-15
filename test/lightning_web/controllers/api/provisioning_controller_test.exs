@@ -1037,6 +1037,18 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response.status == 403
     end
 
+    test "is forbidden for a non-member", %{conn: conn} do
+      project = insert(:project)
+
+      body = %{
+        "id" => project.id,
+        "workflows" => [%{"name" => "default"}]
+      }
+
+      assert post(conn, ~p"/api/provision", body) |> json_response(403) ==
+               %{"error" => "Forbidden"}
+    end
+
     test "is forbidden for an invalid PRC access_token", %{conn: conn} do
       project = insert(:project)
       wrong_project = insert(:project)

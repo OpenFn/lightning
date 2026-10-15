@@ -406,12 +406,16 @@ defmodule LightningWeb.API.CollectionControllerTest do
       end
     end
 
-    test "an editor, a viewer or an outsider is refused with 403", %{
+    test "an editor or a viewer is refused with 403, an outsider with 404", %{
       conn: conn
     } do
       outsider = insert(:user)
 
-      for role <- [:editor, :viewer, nil] do
+      for {role, status, code} <- [
+            {:editor, 403, :forbidden},
+            {:viewer, 403, :forbidden},
+            {nil, 404, :not_found}
+          ] do
         user = if role, do: insert(:user), else: outsider
 
         project_users = if role, do: [%{user: user, role: role}], else: []
@@ -423,12 +427,12 @@ defmodule LightningWeb.API.CollectionControllerTest do
           |> with_pat(user)
           |> put_collection(project.id, id, %{"name" => "patients"})
 
-        assert_problem(conn, 403, :forbidden, [])
+        assert_problem(conn, status, code, [])
         refute Repo.get(Collection, id)
       end
     end
 
-    test "is refused with 403 for a non-member on a project scheduled for deletion",
+    test "is refused with 404 for a non-member on a project scheduled for deletion",
          %{conn: conn} do
       outsider = insert(:user)
 
@@ -444,7 +448,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
           "name" => "patients"
         })
 
-      assert_problem(conn, 403, :forbidden, [])
+      assert_problem(conn, 404, :not_found, [])
     end
 
     test "the owner gets 409 on a project scheduled for deletion", %{

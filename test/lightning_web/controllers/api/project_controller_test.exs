@@ -140,14 +140,14 @@ defmodule LightningWeb.API.ProjectControllerTest do
     test "with token for other project", %{conn: conn} do
       other_project = insert(:project)
       conn = get(conn, ~p"/api/projects/#{other_project.id}")
-      assert_problem(conn, 403, :forbidden, [])
+      assert_problem(conn, 404, :not_found, [])
     end
 
-    test "a non-member is refused with 403, not 409, on a project scheduled for deletion",
+    test "a non-member is refused with 404, not 409, on a project scheduled for deletion",
          %{conn: conn} do
       conn = get(conn, ~p"/api/projects/#{scheduled_project().id}")
 
-      assert_problem(conn, 403, :forbidden, [])
+      assert_problem(conn, 404, :not_found, [])
     end
 
     test "the owner gets 409 on a project scheduled for deletion",
@@ -833,7 +833,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
             admin: 200,
             editor: 403,
             viewer: 403,
-            none: 403
+            none: 404
           ] do
         user = insert(:user)
 
@@ -847,9 +847,11 @@ defmodule LightningWeb.API.ProjectControllerTest do
           |> with_pat(user)
           |> put_project(project.id, %{"name" => "after"})
 
-        if status == 200,
-          do: json_response(replaced, 200),
-          else: assert_problem(replaced, 403, :forbidden, [])
+        case status do
+          200 -> json_response(replaced, 200)
+          403 -> assert_problem(replaced, 403, :forbidden, [])
+          404 -> assert_problem(replaced, 404, :not_found, [])
+        end
 
         expected = if status == 200, do: "after", else: "before"
 
@@ -858,7 +860,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
       end
     end
 
-    test "a non-member is refused with 403, not 409, on a project scheduled for deletion",
+    test "a non-member is refused with 404, not 409, on a project scheduled for deletion",
          %{conn: conn} do
       project = scheduled_project()
 
@@ -867,7 +869,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
         |> with_pat(insert(:user))
         |> put_project(project.id, %{"name" => "renamed"})
 
-      assert_problem(conn, 403, :forbidden, [])
+      assert_problem(conn, 404, :not_found, [])
     end
 
     test "the owner gets 409 on a project scheduled for deletion, and nothing changes",
@@ -891,7 +893,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
         |> with_pat(insert(:user))
         |> put_project(insert(:project).id, %{"nonsense" => 1})
 
-      assert_problem(conn, 403, :forbidden, [])
+      assert_problem(conn, 404, :not_found, [])
     end
   end
 end

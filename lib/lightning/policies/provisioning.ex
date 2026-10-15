@@ -54,8 +54,17 @@ defmodule Lightning.Policies.Provisioning do
 
   def authorize(action, %Scope{} = scope, %Project{} = project)
       when action in [:provision_project, :describe_project] do
-    Decision.project(scope, project, "projects:provision", judge(action, scope)) ||
-      {:error, :forbidden}
+    case Decision.project(
+           scope,
+           project,
+           "projects:provision",
+           judge(action, scope)
+         ) do
+      false -> {:error, :forbidden}
+      # /api/provision keeps answering no standing with 403 (plan D14).
+      {:error, :no_standing} -> {:error, :forbidden}
+      answer -> answer
+    end
   end
 
   def authorize(action, actor, %Project{} = project)

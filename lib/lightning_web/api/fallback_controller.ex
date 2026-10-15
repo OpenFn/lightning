@@ -32,6 +32,9 @@ defmodule LightningWeb.API.FallbackController do
   def call(conn, {:error, :no_such_project}),
     do: Problem.respond(conn, Problem.new(:not_found))
 
+  def call(conn, {:error, :no_standing}),
+    do: Problem.respond(conn, Problem.new(:not_found))
+
   def call(conn, {:error, :forbidden}),
     do: Problem.respond(conn, Problem.new(:forbidden))
 

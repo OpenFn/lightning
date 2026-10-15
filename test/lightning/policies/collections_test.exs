@@ -208,7 +208,7 @@ defmodule Lightning.Policies.CollectionsTest do
                :manage_collection,
                outsider_scope,
                scheduled_project
-             ) == false
+             ) == {:error, :no_standing}
     end
   end
 
