@@ -21,7 +21,6 @@ defmodule LightningWeb.API.Errors do
 
   @validation_codes %{
     required: :required,
-    cast: :type,
     format: :format,
     inclusion: :not_allowed,
     subset: :not_allowed,
@@ -156,6 +155,7 @@ defmodule LightningWeb.API.Errors do
 
   defp ecto_code(opts) do
     case Map.new(opts) do
+      %{validation: :cast, type: type} -> cast_code(type)
       %{validation: :length, kind: kind} -> Map.get(@length_codes, kind)
       %{validation: validation} -> Map.get(@validation_codes, validation)
       %{constraint: constraint} -> Map.get(@constraint_codes, constraint)
@@ -163,6 +163,20 @@ defmodule LightningWeb.API.Errors do
       _untagged -> nil
     end
   end
+
+  # A value outside an enum's set is refused like validate_inclusion, not as
+  # a value of the wrong type (spec §6.2). `__enum_map__/0` is what ecto_enum's
+  # defenum modules export.
+  defp cast_code({:array, type}), do: cast_code(type)
+  defp cast_code({:parameterized, {Ecto.Enum, _params}}), do: :not_allowed
+
+  defp cast_code(type) when is_atom(type) do
+    if Code.ensure_loaded?(type) and function_exported?(type, :__enum_map__, 0),
+      do: :not_allowed,
+      else: :type
+  end
+
+  defp cast_code(_type), do: :type
 
   defp interpolate(message, opts) do
     Regex.replace(~r"%{(\w+)}", message, fn whole, key ->

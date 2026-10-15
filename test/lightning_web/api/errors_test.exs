@@ -6,6 +6,7 @@ defmodule LightningWeb.API.ErrorsTest do
 
   alias Lightning.Accounts.User
   alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.Provisioner
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Workflow
@@ -106,7 +107,48 @@ defmodule LightningWeb.API.ErrorsTest do
                  detail:
                    "Every project must have exactly one owner. Please specify one below."
                },
-               %{pointer: "#/members/1/role", code: :type, detail: "is invalid"}
+               %{
+                 pointer: "#/members/1/role",
+                 code: :not_allowed,
+                 detail: "is invalid"
+               }
+             ]
+    end
+
+    test "codes a value outside an ecto_enum defenum's set not_allowed, not type" do
+      changeset =
+        ProjectUser.changeset(%ProjectUser{}, %{
+          "user_id" => Ecto.UUID.generate(),
+          "role" => "boss"
+        })
+
+      assert Errors.from_changeset(changeset) == [
+               %{pointer: "#/role", code: :not_allowed, detail: "is invalid"}
+             ]
+    end
+
+    test "codes a value outside an Ecto.Enum's set not_allowed, not type" do
+      changeset =
+        Project.changeset(%Project{}, %{
+          "name" => "enum",
+          "retention_policy" => "keep_forever"
+        })
+
+      assert Errors.from_changeset(changeset) == [
+               %{
+                 pointer: "#/retention_policy",
+                 code: :not_allowed,
+                 detail: "is invalid"
+               }
+             ]
+    end
+
+    test "still codes a cast to a type that isn't an enum as type" do
+      changeset =
+        Project.changeset(%Project{}, %{"name" => "type", "concurrency" => "x"})
+
+      assert Errors.from_changeset(changeset) == [
+               %{pointer: "#/concurrency", code: :type, detail: "is invalid"}
              ]
     end
 
