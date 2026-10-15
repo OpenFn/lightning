@@ -182,7 +182,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     branch_errors = Keyword.get_values(changeset.errors, :branch)
 
     if Enum.any?(branch_errors, fn {_msg, opts} ->
-         Keyword.get(opts, :reason) == :tree_branch_conflict
+         Keyword.get(opts, :code) == :tree_branch_conflict
        end) do
       Map.put(changeset, :action, :validate)
     else
