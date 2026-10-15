@@ -70,6 +70,7 @@ defmodule Lightning.Validators do
   # `not_ready` is set with `code:` too, but it is not listed here. It never
   # reaches the client as an entry, only as the 503 response code (spec §6.2).
   @entry_codes [
+    :already_scheduled,
     :credential_not_allowed,
     :cycle,
     :dataclip_wiped,
@@ -83,7 +84,6 @@ defmodule Lightning.Validators do
     :not_found,
     :not_supported,
     :one_owner,
-    :scheduled_for_deletion,
     :storage_failed,
     :too_many_secrets,
     :tree_branch_conflict,

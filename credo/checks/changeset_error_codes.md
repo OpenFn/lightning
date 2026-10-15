@@ -93,7 +93,7 @@ the line of the error the validator returns, which is where the code goes.
 | lib/lightning/version_control/project_repo_connection.ex:94  | validate_change | "please tick the box"                                                             | must_accept            |
 | lib/lightning/version_control/project_repo_connection.ex:144 | add_error       | @tree_branch_error (was `reason:`)                                                | tree_branch_conflict   |
 | lib/lightning/version_control/project_repo_connection.ex:208 | validate_change | "you must specify a path to an existing config file"                              | required               |
-| lib/lightning/webhook_auth_methods.ex:680                    | add_error       | "already scheduled for deletion"                                                  | scheduled_for_deletion |
+| lib/lightning/webhook_auth_methods.ex:680                    | add_error       | "already scheduled for deletion"                                                  | already_scheduled      |
 | lib/lightning/work_orders.ex:349                             | add_error       | "cannot retry run using a wiped dataclip"                                         | dataclip_wiped         |
 | lib/lightning/workflows.ex:549                               | add_error       | base_message (a rescued Ecto exception)                                           | invalid                |
 | lib/lightning/workflows/edge.ex:127                          | add_error       | "source_job_id or source_trigger_id must be present"                              | required               |

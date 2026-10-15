@@ -680,7 +680,7 @@ defmodule Lightning.WebhookAuthMethods do
         |> Ecto.Changeset.add_error(
           :scheduled_deletion,
           "already scheduled for deletion",
-          code: :scheduled_for_deletion
+          code: :already_scheduled
         )
 
       {:error, changeset}

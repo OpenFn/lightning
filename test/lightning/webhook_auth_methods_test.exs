@@ -490,7 +490,12 @@ defmodule Lightning.WebhookAuthMethodsTest do
         actor: user
       )
 
-    assert {:error, _changeset} = result
+    assert {:error, changeset} = result
+
+    assert changeset.errors == [
+             scheduled_deletion:
+               {"already scheduled for deletion", [code: :already_scheduled]}
+           ]
 
     final_audit_entries_count =
       Lightning.Auditing.list_all()
