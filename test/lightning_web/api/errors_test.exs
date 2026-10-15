@@ -320,4 +320,55 @@ defmodule LightningWeb.API.ErrorsTest do
                )
     end
   end
+
+  describe "parameters/1" do
+    defp query(params) do
+      types = %{
+        inserted_after: :utc_datetime,
+        state: {:array, :string},
+        page_size: :integer
+      }
+
+      {%{}, types}
+      |> Ecto.Changeset.cast(params, Map.keys(types))
+      |> Ecto.Changeset.validate_subset(:state, ["pending", "success"])
+      |> Ecto.Changeset.validate_number(:page_size, less_than_or_equal_to: 100)
+    end
+
+    test "answers 400 invalid_parameter with every bad parameter, quoting none" do
+      changeset =
+        query(%{
+          "inserted_after" => "yesterday-ish",
+          "state" => ["pending", "sideways"],
+          "page_size" => "1000"
+        })
+
+      assert Errors.parameters(changeset) ==
+               Problem.new(:invalid_parameter,
+                 errors: [
+                   %{
+                     parameter: "inserted_after",
+                     code: :type,
+                     detail: "is invalid"
+                   },
+                   %{
+                     parameter: "state",
+                     code: :not_allowed,
+                     detail: "has an invalid entry"
+                   },
+                   %{
+                     parameter: "page_size",
+                     code: :out_of_range,
+                     detail: "must be less than or equal to 100"
+                   }
+                 ]
+               )
+    end
+
+    test "raises on a changeset with no errors" do
+      assert_raise ArgumentError, fn ->
+        Errors.parameters(query(%{"state" => ["pending"]}))
+      end
+    end
+  end
 end

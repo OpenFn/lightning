@@ -98,6 +98,27 @@ defmodule LightningWeb.API.Errors do
   end
 
   @doc """
+  The 400 `invalid_parameter` problem for a refused changeset over a route's
+  query parameters, with one entry per error, each naming its parameter
+  (spec §9.4).
+  """
+  @spec parameters(Changeset.t()) :: Problem.t()
+  def parameters(%Changeset{valid?: true}) do
+    raise ArgumentError, "a changeset with no errors is not a problem"
+  end
+
+  def parameters(%Changeset{errors: errors}) do
+    entries =
+      errors
+      |> Enum.reverse()
+      |> Enum.map(fn {field, error} ->
+        entry({:parameter, Atom.to_string(field)}, error)
+      end)
+
+    Problem.new(:invalid_parameter, errors: entries)
+  end
+
+  @doc """
   One entry, for a producer that validates the request itself (spec §7 items
   3 and 4).
 
