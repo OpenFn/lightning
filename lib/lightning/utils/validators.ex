@@ -83,6 +83,7 @@ defmodule Lightning.Validators do
     :no_access,
     :not_found,
     :not_supported,
+    :one_body,
     :one_owner,
     :scope_not_granted,
     :storage_failed,

@@ -46,6 +46,39 @@ and this project adheres to
   - A project scheduled for deletion answers 409 `scheduled_for_deletion` to a
     caller who may see the project, and 403 `forbidden` to anyone else, instead
     of 401 `{"error": "Unauthorized"}`.
+- `/api/credentials` answers every error with a problem document, whose `errors`
+  list has one entry per refused field, each with a `pointer`, a `code` and a
+  `detail`:
+  - `GET /api/credentials` and `GET /api/projects/:project_id/credentials`, with
+    a repo connection's token, answer 403 `insufficient_scope` instead of
+    `{"error": "Forbidden"}`.
+  - `GET /api/projects/:project_id/credentials` (and `?project_id=`) for a
+    project that doesn't exist answers 404 `not_found` instead of
+    `{"error": "Not Found"}`, and so does an id that isn't a UUID, instead of
+    400 `{"error": "Bad Request"}`. A caller who isn't a member gets 403
+    `forbidden` instead of `{"error": "Forbidden"}`. A project scheduled for
+    deletion answers 409 `scheduled_for_deletion` to a member, instead of 403.
+  - `POST /api/credentials` with a link to a project the caller can't see, or
+    that doesn't exist, answers 422 `invalid` with a `not_found` entry at that
+    link's `project_id`, and a link to a project where the caller may not add
+    credentials answers a `no_access` entry there, instead of 403
+    `{"error": "Forbidden"}` for the whole request. Each entry points at the
+    link's position in the request, as in `#/project_credentials/1/project_id`.
+  - `POST /api/credentials` answers a field error with 422 `invalid` instead of
+    `{"errors": {"<field>": ["<message>"]}}`. A credential body's errors point
+    into the body at its position: a typed body's at each field its schema
+    refuses (`#/credential_bodies/0/body/host`), where every refusal used to be
+    one `"Environment 1: body Invalid body types"`, and an OAuth token's at the
+    field it refuses, where the request used to fail with a 500.
+  - `POST /api/credentials` with a name the user already holds, or an external
+    ID already in use, answers 409 `taken` with an entry at `#/name` or
+    `#/external_id`, instead of 422.
+  - `POST /api/credentials` with a typed body while the adaptor catalogue is
+    still loading answers 503 `not_ready` with `Retry-After: 5`, instead of 422.
+  - `DELETE /api/credentials/:id` for a credential that doesn't exist, or an id
+    that isn't a UUID, answers 404 `not_found` instead of
+    `{"error": "Not Found"}`, and for someone else's credential 403 `forbidden`
+    instead of `{"error": "Forbidden"}`.
 
 ### Added
 

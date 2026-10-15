@@ -2,14 +2,14 @@ defmodule LightningWeb.API.CredentialPutTest do
   use LightningWeb.ConnCase, async: true
 
   import LightningWeb.API.ProblemHelpers
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.ServiceAccountHelpers
+  import Ecto.Query
 
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
   alias Lightning.Repo
-
-  import Ecto.Query
 
   @secret "s3cr3t-never-rendered"
 
@@ -243,7 +243,7 @@ defmodule LightningWeb.API.CredentialPutTest do
           credential_body(%{"name" => "Hijacked", "owner" => other.email})
         )
 
-      assert json_response(conn, 409) == %{"error" => "id_taken"}
+      assert_problem(conn, 409, :id_taken, [])
 
       assert %Credential{name: "Acme DHIS2", user_id: owner_id} =
                Repo.reload!(credential)
@@ -270,7 +270,7 @@ defmodule LightningWeb.API.CredentialPutTest do
           })
         )
 
-      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert_problem(conn, 409, :scheduled_for_deletion, [])
       assert Repo.reload!(credential).name == "Acme DHIS2"
       assert main_body(credential.id) == %{"password" => "old"}
 
@@ -283,7 +283,7 @@ defmodule LightningWeb.API.CredentialPutTest do
       assert audit_ids(credential.id) == audits_before
     end
 
-    test "answers name_taken when the owner holds the name under another id",
+    test "answers 409 taken when the owner holds the name under another id",
          %{conn: conn} do
       owner = insert(:user)
       held = insert(:credential, user: owner, name: "Taken")
@@ -297,7 +297,14 @@ defmodule LightningWeb.API.CredentialPutTest do
           credential_body(%{"name" => "Taken", "owner" => owner.email})
         )
 
-      assert json_response(created, 409) == %{"error" => "name_taken"}
+      assert_problem(created, 409, :taken, [
+        %{
+          "pointer" => "#/name",
+          "code" => "taken",
+          "detail" => "you have another credential with the same name"
+        }
+      ])
+
       refute Repo.get(Credential, new_id)
 
       replaced =
@@ -307,48 +314,93 @@ defmodule LightningWeb.API.CredentialPutTest do
           credential_body(%{"name" => held.name, "owner" => owner.email})
         )
 
-      assert json_response(replaced, 409) == %{"error" => "name_taken"}
+      assert_problem(replaced, 409, :taken, [
+        %{
+          "pointer" => "#/name",
+          "code" => "taken",
+          "detail" => "you have another credential with the same name"
+        }
+      ])
+
       assert Repo.reload!(renamed).name == "Mine"
     end
 
-    test "refuses a body it cannot take with 422, flat and under its key", %{
+    test "refuses a body it cannot take with 422, at each key it refuses", %{
       conn: conn
     } do
       owner = insert(:user)
       project_id = insert(:project).id
       main = %{"name" => "main", "body" => %{"a" => "b"}}
 
+      entry = fn pointer, code, detail ->
+        %{"pointer" => pointer, "code" => code, "detail" => detail}
+      end
+
+      one_body =
+        entry.(
+          "#/credential_bodies",
+          "one_body",
+          "must be one body named main, holding an object"
+        )
+
       refused = [
-        unknown_key: {%{"external_id" => "x"}, "external_id"},
-        no_bodies: {%{"credential_bodies" => []}, "credential_bodies"},
-        missing_bodies: {%{"credential_bodies" => nil}, "credential_bodies"},
+        unknown_key:
+          {%{"external_id" => "x"},
+           [entry.("#/external_id", "unknown_key", "is not accepted")]},
+        no_bodies: {%{"credential_bodies" => []}, [one_body]},
+        missing_bodies: {%{"credential_bodies" => nil}, [one_body]},
         two_bodies:
           {%{"credential_bodies" => [main, %{main | "name" => "staging"}]},
-           "credential_bodies"},
+           [one_body]},
         not_main:
-          {%{"credential_bodies" => [%{main | "name" => "staging"}]},
-           "credential_bodies"},
+          {%{"credential_bodies" => [%{main | "name" => "staging"}]}, [one_body]},
         body_not_object:
-          {%{"credential_bodies" => [%{main | "body" => "text"}]},
-           "credential_bodies"},
-        bodies_not_list: {%{"credential_bodies" => main}, "credential_bodies"},
+          {%{"credential_bodies" => [%{main | "body" => "text"}]}, [one_body]},
+        bodies_not_list: {%{"credential_bodies" => main}, [one_body]},
         link_without_project:
           {%{"project_credentials" => [%{"id" => project_id}]},
-           "project_credentials"},
+           [
+             entry.(
+               "#/project_credentials/0/project_id",
+               "required",
+               "can't be blank"
+             ),
+             entry.(
+               "#/project_credentials/0/id",
+               "unknown_key",
+               "is not accepted"
+             )
+           ]},
         link_not_uuid:
           {%{"project_credentials" => [%{"project_id" => "acme"}]},
-           "project_credentials"},
+           [
+             entry.(
+               "#/project_credentials/0/project_id",
+               "not_found",
+               "names nothing you can see"
+             )
+           ]},
         links_not_list:
           {%{"project_credentials" => %{"project_id" => project_id}},
-           "project_credentials"},
-        unknown_owner: {%{"owner" => "nobody@example.com"}, "owner"},
-        missing_owner: {%{"owner" => nil}, "owner"},
-        other_id: {%{"id" => Ecto.UUID.generate()}, "id"},
-        blank_name: {%{"name" => ""}, "name"},
-        missing_schema: {%{"schema" => nil}, "schema"}
+           [entry.("#/project_credentials", "type", "is invalid")]},
+        unknown_owner:
+          {%{"owner" => "nobody@example.com"},
+           [entry.("#/owner", "not_found", "names nothing you can see")]},
+        missing_owner:
+          {%{"owner" => nil}, [entry.("#/owner", "required", "can't be blank")]},
+        other_id:
+          {%{"id" => Ecto.UUID.generate()},
+           [
+             entry.("#/id", "mismatch", "does not match the id in the path")
+           ]},
+        blank_name:
+          {%{"name" => ""}, [entry.("#/name", "required", "can't be blank")]},
+        missing_schema:
+          {%{"schema" => nil},
+           [entry.("#/schema", "required", "can't be blank")]}
       ]
 
-      for {case_name, {overrides, key}} <- refused do
+      for {case_name, {overrides, entries}} <- refused do
         id = Ecto.UUID.generate()
 
         body =
@@ -357,27 +409,85 @@ defmodule LightningWeb.API.CredentialPutTest do
           |> Map.merge(overrides)
           |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
-        response = conn |> put_credential(id, body) |> json_response(422)
-
-        assert %{"errors" => %{^key => [_ | _] = messages} = errors} = response,
-               "#{case_name}: #{inspect(response)}"
-
-        assert map_size(errors) == 1 and Enum.all?(messages, &is_binary/1),
-               "#{case_name}: #{inspect(response)}"
+        conn
+        |> put_credential(id, body)
+        |> assert_problem(422, :invalid, entries)
 
         refute Repo.get(Credential, id), "#{case_name} created a credential"
       end
+    end
+
+    test "answers 404 for a path id that isn't a written-out UUID", %{
+      conn: conn
+    } do
+      owner = insert(:user)
 
       for path_id <- ["not-a-uuid", "abcdefghijklmnop"] do
-        assert %{"errors" => %{"id" => [_]}} =
-                 conn
-                 |> put_credential(
-                   path_id,
-                   credential_body(%{"owner" => owner.email})
-                 )
-                 |> json_response(422),
-               path_id
+        conn
+        |> put_credential(path_id, credential_body(%{"owner" => owner.email}))
+        |> assert_problem(404, :not_found, [])
       end
+    end
+
+    test "reports every refused key, link and owner in one answer, links by their position in the request",
+         %{conn: conn} do
+      owner = insert(:user)
+      held = insert(:project, project_users: [%{user: owner, role: :owner}])
+      member = insert(:project, project_users: [%{user: owner, role: :editor}])
+      elsewhere = insert(:project)
+
+      credential =
+        insert(:credential,
+          name: "Acme DHIS2",
+          schema: "raw",
+          user: owner,
+          project_credentials: [%{project_id: held.id}]
+        )
+
+      body =
+        credential_body(%{
+          "owner" => owner.email,
+          "colour" => "blue",
+          "credential_bodies" => [],
+          "project_credentials" =>
+            links([
+              member.id,
+              elsewhere.id,
+              held.id,
+              Ecto.UUID.generate()
+            ])
+        })
+
+      conn
+      |> put_credential(credential.id, body)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/colour",
+          "code" => "unknown_key",
+          "detail" => "is not accepted"
+        },
+        %{
+          "pointer" => "#/credential_bodies",
+          "code" => "one_body",
+          "detail" => "must be one body named main, holding an object"
+        },
+        %{
+          "pointer" => "#/project_credentials/1/project_id",
+          "code" => "no_access",
+          "detail" => "the credential's owner is not a member of this project"
+        },
+        %{
+          "pointer" => "#/project_credentials/3/project_id",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        }
+      ])
+
+      assert Repo.all(
+               from pc in Lightning.Projects.ProjectCredential,
+                 where: pc.credential_id == ^credential.id,
+                 select: pc.project_id
+             ) == [held.id]
     end
 
     test "never quotes a submitted value in a 422", %{conn: conn} do
@@ -402,8 +512,7 @@ defmodule LightningWeb.API.CredentialPutTest do
         conn =
           put_credential(conn, Ecto.UUID.generate(), credential_body(overrides))
 
-        assert %{"errors" => errors} = json_response(conn, 422)
-        assert errors != %{}
+        assert %{"errors" => [_ | _]} = assert_problem(conn, 422, :invalid)
         refute conn.resp_body =~ planted
       end
     end
@@ -425,13 +534,13 @@ defmodule LightningWeb.API.CredentialPutTest do
           })
         )
 
-      assert json_response(conn, 422) == %{
-               "errors" => %{
-                 "project_credentials" => [
-                   "the owner has no access to these projects: #{elsewhere.id}"
-                 ]
-               }
-             }
+      assert_problem(conn, 422, :invalid, [
+        %{
+          "pointer" => "#/project_credentials/0/project_id",
+          "code" => "no_access",
+          "detail" => "the credential's owner is not a member of this project"
+        }
+      ])
 
       refute Repo.get(Credential, id)
     end
@@ -455,7 +564,9 @@ defmodule LightningWeb.API.CredentialPutTest do
       assert linked_project_ids(json_response(conn, 201)) == [project.id]
     end
 
-    test "refuses a listed project that does not exist with 403", %{conn: conn} do
+    test "refuses a listed project that does not exist as naming nothing", %{
+      conn: conn
+    } do
       owner = insert(:user)
       id = Ecto.UUID.generate()
 
@@ -469,7 +580,14 @@ defmodule LightningWeb.API.CredentialPutTest do
           })
         )
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 422, :invalid, [
+        %{
+          "pointer" => "#/project_credentials/0/project_id",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        }
+      ])
+
       refute Repo.get(Credential, id)
     end
   end
@@ -530,16 +648,16 @@ defmodule LightningWeb.API.CredentialPutTest do
 
       id = Ecto.UUID.generate()
 
-      assert conn
-             |> put_credential(id, credential_body(%{"owner" => other.email}))
-             |> json_response(403)
+      conn
+      |> put_credential(id, credential_body(%{"owner" => other.email}))
+      |> assert_problem(403, :forbidden, [])
 
-      assert conn
-             |> put_credential(
-               id,
-               credential_body(%{"owner" => "nobody@example.com"})
-             )
-             |> json_response(403)
+      conn
+      |> put_credential(
+        id,
+        credential_body(%{"owner" => "nobody@example.com"})
+      )
+      |> assert_problem(403, :forbidden, [])
 
       refute Repo.get(Credential, id)
     end
@@ -552,7 +670,7 @@ defmodule LightningWeb.API.CredentialPutTest do
         |> with_pat(insert(:user))
         |> put_credential(credential.id, credential_body(%{}))
 
-      assert json_response(conn, 409) == %{"error" => "id_taken"}
+      assert_problem(conn, 409, :id_taken, [])
       assert Repo.reload!(credential).name == "Theirs"
     end
 
@@ -568,7 +686,7 @@ defmodule LightningWeb.API.CredentialPutTest do
         |> with_pat(user)
         |> put_credential(credential.id, credential_body(%{"name" => "Renamed"}))
 
-      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert_problem(conn, 409, :scheduled_for_deletion, [])
       assert Repo.reload!(credential).name == credential.name
     end
 
@@ -584,7 +702,7 @@ defmodule LightningWeb.API.CredentialPutTest do
         |> with_pat(insert(:user))
         |> put_credential(credential.id, credential_body(%{}))
 
-      assert json_response(conn, 409) == %{"error" => "id_taken"}
+      assert_problem(conn, 409, :id_taken, [])
     end
 
     test "links only to projects where they may create a project credential",
@@ -601,7 +719,14 @@ defmodule LightningWeb.API.CredentialPutTest do
           credential_body(%{"project_credentials" => links([viewing.id])})
         )
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 422, :invalid, [
+        %{
+          "pointer" => "#/project_credentials/0/project_id",
+          "code" => "no_access",
+          "detail" => "you may not link a credential to this project"
+        }
+      ])
+
       refute Repo.get(Credential, id)
     end
 
@@ -654,9 +779,9 @@ defmodule LightningWeb.API.CredentialPutTest do
       assert linked_project_ids(response) == [project.id]
       refute conn.resp_body =~ "password"
 
-      assert conn
-             |> get(~p"/api/credentials/#{Ecto.UUID.generate()}")
-             |> json_response(404)
+      conn
+      |> get(~p"/api/credentials/#{Ecto.UUID.generate()}")
+      |> assert_problem(404, :not_found, [])
     end
 
     test "a service account also holding projects:write sees the projects by name",
@@ -703,10 +828,10 @@ defmodule LightningWeb.API.CredentialPutTest do
       assert [%{"id" => theirs_id}] = response["credential"]["projects"]
       assert theirs_id == theirs.id
 
-      assert conn
-             |> with_pat(insert(:user))
-             |> get(~p"/api/credentials/#{credential.id}")
-             |> json_response(403)
+      conn
+      |> with_pat(insert(:user))
+      |> get(~p"/api/credentials/#{credential.id}")
+      |> assert_problem(403, :forbidden, [])
     end
   end
 
@@ -730,6 +855,104 @@ defmodule LightningWeb.API.CredentialPutTest do
         do: insert(:project_credential, credential: credential, project: project)
 
     assert count_queries(show) == one_link
+  end
+
+  describe "PUT, a credential body that is refused" do
+    setup :isolated_adaptors
+
+    setup %{conn: conn} do
+      seed_credential_schema("postgresql")
+      {conn, _account} = with_service_account(conn, ["credentials:write"])
+      %{conn: conn, owner: insert(:user)}
+    end
+
+    defp typed_body(owner, body) do
+      credential_body(%{
+        "owner" => owner.email,
+        "schema" => "postgresql",
+        "credential_bodies" => [%{"name" => "main", "body" => body}]
+      })
+    end
+
+    test "is refused at each key its schema refuses", %{conn: conn, owner: owner} do
+      id = Ecto.UUID.generate()
+
+      conn
+      |> put_credential(
+        id,
+        typed_body(owner, %{"host" => "acme", "port" => 5432})
+      )
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/credential_bodies/0/body/host",
+          "code" => "type",
+          "detail" => "expected to be a URI or an IPv4 address"
+        },
+        %{
+          "pointer" => "#/credential_bodies/0/body/database",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ])
+
+      refute Repo.get(Credential, id)
+    end
+
+    test "is refused at each key on a credential it replaces", %{
+      conn: conn,
+      owner: owner
+    } do
+      credential = existing_credential(owner, insert(:project))
+
+      conn
+      |> put_credential(
+        credential.id,
+        typed_body(owner, %{
+          "host" => "https://db.example",
+          "port" => "many",
+          "database" => "acme"
+        })
+      )
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/credential_bodies/0/body/port",
+          "code" => "type",
+          "detail" => "is invalid"
+        },
+        # The schema also finds the uncast port missing.
+        %{
+          "pointer" => "#/credential_bodies/0/body/port",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ])
+
+      assert main_body(credential.id) == %{"password" => "old"}
+    end
+
+    test "answers 503 not_ready while the adaptor catalogue can't answer", %{
+      conn: conn,
+      owner: owner
+    } do
+      Mimic.stub(Lightning.Adaptors, :resolve_name, fn name -> {:ok, name} end)
+
+      Mimic.stub(Lightning.Adaptors, :schema, fn _name ->
+        {:error, :not_ready}
+      end)
+
+      id = Ecto.UUID.generate()
+
+      conn =
+        put_credential(
+          conn,
+          id,
+          typed_body(owner, %{"host" => "https://db.example"})
+        )
+
+      assert_problem(conn, 503, :not_ready, [])
+      assert get_resp_header(conn, "retry-after") == ["5"]
+      refute Repo.get(Credential, id)
+    end
   end
 
   describe "for a repo connection" do

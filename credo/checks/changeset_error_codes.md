@@ -151,3 +151,7 @@ none quotes a value from the token.
 | `invalid_expiration`     | expires_at    | format            | "expires_at must be a Unix timestamp or ISO 8601 date string"                                                  |
 | `invalid_expiration`     | expires_at    | type              | "expires_at must be an integer timestamp or date string"                                                       |
 | `missing_scopes`         | scope         | scope_not_granted | "Missing required scopes. Please reauthorize and grant all selected permissions."                              |
+
+`one_body` is set by hand in
+`lib/lightning_web/controllers/api/credential_controller.ex`, outside the check,
+on a `PUT` body's `credential_bodies`.

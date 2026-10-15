@@ -2,6 +2,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
 
   # Sample curl requests:
   #
@@ -362,7 +363,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
         )
 
       conn = get(conn, ~p"/api/projects/#{project.id}/credentials")
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 403, :forbidden, [])
     end
 
     test "tells a member, and only a member, that the project is scheduled for deletion",
@@ -377,20 +378,20 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
       stranger_to = insert(:project, scheduled_deletion: scheduled_deletion)
 
-      assert conn
-             |> get(~p"/api/projects/#{member_of.id}/credentials")
-             |> json_response(409) == %{"error" => "scheduled_for_deletion"}
+      conn
+      |> get(~p"/api/projects/#{member_of.id}/credentials")
+      |> assert_problem(409, :scheduled_for_deletion, [])
 
-      assert conn
-             |> get(~p"/api/projects/#{stranger_to.id}/credentials")
-             |> json_response(403) == %{"error" => "Forbidden"}
+      conn
+      |> get(~p"/api/projects/#{stranger_to.id}/credentials")
+      |> assert_problem(403, :forbidden, [])
     end
 
     test "returns 404 when project does not exist", %{conn: conn, user: _user} do
       non_existent_id = Ecto.UUID.generate()
 
       conn = get(conn, ~p"/api/projects/#{non_existent_id}/credentials")
-      assert json_response(conn, 404) == %{"error" => "Not Found"}
+      assert_problem(conn, 404, :not_found, [])
     end
 
     test "returns empty list when project has no credentials", %{
@@ -477,28 +478,30 @@ defmodule LightningWeb.API.CredentialControllerTest do
           "Bearer #{repo_connection.access_token}"
         )
 
-      assert conn
-             |> post(~p"/api/credentials", %{
-               "name" => "Planted",
-               "schema" => "raw",
-               "credential_bodies" => [
-                 %{"name" => "main", "body" => %{"a" => "b"}}
-               ]
-             })
-             |> json_response(403)
+      conn
+      |> post(~p"/api/credentials", %{
+        "name" => "Planted",
+        "schema" => "raw",
+        "credential_bodies" => [
+          %{"name" => "main", "body" => %{"a" => "b"}}
+        ]
+      })
+      |> assert_problem(403, :insufficient_scope, [])
 
       refute Lightning.Repo.get_by(Lightning.Credentials.Credential,
                name: "Planted"
              )
 
       # Listing crashed the same way, for the same reason, on both routes.
-      assert conn |> get(~p"/api/credentials") |> json_response(403)
+      conn
+      |> get(~p"/api/credentials")
+      |> assert_problem(403, :insufficient_scope, [])
 
       project = insert(:project)
 
-      assert conn
-             |> get(~p"/api/projects/#{project.id}/credentials")
-             |> json_response(403)
+      conn
+      |> get(~p"/api/projects/#{project.id}/credentials")
+      |> assert_problem(403, :insufficient_scope, [])
     end
 
     test "creates a basic credential without project associations", %{
@@ -670,7 +673,8 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert env_names == ["main", "production", "staging"]
     end
 
-    test "fails when user lacks access to project", %{conn: conn, user: _user} do
+    test "refuses a link to a project the user can't see as naming nothing",
+         %{conn: conn, user: user} do
       other_user = insert(:user)
 
       project =
@@ -692,11 +696,20 @@ defmodule LightningWeb.API.CredentialControllerTest do
         ]
       }
 
-      conn = post(conn, ~p"/api/credentials", credential_attrs)
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      conn
+      |> post(~p"/api/credentials", credential_attrs)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/project_credentials/0/project_id",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        }
+      ])
+
+      assert Lightning.Credentials.list_credentials(user) == []
     end
 
-    test "fails when user has insufficient role (viewer) on project", %{
+    test "refuses a link to a project where the user is a viewer", %{
       conn: conn,
       user: user
     } do
@@ -717,11 +730,21 @@ defmodule LightningWeb.API.CredentialControllerTest do
         ]
       }
 
-      conn = post(conn, ~p"/api/credentials", credential_attrs)
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      conn
+      |> post(~p"/api/credentials", credential_attrs)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/project_credentials/0/project_id",
+          "code" => "no_access",
+          "detail" => "you may not link a credential to this project"
+        }
+      ])
     end
 
-    test "fails when project does not exist", %{conn: conn, user: _user} do
+    test "refuses a link to a project that does not exist as naming nothing", %{
+      conn: conn,
+      user: _user
+    } do
       credential_attrs = %{
         "name" => "Nonexistent Project Credential",
         "schema" => "raw",
@@ -736,38 +759,43 @@ defmodule LightningWeb.API.CredentialControllerTest do
         ]
       }
 
-      conn = post(conn, ~p"/api/credentials", credential_attrs)
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      conn
+      |> post(~p"/api/credentials", credential_attrs)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/project_credentials/0/project_id",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        }
+      ])
     end
 
-    test "refuses a link whose project_id is not a UUID with 422", %{
+    test "refuses a malformed link with 422 at the link", %{
       conn: conn,
       user: user
     } do
-      for links <- [
-            [%{"project_id" => "not-a-uuid"}],
-            [%{"project_id" => 42}],
-            [%{}],
-            %{"project_id" => Ecto.UUID.generate()}
+      for {links, pointer, code, detail} <- [
+            {[%{"project_id" => "not-a-uuid"}],
+             "#/project_credentials/0/project_id", "not_found",
+             "names nothing you can see"},
+            {[%{"project_id" => 42}], "#/project_credentials/0/project_id",
+             "type", "is invalid"},
+            {[%{}], "#/project_credentials/0/project_id", "required",
+             "can't be blank"},
+            {["acme"], "#/project_credentials/0", "type", "is invalid"},
+            {%{"project_id" => Ecto.UUID.generate()}, "#/project_credentials",
+             "type", "is invalid"}
           ] do
-        response =
-          conn
-          |> post(~p"/api/credentials", %{
-            "name" => "Malformed Link",
-            "schema" => "raw",
-            "credential_bodies" => [%{"name" => "main", "body" => %{}}],
-            "project_credentials" => links
-          })
-          |> json_response(422)
-
-        assert response == %{
-                 "errors" => %{
-                   "project_credentials" => [
-                     "must each be an object holding a project_id"
-                   ]
-                 }
-               },
-               inspect(links)
+        conn
+        |> post(~p"/api/credentials", %{
+          "name" => "Malformed Link",
+          "schema" => "raw",
+          "credential_bodies" => [%{"name" => "main", "body" => %{}}],
+          "project_credentials" => links
+        })
+        |> assert_problem(422, :invalid, [
+          %{"pointer" => pointer, "code" => code, "detail" => detail}
+        ])
       end
 
       assert Lightning.Credentials.list_credentials(user) == []
@@ -822,11 +850,15 @@ defmodule LightningWeb.API.CredentialControllerTest do
         ]
       }
 
-      conn = post(conn, ~p"/api/credentials", credential_attrs)
-      response = json_response(conn, 422)
-
-      assert %{"errors" => errors} = response
-      assert Map.has_key?(errors, "name")
+      conn
+      |> post(~p"/api/credentials", credential_attrs)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ])
     end
 
     test "fails when missing required fields", %{conn: conn, user: _user} do
@@ -834,10 +866,20 @@ defmodule LightningWeb.API.CredentialControllerTest do
         "name" => ""
       }
 
-      conn = post(conn, ~p"/api/credentials", credential_attrs)
-      response = json_response(conn, 422)
-
-      assert %{"errors" => _errors} = response
+      conn
+      |> post(~p"/api/credentials", credential_attrs)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/schema",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ])
     end
 
     test "cannot override user_id in request", %{conn: conn, user: user} do
@@ -880,7 +922,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert json_response(conn, 201)
     end
 
-    test "handles partial project access - allows accessible, denies inaccessible",
+    test "refuses only the link it can't make, at its position in the request",
          %{conn: conn, user: user} do
       accessible_project =
         insert(:project, project_users: [%{user_id: user.id, role: :editor}])
@@ -898,13 +940,28 @@ defmodule LightningWeb.API.CredentialControllerTest do
           }
         ],
         "project_credentials" => [
+          %{"project_id" => inaccessible_project.id},
           %{"project_id" => accessible_project.id},
           %{"project_id" => inaccessible_project.id}
         ]
       }
 
-      conn = post(conn, ~p"/api/credentials", credential_attrs)
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      conn
+      |> post(~p"/api/credentials", credential_attrs)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/project_credentials/0/project_id",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        },
+        %{
+          "pointer" => "#/project_credentials/2/project_id",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        }
+      ])
+
+      assert Lightning.Credentials.list_credentials(user) == []
     end
   end
 
@@ -980,6 +1037,88 @@ defmodule LightningWeb.API.CredentialControllerTest do
     end
   end
 
+  describe "create, refused by what it writes" do
+    setup [:assign_bearer_for_api]
+
+    defp oauth_token(overrides) do
+      Map.merge(
+        %{
+          "access_token" => "access",
+          "refresh_token" => "refresh",
+          "token_type" => "Bearer",
+          "scope" => "read write",
+          "expires_in" => 3600
+        },
+        overrides
+      )
+    end
+
+    test "refuses an OAuth token at the key it refuses, in the body at its position",
+         %{conn: conn, user: user} do
+      conn
+      |> post(~p"/api/credentials", %{
+        "name" => "OAuth",
+        "schema" => "oauth",
+        "credential_bodies" => [
+          %{"name" => "main", "body" => oauth_token(%{})},
+          %{
+            "name" => "staging",
+            "body" => oauth_token(%{"token_type" => "Basic"})
+          }
+        ]
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/credential_bodies/1/body/token_type",
+          "code" => "not_allowed",
+          "detail" => "Unsupported token type. Expected 'Bearer'"
+        }
+      ])
+
+      conn
+      |> post(~p"/api/credentials", %{
+        "name" => "OAuth",
+        "schema" => "oauth",
+        "credential_bodies" => [
+          %{
+            "name" => "main",
+            "body" => Map.delete(oauth_token(%{}), "access_token")
+          }
+        ]
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/credential_bodies/0/body/access_token",
+          "code" => "required",
+          "detail" => "Missing required OAuth field: access_token"
+        }
+      ])
+
+      assert Lightning.Credentials.list_credentials(user) == []
+    end
+
+    test "answers 409 taken for a name the user already holds", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:credential, user: user, name: "Taken")
+
+      conn
+      |> post(~p"/api/credentials", %{
+        "name" => "Taken",
+        "schema" => "raw",
+        "credential_bodies" => [%{"name" => "main", "body" => %{"a" => "b"}}]
+      })
+      |> assert_problem(409, :taken, [
+        %{
+          "pointer" => "#/name",
+          "code" => "taken",
+          "detail" => "you have another credential with the same name"
+        }
+      ])
+    end
+  end
+
   describe "delete" do
     setup [:assign_bearer_for_api]
 
@@ -998,7 +1137,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
       non_existent_id = Ecto.UUID.generate()
 
       conn = delete(conn, ~p"/api/credentials/#{non_existent_id}")
-      assert json_response(conn, 404) == %{"error" => "Not Found"}
+      assert_problem(conn, 404, :not_found, [])
     end
 
     test "returns 403 when trying to delete credential owned by another user", %{
@@ -1015,7 +1154,7 @@ defmodule LightningWeb.API.CredentialControllerTest do
         )
 
       conn = delete(conn, ~p"/api/credentials/#{other_credential.id}")
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 403, :forbidden, [])
 
       # Verify credential still exists
       assert Lightning.Credentials.get_credential(other_credential.id)
@@ -1045,7 +1184,85 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
     test "handles invalid UUID format", %{conn: conn, user: _user} do
       conn = delete(conn, ~p"/api/credentials/invalid-uuid")
-      assert json_response(conn, 404) == %{"error" => "Not Found"}
+      assert_problem(conn, 404, :not_found, [])
+    end
+  end
+
+  describe "error answers on every credentials route" do
+    setup [:assign_bearer_for_api]
+
+    test "never quote a value from the request", %{conn: conn, user: user} do
+      planted =
+        plant_sentinel(%{
+          "id" => nil,
+          "name" => nil,
+          "schema" => nil,
+          "colour" => nil,
+          "credential_bodies" => [%{"name" => nil, "body" => %{"key" => nil}}],
+          "project_credentials" => [%{"project_id" => nil, "extra" => nil}]
+        })
+
+      conn
+      |> get(~p"/api/projects/#{planted["name"]}/credentials")
+      |> refute_sentinel()
+      |> assert_problem(404, :not_found, [])
+
+      conn
+      |> get(~p"/api/credentials?project_id=#{planted["name"]}")
+      |> refute_sentinel()
+      |> assert_problem(404, :not_found, [])
+
+      conn
+      |> post(~p"/api/credentials", planted)
+      |> refute_sentinel()
+      |> assert_problem(422, :invalid)
+
+      conn
+      |> post(~p"/api/credentials", %{
+        "name" => "OAuth",
+        "schema" => "oauth",
+        "credential_bodies" =>
+          plant_sentinel([
+            %{
+              "name" => "main",
+              "body" => %{
+                "access_token" => [nil],
+                "refresh_token" => nil,
+                "token_type" => nil,
+                "scope" => nil,
+                "expires_in" => nil
+              }
+            }
+          ])
+      })
+      |> refute_sentinel()
+      |> assert_problem(422, :invalid)
+
+      conn
+      |> get(~p"/api/credentials/#{planted["name"]}")
+      |> refute_sentinel()
+      |> assert_problem(404, :not_found, [])
+
+      for path_id <- [planted["name"], Ecto.UUID.generate()] do
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> put(~p"/api/credentials/#{path_id}", Jason.encode!(planted))
+        |> refute_sentinel()
+      end
+
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> put(
+        ~p"/api/credentials/#{Ecto.UUID.generate()}",
+        Jason.encode!(Map.put(planted, "owner", user.email))
+      )
+      |> refute_sentinel()
+      |> assert_problem(422, :invalid)
+
+      conn
+      |> delete(~p"/api/credentials/#{planted["name"]}")
+      |> refute_sentinel()
+      |> assert_problem(404, :not_found, [])
     end
   end
 end
