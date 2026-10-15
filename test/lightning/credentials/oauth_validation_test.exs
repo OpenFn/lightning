@@ -4,24 +4,6 @@ defmodule Lightning.Credentials.OauthValidationTest do
   alias Lightning.Credentials.OauthValidation
   alias Lightning.Credentials.OauthValidation.Error
 
-  describe "Error struct" do
-    test "creates error with type, message, and details" do
-      error = Error.new(:missing_scopes, "Test message", %{test: "data"})
-
-      assert error.type == :missing_scopes
-      assert error.message == "Test message"
-      assert error.details == %{test: "data"}
-    end
-
-    test "creates error without details" do
-      error = Error.new(:invalid_token_format, "Test message")
-
-      assert error.type == :invalid_token_format
-      assert error.message == "Test message"
-      assert error.details == nil
-    end
-  end
-
   describe "validate_token_data/1" do
     test "validates complete valid token data with Bearer token type" do
       token_data = %{

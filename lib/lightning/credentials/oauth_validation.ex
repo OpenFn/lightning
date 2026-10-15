@@ -18,14 +18,6 @@ defmodule Lightning.Credentials.OauthValidation do
     that can occur during authentication flows, token validation, and scope verification.
     Each error includes a type for programmatic handling, a human-readable message,
     and optional details for additional context.
-
-    ## Examples
-
-        iex> Error.new(:missing_scopes, "Required scopes not granted")
-        %Error{type: :missing_scopes, message: "Required scopes not granted", details: nil}
-
-        iex> Error.new(:missing_refresh_token, "No refresh token", %{existing_token_available: true})
-        %Error{type: :missing_refresh_token, message: "No refresh token", details: %{existing_token_available: true}}
     """
 
     @type error_type ::
@@ -58,11 +50,6 @@ defmodule Lightning.Credentials.OauthValidation do
           }
 
     defstruct [:type, :code, :field, :message, :details]
-
-    @spec new(error_type(), String.t(), map() | nil) :: t()
-    def new(type, message, details \\ nil) do
-      %__MODULE__{type: type, message: message, details: details}
-    end
   end
 
   @doc """
@@ -153,7 +140,7 @@ defmodule Lightning.Credentials.OauthValidation do
           :invalid_oauth_response,
           "scope",
           "OAuth token missing scope information",
-          code: :required
+          :required
         )
     end
   end
@@ -288,21 +275,19 @@ defmodule Lightning.Credentials.OauthValidation do
 
   defp convert_to_string(_), do: nil
 
-  defp refuse(type, field, message, opts) do
+  defp refuse(type, field, message, code, details \\ nil) do
     {:error,
      %Error{
        type: type,
-       code: Keyword.fetch!(opts, :code),
+       code: code,
        field: field,
        message: message,
-       details: opts[:details]
+       details: details
      }}
   end
 
   defp validate_token_format(token_data) when not is_map(token_data) do
-    refuse(:invalid_token_format, nil, "OAuth token must be a valid map",
-      code: :type
-    )
+    refuse(:invalid_token_format, nil, "OAuth token must be a valid map", :type)
   end
 
   defp validate_token_format(_), do: :ok
@@ -318,13 +303,16 @@ defmodule Lightning.Credentials.OauthValidation do
       :invalid_access_token,
       "access_token",
       "access_token must be a non-empty string",
-      code: :type
+      :type
     )
   end
 
   defp validate_access_token(%{"access_token" => ""}) do
-    refuse(:invalid_access_token, "access_token", "access_token cannot be empty",
-      code: :required
+    refuse(
+      :invalid_access_token,
+      "access_token",
+      "access_token cannot be empty",
+      :required
     )
   end
 
@@ -333,7 +321,7 @@ defmodule Lightning.Credentials.OauthValidation do
       :missing_access_token,
       "access_token",
       "Missing required OAuth field: access_token",
-      code: :required
+      :required
     )
   end
 
@@ -348,7 +336,7 @@ defmodule Lightning.Credentials.OauthValidation do
       :invalid_refresh_token,
       "refresh_token",
       "refresh_token must be a non-empty string",
-      code: :type
+      :type
     )
   end
 
@@ -357,7 +345,7 @@ defmodule Lightning.Credentials.OauthValidation do
       :invalid_refresh_token,
       "refresh_token",
       "refresh_token cannot be empty",
-      code: :required
+      :required
     )
   end
 
@@ -366,7 +354,7 @@ defmodule Lightning.Credentials.OauthValidation do
       :missing_refresh_token,
       "refresh_token",
       "Missing required OAuth field: refresh_token",
-      code: :required
+      :required
     )
   end
 
@@ -378,14 +366,17 @@ defmodule Lightning.Credentials.OauthValidation do
       :unsupported_token_type,
       "token_type",
       "Unsupported token type. Expected 'Bearer'",
-      code: :not_allowed,
-      details: %{token_type: type}
+      :not_allowed,
+      %{token_type: type}
     )
   end
 
   defp validate_token_type(%{"token_type" => _type}) do
-    refuse(:invalid_token_format, "token_type", "token_type must be a string",
-      code: :type
+    refuse(
+      :invalid_token_format,
+      "token_type",
+      "token_type must be a string",
+      :type
     )
   end
 
@@ -394,7 +385,7 @@ defmodule Lightning.Credentials.OauthValidation do
       :missing_token_type,
       "token_type",
       "Missing required OAuth field: token_type",
-      code: :required
+      :required
     )
   end
 
@@ -411,33 +402,25 @@ defmodule Lightning.Credentials.OauthValidation do
         :invalid_oauth_response,
         "scopes",
         "scopes array must contain only strings",
-        code: :type
+        :type
       )
     end
   end
 
   defp validate_scope_field(%{"scope" => ""}) do
-    refuse(:missing_scope, "scope", "scope field cannot be empty",
-      code: :required
-    )
+    refuse(:missing_scope, "scope", "scope field cannot be empty", :required)
   end
 
   defp validate_scope_field(%{"scopes" => []}) do
-    refuse(:missing_scope, "scopes", "scopes array cannot be empty",
-      code: :required
-    )
+    refuse(:missing_scope, "scopes", "scopes array cannot be empty", :required)
   end
 
   defp validate_scope_field(%{"scope" => scope}) when not is_binary(scope) do
-    refuse(:invalid_oauth_response, "scope", "scope must be a string",
-      code: :type
-    )
+    refuse(:invalid_oauth_response, "scope", "scope must be a string", :type)
   end
 
   defp validate_scope_field(%{"scopes" => scopes}) when not is_list(scopes) do
-    refuse(:invalid_oauth_response, "scopes", "scopes must be a list",
-      code: :type
-    )
+    refuse(:invalid_oauth_response, "scopes", "scopes must be a list", :type)
   end
 
   defp validate_scope_field(_) do
@@ -445,7 +428,7 @@ defmodule Lightning.Credentials.OauthValidation do
       :missing_scope,
       "scope",
       "Missing required OAuth field: scope or scopes",
-      code: :required
+      :required
     )
   end
 
@@ -462,7 +445,7 @@ defmodule Lightning.Credentials.OauthValidation do
       :missing_expiration,
       "expires_in",
       "Missing expiration field: either expires_in or expires_at is required",
-      code: :required
+      :required
     )
   end
 
@@ -473,7 +456,7 @@ defmodule Lightning.Credentials.OauthValidation do
           :invalid_expiration,
           "expires_in",
           "expires_in must be greater than 0 seconds",
-          code: :out_of_range
+          :out_of_range
         )
 
       expires_in > 365 * 24 * 3600 ->
@@ -481,7 +464,7 @@ defmodule Lightning.Credentials.OauthValidation do
           :invalid_expiration,
           "expires_in",
           "expires_in seems unreasonably long",
-          code: :out_of_range
+          :out_of_range
         )
 
       true ->
@@ -499,7 +482,7 @@ defmodule Lightning.Credentials.OauthValidation do
           :invalid_expiration,
           "expires_in",
           "expires_in string must represent a valid positive integer",
-          code: :type
+          :type
         )
     end
   end
@@ -509,7 +492,7 @@ defmodule Lightning.Credentials.OauthValidation do
       :invalid_expiration,
       "expires_in",
       "expires_in must be a positive integer (seconds)",
-      code: :type
+      :type
     )
   end
 
@@ -524,7 +507,7 @@ defmodule Lightning.Credentials.OauthValidation do
           :invalid_expiration,
           "expires_at",
           "expires_at timestamp appears to be too far in the past (possible clock skew)",
-          code: :out_of_range
+          :out_of_range
         )
 
       expires_at > max_valid_time ->
@@ -532,7 +515,7 @@ defmodule Lightning.Credentials.OauthValidation do
           :invalid_expiration,
           "expires_at",
           "expires_at timestamp appears to be too far in the future",
-          code: :out_of_range
+          :out_of_range
         )
 
       true ->
@@ -555,7 +538,7 @@ defmodule Lightning.Credentials.OauthValidation do
             :invalid_expiration,
             "expires_at",
             "expires_at must be a Unix timestamp or ISO 8601 date string",
-            code: :format
+            :format
           )
         end
     end
@@ -566,7 +549,7 @@ defmodule Lightning.Credentials.OauthValidation do
       :invalid_expiration,
       "expires_at",
       "expires_at must be an integer timestamp or date string",
-      code: :type
+      :type
     )
   end
 
@@ -602,8 +585,8 @@ defmodule Lightning.Credentials.OauthValidation do
         :missing_scopes,
         "scope",
         "Missing required scopes. Please reauthorize and grant all selected permissions.",
-        code: :scope_not_granted,
-        details: details
+        :scope_not_granted,
+        details
       )
     end
   end
