@@ -77,11 +77,13 @@ defmodule LightningWeb.API.Problem do
     asks_for_problem? =
       conn
       |> Plug.Conn.get_req_header("accept")
-      |> Enum.flat_map(&String.split(&1, ","))
-      |> Enum.any?(fn range ->
-        range |> String.split(";") |> hd() |> String.trim() |> String.downcase() ==
-          "application/problem+json"
-      end)
+      |> Enum.flat_map(&Plug.Conn.Utils.list/1)
+      |> Enum.any?(
+        &match?(
+          {:ok, "application", "problem+json", _params},
+          Plug.Conn.Utils.media_type(&1)
+        )
+      )
 
     if asks_for_problem?,
       do: "application/problem+json",

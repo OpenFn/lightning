@@ -202,25 +202,22 @@ defmodule LightningWeb.API.Errors do
   # Only children with params came from the request, and positions count
   # only those (spec §7 item 3, plan D1).
   defp walk_relation(children, path, renames) when is_list(children) do
-    from_request = Enum.filter(children, &from_request?/1)
+    {from_request, not_sent} = Enum.split_with(children, &from_request?/1)
+    Enum.each(not_sent, &refuse_errors(&1, path))
 
-    firsts =
+    {placed, _firsts} =
       from_request
       |> Enum.with_index()
-      |> Enum.reduce(%{}, fn {child, index}, firsts ->
-        Map.put_new(firsts, primary_key(child), index)
+      |> Enum.flat_map_reduce(%{}, fn {child, index}, firsts ->
+        key = primary_key(child)
+        first = Map.get(firsts, key, index)
+        duplicate_of = if first != index and nil not in key, do: path ++ [first]
+
+        {walk(child, path ++ [index], renames, duplicate_of),
+         Map.put_new(firsts, key, index)}
       end)
 
-    Enum.each(children -- from_request, &refuse_errors(&1, path))
-
-    from_request
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {child, index} ->
-      key = primary_key(child)
-      first = Map.fetch!(firsts, key)
-      duplicate_of = if first != index and nil not in key, do: path ++ [first]
-      walk(child, path ++ [index], renames, duplicate_of)
-    end)
+    placed
   end
 
   defp walk_relation(%Changeset{} = child, path, renames) do
