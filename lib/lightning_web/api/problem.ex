@@ -74,7 +74,13 @@ defmodule LightningWeb.API.Problem do
     |> Map.merge(problem.extensions)
   end
 
-  defp content_type(conn) do
+  @doc """
+  The content type a problem sent on `conn` takes: `application/problem+json`
+  when the request's `Accept` names it, in any position and whatever its `q`,
+  and `application/json` otherwise (spec §5).
+  """
+  @spec content_type(Plug.Conn.t()) :: String.t()
+  def content_type(conn) do
     asks_for_problem? =
       conn
       |> Plug.Conn.get_req_header("accept")

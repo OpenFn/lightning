@@ -5,6 +5,7 @@ defmodule LightningWeb.API.ProblemHelpers do
   import ExUnit.Assertions
 
   alias LightningWeb.API.Codes
+  alias LightningWeb.API.Problem
 
   @sentinel "sentinel-5e17f4c2"
 
@@ -12,7 +13,7 @@ defmodule LightningWeb.API.ProblemHelpers do
   Asserts `conn` answered with the problem for `code` at `status`, and returns
   the decoded body.
 
-  It checks that the content type is one of the two JSON types, the members
+  It checks the content type against the request's `Accept`, the members
   `LightningWeb.API.Codes` fixes, and that every code, the response's and each
   entry's, is in one of the two code lists. `entries` is `:any`, or the exact
   list of entries in any order, as decoded JSON:
@@ -23,7 +24,7 @@ defmodule LightningWeb.API.ProblemHelpers do
 
     assert [content_type] = Plug.Conn.get_resp_header(conn, "content-type")
     [media_type | _params] = String.split(content_type, ";")
-    assert media_type in ["application/json", "application/problem+json"]
+    assert media_type == Problem.content_type(conn)
 
     body = Jason.decode!(conn.resp_body)
 

@@ -73,6 +73,7 @@ defmodule LightningWeb.API.ProblemTest do
     test "answers each result it takes with one status and code" do
       for {result, status, code} <- [
             {{:error, :not_found}, 404, :not_found},
+            {{:error, :no_such_project}, 404, :not_found},
             {{:error, :connection_not_for_this_project}, 404, :not_found},
             {{:error, :forbidden}, 403, :forbidden},
             {{:error, :insufficient_scope}, 403, :insufficient_scope},
