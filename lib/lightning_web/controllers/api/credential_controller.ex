@@ -259,7 +259,7 @@ defmodule LightningWeb.API.CredentialController do
         {:error, :scheduled_for_deletion}
 
       :ok ->
-        {:ok, credential}
+        {:ok, Repo.preload(credential, :project_credentials)}
 
       # The id belongs to a credential the caller can't write, which no body
       # can change (spec §4).
@@ -365,12 +365,8 @@ defmodule LightningWeb.API.CredentialController do
 
   defp held_project_ids(:new), do: []
 
-  defp held_project_ids(%Credential{} = credential) do
-    credential
-    |> Repo.preload(:project_credentials)
-    |> Map.fetch!(:project_credentials)
-    |> Enum.map(& &1.project_id)
-  end
+  defp held_project_ids(%Credential{project_credentials: links}),
+    do: Enum.map(links, & &1.project_id)
 
   # Checks each link the body asks for, at its position in the request (spec
   # §7 item 3): a project the caller can't see is `not_found`, and one the
@@ -496,8 +492,6 @@ defmodule LightningWeb.API.CredentialController do
   # `cast_assoc` keeps them rather than replacing them.
   defp replace(conn, credential, body, owner, project_ids) do
     if credential.user_id == owner.id do
-      credential = Repo.preload(credential, :project_credentials)
-
       links =
         Enum.map(
           credential.project_credentials,
