@@ -298,7 +298,7 @@ defmodule LightningWeb.API.CredentialController do
          do: {:ok, {owner, project_ids}}
   end
 
-  defp resolve_owner(:self, %{"owner" => owner}, _caller)
+  defp resolve_owner(_naming, %{"owner" => owner}, _caller)
        when not is_binary(owner) and not is_nil(owner),
        do: {:error, [Errors.entry([:owner], {"is invalid", code: :type})]}
 
@@ -314,10 +314,6 @@ defmodule LightningWeb.API.CredentialController do
         {:error, [Errors.entry([:owner], @nothing_visible)]}
     end
   end
-
-  defp resolve_owner(:anyone, %{"owner" => owner}, _caller)
-       when not is_nil(owner),
-       do: {:error, [Errors.entry([:owner], {"is invalid", code: :type})]}
 
   defp resolve_owner(:anyone, _body, _caller),
     do: {:error, [Errors.entry([:owner], {"can't be blank", code: :required})]}
@@ -405,10 +401,7 @@ defmodule LightningWeb.API.CredentialController do
     end
   end
 
-  defp link_project_id(%{"project_id" => nil}, index),
-    do: {:error, link_entry(index, {"can't be blank", code: :required})}
-
-  defp link_project_id(%{"project_id" => _id}, index),
+  defp link_project_id(%{"project_id" => id}, index) when not is_nil(id),
     do: {:error, link_entry(index, {"is invalid", code: :type})}
 
   defp link_project_id(%{}, index),
