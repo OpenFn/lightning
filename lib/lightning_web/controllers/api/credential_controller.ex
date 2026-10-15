@@ -345,12 +345,6 @@ defmodule LightningWeb.API.CredentialController do
   defp held_project_ids(%Credential{project_credentials: links}),
     do: Enum.map(links, & &1.project_id)
 
-  # Checks each link the body asks for, at its position in the request (spec
-  # §7 item 3): a project the caller can't see is `not_found`, and one the
-  # caller may not link to, or whose owner isn't a member, is `no_access`
-  # (plan D13). An owner the body failed to name is refused elsewhere, so its
-  # membership isn't checked. Links already `held` are kept as they are.
-  # Returns the entries and the ids of the projects to link.
   defp check_links(%{"project_credentials" => links}, held, owner, scope)
        when is_list(links) do
     shaped =
@@ -410,6 +404,7 @@ defmodule LightningWeb.API.CredentialController do
   defp link_entry(index, error),
     do: Errors.entry([:project_credentials, index, :project_id], error)
 
+  # A link's entry codes follow spec §7 item 3 and plan D13.
   defp link_refusal(nil, _owner_unreachable?), do: Errors.not_visible()
 
   defp link_refusal(project_scope, owner_unreachable?) do
@@ -433,6 +428,8 @@ defmodule LightningWeb.API.CredentialController do
     end
   end
 
+  # An owner the body failed to name already has its own entry, so its
+  # membership isn't checked.
   defp owner_unreachable({:error, _entries}, _project_ids), do: []
 
   defp owner_unreachable({:ok, owner}, project_ids) do
