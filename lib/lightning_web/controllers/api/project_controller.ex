@@ -35,16 +35,35 @@ defmodule LightningWeb.API.ProjectController do
 
   import Ecto.Changeset
 
+  alias Lightning.Accounts
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Scope
-  alias LightningWeb.API.PutRequest
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Problem
+  alias LightningWeb.API.PutBody
   alias LightningWeb.Plugs.AuthorizeAction
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
 
-  plug AuthorizeAction, {:project_users, :access_project} when action == :show
-  plug AuthorizeAction, {:project_users, :edit_project} when action == :update
+  plug AuthorizeAction,
+       {:project_users, :access_project, fallback: FallbackController}
+       when action == :show
+
+  plug AuthorizeAction,
+       {:project_users, :edit_project, fallback: FallbackController}
+       when action == :update
+
+  @accepted [:id, :name, :description, :members, :notify]
+  @request_types %{members: {:array, :map}, notify: :boolean}
+  @member_types %{email: :string, role: ProjectUser.RolesEnum}
+
+  # The project changeset reports member errors under `owner` and
+  # `project_users`. This API calls them `members`.
+  @renames %{owner: :members, project_users: :members}
 
   @doc """
   Lists all projects accessible to the authenticated user.
@@ -120,15 +139,28 @@ defmodule LightningWeb.API.ProjectController do
   Creates the project under the path's id, or replaces the name and description
   of the one that has it.
 
-  `members` and `notify` only apply when the project is created.
+  `members` and `notify` only apply when the project is created. A refused body
+  answers one 422 with every error in it, the body's keys, its members and the
+  project's own fields together (error-format spec §9.6).
   """
   @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def update(conn, %{"id" => id}) do
-    with {:ok, target} <- update_target(conn, id),
-         {:ok, attrs} <- parse(conn, id) do
+    body = conn.body_params
+
+    with {:ok, id} <- PutBody.path_id(id),
+         {:ok, target} <- update_target(conn, id),
+         {:ok, body_entries} <- PutBody.check(body, id, @accepted) do
+      request =
+        {%{notify: true}, @request_types}
+        |> cast(body, Map.keys(@request_types))
+        |> validate_required(:notify)
+
+      fields = %{name: body["name"], description: body["description"]}
+      entries = body_entries ++ Errors.from_changeset(request)
+
       case target do
-        :new -> create(conn, attrs)
-        project -> replace(conn, project, attrs)
+        :new -> create(conn, Map.put(fields, :id, id), request, entries)
+        project -> replace(conn, project, fields, entries)
       end
     end
   end
@@ -154,98 +186,141 @@ defmodule LightningWeb.API.ProjectController do
                  nil
                ),
              do: {:ok, :new}
-
-      error ->
-        error
     end
   end
 
-  defp parse(conn, id) do
-    case parse_body(conn.body_params, id) do
-      {:ok, attrs} -> {:ok, attrs}
-      {:error, :invalid, errors} -> PutRequest.render_errors(conn, errors)
+  defp replace(conn, project, fields, entries) do
+    with :ok <- refuse(entries, Project.changeset(project, fields)),
+         {:ok, project} <-
+           Projects.update_project(
+             project,
+             fields,
+             conn.assigns.current_resource
+           ) do
+      render_project(conn, project)
     end
   end
 
-  @body_types %{
-    id: :binary_id,
-    name: :string,
-    description: :string,
-    members: {:array, :map},
-    notify: :boolean
-  }
+  defp create(conn, fields, request, entries) do
+    # A members list of the wrong type is already among the request's entries.
+    members =
+      if Keyword.has_key?(request.errors, :members),
+        do: {:error, []},
+        else: resolve_members(get_field(request, :members) || [])
 
-  defp parse_body(body, id) do
-    with {:ok, changeset} <-
-           PutRequest.changeset(body, id, {%{notify: true}, @body_types}) do
-      changeset
-      |> validate_required(:notify, message: "must be true or false")
-      |> PutRequest.attrs()
-    end
-  end
-
-  defp replace(conn, project, attrs) do
-    project
-    |> Projects.update_project(
-      %{name: attrs[:name], description: attrs[:description]},
-      conn.assigns.current_resource
-    )
-    |> case do
-      {:ok, project} ->
-        render_project(conn, project)
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        render_changeset_errors(conn, changeset)
-
-      # Some other step of the write failed, such as its audit event. Nothing
-      # in the request can fix that.
-      {:error, :not_related_to_project} ->
-        conn
-        |> put_status(:internal_server_error)
-        |> put_view(LightningWeb.ErrorView)
-        |> render(:"500")
-    end
-  end
-
-  defp create(conn, attrs) do
-    actor = conn.assigns.current_resource
-
-    case Projects.members_by_email(attrs[:members] || []) do
+    case members do
       {:ok, project_users} ->
-        attrs
-        |> Map.take([:id, :name, :description])
-        |> Map.put(:project_users, project_users)
-        |> Projects.create_project(actor, notify: attrs.notify)
-        |> case do
-          {:ok, project} ->
-            conn |> put_status(:created) |> render_project(project)
+        fields = Map.put(fields, :project_users, project_users)
 
-          # Someone else created it since the lookup. Rerun the request so the
-          # caller is checked against that project.
-          {:error, changeset} ->
-            if PutRequest.unique_error?(changeset, :id),
-              do: update(conn, %{"id" => attrs.id}),
-              else: render_changeset_errors(conn, changeset)
+        with :ok <-
+               refuse(
+                 entries,
+                 Project.project_with_users_changeset(%Project{}, fields)
+               ) do
+          insert(conn, fields, notify: get_field(request, :notify))
         end
 
-      {:error, messages} ->
-        PutRequest.render_errors(conn, %{members: messages})
+      # Without its members a new project can't be checked for an owner, so
+      # only its own fields are.
+      {:error, member_entries} ->
+        project_entries =
+          Errors.from_changeset(Project.changeset(%Project{}, fields))
+
+        {:error,
+         Problem.new(:invalid,
+           errors: entries ++ member_entries ++ project_entries
+         )}
     end
   end
 
-  # The project changeset reports member errors under `owner` and
-  # `project_users`. This API calls them `members`.
-  defp render_changeset_errors(conn, changeset) do
-    errors = PutRequest.flat_errors(changeset)
+  defp insert(conn, attrs, opts) do
+    case Projects.create_project(attrs, conn.assigns.current_resource, opts) do
+      {:ok, project} ->
+        conn |> put_status(:created) |> render_project(project)
 
-    {member_errors, errors} = Map.split(errors, [:owner, :project_users])
+      # Someone else created it since the lookup. Rerun the request so the
+      # caller is checked against that project.
+      {:error, changeset} ->
+        if id_taken?(changeset),
+          do: update(conn, %{"id" => attrs.id}),
+          else: {:error, Errors.problem(changeset, @renames)}
+    end
+  end
 
-    errors =
-      if member_errors == %{},
-        do: errors,
-        else: Map.put(errors, :members, Enum.concat(Map.values(member_errors)))
+  defp refuse(entries, validated) do
+    case entries ++ Errors.from_changeset(validated, @renames) do
+      [] -> :ok
+      entries -> {:error, Problem.new(:invalid, errors: entries)}
+    end
+  end
 
-    PutRequest.render_errors(conn, errors)
+  defp id_taken?(changeset) do
+    changeset.errors
+    |> Keyword.get_values(:id)
+    |> Enum.any?(fn {_message, opts} -> opts[:constraint] == :unique end)
+  end
+
+  # Resolves each member's email to its user. Errors point at the member's
+  # position in the request, which the project changeset doesn't keep
+  # (error-format spec §7 items 3 and 4).
+  defp resolve_members(members) do
+    changesets =
+      Enum.map(members, fn member ->
+        {%{}, @member_types}
+        |> cast(member, Map.keys(@member_types))
+        |> validate_required(Map.keys(@member_types))
+      end)
+
+    user_ids =
+      for(
+        %{valid?: true} = changeset <- changesets,
+        do: get_field(changeset, :email)
+      )
+      |> Accounts.list_users_by_emails()
+      |> Map.new(&{String.downcase(&1.email), &1.id})
+
+    {project_users, entries, _firsts} =
+      changesets
+      |> Enum.with_index()
+      |> Enum.reduce({[], [], %{}}, fn {changeset, index}, acc ->
+        resolve_member(changeset, [:members, index], user_ids, acc)
+      end)
+
+    if entries == [],
+      do: {:ok, Enum.reverse(project_users)},
+      else: {:error, Enum.reverse(entries)}
+  end
+
+  defp resolve_member(%{valid?: false} = changeset, path, _user_ids, acc) do
+    {project_users, entries, firsts} = acc
+
+    member_entries =
+      for {field, error} <- changeset.errors,
+          do: Errors.entry(path ++ [field], error)
+
+    {project_users, member_entries ++ entries, firsts}
+  end
+
+  defp resolve_member(changeset, path, user_ids, acc) do
+    {project_users, entries, firsts} = acc
+
+    refuse_email =
+      &{project_users, [Errors.entry(path ++ [:email], &1) | entries], firsts}
+
+    case Map.fetch(user_ids, String.downcase(get_field(changeset, :email))) do
+      :error ->
+        refuse_email.({"names nothing you can see", code: :not_found})
+
+      {:ok, user_id} when is_map_key(firsts, user_id) ->
+        refuse_email.(
+          {"names the same user as " <> Errors.pointer(firsts[user_id]),
+           code: :duplicate}
+        )
+
+      {:ok, user_id} ->
+        project_user = %{user_id: user_id, role: get_field(changeset, :role)}
+        {[project_user | project_users], entries, Map.put(firsts, user_id, path)}
+    end
   end
 
   defp render_project(conn, project) do

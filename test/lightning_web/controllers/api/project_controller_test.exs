@@ -128,22 +128,26 @@ defmodule LightningWeb.API.ProjectControllerTest do
   describe "show" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
-    test "returns 404 for non-existent project", %{conn: conn} do
-      conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}")
-      assert json_response(conn, 404)
+    test "answers 404 for a project that doesn't exist, or an id that isn't a UUID",
+         %{conn: conn} do
+      for id <- [Ecto.UUID.generate(), "not-a-uuid"] do
+        conn
+        |> get(~p"/api/projects/#{id}")
+        |> assert_problem(404, :not_found, [])
+      end
     end
 
     test "with token for other project", %{conn: conn} do
       other_project = insert(:project)
       conn = get(conn, ~p"/api/projects/#{other_project.id}")
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 403, :forbidden, [])
     end
 
     test "a non-member is refused with 403, not 409, on a project scheduled for deletion",
          %{conn: conn} do
       conn = get(conn, ~p"/api/projects/#{scheduled_project().id}")
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 403, :forbidden, [])
     end
 
     test "the owner gets 409 on a project scheduled for deletion",
@@ -152,7 +156,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
       conn = get(conn, ~p"/api/projects/#{project.id}")
 
-      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert_problem(conn, 409, :scheduled_for_deletion, [])
     end
 
     test "shows the project with its members", %{
@@ -209,7 +213,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
     test "answers 409 for a project scheduled for deletion", %{conn: conn} do
       conn = get(conn, ~p"/api/projects/#{scheduled_project().id}")
 
-      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert_problem(conn, 409, :scheduled_for_deletion, [])
     end
   end
 
@@ -404,21 +408,25 @@ defmodule LightningWeb.API.ProjectControllerTest do
     test "refuses a blank name on replace as it does on create", %{conn: conn} do
       project = insert(:project, name: "before")
 
-      replaced =
-        conn
-        |> put_project(project.id, %{"name" => ""})
-        |> json_response(422)
+      blank_name = [
+        %{
+          "pointer" => "#/name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ]
 
-      created =
-        conn
-        |> put_project(Ecto.UUID.generate(), %{
-          "name" => "",
-          "members" => four_members()
-        })
-        |> json_response(422)
+      conn
+      |> put_project(project.id, %{"name" => ""})
+      |> assert_problem(422, :invalid, blank_name)
 
-      assert %{"errors" => %{"name" => [_]}} = replaced
-      assert replaced == created
+      conn
+      |> put_project(Ecto.UUID.generate(), %{
+        "name" => "",
+        "members" => four_members()
+      })
+      |> assert_problem(422, :invalid, blank_name)
+
       assert Lightning.Repo.reload!(project).name == "before"
     end
 
@@ -430,7 +438,13 @@ defmodule LightningWeb.API.ProjectControllerTest do
           "members" => four_members()
         })
 
-      assert %{"id" => [_]} = json_response(conn, 422)["errors"]
+      assert_problem(conn, 422, :invalid, [
+        %{
+          "pointer" => "#/id",
+          "code" => "mismatch",
+          "detail" => "does not match the id in the path"
+        }
+      ])
     end
 
     test "refuses a key the body does not take, under that key", %{conn: conn} do
@@ -444,95 +458,221 @@ defmodule LightningWeb.API.ProjectControllerTest do
           "retention_policy" => "erase_all"
         })
 
-      assert json_response(conn, 422) == %{
-               "errors" => %{
-                 "requires_mfa" => ["is not accepted"],
-                 "retention_policy" => ["is not accepted"]
-               }
-             }
+      assert_problem(conn, 422, :invalid, [
+        %{
+          "pointer" => "#/requires_mfa",
+          "code" => "unknown_key",
+          "detail" => "is not accepted"
+        },
+        %{
+          "pointer" => "#/retention_policy",
+          "code" => "unknown_key",
+          "detail" => "is not accepted"
+        }
+      ])
 
       refute Lightning.Repo.get(Lightning.Projects.Project, id)
     end
 
-    test "refuses a path id that is not a UUID", %{conn: conn} do
+    test "answers 404 for a path id that is not a UUID", %{conn: conn} do
       conn =
         put_project(conn, "not-a-uuid", %{
           "name" => "acme",
           "members" => four_members()
         })
 
-      assert %{"id" => [_]} = json_response(conn, 422)["errors"]
+      assert_problem(conn, 404, :not_found, [])
     end
 
-    test "refuses members it cannot write, under members", %{conn: conn} do
+    test "refuses members it cannot write, each at its place in members", %{
+      conn: conn
+    } do
       [owner, admin | _] = four_members()
 
+      one_owner = fn detail ->
+        %{"pointer" => "#/members", "code" => "one_owner", "detail" => detail}
+      end
+
       refused = [
-        unknown_email: [
-          owner,
-          %{"email" => "nobody@example.com", "role" => "admin"}
-        ],
-        two_owners: [owner, %{admin | "role" => "owner"}],
-        no_owner: [admin],
-        no_members: [],
-        not_a_list: %{"email" => owner["email"], "role" => "owner"}
+        unknown_email: {
+          [owner, %{"email" => "nobody@example.com", "role" => "admin"}],
+          [
+            %{
+              "pointer" => "#/members/1/email",
+              "code" => "not_found",
+              "detail" => "names nothing you can see"
+            }
+          ]
+        },
+        missing_email_and_unknown_role: {
+          [owner, %{"role" => "admin"}, %{admin | "role" => "boss"}],
+          [
+            %{
+              "pointer" => "#/members/1/email",
+              "code" => "required",
+              "detail" => "can't be blank"
+            },
+            %{
+              "pointer" => "#/members/2/role",
+              "code" => "not_allowed",
+              "detail" => "is invalid"
+            }
+          ]
+        },
+        two_owners: {
+          [owner, %{admin | "role" => "owner"}],
+          [one_owner.("A project can have only one owner.")]
+        },
+        no_owner: {
+          [admin],
+          [
+            one_owner.(
+              "Every project must have exactly one owner. Please specify one below."
+            )
+          ]
+        },
+        no_members: {
+          [],
+          [
+            %{
+              "pointer" => "#/members",
+              "code" => "required",
+              "detail" => "can't be blank"
+            },
+            one_owner.(
+              "Every project must have exactly one owner. Please specify one below."
+            )
+          ]
+        },
+        not_a_list: {
+          %{"email" => owner["email"], "role" => "owner"},
+          [
+            %{
+              "pointer" => "#/members",
+              "code" => "type",
+              "detail" => "is invalid"
+            }
+          ]
+        }
       ]
 
-      for {case_name, members} <- refused do
+      for {case_name, {members, entries}} <- refused do
         id = Ecto.UUID.generate()
 
         response =
           conn
           |> put_project(id, %{"name" => "acme", "members" => members})
-          |> json_response(422)
+          |> assert_problem(422, :invalid, entries)
 
-        assert %{"members" => [_ | _] = messages} = response["errors"],
-               "#{case_name}: #{inspect(response)}"
-
-        assert map_size(response["errors"]) == 1 and
-                 Enum.all?(messages, &is_binary/1),
-               "#{case_name}: #{inspect(response)}"
-
-        refute Enum.any?(messages, &String.contains?(&1, "@")),
+        refute Jason.encode!(response) =~ "@",
                "#{case_name} echoes an email: #{inspect(response)}"
 
         refute Lightning.Repo.get(Lightning.Projects.Project, id)
       end
     end
 
-    test "lists a member the project refuses as a plain message under members",
+    test "places a member's error by its position in the request, not the owner-last order members are written in",
          %{conn: conn} do
-      # An extension refusing one member, the way a seat limit would.
+      [owner, admin, editor, _viewer] = four_members()
+
+      conn
+      |> put_project(Ecto.UUID.generate(), %{
+        "name" => "acme",
+        "members" => [
+          owner,
+          admin,
+          %{"email" => "nobody@example.com", "role" => "editor"},
+          %{admin | "email" => String.upcase(admin["email"])},
+          editor,
+          %{admin | "role" => "viewer"}
+        ]
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/members/2/email",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        },
+        %{
+          "pointer" => "#/members/3/email",
+          "code" => "duplicate",
+          "detail" => "names the same user as #/members/1"
+        },
+        %{
+          "pointer" => "#/members/5/email",
+          "code" => "duplicate",
+          "detail" => "names the same user as #/members/1"
+        }
+      ])
+    end
+
+    test "answers 402 with the members list when the project refuses a member for want of a seat",
+         %{conn: conn} do
+      # An extension refusing a member the way a seat limit does.
       Mox.expect(Lightning.Extensions.MockProjectHook, :handle_create_project, fn
         attrs ->
-          changeset =
-            Lightning.Projects.Project.project_with_users_changeset(
-              %Lightning.Projects.Project{},
-              attrs
-            )
-
-          [first | rest] = Ecto.Changeset.get_change(changeset, :project_users)
-
-          changeset
-          |> Ecto.Changeset.put_change(:project_users, [
-            first,
-            rest
-            |> hd()
-            |> Ecto.Changeset.add_error(:user_id, "has no seat left")
-            | tl(rest)
-          ])
+          %Lightning.Projects.Project{}
+          |> Lightning.Projects.Project.project_with_users_changeset(attrs)
+          |> Ecto.Changeset.add_error(:project_users, "has no seat left",
+            code: :exceeds_limit
+          )
           |> Ecto.Changeset.apply_action(:insert)
       end)
 
-      response =
-        conn
-        |> put_project(Ecto.UUID.generate(), %{
-          "name" => "acme",
-          "members" => four_members()
-        })
-        |> json_response(422)
+      conn
+      |> put_project(Ecto.UUID.generate(), %{
+        "name" => "acme",
+        "members" => four_members()
+      })
+      |> assert_problem(402, :exceeds_limit, [
+        %{
+          "pointer" => "#/members",
+          "code" => "exceeds_limit",
+          "detail" => "has no seat left"
+        }
+      ])
+    end
 
-      assert response["errors"] == %{"members" => ["has no seat left"]}
+    test "reports every error in the body in one answer", %{conn: conn} do
+      [owner | _] = four_members()
+      id = Ecto.UUID.generate()
+
+      conn
+      |> put_project(id, %{
+        "id" => Ecto.UUID.generate(),
+        "name" => "Not Allowed",
+        "colour" => "red",
+        "notify" => "sometimes",
+        "members" => [
+          owner,
+          %{"email" => "nobody@example.com", "role" => "admin"}
+        ]
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/colour",
+          "code" => "unknown_key",
+          "detail" => "is not accepted"
+        },
+        %{
+          "pointer" => "#/id",
+          "code" => "mismatch",
+          "detail" => "does not match the id in the path"
+        },
+        %{"pointer" => "#/notify", "code" => "type", "detail" => "is invalid"},
+        %{
+          "pointer" => "#/members/1/email",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        },
+        %{
+          "pointer" => "#/name",
+          "code" => "format",
+          "detail" => "has invalid format"
+        }
+      ])
+
+      refute Lightning.Repo.get(Lightning.Projects.Project, id)
     end
 
     test "refuses a notify of null, under notify", %{conn: conn} do
@@ -545,16 +685,22 @@ defmodule LightningWeb.API.ProjectControllerTest do
           "members" => four_members(),
           "notify" => nil
         })
-        |> json_response(422)
+        |> assert_problem(422, :invalid, [
+          %{
+            "pointer" => "#/notify",
+            "code" => "required",
+            "detail" => "can't be blank"
+          }
+        ])
 
-      assert %{"notify" => [_]} = response["errors"]
+      assert response["errors"]
       refute Lightning.Repo.get(Lightning.Projects.Project, id)
     end
 
     test "refuses a body that is not a JSON object", %{conn: conn} do
       conn = put_project(conn, Ecto.UUID.generate(), [%{"name" => "acme"}])
 
-      assert %{"errors" => %{"body" => [_]}} = json_response(conn, 422)
+      assert_problem(conn, 400, :malformed, [])
     end
 
     test "refuses a name or description the project cannot hold", %{conn: conn} do
@@ -564,7 +710,13 @@ defmodule LightningWeb.API.ProjectControllerTest do
           "members" => four_members()
         })
 
-      assert Map.keys(json_response(conn_name, 422)["errors"]) == ["name"]
+      assert_problem(conn_name, 422, :invalid, [
+        %{
+          "pointer" => "#/name",
+          "code" => "format",
+          "detail" => "has invalid format"
+        }
+      ])
 
       conn_description =
         put_project(conn, Ecto.UUID.generate(), %{
@@ -573,9 +725,13 @@ defmodule LightningWeb.API.ProjectControllerTest do
           "members" => four_members()
         })
 
-      assert Map.keys(json_response(conn_description, 422)["errors"]) == [
-               "description"
-             ]
+      assert_problem(conn_description, 422, :invalid, [
+        %{
+          "pointer" => "#/description",
+          "code" => "too_long",
+          "detail" => "should be at most 240 character(s)"
+        }
+      ])
     end
 
     test "answers 409 for a project scheduled for deletion", %{conn: conn} do
@@ -583,8 +739,49 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
       conn = put_project(conn, project.id, %{"name" => "renamed"})
 
-      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert_problem(conn, 409, :scheduled_for_deletion, [])
       assert Lightning.Repo.reload!(project).name == project.name
+    end
+  end
+
+  describe "error answers on every projects route that has one" do
+    setup %{conn: conn} do
+      {conn, _account} = with_service_account(conn, ["projects:write"])
+
+      %{
+        conn: conn,
+        planted:
+          plant_sentinel(%{
+            "id" => nil,
+            "name" => nil,
+            "description" => nil,
+            "notify" => nil,
+            "members" => [%{"email" => nil, "role" => nil}],
+            "colour" => nil
+          })
+      }
+    end
+
+    test "never quote a value from the request", %{conn: conn, planted: planted} do
+      conn
+      |> get(~p"/api/projects/#{planted["name"]}")
+      |> refute_sentinel()
+      |> assert_problem(404, :not_found)
+
+      conn
+      |> put_project(planted["name"], planted)
+      |> refute_sentinel()
+      |> assert_problem(404, :not_found)
+
+      conn
+      |> put_project(Ecto.UUID.generate(), planted)
+      |> refute_sentinel()
+      |> assert_problem(422, :invalid)
+
+      conn
+      |> put_project(insert(:project).id, planted)
+      |> refute_sentinel()
+      |> assert_problem(422, :invalid)
     end
   end
 
@@ -625,7 +822,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
       conn =
         put_project(conn, id, %{"name" => "acme", "members" => four_members()})
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 403, :forbidden, [])
       refute Lightning.Repo.get(Lightning.Projects.Project, id)
     end
 
@@ -645,10 +842,14 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
         project = insert(:project, name: "before", project_users: project_users)
 
-        conn
-        |> with_pat(user)
-        |> put_project(project.id, %{"name" => "after"})
-        |> json_response(status)
+        replaced =
+          conn
+          |> with_pat(user)
+          |> put_project(project.id, %{"name" => "after"})
+
+        if status == 200,
+          do: json_response(replaced, 200),
+          else: assert_problem(replaced, 403, :forbidden, [])
 
         expected = if status == 200, do: "after", else: "before"
 
@@ -666,7 +867,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
         |> with_pat(insert(:user))
         |> put_project(project.id, %{"name" => "renamed"})
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 403, :forbidden, [])
     end
 
     test "the owner gets 409 on a project scheduled for deletion, and nothing changes",
@@ -679,7 +880,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
         |> with_pat(user)
         |> put_project(project.id, %{"name" => "renamed"})
 
-      assert json_response(conn, 409) == %{"error" => "scheduled_for_deletion"}
+      assert_problem(conn, 409, :scheduled_for_deletion, [])
       assert Lightning.Repo.reload!(project).name == project.name
     end
 
@@ -690,7 +891,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
         |> with_pat(insert(:user))
         |> put_project(insert(:project).id, %{"nonsense" => 1})
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 403, :forbidden, [])
     end
   end
 end

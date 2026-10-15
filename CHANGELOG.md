@@ -36,6 +36,16 @@ and this project adheres to
   - `GET /api/users/:id` and `PATCH /api/users/:id` for a user that doesn't
     exist, or an id that isn't a UUID, answer 404 `not_found` instead of
     `{"error": "Not Found"}`.
+- `GET /api/projects/:id` answers every error with a problem document:
+  - A project that doesn't exist answers 404 `not_found` instead of
+    `{"error": "Not Found"}`, and so does an id that isn't a UUID, instead of
+    400 `{"error": "Bad Request"}`.
+  - A caller who isn't a member of the project, or hasn't met its MFA
+    requirement, gets 403 `forbidden` instead of 401
+    `{"error": "Unauthorized"}`.
+  - A project scheduled for deletion answers 409 `scheduled_for_deletion` to a
+    caller who may see the project, and 403 `forbidden` to anyone else, instead
+    of 401 `{"error": "Unauthorized"}`.
 
 ### Added
 

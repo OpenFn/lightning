@@ -547,64 +547,6 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  @member_roles ProjectUser.RolesEnum.__valid_values__()
-                |> Enum.filter(&is_binary/1)
-
-  @doc """
-  Resolves members given as `%{"email" => email, "role" => role}` to the
-  `%{user_id: id, role: role}` rows a project's `project_users` take.
-
-  Emails match regardless of case. Returns `{:error, messages}` when a member
-  is malformed, names an email no user holds, or names a user twice. The
-  messages never contain an email, so they can be shown to whoever submitted
-  the list.
-  """
-  @spec members_by_email([term()]) ::
-          {:ok,
-           [%{user_id: Ecto.UUID.t(), role: :owner | :admin | :editor | :viewer}]}
-          | {:error, [String.t()]}
-  def members_by_email(members) do
-    if Enum.all?(members, &member_shape?/1) do
-      user_ids =
-        members
-        |> Enum.map(& &1["email"])
-        |> Lightning.Accounts.list_users_by_emails()
-        |> Map.new(&{String.downcase(&1.email), &1.id})
-
-      members
-      |> Enum.map(fn %{"email" => email, "role" => role} ->
-        %{
-          user_id: Map.get(user_ids, String.downcase(email)),
-          role: String.to_existing_atom(role)
-        }
-      end)
-      |> check_members()
-    else
-      {:error,
-       [
-         "each member needs an email and a role of #{Enum.join(@member_roles, ", ")}"
-       ]}
-    end
-  end
-
-  defp member_shape?(%{"email" => email, "role" => role}),
-    do: is_binary(email) and role in @member_roles
-
-  defp member_shape?(_member), do: false
-
-  defp check_members(members) do
-    {found, missing} = members |> Enum.map(& &1.user_id) |> Enum.split_with(& &1)
-
-    messages =
-      for {true, message} <- [
-            {missing != [], "names an email no user holds"},
-            {found != Enum.uniq(found), "names one user more than once"}
-          ],
-          do: message
-
-    if messages == [], do: {:ok, members}, else: {:error, messages}
-  end
-
   @doc """
   Creates a project, recording `actor` as having created it and added each of
   its initial members.
