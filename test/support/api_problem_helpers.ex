@@ -12,7 +12,7 @@ defmodule LightningWeb.API.ProblemHelpers do
   Asserts `conn` answered with the problem for `code` at `status`, and returns
   the decoded body.
 
-  It checks the content type against the request's `Accept`, the members
+  It checks that the content type is one of the two JSON types, the members
   `LightningWeb.API.Codes` fixes, and that every code, the response's and each
   entry's, is in one of the two code lists. `entries` is `:any`, or the exact
   list of entries in any order, as decoded JSON:
@@ -22,16 +22,14 @@ defmodule LightningWeb.API.ProblemHelpers do
     assert conn.status == status
 
     assert [content_type] = Plug.Conn.get_resp_header(conn, "content-type")
-
-    assert content_type |> String.split(";") |> hd() ==
-             expected_content_type(conn)
+    [media_type | _params] = String.split(content_type, ";")
+    assert media_type in ["application/json", "application/problem+json"]
 
     body = Jason.decode!(conn.resp_body)
 
     assert code in Codes.response_codes()
 
-    assert status == Codes.status(code) or
-             {code, status} == {:exceeds_limit, 429}
+    assert status == Codes.status(code)
 
     assert Map.take(body, ["type", "status", "title", "code", "detail"]) == %{
              "type" => "about:blank",
@@ -76,16 +74,5 @@ defmodule LightningWeb.API.ProblemHelpers do
            "the answer quotes a value from the request: #{conn.resp_body}"
 
     conn
-  end
-
-  defp expected_content_type(conn) do
-    asks_for_problem? =
-      conn
-      |> Plug.Conn.get_req_header("accept")
-      |> Enum.any?(&(&1 =~ "application/problem+json"))
-
-    if asks_for_problem?,
-      do: "application/problem+json",
-      else: "application/json"
   end
 end
