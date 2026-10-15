@@ -420,7 +420,7 @@ defmodule Lightning.VersionControl do
     %{
       projectId: repo_connection.project_id,
       apiSecretName: api_secret_name(repo_connection),
-      endpoint: LightningWeb.Endpoint.url(),
+      endpoint: endpoint_url(),
       branch: repo_connection.branch,
       workspace: ProjectRepoConnection.workspace_path(repo_connection),
       commitMessage: commit_message
@@ -942,10 +942,18 @@ defmodule Lightning.VersionControl do
         workspace: ProjectRepoConnection.workspace_path(repo_connection),
         workspace_glob:
           ProjectRepoConnection.workspace_file(repo_connection, "**"),
-        endpoint: LightningWeb.Endpoint.url()
+        endpoint: endpoint_url()
       ]
     )
   end
+
+  @doc """
+  The Lightning URL the GitHub actions call back to. The CLI names its project
+  copies after this URL's host. This is public to allow for easy local testing.
+  If you have a tunneling software like ngrok, you can replace it with a public
+  URL
+  """
+  def endpoint_url, do: LightningWeb.Endpoint.url()
 
   # v2 sync uses @v2 of the GitHub actions (openfn.yaml workspaces)
   defp github_template(name, %{sync_version: true}), do: "github/#{name}_v2.yml"
@@ -954,7 +962,7 @@ defmodule Lightning.VersionControl do
   defp config_json(repo_connection) do
     Jason.encode!(
       %{
-        endpoint: LightningWeb.Endpoint.url(),
+        endpoint: endpoint_url(),
         statePath: "openfn-#{repo_connection.project_id}-state.json",
         specPath: "openfn-#{repo_connection.project_id}-spec.yaml"
       },

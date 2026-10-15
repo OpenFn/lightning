@@ -711,7 +711,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   # The workspace's local project copies that share `alias` with this project
   # but not its uuid or host. The CLI refuses to pull with any of these around.
   defp alias_clashes(projects, project_id, alias) do
-    host = URI.parse(LightningWeb.Endpoint.url()).host
+    # the host the CLI was given, so it matches the files it writes
+    host = URI.parse(VersionControl.endpoint_url()).host
 
     Enum.filter(
       projects,
