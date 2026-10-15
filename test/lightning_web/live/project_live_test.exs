@@ -5965,44 +5965,8 @@ defmodule LightningWeb.ProjectLiveTest do
       other_id = Ecto.UUID.generate()
       contents = "https://api.github.com/repos/someaccount/somerepo/contents/"
 
-      stub(Lightning.Tesla.Mock, :call, fn
-        %{url: "https://api.github.com/user/installations"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "installations" => [
-                 %{
-                   "id" => 1234,
-                   "account" => %{"type" => "User", "login" => "u"}
-                 }
-               ]
-             }
-           }}
-
-        %{url: "https://api.github.com/app/installations/1234/access_tokens"},
-        _opts ->
-          {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
-
-        %{url: "https://api.github.com/installation/repositories"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "repositories" => [
-                 %{
-                   "full_name" => "someaccount/somerepo",
-                   "default_branch" => "main"
-                 }
-               ]
-             }
-           }}
-
-        %{url: "https://api.github.com/repos/someaccount/somerepo/branches"},
-        _opts ->
-          {:ok, %Tesla.Env{status: 200, body: [%{"name" => "main"}]}}
-
-        %{url: ^contents <> "ws/.projects"}, _opts ->
+      stub_connect_form(%{
+        (contents <> "ws/.projects") =>
           {:ok,
            %Tesla.Env{
              status: 200,
@@ -6012,9 +5976,8 @@ defmodule LightningWeb.ProjectLiveTest do
                  "path" => "ws/.projects/main@app.example.org.yaml"
                }
              ]
-           }}
-
-        %{url: ^contents <> "ws/.projects/main@app.example.org.yaml"}, _opts ->
+           }},
+        (contents <> "ws/.projects/main@app.example.org.yaml") =>
           {:ok,
            %Tesla.Env{
              status: 200,
@@ -6022,11 +5985,7 @@ defmodule LightningWeb.ProjectLiveTest do
                "content" => Base.encode64("openfn:\n  uuid: #{other_id}\n")
              }
            }}
-
-        # no checkout yet, and any other workspace is empty
-        %{url: _url}, _opts ->
-          {:ok, %Tesla.Env{status: 404, body: %{}}}
-      end)
+      })
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
       render_async(view)
@@ -6059,6 +6018,63 @@ defmodule LightningWeb.ProjectLiveTest do
       change.(%{branch: "main", workspace_path: "other", local_alias: ""})
 
       assert view |> element("#workspace-alias") |> render() =~ "main"
+    end
+
+    test "warns that connecting replaces a pull workflow of the other format",
+         %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      legacy_pull_yml =
+        :code.priv_dir(:lightning)
+        |> Path.join("github/pull.yml")
+        |> File.read!()
+
+      stub_connect_form(%{
+        "https://api.github.com/repos/someaccount/somerepo/contents/.github/workflows/openfn-pull.yml" =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"content" => Base.encode64(legacy_pull_yml)}
+           }}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      change = fn params ->
+        view
+        |> form("#project-repo-connection-form")
+        |> render_change(
+          connection:
+            Map.merge(
+              %{
+                github_installation_id: "1234",
+                repo: "someaccount/somerepo",
+                branch: "main",
+                sync_direction: "pull",
+                accept: "true"
+              },
+              params
+            )
+        )
+
+        render_async(view)
+      end
+
+      change.(%{sync_version: "true"})
+
+      assert view |> element("#pull-workflow-other-format") |> render() =~
+               "set up for the legacy format"
+
+      # a warning, not a block
+      refute view |> element("#connect-and-sync-button") |> render() =~
+               "disabled=\"disabled\""
+
+      change.(%{sync_version: "false"})
+
+      refute has_element?(view, "#pull-workflow-other-format")
     end
 
     test "shows the sync status of a v2 connection", %{conn: conn} do
@@ -8122,6 +8138,63 @@ defmodule LightningWeb.ProjectLiveTest do
     {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
     render_async(view)
     view
+  end
+
+  # Stubs GitHub for the connect form: one installation holding
+  # someaccount/somerepo (default branch main), a main branch, and 404 for any
+  # other url. `routes` maps more urls to responses.
+  defp stub_connect_form(routes) do
+    stub(Lightning.Tesla.Mock, :call, fn
+      %{url: url}, _opts when is_map_key(routes, url) ->
+        routes[url]
+
+      %{url: "https://api.github.com/user/installations"}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "installations" => [
+               %{"id" => 1234, "account" => %{"type" => "User", "login" => "u"}}
+             ]
+           }
+         }}
+
+      %{url: "https://api.github.com/app/installations/1234/access_tokens"},
+      _opts ->
+        {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
+
+      %{url: "https://api.github.com/installation/repositories"}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "repositories" => [
+               %{
+                 "full_name" => "someaccount/somerepo",
+                 "default_branch" => "main"
+               }
+             ]
+           }
+         }}
+
+      %{url: "https://api.github.com/repos/someaccount/somerepo"}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "full_name" => "someaccount/somerepo",
+             "default_branch" => "main"
+           }
+         }}
+
+      %{url: "https://api.github.com/repos/someaccount/somerepo/branches"},
+      _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{"name" => "main"}]}}
+
+      # no pull workflow, checkout or workspace yet
+      %{url: _url}, _opts ->
+        {:ok, %Tesla.Env{status: 404, body: %{}}}
+    end)
   end
 
   # Stubs GitHub for a v2 connection on someaccount/somerepo@somebranch. The

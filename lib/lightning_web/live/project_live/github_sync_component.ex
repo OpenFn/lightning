@@ -245,8 +245,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       :running in Keyword.values(checks)
   end
 
-  # Re-checked only when installation, repo, branch or workspace change, as
-  # the user picks them
+  # Re-checked only when installation, repo, branch, format or workspace
+  # change, as the user picks them
   defp maybe_check_workspace(socket) do
     %{changeset: changeset, user: user} = socket.assigns
     connection = Ecto.Changeset.apply_changes(changeset)
@@ -254,10 +254,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     %{github_installation_id: installation, repo: repo, branch: branch} =
       connection
 
-    key = {installation, repo, branch, connection.workspace_path}
+    key =
+      {installation, repo, branch, connection.sync_version,
+       connection.workspace_path}
 
     cond do
-      !connection.sync_version or nil in [installation, repo, branch] ->
+      nil in [installation, repo, branch] ->
         assign(socket, workspace_check: nil, workspace_key: nil)
 
       key == socket.assigns.workspace_key ->
@@ -1099,6 +1101,21 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     """
   end
 
+  # "legacy" or "v2" when the repo's shared openfn-pull.yml is set up for the
+  # other format, which connecting replaces
+  defp pull_workflow_other_format(
+         %AsyncResult{ok?: true, result: %{pull_workflow: found}},
+         form
+       ) do
+    case {found, sync_version?(form)} do
+      {:v1, true} -> "legacy"
+      {:v2, false} -> "v2"
+      _same_or_none -> nil
+    end
+  end
+
+  defp pull_workflow_other_format(_workspace_check, _form), do: nil
+
   # The alias of this project's local copy in the workspace, once synced
   defp workspace_alias(%AsyncResult{ok?: true, result: status}, project_id),
     do: find_project(status.projects, project_id)[:alias]
@@ -1529,6 +1546,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   attr :form, :map, required: true
   attr :project, :map, required: true
   attr :default_branch, :string
+  attr :pull_workflow_other_format, :string, default: nil
 
   defp accept_checkbox(assigns) do
     ~H"""
@@ -1559,6 +1577,15 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             <code class="break-all">
               .github/workflows/openfn-pull.yml -> {@default_branch}
             </code>
+          </li>
+          <li
+            :if={@pull_workflow_other_format}
+            id="pull-workflow-other-format"
+            class="ml-5 text-red-700"
+          >
+            This file is set up for the {@pull_workflow_other_format} format.
+            Replacing it stops syncs from OpenFn for every project connected
+            to this repository with that format.
           </li>
           <li class="flex items-start gap-1.5">
             <.icon name="hero-document-plus" class="h-4 w-4 shrink-0 text-gray-500" />

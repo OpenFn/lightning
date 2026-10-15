@@ -200,9 +200,16 @@ defmodule Lightning.VersionControl do
   end
 
   @doc """
-  What a not-yet-connected v2 workspace already holds on the branch: the
-  `tracking` and `projects` of `get_sync_status/1`. Checks `user` can access
-  the installation first, as `fetch_repo_branches/3` does.
+  What a not-yet-connected repo already holds:
+
+  - `pull_workflow`: which format the repo's shared openfn-pull.yml is set up
+    for, `:v1`, `:v2` or nil when there is none. Every project connected to
+    the repo uses it, so they all have to use the same format.
+  - v2 only, the workspace on the branch: the `tracking` and `projects` of
+    `get_sync_status/1`.
+
+  Checks `user` can access the installation first, as `fetch_repo_branches/3`
+  does.
   """
   @spec check_workspace(User.t(), ProjectRepoConnection.t()) ::
           {:ok, map()} | {:error, term()}
@@ -211,10 +218,41 @@ defmodule Lightning.VersionControl do
 
     with :ok <- authorize_installation_access(user, installation_id),
          {:ok, client} <-
-           GithubClient.build_installation_client(installation_id) do
-      workspace_state(client, repo_connection)
+           GithubClient.build_installation_client(installation_id),
+         {:ok, pull_workflow} <- pull_workflow_version(client, repo_connection),
+         {:ok, workspace} <- maybe_workspace_state(client, repo_connection) do
+      {:ok, Map.put(workspace, :pull_workflow, pull_workflow)}
     end
   end
+
+  defp pull_workflow_version(client, %{repo: repo}) do
+    with {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
+           GithubClient.get_repo(client, repo) do
+      case GithubClient.get_repo_content(
+             client,
+             repo,
+             pull_yml_target_path(),
+             "heads/#{default_branch}"
+           ) do
+        {:ok, %{body: %{"content" => content}}} ->
+          with {:ok, yaml} <- Base.decode64(content, ignore: :whitespace) do
+            # pathToConfig is a pull.yml (v1) input, pull_v2.yml has none
+            {:ok, if(yaml =~ "pathToConfig", do: :v1, else: :v2)}
+          end
+
+        {:error, %Tesla.Env{status: 404}} ->
+          {:ok, nil}
+
+        error ->
+          error
+      end
+    end
+  end
+
+  defp maybe_workspace_state(client, %{sync_version: true} = repo_connection),
+    do: workspace_state(client, repo_connection)
+
+  defp maybe_workspace_state(_client, _legacy_connection), do: {:ok, %{}}
 
   defp workspace_state(client, repo_connection) do
     with {:ok, tracking} <- tracking_status(client, repo_connection),

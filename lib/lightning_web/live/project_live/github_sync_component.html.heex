@@ -184,6 +184,9 @@
         <.accept_checkbox
           project={@project}
           form={f}
+          pull_workflow_other_format={
+            pull_workflow_other_format(@workspace_check, f)
+          }
           default_branch={
             get_default_branch(
               @repos,

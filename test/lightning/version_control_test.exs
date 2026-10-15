@@ -862,11 +862,20 @@ defmodule Lightning.VersionControlTest do
         github_installation_id: "1234",
         repo: "someaccount/somerepo",
         branch: "somebranch",
+        sync_version: true,
         workspace_path: "projects/a"
       }
 
       expect_get_user_installations()
       expect_create_installation_token("1234")
+      expect_get_repo(connection.repo)
+
+      expect_get_repo_content(
+        connection.repo,
+        ".github/workflows/openfn-pull.yml",
+        404,
+        %{}
+      )
 
       expect_get_repo_content(
         connection.repo,
@@ -877,8 +886,44 @@ defmodule Lightning.VersionControlTest do
 
       expect_get_repo_content(connection.repo, "projects/a/.projects", 404, %{})
 
-      assert {:ok, %{tracking: :pending, projects: []}} =
+      assert {:ok, %{pull_workflow: nil, tracking: :pending, projects: []}} =
                VersionControl.check_workspace(user, connection)
+    end
+
+    test "reports the format of the repo's shared pull workflow" do
+      user = insert(:user) |> set_valid_github_oauth_token!() |> Repo.reload!()
+
+      connection = %ProjectRepoConnection{
+        project_id: Ecto.UUID.generate(),
+        github_installation_id: "1234",
+        repo: "someaccount/somerepo",
+        branch: "somebranch"
+      }
+
+      for {template, format} <- [{"pull.yml", :v1}, {"pull_v2.yml", :v2}] do
+        content =
+          :code.priv_dir(:lightning)
+          |> Path.join("github/#{template}")
+          |> File.read!()
+          |> Base.encode64()
+
+        expect_get_user_installations()
+        expect_create_installation_token("1234")
+        expect_get_repo(connection.repo)
+
+        expect_get_repo_content(
+          connection.repo,
+          ".github/workflows/openfn-pull.yml",
+          200,
+          %{"content" => content}
+        )
+
+        # a legacy connection has no workspace to check
+        assert {:ok, %{pull_workflow: ^format} = check} =
+                 VersionControl.check_workspace(user, connection)
+
+        refute Map.has_key?(check, :tracking)
+      end
     end
 
     test "refuses an installation the user can't access" do
