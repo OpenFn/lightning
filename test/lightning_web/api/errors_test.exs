@@ -128,7 +128,7 @@ defmodule LightningWeb.API.ErrorsTest do
              ]
     end
 
-    test "codes an assoc_constraint error from the database not_found (plan D2)" do
+    test "codes an assoc_constraint error not_found at the foreign key the request sent (plan D2)" do
       {:error, changeset} =
         %Workflow{}
         |> Workflow.changeset(%{
@@ -139,11 +139,14 @@ defmodule LightningWeb.API.ErrorsTest do
 
       assert Errors.from_changeset(changeset) == [
                %{
-                 pointer: "#/project",
+                 pointer: "#/project_id",
                  code: :not_found,
                  detail: "does not exist"
                }
              ]
+
+      assert [%{pointer: "#/parent"}] =
+               Errors.from_changeset(changeset, %{project: :parent})
     end
 
     test "raises on an error with no code" do

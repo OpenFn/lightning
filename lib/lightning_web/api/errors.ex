@@ -180,7 +180,7 @@ defmodule LightningWeb.API.Errors do
       changeset.errors
       |> Enum.reverse()
       |> Enum.map(fn {field, error} ->
-        {error_location(path, field, error, renames),
+        {error_location(changeset, path, field, error, renames),
          duplicate(changeset, field, error, duplicate_of)}
       end)
 
@@ -250,11 +250,27 @@ defmodule LightningWeb.API.Errors do
     Enum.map(schema.__schema__(:primary_key), &Changeset.get_field(child, &1))
   end
 
-  defp error_location(path, :base, {_message, opts}, _renames),
+  defp error_location(_changeset, path, :base, {_message, opts}, _renames),
     do: path ++ List.wrap(opts[:key])
 
-  defp error_location(path, field, {_message, opts}, renames),
-    do: path ++ [opts[:key] || Map.get(renames, field, field)]
+  defp error_location(changeset, path, field, {_message, opts}, renames) do
+    key =
+      opts[:key] || Map.get(renames, field) ||
+        request_key(changeset, field, opts[:constraint])
+
+    path ++ [key]
+  end
+
+  # assoc_constraint puts its error on the association, but the request sent
+  # the foreign key, and keys are the request's (spec §3 rule 2).
+  defp request_key(%Changeset{data: %schema{}}, field, :assoc) do
+    case schema.__schema__(:association, field) do
+      %Ecto.Association.BelongsTo{owner_key: owner_key} -> owner_key
+      _other -> field
+    end
+  end
+
+  defp request_key(_changeset, field, _constraint), do: field
 
   # Ecto's duplicate-key check in cast_assoc and cast_embed is its one error
   # with no options: "has already been taken", on the later child's primary
