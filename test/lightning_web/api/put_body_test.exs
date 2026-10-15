@@ -66,4 +66,16 @@ defmodule LightningWeb.API.PutBodyTest do
                 }
               ]}
   end
+
+  describe "path_id/1" do
+    test "takes a UUID written out, in any case" do
+      assert PutBody.path_id(String.upcase(@id)) == {:ok, @id}
+    end
+
+    test "answers not_found for anything else, a 16-byte string included" do
+      for id <- ["not-a-uuid", "aaaaaaaaaaaaaaaa", ""] do
+        assert PutBody.path_id(id) == {:error, :not_found}, inspect(id)
+      end
+    end
+  end
 end

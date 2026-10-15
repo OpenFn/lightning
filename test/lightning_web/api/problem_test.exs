@@ -128,6 +128,17 @@ defmodule LightningWeb.API.ProblemTest do
       assert log =~ "could not save a workflow snapshot"
     end
 
+    test "logs a project change whose audit events failed to write, and answers 500" do
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          build_conn()
+          |> FallbackController.call({:error, :not_related_to_project})
+          |> assert_problem(500, :internal, [])
+        end)
+
+      assert log =~ "could not write the audit events of a project change"
+    end
+
     test "names the missing grant in the challenge" do
       conn =
         FallbackController.call(

@@ -53,6 +53,14 @@ defmodule LightningWeb.API.FallbackController do
   def call(conn, {:error, :exceeds_limit}),
     do: Problem.respond(conn, Problem.new(:exceeds_limit))
 
+  def call(conn, {:error, :not_related_to_project}) do
+    Logger.error(
+      "An API action could not write the audit events of a project change"
+    )
+
+    Problem.respond(conn, Problem.new(:internal))
+  end
+
   def call(conn, {:error, :snapshot_failed}) do
     Logger.error("An API action could not save a workflow snapshot")
     Problem.respond(conn, Problem.new(:internal))

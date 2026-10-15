@@ -30,6 +30,23 @@ defmodule LightningWeb.API.PutBody do
     {:ok, unknown ++ id_mismatch(body, path_id)}
   end
 
+  @doc """
+  The path's id, written out as a UUID.
+
+  Returns `{:error, :not_found}` for anything else, since an id that isn't a
+  UUID names nothing (spec §4). `Ecto.UUID.cast/1` would also take any 16-byte
+  string as a raw UUID, landing the request under an id it doesn't name.
+  """
+  @spec path_id(String.t()) :: {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def path_id(id) do
+    with {:ok, raw} <- Ecto.UUID.dump(id),
+         {:ok, uuid} <- Ecto.UUID.load(raw) do
+      {:ok, uuid}
+    else
+      :error -> {:error, :not_found}
+    end
+  end
+
   defp id_mismatch(%{"id" => body_id}, path_id) do
     if Ecto.UUID.cast(body_id) == {:ok, path_id},
       do: [],
