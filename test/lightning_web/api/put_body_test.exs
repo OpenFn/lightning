@@ -1,0 +1,69 @@
+defmodule LightningWeb.API.PutBodyTest do
+  use ExUnit.Case, async: true
+
+  alias LightningWeb.API.Problem
+  alias LightningWeb.API.PutBody
+
+  @id "3f2504e0-4f89-41d3-9a0c-0305e82c3301"
+  @accepted [:id, :name]
+
+  test "passes a body holding only accepted keys and the path's id" do
+    assert PutBody.check(%{"id" => @id, "name" => "n"}, @id, @accepted) ==
+             {:ok, []}
+  end
+
+  test "passes a body that leaves the id out" do
+    assert PutBody.check(%{"name" => "n"}, @id, @accepted) == {:ok, []}
+  end
+
+  test "passes a body id written in upper case" do
+    assert PutBody.check(%{"id" => String.upcase(@id)}, @id, @accepted) ==
+             {:ok, []}
+  end
+
+  test "answers 400 malformed for a body that is not a JSON object" do
+    assert PutBody.check(%{"_json" => [1, 2]}, @id, @accepted) ==
+             {:error, Problem.new(:malformed)}
+  end
+
+  test "gives one unknown_key entry per key the route does not accept, and a mismatch for another id" do
+    body = %{
+      "id" => "0b9e0a5e-7d55-4d8e-8f7e-4a0b1c2d3e4f",
+      "name" => "n",
+      "colour" => "red",
+      "a/b" => 1
+    }
+
+    assert PutBody.check(body, @id, @accepted) ==
+             {:ok,
+              [
+                %{
+                  pointer: "#/a~1b",
+                  code: :unknown_key,
+                  detail: "is not accepted"
+                },
+                %{
+                  pointer: "#/colour",
+                  code: :unknown_key,
+                  detail: "is not accepted"
+                },
+                %{
+                  pointer: "#/id",
+                  code: :mismatch,
+                  detail: "does not match the id in the path"
+                }
+              ]}
+  end
+
+  test "gives a mismatch for a body id that is not a UUID" do
+    assert PutBody.check(%{"id" => 42}, @id, @accepted) ==
+             {:ok,
+              [
+                %{
+                  pointer: "#/id",
+                  code: :mismatch,
+                  detail: "does not match the id in the path"
+                }
+              ]}
+  end
+end
