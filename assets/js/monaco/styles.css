@@ -33,3 +33,34 @@
 .monaco-editor .line-numbers.active-line-number {
   color: white !important;
 }
+
+/* Marks what an AI reply changed: pulses twice to catch the eye, then rests
+   fainter than a selection so it never reads as one. */
+.monaco-editor .ai-change-highlight {
+  background-color: color-mix(in oklab, var(--color-white) 8%, transparent);
+  animation: ai-change-pulse 0.6s ease-in-out 2;
+}
+
+/* Same pulse under another name, so a repeat highlight restarts it */
+.monaco-editor .ai-change-highlight.ai-change-replay {
+  animation-name: ai-change-pulse-replay;
+}
+
+@keyframes ai-change-pulse {
+  50% {
+    background-color: color-mix(in oklab, var(--color-white) 22%, transparent);
+  }
+}
+
+@keyframes ai-change-pulse-replay {
+  50% {
+    background-color: color-mix(in oklab, var(--color-white) 22%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monaco-editor .ai-change-highlight,
+  .monaco-editor .ai-change-highlight.ai-change-replay {
+    animation: none;
+  }
+}

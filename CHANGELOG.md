@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- AI assistant diff blocks show the step with its adaptor logo. Clicking it
+  opens the step and highlights the code the AI added.
+
 ### Changed
 
 - Update Project and Workflow yaml exports to match the v4 portability spec

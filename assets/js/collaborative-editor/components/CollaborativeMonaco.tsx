@@ -18,7 +18,10 @@ import _logger from '#/utils/logger';
 
 import { type Monaco, MonacoEditor, setTheme } from '../../monaco';
 import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
-import { useHandleDiffDismissed } from '../contexts/MonacoRefContext';
+import {
+  useHandleDiffDismissed,
+  usePendingHighlight,
+} from '../contexts/MonacoRefContext';
 
 import createCompletionProvider from '../utils/magic-completion';
 
@@ -173,6 +176,67 @@ export const CollaborativeMonaco = forwardRef<
       }
     };
   }, []);
+
+  const highlightRef = useRef<editor.IEditorDecorationsCollection>();
+  // Monaco keeps a decoration's DOM when its markup is unchanged, so a
+  // repeat highlight alternates class names to restart the flash.
+  const replayRef = useRef(false);
+  const { pendingHighlight, setPendingHighlight } = usePendingHighlight();
+
+  // Runs after the binding effect, so the model already holds this ytext.
+  useEffect(() => {
+    const editor = editorRef.current;
+    const model = editor?.getModel();
+    if (!editor || !model) return;
+    if (!pendingHighlight || pendingHighlight.ytext !== ytext) return;
+    setPendingHighlight?.(null);
+
+    // Found by text, not line number: the code may have been edited since
+    // the reply. Of several copies, the one nearest where it was wins; a run
+    // edited away, or only blank lines, highlights nothing.
+    const ranges = pendingHighlight.added.flatMap(({ line, text }) => {
+      if (!text.trim()) return [];
+      const whole = model
+        .findMatches(text, false, false, true, null, false)
+        .map(match => match.range)
+        .filter(
+          range =>
+            range.startColumn === 1 &&
+            range.endColumn === model.getLineMaxColumn(range.endLineNumber)
+        );
+      const nearest = whole.sort(
+        (a, b) =>
+          Math.abs(a.startLineNumber - line) -
+          Math.abs(b.startLineNumber - line)
+      )[0];
+      return nearest ? [nearest] : [];
+    });
+
+    const className = replayRef.current
+      ? 'ai-change-highlight ai-change-replay'
+      : 'ai-change-highlight';
+    replayRef.current = !replayRef.current;
+    highlightRef.current?.clear();
+    highlightRef.current = editor.createDecorationsCollection(
+      ranges.map(range => ({
+        range,
+        options: { className },
+      }))
+    );
+    if (ranges[0]) editor.revealRangeInCenterIfOutsideViewport(ranges[0]);
+  }, [pendingHighlight, ytext, editorReady, setPendingHighlight]);
+
+  // Dismissed the way a selection is: by clicking or typing in the code.
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const clear = () => highlightRef.current?.clear();
+    const subscriptions = [editor.onMouseDown(clear), editor.onKeyDown(clear)];
+    return () => {
+      clear();
+      subscriptions.forEach(subscription => subscription.dispose());
+    };
+  }, [ytext, editorReady]);
 
   useEffect(() => {
     if (editorRef.current) {
