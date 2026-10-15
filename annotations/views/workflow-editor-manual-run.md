@@ -108,17 +108,30 @@ whether their code works, and a failed run could only be repeated from the Histo
 
 ## 2. What it does
 
-- Editors start a run from a step or a trigger with an empty input
-- Editors start a run with a custom JSON object they type or upload
-- Editors start a run with an input the step received before, chosen from a searchable list
-- Anyone who can open the workflow browses, searches, filters and previews earlier inputs for a step
-- Editors name or unname an earlier input
-- Cron-triggered steps default to the input the next scheduled run will use
-- Editors retry a followed run from a step with the same input, or force a new work order instead
-- Editors start a quick run from the first trigger from the header without opening the panel
-- The editor saves the workflow before any run or retry
-- Run and retry are refused, with a reason, when the person or the workflow cannot run
-- The panel opens from, and survives, a URL
+- **Choose the input** (editors)
+  - Start from a step or a trigger with an empty input, or a JSON object they type or upload
+  - Or pick an input the step received before; cron-triggered steps default to the one the next scheduled run will use
+  - Name or unname an earlier input so others can find it
+- **Find earlier inputs**
+  - Anyone who can open the workflow browses, searches, filters and previews earlier inputs for a step
+- **Run or retry** (editors)
+  - Retry a followed run from a step with the same input, or force a new work order instead
+  - Start a quick run from the first trigger in the header without opening the panel
+  - The editor saves the workflow before any run or retry
+- **Refuse with a reason**
+  - Run and retry are refused, with a reason shown, when the person or the workflow cannot run
+- **Open from a link**
+  - The panel opens from, and survives, a URL, including one that picks the input
+
+**Straightforwardness: 3 of 5.** The choices are easy to follow, but which input actually gets used, and when retry is offered at all, hang on rules you'd only know if someone told you.
+
+### Most surprising behaviours
+
+- **(2)** If you leave the "New" tab and come back, the editor may look empty while Run still submits the JSON you typed earlier, so you start a run with data you can no longer see. (6.1)
+- **(2)** Retry is only offered, and a link that picks an input only works, when that input is among the step's 10 most recent. Older inputs quietly fall back to a plain new run or no selection. (6.2)
+- **(3)** A retry runs against the latest version of the workflow, not the one the original run used, so "retry" isn't a faithful replay. (6.2, S14)
+- **(3)** Date filters on earlier inputs seem to be read as UTC, so someone in Nairobi gets results three hours off from what they asked for. (6.1)
+- **(3)** Pressing Escape to cancel renaming an input may close the whole run panel instead. (6.1)
 
 ## 3. Who can do what
 

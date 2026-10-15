@@ -95,22 +95,33 @@ bringing failures down.
 
 ## 2. What it does
 
-- Anyone on the project opens a workflow's health page from the workflow list, a failure alert or a digest email
-- Anyone sees how the window's finished work orders ended, with the success rate
-- Anyone sees the failed work orders broken down by the state they ended in
-- Anyone sees which steps the failures land on, heaviest first
-- Anyone sees the failures grouped by error, heaviest first, with a suggestion for each error type
-- Anyone opens History filtered to one error group (flow-workflow-health-drilldown)
-- Anyone opens History filtered to one outcome or failure state (proposed flow-workflow-health-drilldown)
-- Anyone sees runs over time, stacked by outcome, on their own clock
-- Anyone opens History filtered to one band of one bar of the runs chart (flow-workflow-health-drilldown)
-- Anyone picks the window: last 24 hours, 7 days or 30 days
-- Anyone is stopped from picking a window longer than the project keeps history
-- Anyone watching the page sees the numbers update without reloading
-- Anyone still sees the charts that loaded when another one fails
-- Anyone goes back to the workflow's editor from the page
-- Nobody reads another project's workflow health, through the page or its data endpoints
-- Anyone viewing the page is moved to the workflow list when the workflow is deleted (flow-delete-open-workflow)
+- **Get to the page and away from it** (anyone on the project)
+  - Open a workflow's health page from the workflow list, a failure alert or a digest email
+  - Go back to the workflow's editor from the page
+  - Get moved to the workflow list if the workflow is deleted while the page is open
+- **See how the work ended**
+  - How the window's finished work orders ended, with the success rate
+  - The failed work orders broken down by the state they ended in
+  - Runs over time, stacked by outcome, on the viewer's own clock
+- **See what's breaking**
+  - Which steps the failures land on, heaviest first
+  - The failures grouped by error, heaviest first, with a suggestion for each error type
+- **Drill into History**
+  - Open History filtered to one error group, one outcome or failure state, or one band of one bar of the runs chart
+- **Choose the window and keep it reliable**
+  - Pick the last 24 hours, 7 days or 30 days, but never a window longer than the project keeps history
+  - Numbers update without reloading, and charts that loaded stay up when another one fails
+  - Nobody reads another project's workflow health, through the page or the data behind it
+
+**Straightforwardness: 3 of 5.** The charts are easy to read, but what gets counted (retries, failures in two branches, which window an old work order falls into) takes some explaining.
+
+### Most surprising behaviours
+
+- **(2)** If the automatic refresh starts failing, for example after your session expires, the page keeps showing the old numbers with nothing to say they've stopped updating. Someone watching after a fix could wait for a drop that never shows. (6.1, S23)
+- **(3)** Counting follows the latest attempt: a work order that failed and was retried to success counts as a success, and an old work order retried today counts in today's window. Good for seeing a fix work, but the numbers can move for work that happened weeks ago. (S05, S11, 6.2)
+- **(3)** A work order that broke in two branches shows up twice in the triage table, so the triage rows can add up to more than the failure total in the charts beside it. (S12, 6.2)
+- **(3)** If the server doesn't recognise the browser's timezone (a very new one), the runs chart never loads and tells the person to refresh, which won't help. (6.1)
+- **(4)** The chosen window and tab aren't kept in the link, so a reload, a shared link or a link from an email always opens on the last 7 days. (6.2)
 
 ## 3. Who can do what
 

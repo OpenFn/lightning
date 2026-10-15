@@ -110,13 +110,28 @@ nobody can restore).
 
 ## 2. What it does
 
-- Members see the workspace root and every sandbox they belong to, with the current one marked
-- Editors and above create a sandbox under the current project
-- Sandbox admins and owners (and workspace root admins and owners) rename and recolour a sandbox
-- The same people delete a sandbox, which schedules it and its children for deletion
-- The same people restore a sandbox during its grace period
-- The same people merge a sandbox into a project where they are an editor or above, choosing which workflows, credentials and collections go across
-- Nobody can act on the workspace root itself, or on a sandbox they can't see
+- **See the workspace**
+  - Members see the workspace root and every sandbox they belong to, with the current one marked
+- **Create a sandbox**
+  - Editors and above create a sandbox under the current project
+- **Look after a sandbox** (sandbox admins and owners, and workspace root admins and owners)
+  - Rename and recolour it
+  - Delete it, which schedules it and its children for deletion
+  - Restore it during the grace period
+- **Merge a sandbox** (the same people)
+  - Merge it into a project where they are an editor or above, choosing which workflows, credentials and collections go across
+- **Off limits**
+  - Nobody can act on the workspace root itself, or on a sandbox they can't see
+
+**Straightforwardness: 2 of 5.** Create, rename and delete are simple, but the merge decides what counts as new, changed or deleted in ways you have to sit down and work through, and deleting or merging reaches further than the list shows.
+
+### Most surprising behaviours
+
+- **(2)** The merge decides a workflow was "Deleted in sandbox" by comparing dates with when the sandbox was made, and it matches workflows by name. Merging into a sibling or grandparent, or after renaming a workflow, can offer to delete a live workflow the sandbox never touched. (6.1, 6.2, S37)
+- **(3)** Deleting or merging a sandbox also deletes all its child sandboxes, including ones you can't see in the list. The modal gives a count, but not names. (S24, S43, 6.2)
+- **(3)** Restoring a deleted sandbox brings it back with every trigger still switched off, and nothing says so. (6.2)
+- **(3)** If a sandbox job uses a keychain credential that only the sandbox has, and the person merging isn't allowed to create one in the target, the job arrives in the target without it and nothing says so. (6.2)
+- **(3)** A person who only belongs to the sandbox, and deletes the one they're in, is sent to its parent project, which they can't open, so they land on "not found". The modal also promises a different destination from the one they get. (6.1)
 
 ## 3. Who can do what
 

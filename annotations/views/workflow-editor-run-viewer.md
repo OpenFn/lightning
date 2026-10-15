@@ -141,16 +141,29 @@ of the graph to fix.
 
 ## 2. What it does
 
-- Anyone on the project sees the loaded run's work order, id, status, duration, start time and who started it
-- Anyone sees the run's steps in start order with their outcome and duration
-- Anyone sees which steps were carried over from an earlier run
-- Anyone picks a step to open its job's code and see that step's input, output and log lines
-- Anyone sees what a queued or starting run is waiting for while no log has arrived
-- Anyone is warned when the job open in the code editor did not run in the loaded run
-- Anyone follows links from the run to its work order on History and to the full run page
-- Anyone sees on the canvas which path the run took and where it failed
-- Anyone is told when a run cannot be loaded
-- A run from another project is not painted onto this workflow
+- **See how the run went** (anyone on the project)
+  - The loaded run's work order, id, status, duration, start time and who started it
+  - Its steps in start order with outcome and duration, with steps carried over from an earlier run marked
+  - What a queued or starting run is waiting for while no log has arrived
+- **Dig into a step**
+  - Anyone picks a step to open its job's code and see that step's input, output and log lines
+  - Anyone is warned when the job open in the code editor did not run in the loaded run
+- **See the run on the canvas**
+  - Anyone sees which path the run took and where it failed
+- **Jump elsewhere**
+  - Anyone follows links from the run to its work order on History and to the full run page
+- **Load only what belongs here**
+  - Anyone is told when a run cannot be loaded, and a run from another project is not painted onto this workflow
+
+**Straightforwardness: 3 of 5.** Reading a run is simple, but which step's data you're actually looking at can drift from what you clicked or linked to, and that takes some explaining.
+
+### Most surprising behaviours
+
+- **(2)** A link to a specific step, say from the run page, seems to open the right job's code but show the first step's input, output and logs, so you can read the wrong data without noticing. (6.1)
+- **(3)** Step names come from the version of the workflow open now, not the one that ran, so a renamed job shows its new name and a removed one reads "Unknown Job". (6.1)
+- **(3)** When a job ran more than once in a run, you may not be able to select its second or later execution; the page snaps back to the first. (6.1)
+- **(3)** The list of steps, data and logs only exists in the full-screen code view; on the canvas you just get the run painted onto the graph. (6.2)
+- **(3)** A cancelled step can show a failure badge whose tooltip says it completed successfully. (6.1)
 
 ## 3. Who can do what
 

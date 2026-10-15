@@ -134,24 +134,33 @@ shape that produced it, and the only way to change production would be to edit i
 
 ## 2. What it does
 
-- Members browse the workflow's saves and open any one read-only
-- With experimental features, a live workflow lists its publishes instead, with who published each one and how
-- Members return to the latest, editable copy from any older view
-- With experimental features, switching away asks before throwing away unsaved edits
-- The version lists stay current after anyone saves, and a failed load says so
-- With experimental features, editors restore an older publish of a live workflow, after seeing which triggers it deletes or brings back off
-- A restore that is refused says why and changes nothing
-- Members see the workflow's recent work orders and runs on the canvas, with load, empty and failure states
-- Picking a run shows it on the version it ran on
-- When reading a publish, the history shows only that publish's runs
-- With experimental features, each run is tagged with the version it ran on
-- Members follow links from the history to the full history, a work order or a run
-- With experimental features, editors copy a live workflow into a new sandbox and land in it
-- They choose what the sandbox starts with: nothing, the open run's reviewed input, or a saved input
-- They continue in an existing sandbox that holds this workflow instead
-- Sandbox creation respects name uniqueness, permissions and the plan's sandbox limit
-- Editors save and sync to GitHub from the editor (handoff)
-- In a sandbox, editors promote the workflow to the parent (handoff)
+- **Browse versions** (members)
+  - Browse the workflow's saves and open any one read-only, then return to the latest, editable copy; with experimental features a live workflow lists its publishes instead, with who published each one and how
+  - With experimental features, switching away asks before throwing away unsaved edits
+  - The version lists stay current after anyone saves, and a failed load says so
+- **Roll back a live workflow** (editors, experimental features)
+  - Restore an older publish after seeing which triggers it deletes or brings back switched off
+  - A restore that is refused says why and changes nothing
+- **See what ran** (members)
+  - Recent work orders and runs on the canvas, with load, empty and failure states, and links to the full history, a work order or a run
+  - Picking a run shows it on the version it ran on, and reading a publish shows only that publish's runs
+  - With experimental features, each run is tagged with the version it ran on
+- **Edit in a sandbox** (editors, experimental features)
+  - Copy a live workflow into a new sandbox and land in it, or continue in an existing sandbox that holds this workflow
+  - Choose what a new sandbox starts with: nothing, the open run's reviewed input, or a saved input
+  - Creation respects name uniqueness, permissions and the plan's sandbox limit
+- **Hand off to other flows** (editors)
+  - Save and sync to GitHub from the editor, and in a sandbox promote the workflow to the parent
+
+**Straightforwardness: 2 of 5.** Two numbering schemes, read-only views of the past, a rollback that reaches other people's screens and a sandbox picker with several starting points add up to a page you have to sit and think about.
+
+### Most surprising behaviours
+
+- **(2)** Restoring a publish resets the workflow in place for everyone who has it open, so a colleague's unsaved edits are replaced by the restored version. (4, S34)
+- **(2)** If the restore dialog can't work out which triggers will change, it shows no warnings and still lets you restore, so "nothing will break" and "we couldn't check" look exactly the same. (6.2)
+- **(3)** "v3" means the third publish in one list and the third save in the other, depending on whether the workflow is live. (6.2, S04)
+- **(3)** Choosing "Cancel" on the unsaved-changes prompt after "Edit in sandbox" still leaves the new sandbox behind, and trying again fails because the name is taken. (6.1)
+- **(3)** "Continue in a sandbox" lists sandboxes you aren't a member of, with their owner's name or email, and then refuses to let you in. (6.1)
 
 ## 3. Who can do what
 

@@ -98,15 +98,29 @@ or been left off, and switching a workflow off in a hurry would mean opening the
 
 ## 2. What it does
 
-- Members see every workflow in the project with its latest work order, work order count, failed work order count and on/off state for the last 30 days
-- Members see project totals for work orders, runs, successful runs and failed work orders
-- Members search workflows by name
-- Members sort the list by any column
-- Members open a workflow, its health page, or the history filtered to a number they clicked
-- Editors and above switch a workflow on or off from the list
-- Editors and above delete a workflow
-- Editors and above start a new workflow
-- With experimental features on, members see a Live or Draft badge instead of the switch (except in sandboxes)
+- **See how the project's workflows are doing** (members)
+  - Every workflow with its latest work order, work order count, failed count and on/off state over the last 30 days
+  - Project totals for work orders, runs, successful runs and failed work orders
+- **Find a workflow**
+  - Members search by name and sort by any column; both stay in the link so the view can be shared
+- **Go deeper**
+  - Members open a workflow in the editor, its health page, or the history filtered to a number they clicked
+- **Change workflows** (editors and above)
+  - Switch a workflow on or off from the list
+  - Delete a workflow after confirming
+  - Start a new workflow
+- **Experimental lifecycle mode**
+  - Members with experimental features on see a Live or Draft badge instead of the switch, except in sandboxes
+
+**Straightforwardness: 3 of 5.** The list itself is simple, but "on" means different things in different parts of the same row, and the numbers don't always match what their links open.
+
+### Most surprising behaviours
+
+- **(2)** A workflow with some triggers on and some off shows its switch off, its name not greyed out, and sorts with the enabled ones. A workflow with no triggers at all shows the switch on next to a tooltip saying it's inactive. (6.1, S26)
+- **(3)** The project totals follow the search box, but their links open the whole project's history, so after searching a card can say 1 failure and "View all" lists 5. (6.1)
+- **(3)** Switching a workflow off also turns it back into a draft, and switching it on records a go-live release, even for people who've never opted into the lifecycle feature. (6.2, S11, S12)
+- **(3)** The list doesn't update by itself. If a colleague switches off or deletes a workflow, you keep seeing the old state until you reload. (6.2)
+- **(4)** Viewers see a switch that looks like it works; they only find out they can't use it when they click and get "not authorized". (6.1, S15)
 
 ## 3. Who can do what
 

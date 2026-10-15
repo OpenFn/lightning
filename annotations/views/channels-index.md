@@ -92,16 +92,30 @@ destination with the project's secret attached.
 
 ## 2. What it does
 
-- Anyone on the project sees the project's channels with destination, request count, last activity and enabled state
-- Anyone sees total channels and total requests for the project
-- Anyone copies a channel's proxy URL
-- Anyone follows a channel's request count or "View all" to the channel logs
-- Editors create a channel with a name, destination URL, destination credential and client credentials
-- Editors change a channel's settings and credentials
-- Editors switch a channel off and on
-- Editors delete a channel
-- Viewers see the list read-only
-- Credentials and auth methods from another project can never be attached
+- **See the project's channels** (anyone on the project)
+  - Each channel with its destination, request count, last activity and enabled state
+  - Totals for channels and requests across the project
+  - Viewers see the list read-only
+- **Use a channel** (anyone on the project)
+  - Copy a channel's proxy URL to hand to a client system
+  - Follow a channel's request count, or "View all", to the channel logs
+- **Set up and change channels** (editors)
+  - Create a channel with a name, destination URL, destination credential and client credentials
+  - Change a channel's settings and credentials
+  - Credentials and auth methods from another project can never be attached
+- **Stop or remove channels** (editors)
+  - Switch a channel off and back on
+  - Delete a channel
+
+**Straightforwardness: 3 of 5.** The page itself is a plain list and form, but what a channel does once it's live, and what deleting one takes with it, needs explaining.
+
+### Most surprising behaviours
+
+- **(2)** A channel saved with no client credentials forwards anyone's request to the destination with the project's credential attached. The form doesn't warn you, so an editor can publish an open door to a secret-protected system without knowing. (6.1)
+- **(2)** Deleting a channel also wipes every logged request it ever carried, even though the confirm only says "This cannot be undone." On a busy channel the delete may fail after the history is already gone, leaving the channel in place with no logs. (6.1)
+- **(3)** Several save failures show nothing at all: a credential that's no longer allowed, or someone else saving the same channel while you had it open. The button just seems not to work. (6.1)
+- **(4)** The menu link only appears for people with experimental features on, but the page works for anyone on the project who has the link. (6.2)
+- **(4)** The "Add new" link for client credentials goes to a settings tab only admins can change, and anything you add there only shows in the channel form after you close and reopen it. (6.2)
 
 ## 3. Who can do what
 

@@ -136,34 +136,35 @@ rights, run data leaking to a project it doesn't belong to, or questions and ans
 
 ## 2. What it does
 
-- Members with the assistant configured open and close the panel from the header, Cmd/Ctrl+K or a `?chat=true` link
-- The panel is unavailable on older versions and on instances without the assistant
-- Members start a conversation with a first message, and every message carries the current workflow
-- Replies stream in, and nobody can send again until the answer is in
-- Changes the assistant writes land on the canvas for the person who asked, unsaved
-- Applied changes keep each step's credential
-- On a new workflow, the assistant's first workflow is saved for the person who asked
-- On a new workflow, the assistant's changes wait for a connection rather than being lost
-- A change that did not reach the canvas says so, offers a retry and is still flagged after reload
-- The person who asked can revert the last reply's changes, and restore them
-- Viewers can ask but cannot apply changes or change the assistant's job context
-- On a live workflow (experimental), the assistant cannot change it and offers "Switch to draft"
-- A failed reply says why and offers "Try again"
-- Text that streamed before a failure is kept
-- A reply whose code edit failed says so and offers to try again
-- A message stuck by a crash or deploy is released with a reason
-- When the project's AI quota is spent, the panel says so and blocks sending
-- Members browse, search, page through and reopen this workflow's conversations
-- Conversations are shared with everyone on the project
-- Non-members and unenrolled members of MFA projects cannot read or join conversations
-- With a run open, members attach its logs and the shape of its data
-- A run from another project is never attached
-- Messages are limited to 10,000 characters, with a countdown near the limit
-- A conversation started on an unsaved workflow or job stays with it once saved
-- Losing access to the project closes the assistant; becoming a viewer does not
-- Project deletion and workflow deletion close the assistant (handoff)
-- Members can read what the assistant sends and stores before they use it
-- Members open a step the assistant changed straight in the code editor
+- **Open the assistant**
+  - Members with the assistant configured open and close the panel from the header, Cmd/Ctrl+K or a direct link; it is unavailable on older versions and on instances without the assistant
+  - Members can read what the assistant sends and stores before they use it
+- **Ask and get answers** (members)
+  - Start a conversation with a first message; every message carries the current workflow, and with a run open they can attach its logs and the shape of its data, never a run from another project
+  - Replies stream in, and nobody can send again until the answer is in
+  - A failed reply, a failed code edit or a message stuck by a crash or deploy says why and offers "Try again", keeping any text that already streamed
+- **Have changes applied** (the person who asked, if they can edit)
+  - Changes land on the canvas unsaved and keep each step's credential; on a new workflow the first workflow is saved, and waits for a connection rather than being lost
+  - A change that did not reach the canvas says so, offers a retry and is still flagged after reload; the last reply's changes can be reverted and restored
+  - Open a step the assistant changed straight in the code editor
+- **Limits on what people can do**
+  - Viewers can ask but cannot apply changes or change the assistant's job context
+  - On a live workflow (experimental) the assistant cannot change it and offers "Switch to draft"
+  - Messages stop at 10,000 characters with a countdown, and when the project's AI quota is spent the panel says so and blocks sending
+- **Keep conversations with the project**
+  - Members browse, search, page through and reopen this workflow's conversations, shared with everyone on the project; one started on an unsaved workflow or job stays with it once saved
+  - Non-members and unenrolled members of MFA projects cannot read or join conversations
+  - Losing access to the project, or deleting the project or workflow, closes the assistant; becoming a viewer does not
+
+**Straightforwardness: 2 of 5.** Chatting is simple, but whose browser applies a change, whether it gets saved, and what everyone else on the workflow sees while that happens, take real thought.
+
+### Most surprising behaviours
+
+- **(2)** If the person whose reply is being applied closes their tab or drops off midway, everyone else on the workflow may be stuck with Apply hidden and Save disabled until they reload. (6.1)
+- **(2)** A reply can list the changes it made even when they never reached the canvas, for example a viewer's own reply or one on a live workflow, with no "not applied" notice. (6.1)
+- **(3)** Changes are only applied in the asker's browser, and they're left unsaved on an existing workflow but saved straight away on a new one, so the same action behaves differently depending on where you start. (6.2, S07, S09)
+- **(3)** Viewers can't change anything, but they can chat, so they add to the team's shared history and spend the project's AI quota. (6.2)
+- **(3)** A direct link to the assistant may open a working-looking panel even where the assistant isn't set up, or on an old version, and sending from it just fails. (6.1)
 
 ## 3. Who can do what
 
