@@ -69,9 +69,22 @@ form creates the account, grants the role and emails the person a link to choose
 Without it, an admin would need a superuser to create the account first, or would have to set and
 share a password themselves, and a new team member could not start work on the project's data.
 
-## 2. What it does
+1. A project admin or owner invites someone who has no OpenFn account, choosing a viewer, editor or admin role.
+2. The account is created and added to the project straight away, and the person is emailed "Join <project> on OpenFn as a collaborator" with a link.
+3. They open the link while signed out and choose their own password.
+   - The password has to meet the usual rules, and the link stays usable until it works
+   - The link works once and lapses after a day; after that they can use "Forgot your password?" instead
+4. They log in, land on their projects list and open the project with the role they were given.
 
-Admin submits the invite form, the invitee is created and added with the chosen role and is emailed "Join <project> on OpenFn as a collaborator", follows the link to set a password, logs in, and opens the project.
+**Straightforwardness: 3 of 5.** One form does a lot at once, and the invitee's experience is borrowed from password reset, which shows in the wording and the gaps.
+
+### Most surprising behaviours
+
+- **(2)** When email confirmation is required, setting a password from the invite doesn't count as confirming the email, so the new person sees a warning banner and is locked out 48 hours after the invite. (6.1)
+- **(3)** The link dies after one day and the email doesn't say so. There's no way for the admin to resend it; the invitee has to know to use "Forgot your password?". (S03, 6.1, 6.5)
+- **(3)** The person is a full member from the moment the invite is sent, and the email tells them to ignore it if they didn't ask to join, which leaves that account and membership in place. (6.1, 6.2)
+- **(3)** Someone who has never had a password is shown "Reset password" throughout. (6.1)
+- **(3)** If the email fails to send the right way, the admin's page just reloads with no message and nothing is saved. (6.1)
 
 ## 3. Who can do what
 

@@ -64,9 +64,19 @@ link to reset it if they didn't approve it. Without it, a retention policy agree
 could be shortened, lengthened or cleared by one person and nobody else would know until data
 went missing or was kept too long.
 
-## 2. What it does
+1. A project admin or owner saves a new history or input/output data retention period on the data storage tab.
+   - A save that changes no period, or that is rejected, sends nothing
+2. Straight away, every admin and owner on the project, including the one who made the change, is emailed the new policy with a link back to the tab to reset it.
+   - Editors and viewers aren't emailed, nor are admins who couldn't open the project right now (disabled, unconfirmed, or missing required multi-factor)
 
-Admin saves a new history or I/O retention period on the data storage tab; each admin and owner who may be sent the project's contents is emailed the new policy with a link back to the tab.
+**Straightforwardness: 3 of 5.** The idea is simple, but the email misses the change that matters most and can describe the policy wrongly.
+
+### Most surprising behaviours
+
+- **(2)** Switching a project to or from "Never retain" input/output data sends no email at all, even though catching that kind of unapproved change is the whole point. (6.1)
+- **(3)** When I/O data isn't kept, the email still lists an I/O retention period, and clearing the history period shows "∞ days" instead of saying data is kept indefinitely. (6.1)
+- **(3)** The email doesn't say who made the change or what the old values were, so admins can't easily tell if it's something to undo. (6.2)
+- **(3)** If emails fail to send, the admin who saved still sees "Project updated successfully" and nobody learns the others weren't told. (6.1)
 
 ## 3. Who can do what
 

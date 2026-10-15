@@ -75,9 +75,21 @@ being used, and that deleting it there cuts it off everywhere. Without it a user
 dead token from a live one, and a leaked token they "deleted" could keep reading and writing
 project data.
 
-## 2. What it does
+1. A user generates a personal access token on the tokens page of their profile.
+2. A script uses it to call the main API and the collections API, with the user's own project access.
+   - It can't be used to manage user accounts
+   - An account that hasn't confirmed its email in time is refused until it does, then the same token works again
+3. Back on the tokens page, "Last Used at" shows when the token was last used.
+4. The user deletes the token there, and both APIs refuse it from then on; their other tokens keep working.
 
-Generate on profile-tokens, call `/api` or `/collections` with it as a bearer, see "Last Used at" move on profile-tokens, delete it there, and both APIs refuse it with 401.
+**Straightforwardness: 3 of 5.** The journey is what you'd expect, but the two APIs check the token in different ways, and "Last Used at" doesn't mean quite what it says.
+
+### Most surprising behaviours
+
+- **(3)** "Last Used at" only moves for the main API. A token used only by a collections client shows "Never used", which invites the user to delete one that is keeping an integration alive. (6.1)
+- **(3)** "Last Used at" also moves for requests that were refused because the account hadn't confirmed its email, so it can show recent use of a token that isn't working. (6.1)
+- **(3)** Every refusal is the same bare "Unauthorized", whether the token was deleted, the account is blocked, or the user simply isn't on that project, so it's hard to tell what went wrong. (6.2)
+- **(3)** The two APIs check tokens separately, so a server-side key change could stop every token on collections while they keep working on the main API. (6.2)
 
 ## 3. Who can do what
 

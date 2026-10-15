@@ -73,9 +73,23 @@ every member: those already enrolled carry on, and those who aren't are stopped 
 why, sent to enrol, and let back in once they have. Without it the requirement would either not be
 enforced, or would lock people out with no explanation and no way back.
 
-## 2. What it does
+1. A project owner or admin turns on "Require MFA?" on the project's security settings.
+2. Members who already use multi-factor authentication carry on as normal.
+3. A member who hasn't set it up is sent, on their next project page, to a page explaining that the project requires it.
+4. They follow "Visit your account", turn on multi-factor on their profile and confirm a code from their authenticator app.
+   - A code that doesn't check out leaves them locked out
+   - Once set up, they land on their backup codes page, and the explanation page no longer holds them
+5. The project's pages open for them again.
 
-Owner turns on "Require MFA?" on the security tab; an unenrolled member's next project page sends them to `/mfa_required`; they follow "Visit your account" to the profile, enrol an authenticator app, and the project's workflows page opens for them again.
+**Straightforwardness: 3 of 5.** The idea is simple, but the rule bites the person switching it on, and pages already open don't react straight away.
+
+### Most surprising behaviours
+
+- **(2)** An owner or admin who hasn't set up multi-factor can turn the requirement on and is locked out by it at once, including from turning it back off. If no owner or admin has set it up, nobody on the project can lift it. (6.1)
+- **(3)** Members with the project already open aren't moved off it; they keep seeing the page but get "not authorized" when they try to do things, until they navigate or reload. (S06, 6.2)
+- **(3)** The explanation page doesn't say which project sent them there and doesn't bring them back afterwards, so after setting up they have to find the project again. (6.2)
+- **(3)** Members who haven't set up multi-factor quietly stop getting the project's digest and failure alert emails until they do. (4)
+- **(3)** Existing sandboxes of the project don't pick up the requirement, so unenrolled members can still reach them. (6.2)
 
 ## 3. Who can do what
 

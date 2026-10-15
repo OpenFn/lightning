@@ -105,9 +105,24 @@ routes: that flow's `state` is an encrypted pointer to a LiveView, its callback 
 anyone in (oidc_controller.ex:75-83, :269-294). This flow's `state` is a random value bound to the
 browser session, and its callback signs the user in.
 
-## 2. What it does
+1. A signed-out visitor clicks "via external provider" on the login page and is sent to their organisation's sign-in page.
+2. They sign in there and are sent back to Lightning, which checks the answer really came from the provider for this login.
+   - Anything that doesn't check out (a wrong or reused link, a bad token, an email the provider hasn't verified) goes back to the login page with a generic "couldn't sign you in"
+   - Cancelling at the provider, or the provider being unreachable, also lands back on the login page
+3. Lightning matches the provider's verified email to an existing account.
+   - No matching account, a disabled account or one scheduled for deletion each go back to the login page with their own message
+4. Users without two-factor are signed in; users with two-factor go through the code step first.
+5. They land on the page they originally asked for, or the projects list, kept signed in for 60 days.
 
-Signed-out visitor clicks "via external provider"; Lightning stores a fresh state and nonce and sends them to the provider; they sign in there; the provider returns to `/authenticate/:provider/callback`; Lightning checks state, the id token and the verified email, refuses unknown, disabled and scheduled-for-deletion accounts back to the login page, and otherwise signs them in with "keep me logged in" on, via two-factor for MFA accounts, landing on the stored return path or `/projects`.
+**Straightforwardness: 3 of 5.** The journey is the usual single sign-on dance, and most of the many checks just make it safe; the surprises are in how accounts are matched and what different failures show.
+
+### Most surprising behaviours
+
+- **(2)** Accounts are matched by email address alone. If the provider reassigns an address to someone new, that person gets into the old owner's Lightning account. (3, 8)
+- **(3)** "Keep me logged in for 60 days" is always on for single sign-on and the user is never asked, even on a shared computer. (S01, 6.2)
+- **(3)** Most failures share one vague message, but unknown, disabled and scheduled-for-deletion accounts each get a specific one, which tells anyone with a provider login whether an account exists for that email. (6.2)
+- **(3)** If the provider rejects Lightning's own credentials, the user seems to get a dead-end error page showing the provider's technical error instead of the login page. (6.1)
+- **(3)** On a setup with several servers, removing the provider in admin may leave single sign-on working on some servers for up to 30 minutes. (6.1)
 
 ## 3. Who can do what
 

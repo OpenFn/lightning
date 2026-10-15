@@ -84,9 +84,22 @@ working. This flow lets each member choose a daily, weekly or monthly summary of
 failed work orders per workflow, and gives them a link that opens History on exactly that workflow
 and window. Without it, a failing integration goes unnoticed until someone downstream complains.
 
-## 2. What it does
+1. A project member sets their own digest to daily, weekly or monthly (or never) on the collaborators tab; nobody can set it for someone else.
+2. At 10:00 UTC on the matching day, each member who chose that frequency is emailed a summary of the period.
+   - Per workflow: how many work orders succeeded and how many failed, counting every kind of failure and leaving out work still in progress
+   - Projects being deleted send nothing, and members who couldn't open the project right now (disabled, unconfirmed, or missing required multi-factor) get nothing
+3. Each workflow's link opens History filtered to that workflow and the digest's dates, after logging in first if needed.
+   - A workflow with failures also links to its failures grouped by error
 
-A member sets their own digest frequency on the collaboration tab; at 10:00 UTC on the matching day DigestEmailWorker emails them per-workflow success and failure counts for the period; each workflow's link opens History filtered to that workflow and the digest's date range.
+**Straightforwardness: 3 of 5.** The idea is simple, but the numbers in the email and the list behind the link don't always line up, and a missed digest is easy not to notice.
+
+### Most surprising behaviours
+
+- **(2)** The history link filters by last activity, not by when the work happened, and doesn't filter by status. So the list can show more or fewer work orders than the email counted, especially once something is retried. (6.1, 6.2)
+- **(2)** One error while building digests can stop the whole run, so members of unrelated projects silently miss that period's digest, and a failed send is never retried. (6.1, 6.4)
+- **(3)** The email says "today" or "this month", but it really covers the last 24 hours, or the previous calendar month, up to 10:00 UTC. A monthly digest on 1 November calls October "this month". (6.1)
+- **(3)** A project with workflows but no activity still sends a digest full of zeros, and a work order finishing at exactly 10:00 UTC can be counted in two digests. (6.2)
+- **(3)** On a big instance digests are built one after another, so they may arrive well after 10:00 UTC. (6.4)
 
 ## 3. Who can do what
 

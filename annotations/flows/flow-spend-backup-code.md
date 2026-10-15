@@ -71,9 +71,21 @@ printed or saved recovery codes to finish signing in. Each code must open the ac
 so a code that has been seen, photographed or left in an old printout is useless after its first
 use, and the user must be able to tell afterwards which of their codes are already spent.
 
-## 2. What it does
+1. A user with two-factor turned on enters their password and lands on the two-factor page.
+2. They switch to "Use your backup code", type one of their unused recovery codes and are signed in.
+   - A mistyped code is refused and nothing is used up
+3. That code is marked as spent and refused at every later sign-in, while the other codes keep working.
+4. On their backup codes page in their profile, the spent code should then show struck through with the date it was used.
 
-Password accepted; on `/users/two-factor` the user switches to "Use your backup code", enters an unused code and is signed in; that code is marked spent and refused at every later sign-in while the others keep working; on `/profile/auth/backup_codes` it should then show struck through with "Code used on ..." (blocked, 6.1 row 1).
+**Straightforwardness: 3 of 5.** The journey itself is simple, but what happens after a code is spent has real gaps that are easy to miss.
+
+### Most surprising behaviours
+
+- **(2)** Once any code has been spent, the backup codes page may fail to load at all. That page is the only place to generate new codes, so the user could be stuck with a shrinking set they can't see or replace. (6.1)
+- **(3)** The same code typed in from two places at the same moment may be accepted twice, so a leaked code could open two sessions. (6.1)
+- **(3)** Using a recovery code sends no email and leaves no record, and nobody tells the user how many codes they have left or prompts them to make more. (6.2)
+- **(3)** Copying or printing the codes lists spent ones exactly like unused ones, so a saved list can look usable when it isn't. (6.1)
+- **(3)** On a phone the code box opens a number pad and hints at six characters, but codes are nine letters and digits; after a wrong code the form also loses its "backup code" wording. (6.1)
 
 ## 3. Who can do what
 

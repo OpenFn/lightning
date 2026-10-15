@@ -79,9 +79,23 @@ every opted-in member who may still see the project gets an email naming the wor
 and its link opens History on that failed work order, already expanded. Without it, a failed
 delivery of health data is noticed only when someone downstream complains.
 
-## 2. What it does
+1. A project member turns on their own failure alerts on the collaborators tab; alerts start off for everyone.
+2. A run ends without succeeding, either reported by the worker or, for a run that stopped reporting, marked lost by a check every five minutes.
+3. Every opted-in member who could still open the project is emailed straight away, naming the workflow and project.
+   - Nothing is sent if the project's plan doesn't include alerts, or to members who are disabled, unconfirmed, missing required multi-factor, or on a project being deleted
+   - At most three emails per person per workflow every five minutes; other workflows still alert
+   - The email links to the logs rather than including them
+4. The link opens History showing just that work order, expanded, after logging in first if needed.
 
-Member enables their own failure alert on the collaboration tab; a run ends in a non-success state (worker report or janitor marking it lost); the alerter emails each opted-in, eligible member, at most 3 per workflow per 5 minutes; the email's link opens History filtered to and expanding the failed work order, after login if needed.
+**Straightforwardness: 3 of 5.** The journey is easy to follow, but the rate cap and what counts as a "failure" behave differently from what the email says.
+
+### Most surprising behaviours
+
+- **(3)** Cancelled and killed runs also send an alert that says the run "just failed". (6.1)
+- **(3)** "Failed N times in the last 5 minutes" counts emails sent to you, not failures, and the five minutes are fixed blocks, so you may get up to six alerts in a five-minute stretch and the count can understate how often it failed. (6.1)
+- **(3)** If an email fails to send it is dropped silently, with no retry and no sign to anyone. (6.2)
+- **(3)** Support users and superusers who aren't members can never get alerts, even when they can open the project. (6.2)
+- **(3)** For a lost run, the alert can go out even if marking the run as lost then fails, so the email may describe a run History still shows as running. (6.1)
 
 ## 3. Who can do what
 
