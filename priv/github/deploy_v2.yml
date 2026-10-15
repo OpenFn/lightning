@@ -2,6 +2,10 @@ on:
   push:
     branches:
       - <%= @branch %>
+    # Only deploy when this project's workspace (or this file) changes
+    paths:
+      - '<%= @workspace_glob %>'
+      - '.github/workflows/openfn-<%= @project_id %>-deploy.yml'
   workflow_dispatch:
     inputs:
       force:
@@ -29,4 +33,8 @@ jobs:
           secret_input: ${{ secrets.<%= @api_secret_name %> }}
           project_id_input: '<%= @project_id %>'
           endpoint_input: '<%= @endpoint %>'
-          force_input: ${{ inputs.force || false }}
+          workspace_input: '<%= @workspace %>'
+          # A commit with [openfn force] in its message forces the deploy too
+          force_input:
+            ${{ inputs.force || contains(github.event.head_commit.message,
+            '[openfn force]') }}

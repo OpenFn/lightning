@@ -1,3 +1,6 @@
+# Lightning finds this project's runs by the project id in the run name
+run-name: ${{ inputs.commitMessage }} (${{ inputs.projectId }})
+
 on:
   workflow_dispatch:
     inputs:
@@ -13,9 +16,18 @@ on:
       branch:
         description: 'Branch to commit the project to'
         required: true
+      workspace:
+        description: 'Folder holding the project openfn.yaml'
+        required: false
+        default: '.'
       commitMessage:
         description: 'Commit message for the project'
         required: true
+      alias:
+        description:
+          'Local alias for the project in the workspace (first pull only)'
+        required: false
+        default: ''
 
 # Shared with openfn-<project>-deploy.yml so a pull and a deploy never push to
 # the same branch at once
@@ -37,4 +49,6 @@ jobs:
           project_id_input: ${{ inputs.projectId }}
           endpoint_input: ${{ inputs.endpoint }}
           branch_input: ${{ inputs.branch }}
+          workspace_input: ${{ inputs.workspace }}
           commit_message_input: ${{ inputs.commitMessage }}
+          alias_input: ${{ inputs.alias }}

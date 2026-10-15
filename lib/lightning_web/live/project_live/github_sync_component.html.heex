@@ -158,6 +158,15 @@
         <.sync_order_radio form={f} />
       </div>
       <.config_format_toggle form={f} project_id={@project.id} myself={@myself} />
+      <.workspace_fields :if={sync_version?(f)} form={f}>
+        <.workspace_check
+          :if={@workspace_check}
+          workspace_check={@workspace_check}
+          form={f}
+          project={@project}
+          myself={@myself}
+        />
+      </.workspace_fields>
       <div :if={!sync_version?(f)} class="mt-4">
         <.input
           type="text"
@@ -201,9 +210,10 @@
     <div class="bg-white p-4 rounded-md">
       <h6 class="mb-4 font-medium text-black">Connected to GitHub</h6>
       <GithubComponents.sync_docs_banner />
-      <.verify_connection_banner
-        id="verify-connection-banner"
+      <.sync_health
         verify_connection={@verify_connection}
+        sync_status={@sync_status}
+        project_repo_connection={@project_repo_connection}
         myself={@myself}
         changeset={@changeset}
         repos={@repos}
@@ -242,6 +252,28 @@
           </span>
         </span>
 
+        <span :if={@project_repo_connection.sync_version}>
+          Workspace:
+          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+            {ProjectRepoConnection.workspace_path(@project_repo_connection)}
+          </span>
+        </span>
+
+        <span :if={
+          alias =
+            @project_repo_connection.sync_version &&
+              workspace_alias(@sync_status, @project.id)
+        }>
+          Local alias:
+          <span
+            id="workspace-alias"
+            class="text-xs font-mono bg-gray-200 rounded-md p-1"
+          >
+            {alias}
+          </span>
+        </span>
+
+        <%!-- v2's config is always <workspace>/openfn.yaml --%>
         <span :if={!@project_repo_connection.sync_version}>
           Path to config:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">

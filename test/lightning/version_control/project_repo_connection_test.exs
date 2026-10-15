@@ -285,6 +285,65 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
     end
   end
 
+  describe "workspace_path" do
+    test "must be a plain folder inside the repo" do
+      errors = fn path ->
+        ProjectRepoConnection.changeset(%ProjectRepoConnection{}, %{
+          project_id: insert(:project).id,
+          repo: "openfn/example",
+          branch: "main",
+          github_installation_id: "1234",
+          sync_version: true,
+          workspace_path: path
+        }).errors[:workspace_path]
+      end
+
+      assert errors.("projects/a") == nil
+      assert {"must stay inside the repository", _} = errors.("../a")
+      assert {"must stay inside the repository", _} = errors.("/a")
+      # it's written into the GitHub workflow files
+      assert {"can only contain" <> _, _} = errors.("a'b")
+    end
+
+    test "defaults to the repo root, where openfn.yaml is the config" do
+      connection = %ProjectRepoConnection{sync_version: true}
+
+      assert ProjectRepoConnection.workspace_path(connection) == "."
+      assert ProjectRepoConnection.config_path(connection) == "openfn.yaml"
+
+      connection = %{connection | workspace_path: "./projects/a"}
+
+      assert ProjectRepoConnection.workspace_path(connection) == "projects/a"
+
+      assert ProjectRepoConnection.config_path(connection) ==
+               "projects/a/openfn.yaml"
+    end
+  end
+
+  describe "local_alias" do
+    test "must be usable in the CLI's <alias>@<host>.yaml filename" do
+      errors = fn local_alias ->
+        ProjectRepoConnection.configure_changeset(%ProjectRepoConnection{}, %{
+          project_id: insert(:project).id,
+          repo: "openfn/example",
+          branch: "main",
+          github_installation_id: "1234",
+          sync_version: true,
+          sync_direction: "pull",
+          accept: true,
+          local_alias: local_alias
+        }).errors[:local_alias]
+      end
+
+      assert errors.("my-project_2") == nil
+      assert errors.("") == nil
+
+      for bad <- ["Main", "a@b", "a/b", "-a"] do
+        assert {"use lowercase letters" <> _, _} = errors.(bad)
+      end
+    end
+  end
+
   describe "tree_branch_conflict?/4" do
     test "returns false when no other connection in the tree uses the (repo, branch)" do
       root = insert(:project)

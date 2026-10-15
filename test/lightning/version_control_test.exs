@@ -535,6 +535,352 @@ defmodule Lightning.VersionControlTest do
     end
   end
 
+  describe "reconfigure_github_connection/3" do
+    setup do
+      repo_connection =
+        insert(:project_repo_connection,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          sync_version: true
+        )
+
+      %{repo_connection: repo_connection}
+    end
+
+    test "moves the workspace and passes a local alias to the pull", %{
+      repo_connection: repo_connection
+    } do
+      user =
+        insert(:user) |> set_valid_github_oauth_token!() |> Repo.reload!()
+
+      repo = repo_connection.repo
+      project_id = repo_connection.project_id
+      user_id = user.id
+
+      # push pull.yml
+      expect_get_repo(repo)
+      expect_create_blob(repo)
+      expect_get_commit(repo, "main")
+      expect_create_tree(repo)
+      expect_create_commit(repo)
+      expect_update_ref(repo, "main")
+      # write secret
+      expect_get_public_key(repo)
+      expect_create_repo_secret(repo, api_secret_name(repo_connection))
+      # push deploy.yml (v2 has no config.json)
+      expect_create_blob(repo)
+      expect_get_commit(repo, repo_connection.branch)
+      expect_create_tree(repo)
+      expect_create_commit(repo)
+      expect_update_ref(repo, repo_connection.branch)
+      # first pull
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url, body: body},
+                                                 _opts ->
+        assert url =~ "/actions/workflows/openfn-pull.yml/dispatches"
+
+        assert %{"workspace" => "projects/b", "alias" => "staging"} =
+                 Jason.decode!(body)["inputs"]
+
+        {:ok, %Tesla.Env{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               VersionControl.reconfigure_github_connection(
+                 repo_connection,
+                 %{
+                   "sync_direction" => "pull",
+                   "accept" => "true",
+                   "workspace_path" => "projects/b",
+                   "local_alias" => "staging"
+                 },
+                 user
+               )
+
+      assert Repo.reload!(repo_connection).workspace_path == "projects/b"
+
+      assert %{
+               event: "repo_connection_updated",
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               changes: %{
+                 before: %{"workspace_path" => nil},
+                 after: %{"workspace_path" => "projects/b"}
+               }
+             } = Repo.one!(Audit)
+    end
+
+    test "keeps the old workspace when GitHub can't be configured", %{
+      repo_connection: repo_connection
+    } do
+      # no oauth token, so nothing reaches GitHub
+      user = insert(:user)
+
+      assert {:error, _reason} =
+               VersionControl.reconfigure_github_connection(
+                 repo_connection,
+                 %{
+                   "sync_direction" => "pull",
+                   "accept" => "true",
+                   "workspace_path" => "projects/b"
+                 },
+                 user
+               )
+
+      assert Repo.reload!(repo_connection).workspace_path == nil
+      refute Repo.exists?(Audit)
+    end
+  end
+
+  describe "verify_github_connection/1" do
+    test "doesn't look for a config file on a v2 connection" do
+      repo_connection =
+        insert(:project_repo_connection,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          sync_version: true
+        )
+
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+
+      expect_get_repo_content(
+        repo_connection.repo,
+        ".github/workflows/openfn-pull.yml"
+      )
+
+      expect_get_repo_content(
+        repo_connection.repo,
+        ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+      )
+
+      # no config file lookup: Mox fails on unexpected calls
+      secret_name =
+        "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
+
+      expect(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+        assert url =~ "/actions/secrets/#{secret_name}"
+        {:ok, %Tesla.Env{status: 200, body: %{}}}
+      end)
+
+      assert :ok = VersionControl.verify_github_connection(repo_connection)
+    end
+  end
+
+  describe "get_sync_status/1" do
+    setup do
+      repo_connection =
+        insert(:project_repo_connection,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          sync_version: true
+        )
+
+      expect_create_installation_token(repo_connection.github_installation_id)
+
+      %{
+        repo_connection: repo_connection,
+        checkout_path: ".openfn/branches/somebranch/checkout.yaml",
+        deploy_file: "openfn-#{repo_connection.project_id}-deploy.yml"
+      }
+    end
+
+    defp checkout_content(uuid) do
+      %{"content" => Base.encode64("alias: main\nuuid: #{uuid}\n")}
+    end
+
+    test "reports the branch tracking this project and the latest runs", %{
+      repo_connection: repo_connection,
+      checkout_path: checkout_path,
+      deploy_file: deploy_file
+    } do
+      project_id = repo_connection.project_id
+
+      expect_get_repo_content(
+        repo_connection.repo,
+        checkout_path,
+        200,
+        checkout_content(project_id)
+      )
+
+      expect_get_repo_content(repo_connection.repo, ".projects", 200, [
+        %{
+          "name" => "main@app.openfn.org.yaml",
+          "path" => ".projects/main@app.openfn.org.yaml"
+        },
+        %{"name" => "README.md", "path" => ".projects/README.md"}
+      ])
+
+      expect_get_repo_content(
+        repo_connection.repo,
+        ".projects/main@app.openfn.org.yaml",
+        200,
+        %{"content" => Base.encode64("openfn:\n  uuid: #{project_id}\n")}
+      )
+
+      # openfn-pull.yml is shared: skip another project's run
+      expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [
+        %{"display_title" => "sync (#{Ecto.UUID.generate()})"},
+        %{
+          "display_title" => "sync (#{project_id})",
+          "status" => "completed",
+          "conclusion" => "success",
+          "html_url" => "https://github.com/runs/1",
+          "created_at" => "2026-10-14T09:00:00Z"
+        }
+      ])
+
+      expect_list_workflow_runs(repo_connection.repo, deploy_file, [
+        %{
+          "status" => "in_progress",
+          "conclusion" => nil,
+          "html_url" => "https://github.com/runs/2",
+          "created_at" => "2026-10-14T10:00:00Z"
+        }
+      ])
+
+      assert {:ok,
+              %{
+                tracking: :ok,
+                projects: [
+                  %{
+                    alias: "main",
+                    host: "app.openfn.org",
+                    uuid: ^project_id,
+                    path: ".projects/main@app.openfn.org.yaml"
+                  }
+                ],
+                last_pull: %{
+                  status: "completed",
+                  conclusion: "success",
+                  url: "https://github.com/runs/1",
+                  created_at: ~U[2026-10-14 09:00:00Z]
+                },
+                last_deploy: %{status: "in_progress", conclusion: nil}
+              }} = VersionControl.get_sync_status(repo_connection)
+    end
+
+    test "is pending until the first sync commits a checkout", %{
+      repo_connection: repo_connection,
+      checkout_path: checkout_path,
+      deploy_file: deploy_file
+    } do
+      expect_get_repo_content(repo_connection.repo, checkout_path, 404, %{})
+      expect_get_repo_content(repo_connection.repo, ".projects", 404, %{})
+      expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [])
+      expect_list_workflow_runs(repo_connection.repo, deploy_file, [])
+
+      assert {:ok,
+              %{
+                tracking: :pending,
+                projects: [],
+                last_pull: nil,
+                last_deploy: nil
+              }} =
+               VersionControl.get_sync_status(repo_connection)
+    end
+
+    test "reads the checkout from the workspace folder", %{
+      repo_connection: repo_connection,
+      deploy_file: deploy_file
+    } do
+      repo_connection =
+        repo_connection
+        |> Ecto.Changeset.change(workspace_path: "projects/a")
+        |> Repo.update!()
+
+      expect_get_repo_content(
+        repo_connection.repo,
+        "projects/a/.openfn/branches/somebranch/checkout.yaml",
+        200,
+        checkout_content(repo_connection.project_id)
+      )
+
+      expect_get_repo_content(
+        repo_connection.repo,
+        "projects/a/.projects",
+        404,
+        %{}
+      )
+
+      expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [])
+      expect_list_workflow_runs(repo_connection.repo, deploy_file, [])
+
+      assert {:ok, %{tracking: :ok}} =
+               VersionControl.get_sync_status(repo_connection)
+    end
+
+    test "flags a branch that tracks another project", %{
+      repo_connection: repo_connection,
+      checkout_path: checkout_path,
+      deploy_file: deploy_file
+    } do
+      other_project_id = Ecto.UUID.generate()
+
+      expect_get_repo_content(
+        repo_connection.repo,
+        checkout_path,
+        200,
+        checkout_content(other_project_id)
+      )
+
+      expect_get_repo_content(repo_connection.repo, ".projects", 404, %{})
+
+      expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [])
+      expect_list_workflow_runs(repo_connection.repo, deploy_file, [])
+
+      assert {:ok, %{tracking: {:other_project, ^other_project_id}}} =
+               VersionControl.get_sync_status(repo_connection)
+    end
+  end
+
+  describe "check_workspace/2" do
+    test "lists what the branch's workspace holds" do
+      user = insert(:user) |> set_valid_github_oauth_token!() |> Repo.reload!()
+
+      connection = %ProjectRepoConnection{
+        project_id: Ecto.UUID.generate(),
+        github_installation_id: "1234",
+        repo: "someaccount/somerepo",
+        branch: "somebranch",
+        workspace_path: "projects/a"
+      }
+
+      expect_get_user_installations()
+      expect_create_installation_token("1234")
+
+      expect_get_repo_content(
+        connection.repo,
+        "projects/a/.openfn/branches/somebranch/checkout.yaml",
+        404,
+        %{}
+      )
+
+      expect_get_repo_content(connection.repo, "projects/a/.projects", 404, %{})
+
+      assert {:ok, %{tracking: :pending, projects: []}} =
+               VersionControl.check_workspace(user, connection)
+    end
+
+    test "refuses an installation the user can't access" do
+      user = insert(:user) |> set_valid_github_oauth_token!() |> Repo.reload!()
+
+      expect_get_user_installations()
+
+      assert {:error, :unauthorized_installation} =
+               VersionControl.check_workspace(user, %ProjectRepoConnection{
+                 github_installation_id: "9999",
+                 repo: "someaccount/somerepo",
+                 branch: "somebranch"
+               })
+    end
+  end
+
   describe "exchange_code_for_oauth_token/1" do
     test "returns ok for a response body with access_token" do
       expected_token = %{"access_token" => "1234567"}
@@ -828,9 +1174,31 @@ defmodule Lightning.VersionControlTest do
                  "apiSecretName" => api_secret_name(yaml_connection),
                  "endpoint" => LightningWeb.Endpoint.url(),
                  "branch" => yaml_connection.branch,
+                 "workspace" => ".",
                  "commitMessage" => commit_message
                }
 
+        {:ok, %Tesla.Env{status: 204, body: ""}}
+      end)
+
+      assert :ok = VersionControl.initiate_sync(yaml_connection, commit_message)
+    end
+
+    test "passes a local alias to the pull (sync_version: true)",
+         %{commit_message: commit_message, repo_connection: repo_connection} do
+      yaml_connection =
+        repo_connection
+        |> Ecto.Changeset.change(sync_version: true)
+        |> Lightning.Repo.update!()
+        |> Map.put(:local_alias, "staging")
+
+      expect_create_installation_token(yaml_connection.github_installation_id)
+      expect_get_repo(yaml_connection.repo)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url, body: body},
+                                                 _opts ->
+        assert url =~ "/actions/workflows/openfn-pull.yml/dispatches"
+        assert Jason.decode!(body)["inputs"]["alias"] == "staging"
         {:ok, %Tesla.Env{status: 204, body: ""}}
       end)
 
@@ -1133,12 +1501,97 @@ defmodule Lightning.VersionControlTest do
             assert content =~ "openfn/cli-deploy-action@v2"
             assert content =~ "project_id_input: '#{project.id}'"
             assert content =~ "endpoint_input: '#{LightningWeb.Endpoint.url()}'"
+            assert content =~ "workspace_input: '.'"
+            # a root workspace deploys on any push to the branch
+            assert content =~ "- '**'"
             {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
           end)
         end
       )
 
       params = Map.put(base_params, "sync_version", "true")
+      assert {:ok, _} = VersionControl.create_github_connection(params, user)
+    end
+
+    test "only deploys a v2 workspace folder when it changes", %{
+      project: project,
+      user: user,
+      repo: repo,
+      branch: branch,
+      installation_id: installation_id,
+      base_params: base_params,
+      expected_repo: expected_repo
+    } do
+      expect_full_github_connection_flow(
+        expected_repo,
+        branch,
+        project.id,
+        installation_id,
+        config_blob_expectation: fn -> :ok end,
+        deploy_blob_expectation: fn ->
+          Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+            content = Jason.decode!(env.body)["content"]
+            assert content =~ "workspace_input: 'projects/a'"
+            assert content =~ "- 'projects/a/**'"
+            # Lightning's own push of this file triggers the first deploy
+            assert content =~
+                     "- '.github/workflows/openfn-#{project.id}-deploy.yml'"
+
+            {:ok, %Tesla.Env{status: 201, body: %{"sha" => "3a0f8"}}}
+          end)
+        end
+      )
+
+      params =
+        Map.merge(base_params, %{
+          "sync_version" => "true",
+          "workspace_path" => "projects/a"
+        })
+
+      assert {:ok, _} = VersionControl.create_github_connection(params, user)
+    end
+
+    test "forces the first v2 deploy from GitHub", %{
+      project: project,
+      user: user,
+      repo: repo,
+      branch: branch,
+      installation_id: installation_id,
+      base_params: base_params,
+      expected_repo: expected_repo
+    } do
+      expect_full_github_connection_flow(
+        expected_repo,
+        branch,
+        project.id,
+        installation_id,
+        sync: false,
+        config_blob_expectation: fn -> :ok end,
+        deploy_blob_expectation: fn ->
+          expect_blob_content(
+            repo,
+            # prettier wraps the expression, which YAML folds back into one line
+            ~r/contains\(github\.event\.head_commit\.message,\s+'\[openfn force\]'\)/
+          )
+        end,
+        commit_expectation: fn ->
+          Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+            assert env.url == "https://api.github.com/repos/#{repo}/git/commits"
+
+            assert Jason.decode!(env.body)["message"] ==
+                     "Configure OpenFn [openfn force]"
+
+            {:ok, %Tesla.Env{status: 201, body: %{"sha" => "7abcd"}}}
+          end)
+        end
+      )
+
+      params =
+        Map.merge(base_params, %{
+          "sync_version" => "true",
+          "sync_direction" => "deploy"
+        })
+
       assert {:ok, _} = VersionControl.create_github_connection(params, user)
     end
   end
@@ -1179,6 +1632,9 @@ defmodule Lightning.VersionControlTest do
     deploy_blob_expectation =
       Keyword.get(opts, :deploy_blob_expectation, default_blob)
 
+    commit_expectation =
+      Keyword.get(opts, :commit_expectation, fn -> expect_create_commit(repo) end)
+
     # push pull.yml
     expect_get_repo(repo, 200, expected_repo)
     pull_blob_expectation.()
@@ -1187,6 +1643,10 @@ defmodule Lightning.VersionControlTest do
     expect_create_commit(repo)
     expect_update_ref(repo, default_branch)
 
+    # write secret
+    expect_get_public_key(repo)
+    expect_create_repo_secret(repo, api_secret_name(%{project_id: project_id}))
+
     # push deploy.yml + config.json
     # deploy.yml blob
     deploy_blob_expectation.()
@@ -1194,17 +1654,15 @@ defmodule Lightning.VersionControlTest do
     config_blob_expectation.()
     expect_get_commit(repo, branch)
     expect_create_tree(repo)
-    expect_create_commit(repo)
+    commit_expectation.()
     expect_update_ref(repo, branch)
 
-    # write secret
-    expect_get_public_key(repo)
-    expect_create_repo_secret(repo, api_secret_name(%{project_id: project_id}))
-
-    # initiate sync
-    expect_create_installation_token(installation_id)
-    expect_get_repo(repo, 200, expected_repo)
-    expect_create_workflow_dispatch(repo, "openfn-pull.yml")
+    # initiate sync (pull direction only)
+    if Keyword.get(opts, :sync, true) do
+      expect_create_installation_token(installation_id)
+      expect_get_repo(repo, 200, expected_repo)
+      expect_create_workflow_dispatch(repo, "openfn-pull.yml")
+    end
   end
 
   defp user_with_valid_github_oauth do

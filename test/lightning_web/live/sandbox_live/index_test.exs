@@ -4843,6 +4843,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
             apiSecretName: api_secret_name(parent),
             endpoint: LightningWeb.Endpoint.url(),
             branch: repo_connection.branch,
+            workspace: ".",
             commitMessage: "pre-merge commit"
           }
         }
@@ -4861,6 +4862,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
             apiSecretName: api_secret_name(parent),
             endpoint: LightningWeb.Endpoint.url(),
             branch: repo_connection.branch,
+            workspace: ".",
             commitMessage: "Merged sandbox #{sandbox.name}"
           }
         }
