@@ -103,7 +103,24 @@ link that also caught cancelled work would resend work someone stopped on purpos
 
 ## 2. What it does
 
-A member clicks a triage row's "View history", a band of a runs-chart bar, or a legend row or wedge of the "Outcomes" or "Failure breakdown" donut on the health page; History opens in a new tab filtered to the work orders that row, band or slice counted; an editor selects all and retries, and only those work orders get new runs.
+1. Any project member opens a workflow's health page, which shows its failures, run volumes and outcomes for the last 24 hours, 7 days or 30 days.
+2. They click something to see the work orders behind it, and the history page opens in a new tab with the health page left as it was.
+   - A triage row's "View history", for one kind of error at one step, or for rejected work.
+   - A coloured band of a bar in the runs chart, for runs in that time slot and state.
+   - A legend row or wedge of the "Outcomes" or "Failure breakdown" donut, for one outcome or failure state.
+3. The history page is filtered to exactly what was counted: that workflow, the time window, and the matching error, run state or outcome.
+4. An editor can select everything and retry it, and only those work orders get new runs; retried ones drop out of the list while they run.
+5. Nobody can read the health numbers of a workflow in a project they aren't on.
+
+**Straightforwardness: 3 of 5.** Each link makes sense on its own, but the health page and the history page count slightly different things at slightly different times, which matters most when someone hits "retry all".
+
+### Most surprising behaviours
+
+- **(2)** Retrying everything from a runs-chart band also retries work orders that have since been retried to success, or are still running, so data that already went through can be sent again. (6.1)
+- **(3)** "Rerun all 12" can end with "New runs enqueued for 10", because work orders whose input was wiped are quietly skipped with no explanation. (6.1)
+- **(3)** The health numbers can be up to 5 minutes old while the list is live, so a row that says 2 can open a list of 3, or "Failed 4" can open 3 or 5. (6.1)
+- **(3)** The "Success" and "Cancelled" drill-downs offer bulk retry like any other list, so work that succeeded or was stopped on purpose can be rerun from them. (6.2)
+- **(3)** The plan limit check on bulk retry counts only the work orders ticked on the page, so the retry dialog can open and then the "all matching" retry gets refused. (6.1)
 
 ## 3. Who can do what
 

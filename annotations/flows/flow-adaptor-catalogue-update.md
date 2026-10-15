@@ -104,12 +104,21 @@ under a short schema name also need to line up with the adaptor names the catalo
 
 ## 2. What it does
 
-Superuser clicks "Run" on /settings/maintenance, or the hourly tick fires → the Scheduler fetches
-and writes changed `adaptors` rows → `{:changed, name, source}` on `adaptors:<instance>` → every
-node drops its cached entries for that adaptor and coalesces a push of `adaptors_updated` →
-each node's SchemaReconciler rewrites short credential schema names → every open editor channel
-pushes `adaptors_updated` → the editor refetches `/adaptors/catalogue` and its pickers and icons
-show the new data, icon URLs that moved redirecting to the current one.
+1. A superuser clicks "Run" on the maintenance page to refresh the adaptor registry or the icons, or the hourly refresh runs by itself (unless the server has turned it off).
+2. The server checks for new adaptors, releases and icons and saves only what changed; if nothing changed, or the upstream registry can't be reached, the catalogue stays as it was and nobody is disturbed.
+3. Every server in the cluster forgets its old copy of the changed adaptors, and older credentials saved under a short adaptor name are renamed to the full adaptor name.
+4. Everyone with a workflow open in the editor is told, at most once per burst of changes, and their adaptor picker, version lists and icons update without a reload; an editor that was offline catches up when it reconnects.
+5. An old icon link from before the refresh still works and points the browser at the current icon.
+
+**Straightforwardness: 3 of 5.** Most of it is invisible plumbing that just makes new releases show up, but what the admin is told and what open editors actually see don't always line up.
+
+### Most surprising behaviours
+
+- **(3)** When an old credential is renamed to match its adaptor, open editors aren't told, so it stays missing from "Configure connection" until the editor reconnects. (S10, 6.1)
+- **(3)** A registry refresh always says "queued", even when the upstream registry is down and nothing will reach anyone's editor. (6.1)
+- **(3)** An icon refresh that takes more than two minutes tells the admin it failed, while it carries on and editors get the new icons shortly after. (6.1)
+- **(3)** After a network split between servers, one server may keep serving an old credential form for an adaptor until that adaptor changes again. (6.1)
+- **(4)** If the editor's refetch fails after an update, it quietly keeps the old list and shows no error. (6.2)
 
 ## 3. Who can do what
 

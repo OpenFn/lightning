@@ -85,7 +85,26 @@ an empty step as a platform fault.
 
 ## 2. What it does
 
-Admin saves "Never retain" on the data storage tab; each run created afterwards hands its input to the worker, erases it, stores its step and final outputs empty, and the run page, history and the editor's run viewer show that data as not retained, with admins linked back to the tab.
+1. A project admin chooses "Never retain" on the data storage tab of project settings.
+2. Every run created after that, by webhook, schedule, manual run or retry, keeps no input or output.
+   - The worker still gets the input, and then the stored copy is erased.
+   - Step outputs and the run's final output are stored empty.
+   - Saved inputs someone deliberately named are never erased, and webhook callers waiting for a reply still get it.
+3. Anyone who opens one of those runs is told the data wasn't kept because of the project's policy, not lost.
+   - Admins and owners get a link back to the data storage tab to change it for future runs.
+   - Everyone else is told to contact an admin, with the admins' and owners' emails in a tooltip.
+4. The history page won't retry a work order whose input was erased, and the step rerun button is disabled.
+5. Switching back to keeping data only affects runs created from then on; older runs stay empty.
+
+**Straightforwardness: 2 of 5.** "Keep nothing" sounds absolute, but what gets kept depends on when each run was created and whether a worker ever picked it up, and several screens don't know the data is gone.
+
+### Most surprising behaviours
+
+- **(2)** A webhook's data is stored in full when it arrives and only erased when a worker picks the run up. If the run is never picked up (refused by the plan limit, cancelled, or lost), the data seems to stay, possibly forever, on a project that promised to keep nothing. (6.1)
+- **(2)** The setting is fixed on each run when it's created, not when it runs. Runs already queued when you switch to "Never retain" still store their data, and retrying an older work order erases its input, so it can only be retried once more. (6.2)
+- **(2)** Scheduled workflows that carry state from one run to the next may replay old state from before the switch, one older run at a time, and then start from empty. Read from the code, not run. (6.1)
+- **(3)** In the workflow editor the run's Input and Output tabs just show "null" with no explanation, and "Retry" is offered, saves the workflow, then fails. (6.1)
+- **(3)** Run logs are still kept, and they may contain whatever data a job printed. (6.5)
 
 ## 3. Who can do what
 

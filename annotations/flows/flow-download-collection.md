@@ -74,8 +74,19 @@ outside the project, the copy would either be wrong or a leak of health data.
 
 ## 2. What it does
 
-"Download" on a collection row in the collections tab makes the browser save `<name>.json`, a JSON
-array of every record in that collection, while the tab stays where it was.
+1. Any member of the project, viewers included, clicks "Download" on a collection on the project's collections tab.
+2. The browser saves a file named after the collection, holding every record in it (key, value, created and updated), however many there are; an empty collection gives an empty list.
+3. The tab stays where it was.
+4. Anyone else is refused: people not on the project and members who haven't set up two-factor on a project that requires it see "Authorization Error", and signed-out visitors are sent to log in.
+
+**Straightforwardness: 4 of 5.** It does what it says; the surprises are about what's in the file and what happens when the download goes wrong.
+
+### Most surprising behaviours
+
+- **(3)** If something fails part way through, the browser still saves the file as if it worked, but it's cut off and won't open as valid data. Someone taking a backup before clearing a collection may not notice. (6.1)
+- **(3)** Each record's value comes out as text wrapped in quotes rather than as data, so the file can't be read or re-imported without unpicking it twice. (6.2)
+- **(3)** Someone outside the project can guess collection names: a name that exists gives "Authorization Error", one that doesn't gives "Not Found". (6.2)
+- **(4)** A member who hasn't set up two-factor gets "Authorization Error" rather than being sent to set it up, unlike the rest of the project. (6.2)
 
 ## 3. Who can do what
 

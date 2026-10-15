@@ -95,7 +95,21 @@ sandboxes with no way back.
 
 ## 2. What it does
 
-Admin confirms on the sandboxes list → the sandbox and its descendants get one deletion date, their triggers go off, open pages and channels in the subtree leave → admin stays on the list (or lands on the parent's list if they were inside the subtree) → restore is possible until the nightly purge hard-deletes the subtree. From the sandbox's own settings the owner instead hard-deletes the subtree at once and lands on the root's workflows.
+1. An admin or owner of a sandbox (or of the workspace it sits in) types its name to confirm deletion on the sandboxes list.
+2. The sandbox and every sandbox under it get the same deletion date, a week out by default, and all their triggers switch off straight away; the parent and sibling sandboxes keep running.
+3. Everyone with a page, editor, run log or AI assistant open anywhere in that group of sandboxes is moved out; the person who deleted it stays on the list, or lands on the parent's sandboxes if they were inside it.
+4. Until the date passes, an admin can restore it from the list; after that the nightly clean-up removes the sandboxes and all their data.
+5. Deleting from the sandbox's own settings is different: the owner's confirmation removes the sandbox and its children at once, and they land on the workspace's workflows.
+
+**Straightforwardness: 2 of 5.** The list path is clear on its own, but the settings path quietly does something else under the same wording, and restore doesn't fully undo what deletion did.
+
+### Most surprising behaviours
+
+- **(2)** Deleting from the sandbox's settings wipes it and all its children immediately, even though the dialog promises a grace period and a restore. It also never warns that child sandboxes go too, and colleagues with them open aren't told. (6.1)
+- **(2)** Restoring a child sandbox while its parent is still scheduled looks like it worked, but the child is deleted anyway when the parent is purged. (6.1)
+- **(3)** Restoring a sandbox doesn't switch its triggers back on, so it comes back silent until someone notices and turns each one on again. (S06, 6.2)
+- **(3)** Nobody gets an email when a sandbox is deleted, unlike a whole project, so members of a child sandbox only find out when they're bounced out of it or see it on the list. (6.2)
+- **(3)** On a server set to purge immediately, the sandbox is marked as deleted but no clean-up ever runs, so it sits under "Scheduled for deletion" for good. (6.1)
 
 ## 3. Who can do what
 

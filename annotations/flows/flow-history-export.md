@@ -99,9 +99,26 @@ credentials in the hands of someone no longer allowed to see them.
 
 ## 2. What it does
 
-An editor confirms an export on history; `ExportWorker` builds a zip of every matching work order;
-the requester gets an email with a download link; any project member downloads the zip from project
-settings › History exports or from that link.
+1. An editor filters the history page and confirms "Export history"; the page says the export has started and an email will follow.
+2. The export is built in the background as a zip.
+   - It covers every work order matching the filters, not just the page shown or the first 50.
+   - It holds each work order's runs, steps, logs and input and output data, with credential and webhook secrets blanked out.
+   - Exports run one at a time, and one that fails is marked "Failed" and is not tried again.
+3. The requester gets an email with a download link once it's done, as long as they can still see the project.
+4. Any member of the project sees every export in project settings under History exports, and can download any completed one.
+   - Unfinished exports show as "Pending" with the download button disabled.
+   - The download is refused to anyone without project access: non-members, members who haven't set up two-factor sign-in when the project requires it, and everyone once the project is scheduled for deletion.
+5. Exports are deleted automatically once they are older than the project's history retention period.
+
+**Straightforwardness: 3 of 5.** The export-then-email shape is familiar, but what counts as "complete", who gets told, and who can download are all a bit different from what you'd assume.
+
+### Most surprising behaviours
+
+- **(2)** If some log or data files fail to write, they are skipped and the export is still marked "Completed". Someone can hand over a zip as the full record when parts of it are missing. (6.1)
+- **(3)** A failed export sends no email, even though the start message promised one. The requester waits and has to find "Failed" in settings themselves. (6.1)
+- **(3)** Any member, including a viewer, can download any export, and the export is still built for someone who lost access while it ran; only their email is held back. (S07, 6.5)
+- **(3)** Exported steps don't say which version of the workflow ran them, so they can't be tied back to the code that produced them. (6.1)
+- **(4)** The History exports list doesn't update while you watch: an export stays "Pending" until you reload. (6.2)
 
 ## 3. Who can do what
 

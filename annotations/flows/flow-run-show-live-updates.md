@@ -76,7 +76,27 @@ happens instead of reloading or guessing from a stale "Enqueued".
 
 ## 2. What it does
 
-Worker claims the run, starts it, starts and completes steps, sends log lines and completes the run → Runs.Events on `run_events:<run_id>` → the open run page updates its state pill, cancel action, timestamps and duration, step list, the selected step's output and the log, without a reload.
+1. Anyone on the project opens a run, often one they just started or one a colleague or an alert pointed them to.
+2. A worker picks the run up and works through it: it claims it, starts it, starts and finishes each step, sends log lines and finishes the run.
+3. The open run page follows along without a reload.
+   - The status moves from "Enqueued" to "Starting", "Running" and the final state, and the cancel action disappears once a worker has claimed the run.
+   - Start and finish times fill in, and the run's and each step's duration count up until they finish.
+   - Steps appear in the order they started and show their outcome when they finish.
+4. The details fill in as they become available.
+   - The selected step's output appears as soon as the step finishes, without reselecting it.
+   - Log lines appear as they're sent, once each and in time order, even while the older lines are still loading.
+   - A run that finishes without logging anything says "No logs were received for this run."
+5. When the run finishes, a failed run sets off the failure alert email and any open history pages update too; progress from any other run never reaches this page.
+
+**Straightforwardness: 3 of 5.** A live run page is easy to picture, but there are a few timing gaps where the page can show a stale state with nothing to tell the person it's out of date.
+
+### Most surprising behaviours
+
+- **(2)** If the run changes state in the moment between the page loading it and starting to listen, that change is lost. A run that finishes in that gap can read "Running" with a duration still counting until you reload. Read from the code, not run. (6.1)
+- **(3)** A run opened while it is "Enqueued" seems to keep saying "Waiting for worker" after it has started, until its first log line arrives. (6.1)
+- **(3)** When a run is marked "Lost", its running step keeps a pending icon and a counting duration until you reload. (6.1)
+- **(3)** On a very long log, loading the older lines can time out quietly while new lines keep arriving, so the start of the log may be missing with no warning. Not verified. (6.4)
+- **(4)** The version shown on the page is worked out when you open it and doesn't change while the run plays out. (6.2)
 
 ## 3. Who can do what
 

@@ -100,7 +100,21 @@ in which to undo it.
 
 ## 2. What it does
 
-Owner confirms on setup (or superuser on the admin projects list) → triggers disabled, every member emailed, open pages and channels on the project end → owner lands on `/projects` → superuser can cancel or purge now during the grace period → nightly purge deletes the project and its sandboxes.
+1. The owner types the project's name to confirm deletion in its settings, or a superuser does the same from the admin projects list.
+2. The project stops taking in data at once: every trigger switches off, and webhooks and schedules stop running it.
+3. Every member gets an email saying the project is scheduled for deletion and when, and anyone with a page, editor, run log or AI assistant open on it is moved out; other projects are unaffected.
+4. The owner lands on their projects list (a superuser stays on the admin list); during the grace period, a week by default, nobody can open the project, but a superuser can cancel the deletion or purge it straight away.
+5. Once the date passes, the nightly clean-up removes the project, its sandboxes and all their data; if stored export files can't be removed, it stops and keeps the project whole.
+
+**Straightforwardness: 3 of 5.** The main path is what you'd expect, but its sandboxes aren't brought along, and a few dates and lists don't quite match what really happens.
+
+### Most surprising behaviours
+
+- **(2)** The project's sandboxes aren't touched when it's scheduled: their triggers keep running, their members aren't emailed and can keep working, and then the sandboxes vanish without notice when the parent is purged. (6.1)
+- **(3)** Right after "Project scheduled for deletion", the project still shows on the projects list, and clicking it gives "Not Found". (6.1)
+- **(3)** Cancelling a deletion doesn't switch the triggers back on, so a rescued project stays silent until someone turns each one on again. (6.2)
+- **(3)** The date in the email can be a day later than the real purge, so members who think they have until tomorrow may find the project already gone. (6.1)
+- **(3)** If the email to one member fails, the deletion goes ahead anyway and that member is never told; nobody is emailed when a deletion is cancelled or carried out. (6.2, 6.5)
 
 ## 3. Who can do what
 

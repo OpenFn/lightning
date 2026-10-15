@@ -105,7 +105,30 @@ tell a slow queue from a failing step.
 
 ## 2. What it does
 
-Editor clicks "Run From Here" in the manual run panel → create_run creates the work order and run → the editor sets `run=<id>`, closes the panel (or switches the IDE to its run viewer) and joins `run:<id>` → the worker claims, starts, runs steps, logs and completes → run and step events reach the editor through the run channel and the project topic → the canvas, the run history list and the IDE's run viewer show the run's progress until it reaches a final state.
+1. An editor clicks "Run From Here" in the run panel, either over the canvas or inside the code editor, and the run is created and queued for a worker.
+2. The editor switches to following that run straight away.
+   - Over the canvas, the panel closes and the new run is selected at the top of the run history list.
+   - In the code editor, the right-hand panel switches to the run viewer.
+   - A custom input typed into the panel is saved, so it becomes the input to retry with.
+3. A worker picks the run up, runs each step and sends its logs.
+4. The editor shows the progress live, without a reload, until the run finishes.
+   - The canvas marks each step as it runs and how it ended; the code editor shows log lines as they arrive.
+   - Anything that happened before the editor connected is caught up, so a fast run never looks stuck in the queue.
+   - When the run ends, the history list shows the outcome, the run controls free up, and a failed run sets off the failure alert email.
+5. Other people stay on their own run.
+   - Collaborators with the workflow open see the new run appear in their history list, but are not moved to it.
+   - Another run's steps and logs never show on the run you're following.
+   - Someone removed from the project stops receiving the run's data at once, even mid-run.
+
+**Straightforwardness: 3 of 5.** Watching your own run is easy to picture, but the updates come in over two separate routes and several of the rough edges only show up when the timing is unlucky.
+
+### Most surprising behaviours
+
+- **(2)** The live connection for the run seems likely to break every time the run changes state, so the status and the "Processing" button lag by a second or more and some step updates go missing until the run finishes. This is read from the code, not seen in a browser. (6.1)
+- **(3)** If you lose access to the project mid-run, the updates stop but the editor says nothing; the run viewer just freezes on its last state, as if the run had stalled. (6.1, S08)
+- **(3)** Right after starting a second run, a step from the new run can briefly show under the old one, and the run controls read the old run's state. (6.1)
+- **(3)** Over the canvas the button stops saying "Processing" as soon as the request comes back, but in the code editor it waits until the run actually arrives, or 30 seconds. Same action, two different signals. (6.2)
+- **(4)** In the code editor no step is selected for a freshly started run, so the log shows every step's lines together. (6.2)
 
 ## 3. Who can do what
 

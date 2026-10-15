@@ -91,7 +91,26 @@ destination; if logging fails, a partner's "my request never arrived" can't be a
 
 ## 2. What it does
 
-Editor configures a channel on the channels page and hands the proxy URL to a client system → the client calls `/channels/<id>/<path>` → a disabled or unknown channel answers 404 and a request without a matching client credential answers 401 → otherwise the client's credential is stripped, the destination credential is added and the request is forwarded unchanged → the destination's response goes back to the client → the request, its timing and the credentials used appear in the channel logs and on the request page.
+1. An editor sets up a channel on the channels page (where it sends to, the credential to send with, and which client credentials may call it) and hands its address to a partner system.
+2. The partner system sends a request to that address.
+   - A switched-off, unknown or malformed channel answers "Not Found".
+   - A request without a matching client credential answers "Unauthorized"; any one of the channel's credentials is enough, and a deleted one stops working at once.
+   - Destinations on the internal network are blocked unless the hosting operator allows them.
+3. Otherwise the request is passed on unchanged, with the partner's own credential and any Lightning sign-in cookie removed and the project's destination credential added in the form that destination expects.
+   - A sandbox uses its own credential values, never the parent project's.
+   - A destination credential that can't be used stops the request before it's sent and records why.
+4. The destination's answer goes back to the partner, with protections added so it can't run scripts or set cookies on Lightning's site.
+5. Project members with experimental features on see each forwarded request in the channel logs and on its own page: timing, outcome, which credentials were used, and secrets blanked out.
+
+**Straightforwardness: 3 of 5.** A proxy that swaps one key for another is easy to explain, but whether a channel is actually locked, and what you can see when things go wrong, both need spelling out.
+
+### Most surprising behaviours
+
+- **(2)** A channel with no client credentials lets anyone with the address call the destination as the project, with no warning. Deleting a channel's only client credential, for example to cut off a leaked key, turns it into exactly that kind of open channel. (6.1, S04)
+- **(3)** Refused requests, from a wrong key or a switched-off channel, aren't recorded anywhere a project member can see, so "my request never arrived" can't be answered. (6.1)
+- **(3)** A partner that retries with the same request id gets "Service Unavailable" and nothing is logged. (6.1)
+- **(3)** The client address shown on the request page is whatever the caller claims it is. (6.1)
+- **(3)** There's no rate limit, usage limit or size limit on channel traffic, and turning off experimental features only hides the pages; the channels keep working. (6.2)
 
 ## 3. Who can do what
 

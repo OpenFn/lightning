@@ -83,7 +83,25 @@ payload as a proxy fault.
 
 ## 2. What it does
 
-Admin saves "Never retain" on the data storage tab; each channel request proxied afterwards is forwarded unchanged but stored with only method, status, state, sizes, timing and error, marked wiped, and the channel logs show "—" for its path while the request page shows the request/response data as not retained, with admins linked back to the tab.
+1. A project admin chooses "Never retain" on the data storage tab of project settings; channels have no setting of their own.
+2. Channel requests that arrive afterwards are forwarded and answered exactly as before, so client systems keep working.
+3. Each of those requests is stored without its contents: no path, query, headers, bodies or client IP.
+   - What's kept is the method, status, state, sizes, timing and any error, so failures still show up.
+   - A request that fails because of a broken destination credential is recorded the same way.
+4. People with experimental features on see what was withheld.
+   - The channel logs show "—" for the request's path.
+   - The request's page says its request and response data wasn't kept because of the project's policy; admins and owners get a link back to the setting, everyone else is told to contact an admin.
+5. The setting only affects requests from that moment on, in both directions; switching back stores contents again for new requests only.
+
+**Straightforwardness: 3 of 5.** It mirrors the same setting for runs and mostly does what it says, but it only reaches forward in time and it hides a little more than it should on the request page.
+
+### Most surprising behaviours
+
+- **(2)** Requests stored before the switch keep their full contents, and nothing ever erases them. With no history period set, they stay visible on the channel logs indefinitely. (6.1, S05)
+- **(3)** On a request that failed, the "not retained" message replaces the only part of the page that explains the error, so you see a red "Error" with no reason, even though the list shows the error code. (6.1, S03)
+- **(3)** The channel logs list gives no sign that a request's data was withheld; its "—" looks exactly like the one shown for an errored request. (6.1)
+- **(3)** "Payloads will not be stored" isn't the whole story: body sizes, timing, the destination address and error messages are still kept, and it hasn't been checked whether an error message can carry payload data. (6.2, 6.5)
+- **(4)** Unlike runs, which lock the setting in when they're created, a channel request uses whatever the setting is at the moment it arrives. (6.2)
 
 ## 3. Who can do what
 

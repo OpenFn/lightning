@@ -80,7 +80,24 @@ a run a worker is already delivering, or retrying a work order that is already b
 
 ## 2. What it does
 
-A webhook arrival, a worker claiming, starting or finishing a run, a background retry or cancel job, or an action in another tab → WorkOrders event on the project topic → every open history page on that project adds the new work order (if its filters admit it) or refreshes the changed row, including its state, runs and cancel and retry buttons.
+1. Something changes a project's work orders or runs.
+   - New data arrives at a webhook, including data the plan limit refuses to run, which arrives as "Rejected".
+   - A worker picks up, starts or finishes a run.
+   - Someone retries or cancels, either in bulk in the background or one at a time from another tab.
+2. Every history page open on that project hears about it straight away; pages on other projects never do.
+3. A new work order appears at the top of the list, but only if it matches the page's current filters.
+4. A changed work order's row refreshes in place: its state, its runs, and whether it shows cancel and retry buttons.
+5. Two people watching the same incident see each other's cancels and reruns without reloading.
+
+**Straightforwardness: 2 of 5.** Live updates sound simple, but the page can quietly show a stale state, act on an out-of-date selection, or claim a bulk retry worked when part of it didn't.
+
+### Most surprising behaviours
+
+- **(2)** A change can be announced before it is saved, so the page may reload the row and get the old state. The row then sits there wrong, for example still offering cancel after a worker took the run, or still "Running" after it finished, until something else changes. (6.1)
+- **(2)** Ticked work orders remember the state they had when you ticked them. Bulk "Cancel" stays enabled after a worker has taken them (and then cancels nothing), and bulk "Retry" stays greyed out after they've finished. (6.1)
+- **(2)** If part of a bulk retry fails in the background, up to 100 work orders are never retried and never update on the page, even though you were told they were all enqueued. (6.1)
+- **(3)** A new work order arriving at just the wrong moment can show up twice, and while the list is first loading it can briefly show only that one new work order. (6.1)
+- **(3)** Steps don't update live here: an expanded row only shows a run's new steps when the run's overall state next changes. You need the run page for step-by-step progress. (6.2)
 
 ## 3. Who can do what
 

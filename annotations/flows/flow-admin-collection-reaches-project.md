@@ -71,9 +71,23 @@ failing on a collection that "exists", or keep reading data that now belongs to 
 
 ## 2. What it does
 
-A superuser creates, renames, moves or deletes a collection on /settings/collections; the owning
-project's collections tab shows the change when it next loads, and that project's jobs find the
-collection by its new name and project (or stop finding it) on their next call.
+1. A superuser creates, renames, moves to another project, or deletes a collection on the admin collections page, without needing to be on the project.
+2. The collection's records go wherever it goes: a rename or move keeps them, and a delete removes them.
+3. Members see the change on the project's collections tab the next time it loads; a member acting from a tab that was already open is told the collection is "not found".
+4. The project's jobs see the change on their next call:
+   - A new or renamed collection is found by its new name
+   - The old name, or a deleted collection, gives "Not Found"
+   - After a move, only jobs in the new project can use it; the old project's jobs are refused
+
+**Straightforwardness: 3 of 5.** The direct effects are what you'd expect, but collection names are shared across the whole instance and moving is looser than it looks, so one change can break or expose another project.
+
+### Most surprising behaviours
+
+- **(2)** A project admin can also move a collection, with all its records, into any project, including one they aren't on. The data leaves their project and the other project's jobs can read it. Moving may not even be an intended feature. (6.1)
+- **(2)** Collection names are looked up across the whole instance. Creating, renaming or moving a collection to a name another project already uses makes every job in both projects that uses that name start failing. (6.2)
+- **(3)** Renaming, moving or deleting gives no warning that jobs using the collection will break, so the first sign is failed runs in a project the superuser may never look at. (6.1)
+- **(3)** A move isn't checked against the new project's plan limits, and the old project keeps the usage. (6.1)
+- **(3)** These changes to someone else's project skip that project's two-factor requirement and leave no audit record. (6.2)
 
 ## 3. Who can do what
 

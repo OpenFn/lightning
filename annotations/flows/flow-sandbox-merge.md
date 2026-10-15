@@ -90,12 +90,23 @@ working on a stale or retired copy.
 
 ## 2. What it does
 
-Admin confirms Merge on sandboxes-index (or an editor confirms "Save and promote" in the sandbox
-editor) → one transaction updates the parent's workflows, attaches chosen credentials and keychains,
-creates missing collections and records sync points → open parent editors reconcile, merged
-deletions bounce open editors → the sandbox is scheduled for deletion (automatically from the list,
-by choice from the editor) and its open pages leave → the merger lands on the parent's workflow list,
-or on the parent's copy of the workflow with "Promoted to parent project".
+1. An admin merges a whole sandbox from the sandboxes list, or an editor clicks "Save and promote" on one workflow in the sandbox editor.
+   - The promote dialog warns first if the parent's copy of that workflow has changed since the sandbox was made
+   - From the list, a parent that syncs to GitHub is committed to the repository before and after the merge
+2. The parent is updated all at once or not at all: the chosen workflows change, the chosen credentials and keychains come across, missing collections are created empty, and the parent's own settings and team stay as they were.
+3. Colleagues with a parent workflow open see the merged version appear without reloading; anyone with a workflow open that the merge deleted is moved off it.
+4. The sandbox is retired: a list merge always schedules it for deletion, while after a promote an admin can choose "Archive sandbox" or anyone can keep it to promote more workflows. Its triggers are switched off and anyone still in it is moved out.
+5. The person who merged lands on the parent's workflow list, or after promote and archive, on the parent's copy of the workflow with "Promoted to parent project".
+
+**Straightforwardness: 2 of 5.** The two ways in look like the same action but carry different things across, and several of the differences quietly leave the live project in a state the person didn't expect.
+
+### Most surprising behaviours
+
+- **(2)** Promoting one workflow doesn't bring across credentials that only the sandbox has. The dialog says "Changes promoted" and the live job then fails because it has no credential. (6.1)
+- **(2)** The promote dialog says the parent "starts processing data with these changes", but a workflow that is new to the parent arrives as a draft with its triggers off, so it never runs. (6.1)
+- **(2)** Workflows are matched by name. Rename one in the sandbox and promoting it creates a second workflow in the parent while the old one keeps running. (6.2)
+- **(3)** The merge wins over whatever is in the parent. A colleague mid-edit on the parent workflow has their screen reset to the merged version, and their unsaved changes are overwritten. (S02, 6.2)
+- **(3)** Promote does less than a list merge in other ways too: it creates every sandbox-only collection in the parent, even unrelated ones, and it skips the GitHub commit, so a synced repository falls behind. (6.1)
 
 ## 3. Who can do what
 

@@ -81,7 +81,25 @@ miss a failure that needs a retry or chase one that isn't there.
 
 ## 2. What it does
 
-Member clicks a work order count, a failed count, the Work Orders card's "N pending" or the failed card's "View all" on workflows-index → History opens with the matching workflow, last-activity window and status chips, listing the work orders that number counted.
+1. Any project member reads the workflows page, which counts each workflow's work orders over the last 30 days of activity.
+2. They click a number to see what it counted.
+   - A workflow's work order count, or its failed count.
+   - "N pending" on the Work Orders card, or "View all" on the failed work orders card, for the whole project.
+3. The history page opens already filtered to match: the workflow (if any), "Last activity after" the start of the 30-day window, and the right statuses.
+   - "Failed" covers every failure state (failed, crashed, killed, exception, lost and rejected) but never cancelled work.
+   - "Pending" covers enqueued and running.
+4. The list shows the same work orders the number counted, judged by last activity rather than when they were received.
+5. They can search the narrowed list straight away, including in run logs.
+
+**Straightforwardness: 3 of 5.** Clicking a number to see its list is obvious, but in a few common cases the number and the list don't match, and nothing tells you why.
+
+### Most surprising behaviours
+
+- **(3)** The summary cards are totalled over your dashboard search, but their links open the whole project. Search for "sync" and the failed card may say 1 while "View all" lists 5. (6.1)
+- **(3)** The cards leave out deleted workflows, but the history page still lists their work orders, so a failed card of 1 can open a list of 3. (6.1)
+- **(3)** The list is worked out when you click, not when the number was counted. Work that arrived since shows up, and pending work that has since finished drops out of the pending list. (6.2)
+- **(4)** A big 30-day drill-down can time out on the history page even though the dashboard managed to count it. (6.4)
+- **(4)** The "Runs" and "Successful Runs" cards can't be clicked, while the other card links show even at zero and open an empty list. (6.2)
 
 ## 3. Who can do what
 

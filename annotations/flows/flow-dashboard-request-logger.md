@@ -89,7 +89,20 @@ long a token lives are the security surface.
 
 ## 2. What it does
 
-Superuser opens /dashboard/request_logger and gets a stream and a token; any request on the instance carrying the token (by link or by cookie) has its log lines broadcast to that stream; the dashboard tab shows them until the token's hour runs out.
+1. A superuser opens the request logger on the admin dashboard and gets a live stream and a token that lasts one hour, as a link or as a cookie set in their own browser.
+2. Any request to the instance carrying that token, from anyone, signed in or not, including an outside system calling a webhook, has its server log lines sent to the stream; requests without a valid token, or with an expired one, are never sent.
+3. The superuser's tab shows the lines as they arrive, for as long as the tab stays open and the token is under an hour old.
+4. On a normal production instance the lines show what was called and how it ended, not the values sent; with extra logging switched on, form fields like passwords are masked.
+
+**Straightforwardness: 3 of 5.** The idea is simple once explained, but the token is the only gate, it travels further than the dashboard, and switching it off doesn't do quite what it says.
+
+### Most surprising behaviours
+
+- **(2)** With extra logging switched on, the stream also shows database queries with their real values, so a superuser can see other people's emails, credential values and data in plain text; only form fields are masked. (6.1)
+- **(2)** A token sent on a webhook or channel request is saved with the incoming data, and on a channel request it is passed on to the outside system, so the link keeps working for its hour wherever it ends up. (6.2)
+- **(3)** "Disable cookie" may not actually remove the cookie, so the button says capture is off while requests are still being captured until the hour runs out. (6.1)
+- **(3)** Tokens can't be revoked. Starting a new stream gives a new token but every earlier link keeps working for its full hour. (6.2)
+- **(3)** Only the first load of a page is captured. Clicks on that page afterwards, the workflow editor, and background work started by the request never appear, and nothing is kept once the tab reloads. (6.2)
 
 ## 3. Who can do what
 
