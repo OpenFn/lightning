@@ -72,13 +72,19 @@ would get no explanation of why they can't turn it on.
 ## 2. What it does
 
 - Every member sees whether the project currently requires MFA
-- Admins and owners turn the MFA requirement on
-- Admins and owners turn the MFA requirement off
-- Editors, viewers and support users cannot change the requirement, and are told so
-- A member whose admin role was removed while the page was open cannot change the requirement
-- On a plan without the MFA feature, admins see the limiter's message and the switch is disabled
-- In a sandbox, the switch is disabled
-- Turning the requirement on keeps unenrolled members out of the project from then on
+- Admins and owners turn the MFA requirement on or off; editors, viewers and support users can't, and are told so, even if they were demoted while the page was open
+- The switch is disabled in a sandbox, and on a plan without the MFA feature, where admins see the plan's message instead
+- Once the requirement is on, members who haven't enrolled in MFA are kept out of the project from then on
+
+**Straightforwardness: 3 of 5.** The switch itself is simple, but what it does to people, including the admin flipping it, takes a minute of explaining.
+
+### Most surprising behaviours
+
+- **(2)** An admin who hasn't set up MFA themselves can turn the requirement on, and is then locked out of the project, including from turning it back off. They get a success message and no warning first. (6.1, 8)
+- **(3)** Turning it on doesn't only block page visits: members without MFA also lose API and live-editing access and silently stop getting digest and failure-alert emails. People already on an open project page aren't moved off until their next request. (4, S08)
+- **(3)** A sandbox shows a banner saying its security comes from the parent, but it actually keeps its own copy of the setting taken when it was created, so changing the parent later doesn't reach it. (6.1)
+- **(4)** The switch's look doesn't match what it does: non-admins see a greyed-out switch that still clicks and shows a "not authorized" error, while admins on a limited plan see a normal-looking switch that does nothing. (6.1)
+- **(4)** If another tab already changed the setting, clicking the switch can leave it as it was and still say "updated successfully"; the message never says which way it went. (6.2)
 
 ## 3. Who can do what
 

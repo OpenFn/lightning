@@ -79,22 +79,31 @@ storing them; and everyone else on the project would have no way to see what the
 
 ## 2. What it does
 
-- Every member sees the project's current history retention period, I/O storage policy and I/O retention period
-- New projects keep all I/O data and have no history retention period until an admin sets one
-- Admins and owners set how long run history is kept
-- Admins and owners set how long I/O data is kept, once a history period is set
-- I/O data can't be set to outlive the run history it belongs to
-- Admins and owners switch the project to never storing I/O data, after a warning
-- Admins and owners switch back to retaining all I/O data
-- Admins and owners discard unsaved changes with Cancel
-- Editors, viewers and support users see the settings with every control disabled
-- Editors, viewers, support users and admins demoted while the page is open cannot save
-- The retention form changes only retention fields
-- An admin is told when a save failed
-- Each saved period change is recorded in the audit trail with the acting user
-- Each saved period change notifies the project's admins and owners by email
-- On a plan that limits retention, admins only see the plan's periods, and the plan's explanation
-- On a plan with a single period, the history period can't be changed
+- **See the policy**
+  - Every member sees the history retention period, the I/O storage policy and the I/O retention period; editors, viewers and support users see every control disabled
+  - New projects keep all I/O data and have no history retention period until an admin sets one
+- **Set retention periods** (admins and owners)
+  - Admins set how long run history is kept
+  - Admins set how long I/O data is kept, once a history period is set, and never longer than the history period
+  - On a plan that limits retention, admins only see the plan's periods and its explanation; with a single period, the history period can't be changed
+- **Choose whether I/O data is stored at all** (admins and owners)
+  - Admins switch the project to never storing I/O data, after a warning, and switch back to retaining it
+  - Admins discard unsaved changes with Cancel
+- **Saving safely**
+  - Editors, viewers, support users and admins demoted while the page is open cannot save
+  - The form changes only retention settings, and an admin is told when a save failed
+- **Keep a record of changes**
+  - Each saved period change is recorded in the audit trail with the acting user, and emailed to the project's admins and owners
+
+**Straightforwardness: 3 of 5.** Three settings that depend on each other and on the plan, and the most sensitive change on the page is the one that leaves the least trace.
+
+### Most surprising behaviours
+
+- **(2)** Switching to "never store I/O data", or back again, isn't recorded in the audit trail and doesn't email the other admins. Only period changes are, even though the storage switch is the bigger decision. (6.1, 8)
+- **(2)** Choosing "never store" may quietly keep the old I/O period behind the scenes, so the page shows it again after a reload and switching back silently brings it back. This was read from the code, not tried. (6.1)
+- **(3)** A shorter period applies with no confirmation, and on the next cleanup, within about two hours, older runs and their data are deleted for good. (4, 6.2)
+- **(3)** Plan limits are only enforced by what the list offers: on a limited plan, picking "Select Period" sets history back to unlimited, and a single-period plan with nothing set may never be able to set one. (6.1, 8)
+- **(3)** This tab shares one form behind the scenes with the Setup tab, so editing here drops unsaved Setup edits and Cancel here resets the Setup tab too. (6.2)
 
 ## 3. Who can do what
 

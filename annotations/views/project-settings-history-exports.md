@@ -67,10 +67,18 @@ did not request the export, would have no way to retrieve the file.
 ## 2. What it does
 
 - Any member sees every export requested on this project, with when, by whom, filename and status
-- Any member downloads a completed export (handoff to flow-history-export)
-- Unfinished and failed exports cannot be downloaded (flow-history-export S05, S06)
+- Any member downloads a completed export
+- Unfinished and failed exports cannot be downloaded
 - Members see a clear empty state when the project has no exports
 - Only this project's exports are listed, including in a sandbox
+
+**Straightforwardness: 4 of 5.** A read-only list with a download link; the surprises are about how stale or misleading a row can look, not about what the page does.
+
+### Most surprising behaviours
+
+- **(3)** The list never updates on its own. An export that has finished keeps showing "In progress" with a disabled button until you reload the page. (6.1)
+- **(3)** A failed export says "Export is not yet ready for download" and shows its filename as "Pending", which suggests it will be ready later when it never will. There's no way to retry or remove it from here. (6.1, 8)
+- **(4)** Exports don't stay forever: they drop off this list when the project's data retention cleanup removes them. (4)
 
 ## 3. Who can do what
 

@@ -96,18 +96,31 @@ by accident could destroy work in GitHub or in OpenFn.
 
 ## 2. What it does
 
-- Admins connect their own GitHub account before they can create a connection
-- Admins pick a GitHub App installation, a repository and a branch, refreshing either list on demand
-- Admins choose the first sync direction: export this project to GitHub, or import from GitHub and overwrite this project
-- Admins must confirm the files that will be written (and, for import, that the project will be destroyed) before connecting
-- Sandboxes cannot reuse a branch already linked elsewhere in the same project family
-- Admins are told when they have no installations, when GitHub can't be reached, and when the instance has no GitHub app configured
-- Everyone on the project sees the saved connection and whether GitHub still has the files and secret it needs
-- Editors and above start a sync to the branch
-- Admins reconnect a broken connection when they can access its installation
-- Admins remove the connection, even when GitHub cleanup fails
-- A plan limit on GitHub sync blocks connecting and syncing, and says why
-- Name collisions in the project stop a connect or sync before anything is pushed, and say which names collide
+- **Connect a project to a branch** (admins)
+  - Admins connect their own GitHub account first, then pick an installation, a repository and a branch, refreshing the lists on demand
+  - Admins choose the first sync direction: export this project to GitHub, or import from GitHub and overwrite this project
+  - Admins confirm the files that will be written (and, for import, that the project will be destroyed) before connecting
+- **See the connection**
+  - Everyone on the project sees the saved connection and whether GitHub still has the files and secret it needs
+  - Admins are told when they have no installations or GitHub can't be reached; everyone is told when the instance has no GitHub app set up
+- **Sync and maintain it**
+  - Editors and above start a sync to the branch
+  - Admins reconnect a broken connection when their own GitHub account can reach its installation
+  - Admins remove the connection, even when GitHub cleanup fails
+- **What stops a connect or sync**
+  - Sandboxes can't reuse a branch already linked elsewhere in the same project family
+  - Workflows whose names collide stop a connect or sync before anything is pushed, and the message names them
+  - A plan limit on GitHub sync blocks connecting and syncing, and says why
+
+**Straightforwardness: 2 of 5.** Every action here writes files and secrets into someone's GitHub repo, and what's left behind when things go wrong, or who is allowed to fix it, takes real thought.
+
+### Most surprising behaviours
+
+- **(2)** If connecting fails partway, the project ends up with no connection, but the workflow files, config and an API secret it already wrote stay in the GitHub repo, with nothing on the page saying so. (6.1, 8)
+- **(2)** Removing the connection can quietly leave the files and secret in GitHub: cleanup only happens with the remover's own GitHub account, failures aren't reported, and one workflow file is always left behind. (S26, 6.2)
+- **(3)** Only sandboxes of the same project are stopped from sharing a branch. Two unrelated projects can both connect to the same repo and branch and overwrite each other's files. (6.2, 8)
+- **(3)** The branch and installation lists only show GitHub's first page, so in a busy repo the branch you want may simply not be there. (6.1)
+- **(3)** Whether you can repair a broken connection depends on your personal GitHub access, not just your role, so an owner can be shown the problem with no way to fix it. Reconnecting in the import direction can also silently do nothing. (S20, 6.1)
 
 ## 3. Who can do what
 

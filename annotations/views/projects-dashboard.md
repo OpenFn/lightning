@@ -93,17 +93,30 @@ way to create their first project, and nobody has a single place to see everythi
 
 ## 2. What it does
 
-- Anyone signed in sees the top-level projects they are a member of, and no others
-- Anyone sees, per project, their role, the number of workflows and collaborators, and when a workflow last changed
-- Support users also see projects that allow support access
-- Anyone with no projects is offered to create one
-- Anyone sorts the list by name or by last updated
-- Anyone opens a project's workflows, collaborators or history from its row
-- Anyone creates a project, becoming its owner, and sees the name it will be stored under first
-- Anyone can back out of creating a project without creating one
-- Anyone is pointed to documentation and community help
-- Visiting the instance root takes anyone to this page
-- Owners land here after scheduling a project for deletion
+- **See my projects**
+  - Anyone signed in sees the top-level projects they are a member of, and no others
+  - Support users also see projects that allow support access
+  - Each row shows the user's role, the number of workflows and collaborators, and when a workflow last changed
+- **Find and open a project**
+  - Anyone sorts the list by name or by last updated
+  - Anyone opens a project's workflows, collaborators or history from its row
+- **Create a project**
+  - Anyone creates a project, becoming its owner, and sees the name it will be stored under first
+  - Anyone can back out of creating a project without creating one
+  - Anyone with no projects is offered to create one
+- **Arrive here and get help**
+  - Visiting the instance root takes anyone to this page, and owners land here after scheduling a project for deletion
+  - Anyone is pointed to documentation and community help
+
+**Straightforwardness: 3 of 5.** A familiar list-and-create page, but which projects actually show up in the list follows rules you wouldn't guess.
+
+### Most surprising behaviours
+
+- **(2)** A project you've just scheduled for deletion is still in the list straight after the "scheduled for deletion" message, and clicking it shows "Not Found". (6.1, S18)
+- **(3)** A project whose workflows have all been deleted disappears from the list completely, while a project that never had any workflows still shows. (6.1)
+- **(3)** Sandboxes are never listed, so someone whose only membership is a sandbox sees "No projects found." even though the project picker shows the sandbox. (6.2)
+- **(3)** Collapsing the sidebar may reset the sort back to name order and clear a half-filled create form. This was read from the code, not tried. (6.1)
+- **(4)** "Last Updated" only counts workflow edits, not runs or settings changes, so a busy project can look dormant. The list also doesn't refresh when you're added to or removed from a project elsewhere. (6.2)
 
 ## 3. Who can do what
 
