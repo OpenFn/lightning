@@ -190,7 +190,7 @@ defmodule Lightning.Policies.ProvisioningTest do
 
       for action <- [:provision_project, :describe_project] do
         assert Provisioning.authorize(action, account, project) ==
-                 {:error, :insufficient_scope}
+                 {:error, {:insufficient_scope, "projects:provision"}}
       end
     end
 
@@ -229,7 +229,7 @@ defmodule Lightning.Policies.ProvisioningTest do
         )
 
       assert Provisioning.authorize(:provision_project, account, project) ==
-               {:error, :insufficient_scope}
+               {:error, {:insufficient_scope, "projects:provision"}}
 
       account = %{account | grants: MapSet.new(["projects:provision"])}
 
@@ -259,7 +259,7 @@ defmodule Lightning.Policies.ProvisioningTest do
                :create_project,
                %{account | grants: MapSet.new(["users:write"])},
                nil
-             ) == {:error, :insufficient_scope}
+             ) == {:error, {:insufficient_scope, "projects:write"}}
     end
 
     test "is refused for a user who is not a superuser, whatever roles they hold elsewhere" do
@@ -281,7 +281,7 @@ defmodule Lightning.Policies.ProvisioningTest do
       repo_connection = insert(:project_repo_connection)
 
       assert Provisioning.authorize(:create_project, repo_connection, nil) ==
-               {:error, :insufficient_scope}
+               {:error, {:insufficient_scope, "projects:write"}}
     end
   end
 end

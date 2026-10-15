@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.ProvisioningControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Ecto.Query
   import Lightning.Factories
 
@@ -1071,10 +1072,10 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         )
         |> post(~p"/api/provision", body)
 
-      assert json_response(response, 403) == %{"error" => "insufficient_scope"}
+      assert_problem(response, 403, :insufficient_scope)
 
-      assert Plug.Conn.get_resp_header(response, "www-authenticate") == [
-               ~s(Bearer error="insufficient_scope")
+      assert get_resp_header(response, "www-authenticate") == [
+               ~s(Bearer error="insufficient_scope", scope="projects:write")
              ]
 
       refute Lightning.Repo.get(Lightning.Projects.Project, id)

@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.ProjectControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
   import Ecto.Query
   import Lightning.ServiceAccountHelpers
@@ -227,10 +228,10 @@ defmodule LightningWeb.API.ProjectControllerTest do
         )
         |> get(~p"/api/projects/#{project.id}")
 
-      assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+      assert_problem(conn, 403, :insufficient_scope)
 
       assert get_resp_header(conn, "www-authenticate") == [
-               ~s(Bearer error="insufficient_scope")
+               ~s(Bearer error="insufficient_scope", scope="projects:write")
              ]
     end
   end
@@ -597,10 +598,10 @@ defmodule LightningWeb.API.ProjectControllerTest do
         refused =
           put_project(conn, id, %{"name" => "acme", "members" => four_members()})
 
-        assert json_response(refused, 403) == %{"error" => "insufficient_scope"}
+        assert_problem(refused, 403, :insufficient_scope)
 
         assert get_resp_header(refused, "www-authenticate") == [
-                 ~s(Bearer error="insufficient_scope")
+                 ~s(Bearer error="insufficient_scope", scope="projects:write")
                ]
       end
     end

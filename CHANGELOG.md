@@ -27,6 +27,10 @@ and this project adheres to
   to `POST /api/oauth/token` without `scope`, or with an empty one, is refused
   with `invalid_scope` instead of getting every scope.
   [#5239](https://github.com/OpenFn/lightning/pull/5239)
+- A token refused for a scope it lacks now gets a 403 problem document with
+  `"code": "insufficient_scope"` instead of `{"error": "insufficient_scope"}`,
+  and its `WWW-Authenticate` header names the one scope the request needed, as
+  in `Bearer error="insufficient_scope", scope="credentials:write"`.
 
 ### Fixed
 

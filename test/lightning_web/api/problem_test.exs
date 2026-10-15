@@ -76,7 +76,8 @@ defmodule LightningWeb.API.ProblemTest do
             {{:error, :no_such_project}, 404, :not_found},
             {{:error, :connection_not_for_this_project}, 404, :not_found},
             {{:error, :forbidden}, 403, :forbidden},
-            {{:error, :insufficient_scope}, 403, :insufficient_scope},
+            {{:error, {:insufficient_scope, "users:read"}}, 403,
+             :insufficient_scope},
             {{:error, :scheduled_for_deletion}, 409, :scheduled_for_deletion},
             {{:error, :id_taken}, 409, :id_taken},
             {{:error, :exceeds_limit}, 402, :exceeds_limit},
@@ -128,11 +129,15 @@ defmodule LightningWeb.API.ProblemTest do
       assert log =~ "could not save a workflow snapshot"
     end
 
-    test "names the missing scope's error in the challenge" do
-      conn = FallbackController.call(build_conn(), {:error, :insufficient_scope})
+    test "names the missing grant in the challenge" do
+      conn =
+        FallbackController.call(
+          build_conn(),
+          {:error, {:insufficient_scope, "credentials:write"}}
+        )
 
       assert get_resp_header(conn, "www-authenticate") == [
-               ~s(Bearer error="insufficient_scope")
+               ~s(Bearer error="insufficient_scope", scope="credentials:write")
              ]
     end
   end

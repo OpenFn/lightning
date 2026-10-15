@@ -79,11 +79,11 @@ defmodule Lightning.Policies.DecisionTest do
     end
   end
 
-  test "a caller without the grant hears insufficient_scope, never the deletion",
+  test "a caller without the grant hears which grant, never the deletion",
        %{project: project, grantless: grantless} do
     for {policy, actions} <- @project_actions, action <- actions do
       assert policy.authorize(action, grantless, project) ==
-               {:error, :insufficient_scope},
+               {:error, {:insufficient_scope, grant(policy, action)}},
              "#{inspect(policy)} #{action}"
     end
 
@@ -91,7 +91,7 @@ defmodule Lightning.Policies.DecisionTest do
 
     for {policy, actions} <- @instance_actions, action <- actions do
       assert policy.authorize(action, instance, nil) ==
-               {:error, :insufficient_scope},
+               {:error, {:insufficient_scope, grant(policy, action)}},
              "#{inspect(policy)} #{action}"
     end
   end
@@ -105,4 +105,14 @@ defmodule Lightning.Policies.DecisionTest do
              "#{inspect(policy)} #{action}"
     end
   end
+
+  defp grant(ProjectUsers, action)
+       when action in [:create_project_credential, :list_project_credentials],
+       do: "credentials:write"
+
+  defp grant(ProjectUsers, _action), do: "projects:write"
+  defp grant(Collections, _action), do: "collections:write"
+  defp grant(Credentials, _action), do: "credentials:write"
+  defp grant(Users, :read_users), do: "users:read"
+  defp grant(Users, :write_users), do: "users:write"
 end

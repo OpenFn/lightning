@@ -683,7 +683,7 @@ defmodule Lightning.Policies.CredentialsTest do
                :create_project_credential,
                account,
                insert(:project)
-             ) == {:error, :insufficient_scope}
+             ) == {:error, {:insufficient_scope, "credentials:write"}}
     end
 
     test "a service account can write any credential but never delete one", %{
@@ -714,12 +714,12 @@ defmodule Lightning.Policies.CredentialsTest do
                false
 
       assert Credentials.authorize(:name_credential_owner, bare, nil) ==
-               {:error, :insufficient_scope}
+               {:error, {:insufficient_scope, "credentials:write"}}
 
       assert Credentials.authorize(:list_credentials, insert(:user), nil) == true
 
       assert Credentials.authorize(:edit_credential, bare, insert(:credential)) ==
-               {:error, :insufficient_scope}
+               {:error, {:insufficient_scope, "credentials:write"}}
     end
 
     test "only a person may list their credentials or create one for themselves" do

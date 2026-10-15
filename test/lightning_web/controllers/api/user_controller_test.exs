@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.UserControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
   import Lightning.ServiceAccountHelpers
 
@@ -257,7 +258,12 @@ defmodule LightningWeb.API.UserControllerTest do
         |> with_scopes(account, ["users:read"])
         |> post(~p"/api/users", %{email: "no@example.com", password: @password})
 
-      assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+      assert_problem(conn, 403, :insufficient_scope)
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer error="insufficient_scope", scope="users:write")
+             ]
+
       refute Accounts.get_user_by_email("no@example.com")
     end
 
@@ -563,7 +569,12 @@ defmodule LightningWeb.API.UserControllerTest do
         |> with_scopes(account, ["users:read"])
         |> patch(~p"/api/users/#{user.id}", %{first_name: "Grace"})
 
-      assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+      assert_problem(conn, 403, :insufficient_scope)
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer error="insufficient_scope", scope="users:write")
+             ]
+
       assert %User{first_name: "Ada"} = Accounts.get_user(user.id)
     end
 
@@ -774,7 +785,11 @@ defmodule LightningWeb.API.UserControllerTest do
         |> with_scopes(account, ["users:write"])
         |> get(~p"/api/users?email=a@example.com")
 
-      assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+      assert_problem(conn, 403, :insufficient_scope)
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer error="insufficient_scope", scope="users:read")
+             ]
     end
 
     test "refuses a personal access token", %{conn: conn} do

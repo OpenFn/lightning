@@ -8,6 +8,7 @@ defmodule LightningWeb.API.FallbackController do
   `{:error, :unauthorized}` from `Permissions.can/4` has no clause either,
   because a refused permission is a 403 or a 404, never a 401 (plan D9).
   """
+  alias LightningWeb.API.Challenge
   alias LightningWeb.API.Errors
   alias LightningWeb.API.Problem
 
@@ -33,10 +34,10 @@ defmodule LightningWeb.API.FallbackController do
   def call(conn, {:error, :forbidden}),
     do: Problem.respond(conn, Problem.new(:forbidden))
 
-  def call(conn, {:error, :insufficient_scope}) do
+  def call(conn, {:error, {:insufficient_scope, grant}}) do
     problem =
       Problem.new(:insufficient_scope,
-        headers: [{"www-authenticate", ~s(Bearer error="insufficient_scope")}]
+        headers: [Challenge.insufficient_scope(grant)]
       )
 
     Problem.respond(conn, problem)

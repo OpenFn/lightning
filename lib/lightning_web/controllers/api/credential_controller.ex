@@ -421,9 +421,14 @@ defmodule LightningWeb.API.CredentialController do
   defp render_write_error(_conn, {:error, :unauthorized}),
     do: {:error, :forbidden}
 
-  defp render_write_error(_conn, {:error, reason} = error)
-       when reason in [:insufficient_scope, :scheduled_for_deletion],
+  defp render_write_error(
+         _conn,
+         {:error, {:insufficient_scope, _grant}} = error
+       ),
        do: error
+
+  defp render_write_error(_conn, {:error, :scheduled_for_deletion} = error),
+    do: error
 
   # What remains is an OAuth token body the context refused.
   defp render_write_error(conn, {:error, _reason}),

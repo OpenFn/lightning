@@ -14,6 +14,7 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
 
   alias Lightning.ServiceAccount
   alias Lightning.ServiceAccount.AccessToken
+  alias LightningWeb.API.Challenge
 
   def init(opts), do: opts
 
@@ -28,17 +29,15 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
       |> assign(:access_token, claims)
       |> assign(:current_resource, %{service_account | grants: grants})
     else
-      _other -> refuse(conn, 401, "invalid_token")
+      _other -> refuse(conn)
     end
   end
 
-  @doc "Refuses the request in the RFC 6750 §3 shape, and halts."
-  @spec refuse(Plug.Conn.t(), Plug.Conn.status(), String.t()) :: Plug.Conn.t()
-  def refuse(conn, status, error) do
+  defp refuse(conn) do
     conn
-    |> put_resp_header("www-authenticate", ~s(Bearer error="#{error}"))
-    |> put_status(status)
-    |> Phoenix.Controller.json(%{error: error})
+    |> merge_resp_headers([Challenge.invalid_token()])
+    |> put_status(401)
+    |> Phoenix.Controller.json(%{error: "invalid_token"})
     |> halt()
   end
 end

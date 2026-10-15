@@ -1,6 +1,7 @@
 defmodule LightningWeb.Plugs.AuthorizeActionTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
 
   alias Lightning.Scope
@@ -32,7 +33,12 @@ defmodule LightningWeb.Plugs.AuthorizeActionTest do
     conn = run(conn, %{account | grants: MapSet.new(["users:read"])})
 
     assert conn.halted
-    assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+    assert_problem(conn, 403, :insufficient_scope)
+
+    assert get_resp_header(conn, "www-authenticate") == [
+             ~s(Bearer error="insufficient_scope", scope="projects:write")
+           ]
+
     refute Map.has_key?(conn.assigns, :scope)
   end
 end

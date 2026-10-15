@@ -28,7 +28,10 @@ defmodule Lightning.Policies.Provisioning do
 
   @spec authorize(actions(), Scope.t() | Scope.actor(), Project.t() | nil) ::
           boolean()
-          | {:error, :forbidden | :insufficient_scope | :scheduled_for_deletion}
+          | {:error,
+             :forbidden
+             | Decision.insufficient_scope()
+             | :scheduled_for_deletion}
 
   # `false` becomes `{:error, :forbidden}`, so `/api/provision` answers 403, not
   # 401.

@@ -545,7 +545,7 @@ defmodule Lightning.CredentialsTest do
       account = %{account | grants: MapSet.new(["projects:write"])}
 
       assert Credentials.update_credential(credential, %{"name" => "x"}, account) ==
-               {:error, :insufficient_scope}
+               {:error, {:insufficient_scope, "credentials:write"}}
     end
 
     test "create a credential owned by the named user and record the account as the actor",

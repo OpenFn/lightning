@@ -51,7 +51,7 @@ defmodule Lightning.Policies.Collections do
           actions(),
           Scope.t() | Scope.actor() | Run.t(),
           Collection.t() | Project.t() | :before_target
-        ) :: boolean() | {:error, :insufficient_scope | :scheduled_for_deletion}
+        ) :: Decision.answer()
   # Runs may perform any collection action within their own project.
   def authorize(_action, %Run{} = run, %Collection{} = collection) do
     Lightning.Runs.get_project_id_for_run(run) == collection.project_id

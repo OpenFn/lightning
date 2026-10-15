@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.CollectionControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Ecto.Query
   import Lightning.Factories
   import Lightning.ServiceAccountHelpers
@@ -253,7 +254,11 @@ defmodule LightningWeb.API.CollectionControllerTest do
               ~p"/api/projects/#{collection.project_id}/collections/#{collection.id}"
             )
           ] do
-        assert json_response(refused, 403) == %{"error" => "insufficient_scope"}
+        assert_problem(refused, 403, :insufficient_scope)
+
+        assert get_resp_header(refused, "www-authenticate") == [
+                 ~s(Bearer error="insufficient_scope", scope="collections:write")
+               ]
       end
     end
   end
@@ -452,10 +457,11 @@ defmodule LightningWeb.API.CollectionControllerTest do
               ~p"/api/projects/#{project.id}/collections/#{collection.id}"
             )
           ] do
-        assert json_response(refused, 403) == %{"error" => "insufficient_scope"}
+        assert_problem(refused, 403, :insufficient_scope)
 
-        assert get_resp_header(refused, "www-authenticate") ==
-                 [~s(Bearer error="insufficient_scope")]
+        assert get_resp_header(refused, "www-authenticate") == [
+                 ~s(Bearer error="insufficient_scope", scope="collections:write")
+               ]
       end
     end
   end

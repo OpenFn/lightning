@@ -19,7 +19,7 @@ defmodule Lightning.Policies.Users do
           | :write_users
 
   @spec authorize(actions(), User.t() | Scope.t(), any()) ::
-          boolean() | {:error, :insufficient_scope}
+          boolean() | {:error, Decision.insufficient_scope()}
 
   def authorize(action, %Scope{} = scope, subject)
       when action in [:read_users, :write_users],

@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.JobControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
   import Lightning.JobsFixtures
   import Lightning.ProjectsFixtures
@@ -29,10 +30,10 @@ defmodule LightningWeb.API.JobControllerTest do
       )
       |> get(~p"/api/projects/#{project.id}/jobs")
 
-    assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+    assert_problem(conn, 403, :insufficient_scope)
 
     assert get_resp_header(conn, "www-authenticate") == [
-             ~s(Bearer error="insufficient_scope")
+             ~s(Bearer error="insufficient_scope", scope="projects:write")
            ]
   end
 

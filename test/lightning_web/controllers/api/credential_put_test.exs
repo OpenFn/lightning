@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.CredentialPutTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
   import Lightning.ServiceAccountHelpers
 
@@ -487,10 +488,10 @@ defmodule LightningWeb.API.CredentialPutTest do
             ),
             get(conn, ~p"/api/credentials/#{credential.id}")
           ] do
-        assert json_response(refused, 403) == %{"error" => "insufficient_scope"}
+        assert_problem(refused, 403, :insufficient_scope)
 
         assert get_resp_header(refused, "www-authenticate") == [
-                 ~s(Bearer error="insufficient_scope")
+                 ~s(Bearer error="insufficient_scope", scope="credentials:write")
                ]
       end
     end
@@ -748,10 +749,11 @@ defmodule LightningWeb.API.CredentialPutTest do
             put_credential(conn, Ecto.UUID.generate(), credential_body(%{})),
             get(conn, ~p"/api/credentials/#{credential.id}")
           ] do
-        assert json_response(refused, 403) == %{"error" => "insufficient_scope"}
+        assert_problem(refused, 403, :insufficient_scope)
 
-        assert get_resp_header(refused, "www-authenticate") ==
-                 [~s(Bearer error="insufficient_scope")]
+        assert get_resp_header(refused, "www-authenticate") == [
+                 ~s(Bearer error="insufficient_scope", scope="credentials:write")
+               ]
       end
     end
   end

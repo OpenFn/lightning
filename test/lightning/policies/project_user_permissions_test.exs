@@ -517,19 +517,19 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       credentials_only = %{account | grants: MapSet.new(["credentials:write"])}
 
       assert ProjectUsers.authorize(:access_project, credentials_only, project) ==
-               {:error, :insufficient_scope}
+               {:error, {:insufficient_scope, "projects:write"}}
 
       assert ProjectUsers.authorize(
                :list_project_credentials,
                projects_only,
                project
-             ) == {:error, :insufficient_scope}
+             ) == {:error, {:insufficient_scope, "credentials:write"}}
 
       assert ProjectUsers.authorize(
                :create_project_credential,
                projects_only,
                project
-             ) == {:error, :insufficient_scope}
+             ) == {:error, {:insufficient_scope, "credentials:write"}}
 
       assert ProjectUsers.authorize(
                :create_project_credential,
@@ -543,7 +543,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
                :edit_project,
                Scope.new(credentials_only),
                :before_target
-             ) == {:error, :insufficient_scope}
+             ) == {:error, {:insufficient_scope, "projects:write"}}
 
       assert ProjectUsers.authorize(
                :edit_project,

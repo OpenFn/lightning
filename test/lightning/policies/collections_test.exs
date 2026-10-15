@@ -164,7 +164,7 @@ defmodule Lightning.Policies.CollectionsTest do
       {:ok, scope} = Lightning.Scope.fetch(account, project)
 
       assert Collections.authorize(:manage_collection, scope, project) ==
-               {:error, :insufficient_scope}
+               {:error, {:insufficient_scope, "collections:write"}}
     end
   end
 

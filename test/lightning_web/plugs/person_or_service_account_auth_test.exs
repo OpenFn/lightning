@@ -1,6 +1,7 @@
 defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
   import Lightning.ServiceAccountHelpers
 
@@ -34,10 +35,10 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
         |> with_scopes(account, ["users:read", "users:write"])
         |> get(~p"/api/projects/#{project.id}")
 
-      assert json_response(conn, 403) == %{"error" => "insufficient_scope"}
+      assert_problem(conn, 403, :insufficient_scope)
 
       assert get_resp_header(conn, "www-authenticate") == [
-               ~s(Bearer error="insufficient_scope")
+               ~s(Bearer error="insufficient_scope", scope="projects:write")
              ]
     end
 

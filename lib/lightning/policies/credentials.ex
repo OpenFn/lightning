@@ -61,7 +61,7 @@ defmodule Lightning.Policies.Credentials do
           | nil
           | :before_target
         ) ::
-          boolean() | {:error, :insufficient_scope | :scheduled_for_deletion}
+          Decision.answer()
   def authorize(action, %Scope{} = scope, subject)
       when action in @ownership_actions,
       do:

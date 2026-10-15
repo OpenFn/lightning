@@ -116,7 +116,7 @@ defmodule Lightning.Policies.UserPermissionsTest do
       assert Users.authorize(:read_users, reader, nil) == true
 
       assert Users.authorize(:write_users, reader, nil) ==
-               {:error, :insufficient_scope}
+               {:error, {:insufficient_scope, "users:write"}}
     end
 
     test "is refused to a person, even a superuser" do

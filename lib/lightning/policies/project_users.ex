@@ -100,7 +100,7 @@ defmodule Lightning.Policies.ProjectUsers do
   its membership rows.
   """
   @spec authorize(actions(), Scope.t() | Scope.actor(), Scope.subject()) ::
-          boolean() | {:error, :insufficient_scope | :scheduled_for_deletion}
+          Decision.answer()
   def authorize(action, %Scope{} = scope, subject),
     do:
       Decision.project(
