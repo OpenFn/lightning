@@ -150,6 +150,40 @@ defmodule LightningWeb.API.UserControllerTest do
                ~w(code detail errors existing status title type)
     end
 
+    test "answers 409 taken without existing when the holder is gone by the time it is looked up",
+         %{conn: conn} do
+      attrs = %{
+        "email" => "taken@example.com",
+        "password" => @password,
+        "first_name" => "Other",
+        "last_name" => "Person"
+      }
+
+      holder = insert(:user, email: "taken@example.com")
+
+      {:error, refused} =
+        Lightning.Extensions.AccountHook.handle_create_user(attrs)
+
+      Lightning.Repo.delete!(holder)
+
+      Mox.expect(Lightning.Extensions.MockAccountHook, :handle_create_user, fn
+        ^attrs -> {:error, refused}
+      end)
+
+      body =
+        conn
+        |> post(~p"/api/users", attrs)
+        |> assert_problem(409, :taken, [
+          %{
+            "pointer" => "#/email",
+            "code" => "taken",
+            "detail" => "has already been taken"
+          }
+        ])
+
+      refute Map.has_key?(body, "existing")
+    end
+
     test "answers 422 when the email is taken and another field is wrong", %{
       conn: conn
     } do

@@ -88,14 +88,14 @@ defmodule LightningWeb.API.UserController do
   end
 
   # A create's only unique field is the email, so a `taken` problem means a
-  # user holds it.
+  # user holds it, unless that user was deleted since.
   defp creation_problem(changeset) do
     case Errors.problem(changeset) do
       %Problem{code: :taken} = problem ->
-        existing =
-          Accounts.get_user_by_email(Changeset.get_field(changeset, :email))
-
-        %{problem | extensions: %{existing: %{id: existing.id}}}
+        case Accounts.get_user_by_email(Changeset.get_field(changeset, :email)) do
+          %User{id: id} -> %{problem | extensions: %{existing: %{id: id}}}
+          nil -> problem
+        end
 
       problem ->
         problem
