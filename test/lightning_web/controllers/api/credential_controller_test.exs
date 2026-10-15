@@ -625,6 +625,28 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert project2.id in project_ids
     end
 
+    test "links a project named twice once", %{conn: conn, user: user} do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+
+      credential_attrs = %{
+        "name" => "Twice Linked",
+        "schema" => "raw",
+        "credential_bodies" => [%{"name" => "main", "body" => %{"a" => "b"}}],
+        "project_credentials" => [
+          %{"project_id" => project.id},
+          %{"project_id" => project.id}
+        ]
+      }
+
+      assert %{"credential" => %{"project_credentials" => [link]}} =
+               conn
+               |> post(~p"/api/credentials", credential_attrs)
+               |> json_response(201)
+
+      assert link["project_id"] == project.id
+    end
+
     test "creates a credential with multiple environment bodies", %{
       conn: conn,
       user: user
