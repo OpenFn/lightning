@@ -133,18 +133,28 @@ unnoticed or could only be repaired by someone with database access.
 
 ## 2. What it does
 
-- Members see the project's work orders, newest activity first, for the last 30 days by default
-- Members filter by workflow, status, received date and last activity, and clear any filter chip
-- Members search work orders by run logs, inputs, IDs and dataclip names
-- Members sort by created or last activity
-- Members expand a work order to see its runs and steps, and open the run, input, workflow version or step
-- Members arriving from another page see that page's filters as chips (work order, health drill-down)
-- Editors retry a work order from the start, singly or in bulk
-- Editors rerun a run from a chosen step, singly or for many work orders
-- Editors cancel work orders, individual runs, or all matching work orders, when the runs are not yet claimed
-- Editors export the matching history (finishes by email)
-- Anyone sees why a work order whose input was wiped by retention can't be retried, and admins get a link to change retention
+- **Find work orders**
+  - Members see the project's work orders, newest activity first, for the last 30 days by default
+  - Members filter by workflow, status, received date and last activity, and clear any filter chip, including chips carried in from another page (a single work order, a health drill-down)
+  - Members search by run logs, inputs, IDs and dataclip names, and sort by created or last activity
+- **Inspect a work order**
+  - Members expand a work order to see its runs and steps, and open the run, input, workflow version or step
+- **Recover from failures** (editors)
+  - Editors retry a work order from the start, or rerun a run from a chosen step, singly or in bulk
+  - Editors cancel work orders, individual runs, or all matching work orders, when the runs are not yet claimed
+  - Anyone sees why a work order whose input was wiped by retention can't be retried, and admins get a link to change retention
+- Editors export the matching history, which arrives by email
 - Users with experimental features see a tab for channel logs
+
+**Straightforwardness: 2 of 5.** Finding and reading work orders is simple, but the bulk retry, rerun and cancel actions carry a web of rules, and the numbers and selections they show don't always match what actually gets acted on.
+
+### Most surprising behaviours
+
+- **(2)** When you search, the count stops at 50, but "Rerun all", "Cancel up to" and export act on every match. A button that says "Rerun all 50" can retry far more than 50 work orders. (6.1, 6.4)
+- **(2)** Ticked work orders stay selected when you change filters or page, so a bulk action can hit work orders you can no longer see. (6.1)
+- **(3)** The 30-day default only applies when you come from the side menu. Links from alert emails, the health page or a run page show all time, so the same page can show very different amounts of history. (6.2)
+- **(3)** Switching off all four search fields doesn't search nothing: it quietly searches all four, while the toggles still show as off. (6.1)
+- **(3)** If any work order on the page has a wiped input, the "all matching" retry and cancel options never appear, with no hint why. (6.1)
 
 ## 3. Who can do what
 

@@ -81,16 +81,25 @@ destination would go unnoticed until someone complained.
 
 ## 2. What it does
 
-- Members see the project's channel requests, newest first, ten per page
-- Members see each request's ID, path, channel, start time, status and error message
-- Members never see requests from another project's channels
-- Members filter by channel from a dropdown, and clear the filter from the chip
-- Members filter to a channel by clicking its name in a row
-- Members arriving from the channels page see that channel's requests
-- Members page through requests without losing the channel filter
+- **See requests**
+  - Members see the project's channel requests, newest first, ten per page, with each one's ID, path, channel, start time, status and error message
+  - Members never see requests from another project's channels
+  - Members see a placeholder where the project keeps no request data
+- **Narrow to one channel**
+  - Members filter by channel from a dropdown or by clicking a channel name in a row, and clear the filter from the chip
+  - Members arriving from the channels page see that channel's requests
+  - Members page through requests without losing the channel filter
 - Members open a request's detail page from its ID
-- Members see a placeholder where the project keeps no request data
 - Members with experimental features move between the work orders and channel logs tabs
+
+**Straightforwardness: 4 of 5.** A plain filtered list; the surprises are about when it hides things or quietly shows the wrong state.
+
+### Most surprising behaviours
+
+- **(3)** Anyone with the link can open this list without experimental features, but every request link then sends them back to the work orders tab, which looks broken. (6.1)
+- **(3)** A request that failed before reaching the destination shows "—" for its path, the same placeholder used when a project keeps no data, even though the path was recorded. (6.1)
+- **(3)** A link to a channel that isn't in this project shows an empty list while the chip says "Channel is any", so it looks like nothing has ever come through. (6.1)
+- **(4)** The list doesn't update by itself. New requests and changes in status only appear when you reload, change the filter or page. (6.2)
 
 ## 3. Who can do what
 

@@ -108,22 +108,33 @@ failed to arrive, or ask someone with database access.
 
 ## 2. What it does
 
-- Anyone on the project sees a run's workflow, work order, who or what started it, when it started and finished, its duration and its status
-- Anyone sees whether the run used the workflow's latest version or an older snapshot
-- Anyone opens the run's final output when one was stored
-- Anyone goes from the run to its work order in History
-- Anyone selects a step to see its input and output
-- Anyone arriving from a step link lands with that step selected
-- Anyone reads the run's logs, with the selected step's lines highlighted
-- Anyone filters logs by level, and the choice is remembered for their next run
-- Anyone is told when a finished run has no logs, and what an unfinished run is waiting for
-- Anyone is told when a step's output is not there yet
+- **Run summary**
+  - Anyone on the project sees a run's workflow, work order, who or what started it, when it started and finished, its duration, its status, and whether it used the latest workflow version or an older snapshot
+  - Anyone opens the run's final output when one was stored, and goes from the run to its work order in History
+  - Anyone follows the workflow or a step's inspect link to the version that ran (shared-run-components, flow-open-run-in-editor)
+- **Steps and their data**
+  - Anyone selects a step to see its input and output, or lands with it selected when arriving from a step link
+  - Anyone is told when a step's output is not there yet
+  - Anyone opening a run on a zero-persistence project is told its data was not retained (flow-zero-persistence-runs)
+- **Logs**
+  - Anyone reads the run's logs, with the selected step's lines highlighted
+  - Anyone filters logs by level, and the choice is remembered for their next run
+  - Anyone is told when a finished run has no logs, and what an unfinished run is waiting for
+- **Follow and act on a run**
+  - Anyone watching an unfinished run sees it progress without reloading (flow-run-show-live-updates)
+  - Editors cancel a run no worker has claimed yet (shared-run-components)
+  - Failure alert recipients land here from the email (flow-failure-alert-email)
 - Nobody can open another project's run through this page
-- Editors cancel a run no worker has claimed yet (shared-run-components)
-- Anyone watching an unfinished run sees it progress without reloading (flow-run-show-live-updates)
-- Failure alert recipients land here from the email (flow-failure-alert-email)
-- Anyone opening a run on a zero-persistence project is told its data was not retained (flow-zero-persistence-runs)
-- Anyone follows the workflow or a step's inspect link to the version that ran (shared-run-components, flow-open-run-in-editor)
+
+**Straightforwardness: 3 of 5.** The page itself is easy to read, but the way steps, tabs and logs tie together has gaps where it can show the wrong lines or an out-of-date message.
+
+### Most surprising behaviours
+
+- **(2)** Selecting a step seems to highlight one line too early, and can also highlight other steps' lines logged in between, which points people at the wrong output when diagnosing a failure. (6.1)
+- **(3)** A run that gets picked up while you're watching may keep saying "Waiting for worker" until its first log line arrives, so it looks stuck when it isn't. (6.1)
+- **(3)** A step link that doesn't match this run, or a link straight to the input or output tab, may show "No input state could be saved for this run", which reads like lost data. (6.1)
+- **(3)** Very long logs have no limit and may stop loading part way with no message, so the end of the log, often where the error is, can be missing. (6.4)
+- **(4)** Lines logged as "success" or "always" show whatever level you filter to, so a filtered log is never fully quiet. (6.2)
 
 ## 3. Who can do what
 

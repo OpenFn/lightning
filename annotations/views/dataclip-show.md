@@ -81,14 +81,27 @@ asking someone with database access, while credentials inside that payload must 
 ## 2. What it does
 
 - Anyone on the project sees a dataclip's id, type, created and updated times
-- Anyone reads the dataclip's body, formatted, in a read-only viewer
-- Anyone copies the body to the clipboard
-- Anyone sees a webhook request's body and request metadata together, with webhook credentials hidden
-- Anyone sees a step's output with the step's credential values hidden
-- Anyone opening a wiped dataclip is told its data was erased under the project's retention policy, and when
-- Nobody can open another project's dataclip through this page
-- Non-members cannot open the page at all (shared-project-scope)
-- Anyone opening a zero-persistence run's final output lands on its wiped panel (flow-zero-persistence-runs)
+- **Read the body**
+  - Anyone reads the dataclip's body, formatted, in a read-only viewer
+  - Anyone copies the body to the clipboard
+- **Keep secrets hidden**
+  - Anyone sees a webhook request's body and request metadata together, with webhook credentials hidden
+  - Anyone sees a step's output with the step's credential values hidden
+- **Wiped data**
+  - Anyone opening a wiped dataclip is told its data was erased under the project's retention policy, and when
+  - Anyone opening a zero-persistence run's final output lands on its wiped panel (flow-zero-persistence-runs)
+- **Access**
+  - Nobody can open another project's dataclip through this page
+  - Non-members cannot open the page at all (shared-project-scope)
+
+**Straightforwardness: 4 of 5.** A read-only view of one piece of data; the surprises are in how faithfully that data is shown and which secrets get hidden.
+
+### Most surprising behaviours
+
+- **(2)** Very large numbers, such as long IDs, are rounded when shown and when copied, so the page can display and hand out a value the source system never sent. (6.1)
+- **(3)** Only webhook requests and step outputs have credentials hidden. Saved inputs, global and Kafka data are shown as stored, including any secrets in a Kafka message's request details. (6.2)
+- **(4)** The page doesn't show the dataclip's name and has no link back to the run or History, so you can't tell which saved input it is or get back to where you came from. (6.2)
+- **(4)** Fields in the body appear in a different order from the one the source system sent, which can confuse someone comparing payloads. (6.2)
 
 ## 3. Who can do what
 

@@ -76,18 +76,31 @@ credential or a client sending the wrong payload.
 
 ## 2. What it does
 
-- Anyone on the project sees a request's method, path, query, status code, state and channel
-- Anyone sees the request and response headers, with secrets redacted
-- Anyone sees the request and response bodies, or why a body isn't shown
-- Anyone sees why a request failed when the destination never answered or the request was never sent
-- Anyone sees how long the request took, broken into phases when the data exists
-- Anyone sees which client auth method and destination credential the request used, even after they are deleted
-- Anyone sees the channel config the request ran on and whether it has changed since
+- **What was sent and what came back**
+  - Anyone on the project sees a request's method, path, query, status code, state and channel
+  - Anyone sees the request and response headers, with secrets redacted, and the bodies, or why a body isn't shown
+  - Anyone sees why a request failed when the destination never answered or the request was never sent
+- **How it was handled**
+  - Anyone sees how long the request took, broken into phases when the data exists
+  - Anyone sees which client auth method and destination credential the request used, even after they are deleted
+  - Anyone sees the channel config the request ran on and whether it has changed since
 - Anyone sees that a request's data was not kept; admins get a link to the retention setting, others whom to ask
-- Anyone copies the request id, a body or a body hash
-- Anyone goes back to the channel logs, or on to the channel's settings
-- Nobody sees another project's channel requests
-- Users without experimental features are sent to History
+- **Copy and move on**
+  - Anyone copies the request id, a body or a body hash
+  - Anyone goes back to the channel logs, or on to the channel's settings
+- **Access**
+  - Nobody sees another project's channel requests
+  - Users without experimental features are sent to History
+
+**Straightforwardness: 3 of 5.** Lots of detail on one screen, and a few parts show today's settings or a different ID than you'd expect, which takes some explaining.
+
+### Most surprising behaviours
+
+- **(2)** The top of the page shows the channel's current name and destination URL, not the ones the request actually used. After a config change, the real destination is only in the collapsed Context section. (6.1)
+- **(2)** The ID on this page isn't the request ID the list shows or the one the destination sees in its own logs, so you can't match a request quoted by the destination. (6.1)
+- **(2)** A request sent with a credential that has since been deleted seems to show "None", exactly like a request sent with no auth at all. (6.1, S14)
+- **(3)** An error the page doesn't recognise shows a red "Error" pill and an empty response section, with no reason given. (6.1)
+- **(3)** Form posts and some other text formats are treated as binary, so a body that was captured is hidden and only its type, size and hash are shown. (6.1)
 
 ## 3. Who can do what
 
