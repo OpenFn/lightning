@@ -23,7 +23,7 @@ concurrency:
 jobs:
   deploy-to-lightning:
     runs-on: ubuntu-latest
-    name: A job to deploy to Lightning
+    name: Deploy project to OpenFn
     permissions:
       contents: write
     steps:

@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    name: A job to pull changes from Lightning
+    name: Pull project from OpenFn
     steps:
       - name: openfn pull and commit
         uses: midigofrank/cli-pull-action@v2
