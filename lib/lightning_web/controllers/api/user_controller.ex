@@ -111,11 +111,12 @@ defmodule LightningWeb.API.UserController do
     do: Permissions.permit(:users, action, conn.assigns.scope, nil)
 
   defp fetch_user(id) do
-    with {:ok, id} <- Ecto.UUID.cast(id),
+    with {:ok, id} <- PutBody.path_id(id),
          %User{} = user <- Accounts.get_user(id) do
       {:ok, user}
     else
-      _ -> {:error, :not_found}
+      nil -> {:error, :not_found}
+      error -> error
     end
   end
 end
