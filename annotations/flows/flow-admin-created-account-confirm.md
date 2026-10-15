@@ -76,7 +76,21 @@ require verified emails they are locked out 48 hours after the superuser pressed
 
 ## 2. What it does
 
-A superuser saves a new user on /settings/users/new; the new user gets "Confirm your OpenFn account" naming the creator, opens the link, logs in with the password the superuser gave them, presses "Confirm my account" and lands on projects; if they never confirm and verification is required, they are held on /users/confirm-required from 48 hours after creation.
+1. A superuser creates the account on the new-user form, typing the person's password, and the person is emailed "Confirm your OpenFn account" naming who created it. If the email fails to send, the superuser is told.
+2. The new user opens the link and, having no session yet, is asked to log in first with the password the superuser gave them (plus the second step if the account uses two-factor), then is brought back to the confirm page.
+3. They press "Confirm my account" and land on the projects list, which is empty until someone adds them to a project.
+   - The link lasts 7 days and only works when signed in as that account; the superuser opening it in their own browser is refused
+4. On instances that require verified emails, an unconfirmed user sees a banner with a deadline 48 hours after the account was created and can ask for a new link; after that deadline they are held on a blocked page until they confirm.
+
+**Straightforwardness: 2 of 5.** The happy path is short, but it relies on the superuser passing on a password out of band, and several ordinary fixes quietly break the link.
+
+### Most surprising behaviours
+
+- **(2)** The email says to "complete your registration", but there is no registration step and no password in it. The person lands on a login form asking for a password they were never told, unless the superuser told them separately. (6.1)
+- **(2)** A new user who uses "Forgot your password?" to set their own password loses their confirmation link. Afterwards it says it's invalid or expired, and on default instances the only way to get another is a signed-out form you have to know the address of, which sends the generic welcome email instead. (6.1)
+- **(2)** If the superuser corrects a mistyped address, nothing is sent to the new address and the original link stops working. The real person never hears about the account and, where verification is required, is later locked out. (6.1)
+- **(3)** The 48-hour clock starts when the superuser presses Save, not when the person first logs in, so an account made on a Friday can already be locked on Monday. The email mentions neither the 48 hours nor the 7-day link expiry. (S03, 6.2)
+- **(3)** Superusers can't see whether someone has confirmed and have no way to resend the email, and confirming leaves no audit record. (6.2)
 
 ## 3. Who can do what
 

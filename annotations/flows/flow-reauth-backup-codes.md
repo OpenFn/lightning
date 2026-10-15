@@ -75,7 +75,20 @@ unattended signed-in browser could copy or print the codes and keep a way into t
 
 ## 2. What it does
 
-MFA user clicks "View" under "Recovery codes" on `/profile`; with no recent re-authentication they are sent to "Confirm access", enter their password or an authenticator code, and land on their backup codes (or the print page they asked for); within five minutes they go straight through.
+1. A user with two-factor turned on clicks "View" under "Recovery codes" on their profile, or opens the printable codes page directly.
+2. If they haven't confirmed who they are in the last five minutes, they're sent to "Confirm access" and enter their password, or a code from their authenticator app. A wrong password or code keeps them there.
+3. They land on their recovery codes, or on the print page if that's what they asked for; "Print Codes" opens a printable copy in a new tab.
+4. For five minutes from confirming they go straight through without being asked again; after that, or for anyone else signed in with the same link, they're asked again. A password change ends the window early.
+
+**Straightforwardness: 3 of 5.** "Confirm it's you before seeing secrets" is a familiar pattern, but the five-minute window is enforced loosely and the page can break or mislead in a few ordinary situations.
+
+### Most surprising behaviours
+
+- **(2)** The printed sheet shows codes that have already been used exactly like unused ones, so someone relying on paper may try a code that no longer works. (6.1)
+- **(3)** The five minutes only applies when a page loads. A codes page left open keeps working afterwards, including generating new codes, for whoever sits down at it. (6.2)
+- **(3)** After confirming, the codes page is remembered as a destination, so the next sign-in on that browser, possibly by someone else, lands on "Confirm access" instead of the projects list. (6.1)
+- **(3)** Opening "Confirm access" directly, or having the codes page reconnect after the window expired, can show an error page instead. Even when it works, the page doesn't say why you were sent there. (6.1)
+- **(3)** The approval travels in the page address, so the same user can reuse it from another browser for five minutes. Failed attempts aren't limited or recorded, and recovery codes themselves aren't accepted as proof. (6.2)
 
 ## 3. Who can do what
 

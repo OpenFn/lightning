@@ -88,7 +88,28 @@ calling the API, until they happened to reload.
 
 ## 2. What it does
 
-A user changes their password, a superuser disables, demotes or deletes them, or the user deletes their own account; their session tokens (and, for a password change or deletion, API tokens) are deleted and both transports are told to disconnect; every open page, editor, run viewer and AI chat on every device drops and lands on the login page, while the tab that changed its own password signs back in through `/users/token_exchange/:token` and lands on `/projects`.
+1. Something starts the cut-off.
+   - A user changes their own password on their profile, or deletes their own account after typing their email back
+   - A superuser disables someone, or changes their password, email, role or support access
+   - A superuser schedules someone's account for deletion; routine edits like a name change sign nobody out
+2. The account's ways in are closed at once.
+   - Every browser session for the account ends
+   - A password change or a deletion also deletes the account's API tokens; the other admin changes keep them, but they're refused while the account is disabled
+   - A deletion emails the owner that their account is scheduled for deletion, and the account is purged later by a nightly job
+3. Every page, editor, run viewer and AI chat the account has open, on every device, drops and lands on the login page, and signing in again is refused while the account is disabled or scheduled for deletion.
+4. The tab that started it ends up somewhere sensible.
+   - The tab that changed its own password signs straight back in through a one-time link that lasts 30 seconds, and lands on the projects list
+   - The tab that deleted its own account is logged out and sent to the login page
+
+**Straightforwardness: 3 of 5.** The idea is simple, but which tokens go depends on who made the change and how, and the tab that started it doesn't always end where you'd expect.
+
+### Most surprising behaviours
+
+- **(2)** The tab that changed its own password may end up on the login page with no message, instead of signed back in with "Password changed successfully", because it disconnects itself before it can follow the sign-back-in link. A superuser editing their own account in the admin form may hit the same thing. Not checked in a real browser. (S02, 6.1)
+- **(2)** API tokens are deleted when you change your own password but kept when a superuser sets a new password or disables you; re-enabling the account brings those tokens back to life. Nothing on the profile warns that a password change will break your scripts. (S05, S06, 6.2)
+- **(3)** Everyone else is dropped on the login page with no explanation of why they were signed out. (6.2)
+- **(3)** Cancelling a deletion re-enables the account, but its API tokens are already gone for good, so integrations need new tokens. Setting the deletion date directly in the admin form cuts access the same way but sends no email. (6.2)
+- **(3)** Changing your email through the confirmation link signs out nobody, while a superuser changing your email signs you out everywhere. (6.2)
 
 ## 3. Who can do what
 

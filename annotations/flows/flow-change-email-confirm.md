@@ -84,7 +84,24 @@ point the account at an inbox they control.
 
 ## 2. What it does
 
-User asks for a new address on the profile (or the locked-out page) with their password; the old address is warned and the new one gets a link; opening the link while signed in as that user changes the email, confirms the account and lands on projects with "Email changed successfully."
+1. A signed-in user asks for a new address on their profile, entering their current password.
+   - A user locked out for not confirming their account can do the same from the blocked page to fix a mistyped address, at most 3 times in 15 minutes
+   - The new address must be valid, different from the current one and not used by another account
+2. Two emails go out: a warning to the current address, and a confirmation link to the new one. Nothing changes yet.
+3. The user opens the link while signed in as that account, within 7 days.
+   - If they're signed out they're asked to log in first, then sent on to the link
+   - A link opened in someone else's session, expired, or already used is refused
+4. The email changes, the account counts as confirmed, any other pending change links stop working, and the user lands on the projects list with "Email changed successfully."
+
+**Straightforwardness: 3 of 5.** The two-email shape is familiar, but the warning email jumps the gun, failures all look like an expired link, and a self-service change is treated much more lightly than an admin one.
+
+### Most surprising behaviours
+
+- **(2)** The old inbox is told "Your OpenFn email was changed" the moment the change is requested, even though nothing has changed and may never, and it hears nothing when the change actually goes through. (S10, 6.1, 6.2)
+- **(3)** If someone else takes the new address before the link is opened, the user just sees "Email change link is invalid or it has expired", with no hint that the address is the problem. (S07, 6.1)
+- **(3)** A completed change keeps every session and API token and leaves no audit record, while a superuser changing the same email signs the user out everywhere and is audited. (6.2)
+- **(3)** Tabs already open keep showing the old address, and other tabs of a recently registered user keep the "please confirm" banner, until they're reloaded. (6.1)
+- **(3)** In a rare case a leftover change link opened in a different account's session may change that other account's email; nothing checks which account the link was made for. (6.1)
 
 ## 3. Who can do what
 

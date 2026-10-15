@@ -72,7 +72,21 @@ reaching the instance could keep being sent to a page that hands out superuser a
 
 ## 2. What it does
 
-The operator, forced to /first_setup on a fresh instance, saves the form; the superuser is created, a 30-second sign-in token is handed to `/users/token_exchange/:token`, which starts a fresh session and lands them on /projects as that superuser, after which no page is forced to first setup any more.
+1. On a fresh instance with no superuser (and first setup allowed), whoever visits any page is sent to the first-setup form.
+2. They fill in their name, email and password and save; the superuser account is created. No email is sent.
+3. The page hands them straight on through a one-time sign-in link that lasts 30 seconds, which starts a fresh session.
+   - If the link arrives late, they land on the login page with "Invalid token", but the account exists and they can sign in with the password they chose
+4. They land on the projects list as the new superuser, with "Superuser account created." and the admin menu showing; from then on nobody is sent to first setup.
+
+**Straightforwardness: 3 of 5.** The happy path is a one-step setup, but the edges around stale tabs and browsers that are already signed in are easy to miss and matter because they hand out administrator access.
+
+### Most surprising behaviours
+
+- **(2)** A first-setup tab left open from before the first superuser was created can still be saved, and it creates and signs in a second superuser. (6.1)
+- **(3)** In a browser already signed in as someone else, the handoff is skipped: the projects list says "Superuser account created." but the browser is still signed in as the old account. (6.1)
+- **(3)** If the sign-in link is opened twice within the 30 seconds, both browsers may get a superuser session. Not confirmed to be reachable in practice. (6.1)
+- **(3)** Demoting the only superuser may send the instance back into first setup, and disabling them may leave it with no usable administrator. This path wasn't followed. (6.5)
+- **(4)** The page the operator first tried to open isn't remembered; they always end on the projects list. (6.2)
 
 ## 3. Who can do what
 

@@ -84,7 +84,20 @@ device would end on the projects list, and the person would have to find the run
 
 ## 2. What it does
 
-Signed-out visitor opens a deep link; the gate remembers the path and query and sends them to log in; they enter their password (or use the external provider) and, if enrolled, a code or backup code; they land on the page they asked for, or on the projects list if nothing was remembered.
+1. A signed-out visitor opens a link to a page inside Lightning, such as a run from a failure alert, a workflow's health page from a digest, or a URL a colleague pasted.
+2. Lightning remembers the page they asked for, including any filters or selected step in the address, and sends them to the login page.
+3. They sign in with their password, or through the external sign-in provider where one is set up, and then with an authenticator code or backup code if their account uses two-factor. Typos along the way don't lose the remembered page; disabled accounts are refused.
+4. They land on the page they asked for, which still checks they're allowed to see it; with nothing remembered they land on the projects list. A remembered page is used once.
+
+**Straightforwardness: 3 of 5.** The idea is obvious, but there's only one remembered page per browser, so which page you end up on depends on what happened in that browser before you logged in.
+
+### Most surprising behaviours
+
+- **(3)** A remembered page survives logout, so the next person to sign in on that browser lands on a page the previous user asked for, though that page still checks access. (6.1)
+- **(3)** If you're waiting on the two-factor step and open a different link, you still end up on the first link you opened. Likewise, opening two links in two tabs before logging in returns you to whichever you opened last. (6.1, 6.2)
+- **(3)** A link to a particular tab of a run, such as its output, comes back on the default log tab, because the tab part of the address is never seen by the server. (6.2)
+- **(3)** Signing up instead of logging in, or being held for an unconfirmed email, loses the remembered page: the person ends up somewhere else and isn't sent back afterwards. (6.2)
+- **(4)** The login page doesn't say why you're there or that you'll be taken back to your page. (6.2)
 
 ## 3. Who can do what
 

@@ -93,7 +93,22 @@ a new user can confirm before the banner ever matters.
 
 ## 2. What it does
 
-A new user registers and is sent a welcome email with a confirmation link, or an unconfirmed user clicks "Resend confirmation email" in the header or editor banner and is sent a reminder with a new link and returned to the same page with a flash; either way the user opens the link, presses "Confirm my account", and lands on projects without the banner.
+1. A new user signs up and is sent a welcome email, "Confirm your OpenFn account", with a link. This happens even on instances that don't require verified emails.
+2. On instances that do require them, an unconfirmed user sees a banner on project pages and in the workflow editor with "Resend confirmation email".
+   - Clicking it sends a reminder with a fresh link and brings them back to the page they were on with a message
+   - At most 3 resends in 15 minutes; a failed send says to try again
+3. The user opens any link they were sent within 7 days, logging in first if needed, and presses "Confirm my account". A link for a different account is refused.
+4. They land on the projects list without the banner; every other link they were sent stops working. A user already held on the blocked page after the 48-hour deadline gets straight back in the same way.
+
+**Straightforwardness: 3 of 5.** The journey is a standard confirm-your-email loop; the surprises are about counting failed sends, stale banners and losing your place.
+
+### Most surprising behaviours
+
+- **(3)** A failed send still uses up one of the 3 allowed requests, so after a few mail outages the user is told they've asked too often even though no email ever arrived. (6.1)
+- **(3)** After confirming, the tab or editor they came from keeps saying "Please confirm your account before ..." until it's reloaded. (6.1)
+- **(3)** Resending from the editor reloads the page and drops the selected job or run; whether unsaved edits survive wasn't checked. (6.2, 6.5)
+- **(3)** Opening the link doesn't confirm anything on its own: the user has to press a button on a page that also offers "Log in" and "Register" links, even though they're already signed in. (6.1, 6.2)
+- **(4)** The welcome and reminder emails have the same subject, so an inbox fills with identical messages; any of them works until one is used. (S07, 6.2)
 
 ## 3. Who can do what
 

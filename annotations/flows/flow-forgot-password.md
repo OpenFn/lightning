@@ -81,7 +81,23 @@ take over an account or learn who has one.
 
 ## 2. What it does
 
-A signed-out user clicks "Forgot your password?" on log in, requests instructions on /users/reset_password, opens the link in "Finish resetting your password", sets a new password (ending every other session and token), logs in with it, passes two-factor if enrolled, and lands on /projects.
+1. A signed-out user clicks "Forgot your password?" on the login page and enters an email; they're told instructions are on the way whether or not the address has an account, and are sent back to the login page.
+2. A registered address gets "Finish resetting your password" with a link that lasts one day; it only reaches anyone when the instance has a mail provider set up.
+3. The user opens the link and sets a new password.
+   - Every other session and token for the account ends, signing out all other browsers and devices
+   - Every other reset link already sent stops working, and the old password no longer works
+   - The user is sent to the login page, not signed in
+4. They log in with the new password, pass two-factor if the account uses it, and land on the projects list. A disabled or scheduled-for-deletion account can complete the reset but is still refused at this step.
+
+**Straightforwardness: 3 of 5.** The journey is the familiar one, but the rough edges are about what an outsider can do with it and about emails that silently don't arrive.
+
+### Most surprising behaviours
+
+- **(3)** If the email fails to send, the user is still told instructions are coming and waits for an email that never arrives. With some mail setups a real account gets a server error instead, while an unknown address doesn't. (6.1)
+- **(3)** On instances that use single sign-on, a user seems to be able to set a local password here and then log in without going through the sign-on provider. (6.5)
+- **(3)** There's no limit on requests, so anyone can flood a registered address with reset emails. Real addresses also seem to get a slower response than unknown ones, which may let a script work out who has an account. (6.1, 6.5)
+- **(3)** Using "Forgot your password?" throws away the page the user was originally trying to reach, so after the reset they land on the projects list instead. (6.2)
+- **(4)** No record is kept of a reset being requested or completed, even though completing one signs the account out everywhere and deletes its API tokens. (6.5)
 
 ## 3. Who can do what
 

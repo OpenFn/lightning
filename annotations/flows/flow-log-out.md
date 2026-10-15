@@ -65,7 +65,19 @@ account.
 
 ## 2. What it does
 
-A signed-in user clicks "Log out" in the account menu (or on the confirm-your-email page); `GET /users/log_out` deletes this browser's session token, hangs up that account's LiveView pages, renews the session, clears the remember-me cookie and lands on `/users/log_in` with "Logged out successfully.", while the account's other browsers stay signed in.
+1. A signed-in user clicks "Log out" in the account menu, or a user locked out for not confirming their email clicks "Log out" on the blocked page.
+2. This browser's session ends and "Keep me logged in" is forgotten, so reopening the browser doesn't sign anyone back in.
+3. Other tabs in the same browser drop to the login page; the account's other browsers and devices stay signed in.
+4. The user lands on the login page with "Logged out successfully."
+
+**Straightforwardness: 4 of 5.** It does what you'd expect; the surprises are small security gaps that only matter on shared computers or with a malicious link.
+
+### Most surprising behaviours
+
+- **(3)** A page the previous user was being sent to can carry over, so the next person to sign in on that browser may land on the previous user's page, usually as an access error. (6.1)
+- **(3)** Logging out is a plain link with no check, so following a link on another website can sign you out and lose unsaved work on the page. (6.1)
+- **(3)** The short-lived "confirm it's you" approval isn't cleared on logout and stays valid for up to 5 minutes, though it still needs a signed-in session for that account to be used. (6.1)
+- **(4)** Logging out briefly disconnects and reloads the account's pages on every other browser, even though they stay signed in. There's no "log out everywhere" option; only a password change does that. (S05, 6.2, 8)
 
 ## 3. Who can do what
 
