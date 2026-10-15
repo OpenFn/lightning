@@ -147,6 +147,13 @@ defmodule LightningWeb.API.Errors do
   end
 
   @doc """
+  The error for a reference in the body that matches nothing the caller can
+  see. Something missing and something hidden get the same error (spec §4).
+  """
+  @spec not_visible() :: {String.t(), keyword()}
+  def not_visible, do: {"names nothing you can see", code: :not_found}
+
+  @doc """
   An RFC 6901 JSON Pointer in URI-fragment form: each key has `~` written
   `~0` and `/` written `~1`, then the whole is percent-encoded wherever a
   character isn't allowed in a fragment (spec §3).

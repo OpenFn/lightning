@@ -288,7 +288,7 @@ defmodule LightningWeb.API.ProjectController do
 
     case Map.fetch(user_ids, String.downcase(get_field(changeset, :email))) do
       :error ->
-        refuse_email.({"names nothing you can see", code: :not_found})
+        refuse_email.(Errors.not_visible())
 
       {:ok, user_id} when is_map_key(firsts, user_id) ->
         refuse_email.(

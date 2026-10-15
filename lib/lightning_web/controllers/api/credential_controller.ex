@@ -60,8 +60,6 @@ defmodule LightningWeb.API.CredentialController do
     :project_credentials
   ]
 
-  @nothing_visible {"names nothing you can see", code: :not_found}
-
   @doc """
   Lists credentials, without their bodies.
 
@@ -311,7 +309,7 @@ defmodule LightningWeb.API.CredentialController do
         {:ok, owner}
 
       _none ->
-        {:error, [Errors.entry([:owner], @nothing_visible)]}
+        {:error, [Errors.entry([:owner], Errors.not_visible())]}
     end
   end
 
@@ -394,7 +392,7 @@ defmodule LightningWeb.API.CredentialController do
   defp link_project_id(%{"project_id" => id}, index) when is_binary(id) do
     case PutBody.path_id(id) do
       {:ok, id} -> {:ok, id}
-      {:error, :not_found} -> {:error, link_entry(index, @nothing_visible)}
+      {:error, :not_found} -> {:error, link_entry(index, Errors.not_visible())}
     end
   end
 
@@ -412,12 +410,12 @@ defmodule LightningWeb.API.CredentialController do
   defp link_entry(index, error),
     do: Errors.entry([:project_credentials, index, :project_id], error)
 
-  defp link_refusal(nil, _owner_unreachable?), do: @nothing_visible
+  defp link_refusal(nil, _owner_unreachable?), do: Errors.not_visible()
 
   defp link_refusal(project_scope, owner_unreachable?) do
     cond do
       not Scope.has_standing?(project_scope) ->
-        @nothing_visible
+        Errors.not_visible()
 
       not ProjectUsers.permitted?(:create_project_credential, project_scope) ->
         {"you may not link a credential to this project", code: :no_access}
