@@ -89,10 +89,55 @@ A taut list of capabilities: who can do what. One line each, no justification. T
 lives in section 1 and on each scenario, not here. This is the index into section 5. If a line
 has no scenario, it is either folded into another or it isn't verified.
 
+**At most 5 top-level bullets.** If the page does more than five things, group them into at most
+five headings that don't overlap and together cover everything (MECE), and put at most three
+sub-bullets under each. If a group needs a fourth sub-bullet, the grouping is wrong: regroup.
+
 - Admins add collaborators by email
 - Admins change a collaborator's role
 - Admins remove a collaborator
 - Anyone on the project sees who else is on it
+
+A grouped example, for a page that does more:
+
+- **Find work orders**
+  - Members filter by workflow, status and dates, and search by logs, inputs and IDs
+  - Members sort by created or last activity
+  - Members arriving from another page see that page's filters already applied
+- **Inspect a work order**
+  - Members expand it to see its runs and steps, and open any of them
+- **Act on work orders** (editors)
+  - Retry from the start, or rerun from a chosen step, singly or in bulk
+  - Cancel work orders or runs that haven't started yet
+  - Export the matching history, which arrives by email
+
+**Straightforwardness: 4 of 5.** One sentence saying why, in plain words.
+
+How a product manager would rate the page after reading the list above and then the rest of the
+file. The question is whether the details below are surprising, or just the acceptance criteria
+you'd have guessed from this list.
+
+| Rating | Meaning |
+|--------|---------|
+| 5 | Does what it says on the tin. The list above tells you everything that matters. |
+| 4 | Has some complexity, but you get it at a glance. |
+| 3 | Has complexity you can understand once someone explains it simply. |
+| 2 | Has complexity you really have to sit down and think about to get. |
+| 1 | Full of complex, surprising edge cases. Hard to hold in your head at all. |
+
+### Most surprising behaviours
+
+The few things on this page that a reasonable person would **not** have guessed from the list
+above, worst first, each rated on the same scale. This is where attention should go when the
+page is rebuilt or tested. Write each one in plain words a non-engineer could follow: what
+happens, and why it matters to someone. Leave out anything that is just an acceptance criterion
+the list already implies, and anything a user would never notice. Three to five items is usual;
+a 5-rated page may have none. Each item points at the section it came from.
+
+- **(3)** Changing your password deletes every API token you have, so scripts that were working
+  stop with no warning on this page. (S11)
+- **(3)** Opening the delete dialog clears a token you just generated but haven't copied yet,
+  and it can never be shown again. (6.2)
 
 ## 3. Who can do what
 
@@ -291,24 +336,28 @@ surfaces:
 Read the view's code, the policies and contexts it calls, and its tests. Then:
 
 1. **Write sections 1 and 2 first.** Section 1 says who this is for and why it matters. Section 2 is
-   the bare list of what they can do. Everything else is checked against those.
-2. **For each behaviour you find**, cite file and line and place it in one of:
+   the bare list of what they can do, at most five top-level bullets. Everything else is checked
+   against those.
+2. **Come back to section 2 last** and fill in the straightforwardness rating and the most
+   surprising behaviours. Re-read the list on its own, picture how the page would work, then
+   ask of everything you found: would I have guessed this? Only what you wouldn't have goes in.
+3. **For each behaviour you find**, cite file and line and place it in one of:
    section 3 (authorization), section 4 (what it touches), section 5 (a scenario with a Value
    line), or section 6 (unclear value, with a disposition). If you can write the Value line, it
    goes in 5. If you can't, it goes in 6. Don't force it.
-3. **Edge cases are scenarios when they protect something.** "The last owner can't be removed" protects
+4. **Edge cases are scenarios when they protect something.** "The last owner can't be removed" protects
    against orphaned projects: scenario. "Nulls sort first in last-activity desc" protects nothing you
    can name: section 6.2.
-4. **A crash, a stale assign, copy that doesn't match the button, or a count that doesn't match the
+5. **A crash, a stale assign, copy that doesn't match the button, or a count that doesn't match the
    action is a possible bug.** Put it in 6.1. Never write it as a `@passing-old` scenario.
-5. **If a behaviour spans another route, a controller, an email or a second browser tab**, don't write
+6. **If a behaviour spans another route, a controller, an email or a second browser tab**, don't write
    the scenario here. Create or reference a flow annotation and assert only the handoff in this file.
-6. **If a behaviour depends on config or build**, name the variant in `config_variants` and tag the
+7. **If a behaviour depends on config or build**, name the variant in `config_variants` and tag the
    scenario. Say which variant you verified against.
-7. **If a shared component or hook is involved**, reference the shared annotation in `inherits` and
+8. **If a shared component or hook is involved**, reference the shared annotation in `inherits` and
    list what this view can't reach in `inventory.not_reachable_here`.
-8. **Don't infer behaviour from test names.** Read the assertion.
-9. **Don't invent value.** A thin "so that the user is happy" is worse than putting the item in 6.5.
+9. **Don't infer behaviour from test names.** Read the assertion.
+10. **Don't invent value.** A thin "so that the user is happy" is worse than putting the item in 6.5.
 
 ---
 

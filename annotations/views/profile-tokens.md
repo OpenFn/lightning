@@ -77,13 +77,19 @@ the user's full project access until someone noticed.
 
 ## 2. What it does
 
-- Any signed-in user generates a new personal access token
-- Any signed-in user sees a new token in full once, with a copy button, and never again
-- Any signed-in user sees their own tokens, masked, with when each was created and last used
-- Any signed-in user deletes one of their own tokens after confirming
-- Any signed-in user backs out of a deletion without losing the token
+- Any signed-in user generates a new personal access token, sees it in full once with a copy button, and never again
+- Any signed-in user sees their own tokens, masked, with when each was created and last used, or an empty state pointing them to generate one
+- Any signed-in user deletes one of their own tokens after confirming, or backs out without losing it
 - No user can open the deletion of, or delete, another user's token
-- Users with no tokens see an empty state that points them to generate one
+
+**Straightforwardness: 4 of 5.** A small page that mostly does what it says; the surprises are about what a token is allowed to do once it leaves the page, not about the page itself.
+
+### Most surprising behaviours
+
+- **(3)** "Last used" only counts calls to the main API. A token used only to read and write collections shows "Never used", which invites the user to delete a token that is keeping an integration alive. (6.1)
+- **(3)** Changing your password deletes every token you have. It's the right security call, but nothing here says so, and the scripts using them just start failing. (S11)
+- **(3)** Clicking a trash icon before you've copied a token you just made wipes it from the screen for good, so you have to generate another. (6.2)
+- **(4)** Tokens have no name, no expiry and no scope. Each one is your full access to every project you're on until you delete it, and generating or deleting one leaves no audit trail. (6.2)
 
 ## 3. Who can do what
 
