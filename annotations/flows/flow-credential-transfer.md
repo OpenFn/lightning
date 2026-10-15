@@ -82,7 +82,23 @@ has left, or hands a live secret to a person the owner never meant to give it to
 
 ## 2. What it does
 
-Owner submits a recipient from the credential list; owner is emailed "Transfer <credential> to <first name>" with a /credentials/transfer/:token link; opening it signed in as the owner moves ownership, records an audit event and lands on /projects; the recipient is emailed "A credential has been transferred to you." with a link to their /credentials list.
+1. The owner picks "Transfer" on a credential in their list and names the new owner by email; the credential shows as pending, and the owner can revoke it while it is.
+2. The owner gets a confirmation email naming the recipient, with a link that works for 2 days.
+3. The owner opens the link while signed in (or logs in first) and the transfer happens straight away.
+   - Ownership moves, an audit entry is recorded, and the credential stays shared with the same projects and jobs
+   - The owner lands on the projects list with a success message
+   - Anyone else opening the link gets "No Access"; an expired, revoked or edited link gets "couldn't be confirmed"
+4. The recipient gets an email saying a credential was transferred to them, linking to their credentials list, where it now appears.
+
+**Straightforwardness: 3 of 5.** The steps are what you'd expect, but the checks made when the transfer starts aren't repeated when it's confirmed, so a lot can change in the two days between.
+
+### Most surprising behaviours
+
+- **(2)** Revoking a transfer doesn't kill its link. If the owner revokes a transfer to one person and then starts one to someone else, the first person's old link becomes valid again and hands them the credential. (6.1)
+- **(3)** The check that the recipient is on the credential's projects only happens at the start, so if they're removed from a project in the meantime the transfer still completes and they own a secret for projects they can't open. (6.1)
+- **(3)** If the recipient already has a credential with the same name, confirming fails with a generic "couldn't be confirmed" and the transfer just sits pending, with no hint why. (6.1)
+- **(3)** If the confirmation email fails to send, the owner is still told it was sent, and the credential is stuck showing "Revoke transfer". (6.1)
+- **(4)** Clicking a link you've already used, as the owner, shows "No Access" rather than saying the transfer is done. (S08, 6.1)
 
 ## 3. Who can do what
 

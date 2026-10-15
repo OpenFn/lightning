@@ -105,7 +105,26 @@ being shut down, or reaches a project it was never connected to.
 
 ## 2. What it does
 
-An editor clicks "Initiate Sync to Branch" (or "Save & Sync" in the editor) → Lightning dispatches `openfn-pull.yml` → the Action reads the project from `/api/provision` with the repo secret and commits it to the branch → any commit to the branch runs the deploy workflow → `POST /api/provision` rewrites the project's workflows.
+1. An editor (or above) on a connected project starts a sync, either with "Initiate Sync to Branch" on the Sync to GitHub settings tab, or with "Save & Sync" in the workflow editor.
+   - In the editor they first see the repository and branch, write a commit message (never blank), and the workflow is saved
+   - Viewers, projects with no connection, projects over their plan's sync limit, and projects with clashing workflow names are stopped with a message
+2. OpenFn asks GitHub to run a pull Action, and tells the editor it's done.
+3. The pull Action fetches the project's saved, current workflows from OpenFn using a secret stored in the repository, and commits them to the branch.
+4. Any commit to the branch runs a deploy Action, which writes the branch's contents back into the project.
+   - Changes show in the audit trail as made by "GitHub", and a deleted workflow closes for anyone who has it open
+   - A deploy is refused for another project, a project scheduled for deletion, or a project over its sync limit
+   - On connect, export mode marks the first commits to skip the deploy; import mode deploys the branch over the project straight away
+5. Removing the connection in OpenFn cuts the repository's access, even if the secret is still in GitHub.
+
+**Straightforwardness: 2 of 5.** Most of the journey happens in GitHub, out of OpenFn's sight, so what the editor is told and what actually happened can differ, and changes arriving from GitHub don't play well with people editing at the same time.
+
+### Most surprising behaviours
+
+- **(2)** "Save & Sync" saves first and syncs second. If the sync part fails, the editor seems to get a failure message with Retry even though the workflow was saved, and colleagues' screens don't learn it was saved. (6.1)
+- **(2)** "Workflow saved and synced to GitHub" appears as soon as GitHub accepts the request. The Action can still fail afterwards and OpenFn never finds out. (6.1)
+- **(2)** A deploy from GitHub doesn't update anyone who has that workflow open in the editor; they keep editing the old version, and what their next save does to the deployed change hasn't been traced. (6.2, 6.5)
+- **(3)** It's unclear whether the pull Action's own commit triggers the deploy Action; if it does, every sync deploys straight back into the project. (6.5)
+- **(3)** In the editor, GitHub's errors show as "An internal error occurred", while the settings tab shows GitHub's real message for the same problem. (6.1)
 
 ## 3. Who can do what
 

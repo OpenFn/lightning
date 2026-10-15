@@ -68,8 +68,20 @@ or handed the definition to someone outside the project, the copy would either b
 
 ## 2. What it does
 
-"Export project" on the setup tab opens a new tab that downloads `project-<id>.yaml`, or, when two
-names would collide in the file, lands that tab back on project settings with the reason.
+1. Any member of the project, viewers included, clicks "Export project" on the project settings setup tab.
+2. A new tab opens and downloads the project as a YAML file: workflows, steps, triggers and links, plus the names of its credentials (with owners, never secrets), collections and channels.
+3. If two workflows, or two steps in one workflow, have names that would clash in the file, nothing downloads; the new tab lands on project settings with an error naming them.
+4. People outside the project, members who haven't set up a required MFA, signed-out visitors and locked-out accounts are refused or sent to log in or confirm their email first.
+
+**Straightforwardness: 4 of 5.** It mostly does what it says; the surprises are about what ends up in the file and the odd way failures are shown.
+
+### Most surprising behaviours
+
+- **(3)** A single name clash, like "My Flow" and "My-Flow", blocks the whole export, and the error opens in the new tab, leaving the user with two settings tabs. (S02, 6.2)
+- **(3)** The file lists each credential's owner email, and any member, including a viewer or a support user, can download it. (S06, 8)
+- **(3)** Credentials whose owner has no email are left out of the file without any notice. (6.2)
+- **(4)** Any failure other than a name clash shows a generic error page in the new tab with no reason. (6.1)
+- **(4)** Someone outside the project gets "Authorization Error" rather than "Not Found", which tells them the project exists. (6.2)
 
 ## 3. Who can do what
 

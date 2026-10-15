@@ -89,10 +89,24 @@ later at run time with nobody watching.
 
 ## 2. What it does
 
-"Sign in with <client>" in the credential form opens the provider in a second window; the provider
-redirects to `/authenticate/callback`, which broadcasts the code or error to the originating page and
-closes the window; the page exchanges the code, checks the token and granted scopes, fetches the
-account's profile, and shows the result in the form, ready to save.
+1. In the credential form (on the credentials list, a project's credential settings, or the workflow editor), the user picks an OAuth client and ticks any optional permissions on top of the required ones.
+2. They click "Sign in with <client>" and the provider opens in a second window, where they consent or refuse.
+3. The provider sends the second window back to OpenFn, which passes the result to the original page and closes the window.
+4. The original page swaps the result for a token, checks it can renew itself and has every permission asked for, and fetches the account's profile.
+   - Success shows the connected account and enables Save; nothing is stored until the user saves
+   - A refusal, a failed exchange, missing permissions or a missing renewal token each show their own message with a button to try again
+   - If only the profile lookup fails, the token is still accepted with a note to reauthenticate
+5. The user saves the form as usual to keep the credential.
+
+**Straightforwardness: 2 of 5.** The happy path is familiar, but it depends on the original page staying exactly as it was while the second window is open, and several failure paths leave the user stuck or with a Save button that shouldn't be there.
+
+### Most surprising behaviours
+
+- **(2)** If the user closes the provider window, switches environment tab, or reloads the original page while signing in, the result seems to go nowhere: the page sits on "Authenticating..." forever with no cancel, or quietly shows "Sign in" again. (6.1, 6.2)
+- **(2)** A token that failed the checks (missing permissions, no renewal token, no expiry) still leaves Save enabled, and saving appears to crash the form. The no-expiry case even tells the user their credential "should still work". (6.1)
+- **(2)** Ticking an extra permission after signing in doesn't disable Save, so the user can save a token that lacks the permission they just asked for. (6.1)
+- **(3)** The buttons on error messages all just start sign-in again, whatever they say: "Revoke and Reauthorize" revokes nothing and "Contact Support" contacts no one. (6.1)
+- **(3)** The provider grants access as soon as the user consents, even if they never save, and in the workflow editor a viewer may be able to get that far, since only the save is refused. (4, 6.2)
 
 ## 3. Who can do what
 

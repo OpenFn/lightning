@@ -67,7 +67,24 @@ deletion would have no window in which to recover it.
 
 ## 2. What it does
 
-Owner confirms "Delete credential" on credentials-index → credential unshared from all projects, jobs lose it, OAuth tokens revoked, owner emailed → owner may "Cancel deletion" from the list during the grace period → after `purge_deleted_after_days` the 02:30 purge scrubs every scheduled credential's secrets and deletes those never used in a run.
+1. The owner deletes a credential from their credentials list (or a project's credential settings) and confirms.
+   - It is unshared from every project at once, and every job using it loses it
+   - For an OAuth credential, OpenFn's access is withdrawn at the provider; if the provider refuses, the deletion still goes ahead
+2. The owner gets an email saying the credential is disconnected, its secrets will be scrubbed after the grace period (7 days by default), and how to cancel.
+3. During the grace period the owner can pick "Cancel deletion" from the credential's menu in the list.
+4. After the grace period, a nightly cleanup scrubs the secrets of every credential past its date.
+   - Credentials never used in a run are then deleted outright
+   - Credentials used in a run are kept, empty, so run history still points at them
+
+**Straightforwardness: 3 of 5.** The happy path is simple, but "cancel" restores far less than the word suggests, and a scheduled credential can quietly be put back into use before the cleanup destroys it.
+
+### Most surprising behaviours
+
+- **(2)** A scheduled credential can still be edited, re-shared and transferred, and re-sharing doesn't clear the schedule, so jobs can start using it again and then break when the nightly cleanup empties or deletes it. (6.1)
+- **(2)** For a credential that was used in runs, "Cancel deletion" is still offered after the cleanup has emptied it, so the owner gets back a credential with no secrets and jobs fail. (6.1)
+- **(3)** Cancelling only clears the date: the credential stays unshared from every project and off every job, and an OAuth credential stays revoked at the provider until the owner reauthorizes it. (6.1, 6.2)
+- **(3)** If the grace period is configured to zero, the email says secrets go "after a few minutes", but the cleanup never runs at all, so the secrets stay until someone clicks "Delete now". (6.1)
+- **(3)** The list shows no date or badge for a scheduled credential, the email gives no date either, and the cleanup only runs once a day, so secrets can live up to a day longer than the email implies. (6.2, 6.4)
 
 ## 3. Who can do what
 

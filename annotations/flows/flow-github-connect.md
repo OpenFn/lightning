@@ -87,7 +87,23 @@ control, and a user whose token lapsed would have no way back.
 
 ## 2. What it does
 
-User clicks "Connect your GitHub Account" (or "Reconnect") on the profile or a project's Sync to GitHub tab; authorizes on GitHub in a new tab; the callback stores the token and closes that tab; the original page reloads showing "GitHub account linked successfully", or shows "Oops! GitHub account failed to link. Please try again".
+1. A user whose GitHub link is missing or expired clicks "Connect your GitHub Account" (or "Reconnect") on their profile, or an admin does so on an unconnected project's Sync to GitHub tab.
+   - If GitHub isn't set up on the instance, the button is disabled with a tooltip instead
+2. GitHub's authorization page opens in a new tab and the user approves the app.
+3. GitHub sends that tab back to OpenFn, which stores the token against whoever is signed in in that browser and closes the tab.
+4. The original page updates on its own.
+   - On success it reloads with "GitHub account linked successfully" and the next setup step showing
+   - If GitHub rejects the exchange, it shows "Oops! GitHub account failed to link. Please try again" and still offers Connect
+
+**Straightforwardness: 3 of 5.** A standard "connect your account" journey, but several ways it can go wrong are silent, and the result is announced to every page the user has open, not just the one they started on.
+
+### Most surprising behaviours
+
+- **(2)** Nothing ties the return from GitHub to the person who started it, so a malicious page could link the attacker's GitHub account to a signed-in user, and that user's later sync setup would run against the attacker's GitHub. (6.1)
+- **(3)** Clicking Cancel on GitHub shows an error page in the GitHub tab, which stays open, and the original page never hears about it. (6.1)
+- **(3)** If the user's session has ended, or saving the token fails, the GitHub tab just closes and the original page keeps showing "Connect" with no message. (6.1)
+- **(3)** Every profile and project settings page the user has open reacts to the success, so a settings page for a different project in another tab jumps to its Sync to GitHub tab. (6.2)
+- **(4)** On a project over its GitHub sync limit the button looks disabled but still works. (6.2)
 
 ## 3. Who can do what
 

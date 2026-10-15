@@ -78,9 +78,19 @@ or picks one that has gone.
 
 ## 2. What it does
 
-Editor saves a credential from "Configure connection" in tab A → `credentials_updated` with the
-project's full credential list on `workflow:collaborate:<workflow_id>` → every editor tab joined to
-that workflow replaces its credential list; any tab whose channel (re)connects refetches the list.
+1. An editor creates or edits a credential (including a keychain credential) from a step's "Configure connection" in the workflow editor.
+2. Every editor open on that same workflow, including viewers' and the sender's own, gets the project's full, fresh credential list and replaces theirs.
+3. Separately, any editor whose connection drops and comes back refetches the list, which is how it picks up changes made anywhere else.
+
+**Straightforwardness: 3 of 5.** Easy to explain, but the update only travels in one narrow case, so most credential changes don't reach open editors until they reconnect or reload.
+
+### Most surprising behaviours
+
+- **(2)** Deleting or unsharing a credential elsewhere tells no open editor. The credential stays pickable and attached on screen, and the next save from that editor will likely fail with a "doesn't exist" error. (6.1)
+- **(3)** Creating or sharing a credential on the credentials pages reaches no open editor at all; colleagues won't see it in "Configure connection" until their connection drops or they reload. (S03, 6.1)
+- **(3)** Only editors on the same workflow are told. Someone editing a different workflow in the same project keeps a stale list. (6.2)
+- **(3)** Every save writes the whole credential list to the server's logs. (6.2)
+- **(4)** Editors looking at an older version, a release or a run never get the update, only on reconnect. (6.2)
 
 ## 3. Who can do what
 

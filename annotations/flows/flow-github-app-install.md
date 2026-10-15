@@ -74,7 +74,20 @@ an admin facing an empty or incomplete list has no route from Lightning to the f
 
 ## 2. What it does
 
-From the connect form an admin opens the GitHub App page in a new tab, installs or reconfigures the app, GitHub redirects that tab to `/setup_vcs`, which tries to close it, and back on the original tab the admin clicks refresh to list the new installation and its repositories.
+1. On a project's GitHub sync connect form, an admin or owner with a linked GitHub account clicks a link to install or manage the OpenFn GitHub App, which opens GitHub in a new tab.
+2. In GitHub they install the app on a user or organisation, or give it access to more repositories.
+3. GitHub sends that tab back to OpenFn, which tries to close it.
+4. Back on the original tab, the admin clicks the refresh button next to "GitHub Installation" to see the new installation and its repositories, and carries on connecting.
+
+**Straightforwardness: 3 of 5.** It's a familiar "go to GitHub and come back" journey, but the way back relies on the user knowing to click a small refresh icon, and doing so throws away what they'd already picked.
+
+### Most surprising behaviours
+
+- **(3)** The original tab isn't told anything happened. The new installation only appears after the admin finds and clicks the refresh icon, and it isn't preselected when it does. (6.2)
+- **(3)** Clicking refresh clears the whole form: installation, repository, branch and sync direction all have to be chosen again. (6.2)
+- **(3)** The tab GitHub sends back may not close, since browsers often refuse, leaving a blank page with no message or link back. (6.1)
+- **(3)** Once a project is connected, neither link is shown, so there's no route from OpenFn to give the app access to more repositories. (6.2)
+- **(4)** The list only shows installations the admin's own GitHub account can see, not every installation of the app. (3)
 
 ## 3. Who can do what
 

@@ -83,7 +83,23 @@ work order to show what was refused.
 
 ## 2. What it does
 
-Admin creates a basic auth or API key method on the webhook security tab → attaches it to a webhook trigger in the editor's trigger inspector and clicks Finish → requests to any of the trigger's `/i/...` URLs without credentials get 401, with wrong credentials get 404, with matching credentials create a work order (secret scrubbed from the stored request) that shows in History.
+1. An admin or owner creates a basic auth (username and password) or API key method on the project's Webhook Security settings tab.
+2. In the workflow editor they open a webhook trigger, choose one or more methods under "Authentication" and click Finish; editors and viewers can see the methods but not change them.
+3. From then on, every request to any of that trigger's URLs, including a custom one, is checked.
+   - No credentials: refused as unauthorized, and nothing is created
+   - Wrong credentials: answered as if the webhook didn't exist, and nothing is created
+   - Credentials matching any one of the attached methods: a work order is created and shows in History, with the secret blanked out of the stored request
+4. Deleting a method on the settings tab revokes it at once everywhere, and removing a trigger's last method makes the webhook public again.
+
+**Straightforwardness: 3 of 5.** The core rule is simple, but what the editor shows doesn't always match what the webhook actually enforces, which is risky on a feature that decides who can push data in.
+
+### Most surprising behaviours
+
+- **(2)** An editor left open while someone deletes a method on the settings tab still offers it. Picking it and clicking Finish says "Authentication updated", but the trigger is saved without it, possibly leaving the webhook with no protection at all. (6.1)
+- **(2)** In a sandbox, a trigger protected by the parent project's methods shows "none configured" and those methods can't be picked, yet callers are still refused. (6.1)
+- **(3)** Protection changes apply the moment you click Finish, separately from saving the workflow, so discarding your changes or restoring an older version doesn't undo them and they're not in the version history. (6.2)
+- **(3)** A webhook trigger that hasn't been saved yet can't take a method; Finish seems to fail with "trigger not found" and nothing says to save first. (6.1)
+- **(4)** Because a request with no credentials gets "unauthorized" while a wrong one gets "not found", a stranger can tell a protected URL exists. (6.2)
 
 ## 3. Who can do what
 
