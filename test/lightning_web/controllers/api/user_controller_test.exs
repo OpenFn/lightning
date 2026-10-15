@@ -695,6 +695,8 @@ defmodule LightningWeb.API.UserControllerTest do
           [:lightning, :accounts, :superuser_changed]
         ])
 
+      on_exit(fn -> :telemetry.detach(ref) end)
+
       %{conn: with_scopes(conn, account, ["users:write"]), ref: ref}
     end
 
@@ -760,6 +762,7 @@ defmodule LightningWeb.API.UserControllerTest do
 
     test "say nothing for an ordinary user, or a superuser's names", %{
       conn: conn,
+      account: account,
       ref: ref
     } do
       user = insert(:user)
@@ -775,7 +778,12 @@ defmodule LightningWeb.API.UserControllerTest do
       |> patch(~p"/api/users/#{superuser.id}", %{first_name: "Renamed"})
       |> json_response(200)
 
-      refute_received {[:lightning, :accounts, :superuser_changed], ^ref, _, _}
+      # The handler hears every test running at the same time, so only this
+      # test's own service account counts.
+      actor_id = account.id
+
+      refute_received {[:lightning, :accounts, :superuser_changed], ^ref, _,
+                       %{actor_id: ^actor_id}}
     end
   end
 
