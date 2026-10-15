@@ -286,17 +286,11 @@ defmodule LightningWeb.API.Errors do
     do: path ++ List.wrap(opts[:key])
 
   defp error_location(changeset, path, field, {_message, opts}, renames) do
-    case opts[:key] do
-      nil ->
-        path ++
-          [
-            Map.get(renames, field) ||
-              request_key(changeset, field, opts[:constraint])
-          ]
-
-      key ->
-        path ++ List.wrap(key)
-    end
+    path ++
+      List.wrap(
+        opts[:key] || Map.get(renames, field) ||
+          request_key(changeset, field, opts[:constraint])
+      )
   end
 
   # assoc_constraint puts its error on the association, but the request sent
