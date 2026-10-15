@@ -785,6 +785,20 @@ defmodule Lightning.VersionControlTest do
                VersionControl.get_sync_status(repo_connection)
     end
 
+    test "reports no runs for a workflow GitHub doesn't know yet", %{
+      repo_connection: repo_connection,
+      checkout_path: checkout_path,
+      deploy_file: deploy_file
+    } do
+      expect_get_repo_content(repo_connection.repo, checkout_path, 404, %{})
+      expect_get_repo_content(repo_connection.repo, ".projects", 404, %{})
+      expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [])
+      expect_list_workflow_runs(repo_connection.repo, deploy_file, [], 404)
+
+      assert {:ok, %{tracking: :pending, last_pull: nil, last_deploy: nil}} =
+               VersionControl.get_sync_status(repo_connection)
+    end
+
     test "reads the checkout from the workspace folder", %{
       repo_connection: repo_connection,
       deploy_file: deploy_file

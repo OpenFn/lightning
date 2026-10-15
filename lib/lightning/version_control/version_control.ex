@@ -313,9 +313,17 @@ defmodule Lightning.VersionControl do
   end
 
   defp latest_run(client, repo, workflow_file, query, match \\ fn _ -> true end) do
-    with {:ok, %{body: %{"workflow_runs" => runs}}} <-
-           GithubClient.list_workflow_runs(client, repo, workflow_file, query) do
-      {:ok, runs |> Enum.find(match) |> run_summary()}
+    case GithubClient.list_workflow_runs(client, repo, workflow_file, query) do
+      {:ok, %{body: %{"workflow_runs" => runs}}} ->
+        {:ok, runs |> Enum.find(match) |> run_summary()}
+
+      # GitHub only knows a workflow once it has run or is on the default
+      # branch, e.g. a pull-direction deploy workflow on another branch
+      {:error, %Tesla.Env{status: 404}} ->
+        {:ok, nil}
+
+      error ->
+        error
     end
   end
 
