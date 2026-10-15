@@ -187,6 +187,12 @@ defmodule LightningWeb.API.ProjectController do
              conn.assigns.current_resource
            ) do
       render_project(conn, project)
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:error, Errors.problem(changeset, @renames)}
+
+      error ->
+        error
     end
   end
 
