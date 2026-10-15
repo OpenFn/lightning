@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- GitHub sync connections using the v2 format now install `@v2` of the OpenFn
+  deploy and pull GitHub Actions, which sync `openfn.yaml` workspaces with
+  `openfn project pull/deploy`. Lightning no longer commits a config file for
+  v2, and disconnecting leaves `openfn.yaml` in place. Legacy connections keep
+  using `@v1`.
+
 ### Changed
 
 - Update Project and Workflow yaml exports to match the v4 portability spec

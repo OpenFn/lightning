@@ -27,6 +27,14 @@ defmodule Lightning.VersionControl.GithubClient do
     |> handle_resp([204])
   end
 
+  def list_workflow_runs(client, repo_name, workflow_id, query) do
+    client
+    |> Tesla.get("/repos/#{repo_name}/actions/workflows/#{workflow_id}/runs",
+      query: query
+    )
+    |> handle_resp([200])
+  end
+
   def get_installations(client) do
     client |> Tesla.get("/user/installations") |> handle_resp([200])
   end

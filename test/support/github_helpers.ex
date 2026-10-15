@@ -316,6 +316,22 @@ defmodule Lightning.GithubHelpers do
     )
   end
 
+  def expect_list_workflow_runs(repo, workflow_file, runs, resp_status \\ 200) do
+    Mox.expect(
+      Lightning.Tesla.Mock,
+      :call,
+      fn %{
+           method: :get,
+           url:
+             "https://api.github.com/repos/" <>
+               ^repo <> "/actions/workflows/" <> ^workflow_file <> "/runs"
+         },
+         _opts ->
+        {:ok, %Tesla.Env{status: resp_status, body: %{"workflow_runs" => runs}}}
+      end
+    )
+  end
+
   def expect_create_installation_token(
         installation_id,
         resp_status \\ 201,
