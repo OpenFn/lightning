@@ -36,15 +36,6 @@ defmodule Lightning.WorkOrders.Manual do
     |> validate_body_or_dataclip()
     |> validate_dataclip_in_project()
     |> validate_json(:body)
-    |> validate_change(:workflow, fn _field, workflow ->
-      case workflow do
-        %{__meta__: %{state: :built}} ->
-          [workflow: {"Workflow must be saved first.", code: :not_allowed}]
-
-        _other ->
-          []
-      end
-    end)
   end
 
   defp remove_body_if_dataclip_present(changeset) do
