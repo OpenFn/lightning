@@ -1,7 +1,8 @@
 defmodule LightningWeb.API.PutBody do
   @moduledoc """
-  The checks every create-or-replace `PUT /:id` route makes on its body before
-  the body reaches a changeset (error-format spec §7 item 8, §9.5, §9.6).
+  What every create-or-replace `PUT /:id` route shares: the checks on its path
+  id and body before the body reaches a changeset (error-format spec §7 item 8,
+  §9.5, §9.6), and telling when its insert lost a race for the id.
   """
   alias LightningWeb.API.Errors
   alias LightningWeb.API.Problem
@@ -45,6 +46,17 @@ defmodule LightningWeb.API.PutBody do
     else
       :error -> {:error, :not_found}
     end
+  end
+
+  @doc """
+  Whether an insert at the path's id failed because the id's row now exists,
+  that is, another request created it after the route looked the id up.
+  """
+  @spec id_taken?(Ecto.Changeset.t()) :: boolean()
+  def id_taken?(changeset) do
+    changeset.errors
+    |> Keyword.get_values(:id)
+    |> Enum.any?(fn {_message, opts} -> opts[:constraint] == :unique end)
   end
 
   defp id_mismatch(%{"id" => body_id}, path_id) do

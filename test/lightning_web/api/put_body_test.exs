@@ -78,4 +78,18 @@ defmodule LightningWeb.API.PutBodyTest do
       end
     end
   end
+
+  describe "id_taken?/1" do
+    defp refused(field, opts) do
+      {%{}, %{id: :binary_id, name: :string}}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.add_error(field, "has already been taken", opts)
+    end
+
+    test "is true only for the id's unique constraint" do
+      assert PutBody.id_taken?(refused(:id, constraint: :unique))
+      refute PutBody.id_taken?(refused(:name, constraint: :unique))
+      refute PutBody.id_taken?(refused(:id, validation: :required))
+    end
+  end
 end

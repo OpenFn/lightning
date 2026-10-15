@@ -241,7 +241,7 @@ defmodule LightningWeb.API.ProjectController do
       # Someone else created it since the lookup. Rerun the request so the
       # caller is checked against that project.
       {:error, changeset} ->
-        if id_taken?(changeset),
+        if PutBody.id_taken?(changeset),
           do: update(conn, %{"id" => attrs.id}),
           else: {:error, Errors.problem(changeset, @renames)}
     end
@@ -252,12 +252,6 @@ defmodule LightningWeb.API.ProjectController do
       [] -> :ok
       entries -> {:error, Problem.new(:invalid, errors: entries)}
     end
-  end
-
-  defp id_taken?(changeset) do
-    changeset.errors
-    |> Keyword.get_values(:id)
-    |> Enum.any?(fn {_message, opts} -> opts[:constraint] == :unique end)
   end
 
   # Resolves each member's email to its user. Errors point at the member's

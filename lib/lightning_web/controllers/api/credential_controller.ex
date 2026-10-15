@@ -481,7 +481,7 @@ defmodule LightningWeb.API.CredentialController do
       # Someone else created it since the lookup. Rerun the request so the
       # caller is checked against that credential.
       {:error, %Ecto.Changeset{} = changeset} ->
-        if id_taken?(changeset),
+        if PutBody.id_taken?(changeset),
           do: update(conn, %{"id" => id}),
           else: {:error, changeset}
 
@@ -525,12 +525,6 @@ defmodule LightningWeb.API.CredentialController do
       "name" => body["name"],
       "credential_bodies" => body["credential_bodies"]
     })
-  end
-
-  defp id_taken?(changeset) do
-    changeset.errors
-    |> Keyword.get_values(:id)
-    |> Enum.any?(fn {_message, opts} -> opts[:constraint] == :unique end)
   end
 
   defp fetch_credential(id) do
