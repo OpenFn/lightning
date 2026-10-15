@@ -75,12 +75,22 @@ someone else's.
 
 ## 2. What it does
 
-- Any signed-in user opens a deletion confirmation for their own account, over the profile page
-- Any non-superuser schedules their own account for deletion by typing their email address
-- Users who have created runs are warned their account may not be fully removable
-- Superusers can open the confirmation but cannot delete their own account
-- Nobody can open the confirmation for another user's account
+- Any signed-in user opens a deletion confirmation for their own account, over the profile page; nobody can open it for another user's account
+- **Delete the account**
+  - Any non-superuser schedules their own account for deletion by typing their email address, which disables it and signs them out
+  - Users who have created runs are warned their account may not be fully removable
+  - Superusers can open the confirmation but cannot delete their own account
 - Any user backs out with "Cancel" and returns to the profile
+
+**Straightforwardness: 3 of 5.** Confirming by typing your email is familiar, but what "deleted" actually means, and when it happens, needs explaining.
+
+### Most surprising behaviours
+
+- **(2)** The dialog says the account and credentials "will be deleted", but they are only disabled now. The deletion date isn't shown, and anyone who has started runs, added project files or created certain credentials is skipped by the clean-up, possibly for good. The warning only checks for runs. (6.2, 6.5)
+- **(3)** Typing your email with any capital letters is refused as "doesn't match", because the stored address is lowercase. (6.2)
+- **(3)** Pressing Escape or clicking outside hides the dialog, but the address bar still points at delete and a refresh brings it back. (6.1)
+- **(3)** Superusers get the full dialog and are only told they can't delete their account after they start typing their email. (S05)
+- **(4)** A mistyped or made-up account id in the address shows an error page instead of "You can't perform this action", which also reveals which ids exist. (6.1)
 
 ## 3. Who can do what
 

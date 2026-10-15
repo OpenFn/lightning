@@ -65,6 +65,13 @@ generic "not found" and no route to fix their own access.
 - Enrolled users who land here are sent to the projects list
 - Blocked users can still move to their other projects and account pages from the side menu
 
+**Straightforwardness: 4 of 5.** A small explanation page; the surprises are about what it leaves out, not what it does.
+
+### Most surprising behaviours
+
+- **(3)** The page never says which project needs MFA, and the project picker still lists it, so picking it just brings the user back here. (6.2)
+- **(3)** Any signed-in user without MFA who opens this address is told "This project requires all members to use multi-factor authentication", even if none of their projects does. (6.1)
+
 ## 3. Who can do what
 
 Source: `mfa_required.ex:16-24` (the view's own gate), `init_assigns.ex:17-35` (session gate,

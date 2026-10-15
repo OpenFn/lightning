@@ -110,13 +110,27 @@ would need a superuser.
 
 ## 2. What it does
 
-- Members see the project's (or sandbox's) name, environment and description, and for a sandbox a link to its parent
-- Admins and owners rename the project and edit its description
-- Nobody changes the project environment here
-- Admins and owners switch parallel run execution off or back on for the whole project
-- Members export the project as YAML
-- Owners schedule a project for deletion after typing its name
-- Sandbox owners delete a sandbox after typing its name
+- **See the project**
+  - Members see the project's (or sandbox's) name, environment and description, and for a sandbox a link to its parent
+  - Nobody changes the project environment here
+- **Change the project** (admins and owners)
+  - Rename the project and edit its description
+  - Switch parallel run execution off or back on for the whole project
+- **Export the project**
+  - Members export the project as YAML
+- **Delete it** (owners)
+  - Owners schedule a project for deletion after typing its name
+  - Sandbox owners delete a sandbox after typing its name
+
+**Straightforwardness: 3 of 5.** The edit and export parts are simple, but deletion does more than it says, and the sandbox delete dialog tells people the wrong thing.
+
+### Most surprising behaviours
+
+- **(2)** Deleting a sandbox here wipes it and all its data at once, but the dialog promises it will be kept for 7 days and can be restored. Anyone relying on that restore window loses their work. (6.1, S18)
+- **(2)** Deleting a sandbox also deletes every sandbox made from it, with no warning in the dialog; the only hint is the message afterwards saying its "descendants" were deleted too. (6.1)
+- **(3)** Scheduling a project for deletion takes effect straight away in practice: every trigger is switched off, every member gets an email, and anyone else with the project open is moved out of it, even though the data itself isn't purged for another 7 days. (S12, 4)
+- **(3)** The name and parallel-execution sections share one form behind the scenes, so touching the parallel-execution switch may throw away an unsaved name change, and its Save button seems to be live before anything has changed. (6.1)
+- **(3)** The name you type is turned into a lowercase, hyphenated version, and the preview can show a name (for example with underscores) that is then refused on save. (S02, 6.1)
 
 ## 3. Who can do what
 

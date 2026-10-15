@@ -87,16 +87,31 @@ and members could not stop or start the alerts that tell them a workflow is fail
 
 ## 2. What it does
 
-- Anyone who can open the project sees every collaborator with their role and notification settings
-- Owners and admins add existing users as viewers, editors or admins, several at a time
-- Owners and admins invite people without an OpenFn account, which creates the account and adds them
-- Owners and admins remove a collaborator, which also withdraws that person's credentials from the project
-- Owners, the acting user themselves and parent-project admins (in a sandbox) cannot be removed
-- Every member sets their own failure alert and digest frequency, and only their own
+- **See who's on the project**
+  - Anyone who can open the project sees every collaborator with their role and notification settings
+  - Members without admin rights are told what they can and can't change here
+  - In a sandbox, the tab says changes here stay in the sandbox
+- **Bring people in** (owners and admins)
+  - Add existing users as viewers, editors or admins, several at a time
+  - Invite people without an OpenFn account, which creates the account and adds them
+  - Hosted plans can cap the number of collaborators
+- **Take people out** (owners and admins)
+  - Remove a collaborator, which also withdraws that person's credentials from the project
+  - Owners, the acting user themselves and parent-project admins (in a sandbox) cannot be removed
+- **Set your own notifications** (every member)
+  - Set your own failure alert and digest frequency, and only your own
+  - Hosted plans can switch off failure alerts
 - Owners and admins grant or revoke support access
-- Hosted plans can cap the number of collaborators and switch off failure alerts
-- Members without admin rights are told what they can and can't change here
-- In a sandbox, the tab says changes here stay in the sandbox
+
+**Straightforwardness: 3 of 5.** Adding, removing and notification settings are what you'd expect, but there are notable gaps (no role changes) and several ways the add and invite forms can fail without telling you why.
+
+### Most surprising behaviours
+
+- **(2)** There's no way to change an existing collaborator's role on this tab; it seems only a superuser can do that, from a separate admin page. (6.5, 8)
+- **(2)** "Invite sent successfully" shows even if the email never left the server, leaving the invitee with an account they can't log into and nobody aware of it. (6.1)
+- **(3)** Admins can remove other admins, not just editors and viewers. (6.2, 8)
+- **(3)** The add form talks about inviting people, but anyone who already has an account is added straight away with no acceptance step. (6.1)
+- **(3)** Entering the same email twice in the add or invite form, or going over the collaborator cap while inviting, may crash the page or do nothing at all, with no message saying why. (6.1)
 
 ## 3. Who can do what
 

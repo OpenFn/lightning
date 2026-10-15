@@ -69,12 +69,24 @@ without locking people out for good.
 ## 2. What it does
 
 - Any signed-in user sees whether their account has MFA turned on
-- Any signed-in user without MFA starts setup and sees a QR code and a manual secret key
-- Any signed-in user confirms setup with a code from their app, which turns MFA on
-- Any signed-in user abandons setup without changing anything
-- Any signed-in user with MFA moves it to another device
-- Any signed-in user with MFA turns it off after confirming
-- Any signed-in user with MFA reaches their recovery codes
+- **Turn MFA on**
+  - Any signed-in user without MFA starts setup and sees a QR code and a secret key to type in by hand
+  - Any signed-in user confirms setup with a code from their app, which turns MFA on and shows their recovery codes
+  - Any signed-in user abandons setup without changing anything
+- **Manage MFA once it's on**
+  - Any signed-in user with MFA moves it to another device
+  - Any signed-in user with MFA turns it off after confirming
+  - Any signed-in user with MFA reaches their recovery codes, after proving who they are again
+
+**Straightforwardness: 3 of 5.** The happy path is familiar from any other app, but what does and doesn't need a password, and what happens to recovery codes, takes some explaining.
+
+### Most surprising behaviours
+
+- **(2)** Turning MFA off, or moving it to a new device, needs no password or code, and sends no email. Someone at an unattended signed-in session can quietly remove the owner's second factor or link their own phone, even though viewing recovery codes does ask for a password. (6.2, S08)
+- **(3)** Turning MFA off keeps the old recovery codes. If the user turns it back on later they get the same old set, not fresh ones, so any codes that leaked still work. (6.2)
+- **(3)** Turning MFA off immediately shuts the user out of any project that requires MFA, but the warning only talks about the account being less secure. (6.2)
+- **(3)** With the page open in two tabs, turning MFA off or finishing setup in the older tab can crash the page instead of showing a message. (6.1)
+- **(4)** Closing and reopening setup makes a new secret, so a QR code already scanned stops matching; and finishing a GitHub connection on the same page throws away a setup in progress. (6.2)
 
 ## 3. Who can do what
 

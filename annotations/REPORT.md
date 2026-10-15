@@ -13,61 +13,63 @@ All 990 `decide` items are listed by file in [DECIDES.md](DECIDES.md).
 
 ## Views
 
-| View | Scenarios | 6.1 | 6.2 | 6.3 | 6.4 | 6.5 | Decide |
-|---|---|---|---|---|---|---|---|
-| [auth-login](views/auth-login.md) | 20 | 3 | 10 | 2 | 3 | 5 | 7 |
-| [auth-register](views/auth-register.md) | 16 | 6 | 14 | 4 | 3 | 7 | 13 |
-| [auth-reset-password](views/auth-reset-password.md) | 14 | 6 | 15 | 3 | 4 | 5 | 10 |
-| [auth-two-factor](views/auth-two-factor.md) | 13 | 4 | 14 | 0 | 2 | 5 | 8 |
-| [auth-confirm-account](views/auth-confirm-account.md) | 6 | 4 | 13 | 2 | 5 | 2 | 10 |
-| [auth-confirmation-required](views/auth-confirmation-required.md) | 14 | 6 | 13 | 0 | 5 | 2 | 9 |
-| [auth-confirm-access](views/auth-confirm-access.md) | 7 | 6 | 12 | 3 | 1 | 1 | 8 |
-| [first-setup](views/first-setup.md) | 11 | 6 | 8 | 2 | 3 | 3 | 3 |
-| [projects-dashboard](views/projects-dashboard.md) | 19 | 4 | 19 | 7 | 6 | 5 | 22 |
-| [mfa-required](views/mfa-required.md) | 4 | 0 | 9 | 0 | 1 | 2 | 4 |
-| [workflows-index](views/workflows-index.md) | 29 | 9 | 18 | 4 | 4 | 3 | 11 |
-| [workflow-health](views/workflow-health.md) | 27 | 3 | 19 | 3 | 7 | 3 | 9 |
-| [sandboxes-index](views/sandboxes-index.md) | 47 | 11 | 19 | 8 | 6 | 4 | 18 |
-| [channels-index](views/channels-index.md) | 28 | 8 | 16 | 3 | 5 | 4 | 14 |
-| [workflow-editor-canvas](views/workflow-editor-canvas.md) | 29 | 3 | 15 | 5 | 4 | 3 | 8 |
-| [workflow-editor-new](views/workflow-editor-new.md) | 27 | 5 | 16 | 7 | 5 | 5 | 8 |
-| [workflow-editor-inspectors](views/workflow-editor-inspectors.md) | 45 | 8 | 17 | 12 | 5 | 3 | 13 |
-| [workflow-editor-ide](views/workflow-editor-ide.md) | 22 | 10 | 24 | 8 | 5 | 5 | 13 |
-| [workflow-editor-manual-run](views/workflow-editor-manual-run.md) | 25 | 11 | 28 | 5 | 6 | 3 | 20 |
-| [workflow-editor-run-viewer](views/workflow-editor-run-viewer.md) | 13 | 8 | 18 | 6 | 4 | 3 | 10 |
-| [workflow-editor-ai-assistant](views/workflow-editor-ai-assistant.md) | 32 | 6 | 18 | 8 | 9 | 6 | 8 |
-| [workflow-editor-versions-and-promote](views/workflow-editor-versions-and-promote.md) | 34 | 6 | 23 | 5 | 5 | 4 | 12 |
-| [history-work-orders](views/history-work-orders.md) | 42 | 13 | 18 | 6 | 10 | 2 | 15 |
-| [history-channel-logs](views/history-channel-logs.md) | 15 | 4 | 13 | 2 | 4 | 2 | 11 |
-| [channel-request-show](views/channel-request-show.md) | 21 | 7 | 14 | 3 | 3 | 4 | 11 |
-| [run-show](views/run-show.md) | 20 | 6 | 14 | 4 | 4 | 4 | 13 |
-| [dataclip-show](views/dataclip-show.md) | 10 | 3 | 13 | 3 | 3 | 3 | 11 |
-| [project-settings-setup](views/project-settings-setup.md) | 21 | 8 | 12 | 4 | 3 | 5 | 11 |
-| [project-settings-credentials](views/project-settings-credentials.md) | 19 | 4 | 10 | 3 | 2 | 4 | 6 |
-| [project-settings-collections](views/project-settings-collections.md) | 19 | 6 | 14 | 3 | 5 | 3 | 9 |
-| [project-settings-webhook-security](views/project-settings-webhook-security.md) | 18 | 7 | 15 | 6 | 4 | 3 | 9 |
-| [project-settings-collaborators](views/project-settings-collaborators.md) | 29 | 9 | 17 | 4 | 6 | 3 | 14 |
-| [project-settings-security](views/project-settings-security.md) | 8 | 7 | 10 | 2 | 1 | 3 | 7 |
-| [project-settings-github-sync](views/project-settings-github-sync.md) | 30 | 9 | 23 | 2 | 5 | 3 | 16 |
-| [project-settings-data-storage](views/project-settings-data-storage.md) | 15 | 7 | 13 | 2 | 4 | 3 | 7 |
-| [project-settings-history-exports](views/project-settings-history-exports.md) | 5 | 4 | 9 | 1 | 1 | 1 | 4 |
-| [credentials-index](views/credentials-index.md) | 32 | 6 | 19 | 12 | 8 | 6 | 6 |
-| [profile-account](views/profile-account.md) | 12 | 3 | 15 | 4 | 5 | 4 | 9 |
-| [profile-mfa](views/profile-mfa.md) | 10 | 6 | 17 | 3 | 3 | 3 | 12 |
-| [profile-github](views/profile-github.md) | 7 | 4 | 10 | 3 | 1 | 3 | 7 |
-| [profile-experimental-features](views/profile-experimental-features.md) | 6 | 4 | 8 | 2 | 1 | 3 | 3 |
-| [profile-delete-account](views/profile-delete-account.md) | 7 | 4 | 12 | 4 | 2 | 3 | 7 |
-| [profile-tokens](views/profile-tokens.md) | 11 | 4 | 14 | 2 | 4 | 4 | 9 |
-| [profile-backup-codes](views/profile-backup-codes.md) | 7 | 6 | 14 | 4 | 3 | 2 | 10 |
-| [admin-users](views/admin-users.md) | 8 | 4 | 18 | 3 | 3 | 3 | 16 |
-| [admin-user-edit](views/admin-user-edit.md) | 12 | 5 | 18 | 4 | 3 | 4 | 15 |
-| [admin-projects](views/admin-projects.md) | 15 | 7 | 17 | 4 | 4 | 3 | 15 |
-| [admin-audit](views/admin-audit.md) | 9 | 3 | 12 | 2 | 3 | 3 | 8 |
-| [admin-maintenance](views/admin-maintenance.md) | 8 | 3 | 9 | 2 | 5 | 2 | 7 |
-| [admin-auth-providers](views/admin-auth-providers.md) | 10 | 8 | 16 | 4 | 3 | 3 | 9 |
-| [admin-collections](views/admin-collections.md) | 13 | 5 | 19 | 1 | 4 | 5 | 18 |
-| [admin-live-dashboard](views/admin-live-dashboard.md) | 8 | 1 | 10 | 6 | 4 | 5 | 7 |
-| **Total (52 views)** | **929** | **300** | **781** | **202** | **209** | **182** | **540** |
+Straightforwardness is the section 2 rating: 5 does what it says on the tin, 1 is full of surprising edge cases. Each view's section 2 lists its most surprising behaviours.
+
+| View | Straightforward | Scenarios | 6.1 | 6.2 | 6.3 | 6.4 | 6.5 | Decide |
+|---|---|---|---|---|---|---|---|---|
+| [auth-login](views/auth-login.md) | 3 | 20 | 3 | 10 | 2 | 3 | 5 | 7 |
+| [auth-register](views/auth-register.md) | 3 | 16 | 6 | 14 | 4 | 3 | 7 | 13 |
+| [auth-reset-password](views/auth-reset-password.md) | 3 | 14 | 6 | 15 | 3 | 4 | 5 | 10 |
+| [auth-two-factor](views/auth-two-factor.md) | 3 | 13 | 4 | 14 | 0 | 2 | 5 | 8 |
+| [auth-confirm-account](views/auth-confirm-account.md) | 4 | 6 | 4 | 13 | 2 | 5 | 2 | 10 |
+| [auth-confirmation-required](views/auth-confirmation-required.md) | 3 | 14 | 6 | 13 | 0 | 5 | 2 | 9 |
+| [auth-confirm-access](views/auth-confirm-access.md) | 3 | 7 | 6 | 12 | 3 | 1 | 1 | 8 |
+| [first-setup](views/first-setup.md) | 3 | 11 | 6 | 8 | 2 | 3 | 3 | 3 |
+| [projects-dashboard](views/projects-dashboard.md) | 3 | 19 | 4 | 19 | 7 | 6 | 5 | 22 |
+| [mfa-required](views/mfa-required.md) | 4 | 4 | 0 | 9 | 0 | 1 | 2 | 4 |
+| [workflows-index](views/workflows-index.md) | 3 | 29 | 9 | 18 | 4 | 4 | 3 | 11 |
+| [workflow-health](views/workflow-health.md) | 3 | 27 | 3 | 19 | 3 | 7 | 3 | 9 |
+| [sandboxes-index](views/sandboxes-index.md) | 2 | 47 | 11 | 19 | 8 | 6 | 4 | 18 |
+| [channels-index](views/channels-index.md) | 3 | 28 | 8 | 16 | 3 | 5 | 4 | 14 |
+| [workflow-editor-canvas](views/workflow-editor-canvas.md) | 2 | 29 | 3 | 15 | 5 | 4 | 3 | 8 |
+| [workflow-editor-new](views/workflow-editor-new.md) | 3 | 27 | 5 | 16 | 7 | 5 | 5 | 8 |
+| [workflow-editor-inspectors](views/workflow-editor-inspectors.md) | 3 | 45 | 8 | 17 | 12 | 5 | 3 | 13 |
+| [workflow-editor-ide](views/workflow-editor-ide.md) | 3 | 22 | 10 | 24 | 8 | 5 | 5 | 13 |
+| [workflow-editor-manual-run](views/workflow-editor-manual-run.md) | 3 | 25 | 11 | 28 | 5 | 6 | 3 | 20 |
+| [workflow-editor-run-viewer](views/workflow-editor-run-viewer.md) | 3 | 13 | 8 | 18 | 6 | 4 | 3 | 10 |
+| [workflow-editor-ai-assistant](views/workflow-editor-ai-assistant.md) | 2 | 32 | 6 | 18 | 8 | 9 | 6 | 8 |
+| [workflow-editor-versions-and-promote](views/workflow-editor-versions-and-promote.md) | 2 | 34 | 6 | 23 | 5 | 5 | 4 | 12 |
+| [history-work-orders](views/history-work-orders.md) | 2 | 42 | 13 | 18 | 6 | 10 | 2 | 15 |
+| [history-channel-logs](views/history-channel-logs.md) | 4 | 15 | 4 | 13 | 2 | 4 | 2 | 11 |
+| [channel-request-show](views/channel-request-show.md) | 3 | 21 | 7 | 14 | 3 | 3 | 4 | 11 |
+| [run-show](views/run-show.md) | 3 | 20 | 6 | 14 | 4 | 4 | 4 | 13 |
+| [dataclip-show](views/dataclip-show.md) | 4 | 10 | 3 | 13 | 3 | 3 | 3 | 11 |
+| [project-settings-setup](views/project-settings-setup.md) | 3 | 21 | 8 | 12 | 4 | 3 | 5 | 11 |
+| [project-settings-credentials](views/project-settings-credentials.md) | 3 | 19 | 4 | 10 | 3 | 2 | 4 | 6 |
+| [project-settings-collections](views/project-settings-collections.md) | 3 | 19 | 6 | 14 | 3 | 5 | 3 | 9 |
+| [project-settings-webhook-security](views/project-settings-webhook-security.md) | 3 | 18 | 7 | 15 | 6 | 4 | 3 | 9 |
+| [project-settings-collaborators](views/project-settings-collaborators.md) | 3 | 29 | 9 | 17 | 4 | 6 | 3 | 14 |
+| [project-settings-security](views/project-settings-security.md) | 3 | 8 | 7 | 10 | 2 | 1 | 3 | 7 |
+| [project-settings-github-sync](views/project-settings-github-sync.md) | 2 | 30 | 9 | 23 | 2 | 5 | 3 | 16 |
+| [project-settings-data-storage](views/project-settings-data-storage.md) | 3 | 15 | 7 | 13 | 2 | 4 | 3 | 7 |
+| [project-settings-history-exports](views/project-settings-history-exports.md) | 4 | 5 | 4 | 9 | 1 | 1 | 1 | 4 |
+| [credentials-index](views/credentials-index.md) | 2 | 32 | 6 | 19 | 12 | 8 | 6 | 6 |
+| [profile-account](views/profile-account.md) | 3 | 12 | 3 | 15 | 4 | 5 | 4 | 9 |
+| [profile-mfa](views/profile-mfa.md) | 3 | 10 | 6 | 17 | 3 | 3 | 3 | 12 |
+| [profile-github](views/profile-github.md) | 3 | 7 | 4 | 10 | 3 | 1 | 3 | 7 |
+| [profile-experimental-features](views/profile-experimental-features.md) | 3 | 6 | 4 | 8 | 2 | 1 | 3 | 3 |
+| [profile-delete-account](views/profile-delete-account.md) | 3 | 7 | 4 | 12 | 4 | 2 | 3 | 7 |
+| [profile-tokens](views/profile-tokens.md) | 4 | 11 | 4 | 14 | 2 | 4 | 4 | 9 |
+| [profile-backup-codes](views/profile-backup-codes.md) | 3 | 7 | 6 | 14 | 4 | 3 | 2 | 10 |
+| [admin-users](views/admin-users.md) | 3 | 8 | 4 | 18 | 3 | 3 | 3 | 16 |
+| [admin-user-edit](views/admin-user-edit.md) | 2 | 12 | 5 | 18 | 4 | 3 | 4 | 15 |
+| [admin-projects](views/admin-projects.md) | 3 | 15 | 7 | 17 | 4 | 4 | 3 | 15 |
+| [admin-audit](views/admin-audit.md) | 4 | 9 | 3 | 12 | 2 | 3 | 3 | 8 |
+| [admin-maintenance](views/admin-maintenance.md) | 3 | 8 | 3 | 9 | 2 | 5 | 2 | 7 |
+| [admin-auth-providers](views/admin-auth-providers.md) | 2 | 10 | 8 | 16 | 4 | 3 | 3 | 9 |
+| [admin-collections](views/admin-collections.md) | 3 | 13 | 5 | 19 | 1 | 4 | 5 | 18 |
+| [admin-live-dashboard](views/admin-live-dashboard.md) | 3 | 8 | 1 | 10 | 6 | 4 | 5 | 7 |
+| **Total (52 views)** | | **929** | **300** | **781** | **202** | **209** | **182** | **540** |
 
 ## Flows created
 

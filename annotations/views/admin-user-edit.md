@@ -110,7 +110,7 @@ access or leaves access with someone who should have lost it.
 
 ### Most surprising behaviours
 
-- **(1)** Nothing stops the last superuser being demoted. On instances where first setup is allowed, every visitor, signed in or not, is then sent to the setup page and can make themselves administrator of an instance full of data. (6.1)
+- **(2)** Nothing stops the last superuser being demoted. On instances where first setup is allowed, every visitor, signed in or not, is then sent to the setup page and can make themselves administrator of an instance full of data. (6.1)
 - **(2)** The last superuser can also be disabled, which leaves nobody able to reach any admin page and no way back in the app. Superusers can demote, disable or change their own account here too, and are signed out mid-save. (6.1)
 - **(2)** "Scheduled Deletion" is a free text box. A date typed here revokes every token and blocks sign-in like a deletion, but sends no deletion email, doesn't disable the account, and a badly formatted value shows no error until you save. (6.2)
 - **(3)** Promoting someone to superuser signs them out everywhere, and silently cancels any scheduled deletion they had. (6.2)

@@ -89,17 +89,28 @@ workflows, or someone holding a guessed or stolen password reaches health data.
 
 ## 2. What it does
 
-- Registered users log in with email and password
-- Users choose to stay logged in for 60 days
-- Wrong credentials are refused without saying whether the email exists
-- Disabled and scheduled-for-deletion accounts are refused
-- Accounts with MFA are sent on to their second factor
-- Signed-in visitors are sent to their projects instead
-- Users who forgot their password reach the reset page
-- Visitors on instances with self-signup see a link to register
-- Users on instances with an external provider log in through it
-- A fresh install sends visitors to first setup
-- People arriving from logout, a password reset or a revoked session see why they are here
+- **Log in**
+  - Registered users log in with email and password, and can choose to stay logged in for 60 days
+  - Users on instances with an external provider log in through it instead
+  - Users who forgot their password reach the reset page; visitors on instances with self-signup see a link to register
+- **Keep the wrong people out**
+  - Wrong credentials are refused without saying whether the email exists
+  - Disabled and scheduled-for-deletion accounts are refused
+  - Accounts with MFA are sent on to their second factor before they get in
+- **Send people to the right place**
+  - Signed-in visitors are sent to their projects instead
+  - A fresh install sends visitors to first setup
+  - People arriving from logout, a password reset or a revoked session see why they are here
+
+**Straightforwardness: 3 of 5.** The login itself is simple, but the security gaps around it, and what it does and doesn't tell an attacker, need explaining.
+
+### Most surprising behaviours
+
+- **(2)** There is no limit on failed password attempts and nothing is logged, so someone can keep guessing a password forever and nobody would know. (6.5)
+- **(2)** After a failed attempt the page may send the typed password back inside the page, so it could sit in plain text in the browser or a cache. Not yet checked in a browser. (6.1)
+- **(3)** The "account is disabled" and "scheduled for deletion" messages only appear once the password is right, so they quietly confirm to anyone holding a password that it works. (S04, 6.2)
+- **(3)** "Forgot your password?" shows even when the instance has no way to send email, so the reset message may never arrive. (6.2)
+- **(3)** A newly added external provider can take up to half an hour to show its button, so SSO users may see no way in for a while. (6.4)
 
 ## 3. Who can do what
 

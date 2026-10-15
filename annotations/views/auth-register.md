@@ -99,19 +99,28 @@ create an account (or one with elevated rights) on an instance that never meant 
 
 ## 2. What it does
 
-- Visitors on instances with self-signup create an account and are signed in
-- New users must accept the terms of service
-- New users must give a valid email, a password of at least 12 characters and both names
-- An email that already has an account can't be registered again
-- Self-signup can't create a superuser
-- New users get a starter project and land on its new-workflow page, where configured
-- New users are sent a confirmation email
-- Unconfirmed new users are let in and warned to confirm, where verification is required
-- Signed-in visitors are sent to their projects instead
-- Instances without self-signup refuse the page
-- A fresh install sends visitors to first setup
-- Visitors who already have an account reach log in or password reset
-- A failed submission keeps what the visitor typed
+- **Create an account** (visitors, where self-signup is on)
+  - Visitors give both names, a valid email and a password of at least 12 characters, and must accept the terms of service
+  - An email that already has an account can't be registered again, and self-signup can never create a superuser
+  - A failed submission keeps what the visitor typed
+- **After sign-up**
+  - New users are signed straight in and sent a confirmation email
+  - Where configured, new users get a starter project and land on its new-workflow page
+  - Where verification is required, unconfirmed new users are let in and warned to confirm
+- **Who reaches the page**
+  - Instances without self-signup refuse the page; a fresh install sends visitors to first setup
+  - Signed-in visitors are sent to their projects instead
+  - Visitors who already have an account reach log in or password reset
+
+**Straightforwardness: 3 of 5.** A normal sign-up form, but several instance settings change what happens afterwards, and a few of those paths fail in ways you wouldn't expect.
+
+### Most surprising behaviours
+
+- **(2)** With starter projects on, someone named José or O'Brien gets an error page after their account has already been made; they aren't signed in, and retrying says the email is taken. (6.1)
+- **(2)** When email confirmation isn't required, anyone can sign up with someone else's address and use the account indefinitely; the real owner can't register and has to reset the password to take it back. (6.5)
+- **(3)** "Has already been taken" tells anyone whether an address has an account, even though the login page is careful not to. (S07, 6.5)
+- **(3)** Nothing limits sign-ups, so one person can create accounts in bulk and make the server send email to any addresses they choose. (6.5)
+- **(3)** Double-clicking "Register" may show an error page instead of a normal message, and the confirmation email is sent even when confirmation isn't required, with failed sends never shown. (6.1, 6.2)
 
 ## 3. Who can do what
 

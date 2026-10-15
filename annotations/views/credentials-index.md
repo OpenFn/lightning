@@ -125,18 +125,30 @@ person it was never meant for.
 
 ## 2. What it does
 
-- Any signed-in user sees the credentials they own and the OAuth clients they own or that are global
-- Owners create a credential from an adaptor schema or raw JSON
-- Owners create OAuth credentials against their own or a global OAuth client by signing in to the provider
-- Owners keep separate values per environment, up to five
-- Owners edit a credential's name, values and environments
-- Owners share a credential with projects they belong to, and it follows into those projects' sandboxes
-- Owners remove project access, with a warning when workflows use it
-- Owners schedule a credential for deletion, and delete a scheduled one for good if no runs used it
-- Owners start a transfer of a credential to another user, and revoke a pending one
-- Users create and edit OAuth clients and share them with projects
-- Superusers make an OAuth client global
-- Support users can also share into projects that allow support access
+- **See and create credentials**
+  - Any signed-in user sees the credentials they own and the OAuth clients they own or that are global
+  - Owners create a credential from an adaptor's fields or raw JSON, or an OAuth credential by signing in to the provider through their own or a global OAuth client
+  - Owners keep separate values per environment, up to five, and edit a credential's name, values and environments
+- **Choose which projects get a credential**
+  - Owners share a credential with projects they belong to, and it follows into those projects' sandboxes
+  - Owners remove project access, with a warning when workflows use it
+  - Support users can also share into projects that allow support access
+- **Retire or hand over a credential**
+  - Owners schedule a credential for deletion, and delete a scheduled one for good if no runs used it
+  - Owners start a transfer of a credential to another user, and revoke a pending one
+- **Manage OAuth clients**
+  - Users create and edit OAuth clients and share them with projects
+  - Superusers make an OAuth client global
+
+**Straightforwardness: 2 of 5.** Each action makes sense on its own, but sandboxes, environments, deletion and transfers interact in ways you have to sit down and think through.
+
+### Most surprising behaviours
+
+- **(2)** Scheduling a credential for deletion immediately takes it away from every project and unhooks it from every job using it. Cancelling the deletion brings the credential back but not any of that, so workflows stay broken until someone reconnects them. (S16, 6.2)
+- **(2)** Removing a project's access doesn't remove the credential from that project's sandboxes, so the secret stays reachable where the owner thinks they've withdrawn it. (6.2)
+- **(2)** On instances set to clear deleted credentials straight away, the clean-up never actually runs. The owner is emailed that secrets go "after a few minutes", but they stay until someone clicks "Delete now". (6.1)
+- **(3)** A transfer doesn't go to the recipient: the confirmation email goes to the current owner, and nothing moves until they open that link. The form also tells the owner whether an email has an account and which projects that person isn't in. (6.2, 6.1, S20)
+- **(3)** Saving an OAuth credential before signing in to the provider seems to crash the form and lose what was entered. Not yet confirmed by running it. (6.1)
 
 ## 3. Who can do what
 

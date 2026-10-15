@@ -81,13 +81,24 @@ would hit a redirect loop or a dead end, and a typo in their address would lock 
 
 ## 2. What it does
 
-- A locked-out user sees why they are blocked and the address the link went to
-- A locked-out user sees no project data, app chrome or socket credential
-- A locked-out user asks for a new confirmation link, up to three times in 15 minutes
-- A locked-out user is told when a link could not be sent
-- A locked-out user corrects their email address, with their password, up to three times in 15 minutes
-- A locked-out user logs out
-- Anyone who is not locked out is sent to /projects
+- **Explain the block** (locked-out users)
+  - Locked-out users see why they are blocked and the address the link went to
+  - Locked-out users see no project data, app chrome or live connection to the app
+- **Ways out** (locked-out users)
+  - Ask for a new confirmation link, up to three times in 15 minutes, and are told when one could not be sent
+  - Correct their email address, with their password, up to three times in 15 minutes
+  - Log out
+- Anyone who is not locked out is sent to their projects
+
+**Straightforwardness: 3 of 5.** Two buttons and a form, but the messages they leave behind and the address they act on don't always match what the user just did.
+
+### Most surprising behaviours
+
+- **(2)** After asking to correct a mistyped address, the page still shows the old one, and "Resend confirmation email" keeps sending to the wrong address until the new link is opened. (6.2)
+- **(2)** The page tells everyone a link was sent "when you signed up". The first administrator, and anyone an administrator created, never got one, so they're sent looking for an email that doesn't exist. (6.1)
+- **(3)** Once the resend limit is hit, "We have sent a new confirmation link" stays on screen beside "You've asked for this a few times recently", though nothing was sent. (6.1)
+- **(3)** The password is checked every time you leave the email field, with no limit, so someone at an unattended blocked session can guess the password and check which addresses have accounts. (6.1)
+- **(3)** A wrong password shows "Your passwords do not match", though the user typed only one password. (6.1)
 
 ## 3. Who can do what
 

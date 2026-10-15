@@ -94,11 +94,20 @@ way to confirm, and the instance has no evidence that an address belongs to the 
 
 ## 2. What it does
 
-- Anyone, signed in or out, asks for a new confirmation email by entering an address
-- The answer is the same whether the address is unknown, already confirmed, unconfirmed or throttled
+- Anyone, signed in or out, asks for a new confirmation email by entering an address, and gets the same answer whether the address is unknown, already confirmed, unconfirmed or throttled
 - A signed-in user opens their confirmation link and confirms their account
 - A signed-out user who opens a confirmation link is sent to log in first
 - A signed-in unconfirmed user, including a locked-out one, asks for a new link by visiting the resend URL
+
+**Straightforwardness: 4 of 5.** Confirming is one click; the surprises are small ones about a hidden resend form and pages that don't quite fit the person using them.
+
+### Most surprising behaviours
+
+- **(3)** Nothing in the app links to the signed-out "resend" form; you can only reach it by typing its address. (6.2)
+- **(3)** The form says the same words for every address, but it answers more slowly for an unconfirmed account, which gives the game away. If the email fails to send, the person is still told it's coming and nobody is warned. (6.1)
+- **(3)** The confirm page is only for signed-in users, yet it has no menu or log out and offers "Log in" and "Register" links. (6.1, 6.2)
+- **(4)** Anyone can make the server send up to three emails every 15 minutes to any unconfirmed account, and those sends use up the same allowance as the person's own requests. (6.2)
+- **(4)** The resent email is the "Welcome to OpenFn, ignore this if you didn't sign up" version, even for someone an administrator created. (6.2)
 
 ## 3. Who can do what
 

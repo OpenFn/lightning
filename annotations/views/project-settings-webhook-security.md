@@ -91,15 +91,28 @@ method would not know which workflows and channels it leaves unprotected.
 
 ## 2. What it does
 
-- Every member sees the project's auth methods, their type and what uses them
-- Every member can list the workflow triggers and channels a method is attached to
-- Admins and owners create a basic auth method (name, username, password)
-- Admins and owners create an API key method, with the key generated and shown for copying
-- Admins and owners rename a method
-- Admins and owners reveal a stored password or API key after re-entering their password or a 2FA code
-- Admins and owners delete a method after typing DELETE, seeing first which triggers and channels lose it
+- **See methods and what they protect** (every member)
+  - The project's auth methods, with their type and what uses them
+  - The list of workflow triggers and channels a method is attached to
+- **Create methods** (admins and owners)
+  - A basic auth method (name, username, password)
+  - An API key method, with the key generated and shown for copying
+- **Look after existing methods** (admins and owners)
+  - Rename a method
+  - Reveal a stored password or API key after re-entering their password or a 2FA code
+  - Delete a method after typing DELETE, seeing first which triggers and channels lose it
 - Editors, viewers and support users cannot create, change or delete methods
 - In a sandbox, the tab points to the parent project instead of offering management
+
+**Straightforwardness: 3 of 5.** The basics are clear, but deleting a method reaches further than the page suggests, and a few messages don't match what actually happens.
+
+### Most surprising behaviours
+
+- **(3)** The delete warning says every listed trigger and channel will become unprotected, even when another method is still attached and keeps them protected, so admins get a false alarm. (6.1, S13)
+- **(3)** A deleted method disappears from the list but keeps its name reserved, so creating a new one with that name is refused for a name nobody can see. (6.1)
+- **(3)** There's no way to change a password or regenerate a key: only the name can be edited, so rotating a secret means creating a new method, attaching it everywhere and deleting the old one. (8, S09)
+- **(3)** Sandboxes share their parent's methods, so deleting one here also removes it from the sandboxes' webhooks, not just this project's. The delete dialog does list those sandbox workflows. (6.2)
+- **(3)** Renaming a method to a name another method already has may crash the page and close the dialog with no message, instead of showing an error. (6.1)
 
 ## 3. Who can do what
 

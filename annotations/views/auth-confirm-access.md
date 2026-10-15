@@ -70,10 +70,19 @@ at an unattended signed-in browser could read codes that bypass the account's se
 ## 2. What it does
 
 - Signed-in users see who they are signed in as before confirming
-- Users confirm with their password
-- Users with MFA enabled switch to an authenticator code, and back
+- Users confirm with their password, or, if they have MFA, switch to an authenticator code and back
 - A wrong password or code is refused with an error and nothing is unlocked
 - A correct password or code sends the user back to the page they asked for, unlocked for five minutes
+
+**Straightforwardness: 3 of 5.** A one-field form, but it leans on remembering where the user was headed, and that memory breaks in both directions.
+
+### Most surprising behaviours
+
+- **(2)** The page the user was heading to is remembered even after they log out, so the next person to sign in on that browser lands on "Confirm access" instead of their projects. (6.1)
+- **(2)** Opening the page directly, without being sent from a sensitive page, shows an error page instead of the form. (6.1)
+- **(3)** The page never says why the user was sent here; the explanation is prepared but not shown. (6.1)
+- **(3)** Nothing limits wrong passwords or codes and nothing records them, so someone at an unattended browser can keep guessing. (6.2)
+- **(3)** Backup codes don't work here, unlike at login, and someone who signs in through an external provider without MFA may have no password to confirm with at all. (6.2, 6.5)
 
 ## 3. Who can do what
 

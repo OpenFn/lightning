@@ -87,25 +87,35 @@ and an admin couldn't clear out a collection that is using up the project's stor
 
 ## 2. What it does
 
-- Every member sees the project's collections with their used storage
-- A project with no collections shows an empty state that admins can create from
-- Admins and owners create a collection, with its URL-safe name shown before saving
-- A name that isn't URL safe can't be saved
-- Collection names are unique within a project
-- The same name can be used in different projects
-- On a plan that limits collections, creating one past the limit is refused with the plan's message
-- Admins and owners rename a collection
-- Admins and owners delete a collection and all its records, after confirming
-- Admins and owners close a form or confirmation without changing anything
-- Viewers, editors and support users see create, edit and delete disabled
-- Create, edit and delete requests from anyone but an admin or owner are refused
-- Every member previews the first record of a collection
-- An empty collection's preview says so
-- The preview keeps long records readable and copies the full record
-- Collections from other projects can't be previewed, edited or deleted from this tab
-- A collection removed since the page loaded is reported as not found
-- Members sort the list by name or used storage
-- Every member can download a collection's contents
+- **Browse collections** (every member)
+  - See the project's collections with their used storage, sorted by name or used storage
+  - A project with no collections shows an empty state that admins can create from
+  - Download a collection's contents
+- **Preview a collection** (every member)
+  - See its first record, or a note that it's empty
+  - Long records stay readable on screen, and copying takes the full record
+- **Create collections** (admins and owners)
+  - Create one, seeing its URL-safe name before saving; a name that isn't URL safe can't be saved
+  - Names are unique within a project but can be reused in other projects
+  - On a plan that limits collections, creating one past the limit is refused with the plan's message
+- **Rename and delete collections** (admins and owners)
+  - Rename a collection
+  - Delete a collection and all its records, after confirming
+  - Close any form or confirmation without changing anything
+- **Keep changes in bounds**
+  - Viewers, editors and support users see create, edit and delete disabled, and their requests are refused
+  - Collections from other projects can't be previewed, edited or deleted from this tab
+  - A collection removed since the page loaded is reported as not found
+
+**Straightforwardness: 3 of 5.** The tab itself is a plain list with a form, but collection names are what jobs and the API use to find data, so naming choices here have effects well beyond the page.
+
+### Most surprising behaviours
+
+- **(2)** Giving a collection the same name as one in another project is allowed, but it then breaks API requests by that name in both projects until callers add the project id. Nothing on the page warns about this. (S06, 4)
+- **(2)** In a sandbox, the banner says changes sync to the parent on merge, but renaming a collection there ends up adding a second, empty collection to the parent instead of renaming it. (8)
+- **(2)** An admin who tampers with the rename request can move a collection, with all its records, into another project, even one they aren't on. (6.1)
+- **(3)** Renaming or deleting a collection gives no warning that jobs using it by name will stop finding it, and delete wipes every record with a simple confirm and no undo. (8, 6.2)
+- **(3)** Pressing Escape on the create, edit or delete dialog may leave its button seeming dead until another dialog is opened or the page is reloaded. (6.1)
 
 ## 3. Who can do what
 

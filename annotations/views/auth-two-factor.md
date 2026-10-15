@@ -95,18 +95,27 @@ an account's projects, credentials and health data.
 
 ## 2. What it does
 
-- Users with a pending second factor finish signing in with an authenticator code
-- Users with a pending second factor finish signing in with a backup code
-- Users switch between the authenticator and backup code forms
-- A used backup code cannot be used again
-- An authenticator code cannot be replayed once accepted
-- A wrong code is refused and the session stays pending
-- The "Keep me logged in for 60 days" choice is honoured only after the second factor
-- Signed-out visitors are sent to log in instead
-- The page does not hand a pending session a live socket token
-- Unconfirmed accounts past their deadline can still finish the second factor
-- Users then go on to the page they asked for (flow-login-return-to)
-- Users signing in through an external provider finish here too (flow-sso-login)
+- **Finish signing in** (users with a pending second factor)
+  - Users enter a code from their authenticator app, or switch to a backup code and back
+  - Users who sign in through an external provider finish here too
+  - Users then go on to the page they asked for, and "Keep me logged in for 60 days" takes effect only now
+- **Refuse what shouldn't work**
+  - A wrong code is refused and the session stays pending
+  - A used backup code can't be used again, and an accepted authenticator code can't be replayed
+  - The page gives a pending session no live connection to the app
+- **Who reaches the page**
+  - Signed-out visitors are sent to log in instead
+  - Unconfirmed accounts past their deadline can still finish the second factor
+
+**Straightforwardness: 3 of 5.** Entering a code is simple, but the page goes wrong in confusing ways after a mistake, and gives a stuck person nowhere to go.
+
+### Most surprising behaviours
+
+- **(2)** After one wrong code the page gets muddled: headings and help disappear, and the switch link says "Use your authenticator app" but leads to the backup code form, so there's no way back. (6.1)
+- **(2)** Nothing limits wrong codes, so someone who has the password can keep guessing six-digit codes, and nothing records the attempts. (6.5)
+- **(3)** There's no log out or cancel, and nothing tells someone who has lost both their phone and their backup codes what to do; they can only close the browser. (6.2, 6.5)
+- **(3)** On a phone the backup code box opens a number pad although backup codes include letters, and a code typed in lowercase or with spaces is refused. (6.1, 6.2)
+- **(4)** If two-factor is turned off in another browser while this one is waiting, authenticator codes seem to always fail here and only a backup code gets the person in. (6.5)
 
 ## 3. Who can do what
 

@@ -77,13 +77,24 @@ an administrator, and someone who thinks their codes have leaked has no way to c
 
 ## 2. What it does
 
-- Any signed-in user inside a sudo window sees their own recovery codes
-- Any signed-in user outside a sudo window is sent to re-authenticate first
-- Any signed-in user who has just enrolled lands here and sees their new codes
-- Any signed-in user copies all their codes to the clipboard
-- Any signed-in user opens a printable copy of their codes in a new tab
+- **See the codes**
+  - Any signed-in user who has re-authenticated in the last five minutes sees their own recovery codes; anyone else is sent to re-authenticate first
+  - Any signed-in user who has just enrolled in MFA lands here and sees their new codes
+  - A signed-in user without MFA is told the codes need MFA and pointed to the profile
+- **Keep a copy**
+  - Any signed-in user copies all their codes to the clipboard
+  - Any signed-in user opens a printable copy of their codes in a new tab
 - Any signed-in user replaces all their codes with ten new ones
-- A signed-in user without MFA is told the codes need MFA and pointed to the profile
+
+**Straightforwardness: 3 of 5.** A familiar recovery-codes page, but used codes, the one-click replace and what a user without MFA can do all behave in ways you wouldn't guess.
+
+### Most surprising behaviours
+
+- **(2)** Once a user has signed in with one of their codes, this page seems likely to fail to load at all, right when they most need to check what's left. Not yet confirmed by running it. (6.1, 8)
+- **(3)** "Generate new backup codes" acts on one click, with no confirmation and no email, and every old code stops working at once. It also works after the five-minute window has run out if the page is still open. (6.2, 6.4)
+- **(3)** Copy and print include codes that have already been used, with nothing marking them, so the saved list looks like it has more working codes than it does. (6.1)
+- **(4)** The codes can be shown again any time rather than only once, because they are stored in a form that can be read back. (6.2)
+- **(4)** A user who has never turned on MFA still sees the codes and can generate them below the "MFA Disabled" notice. (6.2)
 
 ## 3. Who can do what
 

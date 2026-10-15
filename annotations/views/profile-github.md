@@ -68,12 +68,23 @@ organisation or stop trusting the instance.
 
 ## 2. What it does
 
-- Any signed-in user sees whether their own GitHub account is linked
-- A user with no valid link starts the GitHub connection from here
-- A user whose link has lapsed is told so and reconnects from here
-- A linked user disconnects GitHub after confirming, which revokes OpenFn's grant on GitHub and removes the stored token
-- A user can back out of the disconnect confirmation without changing anything
-- On an instance without GitHub configured, users see that connecting is unavailable (scenario owned by flow-github-connect S06)
+- Any signed-in user sees whether their own GitHub account is linked, and is told when the link has lapsed
+- **Link GitHub**
+  - A user with no valid link starts the GitHub connection from here, or reconnects if it lapsed
+  - On an instance without GitHub configured, users see that connecting is unavailable (scenario owned by flow-github-connect S06)
+- **Unlink GitHub**
+  - A linked user disconnects GitHub after confirming, which revokes OpenFn's access on GitHub and removes the stored token
+  - A user can back out of the disconnect confirmation without changing anything
+
+**Straightforwardness: 3 of 5.** Connect and disconnect are simple on the surface, but what disconnecting actually does on GitHub's side, and to other accounts, takes explaining.
+
+### Most surprising behaviours
+
+- **(2)** Disconnect always says "GitHub connection removed successfully", even when GitHub refused to revoke access. OpenFn can still act on the user's GitHub account and they aren't told to revoke it themselves. A page left open a while makes this more likely. (6.1, S06)
+- **(2)** Disconnecting revokes OpenFn's access for that GitHub user everywhere, so another OpenFn account (or another instance) linked to the same GitHub user quietly stops working while still showing as connected. (6.1)
+- **(3)** Other open pages for the same user, like another profile tab or a project's GitHub sync tab, keep showing GitHub as connected until reloaded, and then fail. (6.1)
+- **(3)** If an instance turns GitHub off, a user who already has a stored link has no way to remove it from the page. (6.2)
+- **(4)** Disconnecting doesn't stop any project's existing GitHub sync; it only stops this user setting up or changing sync. (6.2)
 
 ## 3. Who can do what
 

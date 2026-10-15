@@ -55,9 +55,17 @@ standard product on their own.
 ## 2. What it does
 
 - Any signed-in user sees whether experimental features are on for their account
-- Any signed-in user turns experimental features on for their own account
-- Any signed-in user turns experimental features off for their own account
+- Any signed-in user turns experimental features on or off for their own account, saved as soon as they flip the switch
 - Turning the setting on or off leaves the user's other saved preferences alone
+
+**Straightforwardness: 3 of 5.** It's one switch, but the page works from a copy of your settings taken when it loaded, which leads to changes quietly undoing each other.
+
+### Most surprising behaviours
+
+- **(2)** Collapsing or expanding the sidebar after using the switch undoes the change: the switch flips back and the setting is lost, even though the user saw a success message. (6.1)
+- **(2)** Using the switch can undo preferences changed in another tab since this page loaded, such as sidebar or editor layout, so "leaves other preferences alone" only holds if nothing changed elsewhere. (6.1)
+- **(3)** After turning experimental features off, the sidebar still says "Experimental" until the page is reloaded, so a user who came here to turn it off thinks it didn't work. (6.1)
+- **(4)** The card doesn't say which features the setting turns on, and other open tabs keep the old setting until they're reloaded. (6.2)
 
 ## 3. Who can do what
 

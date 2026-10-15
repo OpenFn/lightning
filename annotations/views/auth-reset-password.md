@@ -91,15 +91,26 @@ to find out who has an account, or to take over an account from a stale or leake
 
 ## 2. What it does
 
-- A signed-out visitor asks for reset instructions by email
-- The response is the same whether or not the email has an account
-- The holder of a valid link sets a new password
-- The new password must meet the account password rules
-- A successful reset sends the person to log in rather than signing them in
-- A successful reset ends the account's other sessions and API tokens
-- A link stops working once used, after one day, or once the account's email changes
-- A malformed or unknown link is refused
-- Invitees use the same page to set their first password
+- **Ask for a reset** (signed-out visitors)
+  - A visitor asks for reset instructions by email
+  - The response is the same whether or not the email has an account
+- **Set a new password** (holder of a valid link)
+  - The holder of a valid link sets a new password that meets the account password rules
+  - A successful reset sends the person to log in rather than signing them in, and ends the account's other sessions and API tokens
+  - Invitees use the same page to set their first password
+- **Keep links safe**
+  - A link stops working once used, after one day, or once the account's email changes
+  - A malformed or unknown link is refused
+
+**Straightforwardness: 3 of 5.** The happy path is the familiar one, but who the page will reset for, and what it gives away, takes some explaining.
+
+### Most surprising behaviours
+
+- **(2)** On instances that use single sign-on, a person can set a local password here and then log in with it, going around the organisation's provider. (6.5)
+- **(3)** The page says the same thing for every email, but it may answer noticeably slower for real accounts, so a script could still find out who has one. If the email fails to send, the person is still told it's on its way. (6.1)
+- **(3)** Nothing limits how often reset emails are requested, so anyone can flood a person's inbox, and nothing records a reset even though it cuts off every session and API token. (6.5)
+- **(3)** Disabled and scheduled-for-deletion accounts get the email and can set a new password, but still can't log in, which looks to them like the reset didn't work. (6.2)
+- **(4)** Asking again doesn't cancel earlier links: every link sent stays valid until one is used or a day passes. (6.2)
 
 ## 3. Who can do what
 

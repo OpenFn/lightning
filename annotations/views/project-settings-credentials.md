@@ -87,16 +87,28 @@ adding a secret would have to leave the project and remember to share it back.
 
 ## 2. What it does
 
-- Every member sees the credentials and OAuth clients the project can use, with their owners
-- Every member sees the project's keychains, with their JSONPath and creator
-- Editors, admins, owners and support users create a credential that is already shared with this project
-- In a sandbox, a new credential is shared with the sandbox only
-- Editors, admins, owners and support users create an OAuth client already shared with this project
-- New OAuth credentials can be built on the project's OAuth clients and global ones
-- Admins, owners and support users create and edit keychains
-- A keychain's default credential must be one this project can use
+- **See what the project can use** (every member)
+  - The credentials and OAuth clients the project can use, with their owners
+  - The project's keychains, with their JSONPath and creator
+- **Add credentials and OAuth clients** (editors, admins, owners and support users)
+  - Create a credential already shared with this project; in a sandbox, with the sandbox only
+  - Create an OAuth client already shared with this project
+  - Build new OAuth credentials on the project's OAuth clients and global ones
+- **Set up keychains** (admins, owners and support users)
+  - Create and edit keychains, whose default credential must be one this project can use
+- **Look after your own credentials** (credential owners)
+  - Schedule deletion, start a transfer and authorize OAuth from here, landing back on this tab
 - Viewers can't create anything here, even by sending the event
-- Credential owners schedule deletion, start a transfer and authorize OAuth from here, landing back on this tab
+
+**Straightforwardness: 3 of 5.** Seeing and adding is simple, but what you can do to an existing credential depends on whether you own it rather than your role, and that produces some odd moments.
+
+### Most surprising behaviours
+
+- **(2)** A viewer who owns a credential gets an "Edit" button here, fills in the form, and is refused on save, losing the edit. The same edit works on their own credentials page. (6.1)
+- **(3)** Row actions follow ownership, not role: an admin can't edit or delete a colleague's credential from here, while a viewer can manage one they own. (3)
+- **(3)** Deleting a credential from here makes it disappear from the list at once, and the only way to cancel the deletion is on the separate credentials page, which nothing points to. (6.1, S17)
+- **(3)** The "Projects with access" column lists every project a credential is shared with, including ones the viewer isn't on, so members can learn the names of other projects. (6.1)
+- **(3)** When a list is empty its "Create" button looks live even for people who can't create, and clicking it just says they aren't authorized. (6.1)
 
 ## 3. Who can do what
 

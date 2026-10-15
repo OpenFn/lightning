@@ -80,12 +80,22 @@ could quietly redirect the account's email or lock the owner out.
 
 ## 2. What it does
 
-- Any signed-in user sees their name, sign-up date and email address
-- Any signed-in user changes their first name, last name and contact preference
-- Any signed-in user asks to change their email address, confirmed with their password
-- Any signed-in user changes their password, confirmed with their current password
+- Any signed-in user sees their name, sign-up date and email address, plus a privacy preferences card on instances that configure one
+- **Update their details**
+  - Any signed-in user changes their first name, last name and contact preference
+  - Any signed-in user asks to change their email address, confirmed with their password; it only changes once they open the link sent to the new address
+  - Any signed-in user changes their password, confirmed with their current password
 - Any signed-in user reaches the account deletion page from here
-- Users on instances with a GDPR preferences component see it on this page
+
+**Straightforwardness: 3 of 5.** The forms are what you'd expect, but a password change reaches well beyond this page, and the email form gives away more than it should.
+
+### Most surprising behaviours
+
+- **(2)** Changing your password signs you out on every other device and deletes all your API tokens, so working scripts and integrations stop with no warning here. (S08, 6.2)
+- **(3)** Asking for an email change sends the old address a message saying "Your OpenFn email was changed", even though nothing changes until the new address confirms, and it may never be confirmed. (6.1)
+- **(3)** The email form checks your current password every time you leave the field, with no limit on attempts, and tells you if an address already belongs to another account. Someone at an unattended session can use it to guess the password or probe for accounts. (6.2)
+- **(3)** Typing the wrong password on the email form says "Your passwords do not match.", which is confusing because you only typed one. (6.1)
+- **(4)** "Contact preference" promises fewer messages if you pick "Critical", but nothing seems to read the setting, so it may do nothing at all. (6.5, 8)
 
 ## 3. Who can do what
 

@@ -85,14 +85,24 @@ stay shut on instances that are administered by a service account instead.
 
 ## 2. What it does
 
-- A fresh install sends every browser page here until a superuser exists (shared-authenticated-session S11)
-- Anyone reaching the page on a fresh install creates the first superuser and is signed in as them
-- The form requires both names, a valid unused email and a password of at least 12 characters
-- The form flags a password confirmation that doesn't match while typing
-- Names with control characters are refused
-- Save stays disabled until the form is valid
-- Once a superuser exists, the page sends visitors to their projects
-- Instances administered by a service account refuse the page and never force it
+- **Create the first superuser** (anyone reaching the page on a fresh install)
+  - Visitors give both names, a valid unused email and a password of at least 12 characters, and are signed in as the new superuser
+  - The form flags a password confirmation that doesn't match while typing, and refuses names with control characters
+  - Save stays disabled until the form is valid
+- **When the page is open**
+  - A fresh install sends every browser page here until a superuser exists
+  - Once a superuser exists, the page sends visitors to their projects
+  - Instances administered by a service account refuse the page and never force it
+
+**Straightforwardness: 3 of 5.** A one-off form, but who gets to fill it in, and how firmly it shuts afterwards, has gaps you need explained.
+
+### Most surprising behaviours
+
+- **(2)** On a fresh install anyone who reaches the address first becomes the superuser; there is no setup code or other check. (6.5)
+- **(2)** The "already set up" check only happens when the page loads, so a tab left open, or two people saving at once, can create a second superuser. (6.1)
+- **(2)** Where email confirmation is required, the superuser made here is never confirmed or emailed, so the only administrator gets locked out 48 hours later. (6.1)
+- **(3)** If the browser is already signed in as someone else, it stays that person and the new superuser isn't signed in. (6.2)
+- **(3)** A short password shows "minimum 12 characters" and "minimum 8 characters" at the same time, and first setup can only be switched off by setting up a service account. (6.1, 6.2)
 
 ## 3. Who can do what
 
