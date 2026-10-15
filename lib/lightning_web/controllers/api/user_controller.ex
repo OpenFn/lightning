@@ -12,8 +12,8 @@ defmodule LightningWeb.API.UserController do
   with the user rendered as a 201 renders one. The email can't be changed, and
   `confirmed` only ever confirms.
 
-  `GET /api/users` is paginated and filters by `?email=` without regard to
-  case.
+  `GET /api/users` is paginated, at most 100 a page, and filters by `?email=`
+  without regard to case. An `email` that isn't a string answers 422.
   """
   use LightningWeb, :controller
 
@@ -31,7 +31,9 @@ defmodule LightningWeb.API.UserController do
   plug :require_scope, "users:write" when action in [:create, :update]
 
   def index(conn, params) do
-    render(conn, "index.json", page: Accounts.paginate_users(params), conn: conn)
+    with {:ok, page} <- Accounts.paginate_users(params) do
+      render(conn, "index.json", page: page, conn: conn)
+    end
   end
 
   def show(conn, %{"id" => id}) do

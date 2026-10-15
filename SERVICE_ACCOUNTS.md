@@ -173,6 +173,9 @@ curl "https://lightning.example.org/api/users?email=ada@example.com" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
+The list pages 10 users at a time by default, and at most 100 with `page_size`.
+An `email` that isn't a single string answers 422.
+
 Change a user's role or password:
 
 ```bash

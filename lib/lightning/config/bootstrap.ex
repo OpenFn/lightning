@@ -338,6 +338,10 @@ defmodule Lightning.Config.Bootstrap do
         workflow_failures: 1,
         background: 1,
         history_exports: 1,
+        # One-off data repairs enqueued by migrations. A queue of its own means
+        # nodes still on the previous release during a blue-green deploy never
+        # poll it, so they can't pick up a worker they don't have.
+        maintenance: 1,
         ai_assistant: 10,
         # Shared by Lightning.LogLines.SearchVectorWorker and
         # Lightning.Invocation.DataclipSearchVectorWorker. Concurrency 2 gives

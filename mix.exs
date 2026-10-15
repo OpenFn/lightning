@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.19.0",
+      version: "2.19.1-pre",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -71,20 +71,23 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # cowlib advisories we have checked and accepted. Each names a function on
-  # cowlib's header-building path, and nothing in our tree calls any of them. The
-  # parse side of two of them is reachable through cowboy_req, so recheck by
-  # function rather than by module. No patched cowlib release exists yet. Hex
-  # matches an advisory's primary ID or any alias, so the CVE form also silences
-  # the GHSA and EEF variants. Detail in #5102.
+  # Advisories we have checked and accepted. Hex matches an advisory's primary ID
+  # or any alias, so the CVE form also silences the GHSA and EEF variants.
+  #
+  # cowlib: names a function on cowlib's header-building path that nothing in
+  # our tree calls. No patched cowlib release exists yet. Detail in #5102.
   defp hex_audit do
     [
       ignore_advisories: [
-        # cowlib
         # cow_http_struct_hd:escape_string/2
         "CVE-2026-43966",
-        # cow_cookie:cookie/1
-        "CVE-2026-43969"
+        # cloak and cloak_ecto, no patched release exists. Our only cipher is
+        # Cloak.Ciphers.AES.GCM (Lightning.Vault), which authenticates its
+        # ciphertext, and we define no Cloak.Ecto.PBKDF2 fields.
+        # Cloak.Ciphers.AES.CTR, no MAC
+        "CVE-2026-95105",
+        # Cloak.Ecto.PBKDF2 ignores :iterations
+        "CVE-2026-94206"
       ]
     ]
   end
