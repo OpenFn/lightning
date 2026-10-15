@@ -53,9 +53,7 @@ defmodule LightningWeb.API.Errors do
   """
   @spec from_changeset(Changeset.t(), %{atom() => atom()}) :: [entry()]
   def from_changeset(%Changeset{} = changeset, renames \\ %{}) do
-    changeset
-    |> walk([], renames, nil)
-    |> Enum.map(fn {location, error} -> entry(location, error) end)
+    changeset |> entries_with_opts(renames) |> Enum.map(&elem(&1, 0))
   end
 
   @doc """
@@ -72,21 +70,18 @@ defmodule LightningWeb.API.Errors do
   the rest of the validation.
   """
   @spec problem(Changeset.t(), %{atom() => atom()}) :: Problem.t()
-  def problem(%Changeset{} = changeset, renames \\ %{}) do
-    errors =
-      changeset
-      |> walk([], renames, nil)
-      |> Enum.map(fn {location, {_message, opts} = error} ->
-        {entry(location, error), opts}
-      end)
+  def problem(changeset, renames \\ %{})
 
+  def problem(%Changeset{valid?: true}, _renames) do
+    raise ArgumentError, "a changeset with no errors is not a problem"
+  end
+
+  def problem(%Changeset{} = changeset, renames) do
+    errors = entries_with_opts(changeset, renames)
     entries = Enum.map(errors, &elem(&1, 0))
     codes = Enum.map(entries, & &1.code)
 
     cond do
-      errors == [] ->
-        raise ArgumentError, "a changeset with no errors is not a problem"
-
       :not_ready in codes ->
         Problem.new(:not_ready, headers: [{"retry-after", "5"}])
 
@@ -103,6 +98,14 @@ defmodule LightningWeb.API.Errors do
           errors: Enum.reject(entries, &(&1.code == :exceeds_limit))
         )
     end
+  end
+
+  defp entries_with_opts(changeset, renames) do
+    changeset
+    |> walk([], renames, nil)
+    |> Enum.map(fn {location, {_message, opts} = error} ->
+      {entry(location, error), opts}
+    end)
   end
 
   @doc """
