@@ -82,7 +82,7 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
         |> with_token(Lightning.Accounts.generate_api_token(user))
         |> get(~p"/api/projects/#{project.id}")
 
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+      assert_problem(conn, 403, :forbidden, [])
       assert get_resp_header(conn, "www-authenticate") == []
     end
 
