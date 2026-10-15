@@ -238,7 +238,7 @@ defmodule Lightning.Credentials do
     |> Enum.with_index()
     |> Enum.reduce(multi, fn {body_attrs, index}, acc ->
       acc
-      |> Multi.insert(:"credential_body_#{index}", fn %{credential: credential} ->
+      |> Multi.insert({:credential_body, index}, fn %{credential: credential} ->
         %CredentialBody{}
         |> CredentialBody.changeset(%{
           credential_id: credential.id,
@@ -357,7 +357,7 @@ defmodule Lightning.Credentials do
     credential_bodies
     |> Enum.with_index()
     |> Enum.reduce(multi, fn {body_attrs, index}, acc ->
-      Multi.run(acc, :"credential_body_#{index}", fn _repo, _changes ->
+      Multi.run(acc, {:credential_body, index}, fn _repo, _changes ->
         upsert_credential_body(credential_id, body_attrs, schema_name)
       end)
     end)
@@ -617,14 +617,8 @@ defmodule Lightning.Credentials do
       {:error, :credential, %Ecto.Changeset{} = changeset, _changes} ->
         {:error, changeset}
 
-      {:error, op, %Ecto.Changeset{} = failed, _changes} ->
-        case body_position(op) do
-          {:ok, index} ->
-            {:error, put_body_errors(credential_changeset, index, failed)}
-
-          :error ->
-            {:error, failed}
-        end
+      {:error, {:credential_body, index}, %Ecto.Changeset{} = failed, _changes} ->
+        {:error, put_body_errors(credential_changeset, index, failed)}
 
       {:error, _op, error, _changes} ->
         {:error, error}
@@ -641,17 +635,6 @@ defmodule Lightning.Credentials do
          ])}
     end
   end
-
-  # A body is written in its own step, named for its position in
-  # `credential_bodies`.
-  defp body_position(op) when is_atom(op) do
-    case Atom.to_string(op) do
-      "credential_body_" <> index -> {:ok, String.to_integer(index)}
-      _other -> :error
-    end
-  end
-
-  defp body_position(_op), do: :error
 
   defp put_body_errors(credential_changeset, index, body_changeset) do
     Enum.reduce(body_changeset.errors, credential_changeset, fn
@@ -788,20 +771,8 @@ defmodule Lightning.Credentials do
   end
 
   defp extract_environment_bodies(changes) do
-    Enum.reduce(changes, [], fn
-      {key, %CredentialBody{} = credential_body}, acc when is_atom(key) ->
-        case Atom.to_string(key) do
-          "credential_body_" <> _ ->
-            [{credential_body.name, credential_body.body} | acc]
-
-          _ ->
-            acc
-        end
-
-      _, acc ->
-        acc
-    end)
-    |> Enum.reverse()
+    for {{:credential_body, _index}, %CredentialBody{} = body} <- changes,
+        do: {body.name, body.body}
   end
 
   defp extract_deleted_environments(changes) do
