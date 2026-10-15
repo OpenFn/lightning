@@ -14,6 +14,11 @@ defmodule LightningWeb.API.FallbackController do
 
   require Logger
 
+  # action_fallback hands the action's result to init/1, then to call/2.
+  @doc false
+  @spec init(term()) :: term()
+  def init(result), do: result
+
   @spec call(Plug.Conn.t(), term()) :: Plug.Conn.t()
   def call(conn, {:error, %Ecto.Changeset{} = changeset}),
     do: Problem.respond(conn, Errors.problem(changeset))
