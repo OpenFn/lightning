@@ -52,7 +52,9 @@ defmodule LightningWeb.API.Errors do
   """
   @spec from_changeset(Changeset.t(), %{atom() => atom()}) :: [entry()]
   def from_changeset(%Changeset{} = changeset, renames \\ %{}) do
-    changeset |> entries_with_opts(renames) |> Enum.map(&elem(&1, 0))
+    changeset
+    |> walk([], renames, nil)
+    |> Enum.map(fn {location, error} -> entry(location, error) end)
   end
 
   @doc """
@@ -61,12 +63,11 @@ defmodule LightningWeb.API.Errors do
 
     1. any error coded `not_ready`: 503 `not_ready`, with no entries;
     2. every error `exceeds_limit`: 402 `exceeds_limit`;
-    3. every error `taken` from a unique constraint: 409 `taken`;
+    3. every error `taken`: 409 `taken`;
     4. otherwise 422 `invalid`, without any `exceeds_limit` entries.
 
-  A `taken` from an application-level check (`code: :taken` without
-  `constraint: :unique`) is not a unique constraint, so it answers 422 with
-  the rest of the validation.
+  A unique constraint and an application-level check both answer 409, since
+  they report the same clash and which one caught it is a race.
   """
   @spec problem(Changeset.t(), %{atom() => atom()}) :: Problem.t()
   def problem(changeset, renames \\ %{})
@@ -76,8 +77,7 @@ defmodule LightningWeb.API.Errors do
   end
 
   def problem(%Changeset{} = changeset, renames) do
-    errors = entries_with_opts(changeset, renames)
-    entries = Enum.map(errors, &elem(&1, 0))
+    entries = from_changeset(changeset, renames)
     codes = Enum.map(entries, & &1.code)
 
     cond do
@@ -87,9 +87,7 @@ defmodule LightningWeb.API.Errors do
       Enum.all?(codes, &(&1 == :exceeds_limit)) ->
         Problem.new(:exceeds_limit, errors: entries)
 
-      Enum.all?(errors, fn {entry, opts} ->
-        entry.code == :taken and opts[:constraint] == :unique
-      end) ->
+      Enum.all?(codes, &(&1 == :taken)) ->
         Problem.new(:taken, errors: entries)
 
       true ->
@@ -97,14 +95,6 @@ defmodule LightningWeb.API.Errors do
           errors: Enum.reject(entries, &(&1.code == :exceeds_limit))
         )
     end
-  end
-
-  defp entries_with_opts(changeset, renames) do
-    changeset
-    |> walk([], renames, nil)
-    |> Enum.map(fn {location, {_message, opts} = error} ->
-      {entry(location, error), opts}
-    end)
   end
 
   @doc """

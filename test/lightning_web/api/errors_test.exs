@@ -290,11 +290,11 @@ defmodule LightningWeb.API.ErrorsTest do
                )
     end
 
-    test "answers 422 for a taken that an application check found, not a unique constraint" do
+    test "answers 409 taken for a taken that an application check found, as for a unique constraint" do
       user = insert(:user)
 
       changeset =
-        User.user_registration_changeset(%{
+        User.changeset(%User{}, %{
           first_name: "Ada",
           last_name: "Lovelace",
           email: user.email,
@@ -302,7 +302,7 @@ defmodule LightningWeb.API.ErrorsTest do
         })
 
       assert Errors.problem(changeset) ==
-               Problem.new(:invalid,
+               Problem.new(:taken,
                  errors: [
                    %{
                      pointer: "#/email",
