@@ -105,15 +105,15 @@ defmodule LightningWeb.API.CollectionController do
         {:ok, collection} ->
           conn |> put_status(:created) |> render_collection(collection)
 
-        {:error, :exceeds_limit, _message} ->
-          {:error, :exceeds_limit}
-
         # Someone else created it since the lookup. Rerun the request so it
         # meets that collection.
-        {:error, changeset} ->
+        {:error, %Ecto.Changeset{} = changeset} ->
           if PutBody.id_taken?(changeset),
             do: update(conn, %{"project_id" => project.id, "id" => id}),
             else: {:error, changeset}
+
+        error ->
+          error
       end
     end
   end
