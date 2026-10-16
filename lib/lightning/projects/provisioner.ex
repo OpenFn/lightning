@@ -893,10 +893,7 @@ defmodule Lightning.Projects.Provisioner do
 
       if is_map(attrs) and
            (Map.has_key?(attrs, key) or Map.has_key?(attrs, field)) do
-        add_error(acc, :base, "extraneous parameters: %{params}",
-          params: key,
-          code: :unknown_key
-        )
+        add_unknown_key(acc, key)
       else
         acc
       end
@@ -1029,17 +1026,20 @@ defmodule Lightning.Projects.Provisioner do
 
     field_keys = changeset.types |> Map.keys() |> MapSet.new(&to_string/1)
 
-    extraneous_params = MapSet.difference(param_keys, field_keys)
+    param_keys
+    |> MapSet.difference(field_keys)
+    |> Enum.sort()
+    |> Enum.reduce(changeset, &add_unknown_key(&2, &1))
+  end
 
-    if MapSet.size(extraneous_params) > 0 do
-      add_error(changeset, :base, "extraneous parameters: %{params}",
-        params: MapSet.to_list(extraneous_params) |> Enum.join(", "),
+  # A key from the request can't become an atom, so it rides in `key:` and the
+  # API places the error at it (error-format spec §7 item 8).
+  defp add_unknown_key(changeset, key),
+    do:
+      add_error(changeset, :base, "is not accepted",
+        key: key,
         code: :unknown_key
       )
-    else
-      changeset
-    end
-  end
 
   # A hidden row must not keep a name reserved. Released whatever the trigger's
   # enabled state, and before the insert so one document can drop a workflow and

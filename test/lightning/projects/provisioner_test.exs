@@ -6,6 +6,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
+  alias LightningWeb.API.Errors
 
   import Ecto.Query
   import Lightning.AdaptorTestHelpers
@@ -74,8 +75,22 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert flatten_errors(changeset) == %{
                id: ["This field can't be blank."],
                name: ["This field can't be blank."],
-               base: ["extraneous parameters: baz, foo"]
+               base: ["is not accepted", "is not accepted"]
              }
+
+      unknown_keys =
+        changeset
+        |> Errors.from_changeset()
+        |> Enum.filter(&(&1.code == :unknown_key))
+
+      assert Enum.sort_by(unknown_keys, & &1.pointer) == [
+               %{
+                 pointer: "#/baz",
+                 code: :unknown_key,
+                 detail: "is not accepted"
+               },
+               %{pointer: "#/foo", code: :unknown_key, detail: "is not accepted"}
+             ]
     end
 
     test "with server-owned trigger fields" do
@@ -96,10 +111,16 @@ defmodule Lightning.Projects.ProvisionerTest do
 
         refute changeset.valid?
 
-        assert %{workflows: [%{triggers: [%{base: [error]}]}]} =
+        assert %{workflows: [%{triggers: [%{base: ["is not accepted"]}]}]} =
                  flatten_errors(changeset)
 
-        assert error == "extraneous parameters: #{field}"
+        assert Errors.from_changeset(changeset) == [
+                 %{
+                   pointer: "#/workflows/0/triggers/0/#{field}",
+                   code: :unknown_key,
+                   detail: "is not accepted"
+                 }
+               ]
       end
     end
 
