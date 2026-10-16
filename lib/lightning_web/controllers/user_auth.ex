@@ -414,21 +414,9 @@ defmodule LightningWeb.UserAuth do
 
       _ ->
         conn
-        |> get_format()
-        |> case do
-          "json" ->
-            conn
-            |> put_status(:forbidden)
-            |> put_view(LightningWeb.ErrorView)
-            |> render(:"403")
-            |> halt()
-
-          _ ->
-            conn
-            |> put_flash(:nav, :no_access_no_back)
-            |> redirect(to: signed_in_path(conn))
-            |> halt()
-        end
+        |> put_flash(:nav, :no_access_no_back)
+        |> redirect(to: signed_in_path(conn))
+        |> halt()
     end
   end
 

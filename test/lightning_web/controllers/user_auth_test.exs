@@ -908,21 +908,6 @@ defmodule LightningWeb.UserAuthTest do
       assert conn |> redirected_to() == "/projects"
     end
 
-    test "returns 403 if user is not superuser and json request ", %{
-      conn: conn,
-      user: user
-    } do
-      conn =
-        conn
-        |> assign(:current_user, user)
-        |> Phoenix.Controller.put_format("json")
-        |> UserAuth.require_superuser([])
-
-      assert conn.halted
-      assert conn.status == 403
-      assert conn.resp_body |> Jason.decode!() == %{"error" => "Forbidden"}
-    end
-
     test "allows the request to proceed if user is a superuser", %{conn: conn} do
       user = superuser_fixture()
 
