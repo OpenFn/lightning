@@ -343,11 +343,12 @@ defmodule Lightning.Projects.Provisioner do
            }
          } = channel_cs
        ) do
-    method.errors
-    |> Enum.reverse()
-    |> Enum.reduce(channel_cs, fn {_field, {message, opts}}, acc ->
-      add_error(acc, :destination_credential_id, message, opts)
-    end)
+    lifted =
+      Enum.map(method.errors, fn {_field, error} ->
+        {:destination_credential_id, error}
+      end)
+
+    %{channel_cs | errors: lifted ++ channel_cs.errors, valid?: false}
     |> put_change(:destination_auth_method, %{method | errors: [], valid?: true})
   end
 
