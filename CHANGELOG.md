@@ -179,6 +179,12 @@ and this project adheres to
 
 ### Added
 
+- `GET /api/credentials/:id` reads one credential. Its owner gets the credential
+  with its body. A caller who sees it linked to a project whose credentials they
+  may list gets it with the body hidden. Anyone else gets 404 `not_found`, the
+  same answer as for one that doesn't exist.
+  [#5239](https://github.com/OpenFn/lightning/pull/5239)
+
 ### Changed
 
 - Update Project and Workflow yaml exports to match the v4 portability spec
