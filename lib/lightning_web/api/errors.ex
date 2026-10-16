@@ -10,6 +10,8 @@ defmodule LightningWeb.API.Errors do
   alias Ecto.Changeset
   alias LightningWeb.API.Problem
 
+  require Logger
+
   @type segment :: atom() | String.t() | non_neg_integer()
   @type location ::
           [segment()] | {:parameter, String.t()} | {:header, String.t()}
@@ -63,10 +65,12 @@ defmodule LightningWeb.API.Errors do
   The problem for a refused changeset. The first rule that matches wins
   (spec §4, "A changeset's status"):
 
-    1. any error coded `not_ready`: 503 `not_ready`, with no entries;
-    2. every error `exceeds_limit`: 402 `exceeds_limit`;
-    3. every error `taken`: 409 `taken`;
-    4. otherwise 422 `invalid`, without any `exceeds_limit` entries.
+    1. any error coded `storage_failed`: 500 `internal`, since the server
+       failed, not the request (spec §6.2);
+    2. any error coded `not_ready`: 503 `not_ready`, with no entries;
+    3. every error `exceeds_limit`: 402 `exceeds_limit`;
+    4. every error `taken`: 409 `taken`;
+    5. otherwise 422 `invalid`, without any `exceeds_limit` entries.
 
   A unique constraint and an application-level check both answer 409, since
   they report the same clash and which one caught it is a race.
@@ -83,6 +87,10 @@ defmodule LightningWeb.API.Errors do
     codes = Enum.map(entries, & &1.code)
 
     cond do
+      :storage_failed in codes ->
+        Logger.error("An API action could not delete stored files")
+        Problem.new(:internal)
+
       :not_ready in codes ->
         Problem.new(:not_ready, headers: [{"retry-after", "5"}])
 

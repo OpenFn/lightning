@@ -279,6 +279,23 @@ defmodule LightningWeb.API.ErrorsTest do
              }
     end
 
+    test "answers 500 internal, with no entries, when stored files couldn't be deleted" do
+      changeset =
+        %Project{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.add_error(
+          :project_files,
+          "1 stored file(s) could not be deleted from storage",
+          code: :storage_failed
+        )
+
+      {problem, log} =
+        ExUnit.CaptureLog.with_log(fn -> Errors.problem(changeset) end)
+
+      assert problem == %Problem{status: 500, code: :internal}
+      assert log =~ "could not delete stored files"
+    end
+
     test "answers 402 when every error is a plan limit" do
       Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn
         %{type: :new_collection}, _context ->
