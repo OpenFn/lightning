@@ -22,19 +22,18 @@ defmodule LightningWeb.API.ProvisioningController do
   alias Lightning.Workflows
   alias Lightning.WorkflowVersions
   alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
   alias LightningWeb.API.Problem
   alias LightningWeb.API.PutBody
 
-  action_fallback(LightningWeb.API.FallbackController)
+  action_fallback(FallbackController)
 
   plug LightningWeb.Plugs.AuthorizeAction,
-       {:provisioning, :provision_project,
-        fallback: LightningWeb.API.FallbackController}
+       {:provisioning, :provision_project, fallback: FallbackController}
        when action == :create
 
   plug LightningWeb.Plugs.AuthorizeAction,
-       {:provisioning, :describe_project,
-        fallback: LightningWeb.API.FallbackController}
+       {:provisioning, :describe_project, fallback: FallbackController}
        when action in [:show, :show_yaml]
 
   @doc """
