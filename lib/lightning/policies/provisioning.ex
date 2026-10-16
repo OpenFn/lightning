@@ -13,8 +13,7 @@ defmodule Lightning.Policies.Provisioning do
   that doesn't exist (plan D14).
 
   Only a superuser or an operator holding `projects:write` can create a
-  project, whether through `:create_project` or by provisioning one that does
-  not exist yet. Owners and admins can update an existing one.
+  project. Owners and admins can update an existing one.
   `:provision_project` and `:describe_project` on an existing project need
   `projects:provision`, the one grant a repo connection holds.
   """
@@ -30,7 +29,7 @@ defmodule Lightning.Policies.Provisioning do
 
   @spec authorize(
           actions(),
-          Scope.t() | Scope.actor(),
+          Scope.t(),
           Project.t() | nil | :before_target
         ) ::
           boolean()
@@ -51,9 +50,6 @@ defmodule Lightning.Policies.Provisioning do
     ) || {:error, :forbidden}
   end
 
-  def authorize(:create_project, actor, _subject),
-    do: authorize(:create_project, Scope.new(actor), nil)
-
   def authorize(:describe_project, %Scope{} = scope, :before_target),
     do: Decision.instance(scope, :before_target, "projects:provision", true)
 
@@ -63,11 +59,6 @@ defmodule Lightning.Policies.Provisioning do
     Scope.allows?(scope, "projects:write") or
       Decision.instance(scope, :before_target, "projects:provision", true)
   end
-
-  # Stays above the clauses that resolve a Scope, which refuse a project that
-  # does not exist yet and so would block creation.
-  def authorize(:provision_project, actor_or_scope, %Project{id: nil}),
-    do: authorize(:create_project, actor_or_scope, nil)
 
   def authorize(action, %Scope{} = scope, %Project{} = project)
       when action in [:provision_project, :describe_project] do
@@ -79,14 +70,6 @@ defmodule Lightning.Policies.Provisioning do
          ) do
       false -> {:error, :forbidden}
       answer -> answer
-    end
-  end
-
-  def authorize(action, actor, %Project{} = project)
-      when action in [:provision_project, :describe_project] do
-    case Scope.fetch(actor, project) do
-      {:ok, scope} -> authorize(action, scope, project)
-      {:error, _reason} -> {:error, :forbidden}
     end
   end
 
