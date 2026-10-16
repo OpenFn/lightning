@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+## [2.19.2] - 2026-10-16
+
 - History retention no longer leaves steps behind when it deletes work orders in
   batches. A workflow purge that still fails now says why.
   [#5242](https://github.com/OpenFn/lightning/pull/5242)
