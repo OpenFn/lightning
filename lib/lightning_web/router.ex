@@ -5,6 +5,7 @@ defmodule LightningWeb.Router do
   use LightningWeb, :router
   use Lightning.BuildMacros
 
+  import LightningWeb.Plugs.RequestBody, only: [refuse_unparsed: 2]
   import LightningWeb.UserAuth
   import Phoenix.LiveDashboard.Router
 
@@ -44,25 +45,35 @@ defmodule LightningWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug :refuse_unparsed
   end
 
   pipeline :access_token_api do
     plug :accepts, ["json"]
+    plug :refuse_unparsed
     plug LightningWeb.Plugs.AccessTokenAuth
   end
 
   pipeline :person_or_service_account_api do
     plug :accepts, ["json"]
+    plug :refuse_unparsed
     plug LightningWeb.Plugs.PersonOrServiceAccountAuth
   end
 
   pipeline :authenticated_api do
     plug :accepts, ["json"]
+    plug :refuse_unparsed
     plug LightningWeb.Plugs.ApiAuth
+  end
+
+  # Webhooks answer a body they can't read themselves (error-format spec §12).
+  pipeline :webhook do
+    plug :accepts, ["json"]
   end
 
   pipeline :authenticated_json do
     plug :accepts, ["json"]
+    plug :refuse_unparsed
     plug :fetch_session
     plug :protect_from_forgery
     plug :fetch_current_user
@@ -353,7 +364,7 @@ defmodule LightningWeb.Router do
   end
 
   scope "/i", LightningWeb do
-    pipe_through :api
+    pipe_through :webhook
 
     post "/*path", WebhooksController, :create
     get "/*path", WebhooksController, :check

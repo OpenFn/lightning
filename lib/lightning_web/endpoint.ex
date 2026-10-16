@@ -90,7 +90,7 @@ defmodule LightningWeb.Endpoint do
 
   plug Plugs.WebhookAuth
 
-  plug Replug,
+  plug Plugs.RequestBody,
     plug: Plug.Parsers,
     opts: {LightningWeb.PlugConfigs, :plug_parsers}
 
