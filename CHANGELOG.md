@@ -89,6 +89,8 @@ and this project adheres to
     the same answer as for one that doesn't exist, unless the caller sees it
     linked to a project whose credentials they may list, when it answers 403
     `forbidden`; both were `{"error": "Forbidden"}`.
+  - `DELETE /api/credentials/:id` for a credential that runs have used answers
+    409 `in_use` and keeps the credential, instead of failing with a 500.
 
 ### Added
 

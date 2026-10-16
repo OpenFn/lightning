@@ -23,6 +23,7 @@ defmodule LightningWeb.API.Codes do
     id_taken: {409, "The id is already in use."},
     taken: {409, "A value that must be unique is already in use. See errors."},
     being_edited: {409, "This workflow is open in the editor."},
+    in_use: {409, "This has been used by runs and cannot be deleted."},
     ambiguous_name:
       {409, "More than one collection has this name. Add project_id."},
     export_conflict:

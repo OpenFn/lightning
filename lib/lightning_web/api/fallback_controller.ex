@@ -42,11 +42,9 @@ defmodule LightningWeb.API.FallbackController do
     Problem.respond(conn, problem)
   end
 
-  def call(conn, {:error, :scheduled_for_deletion}),
-    do: Problem.respond(conn, Problem.new(:scheduled_for_deletion))
-
-  def call(conn, {:error, :id_taken}),
-    do: Problem.respond(conn, Problem.new(:id_taken))
+  def call(conn, {:error, reason})
+      when reason in [:scheduled_for_deletion, :id_taken, :in_use],
+      do: Problem.respond(conn, Problem.new(reason))
 
   def call(conn, {:error, :exceeds_limit}),
     do: Problem.respond(conn, Problem.new(:exceeds_limit))

@@ -1208,6 +1208,20 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert Lightning.Credentials.get_credential(other_credential.id)
     end
 
+    test "answers 409 in_use for a credential runs have used", %{
+      conn: conn,
+      user: user
+    } do
+      credential = insert(:credential, user: user, schema: "raw")
+      insert(:step, credential: credential)
+
+      conn
+      |> delete(~p"/api/credentials/#{credential.id}")
+      |> assert_problem(409, :in_use, [])
+
+      assert Lightning.Credentials.get_credential(credential.id)
+    end
+
     test "deletes credential with project associations", %{
       conn: conn,
       user: user

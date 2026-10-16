@@ -157,6 +157,15 @@ defmodule Lightning.CredentialsTest do
                {:error, :not_found}
     end
 
+    test "delete_credential/2 refuses a credential runs have used, keeping it" do
+      user = insert(:user)
+      credential = insert(:credential, user: user)
+      insert(:step, credential: credential)
+
+      assert Credentials.delete_credential(credential, user) == {:error, :in_use}
+      assert Credentials.get_credential(credential.id)
+    end
+
     test "schedule_credential_deletion/1 schedules a deletion date according to the :purge_deleted_after_days env" do
       days = Lightning.Config.purge_deleted_after_days()
 

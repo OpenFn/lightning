@@ -920,9 +920,10 @@ defmodule Lightning.Credentials do
   @doc """
   Deletes a credential, recording an audit event in the same transaction.
 
-  Returns `{:error, :unauthorized}` when `actor` doesn't own it, and
-  `{:error, :not_found}` when it is already gone, deleted since it was loaded.
-  A refused audit event is `{:error, changeset}`.
+  Returns `{:error, :unauthorized}` when `actor` doesn't own it,
+  `{:error, :in_use}` when runs have used it, and `{:error, :not_found}` when
+  it is already gone, deleted since it was loaded. A refused audit event is
+  `{:error, changeset}`.
 
   ## Examples
 
@@ -935,11 +936,18 @@ defmodule Lightning.Credentials do
   """
   @spec delete_credential(Credential.t(), User.t()) ::
           {:ok, %{credential: Credential.t(), audit: Audit.t()}}
-          | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+          | {:error, :unauthorized | :in_use | :not_found | Ecto.Changeset.t()}
   def delete_credential(%Credential{} = credential, %User{} = actor) do
-    with :ok <- authorize_credential(:delete_credential, actor, credential) do
+    with :ok <- authorize_credential(:delete_credential, actor, credential),
+         :ok <- refuse_in_use(credential) do
       do_delete_credential(credential)
     end
+  end
+
+  defp refuse_in_use(credential) do
+    if has_activity_in_projects?(credential),
+      do: {:error, :in_use},
+      else: :ok
   end
 
   defp do_delete_credential(%Credential{} = credential) do
