@@ -156,11 +156,16 @@ defmodule Lightning.Workflows.Job do
   # package cannot be persisted on a job. `fetch_adaptor` returns
   # `:not_found` once the catalogue has loaded and genuinely lacks the
   # package, but any other error means the catalogue itself isn't ready
-  # yet, so that case gets its own, retry-able message.
+  # yet, so that case gets its own, retry-able message. It doesn't wait for a
+  # first load, so a save while the catalogue loads is refused at once and the
+  # client retries (error-format spec §9.10).
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
       with {:ok, {name, _version}} <- Adaptors.parse_spec(adaptor),
-           {:ok, _package} <- Adaptors.fetch_adaptor(name) do
+           {:ok, _package} <-
+             Adaptors.fetch_adaptor(Adaptors.Config.default_instance(), name,
+               timeout: 0
+             ) do
         []
       else
         {:error, reason} when reason in [:not_found, :invalid_format] ->

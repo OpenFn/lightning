@@ -593,4 +593,39 @@ defmodule Lightning.Workflows.JobTest do
       end)
     end
   end
+
+  describe "changeset/2 while the catalogue's first load is running" do
+    setup :isolated_adaptors
+
+    test "refuses the adaptor as not ready instead of waiting for the load", %{
+      sup: sup
+    } do
+      {:global, scheduler} =
+        Lightning.Adaptors.Supervisor.global_scheduler_name(sup)
+
+      scheduler = :global.whereis_name(scheduler)
+      Mox.allow(Lightning.Adaptors.StrategyMock, self(), scheduler)
+      Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), scheduler)
+
+      Mox.stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        Process.sleep(2_000)
+        {:ok, []}
+      end)
+
+      Mox.stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-http@1.0.0"
+        })
+
+      assert errors_on(changeset).adaptor == [
+               "adaptor catalogue is not ready yet, try again shortly"
+             ]
+    end
+  end
 end
