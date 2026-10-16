@@ -189,33 +189,15 @@ defmodule LightningWeb.API.CredentialController do
   def show(conn, %{"id" => id}) do
     with {:ok, id} <- PutBody.path_id(id),
          {:ok, credential} <- fetch_credential(id),
-         :ok <- visible(credential, conn.assigns.scope) do
+         :ok <-
+           Permissions.permit(
+             :credentials,
+             :see_credential,
+             conn.assigns.scope,
+             credential
+           ) do
       render_credential(conn, credential)
     end
-  end
-
-  # Seeing a credential through a link is standing to read it and nothing more
-  # (spec §15 row 49).
-  defp visible(credential, scope) do
-    case Permissions.permit(:credentials, :edit_credential, scope, credential) do
-      {:error, :forbidden} ->
-        if seen_through_link?(credential, scope),
-          do: :ok,
-          else: {:error, :not_found}
-
-      answer ->
-        answer
-    end
-  end
-
-  defp seen_through_link?(credential, scope) do
-    %{project_credentials: links} =
-      Repo.preload(credential, :project_credentials)
-
-    scope
-    |> Scope.fetch_all(Enum.map(links, & &1.project_id))
-    |> permitted_ids(:list_project_credentials)
-    |> Enum.any?()
   end
 
   @doc """
@@ -520,7 +502,7 @@ defmodule LightningWeb.API.CredentialController do
   defp fetch_credential(id) do
     case Credentials.get_credential(id) do
       nil -> {:error, :not_found}
-      credential -> {:ok, credential}
+      credential -> {:ok, Repo.preload(credential, :project_credentials)}
     end
   end
 
@@ -606,10 +588,19 @@ defmodule LightningWeb.API.CredentialController do
     end
   end
 
+  # Seeing a credential through a link is standing to read it and nothing more
+  # (spec §15 row 49), so a caller who sees it but may not delete it hears 403.
   defp deletable(credential, scope) do
     case Permissions.permit(:credentials, :delete_credential, scope, credential) do
       {:error, :forbidden} ->
-        with :ok <- visible(credential, scope), do: {:error, :forbidden}
+        with :ok <-
+               Permissions.permit(
+                 :credentials,
+                 :see_credential,
+                 scope,
+                 credential
+               ),
+             do: {:error, :forbidden}
 
       answer ->
         answer

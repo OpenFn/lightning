@@ -4,12 +4,17 @@ defmodule Lightning.Policies.Credentials do
 
   Every action needs the `credentials:write` grant.
 
-  A credential belongs to its owner, not to a project, so these actions never
-  look at a project. Only the owner or an operator may edit a credential, and
-  only the owner may delete one. Only an operator may write a credential for
-  someone else (`:name_credential_owner`). Listing your credentials, or creating
-  one for yourself, needs a caller that can own credentials, which only a
-  person can.
+  A credential belongs to its owner, not to a project. Only the owner or an
+  operator may edit a credential, and only the owner may delete one. Only an
+  operator may write a credential for someone else (`:name_credential_owner`).
+  Listing your credentials, or creating one for yourself, needs a caller that
+  can own credentials, which only a person can.
+
+  `:see_credential` lets in whoever may edit the credential, and a caller who
+  may list the credentials of a project it is linked to. It needs the
+  credential's `project_credentials` loaded. Anyone else hears
+  `{:error, :no_standing}`, so the API answers as if the credential didn't
+  exist (error-format spec §15 row 49).
 
   `Lightning.Credentials`, not this policy, refuses a credential scheduled for
   deletion.
@@ -24,12 +29,14 @@ defmodule Lightning.Policies.Credentials do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Policies.Decision
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.Project
   alias Lightning.Scope
   require Logger
 
   @type actions ::
-          :edit_credential
+          :see_credential
+          | :edit_credential
           | :delete_credential
           | :name_credential_owner
           | :list_credentials
@@ -62,6 +69,21 @@ defmodule Lightning.Policies.Credentials do
           | :before_target
         ) ::
           Decision.answer()
+  def authorize(
+        :see_credential,
+        %Scope{} = scope,
+        %Credential{project_credentials: links} = credential
+      )
+      when is_list(links) do
+    case authorize(:edit_credential, scope, credential) do
+      false ->
+        linked_to_listable_project?(scope, links) || {:error, :no_standing}
+
+      answer ->
+        answer
+    end
+  end
+
   def authorize(action, %Scope{} = scope, subject)
       when action in @ownership_actions,
       do:
@@ -132,6 +154,14 @@ defmodule Lightning.Policies.Credentials do
   defp owns?(:list_credentials, scope, nil), do: scope.can_own_credentials?
 
   defp owns?(_action, _scope, _subject), do: false
+
+  defp linked_to_listable_project?(scope, links) do
+    scope
+    |> Scope.fetch_all(Enum.map(links, & &1.project_id))
+    |> Enum.any?(fn {_id, project_scope} ->
+      ProjectUsers.permitted?(:list_project_credentials, project_scope)
+    end)
+  end
 
   # Deliberately looser than ProjectUsers, where a support user with no
   # membership row gets nothing at admin level. Keychain access on a consenting
