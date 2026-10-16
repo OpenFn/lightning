@@ -272,11 +272,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
         )
         |> get(~p"/api/projects/#{project.id}")
 
-      assert_problem(conn, 403, :insufficient_scope)
-
-      assert get_resp_header(conn, "www-authenticate") == [
-               ~s(Bearer error="insufficient_scope", scope="projects:write")
-             ]
+      assert_refused_for_scope(conn, "projects:write")
     end
   end
 
@@ -832,15 +828,9 @@ defmodule LightningWeb.API.ProjectControllerTest do
       {conn, _account} = with_service_account(conn, ["users:write"])
 
       for id <- [Ecto.UUID.generate(), insert(:project).id] do
-        refused =
-          put_project(conn, id, %{"name" => "acme", "members" => four_members()})
-
-        assert_problem(refused, 403, :insufficient_scope)
-
-        assert get_resp_header(refused, "www-authenticate") == [
-                 ~s(Bearer error="insufficient_scope", scope="projects:write")
-               ]
+        put_project(conn, id, %{"name" => "acme", "members" => four_members()})
       end
+      |> assert_refused_for_scope("projects:write")
     end
   end
 

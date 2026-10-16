@@ -66,12 +66,12 @@ defmodule LightningWeb.API.ProblemHelpers do
   end
 
   @doc """
-  Asserts each of `conns` was refused 403 `insufficient_scope` naming `grant`,
-  so the answers can't tell an existing target from a missing one (spec §4
-  row 2, §9.2).
+  Asserts `conns`, one conn or a list, was refused 403 `insufficient_scope`
+  naming `grant`, so the answers can't tell an existing target from a missing
+  one (spec §4 row 2, §9.2).
   """
   def assert_refused_for_scope(conns, grant) do
-    for conn <- conns do
+    for conn <- List.wrap(conns) do
       assert_problem(conn, 403, :insufficient_scope)
 
       assert Plug.Conn.get_resp_header(conn, "www-authenticate") == [
