@@ -163,9 +163,10 @@ and this project adheres to
   `{"error": "<status text>"}`:
   - A body that isn't valid JSON answers 400 `malformed`, and one over the size
     limit answers 413 `too_large`, both before authentication.
-  - A body in a content type Lightning doesn't parse, such as `text/plain`,
-    answers 415 `unsupported_media_type` before authentication, where the
-    request used to reach the route with its body ignored.
+  - A `POST`, `PUT`, `PATCH` or `DELETE` whose `Content-Type` is one Lightning
+    doesn't parse, such as `text/plain`, answers 415 `unsupported_media_type`
+    before authentication, even when the body is empty, where the request used
+    to reach the route with its body ignored.
   - A path that matches no route answers 404 `not_found` before authentication.
   - An `Accept` header that doesn't allow JSON answers 406 `not_acceptable`, and
     an unexpected failure answers 500 `internal`, both as `application/json`.
@@ -191,6 +192,11 @@ and this project adheres to
 - API page links (`first`, `last`, `next`, `prev`) carry the `page_size`
   Lightning applied, so a request for more than 100 a page links to pages
   of 100.
+- Saving a job while Lightning is still loading its adaptor catalogue, which
+  happens just after it starts, is refused at once with "adaptor catalogue is
+  not ready yet, try again shortly" instead of waiting up to 90 seconds for the
+  catalogue. This applies wherever a job is saved: the workflow editor, the
+  other workflow pages and `POST /api/provision`.
 
 ### Fixed
 
