@@ -13,6 +13,7 @@ defmodule LightningWeb.API.ProvisioningController do
   """
   use LightningWeb, :controller
 
+  alias Lightning.Extensions.Message
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.Project
@@ -22,6 +23,7 @@ defmodule LightningWeb.API.ProvisioningController do
   alias Lightning.WorkflowVersions
   alias LightningWeb.API.Errors
   alias LightningWeb.API.Problem
+  alias LightningWeb.API.PutBody
 
   action_fallback(LightningWeb.API.FallbackController)
 
@@ -78,7 +80,8 @@ defmodule LightningWeb.API.ProvisioningController do
         "workflows": [...]
       }
   """
-  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
+  @spec create(Plug.Conn.t(), map()) ::
+          Plug.Conn.t() | {:error, term()} | {:error, term(), Message.t()}
   def create(conn, params) do
     with {:ok, project} <- provision_target(conn.assigns.scope, params["id"]),
          {:ok, project} <-
@@ -100,7 +103,7 @@ defmodule LightningWeb.API.ProvisioningController do
   defp provision_target(scope, nil), do: create_target(scope)
 
   defp provision_target(scope, id) do
-    with {:ok, id} <- cast_id(id) do
+    with {:ok, id} <- PutBody.path_id(id) do
       case Scope.fetch(scope, id) do
         {:ok, project_scope} ->
           with :ok <-
@@ -119,13 +122,6 @@ defmodule LightningWeb.API.ProvisioningController do
             do: {:error, :not_found},
             else: create_target(scope)
       end
-    end
-  end
-
-  defp cast_id(id) do
-    case Ecto.UUID.cast(id) do
-      {:ok, id} -> {:ok, id}
-      :error -> {:error, :not_found}
     end
   end
 
@@ -166,7 +162,7 @@ defmodule LightningWeb.API.ProvisioningController do
       # Get project state with snapshots
       GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d?snapshots=true
   """
-  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
+  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show(conn, %{"id" => id} = params) do
     with {:ok, project} <- describe_target(conn.assigns.scope, id) do
       ensure_workflows_have_versions(project)
@@ -221,7 +217,7 @@ defmodule LightningWeb.API.ProvisioningController do
       # Get project state as YAML with snapshots
       GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.yaml?snapshots=true
   """
-  @spec show_yaml(Plug.Conn.t(), map()) :: Plug.Conn.t() | term()
+  @spec show_yaml(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show_yaml(conn, %{"id" => id} = params) do
     with {:ok, project} <- describe_target(conn.assigns.scope, id),
          {:ok, yaml} <-
