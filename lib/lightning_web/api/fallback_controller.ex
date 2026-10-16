@@ -44,11 +44,13 @@ defmodule LightningWeb.API.FallbackController do
   end
 
   def call(conn, {:error, reason})
-      when reason in [:scheduled_for_deletion, :id_taken, :in_use],
+      when reason in [
+             :scheduled_for_deletion,
+             :id_taken,
+             :in_use,
+             :exceeds_limit
+           ],
       do: Problem.respond(conn, Problem.new(reason))
-
-  def call(conn, {:error, :exceeds_limit}),
-    do: Problem.respond(conn, Problem.new(:exceeds_limit))
 
   # The usage limiter's refusals (spec §4). Its message is written for the
   # app's pages, so the API leaves the text out.
