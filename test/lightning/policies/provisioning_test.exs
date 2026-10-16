@@ -287,7 +287,7 @@ defmodule Lightning.Policies.ProvisioningTest do
 
   # The routes reach only people (every grant) and repo connections
   # (projects:provision), so these refusals are for tokens that can't reach
-  # /api/provision today.
+  # /api/provision.
   describe "before the target is loaded" do
     setup do
       {account, _private_key} =

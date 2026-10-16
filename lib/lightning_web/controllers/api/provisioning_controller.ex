@@ -61,7 +61,7 @@ defmodule LightningWeb.API.ProvisioningController do
   - `402 Payment Required` when a plan limit is reached
   - `503 Service Unavailable` while the adaptor catalogue is still loading
 
-  Every error is a problem document (error-format spec §2).
+  Every error is a problem document.
 
   ## Examples
 
