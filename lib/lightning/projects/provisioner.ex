@@ -28,7 +28,6 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Services.CollectionHook
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.ProjectRepoConnection
-  alias Lightning.VersionControl.VersionControlUsageLimiter
 
   alias Lightning.Validators
   alias Lightning.Workflows
@@ -75,10 +74,9 @@ defmodule Lightning.Projects.Provisioner do
           map(),
           keyword()
         ) ::
-          {:error,
-           Ecto.Changeset.t(Project.t())
-           | Lightning.Extensions.UsageLimiting.message()}
-          | {:ok, Project.t()}
+          {:ok, Project.t()}
+          | {:error, Ecto.Changeset.t(Project.t())}
+          | Lightning.Extensions.UsageLimiting.error()
   def import_document(project, user_or_repo_connection, data, opts \\ [])
 
   def import_document(nil, %User{} = user, data, opts) do
@@ -93,53 +91,57 @@ defmodule Lightning.Projects.Provisioner do
 
     release = Keyword.get(opts, :release)
 
+    project_changeset =
+      build_import_changeset(project, user_or_repo_connection, data)
+
     result =
-      Repo.transact(fn ->
-        with :ok <-
-               maybe_limit_provisioning(project.id, user_or_repo_connection),
-             project_changeset <-
-               build_import_changeset(project, user_or_repo_connection, data),
-             edges_to_cleanup <-
-               edges_referencing_deleted_jobs(project_changeset),
-             :ok <- release_paths_of_soft_deleted_workflows(project_changeset),
-             {:ok, %{workflows: workflows} = project} <-
-               Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
-             :ok <- check_credential_scoping(project, project_changeset),
-             :ok <- cleanup_orphaned_edges(edges_to_cleanup),
-             :ok <-
-               disable_triggers_for_soft_deleted_workflows(project_changeset),
-             :ok <- release_paths_of_hidden_workflows(project),
-             :ok <- handle_collection_deletion(project_changeset),
-             updated_project <- preload_dependencies(project),
-             {:ok, _changes} <-
-               audit_workflows(project_changeset, user_or_repo_connection),
-             {:ok, _changes} <-
-               audit_channels(project_changeset, user_or_repo_connection),
-             {:ok, _changes} <-
-               update_workflows_version(
-                 project_changeset,
-                 updated_project.workflows
-               ),
-             {:ok, _changes} <-
-               create_snapshots(
-                 project_changeset,
-                 updated_project.workflows,
-                 user_or_repo_connection,
-                 release
-               ) do
-          Enum.each(workflows, &Workflows.Events.workflow_updated/1)
+      with :ok <-
+             maybe_limit_provisioning(project_changeset, user_or_repo_connection) do
+        Repo.transact(fn ->
+          with edges_to_cleanup <-
+                 edges_referencing_deleted_jobs(project_changeset),
+               :ok <- release_paths_of_soft_deleted_workflows(project_changeset),
+               {:ok, %{workflows: workflows} = project} <-
+                 Repo.insert_or_update(project_changeset,
+                   allow_stale: allow_stale
+                 ),
+               :ok <- check_credential_scoping(project, project_changeset),
+               :ok <- cleanup_orphaned_edges(edges_to_cleanup),
+               :ok <-
+                 disable_triggers_for_soft_deleted_workflows(project_changeset),
+               :ok <- release_paths_of_hidden_workflows(project),
+               :ok <- handle_collection_deletion(project_changeset),
+               updated_project <- preload_dependencies(project),
+               {:ok, _changes} <-
+                 audit_workflows(project_changeset, user_or_repo_connection),
+               {:ok, _changes} <-
+                 audit_channels(project_changeset, user_or_repo_connection),
+               {:ok, _changes} <-
+                 update_workflows_version(
+                   project_changeset,
+                   updated_project.workflows
+                 ),
+               {:ok, _changes} <-
+                 create_snapshots(
+                   project_changeset,
+                   updated_project.workflows,
+                   user_or_repo_connection,
+                   release
+                 ) do
+            Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
-          workflows
-          |> Enum.filter(& &1.deleted_at)
-          |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
+            workflows
+            |> Enum.filter(& &1.deleted_at)
+            |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
 
-          Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
-            Lightning.Projects.Project.sandbox?(updated_project)
-          )
+            Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
+              Lightning.Projects.Project.sandbox?(updated_project)
+            )
 
-          {:ok, updated_project}
-        end
-      end)
+            {:ok, updated_project}
+          end
+        end)
+      end
 
     case result do
       {:ok, updated_project} ->
@@ -1134,9 +1136,17 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp maybe_limit_provisioning(project_id, %ProjectRepoConnection{}) do
-    VersionControlUsageLimiter.limit_github_sync(project_id)
+  # A limit is checked once the document is valid, so an invalid one is refused
+  # for what is wrong with it (error-format spec §4). The limiter's reason is
+  # kept, since each answers differently.
+  defp maybe_limit_provisioning(
+         %Ecto.Changeset{valid?: true, data: %Project{id: project_id}},
+         %ProjectRepoConnection{}
+       ) do
+    UsageLimiter.limit_action(%Action{type: :github_sync}, %Context{
+      project_id: project_id
+    })
   end
 
-  defp maybe_limit_provisioning(_project_id, %User{}), do: :ok
+  defp maybe_limit_provisioning(_changeset, _actor), do: :ok
 end

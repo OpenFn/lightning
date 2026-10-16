@@ -329,4 +329,17 @@ defmodule Lightning.Policies.ProvisioningTest do
       Permissions.permit(Provisioning, action, scope)
     end
   end
+
+  describe "a caller with no standing on the project" do
+    test "is told so, for the API to answer as a project that doesn't exist" do
+      user = insert(:user)
+      project = insert(:project)
+      {:ok, scope} = Lightning.Scope.fetch(user, project)
+
+      for action <- [:provision_project, :describe_project] do
+        assert Permissions.permit(Provisioning, action, scope, project) ==
+                 {:error, :no_standing}
+      end
+    end
+  end
 end

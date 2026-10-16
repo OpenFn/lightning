@@ -795,15 +795,13 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response.status == 200
     end
 
-    test "returns a 403 if user does not have access", %{
+    test "returns a 404 if user does not have access", %{
       conn: conn
     } do
       %{id: project_id} = insert(:project)
 
       conn = get(conn, ~p"/api/provision/#{project_id}")
-      response = json_response(conn, 403)
-
-      assert response == %{"error" => "Forbidden"}
+      assert_problem(conn, 404, :not_found, [])
     end
 
     test "returns a 200 if a valid repo conenction token is provided for the project state" do
@@ -939,7 +937,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       refute response =~ "foreign-workflow-name"
     end
 
-    test "returns a 403 if an invalid repo conenction token is provided" do
+    test "returns a 404 if a repo connection token for another project is provided" do
       project_1 = insert(:project)
       project_2 = insert(:project)
 
@@ -954,10 +952,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         )
 
       conn = get(conn, ~p"/api/provision/#{project_1.id}")
-
-      response = json_response(conn, 403)
-
-      assert response == %{"error" => "Forbidden"}
+      assert_problem(conn, 404, :not_found, [])
     end
   end
 
@@ -1018,8 +1013,9 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         "workflows" => [%{"name" => "default"}]
       }
 
-      response = post(conn, ~p"/api/provision", body)
-      assert response.status == 403
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(403, :forbidden, [])
     end
 
     test "is forbidden for an editor", %{conn: conn, user: user} do
@@ -1033,11 +1029,12 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         "workflows" => [%{"name" => "default"}]
       }
 
-      response = post(conn, ~p"/api/provision", body)
-      assert response.status == 403
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(403, :forbidden, [])
     end
 
-    test "is forbidden for a non-member", %{conn: conn} do
+    test "is not found for a non-member", %{conn: conn} do
       project = insert(:project)
 
       body = %{
@@ -1045,11 +1042,14 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         "workflows" => [%{"name" => "default"}]
       }
 
-      assert post(conn, ~p"/api/provision", body) |> json_response(403) ==
-               %{"error" => "Forbidden"}
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(404, :not_found, [])
+
+      assert Lightning.Repo.reload!(project).name == project.name
     end
 
-    test "is forbidden for an invalid PRC access_token", %{conn: conn} do
+    test "is not found for a repo connection of another project", %{conn: conn} do
       project = insert(:project)
       wrong_project = insert(:project)
 
@@ -1065,8 +1065,9 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           "Bearer #{wrong_repo_connection.access_token}"
         )
 
-      response = post(conn, ~p"/api/provision", body)
-      assert response.status == 403
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(404, :not_found, [])
     end
 
     # Creating a project needs projects:write, and a repo connection holds none.
@@ -1093,7 +1094,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       refute Lightning.Repo.get(Lightning.Projects.Project, id)
     end
 
-    test "fails with 403 when repo_connection is limited by github_sync", %{
+    test "fails with 402 when repo_connection is limited by github_sync", %{
       conn: conn
     } do
       %{id: project_id} = project = insert(:project)
@@ -1115,12 +1116,12 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       Lightning.Extensions.MockUsageLimiter
       |> Mox.expect(:limit_action, fn %{type: :github_sync},
                                       %{project_id: ^project_id} ->
-        {:error, :upgrade_required,
-         %Lightning.Extensions.Message{text: error_text}}
+        {:error, :exceeds_limit, %Lightning.Extensions.Message{text: error_text}}
       end)
 
-      assert post(conn, ~p"/api/provision", body) |> json_response(403) ==
-               %{"error" => error_text}
+      conn = post(conn, ~p"/api/provision", body)
+      assert_problem(conn, 402, :exceeds_limit, [])
+      refute conn.resp_body =~ error_text
     end
 
     test "fails with a 422 on validation errors", %{conn: conn, user: user} do
@@ -1138,17 +1139,20 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         ]
       }
 
-      conn = post(conn, ~p"/api/provision", body)
-      response = json_response(conn, 422)
-
-      assert response == %{
-               "errors" => %{
-                 "name" => ["This field can't be blank."],
-                 "workflows" => %{
-                   "default" => %{"id" => ["This field can't be blank."]}
-                 }
-               }
-             }
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/workflows/0/id",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ])
 
       body = %{
         "id" => project.id,
@@ -1176,28 +1180,35 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         ]
       }
 
-      conn = post(conn, ~p"/api/provision", body)
-      response = json_response(conn, 422)
-
-      assert response == %{
-               "errors" => %{
-                 "workflows" => %{
-                   "default" => %{
-                     "jobs" => %{
-                       "first-job" => %{
-                         "id" => ["This field can't be blank."],
-                         "body" => ["Code editor cannot be empty."]
-                       },
-                       "" => %{
-                         "name" => ["Job name can't be blank."],
-                         "id" => ["This field can't be blank."]
-                       }
-                     },
-                     "id" => ["This field can't be blank."]
-                   }
-                 }
-               }
-             }
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/workflows/0/id",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/workflows/0/jobs/0/id",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/workflows/0/jobs/0/body",
+          "code" => "required",
+          "detail" => "job body can't be blank"
+        },
+        %{
+          "pointer" => "#/workflows/0/jobs/1/id",
+          "code" => "required",
+          "detail" => "can't be blank"
+        },
+        %{
+          "pointer" => "#/workflows/0/jobs/1/name",
+          "code" => "required",
+          "detail" => "job name can't be blank"
+        }
+      ])
 
       job_id = Ecto.UUID.generate()
       trigger_id = Ecto.UUID.generate()
@@ -1232,22 +1243,15 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           ]
         }
 
-        conn = post(conn, ~p"/api/provision", body)
-        response = json_response(conn, 422)
-
-        assert response == %{
-                 "errors" => %{
-                   "workflows" => %{
-                     "default" => %{
-                       "edges" => %{
-                         "#{trigger_type}->first-job" => %{
-                           "condition_type" => ["This field can't be blank."]
-                         }
-                       }
-                     }
-                   }
-                 }
-               }
+        conn
+        |> post(~p"/api/provision", body)
+        |> assert_problem(422, :invalid, [
+          %{
+            "pointer" => "#/workflows/0/edges/0/condition_type",
+            "code" => "required",
+            "detail" => "can't be blank"
+          }
+        ])
       end
     end
 
@@ -1574,14 +1578,147 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     test "doesn't let a normal user create a new project", %{conn: conn} do
       %{body: body} = valid_payload()
 
-      response = post(conn, ~p"/api/provision", body)
-      assert response.status == 403
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(403, :forbidden, [])
     end
   end
 
   # Scheduling deletion removes no membership row and revokes no repo-connection
   # token, so both principals below still exist during the grace window. They
   # get the same 409 that the projects API gives.
+  describe "problem documents" do
+    setup [:assign_bearer_for_api]
+
+    setup %{user: user} do
+      %{
+        project:
+          insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+      }
+    end
+
+    test "two jobs with one name answer 409 taken, with one entry", %{
+      conn: conn,
+      project: project
+    } do
+      %{body: body} = valid_payload(project.id)
+
+      body =
+        update_in(body, ["workflows", Access.at(0), "jobs", Access.at(1)], fn
+          job -> Map.put(job, "name", "first-job")
+        end)
+
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(409, :taken, [
+        %{
+          "pointer" => "#/workflows/0/jobs/1/name",
+          "code" => "taken",
+          "detail" => "job name has already been taken"
+        }
+      ])
+    end
+
+    test "a job marked for deletion keeps its place, so later errors point past it",
+         %{conn: conn, project: project} do
+      %{body: body, first_job_id: first_job_id} = valid_payload(project.id)
+
+      conn |> post(~p"/api/provision", body) |> json_response(201)
+
+      body =
+        body
+        |> remove_job_from_document(first_job_id)
+        |> update_in(["workflows", Access.at(0), "jobs"], fn jobs ->
+          jobs ++ [%{"id" => Ecto.UUID.generate(), "body" => "fn(s => s)"}]
+        end)
+
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/workflows/0/jobs/2/name",
+          "code" => "required",
+          "detail" => "job name can't be blank"
+        }
+      ])
+
+      assert Lightning.Repo.get(Lightning.Workflows.Job, first_job_id),
+             "a refused document deleted a job"
+    end
+
+    test "a project id in the body that isn't a UUID is not found", %{
+      conn: conn
+    } do
+      %{body: body} = valid_payload("not-a-uuid")
+
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(404, :not_found, [])
+    end
+
+    test "GET answers a missing or malformed id as not found", %{conn: conn} do
+      for path <- [
+            ~p"/api/provision/#{Ecto.UUID.generate()}",
+            ~p"/api/provision/not-a-uuid",
+            ~p"/api/provision/yaml?#{%{id: Ecto.UUID.generate()}}",
+            ~p"/api/provision/yaml?#{%{id: "not-a-uuid"}}"
+          ] do
+        conn |> get(path) |> assert_problem(404, :not_found, [])
+      end
+    end
+
+    test "GET yaml without an id names the parameter", %{conn: conn} do
+      conn
+      |> get(~p"/api/provision/yaml")
+      |> assert_problem(400, :invalid_parameter, [
+        %{
+          "parameter" => "id",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ])
+    end
+
+    test "no answer quotes a value from the request", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      %{body: body} = valid_payload(project.id)
+
+      body =
+        body
+        |> Map.merge(%{
+          "project_credentials" => [
+            %{"id" => Ecto.UUID.generate(), "name" => "x", "owner" => user.email}
+          ],
+          "channels" => [
+            %{
+              "id" => Ecto.UUID.generate(),
+              "name" => "x",
+              "destination_url" => "x",
+              "destination_credential_id" => "x"
+            }
+          ]
+        })
+        |> plant_sentinel()
+        |> put_in(["project_credentials", Access.at(0), "owner"], user.email)
+        |> Map.put("id", project.id)
+
+      conn
+      |> post(~p"/api/provision", body)
+      |> refute_sentinel()
+      |> assert_problem(422, :invalid)
+
+      for path <- [
+            ~p"/api/provision/sentinel-5e17f4c2",
+            ~p"/api/provision/yaml?#{%{id: "sentinel-5e17f4c2"}}"
+          ] do
+        conn |> get(path) |> refute_sentinel() |> assert_problem(404, :not_found)
+      end
+    end
+  end
+
   describe "a project scheduled for deletion" do
     setup [:assign_bearer_for_api]
 
@@ -1622,10 +1759,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     } do
       response = get(conn, ~p"/api/provision/#{project.id}")
 
-      assert json_response(response, 409) == %{
-               "error" => "scheduled_for_deletion"
-             },
-             "a project member read the shut-down project's state"
+      assert_problem(response, 409, :scheduled_for_deletion, [])
     end
 
     test "tells a non-member nothing about the deletion", %{project: project} do
@@ -1635,7 +1769,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
             ~p"/api/provision/#{project.id}",
             ~p"/api/provision/yaml?#{%{id: project.id}}"
           ] do
-        assert get(outsider, path).status == 403
+        outsider |> get(path) |> assert_problem(404, :not_found, [])
       end
     end
 
@@ -1645,10 +1779,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     } do
       response = get(prc_conn, ~p"/api/provision/#{project.id}")
 
-      assert json_response(response, 409) == %{
-               "error" => "scheduled_for_deletion"
-             },
-             "a repo-connection token read the shut-down project's state"
+      assert_problem(response, 409, :scheduled_for_deletion, [])
     end
 
     test "refuses GET /api/provision/yaml for a project member", %{
@@ -1657,10 +1788,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     } do
       response = get(conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
 
-      assert json_response(response, 409) == %{
-               "error" => "scheduled_for_deletion"
-             },
-             "a project member exported the shut-down project as YAML"
+      assert_problem(response, 409, :scheduled_for_deletion, [])
     end
 
     test "refuses GET /api/provision/yaml for a repo-connection token", %{
@@ -1669,10 +1797,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     } do
       response = get(prc_conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
 
-      assert json_response(response, 409) == %{
-               "error" => "scheduled_for_deletion"
-             },
-             "a repo-connection token exported the shut-down project as YAML"
+      assert_problem(response, 409, :scheduled_for_deletion, [])
     end
 
     # The trigger check matters more than the status code. In #287 the import
@@ -1690,10 +1815,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert Lightning.Repo.reload!(trigger).enabled == false,
              "the import re-enabled a trigger that project shutdown had disabled"
 
-      assert json_response(response, 409) == %{
-               "error" => "scheduled_for_deletion"
-             },
-             "a project member wrote to the shut-down project"
+      assert_problem(response, 409, :scheduled_for_deletion, [])
     end
 
     test "refuses POST /api/provision for a repo-connection token, leaving the trigger disabled",
@@ -1713,10 +1835,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert Lightning.Repo.reload!(trigger).enabled == false,
              "the import re-enabled a trigger that project shutdown had disabled"
 
-      assert json_response(response, 409) == %{
-               "error" => "scheduled_for_deletion"
-             },
-             "a repo-connection token wrote to the shut-down project"
+      assert_problem(response, 409, :scheduled_for_deletion, [])
     end
   end
 

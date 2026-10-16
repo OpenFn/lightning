@@ -2759,15 +2759,40 @@ defmodule Lightning.Projects.ProvisionerTest do
         :limit_action,
         fn
           %{type: :github_sync}, _context ->
-            {:error, :upgrade_required, error_message}
+            {:error, :exceeds_limit, error_message}
 
           _action, _context ->
             :ok
         end
       )
 
-      assert {:error, ^error_message} =
+      assert {:error, :exceeds_limit, ^error_message} =
                Provisioner.import_document(project, repo_connection, body)
+    end
+
+    test "refuses an invalid document for its errors before asking the limiter",
+         %{project: project} do
+      repo_connection = insert(:project_repo_connection, project: project)
+      %{body: body} = valid_document(project.id)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :github_sync}, _context ->
+            {:error, :exceeds_limit, %Lightning.Extensions.Message{}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      assert {:error, %Ecto.Changeset{valid?: false}} =
+               Provisioner.import_document(
+                 project,
+                 repo_connection,
+                 Map.put(body, "name", nil)
+               )
     end
 
     test "allows import when actor is a repo_connection and plan allows github sync",

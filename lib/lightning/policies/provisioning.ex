@@ -8,7 +8,9 @@ defmodule Lightning.Policies.Provisioning do
   `Lightning.Scope`. A person is additionally held to the project's MFA
   requirement; a repo connection has no MFA concept, and `Scope` says so for
   it. A caller who would otherwise be allowed on a project scheduled for
-  deletion hears `{:error, :scheduled_for_deletion}`.
+  deletion hears `{:error, :scheduled_for_deletion}`, and one with no standing
+  on the project `{:error, :no_standing}`, which the API answers as a project
+  that doesn't exist (plan D14).
 
   Only a superuser or an operator holding `projects:write` can create a
   project, whether through `:create_project` or by provisioning one that does
@@ -35,6 +37,7 @@ defmodule Lightning.Policies.Provisioning do
           | {:error,
              :forbidden
              | Decision.insufficient_scope()
+             | :no_standing
              | :scheduled_for_deletion}
 
   # `false` becomes `{:error, :forbidden}`, so `/api/provision` answers 403, not
@@ -75,8 +78,6 @@ defmodule Lightning.Policies.Provisioning do
            judge(action, scope)
          ) do
       false -> {:error, :forbidden}
-      # /api/provision keeps answering no standing with 403 (plan D14).
-      {:error, :no_standing} -> {:error, :forbidden}
       answer -> answer
     end
   end
