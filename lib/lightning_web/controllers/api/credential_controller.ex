@@ -591,19 +591,15 @@ defmodule LightningWeb.API.CredentialController do
   # Seeing a credential through a link is standing to read it and nothing more
   # (spec §15 row 49), so a caller who sees it but may not delete it hears 403.
   defp deletable(credential, scope) do
-    case Permissions.permit(:credentials, :delete_credential, scope, credential) do
-      {:error, :forbidden} ->
-        with :ok <-
-               Permissions.permit(
-                 :credentials,
-                 :see_credential,
-                 scope,
-                 credential
-               ),
-             do: {:error, :forbidden}
-
-      answer ->
-        answer
-    end
+    with {:error, :forbidden} <-
+           Permissions.permit(
+             :credentials,
+             :delete_credential,
+             scope,
+             credential
+           ),
+         :ok <-
+           Permissions.permit(:credentials, :see_credential, scope, credential),
+         do: {:error, :forbidden}
   end
 end
