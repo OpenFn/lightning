@@ -108,6 +108,55 @@ and this project adheres to
     `forbidden`; both were `{"error": "Forbidden"}`.
   - `DELETE /api/credentials/:id` for a credential that runs have used answers
     409 `in_use` and keeps the credential, instead of failing with a 500.
+- On the projects, workflows, jobs, runs, work orders and log lines routes, a
+  token without the scope the route needs now gets 403 `insufficient_scope`,
+  whether or not what it names exists, instead of 404 or 500.
+- `POST /api/provision` answers every error with a problem document, whose
+  `errors` list has one entry per problem, each with a `pointer`, a `code` and a
+  `detail`:
+  - A document that isn't valid answers 422 `invalid` with entries that point at
+    the request's own keys and positions, as in `#/workflows/0/jobs/1/name`,
+    instead of `{"errors": {"workflows": {"<name>": ...}}}` keyed by workflow
+    and job names. Each `detail` is the validation's own message, such as
+    `can't be blank`, instead of `This field can't be blank.`.
+  - A key the document doesn't accept gets its own `unknown_key` entry at that
+    key, as in `#/workflows/0/colour`, instead of one
+    `extraneous parameters: <keys>` error listing them all.
+  - A `project_credentials` entry whose name matches none of the caller's
+    credentials answers a `not_found` entry at `#/project_credentials/<i>/name`,
+    instead of an error quoting the name. A channel's credential errors point at
+    `#/channels/<i>/destination_credential_id`, the key the document sends.
+  - Two jobs with one name in a workflow, or any other value that must be
+    unique, answers 409 `taken` with an entry at the clashing field, instead
+    of 422.
+  - A project `id` naming a project the caller has no standing on (not a member,
+    or for a repo connection any project but its own) answers 404 `not_found`,
+    the same answer as for one that doesn't exist, instead of 403
+    `{"error": "Forbidden"}`. So does an `id` that isn't a UUID, instead of 400.
+  - A viewer, an editor, a member who hasn't met the project's MFA requirement
+    and a caller who may not create a project answer 403 `forbidden` instead of
+    `{"error": "Forbidden"}`.
+  - A project scheduled for deletion answers 409 `scheduled_for_deletion` to a
+    caller who may provision it, instead of 403.
+  - A repo connection refused by the GitHub sync plan limit answers 402
+    `exceeds_limit`, instead of 403 with the limiter's message, and only once
+    the document is valid, so an invalid document gets its 422 first.
+  - A job whose adaptor needs checking while the adaptor catalogue is still
+    loading answers 503 `not_ready` with `Retry-After: 5` at once, instead of
+    waiting up to 90 seconds for the catalogue.
+- `GET /api/provision/:id` and `GET /api/provision/yaml` answer every error with
+  a problem document:
+  - A project the caller has no standing on (not a member, or for a repo
+    connection any project but its own) answers 404 `not_found`, the same answer
+    as for one that doesn't exist, instead of 403 `{"error": "Forbidden"}`. A
+    project that doesn't exist answers 404 `not_found` instead of
+    `{"error": "Not Found"}`.
+  - A member who hasn't met the project's MFA requirement answers 403
+    `forbidden` instead of `{"error": "Forbidden"}`.
+  - A project scheduled for deletion answers 409 `scheduled_for_deletion` to a
+    caller who may see it, instead of 403.
+  - `GET /api/provision/yaml` without `id` answers 400 `invalid_parameter` with
+    an entry naming the `id` parameter, instead of a 400 that named nothing.
 - Every `/api` route except `/api/oauth/token`, every `/collections` route and
   `/adaptors/catalogue` answer these errors with a problem document, whatever
   the request's `Accept` header, where they used to answer an HTML page or
