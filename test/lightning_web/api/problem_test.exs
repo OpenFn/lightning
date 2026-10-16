@@ -3,6 +3,7 @@ defmodule LightningWeb.API.ProblemTest do
 
   import LightningWeb.API.ProblemHelpers
 
+  alias Lightning.Extensions.Message
   alias LightningWeb.API.FallbackController
   alias LightningWeb.API.Problem
 
@@ -80,6 +81,11 @@ defmodule LightningWeb.API.ProblemTest do
             {{:error, :scheduled_for_deletion}, 409, :scheduled_for_deletion},
             {{:error, :id_taken}, 409, :id_taken},
             {{:error, :exceeds_limit}, 402, :exceeds_limit},
+            {{:error, :exceeds_limit, %Message{text: "upgrade"}}, 402,
+             :exceeds_limit},
+            {{:error, :runs_hard_limit, %Message{}}, 402, :exceeds_limit},
+            {{:error, :too_many_runs, %Message{}}, 429, :too_many_runs},
+            {{:error, :unknown_project, %Message{}}, 404, :not_found},
             {{:error, Problem.new(:being_edited)}, 409, :being_edited}
           ] do
         build_conn()
@@ -137,6 +143,25 @@ defmodule LightningWeb.API.ProblemTest do
         end)
 
       assert log =~ "could not write the audit events of a project change"
+    end
+
+    test "sends Retry-After on a limiter's 429 only when its message says when" do
+      conn =
+        FallbackController.call(
+          build_conn(),
+          {:error, :too_many_runs, %Message{retry_after: 30}}
+        )
+
+      assert_problem(conn, 429, :too_many_runs)
+      assert Plug.Conn.get_resp_header(conn, "retry-after") == ["30"]
+
+      conn =
+        FallbackController.call(
+          build_conn(),
+          {:error, :too_many_runs, %Message{text: "slow down"}}
+        )
+
+      assert Plug.Conn.get_resp_header(conn, "retry-after") == []
     end
 
     test "names the missing grant in the challenge" do
