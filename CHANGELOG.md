@@ -21,6 +21,23 @@ and this project adheres to
   `"code": "insufficient_scope"` instead of `{"error": "insufficient_scope"}`,
   and its `WWW-Authenticate` header names the one scope the request needed, as
   in `Bearer error="insufficient_scope", scope="credentials:write"`.
+- A failed login on a JSON route answers a 401 problem document instead of
+  `{"error": "Unauthorized"}`:
+  - Every `/api` route that takes a bearer token, and every `/collections`
+    route, answers a request with no `Authorization` header with
+    `"code": "unauthenticated"` and `WWW-Authenticate: Bearer`, and one whose
+    token is refused (unknown, expired, revoked, malformed, or a locked-out
+    user's) with `"code": "invalid_token"` and
+    `WWW-Authenticate: Bearer error="invalid_token"`. These 401s sent no
+    `WWW-Authenticate` header before.
+  - `/api/users` answers a request with no token with
+    `"code": "unauthenticated"` and `WWW-Authenticate: Bearer`, and a refused
+    token with `"code": "invalid_token"`, both instead of
+    `{"error": "invalid_token"}`.
+  - The routes that take only the session cookie (`/api/ai_assistant/sessions`,
+    the workflow health routes under `/api/projects` and `/adaptors/catalogue`)
+    answer a missing session, a pending MFA code and a locked-out user with
+    `"code": "unauthenticated"` and no `WWW-Authenticate` header.
 - `/api/users` answers every error with a problem document, whose `errors` list
   has one entry per field, each with a `pointer`, a `code` and a `detail`:
   - `POST /api/users` with an email already taken answers 409 with

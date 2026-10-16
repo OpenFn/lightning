@@ -286,14 +286,17 @@ curl -X PUT https://lightning.example.org/api/credentials/$CREDENTIAL_ID \
   holds `projects:write`.
 - A service account can write credentials but never delete one. Listing,
   creating with `POST` and deleting are for people: a service account's token
-  gets a 401 from those routes.
+  gets a 401 `invalid_token` from those routes.
 
 ## When Lightning refuses
 
-- 401 `{"error": "invalid_token"}` with
-  `WWW-Authenticate: Bearer error="invalid_token"`: the access token is expired
-  or bad, or missing on `/api/users`. Elsewhere, a request with no token gets
-  401 `{"error": "Unauthorized"}`, with no `WWW-Authenticate` header.
+- 401 with `WWW-Authenticate: Bearer error="invalid_token"` and the problem
+  document
+  `{"status": 401, "code": "invalid_token", "detail": "The token is not valid."}`:
+  the access token is expired or bad, or isn't one this route accepts.
+- 401 with `WWW-Authenticate: Bearer` and the problem document
+  `{"status": 401, "code": "unauthenticated", "detail": "Authentication is required."}`:
+  the request sent no `Authorization` header.
 - 403 with `WWW-Authenticate: Bearer error="insufficient_scope"` naming the one
   scope the request needed, as in `scope="credentials:write"`, and the problem
   document
