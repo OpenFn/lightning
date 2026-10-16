@@ -5,6 +5,7 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
 
   import Mox
   import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
 
   setup :verify_on_exit!
 
@@ -51,7 +52,7 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
           ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=123"
         )
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
 
     test "returns 401 with invalid token", %{conn: conn} do
@@ -65,7 +66,7 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
           ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=123"
         )
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
   end
 
@@ -94,7 +95,7 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
           ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{Ecto.UUID.generate()}"
         )
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
   end
 

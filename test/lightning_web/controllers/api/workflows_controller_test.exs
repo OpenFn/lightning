@@ -198,7 +198,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> put_req_header("accept", "application/json")
         |> get(~p"/api/workflows")
 
-      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+      assert_problem(conn, 401, :unauthenticated)
     end
 
     test "returns 401 with an invalid token" do
@@ -208,7 +208,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> Plug.Conn.put_req_header("authorization", "Bearer InvalidToken")
         |> get(~p"/api/workflows")
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
 
     test "returns 401 with a run token instead of API token" do
@@ -230,7 +230,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> assign_bearer(token)
         |> get(~p"/api/projects/#{workflow.project_id}/workflows/#{workflow.id}")
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
   end
 
@@ -359,7 +359,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> put_req_header("accept", "application/json")
         |> get(~p"/api/projects/#{project_id}/workflows/#{workflow_id}")
 
-      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+      assert_problem(conn, 401, :unauthenticated)
     end
   end
 
@@ -943,7 +943,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> put_req_header("accept", "application/json")
         |> post(~p"/api/projects/#{project.id}/workflows/")
 
-      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+      assert_problem(conn, 401, :unauthenticated)
     end
   end
 
@@ -1428,7 +1428,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(%{name: "work-2"})
         )
 
-      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+      assert_problem(conn, 401, :unauthenticated)
     end
   end
 
@@ -1941,7 +1941,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(%{workflow | name: "work2"})
         )
 
-      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+      assert_problem(conn, 401, :unauthenticated)
     end
   end
 

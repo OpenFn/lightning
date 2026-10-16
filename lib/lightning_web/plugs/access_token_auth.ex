@@ -8,13 +8,13 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
   tokens already issued. It assigns the token's claims as `:access_token`, and
   the service account as `:current_resource` with the token's scopes as its
   `grants`. It only authenticates. The policies decide whether those grants
-  allow an action. Refusals follow RFC 6750 §3.
+  allow an action. A refusal is `LightningWeb.API.Unauthenticated`'s.
   """
   import Plug.Conn
 
   alias Lightning.ServiceAccount
   alias Lightning.ServiceAccount.AccessToken
-  alias LightningWeb.API.Challenge
+  alias LightningWeb.API.Unauthenticated
 
   def init(opts), do: opts
 
@@ -29,15 +29,7 @@ defmodule LightningWeb.Plugs.AccessTokenAuth do
       |> assign(:access_token, claims)
       |> assign(:current_resource, %{service_account | grants: grants})
     else
-      _other -> refuse(conn)
+      _other -> Unauthenticated.refuse(conn, :bearer)
     end
-  end
-
-  defp refuse(conn) do
-    conn
-    |> merge_resp_headers([Challenge.invalid_token()])
-    |> put_status(401)
-    |> Phoenix.Controller.json(%{error: "invalid_token"})
-    |> halt()
   end
 end

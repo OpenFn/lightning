@@ -51,7 +51,7 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
         |> with_token(expired_access_token(account, "projects:write"))
         |> get(~p"/api/projects/#{insert(:project).id}")
 
-      assert json_response(conn, 401) == %{"error" => "invalid_token"}
+      assert_problem(conn, 401, :invalid_token)
 
       assert get_resp_header(conn, "www-authenticate") == [
                ~s(Bearer error="invalid_token")
@@ -92,13 +92,15 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
         |> with_token("Oooops")
         |> get(~p"/api/projects/#{insert(:project).id}")
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_unauthenticated(conn, :invalid_token, [
+        ~s(Bearer error="invalid_token")
+      ])
     end
 
     test "refuses a request without a token with 401", %{conn: conn} do
       conn = get(conn, ~p"/api/projects/#{insert(:project).id}")
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_unauthenticated(conn, :unauthenticated, ["Bearer"])
     end
   end
 
@@ -117,8 +119,9 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuthTest do
           ] do
         conn = dispatch(conn, @endpoint, method, path, %{})
 
-        assert json_response(conn, 401) == %{"error" => "Unauthorized"},
-               "#{method} #{path}"
+        assert_unauthenticated(conn, :invalid_token, [
+          ~s(Bearer error="invalid_token")
+        ])
       end
     end
   end

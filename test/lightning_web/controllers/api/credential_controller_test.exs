@@ -30,22 +30,22 @@ defmodule LightningWeb.API.CredentialControllerTest do
   describe "without a token" do
     test "index gets a 401", %{conn: conn} do
       conn = get(conn, ~p"/api/credentials")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
 
     test "project credentials index gets a 401", %{conn: conn} do
       conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}/credentials")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
 
     test "create gets a 401", %{conn: conn} do
       conn = post(conn, ~p"/api/credentials", %{})
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
 
     test "delete gets a 401", %{conn: conn} do
       conn = delete(conn, ~p"/api/credentials/#{Ecto.UUID.generate()}")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
   end
 
@@ -54,28 +54,28 @@ defmodule LightningWeb.API.CredentialControllerTest do
       token = "InvalidToken"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = get(conn, ~p"/api/credentials")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
 
     test "project credentials index gets a 401", %{conn: conn} do
       token = "InvalidToken"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}/credentials")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
 
     test "create gets a 401", %{conn: conn} do
       token = "InvalidToken"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = post(conn, ~p"/api/credentials", %{})
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
 
     test "delete gets a 401", %{conn: conn} do
       token = "InvalidToken"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = delete(conn, ~p"/api/credentials/#{Ecto.UUID.generate()}")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
   end
 

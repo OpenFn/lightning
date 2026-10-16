@@ -2,6 +2,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
 
   alias Lightning.Collections
   alias Lightning.Extensions.Message
@@ -21,7 +22,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
   test "without a token", %{conn: conn} do
     conn = get(conn, ~p"/collections/foo")
 
-    assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+    assert_problem(conn, 401, :unauthenticated)
   end
 
   describe "authenticating with a run token" do
@@ -100,7 +101,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> assign_bearer(token)
         |> get(~p"/collections/#{collection.name}")
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
 
     # A plain disable revokes only sessions, not personal access tokens, so
@@ -121,7 +122,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> assign_bearer(token)
         |> get(~p"/collections/#{collection.name}")
 
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
 
     # The token is untouched and the project access is unchanged, so the
@@ -156,7 +157,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> assign_bearer(token)
         |> get(~p"/collections/#{collection.name}")
 
-      assert json_response(refused, 401) == %{"error" => "Unauthorized"}
+      assert_problem(refused, 401, :invalid_token)
 
       user
       |> Ecto.Changeset.change(

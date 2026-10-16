@@ -55,6 +55,17 @@ defmodule LightningWeb.API.ProblemHelpers do
   end
 
   @doc """
+  Asserts `conn` was refused 401 `code` with exactly the `WWW-Authenticate`
+  values in `challenges`, `[]` on a route that takes only the session cookie
+  (spec §9.1, §14).
+  """
+  def assert_unauthenticated(conn, code, challenges) do
+    body = assert_problem(conn, 401, code)
+    assert Plug.Conn.get_resp_header(conn, "www-authenticate") == challenges
+    body
+  end
+
+  @doc """
   Asserts each of `conns` was refused 403 `insufficient_scope` naming `grant`,
   so the answers can't tell an existing target from a missing one (spec §4
   row 2, §9.2).

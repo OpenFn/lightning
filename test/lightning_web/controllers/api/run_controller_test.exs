@@ -11,7 +11,7 @@ defmodule LightningWeb.API.RunControllerTest do
   test "without a token", %{conn: conn} do
     conn = get(conn, ~p"/api/runs")
 
-    assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+    assert_problem(conn, 401, :unauthenticated)
   end
 
   test "a repo connection is refused a run for want of projects:write, whether or not it exists",
@@ -54,7 +54,7 @@ defmodule LightningWeb.API.RunControllerTest do
       token = "InvalidToken"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = get(conn, ~p"/api/runs")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
   end
 

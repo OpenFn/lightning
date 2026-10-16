@@ -1,10 +1,14 @@
 defmodule LightningWeb.API.Challenge do
   @moduledoc """
-  The `WWW-Authenticate` headers a refused bearer token gets (RFC 6750 §3,
+  The `WWW-Authenticate` headers a refused bearer request gets (RFC 6750 §3,
   error-format spec §9.1 and §9.2).
   """
 
   @type header :: {String.t(), String.t()}
+
+  @doc "The challenge on a 401 for a request that sent no token."
+  @spec unauthenticated() :: header()
+  def unauthenticated, do: {"www-authenticate", "Bearer"}
 
   @doc "The challenge on a 401 for a token sent but refused."
   @spec invalid_token() :: header()

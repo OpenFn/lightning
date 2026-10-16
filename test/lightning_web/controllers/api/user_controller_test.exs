@@ -400,7 +400,7 @@ defmodule LightningWeb.API.UserControllerTest do
         |> put_req_header("authorization", "Bearer " <> token)
         |> post(~p"/api/users", %{email: "no@example.com", password: @password})
 
-      assert json_response(conn, 401) == %{"error" => "invalid_token"}
+      assert_problem(conn, 401, :invalid_token)
     end
   end
 
@@ -744,7 +744,7 @@ defmodule LightningWeb.API.UserControllerTest do
         |> put_req_header("authorization", "Bearer " <> token)
         |> patch(~p"/api/users/#{user.id}", %{first_name: "Grace"})
 
-      assert json_response(conn, 401) == %{"error" => "invalid_token"}
+      assert_problem(conn, 401, :invalid_token)
       assert %User{first_name: "Ada"} = Accounts.get_user(user.id)
     end
   end
@@ -968,7 +968,7 @@ defmodule LightningWeb.API.UserControllerTest do
         |> put_req_header("authorization", "Bearer " <> token)
         |> get(~p"/api/users?email=a@example.com")
 
-      assert json_response(conn, 401) == %{"error" => "invalid_token"}
+      assert_problem(conn, 401, :invalid_token)
     end
   end
 

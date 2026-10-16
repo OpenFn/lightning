@@ -11,7 +11,7 @@ defmodule LightningWeb.API.LogLinesControllerTest do
   test "without a token", %{conn: conn} do
     conn = get(conn, ~p"/api/log_lines")
 
-    assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+    assert_problem(conn, 401, :unauthenticated)
   end
 
   test "a repo connection is refused log lines for want of projects:write, whether or not the project exists",
@@ -36,7 +36,7 @@ defmodule LightningWeb.API.LogLinesControllerTest do
       token = "InvalidToken"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = get(conn, ~p"/api/log_lines")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
   end
 

@@ -11,6 +11,7 @@ defmodule LightningWeb.UserAuth do
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserToken
   alias Lightning.VersionControl.ProjectRepoConnection
+  alias LightningWeb.API.Unauthenticated
   alias LightningWeb.Router.Helpers, as: Routes
 
   # Make the remember me cookie valid for 60 days.
@@ -290,7 +291,7 @@ defmodule LightningWeb.UserAuth do
       is_nil(conn.assigns[:current_user]) ->
         case get_format(conn) do
           "json" ->
-            render_unauthorized(conn)
+            Unauthenticated.refuse(conn, :session)
 
           _ ->
             conn
@@ -313,7 +314,7 @@ defmodule LightningWeb.UserAuth do
   defp refuse_totp_pending(conn) do
     case get_format(conn) do
       "json" ->
-        render_unauthorized(conn)
+        Unauthenticated.refuse(conn, :session)
 
       _ ->
         conn
@@ -332,7 +333,7 @@ defmodule LightningWeb.UserAuth do
   defp refuse_locked_out(conn) do
     case get_format(conn) do
       "json" ->
-        render_unauthorized(conn)
+        Unauthenticated.refuse(conn, :session)
 
       _ ->
         conn
@@ -357,22 +358,16 @@ defmodule LightningWeb.UserAuth do
   def require_authenticated_api_resource(conn, _opts) do
     case conn.assigns[:current_resource] do
       nil ->
-        render_unauthorized(conn)
+        Unauthenticated.refuse(conn, :bearer)
 
       %User{} = user ->
-        if Accounts.locked_out?(user), do: render_unauthorized(conn), else: conn
+        if Accounts.locked_out?(user),
+          do: Unauthenticated.refuse(conn, :bearer),
+          else: conn
 
       %ProjectRepoConnection{} ->
         conn
     end
-  end
-
-  defp render_unauthorized(conn) do
-    conn
-    |> put_status(:unauthorized)
-    |> put_view(LightningWeb.ErrorView)
-    |> render(:"401")
-    |> halt()
   end
 
   defp put_user_token(conn, _ \\ nil) do

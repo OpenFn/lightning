@@ -2,6 +2,7 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
   import Lightning.ServiceAccountHelpers
 
   alias Lightning.ServiceAccount.AccessToken
@@ -19,13 +20,12 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
     |> AccessTokenAuth.call(AccessTokenAuth.init([]))
   end
 
-  defp assert_refused(conn, status, error) do
+  defp assert_refused(conn) do
     assert conn.halted
-    assert json_response(conn, status) == %{"error" => error}
 
-    assert get_resp_header(conn, "www-authenticate") == [
-             ~s(Bearer error="#{error}")
-           ]
+    assert_unauthenticated(conn, :invalid_token, [
+      ~s(Bearer error="invalid_token")
+    ])
   end
 
   describe "call/2" do
@@ -76,21 +76,24 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
       {replacement, _private_key} = service_account_with_key()
       Mox.stub(Lightning.MockConfig, :service_account, fn -> replacement end)
 
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> authenticate(token) |> assert_refused()
 
       Mox.stub(Lightning.MockConfig, :service_account, fn -> nil end)
 
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> authenticate(token) |> assert_refused()
     end
 
     test "refuses a missing token", %{conn: conn} do
-      conn |> AccessTokenAuth.call([]) |> assert_refused(401, "invalid_token")
+      conn = AccessTokenAuth.call(conn, [])
+
+      assert conn.halted
+      assert_unauthenticated(conn, :unauthenticated, ["Bearer"])
     end
 
     test "refuses a personal access token", %{conn: conn} do
       token = insert(:user) |> Lightning.Accounts.generate_api_token()
 
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> authenticate(token) |> assert_refused()
     end
 
     test "refuses a run token", %{conn: conn} do
@@ -99,13 +102,13 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
           id: Ecto.UUID.generate()
         })
 
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> authenticate(token) |> assert_refused()
     end
 
     test "refuses an expired access token", %{conn: conn, account: account} do
       conn
       |> authenticate(expired_access_token(account, "users:read"))
-      |> assert_refused(401, "invalid_token")
+      |> assert_refused()
     end
 
     test "refuses a token that is right in every way but its typ", %{
@@ -123,7 +126,7 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
         })
         |> JOSE.JWS.compact()
 
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> authenticate(token) |> assert_refused()
     end
 
     test "refuses an at+jwt signed with another key", %{
@@ -145,7 +148,7 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
           %{"alg" => "RS256", "typ" => "at+jwt"}
         )
 
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> authenticate(token) |> assert_refused()
     end
   end
 

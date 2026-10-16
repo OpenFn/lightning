@@ -13,7 +13,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
   describe "without a token" do
     test "gets a 401", %{conn: conn} do
       conn = get(conn, ~p"/api/projects")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
   end
 
@@ -22,7 +22,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
       token = "Oooops"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = get(conn, ~p"/api/projects")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
   end
 
@@ -55,7 +55,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
       refused = conn |> assign_bearer(token) |> get(~p"/api/projects")
 
-      assert json_response(refused, 401) == %{"error" => "Unauthorized"}
+      assert_problem(refused, 401, :invalid_token)
 
       user
       |> Ecto.Changeset.change(

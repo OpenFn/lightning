@@ -13,7 +13,7 @@ defmodule LightningWeb.API.JobControllerTest do
   test "without a token", %{conn: conn} do
     conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}/jobs")
 
-    assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+    assert_problem(conn, 401, :unauthenticated)
   end
 
   # A repo connection holds no `projects:write`, so it can't read jobs even in
@@ -61,7 +61,7 @@ defmodule LightningWeb.API.JobControllerTest do
       token = "Oooops"
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}/jobs")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :invalid_token)
     end
   end
 

@@ -2,6 +2,7 @@ defmodule LightningWeb.AdaptorControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
   import Mimic
 
   alias Lightning.Adaptors
@@ -131,7 +132,7 @@ defmodule LightningWeb.AdaptorControllerTest do
   test "an unauthenticated request is rejected with a JSON 401", %{conn: conn} do
     conn = get(conn, ~p"/adaptors/catalogue")
 
-    assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    assert_problem(conn, 401, :unauthenticated)
   end
 
   test "returns a 503 with a JSON body when the store fails", %{conn: conn} do

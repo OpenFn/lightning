@@ -16,14 +16,14 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
   describe "without a token" do
     test "get returns a 401", %{conn: conn} do
       conn = get(conn, Routes.api_project_path(conn, :index))
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
 
     test "post returns a 401", %{conn: conn} do
       body = %{"id" => "abc123", "workflows" => [%{"name" => "default"}]}
 
       conn = post(conn, ~p"/api/provision", body)
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_problem(conn, 401, :unauthenticated)
     end
   end
 
