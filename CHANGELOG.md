@@ -113,6 +113,8 @@ and this project adheres to
 - GitHub sync now prevents two projects in the same project tree (root,
   sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
   pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+- Toggling a project's MFA requirement or support access in its settings shows
+  an error when the change can't be saved, instead of crashing the page.
 
 ## [2.19.1-pre] - 2026-10-09
 

@@ -54,7 +54,7 @@ defmodule LightningWeb.API.FallbackController do
   def call(conn, {:error, :exceeds_limit, _message}),
     do: call(conn, {:error, :exceeds_limit})
 
-  def call(conn, {:error, :not_related_to_project}) do
+  def call(conn, {:error, :audit_failed}) do
     Logger.error(
       "An API action could not write the audit events of a project change"
     )

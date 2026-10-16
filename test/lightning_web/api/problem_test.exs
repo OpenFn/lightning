@@ -132,7 +132,7 @@ defmodule LightningWeb.API.ProblemTest do
       log =
         ExUnit.CaptureLog.capture_log(fn ->
           build_conn()
-          |> FallbackController.call({:error, :not_related_to_project})
+          |> FallbackController.call({:error, :audit_failed})
           |> assert_problem(500, :internal, [])
         end)
 

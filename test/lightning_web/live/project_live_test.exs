@@ -2275,6 +2275,34 @@ defmodule LightningWeb.ProjectLiveTest do
              |> render_click() =~ "Project MFA requirement updated successfully"
     end
 
+    test "a refused MFA or support access toggle says so instead of crashing",
+         %{conn: conn} do
+      project = insert(:project)
+
+      project_user =
+        insert(:project_user, role: :owner, project: project, user: build(:user))
+
+      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _, _ ->
+        :ok
+      end)
+
+      stub(Lightning.Extensions.MockProjectHook, :handle_project_validation, fn
+        changeset -> Ecto.Changeset.add_error(changeset, :name, "is refused")
+      end)
+
+      conn = log_in_user(conn, project_user.user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/settings#security")
+
+      assert render_click(view, "toggle-mfa", %{}) =~
+               "Changes couldn&#39;t be saved, please try again"
+
+      assert render_click(view, "toggle_support_access", %{}) =~
+               "Changes couldn&#39;t be saved, please try again"
+
+      assert %{requires_mfa: false, allow_support_access: false} =
+               Lightning.Repo.reload!(project)
+    end
+
     test "MFA limited: banner displayed, button is disabled, and MFA cannot be toggled",
          %{conn: conn} do
       project = insert(:project)

@@ -380,28 +380,16 @@ defmodule LightningWeb.ProjectLive.Settings do
   def handle_event("toggle_support_access", _params, socket) do
     case authorize(socket, :edit_project) do
       :ok ->
-        project = socket.assigns.project
+        granting? = !socket.assigns.project.allow_support_access
 
-        {:ok, project} =
-          Projects.update_project(
-            project,
-            %{
-              allow_support_access: !project.allow_support_access
-            },
-            socket.assigns.current_user
+        toggle_project(
+          socket,
+          %{allow_support_access: granting?},
+          if(granting?,
+            do: "Granted access to support users successfully",
+            else: "Revoked access to support users successfully"
           )
-
-        flash_msg =
-          if project.allow_support_access do
-            "Granted access to support users successfully"
-          else
-            "Revoked access to support users successfully"
-          end
-
-        {:noreply,
-         socket
-         |> assign(:project, project)
-         |> put_flash(:info, flash_msg)}
+        )
 
       {:error, :unauthorized} ->
         deny_action(socket, "toggle_support_access")
@@ -412,19 +400,11 @@ defmodule LightningWeb.ProjectLive.Settings do
     # `can_require_mfa` comes from the `:limit_mfa` hook - a usage limit rather
     # than a role-derived boolean
     if :ok == authorize(socket, :edit_project) and socket.assigns.can_require_mfa do
-      %{project: project, current_user: current_user} = socket.assigns
-
-      {:ok, project} =
-        Projects.update_project(
-          project,
-          %{requires_mfa: !project.requires_mfa},
-          current_user
-        )
-
-      {:noreply,
-       socket
-       |> assign(:project, project)
-       |> put_flash(:info, "Project MFA requirement updated successfully")}
+      toggle_project(
+        socket,
+        %{requires_mfa: !socket.assigns.project.requires_mfa},
+        "Project MFA requirement updated successfully"
+      )
     else
       deny_action(socket, "toggle-mfa")
     end
@@ -768,6 +748,8 @@ defmodule LightningWeb.ProjectLive.Settings do
     Ecto.Changeset.fetch_field!(changeset, :retention_policy) == input_id
   end
 
+  @not_saved "Changes couldn't be saved, please try again"
+
   defp save_project(socket, project_params) do
     socket.assigns.project
     |> Projects.update_project(project_params, socket.assigns.current_user)
@@ -782,10 +764,23 @@ defmodule LightningWeb.ProjectLive.Settings do
         changeset = Helpers.copy_error(changeset, :name, :raw_name)
         {:noreply, assign(socket, :project_changeset, changeset)}
 
-      {:error, :not_related_to_project} ->
+      {:error, :audit_failed} ->
+        {:noreply, put_flash(socket, :error, @not_saved)}
+    end
+  end
+
+  defp toggle_project(socket, attrs, success) do
+    case Projects.update_project(
+           socket.assigns.project,
+           attrs,
+           socket.assigns.current_user
+         ) do
+      {:ok, project} ->
         {:noreply,
-         socket
-         |> put_flash(:error, "Changes couldn't be saved, please try again")}
+         socket |> assign(:project, project) |> put_flash(:info, success)}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, @not_saved)}
     end
   end
 

@@ -594,7 +594,11 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Updates a project.
+  Updates a project, recording an audit event for each audited field it
+  changes in the same transaction.
+
+  A refused audit event is `{:error, :audit_failed}`, not a changeset, so a
+  form never renders it as the caller's mistake.
 
   ## Examples
 
@@ -607,7 +611,7 @@ defmodule Lightning.Projects do
   """
   @spec update_project(Project.t(), map(), Lightning.Actor.t()) ::
           {:ok, Project.t()}
-          | {:error, Ecto.Changeset.t() | :not_related_to_project}
+          | {:error, Ecto.Changeset.t() | :audit_failed}
   def update_project(%Project{} = project, attrs, actor) do
     changeset =
       project
@@ -631,11 +635,8 @@ defmodule Lightning.Projects do
       {:error, :project, changeset, _changes_so_far} ->
         {:error, changeset}
 
-      # 2024-10-29 Not tested at module-level
-      # due to the difficulty of simulating a failure
-      # without mocking
       {:error, _operation, _changeset, _changes_so_far} ->
-        {:error, :not_related_to_project}
+        {:error, :audit_failed}
     end
   end
 
