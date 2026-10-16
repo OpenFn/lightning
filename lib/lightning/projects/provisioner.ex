@@ -151,6 +151,9 @@ defmodule Lightning.Projects.Provisioner do
 
         {:ok, updated_project}
 
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:error, report_destination_credentials(changeset)}
+
       error ->
         error
     end
@@ -305,24 +308,48 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   defp add_channel_credential_error(channel_cs) do
-    message = Scoping.violation_message(:project_credential_id)
+    add_error(
+      channel_cs,
+      :destination_credential_id,
+      Scoping.violation_message(:project_credential_id),
+      code: :credential_not_allowed
+    )
+  end
 
-    case get_change(channel_cs, :destination_auth_method) do
+  # The request names a channel's credential as `destination_credential_id`,
+  # which `channel_changeset/2` turns into a `destination_auth_method`, so that
+  # child's errors are reported on the key the request sent (error-format spec
+  # §7 item 4).
+  defp report_destination_credentials(changeset) do
+    case get_change(changeset, :channels) do
       nil ->
-        add_error(channel_cs, :project_credential_id, message,
-          code: :credential_not_allowed
-        )
+        changeset
 
-      auth_method_cs ->
+      channels ->
         put_change(
-          channel_cs,
-          :destination_auth_method,
-          add_error(auth_method_cs, :project_credential_id, message,
-            code: :credential_not_allowed
-          )
+          changeset,
+          :channels,
+          Enum.map(channels, &lift_destination_errors/1)
         )
     end
   end
+
+  defp lift_destination_errors(
+         %Ecto.Changeset{
+           changes: %{
+             destination_auth_method: %Ecto.Changeset{errors: [_ | _]} = method
+           }
+         } = channel_cs
+       ) do
+    method.errors
+    |> Enum.reverse()
+    |> Enum.reduce(channel_cs, fn {_field, {message, opts}}, acc ->
+      add_error(acc, :destination_credential_id, message, opts)
+    end)
+    |> put_change(:destination_auth_method, %{method | errors: [], valid?: true})
+  end
+
+  defp lift_destination_errors(channel_cs), do: channel_cs
 
   defp build_import_changeset(project, user_or_repo_connection, data) do
     project
@@ -948,6 +975,10 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
+  # New links are filtered, then put ahead of the stored ones, so their
+  # positions aren't the request's. A name that matches none of the caller's
+  # credentials is reported on the project, at the link's position in the
+  # request (error-format spec §7 item 3).
   defp maybe_add_project_credentials(changeset, user_or_repo_connection) do
     credentials_params = changeset.params["project_credentials"]
 
@@ -960,39 +991,29 @@ defmodule Lightning.Projects.Provisioner do
       existing_project_credential_ids =
         Enum.map(changeset.data.project_credentials, fn pc -> pc.id end)
 
-      new_credential_params =
-        Enum.filter(credentials_params, fn cred_params ->
+      {new_links, changeset} =
+        credentials_params
+        |> Enum.with_index()
+        |> Enum.filter(fn {cred_params, _index} ->
           cred_params["id"] not in existing_project_credential_ids and
             cred_params["owner"] == user_or_repo_connection.email
         end)
+        |> Enum.flat_map_reduce(changeset, fn {cred_params, index}, acc ->
+          case find_credential_by_name(user_credentials, cred_params["name"]) do
+            nil ->
+              {[],
+               add_error(acc, :project_credentials, "names nothing you can see",
+                 key: ["project_credentials", index, "name"],
+                 code: :not_found
+               )}
 
-      new_project_creds_to_add =
-        Enum.map(new_credential_params, fn cred_params ->
-          # The stored name went through `validate_name/3` and the spec body
-          # never did. Without normalising both sides, a spec carrying a
-          # decomposed accent is refused with an error naming a credential the
-          # user can see on screen.
-          wanted = Validators.normalize_name_for_match(cred_params["name"])
-
-          credential =
-            Enum.find(user_credentials, fn cred ->
-              Validators.normalize_name_for_match(cred.name) == wanted
-            end)
-
-          if credential do
-            change(%ProjectCredential{
-              id: cred_params["id"],
-              credential_id: credential.id
-            })
-          else
-            change(%ProjectCredential{
-              id: cred_params["id"]
-            })
-            |> add_error(
-              :credential,
-              "No credential found with name #{cred_params["name"]}",
-              code: :not_found
-            )
+            credential ->
+              {[
+                 change(%ProjectCredential{
+                   id: cred_params["id"],
+                   credential_id: credential.id
+                 })
+               ], acc}
           end
         end)
 
@@ -1002,11 +1023,22 @@ defmodule Lightning.Projects.Provisioner do
       put_assoc(
         changeset,
         :project_credentials,
-        new_project_creds_to_add ++ project_credentials
+        new_links ++ project_credentials
       )
     else
       changeset
     end
+  end
+
+  # The stored name went through `validate_name/3` and the spec body never
+  # did. Without normalising both sides, a spec carrying a decomposed accent is
+  # refused, naming a credential the user can see on screen.
+  defp find_credential_by_name(credentials, name) do
+    wanted = Validators.normalize_name_for_match(name)
+
+    Enum.find(credentials, fn credential ->
+      Validators.normalize_name_for_match(credential.name) == wanted
+    end)
   end
 
   @doc """

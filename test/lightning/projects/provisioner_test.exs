@@ -368,6 +368,53 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert project_credential.credential_id == credential.id
     end
 
+    test "reports a credential name it can't find at the link's place in the request" do
+      user = insert(:user)
+      other = insert(:user)
+      known = insert(:credential, name: "known", user: user)
+      insert(:credential, name: "theirs", user: other)
+
+      %{body: body} = valid_document()
+
+      body =
+        Map.put(body, "project_credentials", [
+          %{
+            "id" => Ecto.UUID.generate(),
+            "name" => "theirs",
+            "owner" => other.email
+          },
+          %{
+            "id" => Ecto.UUID.generate(),
+            "name" => "missing",
+            "owner" => user.email
+          },
+          %{
+            "id" => Ecto.UUID.generate(),
+            "name" => known.name,
+            "owner" => user.email
+          }
+        ])
+
+      Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _a, _c ->
+        :ok
+      end)
+
+      assert {:error, changeset} =
+               Provisioner.import_document(
+                 %Lightning.Projects.Project{},
+                 user,
+                 body
+               )
+
+      assert Errors.from_changeset(changeset) == [
+               %{
+                 pointer: "#/project_credentials/1/name",
+                 code: :not_found,
+                 detail: "names nothing you can see"
+               }
+             ]
+    end
+
     test "with valid data" do
       Mox.verify_on_exit!()
       %{id: user_id} = user = insert(:user)
@@ -1952,13 +1999,13 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert {:error, changeset} =
                Provisioner.import_document(project, user, body)
 
-      assert %{
-               channels: [
-                 %{destination_auth_method: %{project_credential_id: [msg]}}
-               ]
-             } = flatten_errors(changeset)
+      assert %{channels: [%{destination_credential_id: [msg]}]} =
+               flatten_errors(changeset)
 
       assert msg =~ "isn't available in this project"
+
+      assert [%{pointer: "#/channels/0/destination_credential_id"}] =
+               Errors.from_changeset(changeset)
 
       # Channel was not persisted
       refute Repo.get(Lightning.Channels.Channel, channel_id)
@@ -1988,13 +2035,17 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert {:error, changeset} =
                Provisioner.import_document(project, user, body)
 
-      assert %{
-               channels: [
-                 %{destination_auth_method: %{project_credential_id: [msg]}}
-               ]
-             } = flatten_errors(changeset)
+      assert %{channels: [%{destination_credential_id: [msg]}]} =
+               flatten_errors(changeset)
 
       assert msg == Scoping.violation_message(:project_credential_id)
+
+      assert [
+               %{
+                 pointer: "#/channels/0/destination_credential_id",
+                 code: :not_found
+               }
+             ] = Errors.from_changeset(changeset)
 
       # Channel was not persisted
       refute Repo.get(Lightning.Channels.Channel, channel_id)
