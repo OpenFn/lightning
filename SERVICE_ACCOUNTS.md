@@ -290,13 +290,16 @@ curl -X PUT https://lightning.example.org/api/credentials/$CREDENTIAL_ID \
 
 ## When Lightning refuses
 
-- 401 with `WWW-Authenticate: Bearer error="invalid_token"`: the access token is
-  expired or bad, or missing on `/api/users`. Elsewhere, a request with no token
-  gets a plain 401.
-- 403 `{"error": "insufficient_scope"}` with
-  `WWW-Authenticate: Bearer error="insufficient_scope"`: the token lacks the
-  scope the action needs. Lightning checks this first, so it comes before any
-  404 or 422, whether the project is missing or the body is wrong.
+- 401 `{"error": "invalid_token"}` with
+  `WWW-Authenticate: Bearer error="invalid_token"`: the access token is expired
+  or bad, or missing on `/api/users`. Elsewhere, a request with no token gets
+  401 `{"error": "Unauthorized"}`, with no `WWW-Authenticate` header.
+- 403 with `WWW-Authenticate: Bearer error="insufficient_scope"` naming the one
+  scope the request needed, as in `scope="credentials:write"`, and the problem
+  document
+  `{"status": 403, "code": "insufficient_scope", "detail": "The token lacks the scope this needs."}`:
+  the token lacks that scope. Lightning checks this first, so it comes before
+  any 404 or 422, whether the project is missing or the body is wrong.
 - 404: the project, collection or credential doesn't exist.
 - 409 `{"error": "scheduled_for_deletion"}`: the project (on the projects and
   collections routes) or the credential (on a credential `PUT`) is scheduled for
