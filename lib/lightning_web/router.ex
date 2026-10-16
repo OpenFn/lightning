@@ -5,9 +5,14 @@ defmodule LightningWeb.Router do
   use LightningWeb, :router
   use Lightning.BuildMacros
 
+  use Plug.ErrorHandler
+
   import LightningWeb.Plugs.RequestBody, only: [refuse_unparsed: 2]
   import LightningWeb.UserAuth
   import Phoenix.LiveDashboard.Router
+
+  alias LightningWeb.API.Problem
+  alias LightningWeb.API.ProblemPaths
 
   alias CredentialLive
   alias ProjectLive
@@ -185,6 +190,13 @@ defmodule LightningWeb.Router do
         :runs
   end
 
+  # An unmatched route is answered before authentication (error-format spec
+  # §4), so the catch-alls take no pipeline. The /api scopes share one prefix,
+  # so theirs follows the last of them.
+  scope "/api" do
+    match :*, "/*path", LightningWeb.API.NoRoute, :not_found
+  end
+
   ## Adaptor catalogue (cookie-authenticated JSON)
   scope "/", LightningWeb do
     pipe_through [:authenticated_json, :require_authenticated_user]
@@ -202,6 +214,10 @@ defmodule LightningWeb.Router do
     post "/:name", CollectionsController, :put_all
     delete "/:name/:key", CollectionsController, :delete
     delete "/:name", CollectionsController, :delete_all
+  end
+
+  scope "/collections" do
+    match :*, "/*path", LightningWeb.API.NoRoute, :not_found
   end
 
   ## Authentication routes
@@ -413,6 +429,17 @@ defmodule LightningWeb.Router do
   end
 
   forward "/health_check", LightningWeb.HealthCheck
+
+  # phoenix_ecto answers an uncastable id 400; on the API a path id that isn't
+  # a UUID is not found (error-format spec §4 row 3).
+  @impl Plug.ErrorHandler
+  def handle_errors(conn, %{reason: %Ecto.Query.CastError{}}) do
+    if ProblemPaths.member?(conn),
+      do: Problem.respond(conn, Problem.new(:not_found)),
+      else: conn
+  end
+
+  def handle_errors(conn, _error), do: conn
 end
 
 defmodule LightningWeb.HealthCheck do

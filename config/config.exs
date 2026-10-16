@@ -31,8 +31,7 @@ config :hammer,
 config :lightning, LightningWeb.Endpoint,
   url: [host: "localhost"],
   render_errors: [
-    view: LightningWeb.ErrorView,
-    accepts: ~w(html json),
+    formats: [html: LightningWeb.ErrorView, json: LightningWeb.API.ErrorJSON],
     layout: false
   ],
   pubsub_server: Lightning.PubSub,

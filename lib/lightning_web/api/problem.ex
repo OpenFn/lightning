@@ -58,7 +58,12 @@ defmodule LightningWeb.API.Problem do
     )
   end
 
-  defp body(problem) do
+  @doc """
+  The problem document `respond/2` sends, for a caller that renders rather than
+  sends, such as `render_errors`' view.
+  """
+  @spec body(t()) :: map()
+  def body(problem) do
     %{
       type: "about:blank",
       status: problem.status,

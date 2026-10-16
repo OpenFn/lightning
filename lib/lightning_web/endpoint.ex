@@ -106,5 +106,16 @@ defmodule LightningWeb.Endpoint do
 
   LightningWeb.Utils.add_dynamic_plugs(@post_session_plugs)
 
+  plug :put_problem_format
+
   plug LightningWeb.Router
+
+  # render_errors keeps a format already on the conn, so a raise inside the
+  # router on these paths renders through LightningWeb.API.ErrorJSON whatever
+  # the Accept header asks for (error-format spec §5).
+  defp put_problem_format(conn, _opts) do
+    if LightningWeb.API.ProblemPaths.member?(conn),
+      do: Phoenix.Controller.put_format(conn, "json"),
+      else: conn
+  end
 end
