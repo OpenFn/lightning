@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.WorkflowsControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
   import Lightning.WorkflowsFixtures
 
@@ -15,6 +16,24 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       |> put_req_header("content-type", "application/json")
 
     {:ok, conn: conn}
+  end
+
+  test "a repo connection is refused a workflow for want of projects:write, whether or not it exists",
+       %{conn: conn} do
+    project = insert(:project)
+    repo_connection = insert(:project_repo_connection, project: project)
+    workflow = insert(:simple_workflow, project: project)
+
+    conn =
+      put_req_header(
+        conn,
+        "authorization",
+        "Bearer " <> repo_connection.access_token
+      )
+
+    [workflow.id, Ecto.UUID.generate()]
+    |> Enum.map(&get(conn, ~p"/api/workflows/#{&1}"))
+    |> assert_refused_for_scope("projects:write")
   end
 
   describe "index" do

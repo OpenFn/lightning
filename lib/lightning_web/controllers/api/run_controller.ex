@@ -59,6 +59,10 @@ defmodule LightningWeb.API.RunController do
 
   action_fallback LightningWeb.FallbackController
 
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project,
+        fallback: LightningWeb.FallbackController}
+
   @doc """
   Lists runs with optional project filtering.
 

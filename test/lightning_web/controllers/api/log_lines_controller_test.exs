@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.LogLinesControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
 
   setup %{conn: conn} do
@@ -11,6 +12,23 @@ defmodule LightningWeb.API.LogLinesControllerTest do
     conn = get(conn, ~p"/api/log_lines")
 
     assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+  end
+
+  test "a repo connection is refused log lines for want of projects:write, whether or not the project exists",
+       %{conn: conn} do
+    project = insert(:project)
+    repo_connection = insert(:project_repo_connection, project: project)
+
+    conn =
+      put_req_header(
+        conn,
+        "authorization",
+        "Bearer " <> repo_connection.access_token
+      )
+
+    [project.id, Ecto.UUID.generate()]
+    |> Enum.map(&get(conn, ~p"/api/log_lines?#{%{project_id: &1}}"))
+    |> assert_refused_for_scope("projects:write")
   end
 
   describe "with invalid token" do

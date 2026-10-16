@@ -29,6 +29,10 @@ defmodule LightningWeb.API.LogLinesController do
 
   action_fallback LightningWeb.FallbackController
 
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project,
+        fallback: LightningWeb.FallbackController}
+
   @doc """
   Lists log lines with pagination and filtering.
 

@@ -1,6 +1,7 @@
 defmodule LightningWeb.API.RunControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
 
   setup %{conn: conn} do
@@ -11,6 +12,41 @@ defmodule LightningWeb.API.RunControllerTest do
     conn = get(conn, ~p"/api/runs")
 
     assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+  end
+
+  test "a repo connection is refused a run for want of projects:write, whether or not it exists",
+       %{conn: conn} do
+    project = insert(:project)
+    repo_connection = insert(:project_repo_connection, project: project)
+    workflow = insert(:workflow, project: project)
+    trigger = insert(:trigger, workflow: workflow)
+
+    workorder =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: build(:dataclip),
+        runs: [
+          %{
+            state: :started,
+            dataclip: build(:dataclip),
+            starting_trigger: trigger
+          }
+        ]
+      )
+
+    [run] = workorder.runs
+
+    conn =
+      put_req_header(
+        conn,
+        "authorization",
+        "Bearer " <> repo_connection.access_token
+      )
+
+    [run.id, Ecto.UUID.generate()]
+    |> Enum.map(&get(conn, ~p"/api/runs/#{&1}"))
+    |> assert_refused_for_scope("projects:write")
   end
 
   describe "with invalid token" do

@@ -50,7 +50,7 @@ defmodule LightningWeb.API.ProjectController do
 
   plug AuthorizeAction,
        {:project_users, :access_project, fallback: FallbackController}
-       when action == :show
+       when action in [:index, :show]
 
   plug AuthorizeAction,
        {:project_users, :edit_project, fallback: FallbackController}

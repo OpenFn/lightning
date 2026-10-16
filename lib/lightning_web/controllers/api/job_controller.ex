@@ -57,6 +57,10 @@ defmodule LightningWeb.API.JobController do
 
   action_fallback LightningWeb.FallbackController
 
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project,
+        fallback: LightningWeb.FallbackController}
+
   @doc """
   Lists jobs with optional project filtering.
 

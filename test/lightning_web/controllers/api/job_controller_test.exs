@@ -37,6 +37,25 @@ defmodule LightningWeb.API.JobControllerTest do
            ]
   end
 
+  test "a repo connection is refused a job for want of projects:write, whether or not it exists",
+       %{conn: conn} do
+    project = insert(:project)
+    repo_connection = insert(:project_repo_connection, project: project)
+    workflow = insert(:simple_workflow, project: project)
+    [job] = workflow.jobs
+
+    conn =
+      put_req_header(
+        conn,
+        "authorization",
+        "Bearer " <> repo_connection.access_token
+      )
+
+    [job.id, Ecto.UUID.generate()]
+    |> Enum.map(&get(conn, ~p"/api/jobs/#{&1}"))
+    |> assert_refused_for_scope("projects:write")
+  end
+
   describe "with invalid token" do
     test "gets a 401", %{conn: conn} do
       token = "Oooops"

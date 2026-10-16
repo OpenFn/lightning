@@ -69,6 +69,27 @@ defmodule LightningWeb.API.ProjectControllerTest do
     end
   end
 
+  test "a repo connection is refused projects for want of projects:write, whether or not the project exists",
+       %{conn: conn} do
+    project = insert(:project)
+    repo_connection = insert(:project_repo_connection, project: project)
+
+    conn =
+      put_req_header(
+        conn,
+        "authorization",
+        "Bearer " <> repo_connection.access_token
+      )
+
+    [
+      ~p"/api/projects",
+      ~p"/api/projects/#{project.id}",
+      ~p"/api/projects/#{Ecto.UUID.generate()}"
+    ]
+    |> Enum.map(&get(conn, &1))
+    |> assert_refused_for_scope("projects:write")
+  end
+
   describe "index" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 

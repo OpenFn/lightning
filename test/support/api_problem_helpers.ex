@@ -55,6 +55,21 @@ defmodule LightningWeb.API.ProblemHelpers do
   end
 
   @doc """
+  Asserts each of `conns` was refused 403 `insufficient_scope` naming `grant`,
+  so the answers can't tell an existing target from a missing one (spec §4
+  row 2, §9.2).
+  """
+  def assert_refused_for_scope(conns, grant) do
+    for conn <- conns do
+      assert_problem(conn, 403, :insufficient_scope)
+
+      assert Plug.Conn.get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer error="insufficient_scope", scope="#{grant}")
+             ]
+    end
+  end
+
+  @doc """
   Replaces every value in `params`, at any depth, with a marker that must
   never come back in an answer. Keys are kept, since a pointer may name them.
   """

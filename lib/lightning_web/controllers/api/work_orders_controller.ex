@@ -66,6 +66,10 @@ defmodule LightningWeb.API.WorkOrdersController do
 
   action_fallback LightningWeb.FallbackController
 
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project,
+        fallback: LightningWeb.FallbackController}
+
   @doc """
   Lists work orders with optional project filtering.
 

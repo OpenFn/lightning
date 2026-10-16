@@ -96,6 +96,10 @@ defmodule LightningWeb.API.WorkflowsController do
 
   action_fallback LightningWeb.FallbackController
 
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project,
+        fallback: LightningWeb.FallbackController}
+
   require Logger
 
   @doc """
