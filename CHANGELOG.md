@@ -108,6 +108,24 @@ and this project adheres to
     `forbidden`; both were `{"error": "Forbidden"}`.
   - `DELETE /api/credentials/:id` for a credential that runs have used answers
     409 `in_use` and keeps the credential, instead of failing with a 500.
+- Every `/api` route except `/api/oauth/token`, every `/collections` route and
+  `/adaptors/catalogue` answer these errors with a problem document, whatever
+  the request's `Accept` header, where they used to answer an HTML page or
+  `{"error": "<status text>"}`:
+  - A body that isn't valid JSON answers 400 `malformed`, and one over the size
+    limit answers 413 `too_large`, both before authentication.
+  - A body in a content type Lightning doesn't parse, such as `text/plain`,
+    answers 415 `unsupported_media_type` before authentication, where the
+    request used to reach the route with its body ignored.
+  - A path that matches no route answers 404 `not_found` before authentication.
+  - An `Accept` header that doesn't allow JSON answers 406 `not_acceptable`, and
+    an unexpected failure answers 500 `internal`, both as `application/json`.
+  - An id that isn't a UUID answers 404 `not_found` instead of 400 on
+    `GET /api/jobs/:id`, `/api/runs/:id`, `/api/work_orders/:id` and
+    `/api/provision/:id`, their `/api/projects/:project_id/...` forms, the
+    `/api/projects/:project_id/jobs`, `/runs` and `/work_orders` lists, and the
+    `run_id` of `GET /api/log_lines`, the `project_id` of `GET /api/runs` and
+    the `id` of `GET /api/provision/yaml`.
 
 ### Added
 
