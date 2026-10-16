@@ -4,45 +4,27 @@ defmodule LightningWeb.API.Helpers do
   """
   alias LightningWeb.Router.Helpers, as: Routes
 
+  @doc """
+  The page's links, each carrying the page size Scrivener applied rather than
+  the one the request asked for.
+  """
   def pagination_links(conn, page) do
     %{
-      first: pagination_link(conn, page, :first),
-      last: pagination_link(conn, page, :last),
-      next: pagination_link(conn, page, :next),
-      prev: pagination_link(conn, page, :prev)
+      first: page_url(conn, page, 1),
+      last: page_url(conn, page, page.total_pages),
+      next:
+        if(page.page_number < page.total_pages,
+          do: page_url(conn, page, page.page_number + 1)
+        ),
+      prev:
+        if(page.page_number > 1,
+          do: page_url(conn, page, page.page_number - 1)
+        )
     }
   end
 
-  def pagination_link(conn, _page, :first) do
-    url_for(conn, conn.query_params |> Map.put("page", 1))
-  end
-
-  def pagination_link(conn, page, :last) do
-    url_for(conn, conn.query_params |> Map.put("page", page.total_pages))
-  end
-
-  def pagination_link(conn, page, :next) do
-    if page.page_number < page.total_pages do
-      url_for(
-        conn,
-        conn.query_params
-        |> Map.put("page", page.page_number + 1)
-      )
-    end
-  end
-
-  def pagination_link(conn, page, :prev) do
-    if page.page_number > 1 do
-      url_for(
-        conn,
-        conn.query_params
-        |> Map.put(
-          "page",
-          page.page_number - 1
-        )
-      )
-    end
-  end
+  defp page_url(conn, page, number),
+    do: url_for(conn, %{"page" => number, "page_size" => page.page_size})
 
   def url_for(conn, params \\ %{}) do
     %URI{

@@ -93,6 +93,25 @@ defmodule LightningWeb.API.ProjectControllerTest do
              ]
     end
 
+    test "page links carry the page size applied, not the one asked for", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:project, project_users: [%{user_id: user.id}])
+
+      links =
+        conn
+        |> get(~p"/api/projects?page=1&page_size=500")
+        |> json_response(200)
+        |> Map.fetch!("links")
+
+      assert links["first"] ==
+               "#{LightningWeb.Endpoint.url()}/api/projects?page=1&page_size=100"
+
+      assert links["last"] == links["first"]
+      assert {links["next"], links["prev"]} == {nil, nil}
+    end
+
     test "Other user don't have access to user project", %{
       conn: conn,
       project: project

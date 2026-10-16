@@ -104,6 +104,9 @@ and this project adheres to
   to `POST /api/oauth/token` without `scope`, or with an empty one, is refused
   with `invalid_scope` instead of getting every scope.
   [#5239](https://github.com/OpenFn/lightning/pull/5239)
+- API page links (`first`, `last`, `next`, `prev`) carry the `page_size`
+  Lightning applied, so a request for more than 100 a page links to pages
+  of 100.
 
 ### Fixed
 
