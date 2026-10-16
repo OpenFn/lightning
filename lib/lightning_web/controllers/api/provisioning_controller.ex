@@ -106,14 +106,7 @@ defmodule LightningWeb.API.ProvisioningController do
     with {:ok, id} <- PutBody.path_id(id) do
       case Scope.fetch(scope, id) do
         {:ok, project_scope} ->
-          with :ok <-
-                 Permissions.permit(
-                   :provisioning,
-                   :provision_project,
-                   project_scope,
-                   project_scope.project
-                 ),
-               do: {:ok, project_scope.project}
+          permit_target(project_scope, :provision_project)
 
         # Also a repo connection's answer for a project other than its own,
         # which must not be mistaken for a free id.
@@ -243,10 +236,14 @@ defmodule LightningWeb.API.ProvisioningController do
 
   defp describe_target(scope, id) do
     with {:ok, project_scope} <- Scope.fetch(scope, id),
-         :ok <-
+         do: permit_target(project_scope, :describe_project)
+  end
+
+  defp permit_target(project_scope, action) do
+    with :ok <-
            Permissions.permit(
              :provisioning,
-             :describe_project,
+             action,
              project_scope,
              project_scope.project
            ),
