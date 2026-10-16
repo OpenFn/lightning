@@ -26,7 +26,11 @@ defmodule Lightning.Policies.Provisioning do
 
   @type actions :: :create_project | :provision_project | :describe_project
 
-  @spec authorize(actions(), Scope.t() | Scope.actor(), Project.t() | nil) ::
+  @spec authorize(
+          actions(),
+          Scope.t() | Scope.actor(),
+          Project.t() | nil | :before_target
+        ) ::
           boolean()
           | {:error,
              :forbidden
@@ -46,6 +50,16 @@ defmodule Lightning.Policies.Provisioning do
 
   def authorize(:create_project, actor, _subject),
     do: authorize(:create_project, Scope.new(actor), nil)
+
+  def authorize(:describe_project, %Scope{} = scope, :before_target),
+    do: Decision.instance(scope, :before_target, "projects:provision", true)
+
+  # Which grant applies waits for the body's project: creating one needs
+  # projects:write, provisioning one that exists projects:provision.
+  def authorize(:provision_project, %Scope{} = scope, :before_target) do
+    Scope.allows?(scope, "projects:write") or
+      Decision.instance(scope, :before_target, "projects:provision", true)
+  end
 
   # Stays above the clauses that resolve a Scope, which refuse a project that
   # does not exist yet and so would block creation.

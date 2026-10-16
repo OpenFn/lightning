@@ -23,6 +23,16 @@ defmodule LightningWeb.API.ProvisioningController do
 
   action_fallback(LightningWeb.FallbackController)
 
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:provisioning, :provision_project,
+        fallback: LightningWeb.FallbackController}
+       when action == :create
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:provisioning, :describe_project,
+        fallback: LightningWeb.FallbackController}
+       when action in [:show, :show_yaml]
+
   @doc """
   Creates or updates a project based on a JSON payload.
 

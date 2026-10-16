@@ -284,4 +284,49 @@ defmodule Lightning.Policies.ProvisioningTest do
                {:error, {:insufficient_scope, "projects:write"}}
     end
   end
+
+  # The routes reach only people (every grant) and repo connections
+  # (projects:provision), so these refusals are for tokens that can't reach
+  # /api/provision today.
+  describe "before the target is loaded" do
+    setup do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{account: account}
+    end
+
+    test "describing needs projects:provision", %{account: account} do
+      assert permit(account, [], :describe_project) ==
+               {:error, {:insufficient_scope, "projects:provision"}}
+
+      assert permit(account, ["projects:write"], :describe_project) ==
+               {:error, {:insufficient_scope, "projects:provision"}}
+
+      assert permit(account, ["projects:provision"], :describe_project) == :ok
+    end
+
+    # Creating needs projects:write and provisioning an existing project
+    # projects:provision; which applies waits for the body's target.
+    test "provisioning needs either grant", %{account: account} do
+      assert permit(account, ["users:write"], :provision_project) ==
+               {:error, {:insufficient_scope, "projects:provision"}}
+
+      assert permit(account, ["projects:write"], :provision_project) == :ok
+      assert permit(account, ["projects:provision"], :provision_project) == :ok
+    end
+
+    test "passes a repo connection" do
+      scope = Lightning.Scope.new(insert(:project_repo_connection))
+
+      for action <- [:describe_project, :provision_project] do
+        assert Permissions.permit(Provisioning, action, scope) == :ok
+      end
+    end
+
+    defp permit(account, grants, action) do
+      scope = Lightning.Scope.new(%{account | grants: MapSet.new(grants)})
+      Permissions.permit(Provisioning, action, scope)
+    end
+  end
 end
