@@ -831,7 +831,29 @@ defmodule LightningWeb.API.CredentialPutTest do
       conn
       |> with_pat(insert(:user))
       |> get(~p"/api/credentials/#{credential.id}")
-      |> assert_problem(403, :forbidden, [])
+      |> assert_problem(404, :not_found, [])
+    end
+
+    test "a person reads someone else's credential linked to a project they stand in",
+         %{conn: conn} do
+      viewer = insert(:user)
+      shared = insert(:project, project_users: [%{user: viewer, role: :viewer}])
+      credential = existing_credential(insert(:user), shared)
+
+      insert(:project_credential,
+        credential: credential,
+        project: insert(:project)
+      )
+
+      response =
+        conn
+        |> with_pat(viewer)
+        |> get(~p"/api/credentials/#{credential.id}")
+        |> json_response(200)
+
+      assert response["credential"]["id"] == credential.id
+      assert linked_project_ids(response) == [shared.id]
+      refute Jason.encode!(response) =~ "password"
     end
   end
 

@@ -179,7 +179,9 @@ defmodule LightningWeb.API.CredentialController do
   end
 
   @doc """
-  Shows a credential, without its body, to a caller who may edit it.
+  Shows a credential, without its body, to a caller who may edit it or who
+  sees it linked to a project whose credentials it may list. Anyone else hears
+  404 `not_found`, as if it didn't exist.
 
   Links to projects whose credentials the caller may not list are left out.
   """
@@ -187,15 +189,33 @@ defmodule LightningWeb.API.CredentialController do
   def show(conn, %{"id" => id}) do
     with {:ok, id} <- PutBody.path_id(id),
          {:ok, credential} <- fetch_credential(id),
-         :ok <-
-           Permissions.permit(
-             :credentials,
-             :edit_credential,
-             conn.assigns.scope,
-             credential
-           ) do
+         :ok <- visible(credential, conn.assigns.scope) do
       render_credential(conn, credential)
     end
+  end
+
+  # Seeing a credential through a link is standing to read it and nothing more
+  # (spec §15 row 49).
+  defp visible(credential, scope) do
+    case Permissions.permit(:credentials, :edit_credential, scope, credential) do
+      {:error, :forbidden} ->
+        if seen_through_link?(credential, scope),
+          do: :ok,
+          else: {:error, :not_found}
+
+      answer ->
+        answer
+    end
+  end
+
+  defp seen_through_link?(credential, scope) do
+    %{project_credentials: links} =
+      Repo.preload(credential, :project_credentials)
+
+    scope
+    |> Scope.fetch_all(Enum.map(links, & &1.project_id))
+    |> permitted_ids(:list_project_credentials)
+    |> Enum.any?()
   end
 
   @doc """
@@ -564,8 +584,9 @@ defmodule LightningWeb.API.CredentialController do
   ## Returns
 
   - `204 No Content` on successful deletion
-  - `404 Not Found` if credential doesn't exist or invalid UUID
-  - `403 Forbidden` if user is not the credential owner
+  - `404 Not Found` if the credential doesn't exist, the id isn't a UUID, or
+    the caller can't see it
+  - `403 Forbidden` if the caller can see it but doesn't own it
 
   ## Examples
 
@@ -575,19 +596,23 @@ defmodule LightningWeb.API.CredentialController do
   def delete(conn, %{"id" => id}) do
     with {:ok, id} <- PutBody.path_id(id),
          {:ok, credential} <- fetch_credential(id),
-         :ok <-
-           Permissions.permit(
-             :credentials,
-             :delete_credential,
-             conn.assigns.scope,
-             credential
-           ),
+         :ok <- deletable(credential, conn.assigns.scope),
          {:ok, _deleted} <-
            Credentials.delete_credential(
              credential,
              conn.assigns.current_resource
            ) do
       send_resp(conn, :no_content, "")
+    end
+  end
+
+  defp deletable(credential, scope) do
+    case Permissions.permit(:credentials, :delete_credential, scope, credential) do
+      {:error, :forbidden} ->
+        with :ok <- visible(credential, scope), do: {:error, :forbidden}
+
+      answer ->
+        answer
     end
   end
 end

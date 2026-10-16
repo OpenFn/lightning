@@ -1176,23 +1176,35 @@ defmodule LightningWeb.API.CredentialControllerTest do
       assert_problem(conn, 404, :not_found, [])
     end
 
-    test "returns 403 when trying to delete credential owned by another user", %{
-      conn: conn,
-      user: _user
+    test "answers 404 for another user's credential the caller can't see", %{
+      conn: conn
     } do
-      other_user = insert(:user)
+      other_credential =
+        insert(:credential, user: insert(:user), schema: "raw")
+
+      conn
+      |> delete(~p"/api/credentials/#{other_credential.id}")
+      |> assert_problem(404, :not_found, [])
+
+      assert Lightning.Credentials.get_credential(other_credential.id)
+    end
+
+    test "answers 403 for another user's credential the caller sees through a project",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
 
       other_credential =
         insert(:credential,
-          user: other_user,
-          name: "Other User Credential",
-          schema: "raw"
+          user: insert(:user),
+          schema: "raw",
+          project_credentials: [%{project_id: project.id}]
         )
 
-      conn = delete(conn, ~p"/api/credentials/#{other_credential.id}")
-      assert_problem(conn, 403, :forbidden, [])
+      conn
+      |> delete(~p"/api/credentials/#{other_credential.id}")
+      |> assert_problem(403, :forbidden, [])
 
-      # Verify credential still exists
       assert Lightning.Credentials.get_credential(other_credential.id)
     end
 

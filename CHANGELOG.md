@@ -85,8 +85,10 @@ and this project adheres to
     still loading answers 503 `not_ready` with `Retry-After: 5`, instead of 422.
   - `DELETE /api/credentials/:id` for a credential that doesn't exist, or an id
     that isn't a UUID, answers 404 `not_found` instead of
-    `{"error": "Not Found"}`, and for someone else's credential 403 `forbidden`
-    instead of `{"error": "Forbidden"}`.
+    `{"error": "Not Found"}`. Someone else's credential answers 404 `not_found`,
+    the same answer as for one that doesn't exist, unless the caller sees it
+    linked to a project whose credentials they may list, when it answers 403
+    `forbidden`; both were `{"error": "Forbidden"}`.
 
 ### Added
 
