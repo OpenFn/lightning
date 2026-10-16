@@ -21,6 +21,7 @@ and this project adheres to
 
 ### Fixed
 
+## [2.19.1] - 2026-10-16
 ## [2.19.1-pre] - 2026-10-09
 
 ### Added
