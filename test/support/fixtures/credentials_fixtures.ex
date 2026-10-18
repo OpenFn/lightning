@@ -9,7 +9,6 @@ defmodule Lightning.CredentialsFixtures do
       Lightning.AccountsFixtures.user_fixture().id
     end)
     |> Enum.into(%{
-      body: %{},
       name: "some name",
       schema: "raw"
     })

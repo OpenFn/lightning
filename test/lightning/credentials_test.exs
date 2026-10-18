@@ -343,11 +343,66 @@ defmodule Lightning.CredentialsTest do
       :ok
     end
 
+    test "rejects a legacy body instead of silently discarding it" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "legacy credential",
+        user_id: user.id,
+        schema: "raw",
+        body: %{"key" => "secret"}
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Credentials.create_credential(attrs, user)
+
+      assert "is no longer supported; use credential_bodies instead" in errors_on(
+               changeset
+             ).body
+
+      refute Repo.get_by(Credential, name: attrs.name)
+    end
+
+    test "rejects a legacy body even when credential_bodies is also provided" do
+      user = insert(:user)
+
+      attrs = %{
+        "name" => "ambiguous credential",
+        "user_id" => user.id,
+        "schema" => "raw",
+        "body" => %{"key" => "ignored"},
+        "credential_bodies" => [
+          %{"name" => "main", "body" => %{"key" => "used"}}
+        ]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Credentials.create_credential(attrs, user)
+
+      assert "is no longer supported; use credential_bodies instead" in errors_on(
+               changeset
+             ).body
+
+      refute Repo.get_by(Credential, name: attrs["name"])
+    end
+
+    test "can still create a credential without any bodies" do
+      user = insert(:user)
+
+      assert {:ok, credential} =
+               Credentials.create_credential(
+                 %{name: "empty credential", user_id: user.id, schema: "raw"},
+                 user
+               )
+
+      assert Repo.preload(credential, :credential_bodies).credential_bodies == []
+    end
+
     test "fails if another cred exists with the same name for the same user" do
       user = insert(:user)
 
       valid_attrs = %{
-        body: %{"a" => "test"},
+        credential_bodies: [%{name: "main", body: %{"a" => "test"}}],
         name: "simple name",
         user_id: user.id,
         schema: "raw"

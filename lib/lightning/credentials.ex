@@ -188,6 +188,11 @@ defmodule Lightning.Credentials do
         * `body` - Credential configuration data
       * `expected_scopes` - List of expected scopes (for OAuth credentials)
 
+  The legacy top-level `body` attribute is rejected. Pass credential configuration
+  in `credential_bodies` with an explicit environment name instead. Supplying both
+  attributes also returns a validation error; neither body is silently ignored.
+  Creating a metadata-only credential without either attribute is still supported.
+
   ## Returns
     * `{:ok, credential}` - Successfully created credential
     * `{:error, error}` - Error with creation process
@@ -203,6 +208,17 @@ defmodule Lightning.Credentials do
            }) do
       do_create_credential(attrs)
     end
+  end
+
+  defp do_create_credential(%{"body" => _} = attrs) do
+    changeset =
+      Credential.create_changeset(%Credential{}, attrs)
+      |> Ecto.Changeset.add_error(
+        :body,
+        "is no longer supported; use credential_bodies instead"
+      )
+
+    {:error, changeset}
   end
 
   defp do_create_credential(attrs) do

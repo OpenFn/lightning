@@ -706,7 +706,9 @@ defmodule LightningWeb.CredentialLiveTest do
 
       credential =
         Repo.get_by(Credential, name: @create_attrs.name)
-        |> Repo.preload(:projects)
+        |> Repo.preload([:projects, :credential_bodies])
+
+      assert [%{name: "main", body: %{"a" => 1}}] = credential.credential_bodies
 
       assert MapSet.equal?(
                MapSet.new(credential.projects, & &1.id),

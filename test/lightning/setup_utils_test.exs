@@ -14,6 +14,8 @@ defmodule Lightning.SetupUtilsTest do
   # The demo projects' jobs are built through `Job.changeset/2`, which only
   # accepts adaptors present in the catalogue.
   setup do
+    seed_credential_schema("dhis2")
+
     Enum.each(
       ~w(@openfn/language-common @openfn/language-dhis2 @openfn/language-http),
       &Lightning.AdaptorTestHelpers.ensure_adaptor/1
@@ -23,6 +25,27 @@ defmodule Lightning.SetupUtilsTest do
   describe "Setup demo site seed data" do
     setup do
       Lightning.SetupUtils.setup_demo(create_super: true)
+    end
+
+    test "the DHIS2 credential resolves for the demo project's environment", %{
+      projects: [_openhie_project, project],
+      jobs: jobs
+    } do
+      job = Enum.find(jobs, &(&1.name == "Get DHIS2 data"))
+      credential = Repo.preload(job, :credential).credential
+      assert {:ok, environment} = Lightning.Projects.Environment.fetch(project)
+
+      assert {:ok, resolved} =
+               Lightning.Credentials.Resolver.resolve_credential(
+                 credential,
+                 environment
+               )
+
+      assert resolved.body == %{
+               "username" => "admin",
+               "password" => "district",
+               "hostUrl" => "https://play.dhis2.org/dev"
+             }
     end
 
     test "all initial data is present in database", %{
@@ -696,9 +719,49 @@ defmodule Lightning.SetupUtilsTest do
 
       # check that the credentials have been created
       assert [
-               %Credential{name: "openmrs", user_id: ^user_id},
-               %Credential{name: "dhis2", user_id: ^user_id}
+               %Credential{name: "openmrs", user_id: ^user_id} = openmrs,
+               %Credential{name: "dhis2", user_id: ^user_id} = dhis2
              ] = Repo.all(Credential)
+
+      assert Lightning.Credentials.get_credential_body(openmrs.id, "main").body ==
+               %{"a" => "secret"}
+
+      assert Lightning.Credentials.get_credential_body(dhis2.id, "main").body ==
+               %{"b" => "safe"}
+    end
+
+    test "preserves explicitly named credential environments" do
+      assert {:ok, :ok} =
+               SetupUtils.setup_user(
+                 %{
+                   first_name: "Taylor",
+                   last_name: "Downs",
+                   email: "contact@openfn.org",
+                   password: "shh12345678!"
+                 },
+                 nil,
+                 [
+                   %{
+                     "name" => "service",
+                     "schema" => "raw",
+                     "credential_bodies" => [
+                       %{"name" => "main", "body" => %{"key" => "main-key"}},
+                       %{
+                         "name" => "staging",
+                         "body" => %{"key" => "staging-key"}
+                       }
+                     ]
+                   }
+                 ]
+               )
+
+      credential = Repo.get_by!(Credential, name: "service")
+
+      assert Lightning.Credentials.get_credential_body(credential.id, "main").body ==
+               %{"key" => "main-key"}
+
+      assert Lightning.Credentials.get_credential_body(credential.id, "staging").body ==
+               %{"key" => "staging-key"}
     end
 
     test "can be used to set up a superuser" do
