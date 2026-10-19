@@ -36,6 +36,14 @@ defmodule Lightning.MixProject do
       ],
       compilers: Mix.compilers(),
       hex: hex_audit(),
+      releases: [
+        lightning: [
+          applications: [
+            opentelemetry_exporter: :permanent,
+            opentelemetry: :temporary
+          ]
+        ]
+      ],
 
       # Docs
       name: "Lightning",
@@ -147,6 +155,13 @@ defmodule Lightning.MixProject do
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.19"},
+      {:opentelemetry, "~> 1.7.0"},
+      {:opentelemetry_api, "~> 1.5.0"},
+      {:opentelemetry_cowboy, "~> 1.0.0"},
+      {:opentelemetry_ecto, "~> 1.2.0"},
+      {:opentelemetry_exporter, "~> 1.10.0"},
+      {:opentelemetry_oban, "~> 1.2.0"},
+      {:opentelemetry_phoenix, "~> 2.0.1"},
       {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},

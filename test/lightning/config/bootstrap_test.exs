@@ -1559,6 +1559,294 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "configuring OpenTelemetry" do
+    test "enabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED false" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_SDK_DISABLED" => "false"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "disabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED true" do
+      reconfigure(%{
+        "OTEL_SDK_DISABLED" => "true"
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "disabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED not set" do
+      reconfigure(%{})
+
+      refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "disabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED empty string" do
+      reconfigure(%{
+        "OTEL_SDK_DISABLED" => ""
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "enabled if TRACING_ENABLED true, OTEL_SDK_DISABLED false" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_SDK_DISABLED" => "false"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "disabled if TRACING_ENABLED true, OTEL_SDK_DISABLED true" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_SDK_DISABLED" => "true"
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "enabled if TRACING_ENABLED true, OTEL_SDK_DISABLED not set" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "enabled if TRACING_ENABLED true, OTEL_SDK_DISABLED empty string" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_SDK_DISABLED" => ""
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "enabled if TRACING_ENABLED false, OTEL_SDK_DISABLED false" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_SDK_DISABLED" => "false"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "disabled if TRACING_ENABLED false, OTEL_SDK_DISABLED true" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_SDK_DISABLED" => "true"
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "disabled if TRACING_ENABLED false, OTEL_SDK_DISABLED not set" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no"
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "disabled if TRACING_ENABLED false, OTEL_SDK_DISABLED empty string" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_SDK_DISABLED" => ""
+      })
+
+      refute get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "raises if OTEL_SDK_DISABLED is set to an invalid value" do
+      message_regexp =
+        ~r/OTEL_SDK_DISABLED must be "true" or "false"/
+
+      assert_raise ArgumentError, message_regexp, fn ->
+        reconfigure(%{
+          "OTEL_SDK_DISABLED" => "invalid"
+        })
+      end
+    end
+
+    test "enables Ecto tracing if TRACING_ECTO_ENABLED is true" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_SDK_DISABLED" => "false",
+        "TRACING_ECTO_ENABLED" => "yes"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+      assert get_env(:lightning, :otel)[:ecto_enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "disables Ecto tracing if TRACING_ECTO_ENABLED is false" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_SDK_DISABLED" => "false",
+        "TRACING_ECTO_ENABLED" => "no"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+      refute get_env(:lightning, :otel)[:ecto_enabled]
+      refute get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "sets an endpoint if OTEL_EXPORTER_OTLP_ENDPOINT is set" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317"
+      })
+
+      assert get_env(:opentelemetry_exporter)[:otlp_endpoint] ==
+               "http://localhost:4317"
+    end
+
+    test "doesn't set endpoint if OTEL_EXPORTER_OTLP_ENDPOINT is empty string" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => ""
+      })
+
+      assert get_env(:opentelemetry_exporter) == nil
+    end
+
+    test "sets a traces endpoint if OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is set" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" => "http://localhost:4317"
+      })
+
+      assert get_env(:opentelemetry_exporter)[:otlp_traces_endpoint] ==
+               "http://localhost:4317"
+    end
+
+    test "doesn't set endpoint if OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is empty" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" => ""
+      })
+
+      assert get_env(:opentelemetry_exporter) == nil
+    end
+
+    test "doesn't set endpoint if neither endpoint env var set" do
+      reconfigure(%{})
+
+      assert get_env(:opentelemetry_exporter) == nil
+    end
+
+    test "doesn't set endpoint if both endpoint env vars are empty strings" do
+      reconfigure(%{
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "",
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" => ""
+      })
+
+      assert get_env(:opentelemetry_exporter) == nil
+    end
+
+    test "raises an error if open telemetry is enabled but no endpoint configured" do
+      message_regexp =
+        ~r/no OTLP endpoint is configured/
+
+      assert_raise ArgumentError, message_regexp, fn ->
+        reconfigure(%{
+          "TRACING_ENABLED" => "yes"
+        })
+      end
+    end
+
+    test "raises an error if open telemetry is enabled and empty string endpoints" do
+      message_regexp =
+        ~r/no OTLP endpoint is configured/
+
+      assert_raise ArgumentError, message_regexp, fn ->
+        reconfigure(%{
+          "TRACING_ENABLED" => "yes",
+          "OTEL_EXPORTER_OTLP_ENDPOINT" => "",
+          "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" => ""
+        })
+      end
+    end
+
+    test "does not raise if open telemetry is enabled and endpoint configured" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "does not raise if open telemetry enabled & traces endpoint configured" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" => "http://localhost:4317"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "does not raise if open telemetry enabled & both endpoints configured" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" => "http://localhost:4317"
+      })
+
+      assert get_env(:lightning, :otel)[:enabled]
+    end
+
+    test "includes the RedactingProcessor and does not set span_processor" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "yes",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" => "http://localhost:4317"
+      })
+
+      opentelemetry = get_env(:opentelemetry)
+
+      # Ensure we are redacting potentially sensitive data before exporting traces
+      assert {Lightning.OpenTelemetry.RedactingProcessor, %{}} in opentelemetry[
+               :processors
+             ]
+
+      # Ensure we have not set a span_processor, as this will result in OTel 
+      # ignoring the processors list.
+      refute Keyword.has_key?(opentelemetry, :span_processor)
+    end
+  end
+
   # Helpers to read the in-process config that Config writes
   defp get_env(app) do
     Process.get(@config_key)

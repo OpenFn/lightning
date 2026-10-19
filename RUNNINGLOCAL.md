@@ -152,6 +152,139 @@ developing, see `tooling/adaptor_cache/README.md`. The `ADAPTORS_NPM_*`
 variables that point Lightning at it are described in
 [ADAPTORS.md](ADAPTORS.md).
 
+### Catching traces locally
+
+Lightning exports OpenTelemetry traces over OTLP, so any local collector that
+accepts OTLP will catch them. Jaeger all-in-one needs no configuration file and
+has a query API that returns raw span JSON, which makes it a good default.
+
+Write a compose file for it. `monitoring/` is ignored by git, so this stays out
+of your commits:
+
+```sh
+mkdir -p monitoring
+cat > monitoring/jaeger.yml <<'YAML'
+services:
+  jaeger:
+    image: jaegertracing/jaeger:2.21.0
+    container_name: lightning-jaeger
+    ports:
+      - "16686:16686" # UI and query API
+      - "4318:4318" # OTLP/HTTP
+      - "4317:4317" # OTLP/gRPC
+YAML
+```
+
+Start it and check it is listening. Spans are kept in memory only, so `down`
+discards everything:
+
+```sh
+docker compose -f monitoring/jaeger.yml up -d
+```
+
+Wait approx 60 seconds for Jaeger to sample itself, then:
+
+```sh
+curl -s localhost:16686/api/v3/services
+```
+
+The reply is `{"services":["jaeger"]}`. Jaeger traces itself, so its own name
+means the collector is up and nothing has arrived from Lightning yet.
+
+Now start Lightning pointing at it, with sampling turned up:
+
+```sh
+TRACING_ENABLED=true \
+  OTEL_TRACES_SAMPLER=always_on \
+  OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
+  iex -S mix phx.server
+```
+
+Add `TRACING_ECTO_ENABLED=true` for a span per database query. See
+[Tracing](DEPLOYMENT.md#tracing) for what each variable does.
+
+Note that Lightning only processes the following OpenTelemetry ENV vars:
+
+- `OTEL_SDK_DISABLED`
+- `OTEL_EXPORTER_OTLP_ENDPOINT`
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
+
+The above can be configured via a `.env` file to be read by Dotenvy. Any other
+`OTEL_*` env vars are read directly from the OS environment by the OpenTelemetry
+libraries. As a result they will be ignored by Dotenvy, e.g.
+`OTEL_TRACES_SAMPLER` in the `iex -S mix phx.server` code snippet above.
+
+Generate some traffic, wait about ten seconds, then open http://localhost:16686
+and pick the `lightning` service.
+
+If you are not seeing an expected span, the following may be factors:
+
+- The exporter batches, so the rule of thumb is that it may take 10-15 seconds
+  for a span to arrive.
+- Sampling keeps 5% of traces by default, unless you use the `always_on`
+  sampler. This can be set with `OTEL_TRACES_SAMPLER=always_on`.
+
+Jaeger keeps spans for the life of the container, and a service stays in the
+list once it has appeared. Restart it between runs to reduce noise:
+
+```sh
+docker compose -f monitoring/jaeger.yml restart jaeger
+```
+
+You can also use the API to pull span data, as per this over-engineered example:
+
+```sh
+cat > monitoring/jaeger-attrs.sh <<'EOF'
+#!/usr/bin/env bash
+# Usage: ./jaeger-attrs.sh [service] [lookback_secs] [attribute_key]
+set -euo pipefail
+
+SERVICE="${1:-lightning}"
+LOOKBACK_SECS="${2:-3600}"
+ATTR_KEY="${3:-db.url}"
+JAEGER_URL="${JAEGER_URL:-http://localhost:16686}"
+OUT="${OUT:-/tmp/spans.json}"
+
+START=$(jq -nr --argjson s "$LOOKBACK_SECS" 'now - $s | strftime("%Y-%m-%dT%H:%M:%SZ")')
+END=$(jq -nr 'now | strftime("%Y-%m-%dT%H:%M:%SZ")')
+
+curl -fsSG "$JAEGER_URL/api/v3/traces" \
+  --data-urlencode "query.service_name=$SERVICE" \
+  --data-urlencode 'query.num_traces=200' \
+  --data-urlencode "query.start_time_min=$START" \
+  --data-urlencode "query.start_time_max=$END" \
+  > "$OUT"
+
+echo "== attribute keys (span + resource) =="
+jq -r '.result.resourceSpans[]?
+       | (.scopeSpans[]?.spans[]?.attributes[]?.key,
+          .resource.attributes[]?.key)' \
+  "$OUT" | sort -u
+
+echo
+echo "== values of $ATTR_KEY =="
+jq -r --arg k "$ATTR_KEY" '.result.resourceSpans[]?.scopeSpans[]?.spans[]?.attributes[]?
+       | select(.key == $k)
+       | .value | to_entries[0].value
+       | if type == "string" then . else tojson end' \
+  "$OUT" | sort -u
+EOF
+chmod +x monitoring/jaeger-attrs.sh
+```
+
+Unfortunately, there does not appear to be a human-friendly URL for Jaeger V3
+API docs, but the OpenApi spec can be found
+[here](https://raw.githubusercontent.com/jaegertracing/jaeger-idl/main/swagger/api_v3/query_service.openapi.yaml).
+
+This can then be fed into a service such as the
+[Swagger Petstore](https://petstore.swagger.io/?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjaegertracing%2Fjaeger-idl%2Fmain%2Fswagger%2Fapi_v3%2Fquery_service.openapi.yaml).
+
+Stop the collector when you are done:
+
+```sh
+docker compose -f monitoring/jaeger.yml down
+```
+
 ### Problems with Apple Silicon
 
 You might run into some errors when running the docker containers on Apple
