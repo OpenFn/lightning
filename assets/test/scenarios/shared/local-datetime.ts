@@ -1,4 +1,4 @@
-// Scenarios from annotations/shared/shared-local-datetime.md (not published yet).
+// Scenarios from annotations/shared/shared-local-datetime.md.
 //
 // Each takes the page and the element (usually a table cell) that shows one
 // timestamp. The host spec owns the Given: it makes that timestamp `given.Sxx`

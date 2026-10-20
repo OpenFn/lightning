@@ -1,4 +1,4 @@
-// Scenarios from annotations/shared/shared-admin-space.md (not published yet), run
+// Scenarios from annotations/shared/shared-admin-space.md, run
 // on an admin page at `path`. The host makes `email` a superuser and restores
 // the account afterwards (makeSuperuser and keepAccount in steps.ts).
 import { expect, type Browser, type Page } from '@playwright/test';

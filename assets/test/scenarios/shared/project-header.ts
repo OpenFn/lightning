@@ -1,4 +1,4 @@
-// Scenarios from annotations/shared/shared-project-header.md (not published yet)
+// Scenarios from annotations/shared/shared-project-header.md
 // that reach a page without a project: the global picker, the role menu and
 // the account menu. Each opens `path` itself.
 import { expect, type Page } from '@playwright/test';

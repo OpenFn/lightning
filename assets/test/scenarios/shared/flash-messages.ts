@@ -1,4 +1,4 @@
-// Scenarios from annotations/shared/shared-flash-messages.md (not published yet).
+// Scenarios from annotations/shared/shared-flash-messages.md.
 //
 // Each takes the page, the message the host page puts, and `act`: the host's
 // own action that puts it. The host owns the Given; the functions hold the
