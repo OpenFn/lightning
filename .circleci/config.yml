@@ -5,7 +5,7 @@ orbs:
 
 # Shared configuration
 defaults:
-  elixir_image: &elixir_image hexpm/elixir:1.18.4-erlang-28.5-debian-bookworm-20260421
+  elixir_image: &elixir_image hexpm/elixir:1.18.4-erlang-28.5-debian-bookworm-20260610
   docker_elixir: &docker_elixir
     - image: *elixir_image
   docker_elixir_postgres: &docker_elixir_postgres

@@ -14,7 +14,7 @@
 #
 ARG ELIXIR_VERSION=1.18.4
 ARG OTP_VERSION=28.5
-ARG DEBIAN_VERSION=bookworm-20260421
+ARG DEBIAN_VERSION=bookworm-20260610
 ARG NODE_VERSION=26.12.0
 ARG ERL_FLAGS
 
@@ -95,7 +95,7 @@ LABEL commit=${COMMIT}
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
   libstdc++6 libatomic1 openssl libncurses5 locales ca-certificates \
-  curl libsodium-dev
+  curl libsodium-dev procps
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 

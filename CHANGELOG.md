@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Lightning now uses Node 26.12.0 from the official nodejs.org binary
+  [#5254](https://github.com/OpenFn/lightning/pull/5254)
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
