@@ -53,6 +53,18 @@ commands:
             bin/install_node "$(awk '$1 == "nodejs" { print $2 }'
             .tool-versions)"
 
+  check_version_drift:
+    description:
+      'Fail unless .tool-versions matches the Dockerfiles, this config and node'
+    parameters:
+      args:
+        type: string
+        default: ''
+    steps:
+      - run:
+          name: 'Check versions against .tool-versions'
+          command: bin/check_version_drift << parameters.args >>
+
   setup_lightning_user:
     description: 'Create lightning user and configure sudo'
     steps:
@@ -97,6 +109,7 @@ jobs:
           name: 'Set ownership'
           command: chown -R lightning /home/lightning
       - install_node
+      - check_version_drift
 
       - run:
           name: 'Save Elixir and Erlang version for caching'
@@ -194,6 +207,7 @@ jobs:
       - setup_lightning_user
       - attach_built_workspace
       - install_node
+      - check_version_drift
       - run:
           name: 'Check code formatting'
           command: |
@@ -274,6 +288,8 @@ jobs:
       - install_system_packages
       - setup_lightning_user
       - attach_built_workspace
+      - check_version_drift:
+          args: --skip-node
       - run:
           name: 'Run Dialyzer type checking'
           command: sudo -u lightning mix dialyzer
@@ -285,6 +301,7 @@ jobs:
       - setup_lightning_user
       - attach_built_workspace
       - install_node
+      - check_version_drift
       - run:
           name: 'Install test dependencies'
           command:
@@ -307,6 +324,7 @@ jobs:
       - setup_lightning_user
       - attach_built_workspace
       - install_node
+      - check_version_drift
       - run:
           name: 'Run JavaScript tests'
           command: cd assets && sudo -u lightning npm run test-report
