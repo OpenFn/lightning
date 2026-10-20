@@ -25,6 +25,13 @@ export default defineConfig({
     // Worker threads can't handle SIGPIPE, so they keep running after pipes
     // break. Can revert to "threads" if Node.js fixes worker_threads SIGPIPE.
     pool: 'forks',
+    poolOptions: {
+      forks: {
+        // Node 25+ enables its own Web Storage by default, and its
+        // `localStorage` global shadows jsdom's.
+        execArgv: ['--no-experimental-webstorage'],
+      },
+    },
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./test/_setup.ts'],
