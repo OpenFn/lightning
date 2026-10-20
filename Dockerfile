@@ -95,7 +95,7 @@ LABEL commit=${COMMIT}
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
   libstdc++6 libatomic1 openssl libncurses5 locales ca-certificates \
-  curl libsodium-dev
+  curl libsodium-dev procps
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
