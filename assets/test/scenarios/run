@@ -1,0 +1,11 @@
+#!/bin/sh
+# Runs the annotation scenarios: the parallel group first, then the tests that
+# need the instance to themselves, one at a time. Arguments (spec files,
+# file:line, --grep) go to both runs.
+cd "$(dirname "$0")/../.." || exit 1
+config=test/scenarios/playwright.config.ts
+npx playwright test -c $config --project=parallel --pass-with-no-tests "$@"
+parallel=$?
+npx playwright test -c $config --project=serial --project=admin --workers=1 --pass-with-no-tests "$@"
+serial=$?
+[ $parallel -eq 0 ] && [ $serial -eq 0 ]
