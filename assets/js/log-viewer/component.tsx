@@ -41,7 +41,8 @@ const LogViewer = ({
   const [monaco, setMonaco] = useState<Monaco>();
   const [editor, setEditor] = useState<e.IStandaloneCodeEditor>();
 
-  const decorationsCollection = useRef<e.IEditorDecorationsCollection>();
+  const decorationsCollection =
+    useRef<e.IEditorDecorationsCollection>(undefined);
 
   // Use custom hook to handle Monaco value synchronization
   // Implements the isEditorReady pattern recommended by @monaco-editor/react maintainer

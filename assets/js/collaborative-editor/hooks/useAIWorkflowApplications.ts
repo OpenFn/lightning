@@ -123,7 +123,7 @@ export function useAIWorkflowApplications({
     updateJob: (jobId: string, updates: { body: string }) => void;
     saveWorkflow: (options?: SaveWorkflowOptions) => Promise<unknown>;
   };
-  monacoRef: RefObject<MonacoHandle> | null;
+  monacoRef: RefObject<MonacoHandle | null> | null;
   jobs: Job[];
   canApplyChanges: boolean;
   connectionState: ConnectionState;

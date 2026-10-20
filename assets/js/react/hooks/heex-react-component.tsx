@@ -169,7 +169,7 @@ export const HeexReactComponent = {
 
   _onBoundary(element) {
     this.__view().liveSocket.requestDOMUpdate(() => {
-      if (element == null) return;
+      if (element == null || this._boundaryMounted) return;
 
       this.__view().execNewMounted();
       this._boundaryMounted = true;

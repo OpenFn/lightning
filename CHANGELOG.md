@@ -26,6 +26,8 @@ and this project adheres to
 - Bump decimal to 3.2.0 and cowlib to 2.21.0 for security fixes, and ignore two
   Cloak advisories that don't affect us
   [#5246](https://github.com/OpenFn/lightning/pull/5246)
+- The web app's interactive pages now run on React 19, up from React 18. They
+  look and behave the same.
 
 ### Fixed
 
