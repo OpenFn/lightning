@@ -3,11 +3,16 @@
 # the CircleCI hexpm/elixir image tag and the running `node -v`.
 # bin/update-images writes all of these; run it to fix a mismatch.
 #
-# Usage: bin/check_version_drift [--skip-node]
+# Usage: bin/check_version_drift [--skip-node], run from the repo root
 #   --skip-node  don't check `node -v`, for jobs that never install Node
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+for file in .tool-versions Dockerfile Dockerfile-dev .circleci/config.yml; do
+  if [[ ! -f "$file" ]]; then
+    echo "$file not found in $PWD; run this from the repo root" >&2
+    exit 1
+  fi
+done
 
 tool_version() {
   awk -v tool="$1" '$1 == tool { print $2 }' .tool-versions
