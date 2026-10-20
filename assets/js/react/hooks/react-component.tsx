@@ -174,9 +174,9 @@ export const ReactComponent = {
       // retry), so hooks inside it are mounted on every attach.
       this.__view().execNewMounted();
 
-      // React 19 StrictMode and Suspense also detach and reattach the
-      // boundary, but the hook stays a portal target until `_beforeUnmount`,
-      // so it registers only once.
+      // StrictMode (in development) and Suspense also detach and reattach the
+      // boundary. The hook stays a portal target until `_beforeUnmount`, so it
+      // registers only once.
       if (this._id != null && !this._boundaryMounted) {
         const beforeUnmount = rootObserver.mounted(
           this._id,

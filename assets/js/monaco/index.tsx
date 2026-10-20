@@ -81,7 +81,8 @@ export const MonacoEditor = ({
     onMount(editor, monaco);
   }, []);
 
-  // The editor only follows its container's size with `automaticLayout`
+  // Without `automaticLayout` the editor doesn't resize with its container,
+  // so callers can't turn it off.
   const callerOptions = props['options'];
   const options = useMemo(
     () => ({ ...callerOptions, automaticLayout: true }),
