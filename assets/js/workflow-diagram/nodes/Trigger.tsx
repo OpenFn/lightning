@@ -21,7 +21,7 @@ const TriggerNode = ({
   ...props
 }: t.DistributedOmit<React.ComponentPropsWithoutRef<typeof Node>, 'data'> & {
   data: Lightning.TriggerNode;
-}): JSX.Element => {
+}): React.JSX.Element => {
   // Do not remove yet, we might need this snippet of code when implementing issue #1121
   const { label, sublabel, tooltip, primaryIcon, secondaryIcon } =
     getTriggerMeta(props.data);

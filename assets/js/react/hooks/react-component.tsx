@@ -163,13 +163,21 @@ export const ReactComponent = {
   },
 
   _onBoundary(element) {
+    if (element == null) return;
+
+    let detached = false;
+
     this.__view().liveSocket.requestDOMUpdate(() => {
-      if (element == null) return;
+      if (detached) return;
 
+      // React can attach a new boundary element (e.g. after an error boundary
+      // retry), so hooks inside it are mounted on every attach.
       this.__view().execNewMounted();
-      this._boundaryMounted = true;
 
-      if (this._id != null) {
+      // StrictMode (in development) and Suspense also detach and reattach the
+      // boundary. The hook stays a portal target until `_beforeUnmount`, so it
+      // registers only once.
+      if (this._id != null && !this._boundaryMounted) {
         const beforeUnmount = rootObserver.mounted(
           this._id,
           this as unknown as ReactComponentHook
@@ -177,7 +185,15 @@ export const ReactComponent = {
 
         this._onBeforeUnmount(beforeUnmount);
       }
+
+      this._boundaryMounted = true;
     });
+
+    // React calls this when it detaches the element, which can happen before
+    // LiveView runs a deferred `requestDOMUpdate` callback.
+    return () => {
+      detached = true;
+    };
   },
 
   _setProps() {

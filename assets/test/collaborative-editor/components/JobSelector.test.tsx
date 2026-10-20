@@ -5,7 +5,7 @@
  * based on the workflow graph structure.
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -265,5 +265,31 @@ describe('JobSelector', () => {
     expect(options[0]).toHaveTextContent('Job 1');
     expect(options[1]).toHaveTextContent('Job 2');
     expect(options[2]).toHaveTextContent('Job 3');
+  });
+
+  it('selects a job with the keyboard and returns focus to the button', async () => {
+    const user = userEvent.setup();
+    const currentJob = createMockJob({ id: 'job-1', name: 'Fetch Data' });
+    const job2 = createMockJob({ id: 'job-2', name: 'Transform Data' });
+    const onChange = vi.fn();
+
+    render(
+      <JobSelector
+        currentJob={currentJob}
+        jobs={[currentJob, job2]}
+        onChange={onChange}
+      />
+    );
+
+    const button = screen.getByRole('button');
+    button.focus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getAllByRole('option')).toHaveLength(2);
+
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    expect(onChange).toHaveBeenCalledWith(job2);
+    await waitFor(() => expect(screen.queryByRole('option')).toBeNull());
+    expect(button).toHaveFocus();
   });
 });
