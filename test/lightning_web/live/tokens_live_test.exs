@@ -62,6 +62,30 @@ defmodule LightningWeb.TokensLiveTest do
     end
   end
 
+  describe "unconfirmed account" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      :ok
+    end
+
+    test "sees the confirmation banner", %{conn: conn} do
+      user =
+        Lightning.Factories.insert(:user,
+          confirmed_at: nil,
+          inserted_at: DateTime.utc_now()
+        )
+
+      {:ok, view, _html} =
+        conn |> log_in_user(user) |> live(~p"/profile/tokens", on_error: :raise)
+
+      assert has_element?(view, "#account-confirmation-alert")
+    end
+  end
+
   describe "Token modal" do
     setup :create_api_token
 
@@ -78,7 +102,39 @@ defmodule LightningWeb.TokensLiveTest do
 
       assert_reply(token_live, reply)
       assert reply == %{}
+      assert_patch(token_live, ~p"/profile/tokens")
       assert tokens(token_live) == []
+      assert render(token_live) =~ "Token deleted successfully"
+    end
+
+    test "can't delete after cancelling the delete modal", %{
+      conn: conn,
+      api_token: api_token
+    } do
+      {:ok, token_live, _html} =
+        live(conn, ~p"/profile/tokens/#{api_token.id}/delete", on_error: :raise)
+
+      render_patch(token_live, ~p"/profile/tokens")
+
+      push_page_event(token_live, "delete_token", %{"id" => api_token.id})
+
+      assert_reply(token_live, %{error: "You can't perform this action"})
+      assert Lightning.Repo.get(Lightning.Accounts.UserToken, api_token.id)
+    end
+
+    test "deleting a token that's gone since the modal opened is refused", %{
+      conn: conn,
+      api_token: api_token
+    } do
+      {:ok, token_live, _html} =
+        live(conn, ~p"/profile/tokens/#{api_token.id}/delete", on_error: :raise)
+
+      Lightning.Repo.delete!(api_token)
+
+      push_page_event(token_live, "delete_token", %{"id" => api_token.id})
+
+      assert_reply(token_live, %{error: "You can't perform this action"})
+      assert_patch(token_live, ~p"/profile/tokens")
     end
 
     test "the delete page for a token that's gone goes back to the list", %{

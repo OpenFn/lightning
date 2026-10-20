@@ -249,19 +249,13 @@ defmodule LightningWeb.LayoutComponents do
   end
 
   attr :current_user, Lightning.Accounts.User, default: nil
-  attr :socket, Phoenix.LiveView.Socket
-  slot :title, doc: "Page title (used when no breadcrumbs)"
-  slot :breadcrumbs, doc: "Breadcrumb navigation content"
-  slot :period
-  slot :description
-  slot :inner_block
 
-  def header(assigns) do
+  def account_confirmation_banner(assigns) do
     ~H"""
     <LightningWeb.Components.Common.banner
       :if={
         Lightning.Config.check_flag?(:require_email_verification) &&
-          assigns[:current_user] &&
+          @current_user &&
           !@current_user.confirmed_at
       }
       id="account-confirmation-alert"
@@ -275,6 +269,20 @@ defmodule LightningWeb.LayoutComponents do
         }
       }
     />
+    """
+  end
+
+  attr :current_user, Lightning.Accounts.User, default: nil
+  attr :socket, Phoenix.LiveView.Socket
+  slot :title, doc: "Page title (used when no breadcrumbs)"
+  slot :breadcrumbs, doc: "Breadcrumb navigation content"
+  slot :period
+  slot :description
+  slot :inner_block
+
+  def header(assigns) do
+    ~H"""
+    <.account_confirmation_banner current_user={assigns[:current_user]} />
     <div
       class="flex-none bg-white shadow-xs border-b border-gray-200"
       data-testid="top-bar"

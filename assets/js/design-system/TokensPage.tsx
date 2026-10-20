@@ -53,7 +53,12 @@ export const TokensPage = ({
           tokenId={tokenId ?? null}
           onGenerate={() => send('generate_new_token')}
           onDelete={id => send('delete_token', { id })}
-          onClose={() => navigate('/profile/tokens')}
+          // After a delete the LiveView has already patched back to the
+          // list, keeping its flash; patching again here would clear it.
+          onClose={() => {
+            if (window.location.pathname !== '/profile/tokens')
+              navigate('/profile/tokens');
+          }}
         />
       </ToastProvider>
     </RouterProvider>

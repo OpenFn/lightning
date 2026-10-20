@@ -6,6 +6,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "rootDir": "../",
     "paths": {
       "#/*": ["./js/*"],
