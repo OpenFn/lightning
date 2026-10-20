@@ -23,6 +23,7 @@ interface TokensPageProps {
     payload?: Record<string, unknown>
   ) => Promise<unknown>;
   navigate: (path: string, opts?: { replace?: boolean }) => void;
+  redirect: (path: string, opts?: { replace?: boolean }) => void;
 }
 
 export const TokensPage = ({
@@ -31,8 +32,9 @@ export const TokensPage = ({
   'data-token-id': tokenId,
   pushEvent,
   navigate,
+  redirect,
 }: TokensPageProps) => {
-  const router = useLiveViewRouter(navigate);
+  const router = useLiveViewRouter({ navigate, redirect }, '/profile/tokens');
 
   // The LiveView replies with { error } when an action fails.
   const send = async (name: string, payload: Record<string, unknown> = {}) => {

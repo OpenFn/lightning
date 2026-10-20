@@ -17,14 +17,19 @@ const useLocation = () => {
   return useMemo(() => new URL(href), [href]);
 };
 
+type Go = (path: string, opts?: NavigateOptions) => void;
+
 /**
- * A design system router that changes page through LiveView. `patch` is the
- * island's `navigate` prop: a patch to another LiveView's route falls back to
- * a live redirect, so it suits every in-app path. A jump to a `#hash` on this
- * page, or a link to another origin, is left to the browser.
+ * A design system router that changes page through LiveView. Paths under
+ * `ownPath` belong to this LiveView, so they patch (the island's `navigate`).
+ * Anything else is a live redirect (`redirect`), which falls back to a full
+ * page load when the target isn't a LiveView; a patch there would crash.
+ * A jump to a `#hash` on this page, or a link to another origin, is left to
+ * the browser.
  */
 export const useLiveViewRouter = (
-  patch: (path: string, opts?: NavigateOptions) => void
+  { navigate, redirect }: { navigate: Go; redirect: Go },
+  ownPath: string
 ): Router =>
   useMemo(
     () => ({
@@ -38,11 +43,16 @@ export const useLiveViewRouter = (
           if (opts?.replace) window.location.replace(url);
           else window.location.assign(url);
         } else {
-          patch(`${url.pathname}${url.search}${url.hash}`, opts);
+          const own =
+            url.pathname === ownPath || url.pathname.startsWith(`${ownPath}/`);
+          (own ? navigate : redirect)(
+            `${url.pathname}${url.search}${url.hash}`,
+            opts
+          );
         }
       },
       useHref: to => to,
       useLocation,
     }),
-    [patch]
+    [navigate, redirect, ownPath]
   );
