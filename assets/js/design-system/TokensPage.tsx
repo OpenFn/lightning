@@ -1,7 +1,10 @@
 import { ToastProvider } from '@openfn/ui/components/Toast.tsx';
 import DesignSystemTokensPage from '@openfn/ui/pages/profile/TokensPage.tsx';
+import { RouterProvider } from '@openfn/ui/routing/router.tsx';
 import type { ApiToken } from '@openfn/ui/types/tokens.ts';
 import { RequestError } from '@openfn/ui/utils/errors.ts';
+
+import { useLiveViewRouter } from './router';
 
 /**
  * The design system's personal access tokens page, fed by TokensLive.Index.
@@ -19,7 +22,7 @@ interface TokensPageProps {
     name: string,
     payload?: Record<string, unknown>
   ) => Promise<unknown>;
-  navigate: (path: string) => void;
+  navigate: (path: string, opts?: { replace?: boolean }) => void;
 }
 
 export const TokensPage = ({
@@ -29,6 +32,8 @@ export const TokensPage = ({
   pushEvent,
   navigate,
 }: TokensPageProps) => {
+  const router = useLiveViewRouter(navigate);
+
   // The LiveView replies with { error } when an action fails.
   const send = async (name: string, payload: Record<string, unknown> = {}) => {
     const reply = (await pushEvent(name, payload)) as
@@ -38,15 +43,17 @@ export const TokensPage = ({
   };
 
   return (
-    <ToastProvider>
-      <DesignSystemTokensPage
-        tokens={JSON.parse(tokens) as ApiToken[]}
-        newToken={newToken ?? null}
-        tokenId={tokenId ?? null}
-        onGenerate={() => send('generate_new_token')}
-        onDelete={id => send('delete_token', { id })}
-        onClose={() => navigate('/profile/tokens')}
-      />
-    </ToastProvider>
+    <RouterProvider value={router}>
+      <ToastProvider>
+        <DesignSystemTokensPage
+          tokens={JSON.parse(tokens) as ApiToken[]}
+          newToken={newToken ?? null}
+          tokenId={tokenId ?? null}
+          onGenerate={() => send('generate_new_token')}
+          onDelete={id => send('delete_token', { id })}
+          onClose={() => navigate('/profile/tokens')}
+        />
+      </ToastProvider>
+    </RouterProvider>
   );
 };
