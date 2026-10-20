@@ -28,6 +28,7 @@ and this project adheres to
   [#5246](https://github.com/OpenFn/lightning/pull/5246)
 - The web app's interactive pages now run on React 19, up from React 18. They
   look and behave the same.
+  [#5256](https://github.com/OpenFn/lightning/pull/5256)
 
 ### Fixed
 
