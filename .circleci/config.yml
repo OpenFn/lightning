@@ -5,12 +5,11 @@ orbs:
 
 # Shared configuration
 defaults:
-  elixir_version: &elixir_version '1.18.4-otp-28'
-  nodejs_version: &nodejs_version '24.18.1'
+  elixir_image: &elixir_image hexpm/elixir:1.18.4-erlang-28.5-debian-bookworm-20260421
   docker_elixir: &docker_elixir
-    - image: elixir:1.18.4-otp-28
+    - image: *elixir_image
   docker_elixir_postgres: &docker_elixir_postgres
-    - image: elixir:1.18.4-otp-28
+    - image: *elixir_image
     - image: cimg/postgres:17.3
   environment: &environment
     ERL_FLAGS: +S 4:4
@@ -29,18 +28,30 @@ executors:
     working_directory: /home/lightning/project
 
 commands:
-  install_node:
-    description: 'Install NodeJS from NodeSource'
-    parameters:
-      version:
-        type: string
+  install_system_packages:
+    description: 'Install the packages the hexpm image lacks'
     steps:
       - run:
-          name: 'Install Node.js from NodeSource'
+          name: 'Install system packages'
           command: |
-            NODE_MAJOR=$(echo "<< parameters.version >>" | cut -d'.' -f1)
-            curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash -
-            apt-get install -y nodejs=<< parameters.version >>-1nodesource1
+            apt-get update && apt-get install -y \
+              git \
+              openssh-client \
+              curl \
+              xz-utils \
+              gnupg \
+              dirmngr \
+              libatomic1 \
+              sudo
+
+  install_node:
+    description: 'Install the Node.js version in .tool-versions'
+    steps:
+      - run:
+          name: 'Install Node.js'
+          command:
+            bin/install_node "$(awk '$1 == "nodejs" { print $2 }'
+            .tool-versions)"
 
   setup_lightning_user:
     description: 'Create lightning user and configure sudo'
@@ -49,9 +60,8 @@ commands:
           name: 'Create lightning user'
           command: adduser --home /home/lightning --system lightning
       - run:
-          name: 'Install sudo and configure environment passthrough'
+          name: 'Configure sudo environment passthrough'
           command: |
-            apt-get update && apt-get install -y sudo
             echo 'Defaults env_keep += "ERL_FLAGS ASSERT_RECEIVE_TIMEOUT MIX_ENV"' | \
               sudo EDITOR='tee -a' visudo
       - run:
@@ -80,17 +90,19 @@ jobs:
   compile:
     executor: elixir
     steps:
+      - install_system_packages
       - setup_lightning_user
       - checkout
       - run:
           name: 'Set ownership'
           command: chown -R lightning /home/lightning
-      - install_node:
-          version: *nodejs_version
+      - install_node
 
       - run:
           name: 'Save Elixir and Erlang version for caching'
-          command: echo "$ELIXIR_VERSION $OTP_VERSION" | tee .elixir_otp_version
+          command: |
+            elixir -e 'IO.puts([System.version(), " ", File.read!(Path.join([:code.root_dir(), "releases", System.otp_release(), "OTP_VERSION"]))])' \
+              | tee .elixir_otp_version
 
       - run:
           name: 'Introspect schedulers'
@@ -178,10 +190,10 @@ jobs:
   lint:
     executor: elixir
     steps:
+      - install_system_packages
       - setup_lightning_user
       - attach_built_workspace
-      - install_node:
-          version: *nodejs_version
+      - install_node
       - run:
           name: 'Check code formatting'
           command: |
@@ -259,6 +271,7 @@ jobs:
   check_dialyzer:
     executor: elixir
     steps:
+      - install_system_packages
       - setup_lightning_user
       - attach_built_workspace
       - run:
@@ -268,10 +281,10 @@ jobs:
   test_elixir:
     executor: elixir_with_postgres
     steps:
+      - install_system_packages
       - setup_lightning_user
       - attach_built_workspace
-      - install_node:
-          version: *nodejs_version
+      - install_node
       - run:
           name: 'Install libsodium'
           command: apt-get update && apt-get install -y libsodium-dev
@@ -289,10 +302,10 @@ jobs:
   test_javascript:
     executor: elixir
     steps:
+      - install_system_packages
       - setup_lightning_user
       - attach_built_workspace
-      - install_node:
-          version: *nodejs_version
+      - install_node
       - run:
           name: 'Run JavaScript tests'
           command: cd assets && sudo -u lightning npm run test-report
