@@ -1,7 +1,7 @@
 import Editor, { loader, type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 // Configure Monaco with ESM workers
 // This needs to be outside of the component to ensure it's only set once
@@ -81,5 +81,12 @@ export const MonacoEditor = ({
     onMount(editor, monaco);
   }, []);
 
-  return <Editor onMount={handleOnMount} {...props} />;
+  // The editor only follows its container's size with `automaticLayout`
+  const callerOptions = props['options'];
+  const options = useMemo(
+    () => ({ ...callerOptions, automaticLayout: true }),
+    [callerOptions]
+  );
+
+  return <Editor onMount={handleOnMount} {...props} options={options} />;
 };
