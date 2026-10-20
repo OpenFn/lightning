@@ -170,12 +170,22 @@ export function setApiTokenTimes(
 }
 
 // When a delete is submitted from the open deletion modal naming token <id>.
-// The modal's "Yes" sends whatever phx-value-id it carries; repoint it.
+// Sends the page's delete event straight down the LiveView socket, as a
+// tampered client would, so it doesn't depend on how the modal is built.
 export async function confirmDeletionNaming(page: Page, id: string) {
   lightningOnly('needs a server: a forged delete has nothing to reach');
-  const yes = page.getByRole('button', { name: 'Yes' });
-  await yes.evaluate((el, id) => el.setAttribute('phx-value-id', id), id);
-  await yes.click();
+  await expect(page.getByRole('button', { name: 'Yes' })).toBeVisible();
+  await page.evaluate(id => {
+    const { liveSocket } = window as unknown as {
+      liveSocket: { execJS(el: Element, encodedJS: string): void };
+    };
+    const main = document.querySelector('[data-phx-main]');
+    if (!main) throw new Error('No LiveView on the page');
+    liveSocket.execJS(
+      main,
+      JSON.stringify([['push', { event: 'delete_token', value: { id } }]])
+    );
+  }, id);
 }
 
 const passwordHashOf = (email: string) =>

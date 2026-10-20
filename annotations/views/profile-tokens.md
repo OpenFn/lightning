@@ -309,7 +309,7 @@ Feature: Personal access tokens
     Then I am on "/profile/tokens"
     And I see "You can't perform this action"
     And both tokens still exist
-    # token_deletion_modal.ex:13-21; tokens_live_test.exs:127-151
+    # tokens_live/index.ex handle_event("delete_token"); tokens_live_test.exs "tampered event id"
 
   @S11 @passing-old
   Scenario: Tokens revoked by a password change are gone from the list

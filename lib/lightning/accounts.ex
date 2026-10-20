@@ -401,6 +401,11 @@ defmodule Lightning.Accounts do
   def get_token!(id), do: Repo.get!(UserToken, id)
 
   @doc """
+  Gets a single UserToken, or nil if it does not exist.
+  """
+  def get_token(id), do: Repo.get(UserToken, id)
+
+  @doc """
   Gets a single UserTOTP if any exists.
   """
   def get_user_totp(%User{id: user_id}) do

@@ -76,8 +76,22 @@ defmodule LightningWeb.TokensLiveTest do
       assert push_page_event(token_live, "delete_token", %{"id" => api_token.id}) =~
                "Token deleted successfully"
 
-      assert_reply(token_live, %{})
+      assert_reply(token_live, reply)
+      assert reply == %{}
       assert tokens(token_live) == []
+    end
+
+    test "the delete page for a token that's gone goes back to the list", %{
+      conn: conn,
+      api_token: api_token
+    } do
+      Lightning.Repo.delete!(api_token)
+
+      {:ok, _tokens_live, html} =
+        live(conn, ~p"/profile/tokens/#{api_token.id}/delete", on_error: :raise)
+        |> follow_redirect(conn, ~p"/profile/tokens")
+
+      assert html =~ "You can&#39;t perform this action"
     end
 
     test "can't delete without the delete modal open", %{
@@ -92,6 +106,8 @@ defmodule LightningWeb.TokensLiveTest do
       push_page_event(token_live, "delete_token", %{"id" => api_token.id})
 
       assert_reply(token_live, %{error: "You can't perform this action"})
+      assert_patch(token_live, ~p"/profile/tokens")
+      assert render(token_live) =~ "You can&#39;t perform this action"
       assert Lightning.Repo.get(Lightning.Accounts.UserToken, api_token.id)
     end
 
@@ -125,6 +141,8 @@ defmodule LightningWeb.TokensLiveTest do
       push_page_event(tokens_live, "delete_token", %{"id" => other_token.id})
 
       assert_reply(tokens_live, %{error: "You can't perform this action"})
+      assert_patch(tokens_live, ~p"/profile/tokens")
+      assert render(tokens_live) =~ "You can&#39;t perform this action"
 
       # the request is rejected: neither token is deleted (no silent substitution)
       assert Lightning.Repo.get(Lightning.Accounts.UserToken, other_token.id)

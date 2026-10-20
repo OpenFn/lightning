@@ -28,22 +28,27 @@ defmodule LightningWeb.TokensLive.Index do
     |> assign(:new_token, nil)
   end
 
+  # A token that's gone (deleted in another tab) is refused like someone
+  # else's, so the page doesn't crash and doesn't reveal which ids exist.
   defp apply_action(socket, :delete, %{"id" => id}) do
-    api_token = Accounts.get_token!(id).token
     current_user = socket.assigns.current_user
 
-    can_delete_api_token =
-      Users |> Permissions.can?(:delete_api_token, current_user, api_token)
-
-    if can_delete_api_token do
+    with %{token: api_token} <- Accounts.get_token(id),
+         true <-
+           Permissions.can?(Users, :delete_api_token, current_user, api_token) do
       socket
       |> assign(:page_title, "Personal Access Tokens")
       |> assign(:token_id, id)
       |> assign(:new_token, nil)
     else
-      put_flash(socket, :error, "You can't perform this action")
-      |> push_patch(to: ~p"/profile/tokens")
+      _ -> refuse(socket)
     end
+  end
+
+  defp refuse(socket) do
+    socket
+    |> put_flash(:error, "You can't perform this action")
+    |> push_patch(to: ~p"/profile/tokens")
   end
 
   @impl true
@@ -61,8 +66,11 @@ defmodule LightningWeb.TokensLive.Index do
   # Only the token whose delete modal passed the :delete action's permission
   # check can be deleted.
   def handle_event("delete_token", %{"id" => id}, socket) do
-    if socket.assigns.live_action == :delete and id == socket.assigns.token_id do
-      case id |> Accounts.get_token!() |> Accounts.delete_token() do
+    with true <-
+           socket.assigns.live_action == :delete and
+             id == socket.assigns.token_id,
+         %{} = token <- Accounts.get_token(id) do
+      case Accounts.delete_token(token) do
         {:ok, _} ->
           {:reply, %{},
            socket
@@ -73,7 +81,7 @@ defmodule LightningWeb.TokensLive.Index do
           {:reply, %{error: "Something went wrong."}, socket}
       end
     else
-      {:reply, %{error: "You can't perform this action"}, socket}
+      _ -> {:reply, %{error: "You can't perform this action"}, refuse(socket)}
     end
   end
 
