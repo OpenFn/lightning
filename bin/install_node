@@ -1,87 +1,115 @@
 #! /usr/bin/env bash
-set -e
+#
+# Download a Node.js release tarball from nodejs.org, verify it against the
+# signed SHASUMS256.txt, and extract it into /usr/local.
+#
+# Usage: install_node [--download-only] [--no-cleanup] <version>
+#
+#   --download-only  Download and verify, but don't install.
+#   --no-cleanup     Keep the tarball and SHASUMS256 files.
+#
+# Needs curl, git, gpg (with dirmngr), sha256sum, tar and xz.
+set -euo pipefail
 
-if [[ -z "$1" ]]; then
-  echo "Usage: install_node <version>"
-	exit 1
-fi
+# The signing keys come from a fixed commit of the official list, so git
+# verifies their content against the commit hash. When a release is signed by
+# a key this commit doesn't have, gpg fails with "No public key"; move this to
+# a newer commit of https://github.com/nodejs/release-keys.
+release_keys_commit=481637f813e912c4aa3622d7964ab426c97b8e8d
 
-if [[ $* == *--no-cleanup* ]]; then
-  cleanup=false
-else
-  cleanup=true
-fi
+usage() {
+  echo "Usage: install_node [--download-only] [--no-cleanup] <version>"
+  exit 1
+}
 
-if [[ $* == *--download-only* ]]; then
-  download_only=false
-else
-  download_only=true
-fi
+cleanup=true
+download_only=false
+node_version=""
 
-for node_version in $@; do :; done
+for arg in "$@"; do
+  case $arg in
+  --no-cleanup) cleanup=false ;;
+  --download-only) download_only=true ;;
+  -*) usage ;;
+  *)
+    [[ -z $node_version ]] || usage
+    node_version=$arg
+    ;;
+  esac
+done
 
-echo "Downloading NodeJS ${node_version}..."
+[[ -n $node_version ]] || usage
 
-tarball=node-v${node_version}-linux-x64.tar.gz
-sumfiles=SHASUMS256{.txt,.txt.sig}
+case $(uname -m) in
+x86_64 | amd64) arch=x64 ;;
+aarch64 | arm64) arch=arm64 ;;
+*) echo "Unsupported CPU: $(uname -m)" && exit 1 ;;
+esac
 
-# if $tarball file already exists, don't download it again
+base_url=https://nodejs.org/dist/v${node_version}
+tarball=node-v${node_version}-linux-${arch}.tar.xz
+sumfiles=(SHASUMS256.txt SHASUMS256.txt.sig)
+
+workdir=$(mktemp -d)
+
+remove_downloads() {
+  if [[ $cleanup == true ]]; then
+    echo "- Cleaning up"
+    rm -f "${sumfiles[@]}"
+    if [[ $download_only == false ]]; then
+      rm -f "$tarball"
+    fi
+  fi
+}
+trap 'remove_downloads; rm -rf "$workdir"' EXIT
+
+echo "Fetching NodeJS ${node_version} (linux-${arch})..."
+
+echo "- Getting validation files"
+for file in "${sumfiles[@]}"; do
+  curl -fsSLo "$file" "${base_url}/${file}"
+done
+
 if [[ -f $tarball ]]; then
   echo "- $tarball already exists, skipping download"
 else
-  echo "- Getting validation files"
-  curl -fO "https://nodejs.org/dist/v${node_version}/${sumfiles}"
-
   echo "- Getting binary tarball"
-  curl -fO https://nodejs.org/dist/v${node_version}/${tarball}
-
-  echo "- Checking SHASUMS256"
-  grep $tarball SHASUMS256.txt | sha256sum -c -
-
-  echo "- Getting keys from openpgp.org"
-  # In case future versions are signed by someone not on this list, see:
-  # https://github.com/nodejs/node#release-keys
-  # and update accordingly
-  gpg --keyserver hkps://keys.openpgp.org --recv-keys \
-  5BE8A3F6C8A5C01D106C0AD820B1A390B168D356 \
-  DD792F5973C6DE52C432CBDAC77ABFA00DDBF2B7 \
-  CC68F5A3106FF448322E48ED27F5E38D5B0A215F \
-  8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600 \
-  890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4 \
-  C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C \
-  108F52B48DB57BB0CC439B2997B01419BD92F80A \
-  655F3B5C1FB3FA8D1A0CA6BDE4A7D232B936D2FD \
-  A363A499291CBBC940DD62E41F10027AF002F8B0 \
-  4ED778F539E3634C779C87C6D7062848A1AB005C \
-  141F07595B7B3FFE74309A937405533BE57C7D57 \
-  94AE36675C464D64BAFA68DD7434390BDBE9B9C5 \
-  74F12602B6F1C4E913FAA37AD3A89613643B6201 \
-  C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8 \
-  DD8F2338BAE7501E3DD5AC78C273792F7D83545D \
-  B9E2F5981AA6E0CD28160D9FF13993A75599653C
-
-  echo "- Validating SHASUMS256 against keys"
-  gpg --verify SHASUMS256.txt.sig SHASUMS256.txt
+  curl -fSLo "$tarball" "${base_url}/${tarball}"
 fi
 
-if [ "$download_only" = false ]
-then
-	echo "🆗 NodeJS ${node_version} downloaded and verified."
-	echo "   Install by running:"
-	echo "   $ tar xzf $(pwd)/${tarball} --strip-components=1 -C /usr/local"
+echo "- Getting release keys from nodejs/release-keys@${release_keys_commit:0:12}"
+git init -q "$workdir/release-keys"
+git -C "$workdir/release-keys" fetch -q --depth 1 \
+  https://github.com/nodejs/release-keys.git "$release_keys_commit"
+git -C "$workdir/release-keys" -c advice.detachedHead=false \
+  checkout -q "$release_keys_commit"
+
+export GNUPGHOME=$workdir/gnupg
+mkdir -m 700 "$GNUPGHOME"
+gpg --batch --quiet --import "$workdir"/release-keys/keys/*.asc
+
+echo "- Verifying SHASUMS256.txt signature"
+gpg --batch --verify SHASUMS256.txt.sig SHASUMS256.txt
+
+echo "- Checking $tarball against SHASUMS256.txt"
+grep " ${tarball}\$" SHASUMS256.txt | sha256sum -c -
+
+if [[ $download_only == true ]]; then
+  echo "🆗 NodeJS ${node_version} downloaded and verified."
+  echo "   Install by running:"
+  echo "   $ tar xJf $(pwd)/${tarball} --strip-components=1 -C /usr/local"
 else
-	echo "- Extracting to /usr/local"
-	tar xzf $tarball --strip-components=1 -C /usr/local
+  echo "- Extracting to /usr/local"
+  tar xJf "$tarball" --strip-components=1 -C /usr/local
 
-	echo "- Checking for existence of binaries in PATH"
-	which node
-	which npm
+  echo "- Checking for existence of binaries in PATH"
+  which node npm
 
-  if [ "$cleanup" = true ]
-  then
-    echo "- Cleaning up"
-    rm -f $tarball $sumfiles
+  installed=$(node -v)
+  if [[ $installed != "v${node_version}" ]]; then
+    echo "Expected node v${node_version}, got ${installed}"
+    exit 1
   fi
 
-	echo "🆗 NodeJS ${node_version} installed."
+  echo "🆗 NodeJS ${node_version} installed."
 fi
