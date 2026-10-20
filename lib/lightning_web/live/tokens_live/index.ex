@@ -70,16 +70,14 @@ defmodule LightningWeb.TokensLive.Index do
            socket.assigns.live_action == :delete and
              id == socket.assigns.token_id,
          %{} = token <- Accounts.get_token(id) do
-      case Accounts.delete_token(token) do
-        {:ok, _} ->
-          {:reply, %{},
-           socket
-           |> assign(:tokens, get_api_tokens_for(socket.assigns.current_user))
-           |> put_flash(:info, "Token deleted successfully")}
+      {:ok, _} = Accounts.delete_token(token)
 
-        {:error, _changeset} ->
-          {:reply, %{error: "Something went wrong."}, socket}
-      end
+      # A server patch keeps the flash; the client's own patch would clear it.
+      {:reply, %{},
+       socket
+       |> assign(:tokens, get_api_tokens_for(socket.assigns.current_user))
+       |> put_flash(:info, "Token deleted successfully")
+       |> push_patch(to: ~p"/profile/tokens")}
     else
       _ -> {:reply, %{error: "You can't perform this action"}, refuse(socket)}
     end
