@@ -6,7 +6,8 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "lib": ["es2020", "es2022.intl", "dom", "dom.iterable"],
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true
   },
   "include": [
     "js/**/*",

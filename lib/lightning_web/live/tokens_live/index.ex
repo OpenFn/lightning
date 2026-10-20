@@ -62,6 +62,20 @@ defmodule LightningWeb.TokensLive.Index do
     Accounts.list_api_tokens(user)
   end
 
+  # The shape the design system's ApiToken type expects.
+  defp tokens_json(tokens) do
+    tokens
+    |> Enum.map(fn token ->
+      %{
+        id: token.id,
+        masked: mask_token(token),
+        insertedAt: token.inserted_at,
+        lastUsedAt: token.last_used_at
+      }
+    end)
+    |> Jason.encode!()
+  end
+
   defp mask_token(token) do
     "..." <> String.slice(token.token, -10, 10)
   end

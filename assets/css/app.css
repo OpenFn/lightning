@@ -8,6 +8,7 @@
 
 @source './js/**/*.{js,jsx,ts,tsx}';
 @source '../lib/**/*.{ex,exs}';
+@source '../node_modules/@openfn/ui/src/**/*.{ts,tsx}';
 
 @theme {
   --font-sans:
