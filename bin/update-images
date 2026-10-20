@@ -5,6 +5,8 @@ set -e
 readonly DOCKER_HUB_API_BASE="https://registry.hub.docker.com/v2/repositories/hexpm/elixir/tags"
 readonly REQUIRED_DOCKERFILE_ARGS=("ELIXIR_VERSION" "OTP_VERSION" "NODE_VERSION" "DEBIAN_VERSION")
 readonly DOCKERFILE_NAMES=("Dockerfile" "Dockerfile-dev")
+readonly CIRCLECI_CONFIG=".circleci/config.yml"
+readonly CIRCLECI_IMAGE_PATTERN="hexpm/elixir:[^[:space:]]*"
 
 # Global variables extracted from .tool-versions
 ELIXIR_VERSION_RAW=$(grep elixir .tool-versions | cut -d' ' -f2)
@@ -18,8 +20,8 @@ show_help() {
   echo "Usage: $0 [COMMAND]"
   echo ""
   echo "Commands:"
-  echo "  update              Update Dockerfile(s) with versions from .tool-versions (default)"
-  echo "  --update-debian     Update Dockerfile(s) and check for newer Debian date within same base"
+  echo "  update              Update Dockerfile(s) and the CircleCI image with versions from .tool-versions (default)"
+  echo "  --update-debian     As update, also moving to the newest Debian date within the same base"
   echo "  --dry-run           Show what would be updated without making changes"
   echo "  show-debian-images  Show available Debian versions without updating"
   echo "  help, --help        Show this help message"
@@ -164,14 +166,14 @@ show_debian_images() {
 # Parses current version, searches for newer dates within same base, returns the newest version
 # Won't switch between bases (e.g., bookworm to bullseye) for safety
 update_debian() {
-  echo "Searching for newer Debian version for elixir:$ELIXIR_VERSION-erlang-$OTP_VERSION..."
+  echo "Searching for newer Debian version for elixir:$ELIXIR_VERSION-erlang-$OTP_VERSION..." >&2
 
   if ! find_and_parse_dockerfile; then
     return 1
   fi
 
   local current_debian="$DOCKERFILE_DEBIAN_VERSION"
-  echo "Current Debian version: $current_debian"
+  echo "Current Debian version: $current_debian" >&2
 
   # Extract base (e.g., bookworm, buster) and variant (slim suffix)
   local debian_base="" debian_variant=""
@@ -185,7 +187,7 @@ update_debian() {
     return 0
   fi
 
-  echo "Debian base: $debian_base, variant: ${debian_variant:-regular}"
+  echo "Debian base: $debian_base, variant: ${debian_variant:-regular}" >&2
 
   # Search within same Debian base and variant only
   local search_pattern="$ELIXIR_VERSION-erlang-$OTP_VERSION-debian-$debian_base"
@@ -197,157 +199,112 @@ update_debian() {
     return 0
   fi
 
-  available_versions=$(echo "$all_base_versions" | grep "^$debian_base.*$debian_variant$")
+  available_versions=$(echo "$all_base_versions" | grep -E "^$debian_base-[0-9]+$debian_variant$")
 
   if [[ -n "$available_versions" ]]; then
     local latest_debian
     latest_debian=$(echo "$available_versions" | tail -1)
 
     if [[ "$latest_debian" == "$current_debian" ]]; then
-      echo "Already using the latest $debian_base${debian_variant} version: $current_debian"
+      echo "Already using the latest $debian_base${debian_variant} version: $current_debian" >&2
       echo "$current_debian"
     else
-      echo "Found newer $debian_base${debian_variant} version: $latest_debian (current: $current_debian)"
+      echo "Found newer $debian_base${debian_variant} version: $latest_debian (current: $current_debian)" >&2
       echo "$latest_debian"
     fi
   else
     echo "Warning: Could not find any $debian_base${debian_variant} versions for elixir:$ELIXIR_VERSION-erlang-$OTP_VERSION, keeping current" >&2
-    echo "View all available tags at: https://hub.docker.com/r/hexpm/elixir/tags?name=$ELIXIR_VERSION-erlang-$OTP_VERSION"
+    echo "View all available tags at: https://hub.docker.com/r/hexpm/elixir/tags?name=$ELIXIR_VERSION-erlang-$OTP_VERSION" >&2
     echo "$current_debian"
   fi
 }
 
-# Create a preview of what the dockerfile would look like after updates
-# Takes dockerfile path and Debian version, returns the updated content
-generate_updated_dockerfile_content() {
-  local dockerfile="$1"
+# Validate that the CircleCI config names exactly one hexpm/elixir image tag
+validate_circleci_config() {
+  if [[ ! -f "$CIRCLECI_CONFIG" ]]; then
+    echo "Error: $CIRCLECI_CONFIG not found" >&2
+    return 1
+  fi
+
+  local tag_count
+  tag_count=$(grep -o "$CIRCLECI_IMAGE_PATTERN" "$CIRCLECI_CONFIG" | wc -l | tr -d ' ')
+  if [[ "$tag_count" != "1" ]]; then
+    echo "Error: Expected one hexpm/elixir image in $CIRCLECI_CONFIG, found $tag_count" >&2
+    return 1
+  fi
+}
+
+# Stop unless the node image the Dockerfiles build from exists
+check_node_image() {
+  local image="node:$NODE_VERSION-bookworm-slim"
+
+  echo "Checking $image exists..."
+  if ! docker manifest inspect "$image" >/dev/null 2>&1; then
+    echo "Error: $image not found (docker manifest inspect failed); nothing was changed" >&2
+    return 1
+  fi
+}
+
+# Print a file as it would be after updates
+# Takes file path and Debian version: Dockerfiles get their ARGs rewritten,
+# the CircleCI config gets its hexpm/elixir image tag rewritten
+generate_updated_content() {
+  local file="$1"
   local debian_version="$2"
 
-  sed \
-    -e "s/ARG ELIXIR_VERSION=.*/ARG ELIXIR_VERSION=$ELIXIR_VERSION/" \
-    -e "s/ARG OTP_VERSION=.*/ARG OTP_VERSION=$OTP_VERSION/" \
-    -e "s/ARG NODE_VERSION=.*/ARG NODE_VERSION=$NODE_VERSION/" \
-    -e "s/ARG DEBIAN_VERSION=.*/ARG DEBIAN_VERSION=$debian_version/" \
-    "$dockerfile"
+  if [[ "$file" == "$CIRCLECI_CONFIG" ]]; then
+    sed "s|$CIRCLECI_IMAGE_PATTERN|hexpm/elixir:$ELIXIR_VERSION-erlang-$OTP_VERSION-debian-$debian_version|" "$file"
+  else
+    sed \
+      -e "s/ARG ELIXIR_VERSION=.*/ARG ELIXIR_VERSION=$ELIXIR_VERSION/" \
+      -e "s/ARG OTP_VERSION=.*/ARG OTP_VERSION=$OTP_VERSION/" \
+      -e "s/ARG NODE_VERSION=.*/ARG NODE_VERSION=$NODE_VERSION/" \
+      -e "s/ARG DEBIAN_VERSION=.*/ARG DEBIAN_VERSION=$debian_version/" \
+      "$file"
+  fi
 }
 
 # Show side-by-side diff for dry-run
-# Takes dockerfile path and Debian version
-show_dockerfile_diff() {
-  local dockerfile="$1"
+# Takes file path and Debian version
+show_file_diff() {
+  local file="$1"
   local debian_version="$2"
 
-  echo "=== $dockerfile ==="
+  echo "=== $file ==="
 
-  # Create temporary file with updated content
   local temp_updated
   temp_updated=$(mktemp)
-  generate_updated_dockerfile_content "$dockerfile" "$debian_version" >"$temp_updated"
+  generate_updated_content "$file" "$debian_version" >"$temp_updated"
 
-  # Show side-by-side diff, focusing on ARG lines and surrounding context
-  if command -v diff >/dev/null 2>&1; then
-    if diff --help 2>&1 | grep -q -- --side-by-side; then
-      # GNU diff with side-by-side support
-      local diff_output
-      diff_output=$(diff --side-by-side --width=120 --suppress-common-lines "$dockerfile" "$temp_updated" 2>/dev/null || true)
-      if [[ -n "$diff_output" ]]; then
-        echo "$diff_output"
-      else
-        echo "No changes needed"
-      fi
-    else
-      # Fallback to unified diff
-      echo "Side-by-side diff not available, showing unified diff:"
-      local diff_output
-      diff_output=$(diff -u "$dockerfile" "$temp_updated" 2>/dev/null || true)
-      if [[ -n "$diff_output" ]]; then
-        echo "$diff_output"
-      else
-        echo "No changes needed"
-      fi
-    fi
+  local diff_output
+  if diff --help 2>&1 | grep -q -- --side-by-side; then
+    diff_output=$(diff --side-by-side --width=120 --suppress-common-lines "$file" "$temp_updated" 2>/dev/null || true)
   else
-    echo "diff command not available, showing before/after comparison:"
-    echo ""
-    echo "BEFORE:"
-    grep "^ARG " "$dockerfile"
-    echo ""
-    echo "AFTER:"
-    grep "^ARG " "$temp_updated"
+    diff_output=$(diff -u "$file" "$temp_updated" 2>/dev/null || true)
+  fi
+
+  if [[ -n "$diff_output" ]]; then
+    echo "$diff_output"
+  else
+    echo "No changes needed"
   fi
 
   rm -f "$temp_updated"
   echo ""
 }
 
-# Update a single dockerfile with new version numbers
-# Takes dockerfile path, Debian version, and optional dry-run flag
-# Creates atomic updates - either all succeed or none are applied
-update_single_dockerfile() {
-  local dockerfile="$1"
-  local debian_version="$2"
-  local dry_run="${3:-false}"
-
-  if [[ -z "$dockerfile" ]]; then
-    echo "Error: dockerfile path is required" >&2
-    return 1
-  fi
-
-  if [[ -z "$debian_version" ]]; then
-    echo "Error: debian version is required" >&2
-    return 1
-  fi
-
-  if ! validate_dockerfile "$dockerfile"; then
-    return 1
-  fi
-
-  if [[ "$dry_run" == "true" ]]; then
-    show_dockerfile_diff "$dockerfile" "$debian_version"
-    return 0
-  fi
-
-  # Make the updates atomically
-  if ! sed -i.bak \
-    -e "s/ARG ELIXIR_VERSION=.*/ARG ELIXIR_VERSION=$ELIXIR_VERSION/" \
-    -e "s/ARG OTP_VERSION=.*/ARG OTP_VERSION=$OTP_VERSION/" \
-    -e "s/ARG NODE_VERSION=.*/ARG NODE_VERSION=$NODE_VERSION/" \
-    -e "s/ARG DEBIAN_VERSION=.*/ARG DEBIAN_VERSION=$debian_version/" \
-    "$dockerfile"; then
-    echo "Error: Failed to update $dockerfile" >&2
-    return 1
-  fi
-
-  echo "Updated $dockerfile"
-  return 0
-}
-
-# Clean up backup files after successful update
-# Takes array of filenames that were successfully updated
-cleanup_backup_files() {
-  local files=("$@")
-
-  for file in "${files[@]}"; do
-    if [[ -f "${file}.bak" ]]; then
-      rm "${file}.bak"
-    fi
-  done
-}
-
-# Update both Dockerfile and Dockerfile-dev with new version numbers
-# Ensures atomic updates - if any file fails, all changes are reverted
-update_dockerfiles() {
+# Update the Dockerfiles and the CircleCI config with new version numbers
+# Every file is generated before any is replaced, so a failure changes nothing
+update_files() {
   local debian_version="$1"
   local dry_run="${2:-false}"
   local files_to_update=()
-  local updated_files=()
 
   if [[ -z "$debian_version" ]]; then
     echo "Error: debian version is required" >&2
     return 1
   fi
 
-  # Identify files that exist and need updating
   for dockerfile in "${DOCKERFILE_NAMES[@]}"; do
     if [[ -f "$dockerfile" ]] && validate_dockerfile "$dockerfile"; then
       files_to_update+=("$dockerfile")
@@ -359,44 +316,47 @@ update_dockerfiles() {
     return 1
   fi
 
+  if ! validate_circleci_config; then
+    return 1
+  fi
+  files_to_update+=("$CIRCLECI_CONFIG")
+
   if [[ "$dry_run" == "true" ]]; then
     echo "Dry run - showing diffs for ${#files_to_update[@]} file(s):"
     echo ""
+    for file in "${files_to_update[@]}"; do
+      show_file_diff "$file" "$debian_version"
+    done
+    return 0
   fi
 
-  # Update each file
-  for dockerfile in "${files_to_update[@]}"; do
-    if update_single_dockerfile "$dockerfile" "$debian_version" "$dry_run"; then
-      updated_files+=("$dockerfile")
-    else
-      if [[ "$dry_run" != "true" ]]; then
-        # Rollback any successful updates
-        for rollback_file in "${updated_files[@]}"; do
-          if [[ -f "${rollback_file}.bak" ]]; then
-            mv "${rollback_file}.bak" "$rollback_file"
-            echo "Rolled back $rollback_file"
-          fi
-        done
-        echo "Error: Update failed - all changes reverted" >&2
-      fi
+  if ! check_node_image; then
+    return 1
+  fi
+
+  for file in "${files_to_update[@]}"; do
+    if ! generate_updated_content "$file" "$debian_version" >"$file.new"; then
+      echo "Error: Failed to update $file; nothing was changed" >&2
+      for staged in "${files_to_update[@]}"; do
+        rm -f "$staged.new"
+      done
       return 1
     fi
   done
 
-  if [[ "$dry_run" != "true" ]]; then
-    # Clean up backup files on success
-    cleanup_backup_files "${updated_files[@]}"
+  for file in "${files_to_update[@]}"; do
+    mv "$file.new" "$file"
+  done
 
-    echo ""
-    echo "Successfully updated ${#updated_files[@]} file(s):"
-    printf "  %s\n" "${updated_files[@]}"
-    echo ""
-    echo "Version updates applied:"
-    echo "  elixir: $ELIXIR_VERSION (from $ELIXIR_VERSION_RAW)"
-    echo "  otp: $OTP_VERSION"
-    echo "  node: $NODE_VERSION"
-    echo "  debian: $debian_version"
-  fi
+  echo ""
+  echo "Successfully updated ${#files_to_update[@]} file(s):"
+  printf "  %s\n" "${files_to_update[@]}"
+  echo ""
+  echo "Version updates applied:"
+  echo "  elixir: $ELIXIR_VERSION (from $ELIXIR_VERSION_RAW)"
+  echo "  otp: $OTP_VERSION"
+  echo "  node: $NODE_VERSION"
+  echo "  debian: $debian_version"
 }
 
 # Main entry point - validates and dispatches commands
@@ -433,7 +393,7 @@ main() {
     if ! debian_version=$(update_debian); then
       return 1
     fi
-    if ! update_dockerfiles "$debian_version"; then
+    if ! update_files "$debian_version"; then
       return 1
     fi
     ;;
@@ -442,7 +402,7 @@ main() {
       return 1
     fi
     local current_debian="$DOCKERFILE_DEBIAN_VERSION"
-    if ! update_dockerfiles "$current_debian" "true"; then
+    if ! update_files "$current_debian" "true"; then
       return 1
     fi
     ;;
@@ -451,7 +411,7 @@ main() {
       return 1
     fi
     local current_debian="$DOCKERFILE_DEBIAN_VERSION"
-    if ! update_dockerfiles "$current_debian"; then
+    if ! update_files "$current_debian"; then
       return 1
     fi
     ;;

@@ -1,0 +1,59 @@
+#!/bin/bash
+# Fails unless the versions pinned in .tool-versions match the Dockerfile ARGs,
+# the CircleCI hexpm/elixir image tag and the running `node -v`.
+# bin/update-images writes all of these; run it to fix a mismatch.
+#
+# Usage: bin/check_version_drift [--skip-node]
+#   --skip-node  don't check `node -v`, for jobs that never install Node
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+tool_version() {
+  awk -v tool="$1" '$1 == tool { print $2 }' .tool-versions
+}
+
+dockerfile_arg() {
+  sed -n "s/^ARG $2=//p" "$1"
+}
+
+elixir=$(tool_version elixir)
+elixir=${elixir%-otp-*}
+otp=$(tool_version erlang)
+node=$(tool_version nodejs)
+
+errors=()
+
+expect() {
+  local what="$1" actual="$2" expected="$3"
+  if [[ "$actual" != "$expected" ]]; then
+    errors+=("$what is '$actual', expected '$expected'")
+  fi
+}
+
+for dockerfile in Dockerfile Dockerfile-dev; do
+  expect "$dockerfile ELIXIR_VERSION" "$(dockerfile_arg "$dockerfile" ELIXIR_VERSION)" "$elixir"
+  expect "$dockerfile OTP_VERSION" "$(dockerfile_arg "$dockerfile" OTP_VERSION)" "$otp"
+  expect "$dockerfile NODE_VERSION" "$(dockerfile_arg "$dockerfile" NODE_VERSION)" "$node"
+done
+
+ci_image=$(grep -o 'hexpm/elixir:[^[:space:]]*' .circleci/config.yml || true)
+if [[ "$ci_image" =~ ^hexpm/elixir:([0-9.]+)-erlang-([0-9.]+)-debian-([^[:space:]]+)$ ]]; then
+  expect "CircleCI image Elixir" "${BASH_REMATCH[1]}" "$elixir"
+  expect "CircleCI image OTP" "${BASH_REMATCH[2]}" "$otp"
+  expect "CircleCI image Debian" "${BASH_REMATCH[3]}" "$(dockerfile_arg Dockerfile DEBIAN_VERSION)"
+else
+  errors+=("no single hexpm/elixir image tag in .circleci/config.yml (found '$ci_image')")
+fi
+
+if [[ "${1:-}" != "--skip-node" ]]; then
+  expect "node -v" "$(node -v 2>/dev/null || echo missing)" "v$node"
+fi
+
+if [[ ${#errors[@]} -gt 0 ]]; then
+  echo "Versions drifted from .tool-versions (bin/update-images rewrites the files):" >&2
+  printf '  %s\n' "${errors[@]}" >&2
+  exit 1
+fi
+
+echo "Versions match .tool-versions: elixir $elixir, otp $otp, node $node"
