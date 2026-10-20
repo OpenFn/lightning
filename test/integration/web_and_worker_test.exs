@@ -285,7 +285,7 @@ defmodule Lightning.WebAndWorkerTest do
       version_logs = pick_out_version_logs(run)
       assert version_logs["@openfn/language-http"] =~ "3.1.12"
       assert version_logs["worker"] =~ "1.29"
-      assert version_logs["node.js"] =~ "24.18"
+      assert version_logs["node.js"] == tool_versions_node()
       assert version_logs["@openfn/language-common"] == "3.0.2"
 
       [step_1, step_2, step_3, step_4] = run.steps
@@ -1167,6 +1167,15 @@ defmodule Lightning.WebAndWorkerTest do
       end)
 
     version_logs
+  end
+
+  defp tool_versions_node do
+    [version] =
+      Regex.run(~r/^nodejs\s+(\S+)$/m, File.read!(".tool-versions"),
+        capture: :all_but_first
+      )
+
+    version
   end
 
   # Used to sneakily get the config from the job log lines, so we can check

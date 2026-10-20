@@ -14,12 +14,14 @@
 #
 ARG ELIXIR_VERSION=1.18.4
 ARG OTP_VERSION=28.5
-ARG DEBIAN_VERSION=bookworm-20260421
-ARG NODE_VERSION=24.18.1
+ARG DEBIAN_VERSION=bookworm-20260610
+ARG NODE_VERSION=26.12.0
 ARG ERL_FLAGS
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
+
+FROM node:${NODE_VERSION}-bookworm-slim AS node
 
 FROM ${BUILDER_IMAGE} AS builder
 ARG NODE_VERSION
@@ -30,9 +32,11 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
   build-essential curl git inotify-tools openssl ca-certificates \
   libsodium-dev cmake
 
-# Install Node.js from NodeSource
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION%%.*}.x | bash - && \
-  apt-get install -y nodejs=${NODE_VERSION}-1nodesource1
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+  ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+  test "$(node -v)" = "v${NODE_VERSION}"
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_*
 
@@ -90,8 +94,8 @@ LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-  libstdc++6 openssl libncurses5 locales ca-certificates \
-  curl libsodium-dev
+  libstdc++6 libatomic1 openssl libncurses5 locales ca-certificates \
+  curl libsodium-dev procps
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
@@ -104,9 +108,11 @@ ENV LC_ALL=en_US.UTF-8
 
 WORKDIR "/app"
 
-# Install Node.js from NodeSource
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION%%.*}.x | bash - && \
-  apt-get install -y nodejs=${NODE_VERSION}-1nodesource1
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+  ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+  test "$(node -v)" = "v${NODE_VERSION}"
 
 RUN useradd --uid 1000 --home /app lightning
 RUN chown lightning /app
