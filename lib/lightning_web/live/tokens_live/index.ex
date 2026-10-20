@@ -58,6 +58,25 @@ defmodule LightningWeb.TokensLive.Index do
      |> put_flash(:info, "Token created successfully")}
   end
 
+  # Only the token whose delete modal passed the :delete action's permission
+  # check can be deleted.
+  def handle_event("delete_token", %{"id" => id}, socket) do
+    if socket.assigns.live_action == :delete and id == socket.assigns.token_id do
+      case id |> Accounts.get_token!() |> Accounts.delete_token() do
+        {:ok, _} ->
+          {:reply, %{},
+           socket
+           |> assign(:tokens, get_api_tokens_for(socket.assigns.current_user))
+           |> put_flash(:info, "Token deleted successfully")}
+
+        {:error, _changeset} ->
+          {:reply, %{error: "Something went wrong."}, socket}
+      end
+    else
+      {:reply, %{error: "You can't perform this action"}, socket}
+    end
+  end
+
   defp get_api_tokens_for(user) do
     Accounts.list_api_tokens(user)
   end

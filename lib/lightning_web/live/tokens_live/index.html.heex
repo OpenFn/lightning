@@ -12,6 +12,8 @@
     data-react-name="TokensPage"
     data-react-file={~p"/assets/js/design-system/TokensPage.js"}
     data-tokens={tokens_json(@tokens)}
+    data-new-token={@new_token}
+    data-token-id={@live_action == :delete && @token_id}
   >
   </div>
 </div>

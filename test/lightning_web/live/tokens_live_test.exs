@@ -11,6 +11,23 @@ defmodule LightningWeb.TokensLiveTest do
     %{api_token: api_token}
   end
 
+  # The page is drawn by React from these data attributes.
+  defp page_data(live, attribute) do
+    live
+    |> element("#tokens-page")
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.attribute(attribute)
+    |> List.first()
+  end
+
+  defp tokens(live), do: live |> page_data("data-tokens") |> Jason.decode!()
+
+  # Sends an event the way the React page does.
+  defp push_page_event(live, event, payload \\ %{}) do
+    live |> element("#tokens-page") |> render_hook(event, payload)
+  end
+
   describe "Index" do
     test "Access API Tokens page", %{conn: conn} do
       {:ok, token_live, html} = live(conn, ~p"/profile/tokens", on_error: :raise)
@@ -20,53 +37,28 @@ defmodule LightningWeb.TokensLiveTest do
              |> has_element?()
 
       assert html =~ "Personal Access Tokens"
-      assert html =~ "No Personal Access Tokens"
-      assert html =~ "Get started by creating a new access token."
-
-      assert token_live
-             |> element("a", "Generate New Token")
+      assert tokens(token_live) == []
     end
 
     test "Generate new token", %{conn: conn} do
       {:ok, token_live, _html} =
         live(conn, ~p"/profile/tokens", on_error: :raise)
 
-      assert token_live
-             |> element("#generate_new_token", "Generate New Token")
-             |> render_click() =~ "Token created successfully"
+      assert push_page_event(token_live, "generate_new_token") =~
+               "Token created successfully"
 
-      assert token_live
-             |> element("div[data-entity='new_token']")
-             |> has_element?()
-
-      assert token_live
-             |> element("button#copy[phx-hook='Copy']")
-             |> has_element?()
-
-      assert token_live
-             |> element("input#new_token")
-             |> render()
-             |> Floki.parse_fragment!()
-             |> Floki.attribute("value")
-             |> Floki.text()
-             |> String.length() == 539
+      assert token_live |> page_data("data-new-token") |> String.length() ==
+               539
     end
 
     test "See a list of tokens", %{conn: conn} do
       {:ok, token_live, _html} =
         live(conn, ~p"/profile/tokens", on_error: :raise)
 
-      assert token_live
-             |> element("#generate_new_token", "Generate New Token")
-             |> render_click() =~ "Token created successfully"
+      push_page_event(token_live, "generate_new_token")
 
-      assert token_live
-             |> element("#tokens")
-             |> render()
-             |> Floki.parse_fragment!()
-             |> Floki.find("code span")
-             |> Floki.text(sep: "\n")
-             |> String.contains?("...")
+      assert [%{"masked" => "..." <> _, "lastUsedAt" => nil}] =
+               tokens(token_live)
     end
   end
 
@@ -75,39 +67,32 @@ defmodule LightningWeb.TokensLiveTest do
 
     test "Delete an existing token", %{conn: conn, api_token: api_token} do
       {:ok, token_live, _html} =
+        live(conn, ~p"/profile/tokens/#{api_token.id}/delete", on_error: :raise)
+
+      assert [%{"id" => id}] = tokens(token_live)
+      assert id == api_token.id
+      assert page_data(token_live, "data-token-id") == api_token.id
+
+      assert push_page_event(token_live, "delete_token", %{"id" => api_token.id}) =~
+               "Token deleted successfully"
+
+      assert_reply(token_live, %{})
+      assert tokens(token_live) == []
+    end
+
+    test "can't delete without the delete modal open", %{
+      conn: conn,
+      api_token: api_token
+    } do
+      {:ok, token_live, _html} =
         live(conn, ~p"/profile/tokens", on_error: :raise)
 
-      # find a <tr> that has id of `token-<id>`
-      assert token_live
-             |> has_element?("tr#tokens-#{api_token.id}")
+      refute page_data(token_live, "data-token-id")
 
-      # and then click the thing that is a#delete-token-#token_id
-      assert token_live
-             |> element("a#delete-token-#{api_token.id}")
-             |> render_click() =~ "Any applications or scripts using this token"
+      push_page_event(token_live, "delete_token", %{"id" => api_token.id})
 
-      # can see the modal
-      assert_patched(
-        token_live,
-        ~p"/profile/tokens/#{api_token.id}/delete"
-      )
-
-      # click confirm
-      {:ok, no_token_live, _html} =
-        token_live
-        |> element("button[phx-click=delete_token]")
-        |> render_click()
-        |> follow_redirect(conn, ~p"/profile/tokens")
-
-      # assert patched / redirect
-      {path, flash} = assert_redirect(token_live)
-
-      assert flash == %{"info" => "Token deleted successfully"}
-      assert path == "/profile/tokens"
-
-      # assert we can't see `token-<id>`
-      refute no_token_live
-             |> has_element?("tr#token-#{api_token.id}")
+      assert_reply(token_live, %{error: "You can't perform this action"})
+      assert Lightning.Repo.get(Lightning.Accounts.UserToken, api_token.id)
     end
 
     test "Users can't delete other users api tokens", %{
@@ -136,14 +121,10 @@ defmodule LightningWeb.TokensLiveTest do
       {:ok, tokens_live, _html} =
         live(conn, ~p"/profile/tokens/#{api_token.id}/delete", on_error: :raise)
 
-      # fire delete but with the foreign token's id (tampered phx-value-id)
-      {:ok, _live, html} =
-        tokens_live
-        |> element("button[phx-click=delete_token]")
-        |> render_click(%{"id" => other_token.id})
-        |> follow_redirect(conn)
+      # fire delete but with the foreign token's id
+      push_page_event(tokens_live, "delete_token", %{"id" => other_token.id})
 
-      assert html =~ "You can&#39;t perform this action"
+      assert_reply(tokens_live, %{error: "You can't perform this action"})
 
       # the request is rejected: neither token is deleted (no silent substitution)
       assert Lightning.Repo.get(Lightning.Accounts.UserToken, other_token.id)
