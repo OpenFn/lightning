@@ -3,10 +3,14 @@ defmodule LightningWeb.CollectionLive.Index do
 
   on_mount {LightningWeb.Hooks, :ensure_admin}
 
-  import LightningWeb.CollectionLive.Components
-
   alias Lightning.Collections
   alias Lightning.Collections.Collection
+  alias Lightning.Extensions.Message
+  alias Lightning.Helpers
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
+  alias Lightning.Projects
+  alias Lightning.Repo
 
   require Logger
 
@@ -16,104 +20,131 @@ defmodule LightningWeb.CollectionLive.Index do
      socket
      |> assign(
        page_title: "Collections",
-       active_menu_item: :collections,
-       collections: Collections.list_collections(),
-       sort_by: "name",
-       sort_direction: :asc
-     ), layout: {LightningWeb.Layouts, :settings}}
+       active_menu_item: :collections
+     )
+     |> load(), layout: {LightningWeb.Layouts, :settings}}
   end
 
   @impl true
-  def handle_event("sort", %{"by" => field}, socket)
-      when field in ~w(name byte_size_sum) do
-    new_direction =
-      if socket.assigns.sort_by == field do
-        switch_sort_direction(socket.assigns.sort_direction)
-      else
-        :asc
-      end
+  def handle_params(_params, _url, socket), do: {:noreply, socket}
 
-    collections =
-      Collections.list_collections(
-        order_by: [{new_direction, String.to_existing_atom(field)}]
-      )
-
-    {:noreply,
-     socket
-     |> assign(:collections, collections)
-     |> assign(:sort_by, field)
-     |> assign(:sort_direction, new_direction)}
+  # The page sorts in the browser; the list arrives by name.
+  defp load(socket) do
+    assign(socket,
+      collections: Collections.list_collections(),
+      project_options: Enum.map(Projects.list_projects(), &[&1.name, &1.id])
+    )
   end
 
-  def handle_event("delete_collection", %{"collection" => collection_id}, socket) do
-    case Collections.delete_collection(collection_id) do
-      {:ok, _collection} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Collection deleted")
-         |> push_navigate(to: ~p"/settings/collections")}
-
-      {:error, reason} ->
-        Logger.error("Error during collection deletion: #{inspect(reason)}")
-
-        {:noreply,
-         socket
-         |> put_flash(:error, "Couldn't delete collection!")
-         |> push_navigate(to: ~p"/settings/collections")}
+  # The create and edit dialogs are the page's own; each save is one event,
+  # and the server derives the URL-safe name and checks the project again.
+  @impl true
+  def handle_event("create_collection", params, socket) do
+    with :ok <- authorize(socket),
+         {:ok, attrs} <- collection_attrs(socket, params) do
+      attrs
+      |> Collections.create_collection()
+      |> saved(socket, "created")
     end
   end
 
-  defp switch_sort_direction(:asc), do: :desc
-  defp switch_sort_direction(:desc), do: :asc
+  def handle_event("update_collection", %{"id" => id} = params, socket) do
+    with :ok <- authorize(socket),
+         {:ok, collection} <- fetch_collection(socket, id),
+         {:ok, attrs} <- collection_attrs(socket, params) do
+      collection
+      |> Collections.update_collection(attrs)
+      |> saved(socket, "updated")
+    end
+  end
 
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <LayoutComponents.page_content>
-      <:header>
-        <LayoutComponents.header current_user={@current_user}>
-          <:title>{@page_title}</:title>
-        </LayoutComponents.header>
-      </:header>
-      <LayoutComponents.centered>
-        <div class="w-full">
-          <.collections_table
-            collections={@collections}
-            user={@current_user}
-            sort_by={@sort_by}
-            sort_direction={@sort_direction}
-          >
-            <:empty_state>
-              <.empty_state
-                icon="hero-plus-circle"
-                message="No collection found."
-                button_text="Create a new one."
-                button_id="open-create-collection-modal-big-buttton"
-                button_click={show_modal("create-collection-modal")}
-                button_disabled={false}
-              />
-            </:empty_state>
-            <:create_collection_button>
-              <.button
-                role="button"
-                id="open-create-collection-modal-button"
-                phx-click={show_modal("create-collection-modal")}
-                class="col-span-1 w-full"
-                theme="primary"
-              >
-                Create collection
-              </.button>
-            </:create_collection_button>
-          </.collections_table>
-          <.live_component
-            id="create-collection-modal"
-            module={LightningWeb.CollectionLive.CollectionCreationModal}
-            collection={%Collection{}}
-            return_to={~p"/settings/collections"}
-          />
-        </div>
-      </LayoutComponents.centered>
-    </LayoutComponents.page_content>
-    """
+  def handle_event("delete_collection", %{"collection" => id}, socket) do
+    with :ok <- authorize(socket),
+         {:ok, collection} <- fetch_collection(socket, id) do
+      case Collections.delete_collection(collection.id) do
+        {:ok, _collection} ->
+          {:reply, %{},
+           socket |> put_flash(:info, "Collection deleted") |> load()}
+
+        {:error, reason} ->
+          Logger.error("Error during collection deletion: #{inspect(reason)}")
+          reply_error(socket, "Couldn't delete collection!")
+      end
+    end
+  end
+
+  # The mount gate is :ensure_admin; every event checks the same policy again.
+  defp authorize(socket) do
+    if Permissions.can?(
+         Users,
+         :access_admin_space,
+         socket.assigns.current_user,
+         {}
+       ),
+       do: :ok,
+       else:
+         reply_error(socket, "You are not authorized to perform this action.")
+  end
+
+  defp fetch_collection(socket, id) do
+    with {:ok, uuid} <- Ecto.UUID.cast(id),
+         %Collection{} = collection <- Repo.get(Collection, uuid) do
+      {:ok, collection}
+    else
+      _ -> reply_error(socket, "Collection not found")
+    end
+  end
+
+  # The page's values as the changeset's params: the name derived from what
+  # was typed, as the old form did, and a project that exists.
+  defp collection_attrs(socket, params) do
+    project_id = params["projectId"]
+
+    with {:ok, _uuid} <- Ecto.UUID.cast(to_string(project_id)),
+         %{} <- Projects.get_project(project_id) do
+      attrs =
+        %{"raw_name" => params["rawName"], "project_id" => project_id}
+        |> Helpers.derive_name_param()
+
+      {:ok, attrs}
+    else
+      _ ->
+        {:reply,
+         %{
+           error: "Please fix the errors below.",
+           fieldErrors: %{"projectId" => ["Choose a project"]}
+         }, socket}
+    end
+  end
+
+  defp saved({:ok, _collection}, socket, verb) do
+    {:reply, %{},
+     socket |> put_flash(:info, "Collection #{verb} successfully") |> load()}
+  end
+
+  defp saved({:error, :exceeds_limit, %Message{text: text}}, socket, _verb),
+    do: reply_error(socket, text)
+
+  defp saved({:error, %Ecto.Changeset{} = changeset}, socket, _verb) do
+    # The form shows the name's error on its Name field only (D29).
+    changeset = Helpers.copy_error(changeset, :name, :raw_name)
+
+    reply_error(socket, %{
+      changeset
+      | errors: Keyword.delete(changeset.errors, :name)
+    })
+  end
+
+  # The shape the design system's AdminCollectionRow type expects.
+  defp collections_json(collections) do
+    Enum.map(collections, fn collection ->
+      %{
+        id: collection.id,
+        name: collection.name,
+        projectId: collection.project_id,
+        projectName: collection.project.name,
+        byteSizeSum: collection.byte_size_sum
+      }
+    end)
   end
 end
