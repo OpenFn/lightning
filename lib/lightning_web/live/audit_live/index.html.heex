@@ -1,56 +1,13 @@
-<LayoutComponents.page_content>
-  <:header>
-    <LayoutComponents.header current_user={@current_user}>
-      <:title>Audit</:title>
-    </LayoutComponents.header>
-  </:header>
-  <LayoutComponents.centered>
-    <.table page={@page} url={@pagination_path} divide={false}>
-      <:header>
-        <.tr>
-          <.th>Occurred</.th>
-          <.th>Event</.th>
-          <.th>Actor</.th>
-          <.th>Subject</.th>
-        </.tr>
-      </:header>
-      <:body>
-        <%= for audit <- @page.entries do %>
-          <.tr class="border-t border-gray-200">
-            <.td>
-              <Common.datetime datetime={audit.inserted_at} />
-            </.td>
-            <.td>
-              <.pill color="green">{audit.event}</.pill>
-            </.td>
-            <.td>
-              <div class="flex flex-col overflow-hidden">
-                <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
-                  {audit.actor_display.label}
-                </div>
-                <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
-                  {if audit.actor_display.identifier,
-                    do: audit.actor_display.identifier,
-                    else: display_short_uuid(audit.actor_id)}
-                </div>
-              </div>
-            </.td>
-            <.td>
-              <div class="flex flex-col overflow-hidden">
-                <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
-                  {audit.item_type |> String.split(".") |> Enum.at(-1)}
-                </div>
-                <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
-                  {display_short_uuid(audit.item_id)}
-                </div>
-              </div>
-            </.td>
-          </.tr>
-          <.tr>
-            <.diff audit={audit} />
-          </.tr>
-        <% end %>
-      </:body>
-    </.table>
-  </LayoutComponents.centered>
-</LayoutComponents.page_content>
+<.design_system_page
+  name="AdminAuditPage"
+  props={
+    %{
+      events: events_json(@page.entries),
+      pageNumber: @page.page_number,
+      pageSize: @page.page_size,
+      totalEntries: @page.total_entries
+    }
+  }
+  banner={assigns[:banner]}
+  current_user={@current_user}
+/>
