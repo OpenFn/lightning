@@ -40,9 +40,9 @@ defmodule LightningWeb.MaintenanceLive.Index do
             put_flash(socket, :error, "Refresh failed: #{inspect(reason)}")
         end
 
-      {:noreply, socket}
+      {:reply, %{}, socket}
     else
-      {:noreply,
+      {:reply, %{},
        socket
        |> put_flash(:nav, :no_access)
        |> push_navigate(to: "/projects")}
@@ -51,14 +51,14 @@ defmodule LightningWeb.MaintenanceLive.Index do
 
   def handle_event("refresh_icons", _params, socket) do
     if superuser?(socket) do
-      {:noreply,
+      {:reply, %{},
        socket
        |> put_flash(:info, "Icon refresh started.")
        |> start_async(:refresh_icons, fn ->
          Lightning.Adaptors.refresh_icons()
        end)}
     else
-      {:noreply,
+      {:reply, %{},
        socket
        |> put_flash(:nav, :no_access)
        |> push_navigate(to: "/projects")}

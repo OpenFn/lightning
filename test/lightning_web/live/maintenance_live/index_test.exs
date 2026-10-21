@@ -9,6 +9,14 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
 
   setup :set_mox_global
 
+  # The page is drawn by React from data-props (none here: it is two
+  # actions). Its cards, texts and buttons are tested in the design system's
+  # AdminMaintenancePage.test.tsx; the events it sends in
+  # assets/test/design-system/AdminMaintenancePage.test.tsx.
+  @page "#admin-maintenance-page"
+
+  defp run(view, action), do: push_page_event(view, @page, action)
+
   describe "Index as a regular user" do
     setup :register_and_log_in_user
 
@@ -24,23 +32,21 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
   describe "Index as a superuser" do
     setup :register_and_log_in_superuser
 
-    test "renders the Refresh Adaptor Registry card", %{conn: conn} do
-      {:ok, _live, html} =
+    test "renders the maintenance page for the design system", %{conn: conn} do
+      {:ok, live, html} =
         live(conn, ~p"/settings/maintenance", on_error: :raise)
 
       assert html =~ "Maintenance"
-      assert html =~ "Refresh Adaptor Registry"
-      assert html =~ "Re-fetch the list of available adaptors"
-      assert html =~ "Run"
+      assert page_props(live, @page) == %{}
     end
 
-    test "clicking Run flashes that the refresh was queued", %{conn: conn} do
+    test "refresh_adaptors flashes that the refresh was queued", %{conn: conn} do
       {:ok, live, _html} =
         live(conn, ~p"/settings/maintenance", on_error: :raise)
 
-      live
-      |> element("#refresh-adaptors-button")
-      |> render_click()
+      run(live, "refresh_adaptors")
+
+      assert_reply(live, %{})
 
       assert has_element?(
                live,
@@ -49,15 +55,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
              )
     end
 
-    test "renders the Refresh Adaptor Icons card", %{conn: conn} do
-      {:ok, live, html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
-
-      assert html =~ "Refresh Adaptor Icons"
-      assert has_element?(live, "#refresh-icons-button")
-    end
-
-    test "clicking the icons button starts the refresh and reports the result asynchronously",
+    test "refresh_icons starts the refresh and reports the result asynchronously",
          %{conn: conn} do
       stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
         {:ok, %{}}
@@ -66,12 +64,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
       {:ok, live, _html} =
         live(conn, ~p"/settings/maintenance", on_error: :raise)
 
-      html =
-        live
-        |> element("#refresh-icons-button")
-        |> render_click()
-
-      assert html =~ "Icon refresh started."
+      assert run(live, "refresh_icons") =~ "Icon refresh started."
 
       render_async(live)
 
@@ -82,7 +75,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
              )
     end
 
-    test "the icons button reports a failed refresh", %{conn: conn} do
+    test "refresh_icons reports a failed refresh", %{conn: conn} do
       stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
         {:error, :boom}
       end)
@@ -90,9 +83,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
       {:ok, live, _html} =
         live(conn, ~p"/settings/maintenance", on_error: :raise)
 
-      live
-      |> element("#refresh-icons-button")
-      |> render_click()
+      run(live, "refresh_icons")
 
       render_async(live)
 
