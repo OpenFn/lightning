@@ -394,7 +394,20 @@ export async function S09(page: Page, email: string) {
 //   Given I am an editor on project "Malawi HIV"
 //   When I open the project's workflows page
 //   Then the project picker button reads "Malawi HIV"
-export async function S02(page: Page, email: string) {
+export async function S02(
+  page: Page,
+  email: string,
+  at?: { path: string; project: string }
+) {
+  if (at) {
+    // A host page that is itself under the project
+    await signInAs(page, email);
+    await open(page, at.path);
+    await expect(
+      page.getByRole('button', { name: at.project, exact: true })
+    ).toBeVisible();
+    return;
+  }
   const malawi = seedProject('Malawi HIV', { [email]: 'editor' });
   try {
     await signInAs(page, email);
@@ -414,7 +427,20 @@ export async function S02(page: Page, email: string) {
 //   When I open the workflows page of sandbox "dev"
 //   Then the picker button reads "Malawi HIV:dev" on a "#E33D63" background with a beaker icon
 // The beaker has no text of its own, so the label and colour carry the check.
-export async function S03(page: Page, email: string) {
+export async function S03(
+  page: Page,
+  email: string,
+  at?: { path: string; label: string }
+) {
+  if (at) {
+    // A host page that is itself under the sandbox "dev" coloured "#E33D63"
+    await signInAs(page, email);
+    await open(page, at.path);
+    const button = page.getByRole('button', { name: at.label });
+    await expect(button).toBeVisible();
+    await expect(button).toHaveCSS('background-color', 'rgb(227, 61, 99)');
+    return;
+  }
   const malawi = seedProject('Malawi HIV', { [email]: 'editor' });
   const dev = sandboxOf(malawi, 'dev', { [email]: 'editor' });
   exec(`update projects set color = '#E33D63' where id = '${dev.id}'`);
@@ -492,4 +518,76 @@ export async function S16(
   // The page's own menus keep the old state until it is reloaded
   await open(page, path);
   await indicators(false);
+}
+
+// @S01 Breadcrumbs show where I am and link back up
+//   Given I am an editor on project "Malawi HIV"
+//   When I open <path>
+//   Then the breadcrumbs show the project picker, then <crumbs>
+//   And the last crumb is not a link
+// `crumbs` are the crumbs after the picker, each with its link; the last has
+// none. The picker names the project.
+export async function S01(
+  page: Page,
+  path: string,
+  email: string,
+  project: string,
+  crumbs: { name: string; href?: string }[]
+) {
+  expect(crumbs[crumbs.length - 1].href, 'the last crumb is no link').toBe(
+    undefined
+  );
+  await signInAs(page, email);
+  await open(page, path);
+
+  const trail = page.getByRole('navigation', { name: 'Breadcrumbs' });
+  await expect(
+    trail.getByRole('button', { name: project, exact: true })
+  ).toBeVisible();
+  await expect
+    .poll(async () =>
+      (await trail.getByRole('listitem').allInnerTexts())
+        .map(text => text.trim())
+        .slice(-crumbs.length)
+    )
+    .toEqual(crumbs.map(crumb => crumb.name));
+  for (const { name, href } of crumbs) {
+    const link = trail.getByRole('link', { name, exact: true });
+    if (href) await expect(link).toHaveAttribute('href', href);
+    else await expect(link).toHaveCount(0);
+  }
+}
+
+// @S15 The side menu leads to each area of the project and marks the current one
+//   Given I am a viewer on project "Malawi HIV"
+//   When I open <path>
+//   Then the side menu shows "Workflows", "Sandboxes", "History" and "Settings" for "Malawi HIV"
+//   And <current> is marked as current
+export async function S15(
+  page: Page,
+  path: string,
+  email: string,
+  projectId: string,
+  current: string
+) {
+  await signInAs(page, email);
+  await open(page, path);
+
+  // The side menu is the navigation that holds "Sandboxes"
+  const menu = page
+    .getByRole('navigation')
+    .filter({ has: page.getByRole('link', { name: 'Sandboxes' }) });
+  const areas = {
+    Workflows: `/projects/${projectId}/w`,
+    Sandboxes: `/projects/${projectId}/sandboxes`,
+    History: `/projects/${projectId}/history`,
+    Settings: `/projects/${projectId}/settings`,
+  };
+  for (const [name, href] of Object.entries(areas)) {
+    const link = menu.getByRole('link', { name, exact: true });
+    await expect(link).toHaveAttribute('href', href);
+    if (name === current)
+      await expect(link).toHaveAttribute('aria-current', 'page');
+    else await expect(link).not.toHaveAttribute('aria-current', 'page');
+  }
 }
