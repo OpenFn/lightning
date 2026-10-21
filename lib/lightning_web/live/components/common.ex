@@ -304,24 +304,31 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
+  # The release shown under the logo: the commit for an edge build, else the label.
+  def release_label do
+    case Lightning.release() do
+      %{image_tag: "edge"} = info -> info.commit
+      info -> info.label
+    end
+  end
+
   attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
 
   def version_chip(assigns) do
-    {display, message} =
+    message =
       Lightning.release()
       |> case do
         %{image_tag: "edge"} = info ->
-          {info.commit,
-           "Unreleased build '#{info.image_tag}' from #{info.commit} on #{info.branch}"}
+          "Unreleased build '#{info.image_tag}' from #{info.commit} on #{info.branch}"
 
         %{image_tag: image} = info when not is_nil(image) ->
-          {info.label, "Build '#{info.image_tag}' from #{info.commit}"}
+          "Build '#{info.image_tag}' from #{info.commit}"
 
-        info ->
-          {info.label, "No image tag found."}
+        _info ->
+          "No image tag found."
       end
 
-    assigns = assign(assigns, display: display, message: message)
+    assigns = assign(assigns, display: release_label(), message: message)
 
     ~H"""
     <div class="text-[8px] primary-light opacity-50 flex justify-center">

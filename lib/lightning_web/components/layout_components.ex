@@ -185,6 +185,64 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
+  @doc """
+  Whether the HEEx sidebar must render instead of the design system's: hosted
+  injects its own menu items into it, first setup has no user, and dead pages
+  have no sidebar at all.
+  """
+  def hosted_sidebar?(assigns) do
+    is_nil(assigns[:current_user]) or assigns[:is_first_setup] == true or
+      Enum.any?(
+        [:menu_items, :user_menu_items, :settings_menu_items_extension],
+        &Application.get_env(:lightning, &1)
+      )
+  end
+
+  attr :variant, :string, required: true, values: ~w(project profile admin)
+  attr :project, :any, default: nil
+  attr :current_user, Lightning.Accounts.User, required: true
+  attr :side_menu_theme, :string, default: "primary-theme"
+  attr :sidebar_collapsed, :boolean, default: false
+
+  @doc """
+  What the design system's sidebar needs from this page. The sidebar itself
+  is mounted once by app.js in the root layout; this element's hook hands it
+  the props and sends the collapse toggle back to this LiveView.
+  """
+  def sidebar_bridge(assigns) do
+    user = assigns.current_user
+
+    props = %{
+      variant: assigns.variant,
+      project: assigns.project && %{id: assigns.project.id},
+      user: %{
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+        experimentalFeatures:
+          Lightning.Accounts.experimental_features_enabled?(user)
+      },
+      canAccessAdmin: user.role == :superuser,
+      sysInfo: function_exported?(Routes, :live_dashboard_path, 2),
+      adminEmail: Lightning.Config.instance_admin_email(),
+      releaseLabel: LightningWeb.Components.Common.release_label(),
+      theme: assigns.side_menu_theme,
+      collapsed: assigns.sidebar_collapsed == true
+    }
+
+    assigns = assign(assigns, :props, Jason.encode!(props))
+
+    ~H"""
+    <div
+      id="sidebar-bridge"
+      phx-hook="SidebarBridge"
+      phx-update="ignore"
+      data-props={@props}
+    >
+    </div>
+    """
+  end
+
   def settings_menu_items_extension(assigns) do
     assigns =
       assigns

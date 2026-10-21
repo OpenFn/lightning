@@ -22,9 +22,10 @@ defmodule LightningWeb.TokensLiveTest do
     test "Access API Tokens page", %{conn: conn} do
       {:ok, token_live, html} = live(conn, ~p"/profile/tokens", on_error: :raise)
 
-      assert token_live
-             |> element("nav#side-menu a", "API Tokens")
-             |> has_element?()
+      # The side menu is drawn by React from the layout's bridge; the profile
+      # menu marks "API Tokens" current from the path.
+      assert %{"variant" => "profile"} =
+               page_props(token_live, "#sidebar-bridge")
 
       assert html =~ "Personal Access Tokens"
       assert props(token_live) == %{"tokens" => [], "tokenId" => false}

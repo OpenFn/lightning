@@ -78,14 +78,10 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      assert index_live
-             |> element("nav#side-menu a", "Credentials")
-             |> has_element?()
-
-      assert index_live
-             |> element("nav#side-menu a.menu-item", "User Profile")
-             |> render_click()
-             |> follow_redirect(conn, ~p"/profile")
+      # The side menu is drawn by React from the layout's bridge; the profile
+      # menu's links are tested in assets/test/design-system/shell.test.tsx.
+      assert %{"variant" => "profile", "project" => nil} =
+               page_props(index_live, "#sidebar-bridge")
     end
 
     test "lists all credentials", %{
