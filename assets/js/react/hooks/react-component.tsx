@@ -9,6 +9,7 @@ import type { GetPhoenixHookInternalThis } from '#/hooks/PhoenixHook';
 import { Boundary } from '#/react/components';
 import {
   adoptPrerenderedRoot,
+  claimContainer,
   importComponent,
   isReactHookedElement,
   lazyLoadComponent,
@@ -55,6 +56,9 @@ export const ReactComponent = {
     this._containerEl = this.el;
     // A component registered by a module loaded with the page renders in the
     // same task as the LiveView join; anything else is imported lazily.
+    // From here the container is the hook's: a module that loads later (the
+    // lazy import below) must not prerender into it.
+    claimContainer(this.el);
     const preloaded = preloadedComponent(this._name);
     this._preloaded = preloaded !== undefined;
     this._Component = withProps(

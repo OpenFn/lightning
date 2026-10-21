@@ -7,6 +7,8 @@ export { mergeChildren } from './merge-children';
 export { performPatch } from './perform-patch';
 export {
   adoptPrerenderedRoot,
+  claimContainer,
+  isClaimed,
   keepPrerenderedRoot,
   preloadedComponent,
   registerComponent,

@@ -6,6 +6,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import {
+  isClaimed,
   keepPrerenderedRoot,
   registerComponent,
   replaceEqualDeep,
@@ -194,25 +195,39 @@ const prerender = (name: string, Island: React.ComponentType<IslandProps>) => {
     `[phx-hook="ReactComponent"][data-react-name="${name}"]`
   );
   const json = el?.getAttribute('data-props');
-  if (!el || json === null || json === undefined || el.childElementCount > 0)
+  // A claimed container is the hook's already: this module was imported
+  // lazily, after a live navigation, and the hook renders it itself.
+  if (
+    !el ||
+    json === null ||
+    json === undefined ||
+    el.childElementCount > 0 ||
+    isClaimed(el)
+  )
     return;
 
   const notConnected = () =>
     Promise.reject(new RequestError('Not connected yet. Please try again.'));
   const load = (path: string) => window.location.assign(path);
   const root = createRoot(el);
-  flushSync(() => {
-    root.render(
-      <StrictMode>
-        <Island
-          data-props={json}
-          pushEvent={notConnected}
-          handleEvent={() => () => {}}
-          navigate={load}
-          redirect={load}
-        />
-      </StrictMode>
-    );
-  });
-  keepPrerenderedRoot(el, root);
+  try {
+    flushSync(() => {
+      root.render(
+        <StrictMode>
+          <Island
+            data-props={json}
+            pushEvent={notConnected}
+            handleEvent={() => () => {}}
+            navigate={load}
+            redirect={load}
+          />
+        </StrictMode>
+      );
+    });
+    keepPrerenderedRoot(el, root);
+  } catch (error) {
+    // The hook will draw the page itself when the LiveView joins.
+    console.error(`Could not prerender ${name}`, error);
+    root.unmount();
+  }
 };

@@ -8,6 +8,7 @@ import type { Root } from 'react-dom/client';
  */
 const registry = new Map<string, React.ComponentType<object>>();
 const roots = new Map<Element, Root>();
+const claimed = new WeakSet<Element>();
 
 export const registerComponent = (
   name: string,
@@ -17,6 +18,13 @@ export const registerComponent = (
 };
 
 export const preloadedComponent = (name: string) => registry.get(name);
+
+/** Marks a container as the hook's, so a module loading later leaves it alone. */
+export const claimContainer = (el: Element) => {
+  claimed.add(el);
+};
+
+export const isClaimed = (el: Element) => claimed.has(el);
 
 /** Remembers a root rendered into `el` before the hook mounted. */
 export const keepPrerenderedRoot = (el: Element, root: Root) => {
