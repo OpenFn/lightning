@@ -1675,7 +1675,7 @@ describe('MessageList', () => {
       expect(screen.getByTestId('diff-line-added')).toBeInTheDocument();
     });
 
-    it('folds a step added with only a placeholder comment, and offers no copy', () => {
+    it('folds a step added with only a placeholder comment, with copy following the fold', () => {
       const messages = [
         createMockAIMessage({
           id: 'msg-user',
@@ -1701,6 +1701,9 @@ describe('MessageList', () => {
       expect(
         within(block).queryByTestId('diff-block-copy')
       ).not.toBeInTheDocument();
+
+      fireEvent.click(within(block).getByTestId('diff-block-toggle'));
+      expect(within(block).getByTestId('diff-block-copy')).toBeInTheDocument();
     });
 
     it('renders nothing when the workflow is unchanged', () => {

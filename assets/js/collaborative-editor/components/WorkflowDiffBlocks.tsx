@@ -78,7 +78,7 @@ const DiffBlockShell = ({
   defaultExpanded: boolean;
   testId: string;
   /** Optional control shown beside the counts, outside the collapse toggle */
-  action?: React.ReactNode;
+  action?: (expanded: boolean) => React.ReactNode;
   children: React.ReactNode;
 }) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -123,7 +123,9 @@ const DiffBlockShell = ({
           {summary}
         </span>
         {action && (
-          <div className="relative flex items-center gap-2">{action}</div>
+          <div className="relative flex items-center gap-2">
+            {action(expanded)}
+          </div>
         )}
       </div>
       {expanded && children}
@@ -152,9 +154,10 @@ const DiffCode = ({
 };
 
 /**
- * One unified-diff row. A single gutter, as Claude Code shows it: a removed
- * row carries its old line number and every other row its new one, so the
- * numbers match the step as it now reads in the editor.
+ * One unified-diff row. A single gutter of new line numbers, so they match
+ * the step as it now reads in the editor. A removed row has no new line, so
+ * its gutter is blank rather than repeating the number of the row that
+ * replaced it.
  */
 const DiffLine = ({
   lineNumber,
@@ -162,7 +165,7 @@ const DiffLine = ({
   content,
   tokens,
 }: {
-  lineNumber: number;
+  lineNumber: number | null;
   marker: '+' | '-' | ' ';
   content: string;
   tokens?: Token[];
@@ -195,7 +198,7 @@ const DiffLine = ({
       )}
       data-testid="diff-gutter"
     >
-      {lineNumber}
+      {lineNumber ?? ''}
     </span>
     <span
       className={cn(
@@ -249,7 +252,7 @@ const DiffHunks = ({ step }: { step: StepChange }) => {
 
               // A removed row exists only in the old body, an added row only
               // in the new one; context rows advance both.
-              let lineNumber: number;
+              let lineNumber: number | null;
               let tokens: Token[] | undefined;
 
               if (marker === '+') {
@@ -257,7 +260,7 @@ const DiffHunks = ({ step }: { step: StepChange }) => {
                 tokens = newTokens[newLine - 1];
                 newLine += 1;
               } else if (marker === '-') {
-                lineNumber = oldLine;
+                lineNumber = null;
                 tokens = oldTokens[oldLine - 1];
                 oldLine += 1;
               } else {
@@ -374,7 +377,7 @@ export const StepDiffBlock = ({
                 ? 'Go to step'
                 : step.type === 'remove'
                   ? 'This step was removed'
-                  : 'This step is no longer in the workflow'
+                  : "Can't find this step on the canvas"
             }
             onClick={() => (canOpen ? openStep() : setShaking(true))}
             onAnimationEnd={() => setShaking(false)}
@@ -404,9 +407,9 @@ export const StepDiffBlock = ({
       summary={<StepCounts step={step} />}
       defaultExpanded={!isPlaceholder}
       testId="diff-block"
-      action={
+      action={expanded => (
         <>
-          {!isPlaceholder && <CopyStepButton body={copyBody} />}
+          {expanded && <CopyStepButton body={copyBody} />}
           {canOpen && (
             <button
               type="button"
@@ -418,7 +421,7 @@ export const StepDiffBlock = ({
             </button>
           )}
         </>
-      }
+      )}
     >
       <DiffHunks step={step} />
     </DiffBlockShell>

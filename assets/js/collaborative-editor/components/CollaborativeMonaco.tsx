@@ -23,6 +23,7 @@ import {
   usePendingHighlight,
 } from '../contexts/MonacoRefContext';
 
+import { locateAddedRuns } from '../utils/locateAddedRuns';
 import createCompletionProvider from '../utils/magic-completion';
 
 import { LoadingIndicator } from './common/LoadingIndicator';
@@ -191,26 +192,7 @@ export const CollaborativeMonaco = forwardRef<
     if (!pendingHighlight || pendingHighlight.ytext !== ytext) return;
     setPendingHighlight?.(null);
 
-    // Found by text, not line number: the code may have been edited since
-    // the reply. Of several copies, the one nearest where it was wins; a run
-    // edited away, or only blank lines, highlights nothing.
-    const ranges = pendingHighlight.added.flatMap(({ line, text }) => {
-      if (!text.trim()) return [];
-      const whole = model
-        .findMatches(text, false, false, true, null, false)
-        .map(match => match.range)
-        .filter(
-          range =>
-            range.startColumn === 1 &&
-            range.endColumn === model.getLineMaxColumn(range.endLineNumber)
-        );
-      const nearest = whole.sort(
-        (a, b) =>
-          Math.abs(a.startLineNumber - line) -
-          Math.abs(b.startLineNumber - line)
-      )[0];
-      return nearest ? [nearest] : [];
-    });
+    const ranges = locateAddedRuns(model, pendingHighlight.added);
 
     const className = replayRef.current
       ? 'ai-change-highlight ai-change-replay'
@@ -223,7 +205,14 @@ export const CollaborativeMonaco = forwardRef<
         options: { className },
       }))
     );
+    // A run edited since can't be found, so scroll to where it was rather
+    // than leave the click looking like it did nothing.
+    const fallbackLine = pendingHighlight.added[0]?.line;
     if (ranges[0]) editor.revealRangeInCenterIfOutsideViewport(ranges[0]);
+    else if (fallbackLine)
+      editor.revealLineInCenterIfOutsideViewport(
+        Math.min(fallbackLine, model.getLineCount())
+      );
   }, [pendingHighlight, ytext, editorReady, setPendingHighlight]);
 
   // Dismissed the way a selection is: by clicking or typing in the code.
