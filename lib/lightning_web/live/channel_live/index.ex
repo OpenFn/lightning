@@ -5,91 +5,14 @@ defmodule LightningWeb.ChannelLive.Index do
   import LightningWeb.ChannelLive.Helpers
 
   alias Lightning.Channels
+  alias Lightning.Channels.Channel
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias LightningWeb.ChannelLive.FormComponent
-  alias LightningWeb.Components.Common
+  alias Lightning.Projects
+  alias Lightning.WebhookAuthMethods
 
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
-
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <LayoutComponents.page_content>
-      <:banner>
-        <Common.dynamic_component
-          :if={assigns[:banner]}
-          function={@banner.function}
-          args={@banner.attrs}
-        />
-      </:banner>
-      <:header>
-        <LayoutComponents.header current_user={@current_user}>
-          <:breadcrumbs>
-            <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker
-                project={@project}
-                label={@project_label}
-              />
-              <LayoutComponents.breadcrumb>
-                <:label>{@page_title}</:label>
-              </LayoutComponents.breadcrumb>
-            </LayoutComponents.breadcrumbs>
-          </:breadcrumbs>
-        </LayoutComponents.header>
-      </:header>
-      <LayoutComponents.centered>
-        <.channel_metrics channel_stats={@channel_stats} project={@project} />
-        <div class="w-full">
-          <div class="mt-14 flex justify-between mb-3">
-            <h3 class="text-3xl font-bold">
-              Channels
-              <span class="text-base font-normal">({length(@channels)})</span>
-            </h3>
-            <.link
-              :if={@can_create_channel}
-              patch={~p"/projects/#{@project}/channels/new"}
-            >
-              <.button id="new-channel-button" theme="primary">
-                New Channel
-              </.button>
-            </.link>
-            <.button
-              :if={!@can_create_channel}
-              id="new-channel-button"
-              theme="primary"
-              disabled
-              tooltip="You are not authorized to perform this action."
-            >
-              New Channel
-            </.button>
-          </div>
-          <.channels_table
-            id="channels-table"
-            channels={@channels}
-            can_edit_channel={@can_edit_channel}
-            can_delete_channel={@can_delete_channel}
-            project={@project}
-          />
-        </div>
-      </LayoutComponents.centered>
-    </LayoutComponents.page_content>
-    <.live_component
-      :if={@live_action in [:new, :edit]}
-      module={FormComponent}
-      id={
-        (@selected_channel && @selected_channel.id &&
-           "edit-channel-#{@selected_channel.id}") || :new
-      }
-      action={@live_action}
-      channel={@selected_channel}
-      project={@project}
-      current_user={@current_user}
-      on_close={JS.patch(~p"/projects/#{@project}/channels")}
-    />
-    """
-  end
 
   @impl true
   def mount(_params, _session, socket) do
@@ -141,12 +64,13 @@ defmodule LightningWeb.ChannelLive.Index do
       socket
       |> assign(
         page_title: "New Channel",
-        selected_channel: %Lightning.Channels.Channel{
+        selected_channel: %Channel{
           channel_auth_methods: [],
           client_auth_methods: [],
           destination_auth_method: nil
         }
       )
+      |> assign_form_options()
     else
       socket
       |> put_flash(:error, "You are not authorized to create channels.")
@@ -165,10 +89,12 @@ defmodule LightningWeb.ChannelLive.Index do
         )
 
       if channel do
-        assign(socket,
+        socket
+        |> assign(
           page_title: "Edit Channel",
           selected_channel: channel
         )
+        |> assign_form_options()
       else
         socket
         |> put_flash(:error, "Channel not found")
@@ -179,6 +105,16 @@ defmodule LightningWeb.ChannelLive.Index do
       |> put_flash(:error, "You are not authorized to edit channels.")
       |> push_navigate(to: ~p"/projects/#{socket.assigns.project.id}/channels")
     end
+  end
+
+  # The form's options, as the form component loaded them when it opened.
+  defp assign_form_options(socket) do
+    project = socket.assigns.project
+
+    assign(socket,
+      webhook_auth_methods: WebhookAuthMethods.list_for_project(project),
+      project_credentials: Projects.list_project_credentials(project)
+    )
   end
 
   @impl true
@@ -196,17 +132,16 @@ defmodule LightningWeb.ChannelLive.Index do
           socket
           |> put_flash(:info, "Channel updated")
           |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/channels")
-          |> noreply()
+          |> reply_ok()
 
         {:error, _changeset} ->
           socket
           |> put_flash(:error, "Failed to update channel. Please try again.")
-          |> noreply()
+          |> reply_ok()
       end
     end
   end
 
-  @impl true
   def handle_event("delete_channel", %{"id" => id}, socket) do
     with :ok <- authorize_action(socket, :delete_channel),
          {:ok, channel} <- fetch_project_channel(socket, id) do
@@ -215,7 +150,7 @@ defmodule LightningWeb.ChannelLive.Index do
           socket
           |> put_flash(:info, "Channel deleted.")
           |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/channels")
-          |> noreply()
+          |> reply_ok()
 
         {:error, changeset} ->
           message =
@@ -224,8 +159,125 @@ defmodule LightningWeb.ChannelLive.Index do
                 "Cannot delete \"#{channel.name}\" — it has request history that must be retained.",
               else: "Failed to delete channel. Please try again."
 
-          socket |> put_flash(:error, message) |> noreply()
+          socket |> put_flash(:error, message) |> reply_ok()
       end
+    end
+  end
+
+  # The open form's Save. Which form is open, and whether this user may save
+  # it, is the route's and the server's to know, not the payload's.
+  def handle_event("save_channel", params, socket) do
+    %{
+      live_action: action,
+      can_create_channel: can_create?,
+      can_edit_channel: can_edit?
+    } = socket.assigns
+
+    channel = socket.assigns[:selected_channel]
+
+    cond do
+      action == :new and can_create? and match?(%Channel{id: nil}, channel) ->
+        create_channel(socket, params)
+
+      action == :edit and can_edit? and
+          match?(%Channel{id: id} when is_binary(id), channel) ->
+        update_channel(socket, channel, params)
+
+      true ->
+        reply_error(socket, "You are not authorized to perform this action.")
+    end
+  end
+
+  defp create_channel(socket, params) do
+    attrs =
+      params
+      |> channel_attrs([], nil)
+      |> Map.put("project_id", socket.assigns.project.id)
+
+    case Channels.create_channel(attrs, actor: socket.assigns.current_user) do
+      {:ok, _channel} ->
+        socket
+        |> put_flash(:info, "Channel created successfully.")
+        |> push_patch(to: ~p"/projects/#{socket.assigns.project}/channels")
+        |> reply_ok()
+
+      {:error, changeset} ->
+        reply_error(socket, changeset)
+    end
+  end
+
+  defp update_channel(socket, channel, params) do
+    attrs =
+      channel_attrs(
+        params,
+        channel.client_auth_methods,
+        channel.destination_auth_method
+      )
+
+    case Channels.update_channel(channel, attrs,
+           actor: socket.assigns.current_user
+         ) do
+      {:ok, _channel} ->
+        socket
+        |> put_flash(:info, "Channel updated successfully.")
+        |> push_patch(to: ~p"/projects/#{socket.assigns.project}/channels")
+        |> reply_ok()
+
+      {:error, changeset} ->
+        reply_error(socket, changeset)
+    end
+  end
+
+  # The page's camelCase values as the changeset's params, with the auth
+  # methods as the nested changes the schema expects: existing clients kept
+  # or deleted, new ones added, and the destination kept, swapped or cleared.
+  defp channel_attrs(params, current_clients, current_destination) do
+    attrs = %{
+      "name" => params["name"],
+      "enabled" => params["enabled"],
+      "destination_url" => params["destinationUrl"],
+      "client_auth_methods" =>
+        build_client_auth_params(params["clientAuthMethodIds"], current_clients)
+    }
+
+    case build_destination_auth_param(
+           params["destinationCredentialId"],
+           current_destination
+         ) do
+      nil -> attrs
+      :clear -> Map.put(attrs, "destination_auth_method", nil)
+      dest -> Map.put(attrs, "destination_auth_method", dest)
+    end
+  end
+
+  defp build_client_auth_params(ids, current_clients) do
+    ids = if is_list(ids), do: Enum.filter(ids, &is_binary/1), else: []
+    current_ids = Enum.map(current_clients, & &1.webhook_auth_method_id)
+
+    kept_or_dropped =
+      Enum.map(current_clients, fn cam ->
+        if cam.webhook_auth_method_id in ids,
+          do: %{id: cam.id},
+          else: %{id: cam.id, delete: true}
+      end)
+
+    added =
+      ids
+      |> Enum.uniq()
+      |> Enum.reject(&(&1 in current_ids))
+      |> Enum.map(&%{webhook_auth_method_id: &1})
+
+    kept_or_dropped ++ added
+  end
+
+  defp build_destination_auth_param(selected_id, current_destination) do
+    selected_id = if selected_id in [nil, ""], do: nil, else: selected_id
+
+    case {current_destination, selected_id} do
+      {nil, nil} -> nil
+      {%{}, nil} -> :clear
+      {%{id: id, project_credential_id: pc_id}, pc_id} -> %{id: id}
+      {_, _} -> %{project_credential_id: selected_id}
     end
   end
 
@@ -241,194 +293,71 @@ defmodule LightningWeb.ChannelLive.Index do
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action.")
-      |> noreply()
+      |> reply_ok()
     end
   end
 
   defp fetch_project_channel(socket, channel_id) do
     case Channels.get_channel_for_project(socket.assigns.project.id, channel_id) do
       %{} = channel -> {:ok, channel}
-      nil -> socket |> put_flash(:error, "Channel not found") |> noreply()
+      nil -> socket |> put_flash(:error, "Channel not found") |> reply_ok()
     end
   end
 
-  # --- Private components ---
+  # The kit's send resolves on this; the flash says what happened.
+  defp reply_ok(socket), do: {:reply, %{}, socket}
 
-  attr :channel_stats, :map, required: true
-  attr :project, :map, required: true
+  # --- Props ---
 
-  defp channel_metrics(assigns) do
-    ~H"""
-    <div class="grid gap-6 grid-cols-2 mb-8">
-      <div class="bg-white shadow rounded-lg py-2 px-6">
-        <h2 class="text-sm text-gray-500">Total Channels</h2>
-        <div class="text-3xl font-bold text-gray-800">
-          {@channel_stats.total_channels}
-        </div>
-      </div>
-      <div class="bg-white shadow rounded-lg py-2 px-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm text-gray-500">Total Requests</h2>
-          <.link
-            navigate={~p"/projects/#{@project}/history/channels"}
-            class="text-xs text-indigo-600 hover:text-indigo-800"
-          >
-            View all
-          </.link>
-        </div>
-        <div class="text-3xl font-bold text-gray-800">
-          {@channel_stats.total_requests}
-        </div>
-      </div>
-    </div>
-    """
+  # The shape the design system's ChannelRow type expects.
+  defp channels_json(channels, project) do
+    Enum.map(channels, fn %{
+                            channel: channel,
+                            request_count: count,
+                            last_activity: last_at
+                          } ->
+      %{
+        id: channel.id,
+        name: channel.name,
+        enabled: channel.enabled,
+        destinationUrl: channel.destination_url,
+        proxyUrl: channel_proxy_url(channel.id),
+        requestCount: count,
+        lastActivityAt: last_at,
+        logsHref:
+          ~p"/projects/#{project}/history/channels?#{%{filters: %{channel_id: channel.id}}}"
+      }
+    end)
   end
 
-  attr :id, :string, required: true
-  attr :channels, :list, required: true
-  attr :project, :map, required: true
-  attr :can_edit_channel, :boolean, default: false
-  attr :can_delete_channel, :boolean, default: false
-
-  defp channels_table(%{channels: []} = assigns) do
-    ~H"""
-    <div class="text-center py-8">
-      <p class="text-gray-500">No channels found.</p>
-    </div>
-    """
+  # The design system's ChannelForm while the route has the form open.
+  defp form_json(action, channel, project_credentials, webhook_auth_methods)
+       when action in [:new, :edit] and is_list(project_credentials) do
+    %{
+      channel: channel_form_json(action, channel),
+      credentialOptions:
+        Enum.map(project_credentials, &%{id: &1.id, name: &1.credential.name}),
+      authMethodOptions:
+        Enum.map(webhook_auth_methods, &%{id: &1.id, name: &1.name})
+    }
   end
 
-  defp channels_table(assigns) do
-    ~H"""
-    <.table id={@id}>
-      <:header>
-        <.tr>
-          <.th>Name</.th>
-          <.th>Destination</.th>
-          <.th>Requests</.th>
-          <.th>Last Activity</.th>
-          <.th>Enabled</.th>
-          <.th><span class="sr-only">Actions</span></.th>
-        </.tr>
-      </:header>
-      <:body>
-        <%= for %{channel: channel, request_count: count, last_activity: last_at} <-
-              @channels do %>
-          <.tr id={"channel-#{channel.id}"}>
-            <.td class="wrap-break-word max-w-[15rem]">
-              <span class={[
-                "font-medium",
-                if(channel.enabled,
-                  do: "text-gray-900",
-                  else: "text-gray-400"
-                )
-              ]}>
-                {channel.name}
-              </span>
-            </.td>
-            <.td>
-              <div class="flex items-center gap-1.5 font-mono text-sm leading-none text-gray-600">
-                <.icon
-                  name="lucide-square-arrow-right-exit"
-                  class="h-4 w-4 shrink-0 text-gray-400"
-                />
-                <span class="wrap-break-word max-w-[20rem] translate-y-px">
-                  {channel.destination_url}
-                </span>
-              </div>
-              <Common.wrapper_tooltip
-                id={"copy-url-tip-#{channel.id}"}
-                tooltip="Copy proxy URL"
-              >
-                <.proxy_url_copy
-                  id={"copy-url-btn-#{channel.id}"}
-                  channel_id={channel.id}
-                  class="mt-1 hover:text-gray-600"
-                  text_class="text-gray-400 max-w-[16rem] group-hover/copy:text-gray-600"
-                >
-                  <:leading>
-                    <.icon
-                      name="lucide-circle-dot"
-                      class="h-4 w-4 shrink-0 text-gray-300"
-                    />
-                  </:leading>
-                  <:trailing>
-                    <.icon
-                      name="hero-clipboard-document"
-                      class="h-4 w-4 shrink-0 text-gray-300 opacity-0 group-hover/copy:opacity-100 transition-opacity"
-                    />
-                  </:trailing>
-                </.proxy_url_copy>
-              </Common.wrapper_tooltip>
-            </.td>
-            <.td class="text-gray-700">
-              <.link
-                navigate={
-                  ~p"/projects/#{@project}/history/channels?#{%{filters: %{channel_id: channel.id}}}"
-                }
-                class="text-indigo-600 hover:text-indigo-800"
-              >
-                {count}
-              </.link>
-            </.td>
-            <.td class="text-gray-500 text-sm">
-              <.link
-                navigate={
-                  ~p"/projects/#{@project}/history/channels?#{%{filters: %{channel_id: channel.id}}}"
-                }
-                class="hover:text-gray-700"
-              >
-                <%= if last_at do %>
-                  <Common.datetime datetime={last_at} />
-                <% else %>
-                  <span class="italic">Never</span>
-                <% end %>
-              </.link>
-            </.td>
-            <.td>
-              <%= if @can_edit_channel do %>
-                <.input
-                  id={channel.id}
-                  type="toggle"
-                  name="channel_state"
-                  value={channel.enabled}
-                  tooltip={unless channel.enabled, do: "#{channel.name} (disabled)"}
-                  on_click="toggle_channel_state"
-                  value_key={channel.id}
-                />
-              <% else %>
-                <span class={[
-                  "text-sm",
-                  if(channel.enabled, do: "text-gray-700", else: "text-gray-400")
-                ]}>
-                  {if channel.enabled, do: "Enabled", else: "Disabled"}
-                </span>
-              <% end %>
-            </.td>
-            <.td class="text-right">
-              <div class="flex items-center justify-end gap-2">
-                <.link
-                  :if={@can_edit_channel}
-                  patch={~p"/projects/#{@project}/channels/#{channel.id}/edit"}
-                >
-                  <.button theme="secondary" size="sm">Edit</.button>
-                </.link>
-                <.button
-                  :if={@can_delete_channel}
-                  theme="danger"
-                  size="sm"
-                  phx-click="delete_channel"
-                  phx-value-id={channel.id}
-                  data-confirm={"Delete \"#{channel.name}\"? This cannot be undone."}
-                >
-                  Delete
-                </.button>
-              </div>
-            </.td>
-          </.tr>
-        <% end %>
-      </:body>
-    </.table>
-    """
+  defp form_json(_action, _channel, _credentials, _methods), do: nil
+
+  defp channel_form_json(:new, _channel), do: nil
+
+  defp channel_form_json(:edit, channel) do
+    %{
+      id: channel.id,
+      proxyUrl: channel_proxy_url(channel.id),
+      name: channel.name,
+      enabled: channel.enabled,
+      destinationUrl: channel.destination_url,
+      destinationCredentialId:
+        (channel.destination_auth_method &&
+           channel.destination_auth_method.project_credential_id) || "",
+      clientAuthMethodIds:
+        Enum.map(channel.client_auth_methods, & &1.webhook_auth_method_id)
+    }
   end
 end

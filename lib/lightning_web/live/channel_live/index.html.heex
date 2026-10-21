@@ -1,0 +1,29 @@
+<.design_system_page
+  name="ChannelsIndexPage"
+  props={
+    %{
+      project: %{
+        id: @project.id,
+        parentId: @project.parent_id,
+        color: @project.color
+      },
+      projectLabel: @project_label,
+      channels: channels_json(@channels, @project),
+      totalChannels: @channel_stats.total_channels,
+      totalRequests: @channel_stats.total_requests,
+      logsHref: ~p"/projects/#{@project}/history/channels",
+      canCreateChannel: @can_create_channel,
+      canEditChannel: @can_edit_channel,
+      canDeleteChannel: @can_delete_channel,
+      form:
+        form_json(
+          @live_action,
+          assigns[:selected_channel],
+          assigns[:project_credentials],
+          assigns[:webhook_auth_methods]
+        )
+    }
+  }
+  banner={assigns[:banner]}
+  current_user={@current_user}
+/>

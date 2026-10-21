@@ -10,9 +10,41 @@ defmodule LightningWeb.ChannelLive.FormTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
+  # The form is drawn by React from the page's `form` prop and saves with one
+  # event; its fields, labels, placeholder and "Add New" links are tested in
+  # the design system (ChannelsIndexPage.test.tsx).
+  @page "#channels-index-page"
+
+  defp props(view), do: page_props(view, @page)
+  defp form(view), do: props(view)["form"]
+
+  # What the page sends from its Save button: every field, as typed.
+  defp save(view, values) do
+    push_page_event(
+      view,
+      @page,
+      "save_channel",
+      Map.merge(
+        %{
+          "name" => "",
+          "enabled" => true,
+          "destinationUrl" => "",
+          "destinationCredentialId" => "",
+          "clientAuthMethodIds" => []
+        },
+        values
+      )
+    )
+  end
+
+  defp auth_methods(channel, role) do
+    Channels.get_channel!(channel.id, include: [:channel_auth_methods]).channel_auth_methods
+    |> Enum.filter(&(&1.role == role))
+  end
+
   describe "new channel form" do
     @tag role: :editor
-    test "navigating to /channels/new shows the form modal", %{
+    test "navigating to /channels/new opens the form", %{
       conn: conn,
       project: project
     } do
@@ -20,40 +52,38 @@ defmodule LightningWeb.ChannelLive.FormTest do
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
       assert html =~ "New Channel"
-      assert has_element?(view, "#new-modal")
+
+      assert %{
+               "channel" => nil,
+               "credentialOptions" => [],
+               "authMethodOptions" => []
+             } = form(view)
     end
 
     @tag role: :editor
-    test "submitting valid params creates channel and shows success flash", %{
-      conn: conn,
-      project: project
-    } do
+    test "saving valid values creates the channel and shows the success flash",
+         %{conn: conn, project: project} do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      form_id = "channel-form-new"
-
-      view
-      |> form("##{form_id}",
-        channel: %{
-          name: "new-channel",
-          destination_url: "https://example.com/destination"
-        }
-      )
-      |> render_submit()
+      save(view, %{
+        "name" => "new-channel",
+        "destinationUrl" => "https://example.com/destination"
+      })
 
       assert_patch(view, ~p"/projects/#{project.id}/channels")
 
       html = render(view)
       assert html =~ "Channel created successfully"
-      assert html =~ "new-channel"
+      assert %{"form" => nil} = props(view)
+      assert Enum.any?(props(view)["channels"], &(&1["name"] == "new-channel"))
 
       assert Channels.list_channels_for_project(project.id)
              |> Enum.any?(&(&1.name == "new-channel"))
     end
 
     @tag role: :editor
-    test "submitting with a client auth method saves the association", %{
+    test "saving with a client auth method saves the association", %{
       conn: conn,
       project: project
     } do
@@ -62,15 +92,11 @@ defmodule LightningWeb.ChannelLive.FormTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      view
-      |> form("#channel-form-new",
-        channel: %{
-          name: "channel-with-auth",
-          destination_url: "https://example.com/destination",
-          client_auth_methods: %{wam.id => "true"}
-        }
-      )
-      |> render_submit()
+      save(view, %{
+        "name" => "channel-with-auth",
+        "destinationUrl" => "https://example.com/destination",
+        "clientAuthMethodIds" => [wam.id]
+      })
 
       assert_patch(view, ~p"/projects/#{project.id}/channels")
 
@@ -80,34 +106,39 @@ defmodule LightningWeb.ChannelLive.FormTest do
 
       assert channel
 
-      channel = Repo.preload(channel, :channel_auth_methods)
-
       assert [%{role: :client, webhook_auth_method_id: wam_id}] =
-               channel.channel_auth_methods
+               Repo.preload(channel, :channel_auth_methods).channel_auth_methods
 
       assert wam_id == wam.id
     end
 
     @tag role: :editor
-    test "submitting with missing name shows inline validation error", %{
+    test "saving with a missing name and URL replies with the field errors", %{
       conn: conn,
       project: project
     } do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      form_id = "channel-form-new"
+      save(view, %{"name" => "", "destinationUrl" => ""})
 
-      html =
-        view
-        |> form("##{form_id}", channel: %{name: "", destination_url: ""})
-        |> render_submit()
+      # The kit's wording for a blank field (reply_error/2 translates the
+      # changeset); the page's own check says "can't be blank" before a save.
+      assert_reply(view, %{
+        error: "Please fix the errors below.",
+        fieldErrors: %{
+          "name" => ["This field can't be blank."],
+          "destinationUrl" => ["This field can't be blank."]
+        }
+      })
 
-      assert html =~ "can&#39;t be blank"
+      # The form stays open.
+      assert form(view)
+      assert Channels.list_channels_for_project(project.id) == []
     end
 
     @tag role: :editor
-    test "submitting with a duplicate name shows inline validation error", %{
+    test "saving with a duplicate name replies with the name's error", %{
       conn: conn,
       project: project
     } do
@@ -121,20 +152,16 @@ defmodule LightningWeb.ChannelLive.FormTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      form_id = "channel-form-new"
+      save(view, %{
+        "name" => channel.name,
+        "destinationUrl" => "https://example.com"
+      })
 
-      html =
-        view
-        |> form("##{form_id}",
-          channel: %{
-            name: channel.name,
-            destination_url: "https://example.com"
-          }
-        )
-        |> render_submit()
-
-      assert html =~
-               "A channel with this name already exists in this project"
+      assert_reply(view, %{
+        fieldErrors: %{
+          "name" => ["A channel with this name already exists in this project"]
+        }
+      })
     end
 
     @tag role: :viewer
@@ -147,141 +174,81 @@ defmodule LightningWeb.ChannelLive.FormTest do
 
       assert redirect_to == ~p"/projects/#{project.id}/channels"
     end
+
+    @tag role: :viewer
+    test "a viewer's crafted save is refused", %{conn: conn, project: project} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      save(view, %{"name" => "sneaky", "destinationUrl" => "https://example.com"})
+
+      assert_reply(view, %{
+        error: "You are not authorized to perform this action."
+      })
+
+      assert Channels.list_channels_for_project(project.id) == []
+    end
+
+    @tag role: :editor
+    test "a save with no form open is refused", %{conn: conn, project: project} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      save(view, %{"name" => "stray", "destinationUrl" => "https://example.com"})
+
+      assert_reply(view, %{
+        error: "You are not authorized to perform this action."
+      })
+
+      assert Channels.list_channels_for_project(project.id) == []
+    end
   end
 
-  describe "form structure" do
+  describe "form options" do
     @tag role: :editor
-    test "renders fields in the correct order with labels, sublabels, and placeholder",
-         %{conn: conn, project: project} do
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project.id}/channels/new")
-
-      # Fields appear in this order: Name, Enabled, Destination URL,
-      # Destination Credential, Client Credentials
-      name_pos = :binary.match(html, "Name") |> elem(0)
-      enabled_pos = :binary.match(html, "Enabled") |> elem(0)
-      dest_url_pos = :binary.match(html, "Destination URL") |> elem(0)
-
-      dest_cred_pos =
-        :binary.match(html, "Destination Credential") |> elem(0)
-
-      client_cred_pos =
-        :binary.match(html, "Client Credentials") |> elem(0)
-
-      assert name_pos < enabled_pos
-      assert enabled_pos < dest_url_pos
-      assert dest_url_pos < dest_cred_pos
-      assert dest_cred_pos < client_cred_pos
-
-      # Sublabels
-      assert html =~ "The service OpenFn will forward requests to"
-
-      assert html =~
-               "How OpenFn authenticates with the destination service"
-
-      assert html =~
-               "Credentials that you can use to access this channel"
-
-      # Destination URL placeholder
-      assert has_element?(
-               view,
-               "input[name='channel[destination_url]'][placeholder='https://']"
-             )
-    end
-
-    @tag role: :editor
-    test "Destination Credential is a select dropdown with None plus project credentials",
+    test "offers the project's credentials for the destination, by name",
          %{conn: conn, project: project, user: user} do
       cred1 =
-        insert(:credential,
-          project: project,
-          user: user,
-          name: "My API Key"
-        )
+        insert(:credential, project: project, user: user, name: "My API Key")
 
-      _pc1 =
-        insert(:project_credential, project: project, credential: cred1)
+      pc1 = insert(:project_credential, project: project, credential: cred1)
 
       cred2 =
-        insert(:credential,
-          project: project,
-          user: user,
-          name: "OAuth Token"
-        )
+        insert(:credential, project: project, user: user, name: "OAuth Token")
 
-      _pc2 =
-        insert(:project_credential, project: project, credential: cred2)
-
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project.id}/channels/new")
-
-      # Renders as a <select>, not checkboxes
-      assert has_element?(
-               view,
-               "select[name='channel[destination_credential_id]']"
-             )
-
-      refute has_element?(
-               view,
-               "input[type='checkbox'][id^='destination_auth_']"
-             )
-
-      # "None" is the first option, credentials follow
-      assert has_element?(view, "select option[value='']", "None")
-      assert html =~ "My API Key"
-      assert html =~ "OAuth Token"
-    end
-
-    @tag role: :editor
-    test "Client Credentials still renders as multi-select checkboxes",
-         %{conn: conn, project: project} do
-      wam1 =
-        insert(:webhook_auth_method,
-          project: project,
-          name: "API Key Auth"
-        )
-
-      wam2 =
-        insert(:webhook_auth_method,
-          project: project,
-          name: "Basic Auth"
-        )
+      pc2 = insert(:project_credential, project: project, credential: cred2)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      assert has_element?(
-               view,
-               "input[type='checkbox']#client_auth_#{wam1.id}"
-             )
+      # Only the id and the name: nothing of the credential's body or owner.
+      assert %{"credentialOptions" => options} = form(view)
 
-      assert has_element?(
-               view,
-               "input[type='checkbox']#client_auth_#{wam2.id}"
-             )
-
-      assert has_element?(view, "label", "API Key Auth")
-      assert has_element?(view, "label", "Basic Auth")
+      assert Enum.sort_by(options, & &1["name"]) == [
+               %{"id" => pc1.id, "name" => "My API Key"},
+               %{"id" => pc2.id, "name" => "OAuth Token"}
+             ]
     end
 
     @tag role: :editor
-    test "shows Add New links and does not show legacy copy text", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, _view, html} =
+    test "offers the project's webhook auth methods for the client credentials",
+         %{conn: conn, project: project} do
+      wam1 = insert(:webhook_auth_method, project: project, name: "API Key Auth")
+      wam2 = insert(:webhook_auth_method, project: project, name: "Basic Auth")
+
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      assert html =~ "/settings#webhook_security"
-      assert html =~ "/settings#credentials"
-      assert html =~ "Add New"
-      refute html =~ "Create a new one in project settings."
+      assert %{"authMethodOptions" => options} = form(view)
+
+      assert Enum.sort_by(options, & &1["name"]) == [
+               %{"id" => wam1.id, "name" => "API Key Auth"},
+               %{"id" => wam2.id, "name" => "Basic Auth"}
+             ]
     end
   end
 
   describe "edit channel form" do
     @tag role: :editor
-    test "/channels/:id/edit mounts form pre-populated with channel values",
+    test "/channels/:id/edit opens the form with the channel's values and proxy URL",
          %{conn: conn, project: project} do
       channel =
         insert(:channel,
@@ -290,20 +257,29 @@ defmodule LightningWeb.ChannelLive.FormTest do
           destination_url: "https://old.example.com"
         )
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
-        )
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      html = render(view)
       assert html =~ "Edit Channel"
-      assert html =~ "edit-me"
-      assert html =~ "https://old.example.com"
+
+      assert %{
+               "channel" => %{
+                 "id" => id,
+                 "name" => "edit-me",
+                 "enabled" => true,
+                 "destinationUrl" => "https://old.example.com",
+                 "destinationCredentialId" => "",
+                 "clientAuthMethodIds" => [],
+                 "proxyUrl" => proxy_url
+               }
+             } = form(view)
+
+      assert id == channel.id
+      assert proxy_url == "#{LightningWeb.Endpoint.url()}/channels/#{channel.id}"
     end
 
     @tag role: :editor
-    test "saving valid changes updates the channel and shows success flash",
+    test "saving valid changes updates the channel and shows the success flash",
          %{conn: conn, project: project} do
       channel =
         insert(:channel,
@@ -313,75 +289,50 @@ defmodule LightningWeb.ChannelLive.FormTest do
         )
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
-        )
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      form_id = "channel-form-#{channel.id}"
-
-      view
-      |> form("##{form_id}",
-        channel: %{
-          name: "updated-name",
-          destination_url: "https://new.example.com"
-        }
-      )
-      |> render_submit()
+      save(view, %{
+        "name" => "updated-name",
+        "destinationUrl" => "https://new.example.com"
+      })
 
       assert_patch(view, ~p"/projects/#{project.id}/channels")
 
       html = render(view)
       assert html =~ "Channel updated successfully"
-      assert html =~ "updated-name"
+      assert Enum.any?(props(view)["channels"], &(&1["name"] == "updated-name"))
 
       updated = Channels.get_channel!(channel.id)
       assert updated.name == "updated-name"
+      assert updated.destination_url == "https://new.example.com"
     end
 
     @tag role: :editor
-    test "edit form shows available auth methods and credentials", %{
+    test "the edit form offers the available auth methods and credentials", %{
       conn: conn,
       project: project,
       user: user
     } do
       wam = insert(:webhook_auth_method, project: project)
-
-      credential =
-        insert(:credential, project: project, user: user)
-
-      _pc =
-        insert(:project_credential,
-          project: project,
-          credential: credential
-        )
-
+      credential = insert(:credential, project: project, user: user)
+      _pc = insert(:project_credential, project: project, credential: credential)
       channel = insert(:channel, project: project)
 
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
-        )
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      assert html =~ wam.name
-      assert html =~ credential.name
+      assert %{"authMethodOptions" => [%{"name" => wam_name}]} = form(view)
+      assert wam_name == wam.name
+      assert %{"credentialOptions" => [%{"name" => cred_name}]} = form(view)
+      assert cred_name == credential.name
     end
 
     @tag role: :editor
-    test "pre-selects existing client checkbox and destination dropdown",
+    test "pre-selects the existing client auth method and destination credential",
          %{conn: conn, project: project, user: user} do
       wam = insert(:webhook_auth_method, project: project)
-
-      credential =
-        insert(:credential, project: project, user: user)
-
-      pc =
-        insert(:project_credential,
-          project: project,
-          credential: credential
-        )
-
+      credential = insert(:credential, project: project, user: user)
+      pc = insert(:project_credential, project: project, credential: credential)
       channel = insert(:channel, project: project)
 
       insert(:channel_auth_method,
@@ -398,22 +349,17 @@ defmodule LightningWeb.ChannelLive.FormTest do
       )
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
-        )
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      # Client auth method is checked
-      assert has_element?(
-               view,
-               "#client_auth_#{wam.id}[value='true']"
-             )
+      assert %{
+               "channel" => %{
+                 "clientAuthMethodIds" => [wam_id],
+                 "destinationCredentialId" => pc_id
+               }
+             } = form(view)
 
-      # Destination credential is selected in the dropdown
-      assert has_element?(
-               view,
-               "select[name='channel[destination_credential_id]'] option[value='#{pc.id}'][selected]"
-             )
+      assert wam_id == wam.id
+      assert pc_id == pc.id
     end
 
     @tag role: :editor
@@ -421,16 +367,8 @@ defmodule LightningWeb.ChannelLive.FormTest do
          %{conn: conn, project: project, user: user} do
       wam1 = insert(:webhook_auth_method, project: project)
       wam2 = insert(:webhook_auth_method, project: project)
-
-      credential =
-        insert(:credential, project: project, user: user)
-
-      pc =
-        insert(:project_credential,
-          project: project,
-          credential: credential
-        )
-
+      credential = insert(:credential, project: project, user: user)
+      pc = insert(:project_credential, project: project, credential: credential)
       channel = insert(:channel, project: project)
 
       insert(:channel_auth_method,
@@ -447,51 +385,27 @@ defmodule LightningWeb.ChannelLive.FormTest do
       )
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
-        )
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      # Remove wam1, add wam2, keep destination credential via dropdown
-      view
-      |> form("#channel-form-#{channel.id}",
-        channel: %{
-          name: channel.name,
-          client_auth_methods: %{
-            wam1.id => "false",
-            wam2.id => "true"
-          },
-          destination_credential_id: pc.id
-        }
-      )
-      |> render_change()
+      # Remove wam1, add wam2, keep the destination credential
+      save(view, %{
+        "name" => channel.name,
+        "destinationUrl" => channel.destination_url,
+        "clientAuthMethodIds" => [wam2.id],
+        "destinationCredentialId" => pc.id
+      })
 
-      view
-      |> form("#channel-form-#{channel.id}")
-      |> render_submit()
+      assert_patch(view, ~p"/projects/#{project.id}/channels")
 
-      updated =
-        Channels.get_channel!(channel.id,
-          include: [:channel_auth_methods]
-        )
+      assert [%{webhook_auth_method_id: client_id}] =
+               auth_methods(channel, :client)
 
-      client_cams =
-        Enum.filter(
-          updated.channel_auth_methods,
-          &(&1.role == :client)
-        )
+      assert client_id == wam2.id
 
-      destination_cams =
-        Enum.filter(
-          updated.channel_auth_methods,
-          &(&1.role == :destination)
-        )
+      assert [%{project_credential_id: dest_id}] =
+               auth_methods(channel, :destination)
 
-      assert length(client_cams) == 1
-      assert hd(client_cams).webhook_auth_method_id == wam2.id
-
-      assert length(destination_cams) == 1
-      assert hd(destination_cams).project_credential_id == pc.id
+      assert dest_id == pc.id
     end
 
     @tag role: :editor
@@ -529,9 +443,9 @@ defmodule LightningWeb.ChannelLive.FormTest do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
       # Simulate a tampered browser pushing a live_patch straight to the
-      # foreign channel's edit action. Unlike the run/workflow views, the
-      # channel index re-scopes on every handle_params (apply_action/:edit
-      # loads via get_channel_for_project), so the patch is rejected.
+      # foreign channel's edit action. The channel index re-scopes on every
+      # handle_params (apply_action/:edit loads via get_channel_for_project),
+      # so the patch is rejected.
       assert {:error, {:live_redirect, %{to: to}}} =
                render_patch(
                  view,
@@ -546,27 +460,17 @@ defmodule LightningWeb.ChannelLive.FormTest do
     @tag role: :editor
     test "creating a channel with a destination credential saves the auth method",
          %{conn: conn, project: project, user: user} do
-      credential =
-        insert(:credential, project: project, user: user)
-
-      pc =
-        insert(:project_credential,
-          project: project,
-          credential: credential
-        )
+      credential = insert(:credential, project: project, user: user)
+      pc = insert(:project_credential, project: project, credential: credential)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      view
-      |> form("#channel-form-new",
-        channel: %{
-          name: "with-dest-cred",
-          destination_url: "https://example.com/api",
-          destination_credential_id: pc.id
-        }
-      )
-      |> render_submit()
+      save(view, %{
+        "name" => "with-dest-cred",
+        "destinationUrl" => "https://example.com/api",
+        "destinationCredentialId" => pc.id
+      })
 
       assert_patch(view, ~p"/projects/#{project.id}/channels")
       assert render(view) =~ "Channel created successfully"
@@ -577,46 +481,26 @@ defmodule LightningWeb.ChannelLive.FormTest do
 
       assert channel
 
-      loaded =
-        Channels.get_channel!(channel.id,
-          include: [:channel_auth_methods]
-        )
+      assert [%{project_credential_id: dest_id}] =
+               auth_methods(channel, :destination)
 
-      dest_cams =
-        Enum.filter(
-          loaded.channel_auth_methods,
-          &(&1.role == :destination)
-        )
-
-      assert length(dest_cams) == 1
-      assert hd(dest_cams).project_credential_id == pc.id
+      assert dest_id == pc.id
     end
 
     @tag role: :editor
     test "creating a channel with None destination credential saves no auth method",
          %{conn: conn, project: project, user: user} do
-      credential =
-        insert(:credential, project: project, user: user)
-
-      _pc =
-        insert(:project_credential,
-          project: project,
-          credential: credential
-        )
+      credential = insert(:credential, project: project, user: user)
+      _pc = insert(:project_credential, project: project, credential: credential)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      # Select "None" (empty value) in the destination credential dropdown
-      view
-      |> form("#channel-form-new",
-        channel: %{
-          name: "no-dest-cred",
-          destination_url: "https://example.com/api",
-          destination_credential_id: ""
-        }
-      )
-      |> render_submit()
+      save(view, %{
+        "name" => "no-dest-cred",
+        "destinationUrl" => "https://example.com/api",
+        "destinationCredentialId" => ""
+      })
 
       assert_patch(view, ~p"/projects/#{project.id}/channels")
 
@@ -625,50 +509,16 @@ defmodule LightningWeb.ChannelLive.FormTest do
         |> Enum.find(&(&1.name == "no-dest-cred"))
 
       assert channel
-
-      loaded =
-        Channels.get_channel!(channel.id,
-          include: [:channel_auth_methods]
-        )
-
-      dest_cams =
-        Enum.filter(
-          loaded.channel_auth_methods,
-          &(&1.role == :destination)
-        )
-
-      assert dest_cams == []
+      assert auth_methods(channel, :destination) == []
     end
 
     @tag role: :editor
     test "changing destination credential from one to another swaps the auth method",
          %{conn: conn, project: project, user: user} do
-      cred1 =
-        insert(:credential,
-          project: project,
-          user: user,
-          name: "Cred A"
-        )
-
-      pc1 =
-        insert(:project_credential,
-          project: project,
-          credential: cred1
-        )
-
-      cred2 =
-        insert(:credential,
-          project: project,
-          user: user,
-          name: "Cred B"
-        )
-
-      pc2 =
-        insert(:project_credential,
-          project: project,
-          credential: cred2
-        )
-
+      cred1 = insert(:credential, project: project, user: user, name: "Cred A")
+      pc1 = insert(:project_credential, project: project, credential: cred1)
+      cred2 = insert(:credential, project: project, user: user, name: "Cred B")
+      pc2 = insert(:project_credential, project: project, credential: cred2)
       channel = insert(:channel, project: project)
 
       insert(:channel_auth_method,
@@ -679,51 +529,27 @@ defmodule LightningWeb.ChannelLive.FormTest do
       )
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
-        )
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      # Swap from pc1 to pc2 via the dropdown
-      view
-      |> form("#channel-form-#{channel.id}",
-        channel: %{destination_credential_id: pc2.id}
-      )
-      |> render_change()
-
-      view
-      |> form("#channel-form-#{channel.id}")
-      |> render_submit()
+      save(view, %{
+        "name" => channel.name,
+        "destinationUrl" => channel.destination_url,
+        "destinationCredentialId" => pc2.id
+      })
 
       assert_patch(view, ~p"/projects/#{project.id}/channels")
 
-      loaded =
-        Channels.get_channel!(channel.id,
-          include: [:channel_auth_methods]
-        )
+      assert [%{project_credential_id: dest_id}] =
+               auth_methods(channel, :destination)
 
-      dest_cams =
-        Enum.filter(
-          loaded.channel_auth_methods,
-          &(&1.role == :destination)
-        )
-
-      assert length(dest_cams) == 1
-      assert hd(dest_cams).project_credential_id == pc2.id
+      assert dest_id == pc2.id
     end
 
     @tag role: :editor
     test "selecting None removes an existing destination auth method",
          %{conn: conn, project: project, user: user} do
-      credential =
-        insert(:credential, project: project, user: user)
-
-      pc =
-        insert(:project_credential,
-          project: project,
-          credential: credential
-        )
-
+      credential = insert(:credential, project: project, user: user)
+      pc = insert(:project_credential, project: project, credential: credential)
       channel = insert(:channel, project: project)
 
       insert(:channel_auth_method,
@@ -734,36 +560,16 @@ defmodule LightningWeb.ChannelLive.FormTest do
       )
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
-        )
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      # Select "None" (empty value)
-      view
-      |> form("#channel-form-#{channel.id}",
-        channel: %{destination_credential_id: ""}
-      )
-      |> render_change()
-
-      view
-      |> form("#channel-form-#{channel.id}")
-      |> render_submit()
+      save(view, %{
+        "name" => channel.name,
+        "destinationUrl" => channel.destination_url,
+        "destinationCredentialId" => ""
+      })
 
       assert_patch(view, ~p"/projects/#{project.id}/channels")
-
-      loaded =
-        Channels.get_channel!(channel.id,
-          include: [:channel_auth_methods]
-        )
-
-      dest_cams =
-        Enum.filter(
-          loaded.channel_auth_methods,
-          &(&1.role == :destination)
-        )
-
-      assert dest_cams == []
+      assert auth_methods(channel, :destination) == []
     end
   end
 
@@ -771,34 +577,24 @@ defmodule LightningWeb.ChannelLive.FormTest do
     @tag role: :editor
     test "creating a channel with another project's credential is rejected",
          %{conn: conn, project: project} do
-      # The dropdown only lists this project's credentials; a tampered browser
-      # can still POST an arbitrary project_credential UUID. It must be rejected
-      # at save so a foreign tenant's secret can't be attached and exfiltrated.
+      # The page only offers this project's credentials; a tampered browser
+      # can still send an arbitrary project_credential UUID. It must be
+      # rejected at save so a foreign tenant's secret can't be attached.
       other_project = insert(:project)
       victim_credential = insert(:project_credential, project: other_project)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      # The malicious credential id is passed via render_submit's override map
-      # rather than through form/2 (the dropdown only offers in-project
-      # options, so form/2 would reject it) — this simulates a tampered
-      # browser POSTing a raw UUID.
-      view
-      |> form("#channel-form-new",
-        channel: %{
-          name: "exfil",
-          destination_url: "https://attacker.example.com"
-        }
-      )
-      |> render_submit(%{
-        channel: %{destination_credential_id: victim_credential.id}
+      save(view, %{
+        "name" => "exfil",
+        "destinationUrl" => "https://attacker.example.com",
+        "destinationCredentialId" => victim_credential.id
       })
 
-      # Stays on the form — no redirect to the index.
-      assert has_element?(view, "#channel-form-new")
-
-      # Nothing was persisted.
+      # Refused, and the form stays open.
+      assert_reply(view, %{error: _})
+      assert form(view)
       assert Channels.list_channels_for_project(project.id) == []
     end
 
@@ -812,7 +608,6 @@ defmodule LightningWeb.ChannelLive.FormTest do
 
       other_project = insert(:project)
       victim_credential = insert(:project_credential, project: other_project)
-
       channel = insert(:channel, project: project)
 
       insert(:channel_auth_method,
@@ -823,32 +618,23 @@ defmodule LightningWeb.ChannelLive.FormTest do
       )
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
-        )
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      # Foreign credential id supplied via the override map to bypass the
-      # dropdown's in-project options (see the create test above).
-      view
-      |> form("#channel-form-#{channel.id}", channel: %{name: channel.name})
-      |> render_submit(%{
-        channel: %{destination_credential_id: victim_credential.id}
+      save(view, %{
+        "name" => channel.name,
+        "destinationUrl" => channel.destination_url,
+        "destinationCredentialId" => victim_credential.id
       })
 
-      # Stays on the form — no redirect to the index.
-      assert has_element?(view, "#channel-form-#{channel.id}")
+      assert_reply(view, %{error: _})
+      assert form(view)
 
       # The existing destination credential is untouched; the foreign one
       # was never attached.
-      loaded =
-        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+      assert [%{project_credential_id: dest_id}] =
+               auth_methods(channel, :destination)
 
-      dest_cams =
-        Enum.filter(loaded.channel_auth_methods, &(&1.role == :destination))
-
-      assert length(dest_cams) == 1
-      assert hd(dest_cams).project_credential_id == own_pc.id
+      assert dest_id == own_pc.id
     end
   end
 
@@ -856,28 +642,16 @@ defmodule LightningWeb.ChannelLive.FormTest do
     @tag role: :editor
     test "creating a channel with another project's webhook auth method is rejected",
          %{conn: conn, project: project} do
-      # The client-auth checkbox list only renders this project's webhook auth
-      # methods, but a tampered browser can POST an arbitrary
-      # webhook_auth_method UUID. It must be rejected at save so a foreign
-      # tenant's auth object can't gate this project's channel.
       other_project = insert(:project)
       victim_auth_method = insert(:webhook_auth_method, project: other_project)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/channels/new")
 
-      # The foreign id is passed via render_submit's override map rather than
-      # through form/2 (the form only renders in-project checkboxes, so form/2
-      # would reject the unknown field) — this simulates a tampered browser.
-      view
-      |> form("#channel-form-new",
-        channel: %{
-          name: "borrowed-auth",
-          destination_url: "https://example.com/destination"
-        }
-      )
-      |> render_submit(%{
-        channel: %{client_auth_methods: %{victim_auth_method.id => "true"}}
+      save(view, %{
+        "name" => "borrowed-auth",
+        "destinationUrl" => "https://example.com/destination",
+        "clientAuthMethodIds" => [victim_auth_method.id]
       })
 
       assert Repo.preload(victim_auth_method, :channel_auth_methods).channel_auth_methods ==
@@ -895,7 +669,6 @@ defmodule LightningWeb.ChannelLive.FormTest do
       own_auth_method = insert(:webhook_auth_method, project: project)
       other_project = insert(:project)
       victim_auth_method = insert(:webhook_auth_method, project: other_project)
-
       channel = insert(:channel, project: project)
 
       insert(:channel_auth_method,
@@ -905,35 +678,20 @@ defmodule LightningWeb.ChannelLive.FormTest do
       )
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
-        )
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
 
-      # Foreign auth-method id supplied via the override map to bypass the
-      # in-project checkbox list (see the create test above).
-      view
-      |> form("#channel-form-#{channel.id}", channel: %{name: channel.name})
-      |> render_submit(%{
-        channel: %{
-          client_auth_methods: %{
-            own_auth_method.id => "true",
-            victim_auth_method.id => "true"
-          }
-        }
+      save(view, %{
+        "name" => channel.name,
+        "destinationUrl" => channel.destination_url,
+        "clientAuthMethodIds" => [own_auth_method.id, victim_auth_method.id]
       })
 
       # The existing in-project client auth method is untouched; the foreign
-      # one was never attached (see the create test on why this doesn't assert
-      # which layer stopped it).
-      loaded =
-        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+      # one was never attached.
+      assert [%{webhook_auth_method_id: client_id}] =
+               auth_methods(channel, :client)
 
-      client_cams =
-        Enum.filter(loaded.channel_auth_methods, &(&1.role == :client))
-
-      assert length(client_cams) == 1
-      assert hd(client_cams).webhook_auth_method_id == own_auth_method.id
+      assert client_id == own_auth_method.id
 
       assert Repo.preload(victim_auth_method, :channel_auth_methods).channel_auth_methods ==
                []

@@ -13,6 +13,27 @@ defmodule LightningWeb.ChannelLive.IndexTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
+  # The page is drawn by React from data-props; the texts it renders (the
+  # empty state, the stat card titles, the delete confirmation) are tested in
+  # the design system and in assets/test/design-system/ChannelsIndexPage.test.tsx.
+  @page "#channels-index-page"
+
+  defp props(view), do: page_props(view, @page)
+  defp channel_names(view), do: Enum.map(props(view)["channels"], & &1["name"])
+
+  defp row(view, channel),
+    do: Enum.find(props(view)["channels"], &(&1["id"] == channel.id))
+
+  defp toggle(view, channel, state),
+    do:
+      push_page_event(view, @page, "toggle_channel_state", %{
+        "channel_state" => state,
+        "value_key" => channel.id
+      })
+
+  defp delete_channel(view, channel),
+    do: push_page_event(view, @page, "delete_channel", %{"id" => channel.id})
+
   describe "access control" do
     test "redirects unauthenticated users to login", %{project: project} do
       conn = Phoenix.ConnTest.build_conn()
@@ -27,11 +48,10 @@ defmodule LightningWeb.ChannelLive.IndexTest do
     } do
       insert(:channel, project: project, name: "my-channel")
 
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project.id}/channels")
+      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/channels")
 
       assert html =~ "Channels"
-      assert html =~ "my-channel"
+      assert channel_names(view) == ["my-channel"]
     end
 
     @tag role: :viewer
@@ -41,7 +61,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      assert has_element?(view, "#new-channel-button:disabled")
+      assert %{"canCreateChannel" => false} = props(view)
     end
 
     @tag role: :editor
@@ -51,38 +71,39 @@ defmodule LightningWeb.ChannelLive.IndexTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      refute has_element?(view, "#new-channel-button:disabled")
-      assert has_element?(view, "#new-channel-button")
+      assert %{"canCreateChannel" => true} = props(view)
     end
   end
 
   describe "channel metrics" do
-    test "shows Total Channels and Total Requests stat cards", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/channels")
+    test "sends the Total Channels and Total Requests figures with the logs link",
+         %{conn: conn, project: project} do
+      insert(:channel, project: project)
 
-      assert html =~ "Total Channels"
-      assert html =~ "Total Requests"
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      assert %{
+               "totalChannels" => 1,
+               "totalRequests" => 0,
+               "logsHref" => logs_href
+             } = props(view)
+
+      assert logs_href == ~p"/projects/#{project.id}/history/channels"
     end
   end
 
   describe "channel list rendering" do
-    test "shows empty state when project has no channels", %{
+    test "sends an empty list when the project has no channels", %{
       conn: conn,
       project: project
     } do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/channels")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      assert html =~ "No channels found."
+      assert %{"channels" => [], "form" => nil} = props(view)
     end
 
-    test "shows channel columns with zero requests and Never for last activity",
-         %{
-           conn: conn,
-           project: project
-         } do
+    test "sends each channel's columns, with no last activity when it has no requests",
+         %{conn: conn, project: project} do
       channel =
         insert(:channel,
           project: project,
@@ -92,16 +113,23 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      assert has_element?(view, "tr#channel-#{channel.id}")
+      assert %{
+               "name" => "test-channel",
+               "enabled" => true,
+               "destinationUrl" => "https://destination.example.com/data",
+               "proxyUrl" => proxy_url,
+               "requestCount" => 0,
+               "lastActivityAt" => nil,
+               "logsHref" => logs_href
+             } = row(view, channel)
 
-      html = render(view)
+      assert proxy_url == "#{LightningWeb.Endpoint.url()}/channels/#{channel.id}"
 
-      assert html =~ "test-channel"
-      assert html =~ "https://destination.example.com/data"
-      assert html =~ "Never"
+      assert logs_href =~
+               ~p"/projects/#{project.id}/history/channels?filters[channel_id]=#{channel.id}"
     end
 
-    test "shows request count and last activity when requests exist", %{
+    test "sends the request count and last activity when requests exist", %{
       conn: conn,
       project: project
     } do
@@ -128,11 +156,11 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      html = render(view)
+      assert %{"requestCount" => 2, "lastActivityAt" => last_at} =
+               row(view, channel)
 
-      assert html =~ "active-channel"
-      assert html =~ "2"
-      refute html =~ "Never"
+      assert last_at =~ "2025-03-05T14:30:00"
+      assert %{"totalRequests" => 2} = props(view)
     end
 
     test "does not show channels from other projects", %{
@@ -143,10 +171,9 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       other_project = insert(:project)
       insert(:channel, project: other_project, name: "theirs")
 
-      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/channels")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      assert html =~ "mine"
-      refute html =~ "theirs"
+      assert channel_names(view) == ["mine"]
     end
   end
 
@@ -163,17 +190,13 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      assert has_element?(view, "tr#channel-#{channel.id}")
+      assert %{"enabled" => true} = row(view, channel)
 
-      html =
-        view
-        |> element("#toggle-control-#{channel.id}")
-        |> render_click()
-
-      assert html =~ "Channel updated"
+      assert toggle(view, channel, "false") =~ "Channel updated"
 
       updated = Channels.get_channel!(channel.id)
       assert updated.enabled == false
+      assert %{"enabled" => false} = row(view, channel)
 
       assert [audit] =
                Repo.all(
@@ -201,53 +224,57 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      view
-      |> element("#toggle-control-#{channel.id}")
-      |> render_click()
+      toggle(view, channel, "true")
 
       assert Channels.get_channel!(channel.id).enabled == true
+    end
+
+    @tag role: :viewer
+    test "a viewer's crafted toggle is refused", %{
+      conn: conn,
+      project: project
+    } do
+      channel = insert(:channel, project: project, name: "c", enabled: true)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      assert %{"canEditChannel" => false} = props(view)
+
+      assert toggle(view, channel, "false") =~
+               "You are not authorized to perform this action."
+
+      assert Channels.get_channel!(channel.id).enabled == true
+    end
+
+    @tag role: :editor
+    test "a toggle for another project's channel is refused", %{
+      conn: conn,
+      project: project
+    } do
+      theirs = insert(:channel, project: insert(:project), enabled: true)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      assert toggle(view, theirs, "false") =~ "Channel not found"
+      assert Channels.get_channel!(theirs.id).enabled == true
     end
   end
 
   describe "delete channel" do
-    @tag role: :editor
-    test "delete button uses data-confirm attribute (not phx-confirm)", %{
-      conn: conn,
-      project: project
-    } do
-      _channel = insert(:channel, project: project, name: "confirm-me")
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
-
-      assert has_element?(
-               view,
-               "[phx-click='delete_channel'][data-confirm]"
-             )
-
-      refute has_element?(
-               view,
-               "[phx-click='delete_channel'][phx-confirm]"
-             )
-    end
-
     @tag role: :viewer
-    test "Edit and Delete buttons are absent for viewer role", %{
-      conn: conn,
-      project: project
-    } do
+    test "Edit and Delete are withheld from the viewer role, and a crafted delete is refused",
+         %{conn: conn, project: project} do
       channel = insert(:channel, project: project, name: "viewer-channel")
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      refute has_element?(
-               view,
-               "[phx-click='delete_channel'][phx-value-id='#{channel.id}']"
-             )
+      assert %{"canEditChannel" => false, "canDeleteChannel" => false} =
+               props(view)
 
-      refute has_element?(
-               view,
-               "a[patch$='/channels/#{channel.id}/edit']"
-             )
+      assert delete_channel(view, channel) =~
+               "You are not authorized to perform this action."
+
+      assert Channels.get_channel!(channel.id)
     end
 
     @tag role: :editor
@@ -264,17 +291,14 @@ defmodule LightningWeb.ChannelLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
 
-      assert has_element?(view, "tr#channel-#{channel.id}")
+      assert row(view, channel)
 
-      view
-      |> element("[phx-click='delete_channel'][phx-value-id='#{channel.id}']")
-      |> render_click()
+      html = delete_channel(view, channel)
 
       assert_patch(view, ~p"/projects/#{project.id}/channels")
 
-      html = render(view)
       assert html =~ "Channel deleted."
-      refute html =~ "delete-me"
+      refute row(view, channel)
 
       assert_raise Ecto.NoResultsError, fn ->
         Channels.get_channel!(channel.id)
@@ -291,6 +315,19 @@ defmodule LightningWeb.ChannelLive.IndexTest do
                )
 
       assert audit.actor_id == user.id
+    end
+
+    @tag role: :editor
+    test "a delete for another project's channel is refused", %{
+      conn: conn,
+      project: project
+    } do
+      theirs = insert(:channel, project: insert(:project))
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      assert delete_channel(view, theirs) =~ "Channel not found"
+      assert Channels.get_channel!(theirs.id)
     end
   end
 end
