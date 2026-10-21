@@ -8,6 +8,7 @@ import warning from 'tiny-warning';
 import type { GetPhoenixHookInternalThis } from '#/hooks/PhoenixHook';
 import { Boundary } from '#/react/components';
 import {
+  adoptPrerenderedRoot,
   importComponent,
   isReactHookedElement,
   lazyLoadComponent,
@@ -261,18 +262,24 @@ export const ReactComponent = {
       this._errorMsg('React root already created!')
     );
 
-    this._root = ReactDOMClient.createRoot(this._containerEl, {
-      identifierPrefix: this._getKey(),
-      // TODO: [error handling](https://18.react.dev/reference/react-dom/client/createRoot#displaying-a-dialog-for-recoverable-errors)?
-      onRecoverableError: (error, errorInfo) => {
-        console.error(
-          'Recoverable error',
-          error,
-          error instanceof Error && 'cause' in error ? error.cause : undefined,
-          errorInfo.componentStack
-        );
-      },
-    });
+    // A module loaded with the page may have drawn the component already,
+    // from the dead render; its root is taken over and re-rendered below.
+    this._root =
+      adoptPrerenderedRoot(this._containerEl) ??
+      ReactDOMClient.createRoot(this._containerEl, {
+        identifierPrefix: this._getKey(),
+        // TODO: [error handling](https://18.react.dev/reference/react-dom/client/createRoot#displaying-a-dialog-for-recoverable-errors)?
+        onRecoverableError: (error, errorInfo) => {
+          console.error(
+            'Recoverable error',
+            error,
+            error instanceof Error && 'cause' in error
+              ? error.cause
+              : undefined,
+            errorInfo.componentStack
+          );
+        },
+      });
 
     this._setProps();
 

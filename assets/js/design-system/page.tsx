@@ -1,9 +1,15 @@
 import { ToastProvider } from '@openfn/ui/components/Toast.tsx';
 import { RouterProvider } from '@openfn/ui/routing/router.tsx';
 import { RequestError } from '@openfn/ui/utils/errors.ts';
-import { useEffect, useMemo, useRef } from 'react';
+import { StrictMode, useEffect, useMemo, useRef } from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
-import { registerComponent, replaceEqualDeep } from '#/react/lib';
+import {
+  keepPrerenderedRoot,
+  registerComponent,
+  replaceEqualDeep,
+} from '#/react/lib';
 
 import { useLiveViewRouter } from './router';
 
@@ -171,5 +177,42 @@ export const designSystemPage = <Props, PageProps extends object>(
   // The module is loaded with the page, so the hook finds the island here
   // and renders it before the LiveView reports itself connected.
   registerComponent(name, Island as unknown as React.ComponentType<object>);
+  prerender(name, Island);
   return Island;
+};
+
+/**
+ * Draws the page into its container from the dead render's `data-props`,
+ * before the LiveView joins, so the content is there as soon as the HTML
+ * is, like a server-rendered page. The hook adopts the root when it mounts
+ * and re-renders with the real actions. Until then an action rejects, as
+ * LiveView refuses a push before it has joined.
+ */
+const prerender = (name: string, Island: React.ComponentType<IslandProps>) => {
+  if (typeof document === 'undefined') return;
+  const el = document.querySelector<HTMLElement>(
+    `[phx-hook="ReactComponent"][data-react-name="${name}"]`
+  );
+  const json = el?.getAttribute('data-props');
+  if (!el || json === null || json === undefined || el.childElementCount > 0)
+    return;
+
+  const notConnected = () =>
+    Promise.reject(new RequestError('Not connected yet. Please try again.'));
+  const load = (path: string) => window.location.assign(path);
+  const root = createRoot(el);
+  flushSync(() => {
+    root.render(
+      <StrictMode>
+        <Island
+          data-props={json}
+          pushEvent={notConnected}
+          handleEvent={() => () => {}}
+          navigate={load}
+          redirect={load}
+        />
+      </StrictMode>
+    );
+  });
+  keepPrerenderedRoot(el, root);
 };
