@@ -26,43 +26,39 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
+  # The page sends its five fields once, on Save; it checks them as it goes.
+  # The server checks them again: the changeset's own rules plus the
+  # confirmation the old validate event added.
   @impl true
-  def handle_event(
-        "validate",
-        %{"superuser_registration" => registration_params},
-        socket
-      ) do
+  def handle_event("save", params, socket) do
+    registration_params = %{
+      "first_name" => params["firstName"],
+      "last_name" => params["lastName"],
+      "email" => params["email"],
+      "password" => params["password"],
+      "password_confirmation" => params["passwordConfirmation"]
+    }
+
     changeset =
       Accounts.change_superuser_registration(registration_params)
       |> Ecto.Changeset.validate_confirmation(:password)
-      |> Ecto.Changeset.validate_length(:password, min: 8)
-      |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, :changeset, changeset)}
-  end
-
-  @impl true
-  def handle_event(
-        "save",
-        %{"superuser_registration" => registration_params},
-        socket
-      ) do
-    case Accounts.register_superuser(registration_params) do
-      {:ok, user} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Superuser account created.")
-         |> redirect(
-           to:
-             Routes.user_session_path(
-               socket,
-               :exchange_token,
-               Accounts.generate_auth_token(user) |> Base.url_encode64()
-             )
-         )}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+    with true <- changeset.valid?,
+         {:ok, user} <- Accounts.register_superuser(registration_params) do
+      {:reply, %{},
+       socket
+       |> put_flash(:info, "Superuser account created.")
+       |> redirect(
+         to:
+           Routes.user_session_path(
+             socket,
+             :exchange_token,
+             Accounts.generate_auth_token(user) |> Base.url_encode64()
+           )
+       )}
+    else
+      false -> reply_error(socket, changeset)
+      {:error, %Ecto.Changeset{} = changeset} -> reply_error(socket, changeset)
     end
   end
 
@@ -72,11 +68,7 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
       |> put_flash(:warn, "Superuser account already exists.")
       |> push_navigate(to: Routes.dashboard_index_path(socket, :index))
     else
-      registration = %Accounts.User{}
-
       socket
-      |> assign(:registration, registration)
-      |> assign(:changeset, Accounts.change_superuser_registration())
     end
   end
 end

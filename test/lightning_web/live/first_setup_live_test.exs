@@ -3,43 +3,49 @@ defmodule LightningWeb.FirstSetupLiveTest do
 
   import Phoenix.LiveViewTest
 
+  # The page is drawn by React from data-props (none: one empty form). Its
+  # fields, its own checks before a save and how it shows the reply's field
+  # errors are tested in the design system's FirstSetupPage.test.tsx; the
+  # event it sends in assets/test/design-system/FirstSetupPage.test.tsx.
+  @page "#first-setup-page"
+
+  @valid %{
+    "firstName" => "Test",
+    "lastName" => "McTest",
+    "email" => "foo@example.com",
+    "password" => "1234567890ab",
+    "passwordConfirmation" => "1234567890ab"
+  }
+
+  defp save(view, values),
+    do: push_page_event(view, @page, "save", Map.merge(@valid, values))
+
   describe "First setup" do
     @tag create_initial_user: false
     test "requires a user to create an initial superuser", %{conn: conn} do
-      {:ok, show_live, _html} =
+      {:ok, show_live, html} =
         live(conn, Routes.first_setup_superuser_path(conn, :show),
           on_error: :raise
         )
 
-      assert show_live |> element("h2", "Setup")
+      assert html =~ "Setup"
+      assert page_props(show_live, @page) == %{}
 
-      assert show_live
-             |> form("#superuser-registration-form",
-               superuser_registration: %{password: "123"}
-             )
-             |> render_change() =~ "does not match confirmation"
+      # The server checks the confirmation and the length again.
+      save(show_live, %{"password" => "123", "passwordConfirmation" => ""})
 
-      assert show_live
-             |> form("#superuser-registration-form",
-               superuser_registration: %{
-                 password: "123",
-                 password_confirmation: "123"
-               }
-             )
-             |> render_change() =~ "Password minimum length is 8 characters"
+      assert_reply(show_live, %{
+        fieldErrors: %{
+          "passwordConfirmation" => ["does not match confirmation"],
+          "password" => ["Password minimum length is 12 characters."]
+        }
+      })
+
+      refute Lightning.Accounts.has_one_superuser?()
 
       {:ok, conn} =
         show_live
-        |> form("#superuser-registration-form",
-          superuser_registration: %{
-            password: "1234567890ab",
-            password_confirmation: "1234567890ab",
-            first_name: "Test",
-            last_name: "McTest",
-            email: "foo@example.com"
-          }
-        )
-        |> render_submit()
+        |> save(%{})
         |> follow_redirect(conn)
 
       assert "/projects" = redirected_path = redirected_to(conn, 302)
@@ -59,21 +65,18 @@ defmodule LightningWeb.FirstSetupLiveTest do
           on_error: :raise
         )
 
-      form =
-        form(show_live, "#superuser-registration-form",
-          superuser_registration: %{
-            password: "1234567890ab",
-            password_confirmation: "1234567890ab",
-            first_name: " ",
-            last_name: "",
-            email: "nameless@example.com"
-          }
-        )
+      save(show_live, %{
+        "firstName" => " ",
+        "lastName" => "",
+        "email" => "nameless@example.com"
+      })
 
-      assert render_change(form) =~ "can&#39;t be blank"
-      assert has_element?(show_live, "button[type=submit][disabled]")
+      assert_reply(show_live, %{
+        fieldErrors: %{"firstName" => [first], "lastName" => [last]}
+      })
 
-      assert render_submit(form) =~ "can&#39;t be blank"
+      assert first =~ "can't be blank"
+      assert last =~ "can't be blank"
       refute Lightning.Accounts.get_user_by_email("nameless@example.com")
       refute Lightning.Accounts.has_one_superuser?()
     end
@@ -87,18 +90,14 @@ defmodule LightningWeb.FirstSetupLiveTest do
           on_error: :raise
         )
 
-      form =
-        form(show_live, "#superuser-registration-form",
-          superuser_registration: %{
-            password: "1234567890ab",
-            password_confirmation: "1234567890ab",
-            first_name: "Ann\u0007",
-            last_name: "Smith",
-            email: "bell@example.com"
-          }
-        )
+      save(show_live, %{
+        "firstName" => "Ann\u0007",
+        "lastName" => "Smith",
+        "email" => "bell@example.com"
+      })
 
-      assert render_submit(form) =~ "can&#39;t contain control characters"
+      assert_reply(show_live, %{fieldErrors: %{"firstName" => [message]}})
+      assert message =~ "can't contain control characters"
       refute Lightning.Accounts.get_user_by_email("bell@example.com")
       refute Lightning.Accounts.has_one_superuser?()
     end
