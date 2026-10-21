@@ -94,4 +94,22 @@ describe('ChatInput slash commands', () => {
     expect(screen.queryByTestId('skill-menu')).not.toBeInTheDocument();
     expect(onSendMessage).toHaveBeenCalledWith('/q', {});
   });
+
+  it('opens the menu again once the input changes after Escape', async () => {
+    await userEvent.type(input(), '/{Escape}{Backspace}/');
+
+    expect(screen.getByTestId('skill-menu')).toBeInTheDocument();
+  });
+
+  it('keeps the Escape that closes the menu from reaching the editor', async () => {
+    const onWindowKeyDown = vi.fn();
+    window.addEventListener('keydown', onWindowKeyDown);
+
+    await userEvent.type(input(), '/{Escape}');
+
+    window.removeEventListener('keydown', onWindowKeyDown);
+    expect(onWindowKeyDown).not.toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'Escape' })
+    );
+  });
 });

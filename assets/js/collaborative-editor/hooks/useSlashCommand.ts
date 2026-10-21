@@ -55,6 +55,7 @@ export function useSlashCommand(
     }
     setInput(value);
     setHighlighted(0);
+    setDismissedMenuFor(null);
   };
 
   /** Handles the menu and pill keys; true when the key was used. */
@@ -73,6 +74,8 @@ export function useSlashCommand(
       }
       if (e.key === 'Escape') {
         e.preventDefault();
+        // The editor's Escape shortcuts listen on window
+        e.stopPropagation();
         setDismissedMenuFor(input);
         return true;
       }
@@ -96,6 +99,7 @@ export function useSlashCommand(
   const reset = () => {
     setInput('');
     setSkill(null);
+    setDismissedMenuFor(null);
   };
 
   return {

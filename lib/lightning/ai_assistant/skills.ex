@@ -3,7 +3,8 @@ defmodule Lightning.AiAssistant.Skills do
   Skills the user can invoke in the global assistant with a slash command.
 
   These are Apollo's standard skills, so each name must match a
-  `skills/<name>/SKILL.md` there; Apollo rejects any other name.
+  `skills/<name>/SKILL.md` there with no `metadata.agent`; Apollo rejects
+  any other name.
 
   `workflow` says which workflows a skill makes sense for: `"any"`, or only
   `"existing"` ones, saved with steps and runs to look at.

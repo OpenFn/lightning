@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Slash-command skills (`/design`, `/diagnose`, `/qa`) in the global AI
+  assistant, and the assistant's conversation history is now stored as Apollo
+  returns it. Needs the matching Apollo release first.
+  [#5236](https://github.com/OpenFn/lightning/pull/5236)
 - The AI assistant now shows a warning banner above its chat input when the
   current workflow is live.
   [#5205](https://github.com/OpenFn/lightning/pull/5205)
