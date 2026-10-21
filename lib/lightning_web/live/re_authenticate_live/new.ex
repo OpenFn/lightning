@@ -9,10 +9,7 @@ defmodule LightningWeb.ReAuthenticateLive.New do
   def mount(_params, %{"user_return_to" => return_to}, socket) do
     {:ok,
      assign(socket,
-       authentication_options: [:password, :totp],
-       active_option: :password,
-       return_to: return_to,
-       error_message: nil
+       return_to: return_to
      ), layout: {LightningWeb.Layouts, :app}}
   end
 
@@ -26,22 +23,24 @@ defmodule LightningWeb.ReAuthenticateLive.New do
      )}
   end
 
-  @impl true
-  def handle_event("toggle-option", %{"option" => option}, socket) do
-    {:noreply, assign(socket, active_option: String.to_existing_atom(option))}
-  end
-
+  # The page sends the password or the code it was given; which one is on
+  # show is the page's own state now (the old `toggle-option` event is gone).
   @impl true
   def handle_event("reauthenticate-user", %{"user" => params}, socket) do
     current_user = socket.assigns.current_user
 
-    if valid_user_input?(current_user, params) do
-      token = Accounts.generate_sudo_session_token(current_user)
-      return_to = append_token(socket.assigns.return_to, Base.encode64(token))
+    case valid_user_input?(current_user, params) do
+      true ->
+        token = Accounts.generate_sudo_session_token(current_user)
+        return_to = append_token(socket.assigns.return_to, Base.encode64(token))
 
-      {:noreply, socket |> push_navigate(to: return_to, replace: true)}
-    else
-      {:noreply, assign(socket, error_message: error_msg(params))}
+        {:reply, %{}, socket |> push_navigate(to: return_to, replace: true)}
+
+      false ->
+        reply_error(socket, error_msg(params))
+
+      :unknown ->
+        reply_error(socket, "Enter your password or your authentication code.")
     end
   end
 
@@ -50,13 +49,16 @@ defmodule LightningWeb.ReAuthenticateLive.New do
     |> assign(:page_title, "Confirm access")
   end
 
-  defp valid_user_input?(current_user, %{"code" => code}) do
+  defp valid_user_input?(current_user, %{"code" => code}) when is_binary(code) do
     Accounts.valid_user_totp?(current_user, code)
   end
 
-  defp valid_user_input?(current_user, %{"password" => password}) do
+  defp valid_user_input?(current_user, %{"password" => password})
+       when is_binary(password) do
     Accounts.User.valid_password?(current_user, password)
   end
+
+  defp valid_user_input?(_current_user, _params), do: :unknown
 
   defp error_msg(%{"password" => _password}) do
     "Invalid password! Try again."

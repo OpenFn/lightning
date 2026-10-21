@@ -6,69 +6,60 @@ defmodule LightningWeb.ReAuthenticateLiveTest do
 
   setup :register_and_log_in_user
 
+  # The page is drawn by React from data-props. Which method is on show, the
+  # texts, the switch between password and code, and how a refusal is shown
+  # are tested in the design system's AuthConfirmAccessPage.test.tsx; the
+  # event it sends in assets/test/design-system/AuthConfirmAccessPage.test.tsx.
+  @page "#auth-confirm-access-page"
+
+  defp props(view), do: page_props(view, @page)
+
+  defp confirm(view, user_params),
+    do:
+      push_page_event(view, @page, "reauthenticate-user", %{
+        "user" => user_params
+      })
+
+  defp sudo_token(user) do
+    Lightning.Repo.get_by(Lightning.Accounts.UserToken,
+      user_id: user.id,
+      context: "sudo_session"
+    )
+  end
+
   describe "New" do
     setup %{conn: conn} do
       %{conn: put_session(conn, :user_return_to, "/return_here")}
     end
 
-    test "load reauthentication page", %{conn: conn} do
-      {:ok, _live, html} = live(conn, ~p"/auth/confirm_access")
-
-      assert html =~ "Confirm access"
-    end
-
-    test "password is chosen by default", %{conn: conn} do
-      {:ok, _live, html} = live(conn, ~p"/auth/confirm_access")
-
-      assert html =~ "Confirm access"
-      assert html =~ "Password"
-      refute html =~ "Authentication Code"
-    end
-
-    test "user with mfa enabled sees the option to use authenticator app", %{
-      conn: conn
-    } do
-      {:ok, _live, html} = live(conn, ~p"/auth/confirm_access")
-      refute html =~ "Use your authenticator app instead"
-      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
-
-      conn = log_in_user(conn, user)
-      {:ok, _live, html} = live(conn, ~p"/auth/confirm_access")
-      assert html =~ "Use your authenticator app instead"
-    end
-
-    test "user can toggle the authentication method to use", %{
-      conn: conn
-    } do
-      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
-
-      conn = log_in_user(conn, user)
-
+    test "load reauthentication page", %{conn: conn, user: user} do
       {:ok, live, html} = live(conn, ~p"/auth/confirm_access")
-      assert html =~ "Use your authenticator app instead"
-      assert html =~ "Enter your password to confirm access"
 
-      refute html =~ "Use your password instead"
-      refute html =~ "Authentication Code"
+      assert html =~ "Confirm access"
+      # The :app layout has no sidebar, so the first paint draws none either.
+      refute html =~ ~s(id="side-menu")
 
-      live |> element("#use-totp") |> render_click()
-      html = render(live)
+      assert %{
+               "user" => %{
+                 "firstName" => first_name,
+                 "lastName" => last_name,
+                 "mfaEnabled" => false
+               }
+             } = props(live)
 
-      refute html =~ "Use your authenticator app instead"
-      refute html =~ "Enter your password to confirm access"
+      assert first_name == user.first_name
+      assert last_name == user.last_name
+    end
 
-      assert html =~ "Use your password instead"
-      assert html =~ "Authentication Code"
-      assert html =~ "Open your two-factor authenticator (TOTP) app"
+    test "user with mfa enabled gets the option to use the authenticator app", %{
+      conn: conn
+    } do
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
-      live |> element("#use-password") |> render_click()
-      html = render(live)
+      conn = log_in_user(conn, user)
+      {:ok, live, _html} = live(conn, ~p"/auth/confirm_access")
 
-      assert html =~ "Use your authenticator app instead"
-      assert html =~ "Enter your password to confirm access"
-
-      refute html =~ "Use your password instead"
-      refute html =~ "Authentication Code"
+      assert %{"user" => %{"mfaEnabled" => true}} = props(live)
     end
 
     test "user can reauthenticate using the correct password", %{
@@ -81,31 +72,19 @@ defmodule LightningWeb.ReAuthenticateLiveTest do
 
       {:ok, live, _html} = live(conn, ~p"/auth/confirm_access")
 
-      render_click(live, "toggle-option", %{"option" => "password"})
+      confirm(live, %{"password" => user.password})
 
-      {:error, _redirect} =
-        live
-        |> element("form#reauthentication-form")
-        |> render_submit(user: %{password: user.password})
-
-      user_token =
-        Lightning.Repo.get_by!(Lightning.Accounts.UserToken,
-          user_id: user.id,
-          context: "sudo_session"
-        )
+      user_token = sudo_token(user)
+      assert user_token
 
       query_params =
         URI.encode_query(%{"sudo_token" => Base.encode64(user_token.token)})
 
-      assert_redirected(
-        live,
-        "/return_here?#{query_params}"
-      )
+      assert_redirected(live, "/return_here?#{query_params}")
     end
 
-    test "using an incorrect password shows an error", %{
-      conn: conn
-    } do
+    test "using an incorrect password replies with the error and unlocks nothing",
+         %{conn: conn} do
       user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
       conn =
@@ -113,14 +92,10 @@ defmodule LightningWeb.ReAuthenticateLiveTest do
 
       {:ok, live, _html} = live(conn, ~p"/auth/confirm_access")
 
-      render_click(live, "toggle-option", %{"option" => "password"})
+      confirm(live, %{"password" => "wrong password"})
 
-      refute render(live) =~ "Invalid password!. Try again"
-
-      live
-      |> element("form#reauthentication-form")
-      |> render_submit(user: %{password: "wrong password"}) =~
-        "Invalid password!. Try again"
+      assert_reply(live, %{error: "Invalid password! Try again."})
+      refute sudo_token(user)
     end
 
     test "user can reauthenticate using the correct totp code", %{
@@ -133,33 +108,21 @@ defmodule LightningWeb.ReAuthenticateLiveTest do
 
       {:ok, live, _html} = live(conn, ~p"/auth/confirm_access")
 
-      render_click(live, "toggle-option", %{"option" => "totp"})
-
       correct_code = NimbleTOTP.verification_code(user.user_totp.secret)
 
-      {:error, _redirect} =
-        live
-        |> element("form#reauthentication-form")
-        |> render_submit(user: %{code: correct_code})
+      confirm(live, %{"code" => correct_code})
 
-      user_token =
-        Lightning.Repo.get_by!(Lightning.Accounts.UserToken,
-          user_id: user.id,
-          context: "sudo_session"
-        )
+      user_token = sudo_token(user)
+      assert user_token
 
       query_params =
         URI.encode_query(%{"sudo_token" => Base.encode64(user_token.token)})
 
-      assert_redirected(
-        live,
-        "/return_here?#{query_params}"
-      )
+      assert_redirected(live, "/return_here?#{query_params}")
     end
 
-    test "using an incorrect totp code shows an error", %{
-      conn: conn
-    } do
+    test "using an incorrect totp code replies with the error and unlocks nothing",
+         %{conn: conn} do
       user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
       conn =
@@ -167,14 +130,22 @@ defmodule LightningWeb.ReAuthenticateLiveTest do
 
       {:ok, live, _html} = live(conn, ~p"/auth/confirm_access")
 
-      render_click(live, "toggle-option", %{"option" => "totp"})
+      confirm(live, %{"code" => "wrongcode"})
 
-      refute render(live) =~ "Invalid OTP code!. Try again"
+      assert_reply(live, %{error: "Invalid OTP code! Try again."})
+      refute sudo_token(user)
+    end
 
-      live
-      |> element("form#reauthentication-form")
-      |> render_submit(user: %{code: "wrongcode"}) =~
-        "Invalid OTP code!. Try again"
+    test "a crafted event with neither a password nor a code is refused", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, live, _html} = live(conn, ~p"/auth/confirm_access")
+
+      confirm(live, %{"backup_code" => "1234-5678"})
+
+      assert_reply(live, %{error: _})
+      refute sudo_token(user)
     end
   end
 end
