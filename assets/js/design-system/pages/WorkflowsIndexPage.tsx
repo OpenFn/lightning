@@ -33,25 +33,30 @@ export const WorkflowsIndexPage = designSystemPage(
   DesignSystemWorkflowsIndexPage,
   ['/projects/:project_id/w'],
   ({ searchTerm, sortKey, sortDirection, ...props }: Props, { send }) => {
-    // What's typed stays while the LiveView answers a search, so a round
-    // trip never eats keystrokes; the box follows the URL otherwise.
+    // What's typed stays while the LiveView answers. The box follows the
+    // URL's term only when nothing is being typed and every search has been
+    // answered, so a slow reply to an older search never overwrites it.
     const [draft, setDraft] = useState(searchTerm);
-    const sent = useRef(searchTerm);
+    const inFlight = useRef(0);
     const timer = useRef<number | null>(null);
     useEffect(() => {
-      if (searchTerm !== sent.current) {
-        sent.current = searchTerm;
+      if (inFlight.current === 0 && timer.current === null)
         setDraft(searchTerm);
-      }
     }, [searchTerm]);
 
-    const search = (term: string) => {
-      sent.current = term;
-      void send('search_workflows', { value: term });
+    // A refused or lost search leaves the list as it was, as a dropped
+    // keyup did; the next keystroke asks again.
+    const search = (event: string, payload?: Record<string, unknown>) => {
+      inFlight.current += 1;
+      void send(event, payload)
+        .catch(() => undefined)
+        .finally(() => {
+          inFlight.current -= 1;
+        });
     };
     const base = `/projects/${props.project.id}/w`;
     const query = (sort: string, dir: string) =>
-      `${base}?sort=${sort}&dir=${dir}${draft ? `&q=${encodeURIComponent(draft)}` : ''}`;
+      `${base}?sort=${sort}&dir=${dir}${searchTerm ? `&q=${encodeURIComponent(searchTerm)}` : ''}`;
 
     return {
       ...props,
@@ -71,15 +76,19 @@ export const WorkflowsIndexPage = designSystemPage(
       onSearch: (term: string) => {
         setDraft(term);
         if (timer.current) window.clearTimeout(timer.current);
-        timer.current = window.setTimeout(() => search(term), SEARCH_DEBOUNCE);
+        timer.current = window.setTimeout(() => {
+          timer.current = null;
+          search('search_workflows', { value: term });
+        }, SEARCH_DEBOUNCE);
       },
       onClear: () => {
         if (timer.current) window.clearTimeout(timer.current);
+        timer.current = null;
         setDraft('');
-        sent.current = '';
-        void send('clear_search');
+        search('clear_search');
       },
-      // The server answers each of these with a flash and a fresh list.
+      // The server answers each of these with a flash and a fresh list; a
+      // refusal rejects, and the page says so.
       onToggle: (workflowId: string, enabled: boolean) =>
         send('toggle_workflow_state', {
           workflow_state: String(enabled),

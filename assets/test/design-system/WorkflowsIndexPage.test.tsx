@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { WorkflowsIndexPage } from '../../js/design-system/pages/WorkflowsIndexPage';
@@ -48,16 +48,27 @@ const props = {
 const renderPage = (overrides: Partial<typeof props> = {}) => {
   const pushEvent = vi.fn().mockResolvedValue({});
   const redirect = vi.fn();
-  render(
+  const element = (next: Partial<typeof props>) => (
     <WorkflowsIndexPage
-      data-props={JSON.stringify({ ...props, ...overrides })}
+      data-props={JSON.stringify({ ...props, ...next })}
       pushEvent={pushEvent}
       handleEvent={vi.fn()}
       navigate={vi.fn()}
       redirect={redirect}
     />
   );
-  return { pushEvent, redirect };
+  const { rerender } = render(element(overrides));
+  // The LiveView's next props, as a patch would bring them.
+  const patch = (next: Partial<typeof props>) => rerender(element(next));
+  return { pushEvent, redirect, patch };
+};
+
+const deferred = () => {
+  let resolve!: (value: unknown) => void;
+  const promise = new Promise(_resolve => {
+    resolve = _resolve;
+  });
+  return { promise, resolve };
 };
 
 const rowOf = (name: string) => screen.getByText(name).closest('tr')!;
@@ -87,6 +98,42 @@ describe('WorkflowsIndexPage', () => {
 
     fireEvent.click(document.getElementById('clear_search_button')!);
     expect(pushEvent).toHaveBeenCalledWith('clear_search', {});
+  });
+
+  test('a slow reply to an older search never overwrites what was typed', async () => {
+    const { pushEvent, patch } = renderPage();
+    const first = deferred();
+    const second = deferred();
+    pushEvent
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const box = screen.getByPlaceholderText<HTMLInputElement>('Search');
+
+    fireEvent.change(box, { target: { value: 'sy' } });
+    vi.advanceTimersByTime(300);
+    fireEvent.change(box, { target: { value: 'syn' } });
+    vi.advanceTimersByTime(300);
+    expect(pushEvent).toHaveBeenCalledTimes(2);
+
+    // The first search is answered and its URL patched while the second is
+    // still out: the box keeps "syn".
+    await act(async () => {
+      first.resolve({});
+      await Promise.resolve();
+    });
+    patch({ searchTerm: 'sy' });
+    expect(box.value).toBe('syn');
+
+    await act(async () => {
+      second.resolve({});
+      await Promise.resolve();
+    });
+    patch({ searchTerm: 'syn' });
+    expect(box.value).toBe('syn');
+
+    // With nothing pending the box follows the URL (a back navigation).
+    patch({ searchTerm: '' });
+    expect(box.value).toBe('');
   });
 
   test('sorts through the server, with the next order in each column link', () => {
