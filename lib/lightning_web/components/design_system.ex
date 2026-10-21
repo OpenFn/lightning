@@ -64,8 +64,9 @@ defmodule LightningWeb.Components.DesignSystem do
 
   @doc """
   The reply the kit's `send` and `request` reject on. A changeset's errors
-  are flattened to `fieldErrors`, keyed like `collaborators.0.email`, so the
-  page can put each one under its field.
+  are flattened to `fieldErrors`, keyed camelCase like
+  `collaborators.0.email` or `rawName`, so the page can put each one under
+  its field.
   """
   def reply_error(socket, message) when is_binary(message) do
     {:reply, %{error: message}, socket}

@@ -31,44 +31,28 @@ defmodule LightningWeb.DashboardLiveTest do
 
       assert %{"firstName" => first_name, "projects" => []} = props(view)
       assert first_name == user.first_name
-
-      assert html =~ "User Profile"
-      assert html =~ "Credentials"
+      assert html =~ "Projects"
     end
 
-    test "Side menu has credentials and user profile navigation", %{
-      conn: conn
+    # The side menu is drawn by React from the layout's bridge (its links are
+    # tested in assets/test/design-system/shell.test.tsx).
+    test "the side menu gets the profile menu for this user", %{
+      conn: conn,
+      user: user
     } do
       {:ok, index_live, _html} = live(conn, ~p"/projects")
 
-      assert index_live
-             |> has_element?("nav#side-menu a[href='/projects']", "Projects")
+      assert %{
+               "variant" => "profile",
+               "project" => nil,
+               "canAccessAdmin" => false,
+               "collapsed" => false,
+               "theme" => "primary-theme",
+               "user" => %{"email" => email, "firstName" => first_name}
+             } = page_props(index_live, "#sidebar-bridge")
 
-      assert index_live
-             |> has_element?("nav#side-menu a[href='/profile']", "User Profile")
-
-      assert index_live
-             |> has_element?(
-               "nav#side-menu a[href='/credentials']",
-               "Credentials"
-             )
-
-      assert index_live
-             |> has_element?(
-               "nav#side-menu a[href='/profile/tokens']",
-               "API Tokens"
-             )
-
-      assert {:ok, profile_live, _html} =
-               index_live
-               |> element("nav#side-menu a.menu-item", "User Profile")
-               |> render_click()
-               |> follow_redirect(conn, ~p"/profile")
-
-      assert profile_live
-             |> element("nav#side-menu a.menu-item", "Credentials")
-             |> render_click()
-             |> follow_redirect(conn, ~p"/credentials")
+      assert email == user.email
+      assert first_name == user.first_name
     end
 
     test "User's projects are listed", %{conn: conn, user: user} do
@@ -264,6 +248,15 @@ defmodule LightningWeb.DashboardLiveTest do
                project_row(view, project)
     end
 
+    test "the server derives the url-safe name itself", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      create_project(view, %{"rawName" => "My Awesome Project"})
+
+      assert [%{name: "my-awesome-project"}] =
+               Lightning.Projects.get_projects_for_user(user)
+    end
+
     test "creating a project cannot mass-assign parent_id", %{
       conn: conn,
       user: user
@@ -289,7 +282,7 @@ defmodule LightningWeb.DashboardLiveTest do
          %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      # "!!!" has no url-safe characters, so the page sends an empty name.
+      # The page sends the url-safe form of what was typed; "!!!" has none.
       create_project(view, %{"rawName" => "", "description" => ""})
 
       assert_reply(view, %{
