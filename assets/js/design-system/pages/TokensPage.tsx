@@ -13,6 +13,7 @@ interface Props {
 
 /** The design system's personal access tokens page, fed by TokensLive.Index. */
 export const TokensPage = designSystemPage(
+  'TokensPage',
   DesignSystemTokensPage,
   ['/profile/tokens', '/profile/tokens/:id/delete'],
   ({ tokens, tokenId }: Props, { request, send, navigate }) => {

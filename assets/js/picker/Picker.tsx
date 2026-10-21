@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { registerComponent } from '#/react/lib';
 import { cn } from '../utils/cn';
 
 /**
@@ -399,3 +400,7 @@ export function Picker(props: PickerProps) {
     </div>
   );
 }
+
+// The layout loads this module with the page, so the hook renders the
+// picker as soon as the LiveView joins instead of after a lazy import.
+registerComponent('Picker', Picker as unknown as React.ComponentType<object>);

@@ -1,4 +1,3 @@
-import type { View } from 'phoenix_live_view';
 import type * as ReactDOMClient from 'react-dom/client';
 
 import type { PhoenixHook } from '#/hooks/PhoenixHook';
@@ -44,6 +43,9 @@ export type ReactComponentHook<Props = object> = PhoenixHook<
 
     /** The [React component](https://react.dev/learn/your-first-component) that will actually be rendered */
     _Component: React.ComponentType<t.EmptyObject>;
+
+    /** Whether the component was registered by a module loaded with the page */
+    _preloaded: boolean;
 
     /** The [React root](https://react.dev/reference/react-dom/client/createRoot) */
     _root: ReactDOMClient.Root | undefined;

@@ -484,6 +484,13 @@ defmodule LightningWeb.LayoutComponents do
       |> assign(:current_id, assigns[:project] && assigns[:project].id)
 
     ~H"""
+    <%!-- Loaded with the HTML, so the picker renders when the LiveView joins. --%>
+    <script
+      :if={assigns[:current_user]}
+      type="module"
+      src={~p"/assets/js/picker/Picker.js"}
+    >
+    </script>
     <div
       :if={assigns[:current_user]}
       id="global-project-picker"

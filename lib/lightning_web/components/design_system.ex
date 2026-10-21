@@ -34,6 +34,10 @@ defmodule LightningWeb.Components.DesignSystem do
 
     ~H"""
     <div class="flex h-full w-full flex-col">
+      <%!-- Loaded with the HTML, so the hook's import of the same URL finds the
+      module evaluated and the page renders as soon as LiveView connects. --%>
+      <script type="module" src={~p"/assets/js/design-system/pages/#{@file}"}>
+      </script>
       <Common.dynamic_component
         :if={@banner}
         function={@banner.function}

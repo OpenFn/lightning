@@ -3,7 +3,7 @@ import { RouterProvider } from '@openfn/ui/routing/router.tsx';
 import { RequestError } from '@openfn/ui/utils/errors.ts';
 import { useEffect, useMemo, useRef } from 'react';
 
-import { replaceEqualDeep } from '#/react/lib';
+import { registerComponent, replaceEqualDeep } from '#/react/lib';
 
 import { useLiveViewRouter } from './router';
 
@@ -114,6 +114,8 @@ const createActions = (
  * it may keep UI state (a secret shown once, a draft).
  */
 export const designSystemPage = <Props, PageProps extends object>(
+  /** The island's name: the module's export and the LiveView's `name`. */
+  name: string,
   Page: React.ComponentType<PageProps>,
   routes: string[],
   useProps: (props: Props, actions: PageActions) => PageProps
@@ -165,6 +167,9 @@ export const designSystemPage = <Props, PageProps extends object>(
       </RouterProvider>
     );
   };
-  Island.displayName = `designSystemPage(${Page.displayName ?? Page.name})`;
+  Island.displayName = `designSystemPage(${name})`;
+  // The module is loaded with the page, so the hook finds the island here
+  // and renders it before the LiveView reports itself connected.
+  registerComponent(name, Island as unknown as React.ComponentType<object>);
   return Island;
 };

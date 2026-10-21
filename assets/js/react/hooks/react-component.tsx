@@ -1,5 +1,6 @@
 import type { ViewHook } from 'phoenix_live_view';
 import { StrictMode } from 'react';
+import { flushSync } from 'react-dom';
 import ReactDOMClient from 'react-dom/client';
 import invariant from 'tiny-invariant';
 import warning from 'tiny-warning';
@@ -10,6 +11,7 @@ import {
   importComponent,
   isReactHookedElement,
   lazyLoadComponent,
+  preloadedComponent,
   replaceEqualDeep,
   withProps,
   RootObserver,
@@ -50,11 +52,16 @@ export const ReactComponent = {
     // TODO: remove this, in this hook there is no difference between the
     // container and the element
     this._containerEl = this.el;
+    // A component registered by a module loaded with the page renders in the
+    // same task as the LiveView join; anything else is imported lazily.
+    const preloaded = preloadedComponent(this._name);
+    this._preloaded = preloaded !== undefined;
     this._Component = withProps(
-      lazyLoadComponent(
-        () => importComponent(this._file, this._name),
-        this._name
-      ),
+      preloaded ??
+        lazyLoadComponent(
+          () => importComponent(this._file, this._name),
+          this._name
+        ),
       /* eslint-disable @typescript-eslint/unbound-method -- bound using `Function.prototype.bind` */
       this._subscribe,
       this._getProps,
@@ -271,19 +278,26 @@ export const ReactComponent = {
 
     // We'll only call `render` this once because updates are triggered using
     // `useSyncExternalStore`, and so we don't need to manually trigger re-renders.
-    this._root.render(
-      // Find common bugs early in development with [`StrictMode`](https://react.dev/reference/react/StrictMode)
-      <StrictMode>
-        <Boundary
-          ref={
-            // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
-            this._onBoundary
-          }
-        >
-          <this._Component />
-        </Boundary>
-      </StrictMode>
-    );
+    const render = () =>
+      this._root?.render(
+        // Find common bugs early in development with [`StrictMode`](https://react.dev/reference/react/StrictMode)
+        <StrictMode>
+          <Boundary
+            ref={
+              // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
+              this._onBoundary
+            }
+          >
+            <this._Component />
+          </Boundary>
+        </StrictMode>
+      );
+
+    // A preloaded component commits before the join finishes. A lazy one
+    // can't, and may be mounting from inside another root's commit (the
+    // Boundary ref runs execNewMounted), where flushSync is not allowed.
+    if (this._preloaded) flushSync(render);
+    else render();
   },
 
   _mountPortal() {

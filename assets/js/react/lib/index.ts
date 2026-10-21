@@ -5,6 +5,7 @@ export { isReactHookedElement } from './is-react-hooked-element';
 export { lazyLoadComponent } from './lazy-load-component';
 export { mergeChildren } from './merge-children';
 export { performPatch } from './perform-patch';
+export { preloadedComponent, registerComponent } from './preloaded';
 export { renderPortals } from './render-portals';
 export { renderSlots } from './render-slots';
 export { replaceEqualDeep } from './replace-equal-deep';

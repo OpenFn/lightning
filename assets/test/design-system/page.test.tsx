@@ -22,6 +22,7 @@ const Page = ({
 }) => <button onClick={() => void onGo()}>{label}</button>;
 
 const Island = designSystemPage(
+  'ThingsPage',
   Page,
   ['/things', '/things/:id'],
   (props: Props, actions) => {
