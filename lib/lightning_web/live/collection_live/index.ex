@@ -48,9 +48,9 @@ defmodule LightningWeb.CollectionLive.Index do
     end
   end
 
-  def handle_event("update_collection", %{"id" => id} = params, socket) do
+  def handle_event("update_collection", params, socket) do
     with :ok <- authorize(socket),
-         {:ok, collection} <- fetch_collection(socket, id),
+         {:ok, collection} <- fetch_collection(socket, params["id"]),
          {:ok, attrs} <- collection_attrs(socket, params) do
       collection
       |> Collections.update_collection(attrs)
@@ -58,9 +58,9 @@ defmodule LightningWeb.CollectionLive.Index do
     end
   end
 
-  def handle_event("delete_collection", %{"collection" => id}, socket) do
+  def handle_event("delete_collection", params, socket) do
     with :ok <- authorize(socket),
-         {:ok, collection} <- fetch_collection(socket, id) do
+         {:ok, collection} <- fetch_collection(socket, params["collection"]) do
       case Collections.delete_collection(collection.id) do
         {:ok, _collection} ->
           {:reply, %{},
@@ -98,12 +98,16 @@ defmodule LightningWeb.CollectionLive.Index do
   # The page's values as the changeset's params: the name derived from what
   # was typed, as the old form did, and a project that exists.
   defp collection_attrs(socket, params) do
-    project_id = params["projectId"]
+    # Crafted payloads may carry anything; only strings are looked at.
+    project_id =
+      if is_binary(params["projectId"]), do: params["projectId"], else: ""
 
-    with {:ok, _uuid} <- Ecto.UUID.cast(to_string(project_id)),
+    raw_name = if is_binary(params["rawName"]), do: params["rawName"], else: ""
+
+    with {:ok, _uuid} <- Ecto.UUID.cast(project_id),
          %{} <- Projects.get_project(project_id) do
       attrs =
-        %{"raw_name" => params["rawName"], "project_id" => project_id}
+        %{"raw_name" => raw_name, "project_id" => project_id}
         |> Helpers.derive_name_param()
 
       {:ok, attrs}
