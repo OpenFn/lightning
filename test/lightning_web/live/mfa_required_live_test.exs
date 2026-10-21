@@ -8,16 +8,15 @@ defmodule LightningWeb.MFARequiredLiveTest do
   setup :create_project_for_current_user
 
   describe "Index" do
-    test "displays the right copy", %{conn: conn} do
+    test "shows the page to a user without MFA", %{conn: conn} do
       {:ok, view, html} = live(conn, "/mfa_required")
 
-      assert html =~
-               "This project requires all members to use multi-factor authentication."
-
-      assert view |> element(~s{[href="/profile"]}) |> has_element?()
+      assert html =~ "MFA Required for Project"
+      # The copy and the /profile links are drawn by React from no props.
+      assert page_props(view, "#mfa-required-page") == %{}
     end
 
-    test "redirects to / if user already has mfa enabled", %{
+    test "redirects to /projects if user already has mfa enabled", %{
       conn: conn,
       project: project
     } do
