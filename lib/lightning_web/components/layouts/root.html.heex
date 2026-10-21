@@ -47,9 +47,30 @@
   <body class="h-full">
     {render_slot(@body_tags)}
     <%!-- The sidebar lives outside the LiveView so it survives navigation;
-    app.js mounts it here when a layout provides sidebar props. --%>
+    app.js mounts it here when a layout provides sidebar props. Until it
+    does, the HEEx sidebar stands in, so the first paint has one too. --%>
     <div class="min-h-full flex">
-      <div id="app-sidebar" class="contents"></div>
+      <div id="app-sidebar" class="contents">
+        <LayoutComponents.heex_sidebar
+          :if={LayoutComponents.first_paint_sidebar?(assigns)}
+          variant={
+            cond do
+              String.starts_with?(@conn.request_path, "/settings/") -> "admin"
+              assigns[:project] -> "project"
+              true -> "profile"
+            end
+          }
+          project={assigns[:project]}
+          current_user={@current_user}
+          active_menu_item={assigns[:active_menu_item]}
+          side_menu_theme={
+            if String.starts_with?(@conn.request_path, "/settings/"),
+              do: "sudo-variant",
+              else: assigns[:side_menu_theme] || "primary-theme"
+          }
+          sidebar_collapsed={assigns[:sidebar_collapsed] == true}
+        />
+      </div>
       <div class="min-w-0 flex-auto">
         {@inner_content}
       </div>

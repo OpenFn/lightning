@@ -2,7 +2,11 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { publishSidebar, Shell } from '../../js/design-system/shell';
+import {
+  mountShell,
+  publishSidebar,
+  Shell,
+} from '../../js/design-system/shell';
 
 // What a layout's SidebarBridge publishes (see LayoutComponents.sidebar_bridge).
 const props = {
@@ -103,6 +107,28 @@ describe('Shell', () => {
 
     expect(navigate).toHaveBeenCalledWith('/credentials', expect.anything());
     expect(toggle).toHaveBeenCalledTimes(1);
+  });
+
+  test('mounting takes over the first paint drawn by the server', async () => {
+    window.history.replaceState(null, '', '/projects');
+    document.body.innerHTML = `
+      <div id="app-sidebar"><nav id="side-menu" data-first-paint>static</nav></div>
+      <div id="sidebar-bridge" data-props='${JSON.stringify(props)}'></div>`;
+
+    await act(async () => {
+      mountShell({ execJS: vi.fn() });
+      await Promise.resolve();
+    });
+
+    expect(document.querySelector('[data-first-paint]')).toBeNull();
+    expect(document.querySelectorAll('#app-sidebar #side-menu')).toHaveLength(
+      1
+    );
+    expect(screen.getByRole('link', { name: 'Credentials' })).toHaveAttribute(
+      'href',
+      '/credentials'
+    );
+    document.body.innerHTML = '';
   });
 
   test('the account menu says who is signed in and logs out', async () => {

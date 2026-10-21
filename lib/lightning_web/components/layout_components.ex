@@ -243,6 +243,183 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
+  @doc """
+  Whether the root layout should draw the sidebar for the first paint: a
+  LiveView page (InitAssigns ran) with a signed-in user, whose sidebar the
+  design system will take over. Hosted pages keep the HEEx sidebar inside
+  the LiveView instead.
+  """
+  def first_paint_sidebar?(assigns) do
+    Map.has_key?(assigns, :sidebar_collapsed) and not hosted_sidebar?(assigns)
+  end
+
+  attr :variant, :string, required: true, values: ~w(project profile admin)
+  attr :current_user, :any, default: nil
+  attr :project, :any, default: nil
+  attr :active_menu_item, :atom, default: nil
+  attr :side_menu_theme, :string, default: "primary-theme"
+  attr :sidebar_collapsed, :boolean, default: false
+  attr :is_first_setup, :boolean, default: false
+
+  @doc """
+  The sidebar as HEEx. Hosted instances render it inside the LiveView,
+  because they inject their own menu items into it. Every other page gets it
+  from the root layout for the first paint, and the design system's sidebar
+  replaces it when app.js mounts (`mountShell`), so a full page load never
+  shows a frame without a sidebar.
+  """
+  def heex_sidebar(assigns) do
+    ~H"""
+    <!-- Sidebar toggle keyboard shortcut -->
+    <span
+      id="sidebar-toggle-shortcut"
+      phx-hook="ToggleSidebarViaCtrlM"
+      class="hidden"
+    >
+    </span>
+    <%!-- Sidebar placeholder: maintains layout width --%>
+    <div class={[
+      "flex-shrink-0 transition-[width] duration-200",
+      @sidebar_collapsed && "w-16",
+      !@sidebar_collapsed && "w-48"
+    ]}>
+    </div>
+    <%!-- Sidebar panel: overlays when collapsed, inline when expanded --%>
+    <div
+      id="sidebar-panel"
+      data-collapsed={to_string(@sidebar_collapsed)}
+      phx-hook="SidebarHoverDelay"
+      class="flex flex-col h-full z-[100] group transition-[width] duration-200 fixed"
+    >
+      <%!-- Header --%>
+      <div class={[
+        "app-logo-container h-20 flex items-center",
+        @side_menu_theme
+      ]}>
+        <.user_menu_dropdown :if={@current_user} current_user={@current_user} />
+      </div>
+      <nav
+        id="side-menu"
+        class={[
+          "flex-1 overflow-hidden",
+          @side_menu_theme
+        ]}
+      >
+        <div class="flex flex-col h-full">
+          <%= if @variant == "admin" do %>
+            <div class="flex-1 overflow-y-auto min-h-0 flex flex-col">
+              <div class="mt-4"></div>
+              <Menu.menu_item
+                to={~p"/settings/projects"}
+                active={@active_menu_item == :projects}
+              >
+                <.icon name="hero-building-library" class="h-5 w-5 shrink-0" />
+                <span class="menu-item-text truncate">Projects</span>
+              </Menu.menu_item>
+              <Menu.menu_item
+                to={~p"/settings/users"}
+                active={@active_menu_item == :users}
+              >
+                <.icon name="hero-user-group" class="h-5 w-5 shrink-0" />
+                <span class="menu-item-text truncate">Users</span>
+              </Menu.menu_item>
+              <Menu.menu_item
+                to={~p"/settings/authentication/new"}
+                active={@active_menu_item == :authentication}
+              >
+                <.icon name="hero-key" class="h-5 w-5 shrink-0" />
+                <span class="menu-item-text truncate">Authentication</span>
+              </Menu.menu_item>
+              <Menu.menu_item
+                to={~p"/settings/audit"}
+                active={@active_menu_item == :audit}
+              >
+                <.icon name="hero-archive-box" class="h-5 w-5 shrink-0" />
+                <span class="menu-item-text truncate">Audit</span>
+              </Menu.menu_item>
+              <Menu.menu_item
+                to={~p"/settings/collections"}
+                active={@active_menu_item == :collections}
+              >
+                <.icon name="hero-circle-stack" class="h-5 w-5 shrink-0" />
+                <span class="menu-item-text truncate">Collections</span>
+              </Menu.menu_item>
+              <Menu.menu_item
+                to={~p"/settings/maintenance"}
+                active={@active_menu_item == :maintenance}
+              >
+                <.icon name="hero-wrench-screwdriver" class="h-5 w-5 shrink-0" />
+                <span class="menu-item-text truncate">Maintenance</span>
+              </Menu.menu_item>
+              <.settings_menu_items_extension
+                current_user={@current_user}
+                active_menu_item={@active_menu_item}
+              />
+              <div class="grow"></div>
+              <Menu.menu_item to={~p"/projects"}>
+                <.icon name="hero-arrow-left" class="h-5 w-5 shrink-0" />
+                <span class="menu-item-text truncate">Back</span>
+              </Menu.menu_item>
+            </div>
+          <% else %>
+            <div class="flex-1 py-4 overflow-y-auto min-h-0 flex flex-col">
+              <%= unless @is_first_setup do %>
+                <.menu_items
+                  project={@project}
+                  current_user={@current_user}
+                  active_menu_item={@active_menu_item}
+                />
+                <div class="grow"></div>
+                <%= if @current_user.role == :superuser do %>
+                  <Menu.menu_item to={~p"/settings/projects"}>
+                    <.icon name="hero-cog-6-tooth" class="h-5 w-5 shrink-0" />
+                    <span class="menu-item-text truncate">Admin Menu</span>
+                  </Menu.menu_item>
+                  <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
+                    <Menu.menu_item to={~p"/dashboard"}>
+                      <.icon
+                        name="hero-exclamation-triangle"
+                        class="h-5 w-5 shrink-0"
+                      />
+                      <span class="menu-item-text truncate">Sys Info</span>
+                    </Menu.menu_item>
+                  <% end %>
+                <% else %>
+                  <Menu.menu_item href="https://docs.openfn.org">
+                    <.icon name="hero-book-open-mini" class="h-5 w-5 shrink-0" />
+                    <span class="menu-item-text truncate">Documentation</span>
+                  </Menu.menu_item>
+                  <Menu.menu_item href="https://community.openfn.org">
+                    <.icon name="hero-user-group-mini" class="h-5 w-5 shrink-0" />
+                    <span class="menu-item-text truncate">Community</span>
+                  </Menu.menu_item>
+                  <Menu.menu_item
+                    href={"mailto:" <> Lightning.Config.instance_admin_email()}
+                    target="_self"
+                  >
+                    <.icon name="hero-lifebuoy-mini" class="h-5 w-5 shrink-0" />
+                    <span
+                      class="menu-item-text truncate"
+                      title={Lightning.Config.instance_admin_email()}
+                    >
+                      Support
+                    </span>
+                  </Menu.menu_item>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+          <Menu.experimental_mode_item
+            :if={@current_user}
+            current_user={@current_user}
+          />
+          <.sidebar_footer />
+        </div>
+      </nav>
+    </div>
+    """
+  end
+
   def settings_menu_items_extension(assigns) do
     assigns =
       assigns

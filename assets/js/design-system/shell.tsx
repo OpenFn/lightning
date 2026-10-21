@@ -48,14 +48,25 @@ export const SidebarBridge = {
     this.publish();
   },
   publish() {
-    publish({
-      props: JSON.parse(this.el.dataset['props'] ?? '{}') as Props,
-      toggle: () => {
-        this.pushEvent('toggle_sidebar', {});
-      },
-    });
+    const props = parseProps(this.el);
+    if (props)
+      publish({
+        props,
+        toggle: () => {
+          this.pushEvent('toggle_sidebar', {});
+        },
+      });
   },
 } as PhoenixHook<{ publish(): void }>;
+
+const parseProps = (el: HTMLElement): Props | null => {
+  try {
+    return JSON.parse(el.dataset['props'] ?? 'null') as Props | null;
+  } catch (error) {
+    console.error('Could not read the sidebar props', error);
+    return null;
+  }
+};
 
 type Go = (path: string, opts?: { replace?: boolean }) => void;
 
@@ -81,6 +92,11 @@ interface LiveNavigator {
 export const mountShell = (liveSocket: LiveNavigator) => {
   const el = document.getElementById('app-sidebar');
   if (!el) return;
+  // The dead render already carries the bridge, so the sidebar is in the
+  // first paint; the hook replaces these props, and the toggle, on join.
+  const bridge = document.getElementById('sidebar-bridge');
+  const props = bridge && parseProps(bridge);
+  if (props) publish({ props, toggle: () => {} });
   const navigate: Go = (href, opts) => {
     const main = document.querySelector('[data-phx-main]') ?? el;
     liveSocket.execJS(

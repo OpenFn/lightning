@@ -40,7 +40,12 @@ defmodule LightningWeb.DashboardLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, index_live, _html} = live(conn, ~p"/projects")
+      {:ok, index_live, html} = live(conn, ~p"/projects")
+
+      # The first paint carries the HEEx sidebar; the design system's replaces it.
+      assert html =~ ~s(<div id="app-sidebar" class="contents">)
+      assert html =~ ~s(id="side-menu")
+      assert html =~ "User Profile"
 
       assert %{
                "variant" => "profile",

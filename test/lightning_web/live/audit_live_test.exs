@@ -54,6 +54,10 @@ defmodule LightningWeb.AuditLiveTest do
       {:ok, live, html} = live(conn, ~p"/settings/audit", on_error: :raise)
 
       assert html =~ "Audit"
+      # The first paint carries the admin HEEx sidebar in the admin theme.
+      assert html =~ ~s(id="side-menu")
+      assert html =~ "sudo-variant"
+      assert html =~ "Maintenance"
 
       for_credential =
         Enum.filter(events(live), &(&1["itemId"] == credential.id))
