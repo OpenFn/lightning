@@ -1,0 +1,26 @@
+<.design_system_page
+  name="WorkflowsIndexPage"
+  props={
+    %{
+      project: %{
+        id: @project.id,
+        parentId: @project.parent_id,
+        color: @project.color
+      },
+      projectLabel: @project_label,
+      period: @dashboard_period,
+      stats: stats_json(@workflows_stats, @project, @lifecycle),
+      metrics: metrics_json(@metrics),
+      pendingHref: history_path(@project, pending_wo_filters()),
+      failedHref: history_path(@project, failed_wo_filters()),
+      searchTerm: @search_term,
+      sortKey: @sort_key,
+      sortDirection: @sort_direction,
+      canCreateWorkflow: @can_create_workflow,
+      canDeleteWorkflow: @can_delete_workflow,
+      lifecycle: @lifecycle
+    }
+  }
+  banner={assigns[:banner]}
+  current_user={@current_user}
+/>

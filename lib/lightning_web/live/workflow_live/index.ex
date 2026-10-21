@@ -6,11 +6,13 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Extensions.Message
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.WorkOrder
+  alias Lightning.WorkOrders.SearchParams
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias LightningWeb.Live.Helpers.TableHelpers
-  alias LightningWeb.WorkflowLive.DashboardComponents
+  alias LightningWeb.WorkflowLive.Helpers
 
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
@@ -22,61 +24,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   # this set via TableHelpers.sort_field/3, never interned.
   @sortable_keys ~w(name last_workorder_updated_at workorders_count
                     failed_workorders_count enabled)a
-
-  attr :dashboard_period, :string, default: @dashboard_period
-  attr :can_create_workflow, :boolean
-  attr :can_delete_workflow, :boolean
-  attr :workflows, :list
-  attr :project, Lightning.Projects.Project
-  attr :banner, :map, default: nil
-  attr :search_term, :string, default: ""
-
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <LayoutComponents.page_content>
-      <:banner>
-        <Common.dynamic_component
-          :if={assigns[:banner]}
-          function={@banner.function}
-          args={@banner.attrs}
-        />
-      </:banner>
-      <:header>
-        <LayoutComponents.header current_user={@current_user}>
-          <:breadcrumbs>
-            <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker
-                project={@project}
-                label={@project_label}
-              />
-            </LayoutComponents.breadcrumbs>
-          </:breadcrumbs>
-          <:period>{@dashboard_period}</:period>
-        </LayoutComponents.header>
-      </:header>
-      <LayoutComponents.centered>
-        <DashboardComponents.workflows_header
-          count={length(@workflows_stats)}
-          project={@project}
-          can_create_workflow={@can_create_workflow}
-          search_term={@search_term}
-        />
-        <DashboardComponents.project_metrics metrics={@metrics} project={@project} />
-        <DashboardComponents.workflow_list
-          lifecycle={@lifecycle}
-          period={@dashboard_period}
-          can_delete_workflow={@can_delete_workflow}
-          workflows_stats={@workflows_stats}
-          project={@project}
-          sort_key={@sort_key}
-          sort_direction={@sort_direction}
-          search_term={@search_term}
-        />
-      </LayoutComponents.centered>
-    </LayoutComponents.page_content>
-    """
-  end
 
   @impl true
   def mount(_params, _session, socket) do
@@ -101,6 +48,7 @@ defmodule LightningWeb.WorkflowLive.Index do
     {:ok,
      socket
      |> assign(
+       dashboard_period: @dashboard_period,
        lifecycle:
          Lightning.Accounts.experimental_features_enabled?(current_user),
        can_delete_workflow: can_delete_workflow,
@@ -177,7 +125,7 @@ defmodule LightningWeb.WorkflowLive.Index do
 
     query_params = build_query_params(search_term, sort_key, sort_direction)
 
-    {:noreply,
+    {:reply, %{},
      socket
      |> push_patch(
        to: ~p"/projects/#{socket.assigns.project.id}/w?#{query_params}"
@@ -192,7 +140,7 @@ defmodule LightningWeb.WorkflowLive.Index do
       dir: sort_direction
     }
 
-    {:noreply,
+    {:reply, %{},
      socket
      |> push_patch(
        to: ~p"/projects/#{socket.assigns.project.id}/w?#{query_params}"
@@ -211,7 +159,7 @@ defmodule LightningWeb.WorkflowLive.Index do
 
     query_params = build_query_params(search_term, sort_key, sort_direction)
 
-    {:noreply,
+    {:reply, %{},
      push_patch(socket,
        to: ~p"/projects/#{socket.assigns.project.id}/w?#{query_params}"
      )}
@@ -242,32 +190,32 @@ defmodule LightningWeb.WorkflowLive.Index do
       |> transition_workflow_state(state, actor)
       |> case do
         {:ok, _workflow} ->
-          {:noreply,
+          {:reply, %{},
            socket
            |> put_flash(:info, "Workflow updated")
            |> push_patch(to: redirect)}
 
         {:error, %Message{text: text}} when is_binary(text) ->
-          {:noreply,
+          {:reply, %{},
            socket
            |> put_flash(:error, text)
            |> push_patch(to: redirect)}
 
         {:error, _reason} ->
-          {:noreply,
+          {:reply, %{},
            socket
            |> put_flash(:error, "Failed to update workflow. Please try again.")
            |> push_patch(to: redirect)}
       end
     else
       false ->
-        {:noreply,
+        {:reply, %{},
          socket
          |> put_flash(:error, "You are not authorized to perform this action.")
          |> push_patch(to: redirect)}
 
       nil ->
-        {:noreply,
+        {:reply, %{},
          socket
          |> put_flash(:error, "Workflow not found.")
          |> push_patch(to: redirect)}
@@ -294,23 +242,28 @@ defmodule LightningWeb.WorkflowLive.Index do
       |> case do
         {:ok, _} ->
           {
-            :noreply,
+            :reply,
+            %{},
             socket
             |> put_flash(:info, "Workflow successfully deleted.")
             |> push_patch(to: ~p"/projects/#{project.id}/w?#{query_params}")
           }
 
         {:error, _changeset} ->
-          {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
+          {:reply, %{}, socket |> put_flash(:error, "Can't delete workflow")}
+
+        # mark_for_deletion runs a Multi, whose failure is a 4-tuple.
+        {:error, _step, _reason, _changes} ->
+          {:reply, %{}, socket |> put_flash(:error, "Can't delete workflow")}
       end
     else
       false ->
-        {:noreply,
+        {:reply, %{},
          socket
          |> put_flash(:error, "You are not authorized to perform this action.")}
 
       nil ->
-        {:noreply, socket |> put_flash(:error, "Workflow not found.")}
+        {:reply, %{}, socket |> put_flash(:error, "Workflow not found.")}
     end
   end
 
@@ -343,5 +296,102 @@ defmodule LightningWeb.WorkflowLive.Index do
     else
       base_params
     end
+  end
+
+  # The shape the design system's WorkflowStats type expects: what each row
+  # shows, plus the History links behind the counts.
+  defp stats_json(stats, project, lifecycle?) do
+    wo_filters = wo_filters()
+    failed_filters = failed_wo_filters()
+
+    Enum.map(stats, fn stats ->
+      workflow = stats.workflow
+
+      %{
+        workflow: %{
+          id: workflow.id,
+          name: workflow.name,
+          updatedAt: workflow.updated_at,
+          enabled: Helpers.workflow_enabled?(workflow),
+          triggerType: trigger_type(workflow)
+        },
+        triggerEnabled: Enum.any?(workflow.triggers, & &1.enabled),
+        state: to_string(workflow.state),
+        toggleTooltip: toggle_tooltip(workflow, lifecycle?),
+        lastWorkOrder: work_order_json(stats.last_workorder),
+        lastFailedAt: stats.last_failed_workorder.updated_at,
+        workordersCount: stats.workorders_count,
+        failedWorkordersCount: stats.failed_workorders_count,
+        stepCount: stats.step_count,
+        stepSuccessRate: stats.step_success_rate,
+        historyHref:
+          history_path(project, Map.put(wo_filters, :workflow_id, workflow.id)),
+        failedHistoryHref:
+          history_path(
+            project,
+            Map.put(failed_filters, :workflow_id, workflow.id)
+          )
+      }
+    end)
+  end
+
+  defp trigger_type(%{triggers: [%{type: type} | _]}), do: to_string(type)
+  defp trigger_type(_workflow), do: "webhook"
+
+  # With the lifecycle on, the switch (in a sandbox) speaks of the state.
+  defp toggle_tooltip(workflow, false),
+    do: Helpers.workflow_state_tooltip(workflow)
+
+  defp toggle_tooltip(%{state: :live}, true),
+    do: "On. Its triggers are answering."
+
+  defp toggle_tooltip(_workflow, true),
+    do: "Off. Its triggers are not answering."
+
+  defp work_order_json(%{state: nil}), do: nil
+
+  defp work_order_json(%{state: state, updated_at: updated_at}),
+    do: %{state: to_string(state), updatedAt: updated_at}
+
+  defp metrics_json(%DashboardStats.ProjectMetrics{} = metrics) do
+    %{
+      workOrders: %{
+        total: metrics.work_order_metrics.total,
+        pending: metrics.work_order_metrics.pending,
+        failed: metrics.work_order_metrics.failed,
+        failedPercentage: metrics.work_order_metrics.failed_percentage
+      },
+      runs: %{
+        total: metrics.run_metrics.total,
+        pending: metrics.run_metrics.pending,
+        success: metrics.run_metrics.success,
+        successRate: metrics.run_metrics.success_rate
+      }
+    }
+  end
+
+  # One definition of "the work orders behind this number", so every link
+  # opens the same window and the same states its count was taken from.
+  defp history_path(project, filters) do
+    ~p"/projects/#{project}/history?#{%{filters: filters}}"
+  end
+
+  defp wo_filters do
+    SearchParams.to_uri_params(%{"date_after" => DashboardStats.window_start()})
+  end
+
+  defp pending_wo_filters do
+    SearchParams.to_uri_params(%{
+      "date_after" => DashboardStats.window_start(),
+      "pending" => "true",
+      "running" => "true"
+    })
+  end
+
+  defp failed_wo_filters do
+    WorkOrder.failure_states()
+    |> Map.new(&{to_string(&1), "true"})
+    |> Map.put("date_after", DashboardStats.window_start())
+    |> SearchParams.to_uri_params()
   end
 end
