@@ -4,7 +4,6 @@ defmodule LightningWeb.BackupCodesLive.Index do
   """
   use LightningWeb, :live_view
   alias Lightning.Accounts
-  alias Phoenix.LiveView.JS
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
@@ -26,12 +25,17 @@ defmodule LightningWeb.BackupCodesLive.Index do
   @impl true
   def handle_event("regenerate-backup-codes", _params, socket) do
     current_user = socket.assigns.current_user
-    {:ok, user} = Accounts.regenerate_user_backup_codes(current_user)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "New Backup Codes Generated!")
-     |> assign(backup_codes: user.backup_codes)}
+    case Accounts.regenerate_user_backup_codes(current_user) do
+      {:ok, user} ->
+        {:reply, %{},
+         socket
+         |> put_flash(:info, "New Backup Codes Generated!")
+         |> assign(backup_codes: user.backup_codes)}
+
+      {:error, _changeset} ->
+        reply_error(socket, "Could not generate new backup codes")
+    end
   end
 
   defp apply_action(socket, :index, _params) do
@@ -41,5 +45,11 @@ defmodule LightningWeb.BackupCodesLive.Index do
       :backup_codes,
       Accounts.list_user_backup_codes(socket.assigns.current_user)
     )
+  end
+
+  # The shape the design system's BackupCode type expects: the code and when
+  # it was used, nothing else about the row.
+  defp codes_json(backup_codes) do
+    Enum.map(backup_codes, &%{code: &1.code, usedAt: &1.used_at})
   end
 end
