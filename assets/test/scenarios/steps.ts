@@ -855,7 +855,9 @@ export function seedWorkOrders(
 // workflows. Do this before removing the project: steps and runs hold
 // restricting references.
 export function removeWorkflowData(projectId: string) {
-  exec(`delete from steps where job_id in
+  exec(`delete from workflow_releases where workflow_id in
+          (select id from workflows where project_id = '${projectId}');
+        delete from steps where job_id in
           (select j.id from jobs j join workflows w on w.id = j.workflow_id
            where w.project_id = '${projectId}');
         delete from work_orders where workflow_id in
@@ -1244,15 +1246,23 @@ export const sortHistoryBy = (page: Page, column: string) =>
 // When the page is sent the LiveView event <event> with <values>, even though
 // nothing on it offers that action. The sortable column header sends an event
 // named by its phx-click; repoint it and click.
-export async function sendEvent(
+export const sendEvent = (
   page: Page,
+  event: string,
+  values: Record<string, string> = {}
+) => sendEventFrom(page, 'Created', event, values);
+
+// The same, from the sortable column header named <header>
+export async function sendEventFrom(
+  page: Page,
+  header: string,
   event: string,
   values: Record<string, string> = {}
 ) {
   lightningOnly('needs a server: a forged event has nothing to reach');
   const link = page
     .getByRole('columnheader')
-    .getByRole('link', { name: 'Created' });
+    .getByRole('link', { name: header });
   await link.evaluate(
     (el, { event, values }) => {
       el.removeAttribute('phx-value-by');
@@ -1648,6 +1658,49 @@ export function withFlag(flag: string, value: boolean) {
   return () => onNode(`Application.put_env(:lightning, :${flag}, ${was})`);
 }
 
+// Given the usage limiter refuses workflow activation with <text> — returns a
+// function that puts the previous limiter back
+export function withRefusingLimiter(text = 'No more workflows') {
+  const key = '{Lightning.Services.AdapterHelper, :usage_limiter}';
+  const was = onNode(`:persistent_term.get(${key}, nil)`).trim();
+  onNode(`
+    defmodule Lightning.Extensions.ScenarioRefusingLimiter do
+      @behaviour Lightning.Extensions.UsageLimiting
+      alias Lightning.Extensions.UsageLimiter
+
+      def limit_action(%{type: :activate_workflow}, _context),
+        do: {:error, :too_many_workflows, %Lightning.Extensions.Message{text: ${JSON.stringify(text)}}}
+
+      def limit_action(action, context), do: UsageLimiter.limit_action(action, context)
+      defdelegate check_limits(context), to: UsageLimiter
+      defdelegate increment_ai_usage(session, usage), to: UsageLimiter
+      defdelegate get_run_options(context), to: UsageLimiter
+      defdelegate get_data_retention_periods(context), to: UsageLimiter
+      defdelegate get_data_retention_message(context), to: UsageLimiter
+    end
+    :persistent_term.put(${key}, Lightning.Extensions.ScenarioRefusingLimiter)
+  `);
+  return () =>
+    onNode(
+      was === 'nil'
+        ? `:persistent_term.erase(${key})`
+        : `:persistent_term.put(${key}, ${was})`
+    );
+}
+
+// When "<email>" creates a workflow named <name> in project <projectId>
+// through Lightning (it must succeed)
+export function createWorkflowOnNode(
+  projectId: string,
+  name: string,
+  actorEmail: string
+) {
+  onNodeOk([
+    `actor = Lightning.Repo.get!(Lightning.Accounts.User, "${user(actorEmail).id}")`,
+    `{:ok, _} = Lightning.Workflows.save_workflow(%{name: ${JSON.stringify(name)}, project_id: "${projectId}"}, actor)`,
+  ]);
+}
+
 // Given an external authentication provider "<name>" is configured — returns a function that removes it
 export function withAuthProvider(name: string) {
   onNode(
@@ -1740,4 +1793,162 @@ export function firstSetupOpen() {
     set('superuser');
     restoreFlag();
   };
+}
+
+// ---------------------------------------------------------------------------
+// Workflows page (annotations/views/workflows-index.md)
+// ---------------------------------------------------------------------------
+
+/** Where the workflows page of a project lives, with an optional query. */
+export const workflowsPath = (projectId: string, query = '') =>
+  `/projects/${projectId}/w${query ? `?${query}` : ''}`;
+
+// Given workflow "<name>" has one webhook trigger that is on or off (or no
+// trigger at all), and is live or a draft (live when its trigger is on, unless
+// said). Its trigger leads to the workflow's first job, so Lightning can save
+// the workflow when a scenario switches it. Remove it with
+// removeWorkflowData(projectId) before the project goes.
+export function seedDashboardWorkflow(
+  projectId: string,
+  name: string,
+  {
+    triggers = 'on',
+    state,
+  }: { triggers?: 'on' | 'off' | 'none'; state?: 'live' | 'draft' } = {}
+) {
+  const wf = seedWorkflow(projectId, name);
+  const triggerId = randomUUID();
+  exec(`update workflows set state = '${state ?? (triggers === 'on' ? 'live' : 'draft')}'
+          where id = '${wf.id}';
+        ${
+          triggers === 'none'
+            ? ''
+            : `insert into triggers (id, workflow_id, project_id, type, enabled, inserted_at, updated_at)
+                 values ('${triggerId}', '${wf.id}', '${projectId}', 'webhook', ${triggers === 'on'}, ${NOW}, ${NOW});
+               insert into workflow_edges (id, workflow_id, source_trigger_id, target_job_id, condition_type, enabled, inserted_at, updated_at)
+                 values (gen_random_uuid(), '${wf.id}', '${triggerId}', '${Object.values(wf.jobs)[0]}', 'always', true, ${NOW}, ${NOW});`
+        }`);
+  return wf;
+}
+
+/** What is stored of a workflow: its state, name, when it was deleted and each trigger's on flag. */
+export function workflowStored(id: string) {
+  const [workflow] = sql<{
+    state: string;
+    name: string;
+    deleted_at: string | null;
+  }>(`select state, name, deleted_at from workflows where id = '${id}'`);
+  const triggers = sql<{ enabled: boolean }>(
+    `select enabled from triggers where workflow_id = '${id}'`
+  ).map(t => t.enabled);
+  return { ...workflow, triggers };
+}
+
+/** The audit events recorded for one item, newest first. */
+export const auditEventsOf = (itemId: string) =>
+  sql<{ event: string; actor_id: string | null }>(
+    `select event, actor_id from audit_events where item_id = '${itemId}'
+     order by inserted_at desc`
+  );
+
+/** The names of the workflows the list shows, top to bottom. */
+export const listedWorkflows = (page: Page) =>
+  page
+    .getByRole('row')
+    .filter({ has: page.getByRole('cell') })
+    .evaluateAll(rows =>
+      rows.map(row =>
+        (row.querySelector('td') as HTMLElement).innerText.split('\n')[0].trim()
+      )
+    );
+
+/** The heading above the list: "Workflows (<count>)". */
+export const workflowsHeading = (page: Page, count?: number) =>
+  page.getByRole('heading', {
+    name: count === undefined ? /^Workflows \(\d+\)$/ : `Workflows (${count})`,
+  });
+
+/** The row of the workflow whose name reads <name>. */
+export const workflowRow = (page: Page, name: string) =>
+  page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
+
+const WORKFLOW_COLUMNS = [
+  'name',
+  'latest',
+  'count',
+  'failed',
+  'state',
+  'actions',
+] as const;
+
+/** One cell of a workflow's row. */
+export const workflowCell = (
+  row: Locator,
+  column: (typeof WORKFLOW_COLUMNS)[number]
+) => row.getByRole('cell').nth(WORKFLOW_COLUMNS.indexOf(column));
+
+/** The on/off switch of a workflow's row. */
+export const workflowSwitch = (row: Locator) => row.getByRole('switch');
+// aria-checked is absent when the switch is off, so read the hidden checkbox.
+export const workflowSwitchInput = (row: Locator) =>
+  row.locator('input[type=checkbox]');
+
+/** The card of a project total, found by its title. */
+export const metricCard = (page: Page, title: string) =>
+  page.getByRole('heading', { name: title, exact: true }).locator('xpath=..');
+
+/** The query string of the page now, as name to value. */
+export const queryOf = (page: Page) =>
+  Object.fromEntries(new URL(page.url()).searchParams);
+
+// Then <target> shows the tooltip <text> when pointed at
+export async function expectTooltip(page: Page, target: Locator, text: string) {
+  // A click hides the tooltip, and hovering where the pointer already is fires
+  // no new mouseenter, so move away first.
+  await page.mouse.move(0, 0);
+  await target.hover();
+  await expect(
+    page.getByRole('tooltip').filter({ hasText: text })
+  ).toBeVisible();
+}
+
+// When I type <term> in the workflows search box, key by key (it searches on
+// key up, which filling the box does not send)
+export async function typeInWorkflowSearch(page: Page, term: string) {
+  const box = page.getByPlaceholder('Search', { exact: true });
+  await box.click();
+  await box.pressSequentially(term);
+}
+
+// When I click the clear search button, which is an icon with no name
+export const clearWorkflowSearch = (page: Page) =>
+  page.locator('#clear_search_button').click();
+
+export const createWorkflowButton = (page: Page) =>
+  page.getByRole('button', { name: 'Create new workflow' });
+
+// When I point at a disabled button: it ignores the pointer, the wrapper
+// around it carries the tooltip
+export const hoverDisabled = (button: Locator) =>
+  button.locator('xpath=..').hover();
+
+// How a piece of text looks: its colour and the opacity it is drawn at,
+// counting every ancestor's. Two names look different when this differs.
+export async function lookOf(text: Locator) {
+  return text.evaluate(el => {
+    let opacity = 1;
+    for (let n: Element | null = el; n; n = n.parentElement)
+      opacity *= Number(getComputedStyle(n).opacity);
+    return `${getComputedStyle(el).color} @ ${opacity}`;
+  });
+}
+
+// When I confirm the next "Are you sure" prompt — resolves to what it asked
+export function confirmNextPrompt(page: Page) {
+  return new Promise<string>(resolve =>
+    page.once('dialog', dialog => {
+      resolve(dialog.message());
+      void dialog.accept();
+    })
+  );
 }

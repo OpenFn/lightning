@@ -1348,7 +1348,7 @@ test.describe('shared-project-scope', () => {
       const h = givenHealth('Malawi HIV', { [ME]: 'admin', [OTHER]: 'owner' });
       await projectScope.S08(
         page,
-        `${h.path}?probe=1`,
+        `${h.path}?x=1`,
         ME,
         () => changeRoleOnNode(h.project.id, ME, 'viewer'),
         healthRoot(page)
