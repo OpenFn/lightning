@@ -250,7 +250,19 @@ defmodule LightningWeb.LayoutComponents do
   the LiveView instead.
   """
   def first_paint_sidebar?(assigns) do
-    Map.has_key?(assigns, :sidebar_collapsed) and not hosted_sidebar?(assigns)
+    Map.has_key?(assigns, :sidebar_collapsed) and not hosted_sidebar?(assigns) and
+      bridged?(assigns[:inner_content])
+  end
+
+  # Only a page whose layout renders the bridge gets a sidebar: the confirm
+  # access page runs InitAssigns too, but its `:app` layout has none.
+  defp bridged?(nil), do: false
+
+  defp bridged?(content) do
+    content
+    |> Phoenix.HTML.Safe.to_iodata()
+    |> IO.iodata_to_binary()
+    |> String.contains?(~s(id="sidebar-bridge"))
   end
 
   attr :variant, :string, required: true, values: ~w(project profile admin)
