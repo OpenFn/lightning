@@ -86,6 +86,14 @@ defmodule LightningWeb.Components.DesignSystem do
     |> Map.new()
   end
 
+  # Props are camelCase (G45), so field errors are keyed the way the form is.
+  defp camel_case(key) do
+    case String.split(key, "_") do
+      [head | rest] -> head <> Enum.map_join(rest, "", &String.capitalize/1)
+      [] -> key
+    end
+  end
+
   defp flatten(%{} = map, path) do
     Enum.flat_map(map, fn {key, value} ->
       flatten(value, [to_string(key) | path])
@@ -94,7 +102,7 @@ defmodule LightningWeb.Components.DesignSystem do
 
   defp flatten(messages, path) when is_list(messages) do
     if Enum.all?(messages, &is_binary/1) do
-      [{path |> Enum.reverse() |> Enum.join("."), messages}]
+      [{path |> Enum.reverse() |> Enum.map_join(".", &camel_case/1), messages}]
     else
       messages
       |> Enum.with_index()

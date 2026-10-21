@@ -1,0 +1,11 @@
+<.design_system_page
+  name="ProjectsDashboardPage"
+  props={
+    %{
+      firstName: @current_user.first_name,
+      projects: projects_json(@projects)
+    }
+  }
+  banner={assigns[:banner]}
+  current_user={@current_user}
+/>

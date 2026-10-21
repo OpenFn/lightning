@@ -1,7 +1,8 @@
 defmodule LightningWeb.DashboardLive.Index do
   use LightningWeb, :live_view
 
-  import LightningWeb.DashboardLive.Components
+  alias Lightning.Helpers
+  alias Lightning.Projects
 
   require Logger
 
@@ -11,50 +12,64 @@ defmodule LightningWeb.DashboardLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Projects", active_menu_item: :projects)}
+    {:ok,
+     socket
+     |> assign(page_title: "Projects", active_menu_item: :projects)
+     |> assign_projects()}
   end
 
+  # Self-service create only sets the name/description the form exposes; a
+  # crafted payload must not mass-assign privileged fields (notably parent_id,
+  # which would attach the new project under an arbitrary parent, bypassing
+  # gated sandbox provisioning) or inject arbitrary project_users.
   @impl true
-  def render(assigns) do
-    ~H"""
-    <LayoutComponents.page_content>
-      <:banner>
-        <Common.dynamic_component
-          :if={assigns[:banner]}
-          function={@banner.function}
-          args={@banner.attrs}
-        />
-      </:banner>
-      <:header>
-        <LayoutComponents.header current_user={@current_user}>
-          <:title>{@page_title}</:title>
-        </LayoutComponents.header>
-      </:header>
+  def handle_event("create_project", params, socket) do
+    current_user = socket.assigns.current_user
 
-      <LayoutComponents.centered>
-        <div class="w-full -mt-6">
-          <div>
-            <.welcome_banner
-              id="projects-dashboard-welcome-section"
-              user={@current_user}
-            />
-          </div>
+    %{
+      "raw_name" => Map.get(params, "rawName"),
+      "description" => Map.get(params, "description")
+    }
+    |> Helpers.derive_name_param()
+    |> Map.put("project_users", %{
+      0 => %{"user_id" => current_user.id, "role" => "owner"}
+    })
+    |> Projects.create_project(false)
+    |> case do
+      {:ok, _project} ->
+        {:reply, %{},
+         socket
+         |> put_flash(:info, "Project created successfully")
+         |> assign_projects()}
 
-          <.live_component
-            id="user-projects-section"
-            module={LightningWeb.DashboardLive.UserProjectsSection}
-            current_user={@current_user}
-          />
+      {:error, %Ecto.Changeset{} = changeset} ->
+        # The form shows the name's error on its Name field only.
+        changeset = Helpers.copy_error(changeset, :name, :raw_name)
+        errors = Keyword.delete(changeset.errors, :name)
+        reply_error(socket, %{changeset | errors: errors})
+    end
+  end
 
-          <.live_component
-            id="create-project-modal"
-            module={LightningWeb.DashboardLive.ProjectCreationModal}
-            current_user={@current_user}
-            return_to={~p"/projects"}
-          />
-        </div>
-      </LayoutComponents.centered>
-    </LayoutComponents.page_content>
-    """
+  # Sorted by name; the page sorts the other way round in the browser.
+  defp assign_projects(socket) do
+    assign(
+      socket,
+      :projects,
+      Projects.get_projects_overview(socket.assigns.current_user)
+    )
+  end
+
+  # The shape the design system's ProjectOverview type expects.
+  defp projects_json(projects) do
+    Enum.map(projects, fn project ->
+      %{
+        id: project.id,
+        name: project.name,
+        role: to_string(project.role),
+        workflowsCount: project.workflows_count,
+        collaboratorsCount: project.collaborators_count,
+        lastUpdatedAt: project.last_updated_at
+      }
+    end)
   end
 end

@@ -9,16 +9,28 @@ defmodule LightningWeb.DashboardLiveTest do
 
   require Ecto.Query
 
+  # The page is drawn by React from data-props.
+  defp props(view), do: page_props(view, "#projects-dashboard-page")
+  defp projects(view), do: props(view)["projects"]
+
+  defp project_row(view, project),
+    do: Enum.find(projects(view), &(&1["id"] == project.id))
+
+  defp create_project(view, params),
+    do:
+      push_page_event(view, "#projects-dashboard-page", "create_project", params)
+
   describe "Index" do
     setup :register_and_log_in_user
 
     test "User is assigned no project", %{
-      conn: conn
+      conn: conn,
+      user: user
     } do
-      {:ok, _view, html} = live(conn, ~p"/projects")
+      {:ok, view, html} = live(conn, ~p"/projects")
 
-      assert html =~ "No projects found."
-      assert html =~ "Create a new one"
+      assert %{"firstName" => first_name, "projects" => []} = props(view)
+      assert first_name == user.first_name
 
       assert html =~ "User Profile"
       assert html =~ "Credentials"
@@ -95,7 +107,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      refute has_element?(view, "#projects-table-row-#{project_3.id}")
+      refute project_row(view, project_3)
 
       assert_project_listed(view, project_1, user, ~N[2023-10-02 12:00:00])
       assert_project_listed(view, project_2, user, ~N[2023-10-05 12:00:00])
@@ -155,7 +167,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      refute has_element?(view, "#projects-table-row-#{project_3.id}")
+      refute project_row(view, project_3)
 
       assert_project_listed(view, project_1, user, ~N[2023-10-02 12:00:00])
       assert_project_listed(view, project_2, user, ~N[2023-10-05 12:00:00])
@@ -190,16 +202,14 @@ defmodule LightningWeb.DashboardLiveTest do
 
       project_1 = insert(:project, project_users: [%{user: user, role: :owner}])
 
-      project_2 = insert(:project, project_users: [%{user: user, role: :admin}])
+      project_2 =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: build(:user), role: :owner}]
+        )
 
       project_3 =
         insert(:project, project_users: [%{user: build(:user), role: :owner}])
-
-      project_4 =
-        insert(:project,
-          allow_support_access: true,
-          project_users: [%{user: build(:user), role: :admin}]
-        )
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
@@ -208,8 +218,6 @@ defmodule LightningWeb.DashboardLiveTest do
       assert html =~ project_1.id
       assert html =~ project_2.id
       refute html =~ project_3.id
-      # Support user should see projects with allow_support_access
-      assert html =~ project_4.id
     end
 
     test "projects list do not count deleted workflows", %{
@@ -231,13 +239,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      assert has_element?(view, "tr#projects-table-row-#{project.id}")
-
-      assert has_element?(
-               view,
-               "tr#projects-table-row-#{project.id} > td:nth-child(3)",
-               "#{workflows_count}"
-             )
+      assert %{"workflowsCount" => ^workflows_count} = project_row(view, project)
     end
 
     test "User can create a new project", %{conn: conn, user: user} do
@@ -245,27 +247,21 @@ defmodule LightningWeb.DashboardLiveTest do
 
       assert Enum.empty?(Lightning.Projects.get_projects_for_user(user))
 
-      view
-      |> form("#project-form",
-        project: %{
-          raw_name: "My Awesome Project",
-          description: "This is a really awesome project"
-        }
-      )
-      |> render_change()
+      # The page sends the url-safe name it showed as "Your project will be named".
+      assert create_project(view, %{
+               "rawName" => "my-awesome-project",
+               "description" => "This is a really awesome project"
+             }) =~ "Project created successfully"
 
-      assert view
-             |> has_element?("input[type='hidden'][value='my-awesome-project']")
+      assert_reply(view, %{})
 
-      view |> form("#project-form") |> render_submit()
+      assert [project] = Lightning.Projects.get_projects_for_user(user)
+      assert project.name == "my-awesome-project"
+      assert project.description == "This is a really awesome project"
 
-      projects_after = Lightning.Projects.get_projects_for_user(user)
-      assert Enum.count(projects_after) == 1
-
-      project = List.first(projects_after)
-
-      {:ok, view, _html} = live(conn, ~p"/projects")
-      assert has_element?(view, "tr#projects-table-row-#{project.id}")
+      # The list is refreshed without a reload.
+      assert %{"name" => "my-awesome-project", "role" => "owner"} =
+               project_row(view, project)
     end
 
     test "creating a project cannot mass-assign parent_id", %{
@@ -278,9 +274,12 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      view
-      |> form("#project-form", project: %{raw_name: "sneaky"})
-      |> render_submit(%{"project" => %{"parent_id" => other_project.id}})
+      create_project(view, %{
+        "rawName" => "sneaky",
+        "parent_id" => other_project.id,
+        "parentId" => other_project.id,
+        "project_users" => %{0 => %{"user_id" => other_project.id}}
+      })
 
       assert [project] = Lightning.Projects.get_projects_for_user(user)
       assert project.parent_id == nil
@@ -290,69 +289,18 @@ defmodule LightningWeb.DashboardLiveTest do
          %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      view
-      |> form("#project-form",
-        project: %{raw_name: "!!!"}
-      )
-      |> render_submit()
+      # "!!!" has no url-safe characters, so the page sends an empty name.
+      create_project(view, %{"rawName" => "", "description" => ""})
 
-      html = render(view)
-      assert html =~ "can&#39;t be blank"
+      assert_reply(view, %{
+        error: "Please fix the errors below.",
+        fieldErrors: %{"rawName" => ["This field can't be blank."]}
+      })
+
       assert Enum.empty?(Lightning.Projects.get_projects_for_user(user))
     end
 
-    test "When the user closes the modal without submitting the form, the project won't be created",
-         %{conn: conn, user: user} do
-      {:ok, view, _html} = live(conn, ~p"/projects")
-
-      view
-      |> form("#project-form",
-        project: %{
-          raw_name: "My Awesome Project",
-          description: "This is a really awesome project"
-        }
-      )
-      |> render_change()
-
-      view |> element("#cancel-project-creation") |> render_click()
-
-      projects_after = Lightning.Projects.get_projects_for_user(user)
-      assert Enum.count(projects_after) == 0
-    end
-
-    test "Users can sort the project table by name", %{conn: conn, user: user} do
-      projects =
-        insert_list(3, :project,
-          project_users: [%{user_id: user.id, role: :admin}]
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects")
-
-      projects_sorted_by_name = sorted_projects_by_name(projects)
-      html = render(view)
-      project_names_from_html = extract_project_names_from_html(html)
-      assert project_names_from_html == projects_sorted_by_name
-
-      view
-      |> element("a[phx-click='sort'][phx-value-by='name']")
-      |> render_click()
-
-      projects_sorted_by_name_desc = sorted_projects_by_name(projects, :desc)
-      html = render(view)
-      project_names_from_html = extract_project_names_from_html(html)
-      assert project_names_from_html == projects_sorted_by_name_desc
-
-      view
-      |> element("a[phx-click='sort'][phx-value-by='name']")
-      |> render_click()
-
-      projects_sorted_by_name_asc = sorted_projects_by_name(projects, :asc)
-      html = render(view)
-      project_names_from_html = extract_project_names_from_html(html)
-      assert project_names_from_html == projects_sorted_by_name_asc
-    end
-
-    test "a crafted sort param does not crash the projects table", %{
+    test "projects arrive sorted by name; the page sorts in the browser", %{
       conn: conn,
       user: user
     } do
@@ -363,125 +311,12 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      # Drive the real sort control but override `by` with a value that is not a
-      # real column. It must be ignored (default name/asc), not crash the
-      # component via String.to_existing_atom/dynamic_order_by.
-      bogus = "not_a_column_#{System.unique_integer([:positive])}"
-
-      html =
-        view
-        |> element("a[phx-click='sort'][phx-value-by='name']")
-        |> render_click(%{"by" => bogus})
-
-      assert extract_project_names_from_html(html) ==
-               sorted_projects_by_name(projects)
-    end
-
-    test "Support users can sort the project table by name", %{
-      conn: conn,
-      user: user
-    } do
-      user = Repo.update!(Changeset.change(user, %{support_user: true}))
-
-      support_project =
-        insert(:project,
-          allow_support_access: true,
-          project_users: [%{user: build(:user), role: :admin}]
-        )
-
-      projects =
-        insert_list(2, :project,
-          project_users: [%{user_id: user.id, role: :admin}]
-        ) ++
-          [
-            support_project
-          ] ++
-          [
-            insert(:project,
-              project_users: [%{user_id: user.id, role: :viewer}]
-            )
-          ] ++
-          [
-            insert(:project,
-              project_users: [%{user_id: user.id, role: :editor}]
-            )
-          ]
-
-      {:ok, view, _html} = live(conn, ~p"/projects")
-
-      projects_sorted_by_name = sorted_projects_by_name(projects)
-      html = render(view)
-      project_names_from_html = extract_project_names_from_html(html)
-      assert project_names_from_html == projects_sorted_by_name
-      assert html =~ support_project.name
-
-      view
-      |> element("a[phx-click='sort'][phx-value-by='name']")
-      |> render_click()
-
-      projects_sorted_by_name_desc = sorted_projects_by_name(projects, :desc)
-      html = render(view)
-      project_names_from_html = extract_project_names_from_html(html)
-      assert project_names_from_html == projects_sorted_by_name_desc
-
-      view
-      |> element("a[phx-click='sort'][phx-value-by='name']")
-      |> render_click()
-
-      projects_sorted_by_name_asc = sorted_projects_by_name(projects, :asc)
-      html = render(view)
-      project_names_from_html = extract_project_names_from_html(html)
-      assert project_names_from_html == projects_sorted_by_name_asc
-    end
-
-    test "Users can sort the project table by last activity", %{
-      conn: conn,
-      user: user
-    } do
-      projects =
-        insert_list(3, :project,
-          project_users: [%{user_id: user.id, role: :admin}]
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects")
-
-      projects_sorted_by_last_updated_at =
-        get_sorted_projects_by_last_updated_at(projects)
-
-      html = render(view)
-
-      project_last_activities_from_html =
-        extract_project_last_activities_from_html(html)
-
-      assert project_last_activities_from_html ==
-               projects_sorted_by_last_updated_at
-
-      view
-      |> element("a[phx-click='sort'][phx-value-by='last_updated_at']")
-      |> render_click()
-
-      projects_sorted_by_last_updated_at_desc =
-        get_sorted_projects_by_last_updated_at(projects, :desc)
-
-      html = render(view)
-
-      project_last_activities_from_html =
-        extract_project_last_activities_from_html(html)
-
-      assert project_last_activities_from_html ==
-               projects_sorted_by_last_updated_at_desc
+      assert Enum.map(projects(view), & &1["name"]) ==
+               projects |> Enum.map(& &1.name) |> Enum.sort()
     end
   end
 
   defp assert_project_listed(view, project, user, max_updated_at) do
-    assert has_element?(view, "tr#projects-table-row-#{project.id}")
-
-    assert has_element?(
-             view,
-             "tr#projects-table-row-#{project.id}",
-             project.name
-           )
-
     role =
       project
       |> Repo.preload(:project_users)
@@ -489,32 +324,13 @@ defmodule LightningWeb.DashboardLiveTest do
       |> Enum.find(%{}, fn pu -> pu.user_id == user.id end)
       |> Map.get(:role)
       |> then(fn role ->
-        if is_nil(role) and user.support_user do
-          "Support"
-        else
-          role
-          |> Atom.to_string()
-          |> String.capitalize()
-        end
+        if is_nil(role) and user.support_user,
+          do: "support",
+          else: Atom.to_string(role)
       end)
 
-    assert has_element?(
-             view,
-             "tr#projects-table-row-#{project.id} > td:nth-child(2)",
-             role
-           )
-
     workflow_count =
-      project
-      |> Repo.preload(:workflows)
-      |> Map.get(:workflows)
-      |> Enum.count()
-
-    assert has_element?(
-             view,
-             "tr#projects-table-row-#{project.id} > td:nth-child(3)",
-             workflow_count |> to_string()
-           )
+      project |> Repo.preload(:workflows) |> Map.get(:workflows) |> Enum.count()
 
     collaborator_count =
       project
@@ -522,78 +338,19 @@ defmodule LightningWeb.DashboardLiveTest do
       |> Map.get(:project_users)
       |> Enum.count()
 
-    assert has_element?(
-             view,
-             "tr#projects-table-row-#{project.id} > td:nth-child(4) > a[href='/projects/#{project.id}/settings#collaboration']",
-             collaborator_count |> to_string()
-           )
+    assert %{
+             "name" => name,
+             "role" => ^role,
+             "workflowsCount" => ^workflow_count,
+             "collaboratorsCount" => ^collaborator_count,
+             "lastUpdatedAt" => last_updated_at
+           } = project_row(view, project)
 
-    formatted_date = Calendar.strftime(max_updated_at, "%Y-%m-%d %H:%M:%S UTC")
+    assert name == project.name
 
-    assert has_element?(
-             view,
-             "tr#projects-table-row-#{project.id} > td:nth-child(5) span[data-iso-timestamp='#{formatted_date}']",
-             NaiveDateTime.to_iso8601(max_updated_at)
-           )
-  end
-
-  defp get_sorted_projects_by_last_updated_at(projects, order \\ :asc) do
-    projects_with_workflows = Repo.preload(projects, :workflows)
-
-    projects_with_workflows
-    |> Enum.sort_by(
-      fn project ->
-        project
-        |> Map.get(:workflows)
-        |> Enum.map(& &1.updated_at)
-        |> Enum.max(fn -> nil end)
-      end,
-      order
-    )
-    |> Enum.map(fn project ->
-      last_updated_at =
-        project
-        |> Map.get(:workflows)
-        |> Enum.map(& &1.updated_at)
-        |> Enum.max(fn -> nil end)
-
-      if last_updated_at do
-        Lightning.Helpers.format_date(last_updated_at)
-      else
-        "N/A"
-      end
-    end)
-  end
-
-  defp extract_project_last_activities_from_html(html) do
-    html
-    |> Floki.parse_document!()
-    |> Floki.find("#projects-table tr")
-    |> Enum.map(fn tr ->
-      tr
-      |> Floki.find("td:nth-child(5)")
-      |> Floki.text()
-      |> String.trim()
-    end)
-    |> Enum.reject(&(&1 == ""))
-  end
-
-  defp sorted_projects_by_name(projects, order \\ :asc) do
-    projects
-    |> Enum.sort_by(fn project -> project.name end, order)
-    |> Enum.map(& &1.name)
-  end
-
-  defp extract_project_names_from_html(html) do
-    html
-    |> Floki.parse_document!()
-    |> Floki.find("#projects-table tr")
-    |> Enum.map(fn tr ->
-      tr
-      |> Floki.find("td:nth-child(1)")
-      |> Floki.text()
-      |> String.trim()
-    end)
-    |> Enum.reject(&(&1 == ""))
+    assert last_updated_at ==
+             max_updated_at
+             |> DateTime.from_naive!("Etc/UTC")
+             |> DateTime.to_iso8601()
   end
 end
