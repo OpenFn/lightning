@@ -292,7 +292,7 @@
         <span :if={@project_repo_connection.sync_version}>
           Workspace:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            {ProjectRepoConnection.workspace_path(@project_repo_connection)}
+            {workspace_label(@project_repo_connection)}
           </span>
         </span>
 

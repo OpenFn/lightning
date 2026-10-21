@@ -1135,6 +1135,14 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp workspace_alias(_sync_status, _project_id), do: nil
 
+  # A workspace at the repo root is stored as nil or "."
+  defp workspace_label(connection) do
+    case ProjectRepoConnection.workspace_path(connection) do
+      path when path in ["", "."] -> "<root>"
+      path -> path
+    end
+  end
+
   attr :workspace_check, AsyncResult, required: true
   attr :form, :map, required: true
   attr :project, :map, required: true
