@@ -11,8 +11,9 @@ defmodule LightningWeb.ChannelLive.FormTest do
   setup :create_project_for_current_user
 
   # The form is drawn by React from the page's `form` prop and saves with one
-  # event; its fields, labels, placeholder and "Add New" links are tested in
-  # the design system (ChannelsIndexPage.test.tsx).
+  # event. Its fields, the placeholder, the "None" option, the "Add New"
+  # links, the browser-side required checks and how it shows the reply's
+  # field errors are tested in the design system's ChannelsIndexPage.test.tsx.
   @page "#channels-index-page"
 
   defp props(view), do: page_props(view, @page)

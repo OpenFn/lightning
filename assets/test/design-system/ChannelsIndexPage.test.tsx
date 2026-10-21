@@ -34,7 +34,7 @@ const props = {
 };
 
 const form = {
-  channel: undefined,
+  channel: null,
   credentialOptions: [{ id: 'pc1', name: 'My API Key' }],
   authMethodOptions: [{ id: 'wam1', name: 'API Key Auth' }],
 };
@@ -107,9 +107,8 @@ describe('ChannelsIndexPage', () => {
         clientAuthMethodIds: ['wam1'],
       })
     );
-    await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith('/projects/p1/channels', undefined)
-    );
+    // The LiveView closes the form by patching back to the list.
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   test('a refused save shows the field error and keeps the form open', async () => {

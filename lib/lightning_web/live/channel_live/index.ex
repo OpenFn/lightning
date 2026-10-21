@@ -234,11 +234,16 @@ defmodule LightningWeb.ChannelLive.Index do
   defp channel_attrs(params, current_clients, current_destination) do
     attrs = %{
       "name" => params["name"],
-      "enabled" => params["enabled"],
       "destination_url" => params["destinationUrl"],
       "client_auth_methods" =>
         build_client_auth_params(params["clientAuthMethodIds"], current_clients)
     }
+
+    # The page always sends it; a payload without it leaves the switch alone.
+    attrs =
+      if Map.has_key?(params, "enabled"),
+        do: Map.put(attrs, "enabled", params["enabled"]),
+        else: attrs
 
     case build_destination_auth_param(
            params["destinationCredentialId"],

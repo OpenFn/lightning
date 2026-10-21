@@ -13,9 +13,11 @@ defmodule LightningWeb.ChannelLive.IndexTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
-  # The page is drawn by React from data-props; the texts it renders (the
-  # empty state, the stat card titles, the delete confirmation) are tested in
-  # the design system and in assets/test/design-system/ChannelsIndexPage.test.tsx.
+  # The page is drawn by React from data-props. What it renders from them is
+  # tested in the design system's ChannelsIndexPage.test.tsx (the empty
+  # state, the stat card titles, the read-only row, the disabled New Channel
+  # button, the delete confirmation) and the events it sends in
+  # assets/test/design-system/ChannelsIndexPage.test.tsx.
   @page "#channels-index-page"
 
   defp props(view), do: page_props(view, @page)
