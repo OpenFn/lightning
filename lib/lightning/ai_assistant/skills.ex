@@ -29,7 +29,7 @@ defmodule Lightning.AiAssistant.Skills do
     },
     %{
       name: "qa",
-      description: "Review this workflow for bugs and risky patterns",
+      description: "Review this workflow and list what should change",
       workflow: "existing"
     }
   ]
