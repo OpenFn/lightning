@@ -141,6 +141,7 @@ defmodule LightningWeb do
       import LightningWeb.Components.Loaders
       import LightningWeb.Components.Icons
       import LightningWeb.Components.TabBar
+      import LightningWeb.Components.DesignSystem
 
       unquote(verified_routes())
     end

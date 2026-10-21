@@ -28,6 +28,7 @@ defmodule LightningWeb.ConnCase do
       import Phoenix.ConnTest
       import LightningWeb.ConnCase
       import LightningWeb.ConnHelpers
+      import LightningWeb.DesignSystemHelpers
 
       alias Ecto.Changeset
       alias LightningWeb.Router.Helpers, as: Routes

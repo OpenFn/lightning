@@ -1,20 +1,11 @@
-<div class="flex h-full w-full flex-col">
-  <Common.dynamic_component
-    :if={assigns[:banner]}
-    function={@banner.function}
-    args={@banner.attrs}
-  />
-  <LayoutComponents.account_confirmation_banner current_user={@current_user} />
-  <div
-    id="tokens-page"
-    class="flex-auto"
-    phx-hook="ReactComponent"
-    phx-update="ignore"
-    data-react-name="TokensPage"
-    data-react-file={~p"/assets/js/design-system/TokensPage.js"}
-    data-tokens={tokens_json(@tokens)}
-    data-new-token={@new_token}
-    data-token-id={@live_action == :delete && @token_id}
-  >
-  </div>
-</div>
+<.design_system_page
+  name="TokensPage"
+  props={
+    %{
+      tokens: tokens_json(@tokens),
+      tokenId: @live_action == :delete && @token_id
+    }
+  }
+  banner={assigns[:banner]}
+  current_user={@current_user}
+/>

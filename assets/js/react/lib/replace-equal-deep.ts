@@ -57,8 +57,7 @@ function isPlainObject(o: unknown): o is Object {
   }
 
   // If has modified prototype
-  const prot =
-    'prototype' in ctor.prototype ? (ctor.prototype as unknown) : undefined;
+  const prot = ctor.prototype as unknown;
   if (!hasObjectPrototype(prot)) {
     return false;
   }

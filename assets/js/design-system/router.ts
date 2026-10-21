@@ -19,17 +19,27 @@ const useLocation = () => {
 
 type Go = (path: string, opts?: NavigateOptions) => void;
 
+/** Whether a pathname matches a route pattern such as `/profile/tokens/:id/delete`. */
+export const matchesRoute = (pattern: string, pathname: string) => {
+  const want = pattern.split('/');
+  const have = pathname.split('/');
+  return (
+    want.length === have.length &&
+    want.every((segment, i) => segment.startsWith(':') || segment === have[i])
+  );
+};
+
 /**
- * A design system router that changes page through LiveView. Paths under
- * `ownPath` belong to this LiveView, so they patch (the island's `navigate`).
- * Anything else is a live redirect (`redirect`), which falls back to a full
- * page load when the target isn't a LiveView; a patch there would crash.
- * A jump to a `#hash` on this page, or a link to another origin, is left to
- * the browser.
+ * A design system router that changes page through LiveView. Paths matching
+ * one of `routes`, the LiveView's own route patterns, patch (the island's
+ * `navigate`). Anything else is a live redirect (`redirect`), which falls
+ * back to a full page load when the target isn't a LiveView; a patch there
+ * would crash. A jump to a `#hash` on this page, or a link to another
+ * origin, is left to the browser.
  */
 export const useLiveViewRouter = (
   { navigate, redirect }: { navigate: Go; redirect: Go },
-  ownPath: string
+  routes: string[]
 ): Router =>
   useMemo(
     () => ({
@@ -43,8 +53,7 @@ export const useLiveViewRouter = (
           if (opts?.replace) window.location.replace(url);
           else window.location.assign(url);
         } else {
-          const own =
-            url.pathname === ownPath || url.pathname.startsWith(`${ownPath}/`);
+          const own = routes.some(route => matchesRoute(route, url.pathname));
           (own ? navigate : redirect)(
             `${url.pathname}${url.search}${url.hash}`,
             opts
@@ -54,5 +63,5 @@ export const useLiveViewRouter = (
       useHref: to => to,
       useLocation,
     }),
-    [navigate, redirect, ownPath]
+    [navigate, redirect, routes]
   );

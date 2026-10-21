@@ -29,7 +29,10 @@ describe('useLiveViewRouter', () => {
 
   const go = (to: string, opts?: { replace?: boolean }) =>
     renderHook(() =>
-      useLiveViewRouter({ navigate, redirect }, '/profile/tokens')
+      useLiveViewRouter({ navigate, redirect }, [
+        '/profile/tokens',
+        '/profile/tokens/:id/delete',
+      ])
     ).result.current.navigate(to, opts);
 
   test('patches paths under its own path', () => {

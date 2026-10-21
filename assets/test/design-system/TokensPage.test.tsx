@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { TokensPage } from '../../js/design-system/TokensPage';
+import { TokensPage } from '../../js/design-system/pages/TokensPage';
 
 const token = {
   id: 'abc',
@@ -12,19 +12,19 @@ const token = {
 };
 
 const renderPage = ({
-  tokenId,
+  tokenId = null,
   reply,
 }: {
-  tokenId?: string;
+  tokenId?: string | null;
   reply?: Record<string, unknown>;
 }) => {
   const pushEvent = vi.fn().mockResolvedValue(reply ?? {});
   const navigate = vi.fn();
   render(
     <TokensPage
-      data-tokens={JSON.stringify([token])}
-      data-token-id={tokenId}
+      data-props={JSON.stringify({ tokens: [token], tokenId })}
       pushEvent={pushEvent}
+      handleEvent={vi.fn()}
       navigate={navigate}
       redirect={vi.fn()}
     />
@@ -35,6 +35,18 @@ const renderPage = ({
 describe('TokensPage', () => {
   afterEach(() => {
     window.history.replaceState(null, '', '/');
+  });
+
+  test('the generated token is shown once, from the reply', async () => {
+    window.history.replaceState(null, '', '/profile/tokens');
+    const { pushEvent } = renderPage({ reply: { token: 'secret-123' } });
+
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Generate New Token' })[0]
+    );
+
+    expect(pushEvent).toHaveBeenCalledWith('generate_new_token', {});
+    expect(await screen.findByRole('textbox')).toHaveValue('secret-123');
   });
 
   test("a refused delete surfaces the reply error and doesn't navigate", async () => {
@@ -71,7 +83,7 @@ describe('TokensPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    expect(navigate).toHaveBeenCalledWith('/profile/tokens');
+    expect(navigate).toHaveBeenCalledWith('/profile/tokens', undefined);
   });
 
   test('no token id, no modal', () => {
