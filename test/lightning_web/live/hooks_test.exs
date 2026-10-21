@@ -17,7 +17,7 @@ defmodule LightningWeb.HooksTest do
     } do
       workflow = insert(:workflow, project: project, name: "One")
 
-      {:ok, view, _html} =
+      {:ok, _view, _html} =
         live(conn, ~p"/projects/#{project.id}/w", on_error: :raise)
 
       query =
@@ -25,11 +25,9 @@ defmodule LightningWeb.HooksTest do
 
       Lightning.Repo.delete_all(query)
 
-      result =
-        view
-        |> element("#workflow-#{workflow.id}")
-        |> render_click()
-        |> follow_redirect(conn)
+      # The workflows page opens a workflow from the browser (a live redirect
+      # from its React row), so the next mount is what the hook sees.
+      result = live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
 
       assert {:error, {:redirect, %{to: "/users/log_in", flash: %{}}}} = result
     end
