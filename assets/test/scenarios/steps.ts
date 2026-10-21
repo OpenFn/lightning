@@ -4,8 +4,8 @@
 // TARGET=demo runs the same specs against the openfn-ia-demo replica instead:
 // hash routes, one fixed signed-in user, static fixtures and no server. A
 // step it can't honour skips the test and says why.
-import { execFileSync } from 'node:child_process';
-import { createHmac } from 'node:crypto';
+import { execFileSync, spawn } from 'node:child_process';
+import { createHmac, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 
 import {
@@ -317,6 +317,10 @@ export function field(within: Page | Locator, label: string) {
     'xpath=following::*[self::select or self::textarea or self::input[not(@type="hidden")]][1]'
   );
 }
+
+// The eye at the end of a password field, which shows or hides what was typed
+export const passwordEye = (within: Page | Locator, label: string) =>
+  field(within, label).locator('xpath=following-sibling::div[1]/*[1]');
 
 // The block holding a field's label, control and any error under it
 export function fieldBlock(within: Page | Locator, label: string) {
@@ -691,3 +695,1049 @@ export function seedAuditEvent(seed: AuditEventSeed) {
 // ids that passed on this page, @pending for the rest.
 export const tagFor = (id: string, passing: readonly string[]) =>
   passing.includes(id) ? '@passing-old' : '@pending';
+
+// ---------------------------------------------------------------------------
+// Workflow health page (annotations/views/workflow-health.md)
+// ---------------------------------------------------------------------------
+
+const NOW = `(now() at time zone 'utc')`;
+
+/** Where the health page of a workflow lives. */
+export const healthPath = (projectId: string, workflowId: string) =>
+  `/projects/${projectId}/w/${workflowId}/health`;
+
+/** The element the page mounts its React charts into. */
+export const healthRoot = (page: Page) => page.locator('#workflow-health');
+
+export type HealthJob = { name: string; adaptor: string };
+
+const DAILY_SYNC_JOBS: HealthJob[] = [
+  { name: 'Fetch', adaptor: '@openfn/language-http@latest' },
+  { name: 'Load', adaptor: '@openfn/language-dhis2@latest' },
+];
+
+export type SeededWorkflow = {
+  id: string;
+  projectId: string;
+  name: string;
+  /** job name (as it reads now) -> job id */
+  jobs: Record<string, string>;
+  snapshotId: string;
+  dataclipId: string;
+  /** Renames a job, which publishes a new snapshot of the workflow. */
+  rename: (job: string, to: string) => void;
+};
+
+// Given workflow "<name>" with these jobs exists in project <projectId>. Remove
+// it with removeWorkflowData(projectId) before the project goes.
+export function seedWorkflow(
+  projectId: string,
+  name = 'Daily sync',
+  jobs: HealthJob[] = DAILY_SYNC_JOBS
+): SeededWorkflow {
+  const workflowId = randomUUID();
+  const dataclipId = randomUUID();
+  const current = jobs.map(j => ({ ...j, id: randomUUID() }));
+  let lockVersion = 0;
+  let snapshotId = randomUUID();
+  const snapshot = (id: string) =>
+    `insert into workflow_snapshots (id, workflow_id, name, jobs, triggers, edges, inserted_at, lock_version)
+     values ('${id}', '${workflowId}', ${literal(name)},
+             ${literal(JSON.stringify(current.map(j => ({ ...j, body: 'fn(state => state)' }))))}::jsonb,
+             '[]'::jsonb, '[]'::jsonb, ${NOW}, ${lockVersion})`;
+
+  exec(`insert into workflows (id, name, project_id, inserted_at, updated_at, lock_version)
+          values ('${workflowId}', ${literal(name)}, '${projectId}', ${NOW}, ${NOW}, 0);
+        ${current
+          .map(
+            j => `insert into jobs (id, name, body, adaptor, workflow_id, inserted_at, updated_at)
+                  values ('${j.id}', ${literal(j.name)}, 'fn(state => state)', '${j.adaptor}',
+                          '${workflowId}', ${NOW}, ${NOW});`
+          )
+          .join('\n')}
+        ${snapshot(snapshotId)};
+        insert into dataclips (id, body, type, project_id, inserted_at, updated_at)
+          values ('${dataclipId}', '{}'::jsonb, 'http_request', '${projectId}', ${NOW}, ${NOW})`);
+
+  const workflow: SeededWorkflow = {
+    id: workflowId,
+    projectId,
+    name,
+    jobs: Object.fromEntries(current.map(j => [j.name, j.id])),
+    get snapshotId() {
+      return snapshotId;
+    },
+    dataclipId,
+    rename(job, to) {
+      const found = current.find(j => j.name === job);
+      if (!found) throw new Error(`no job called ${job}`);
+      found.name = to;
+      lockVersion += 1;
+      snapshotId = randomUUID();
+      exec(`update jobs set name = ${literal(to)} where id = '${found.id}';
+            update workflows set lock_version = ${lockVersion} where id = '${workflowId}';
+            ${snapshot(snapshotId)}`);
+      this.jobs = Object.fromEntries(current.map(j => [j.name, j.id]));
+    },
+  };
+  return workflow;
+}
+
+export type SeededStep = {
+  job: string;
+  /** the step's exit reason; "fail" unless said otherwise */
+  exit?: string;
+  error?: string | null;
+};
+export type SeededRun = { state: string; error?: string; steps?: SeededStep[] };
+
+// Given a "<wf>" work order in <state> whose runs were <runs> (oldest first),
+// last active <minutesAgo> minutes ago, or at <at> (UTC, "YYYY-MM-DD HH:MM:SS")
+export function seedWorkOrder(
+  wf: SeededWorkflow,
+  {
+    state,
+    runs = [],
+    minutesAgo = 60,
+    at,
+  }: { state: string; runs?: SeededRun[]; minutesAgo?: number; at?: string }
+) {
+  const base = at
+    ? `('${at}'::timestamp)`
+    : `(${NOW} - interval '${minutesAgo} minutes')`;
+  const later = (minutes: number) =>
+    `(${base} + interval '${minutes} minutes')`;
+  const workOrderId = randomUUID();
+  const statements = [
+    `insert into work_orders (id, workflow_id, inserted_at, updated_at, state, last_activity, snapshot_id, dataclip_id)
+     values ('${workOrderId}', '${wf.id}', ${base}, ${base}, '${state}', ${later(runs.length)}, '${wf.snapshotId}', '${wf.dataclipId}')`,
+  ];
+  runs.forEach((run, i) => {
+    const runId = randomUUID();
+    statements.push(
+      `insert into runs (id, work_order_id, inserted_at, updated_at, state, started_at, finished_at, dataclip_id, error_type, snapshot_id, starting_job_id)
+       values ('${runId}', '${workOrderId}', ${later(i)}, ${later(i + 1)}, '${run.state}', ${later(i)}, ${later(i + 1)},
+               '${wf.dataclipId}', ${run.error ? literal(run.error) : 'null'}, '${wf.snapshotId}',
+               '${wf.jobs[run.steps?.[0]?.job ?? ''] ?? Object.values(wf.jobs)[0]}')`
+    );
+    for (const step of run.steps ?? []) {
+      const jobId = wf.jobs[step.job];
+      if (!jobId) throw new Error(`no job called ${step.job}`);
+      const stepId = randomUUID();
+      statements.push(
+        `insert into steps (id, started_at, finished_at, inserted_at, updated_at, job_id, exit_reason, error_type, snapshot_id)
+         values ('${stepId}', ${later(i)}, ${later(i + 1)}, ${later(i)}, ${later(i + 1)}, '${jobId}',
+                 '${step.exit ?? 'fail'}', ${step.error == null ? 'null' : literal(step.error)}, '${wf.snapshotId}')`,
+        `insert into run_steps (id, run_id, step_id, inserted_at)
+         values (gen_random_uuid(), '${runId}', '${stepId}', ${later(i)})`
+      );
+    }
+  });
+  exec(statements.join(';\n'));
+  return workOrderId;
+}
+
+// Given <count> "<wf>" work orders in <state>, with no runs, last active
+// <minutesAgo> minutes ago
+export function seedWorkOrders(
+  wf: SeededWorkflow,
+  state: string,
+  count: number,
+  minutesAgo = 60
+) {
+  exec(`insert into work_orders (id, workflow_id, inserted_at, updated_at, state, last_activity, snapshot_id, dataclip_id)
+        select gen_random_uuid(), '${wf.id}', t, t, '${state}', t, '${wf.snapshotId}', '${wf.dataclipId}'
+        from (select ${NOW} - interval '${minutesAgo} minutes' as t
+              from generate_series(1, ${count})) s`);
+}
+
+// Removes the work orders, runs, steps and dataclips seeded for a project's
+// workflows. Do this before removing the project: steps and runs hold
+// restricting references.
+export function removeWorkflowData(projectId: string) {
+  exec(`delete from steps where job_id in
+          (select j.id from jobs j join workflows w on w.id = j.workflow_id
+           where w.project_id = '${projectId}');
+        delete from work_orders where workflow_id in
+          (select id from workflows where project_id = '${projectId}');
+        delete from dataclips where project_id = '${projectId}'`);
+}
+
+// Given the browser reports its timezone as <zone>, even one the browser
+// itself would not accept. Call before the first page load.
+export async function browserReportsTimezone(page: Page, zone: string) {
+  await page.addInitScript(zone => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called back with its own `this`
+    const resolved = Intl.DateTimeFormat.prototype.resolvedOptions;
+    Intl.DateTimeFormat.prototype.resolvedOptions = function (
+      this: Intl.DateTimeFormat
+    ) {
+      return { ...resolved.call(this), timeZone: zone };
+    };
+  }, zone);
+}
+
+// Then the History page open in `tab` lists these work orders and not those.
+// Each work order of History is a row with a details toggle named by its id.
+export async function expectHistoryLists(
+  tab: Page,
+  listed: string[],
+  notListed: string[]
+) {
+  const row = (id: string) => tab.locator(`#toggle_details_for_${id}`);
+  for (const id of listed) await expect(row(id)).toBeAttached();
+  for (const id of notListed) await expect(row(id)).toHaveCount(0);
+}
+
+// When the tab becomes visible again: the page reads fresh numbers at once
+export async function returnToTab(page: Page) {
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange'))
+  );
+}
+
+// Evaluates Elixir that must succeed on the Lightning node
+const onNodeOk = (lines: string[]) => onNode(`${lines.join('\n')}\n:ok`);
+
+// When an admin removes "<email>" from project <projectId> in another session
+export function removeMemberOnNode(
+  projectId: string,
+  memberEmail: string,
+  actorEmail: string
+) {
+  onNodeOk([
+    `pu = Lightning.Repo.get_by!(Lightning.Projects.ProjectUser, project_id: "${projectId}", user_id: "${user(memberEmail).id}")`,
+    `actor = Lightning.Repo.get!(Lightning.Accounts.User, "${user(actorEmail).id}")`,
+    `Lightning.Projects.delete_project_user!(pu, actor)`,
+  ]);
+}
+
+// When an owner changes "<email>"'s role on project <projectId> to <role>
+export function changeRoleOnNode(
+  projectId: string,
+  memberEmail: string,
+  role: string
+) {
+  const { id } = user(memberEmail);
+  exec(
+    `update project_users set role = '${role}' where project_id = '${projectId}' and user_id = '${id}'`
+  );
+  onNodeOk([
+    `Lightning.Projects.Events.project_user_role_changed("${projectId}", "${id}")`,
+  ]);
+}
+
+// When an owner turns support access on project <projectId> on or off
+export function setSupportAccessOnNode(projectId: string, allowed: boolean) {
+  onNodeOk([
+    `project = Lightning.Projects.get_project!("${projectId}")`,
+    `{:ok, _} = Lightning.Projects.update_project(project, %{allow_support_access: ${allowed}})`,
+  ]);
+}
+
+// When an owner schedules project <projectId> for deletion
+export function scheduleDeletionOnNode(projectId: string) {
+  onNodeOk([
+    `project = Lightning.Projects.get_project!("${projectId}")`,
+    `{:ok, _} = Lightning.Projects.schedule_project_deletion(project)`,
+  ]);
+}
+
+// When "<email>" deletes workflow <workflowId> in another session
+export function deleteWorkflowOnNode(workflowId: string, actorEmail: string) {
+  onNodeOk([
+    `wf = Lightning.Repo.get!(Lightning.Workflows.Workflow, "${workflowId}")`,
+    `actor = Lightning.Repo.get!(Lightning.Accounts.User, "${user(actorEmail).id}")`,
+    `{:ok, _} = Lightning.Workflows.mark_for_deletion(wf, actor)`,
+  ]);
+}
+
+// Given a failure alert for the workflow was emailed to "<email>"
+export function sendFailureAlertOnNode(
+  projectId: string,
+  wf: SeededWorkflow,
+  email: string
+) {
+  onNodeOk([
+    `recipient = Lightning.Repo.get!(Lightning.Accounts.User, "${user(email).id}")`,
+    `project = Lightning.Projects.get_project!("${projectId}")`,
+    `Lightning.FailureAlerter.alert(%{"workflow_id" => "${wf.id}", "workflow_name" => "${wf.name}", "project" => project, "work_order_id" => Ecto.UUID.generate(), "run_id" => Ecto.UUID.generate(), "recipient" => recipient})`,
+  ]);
+}
+
+// Given a digest listing failures for the workflow was emailed to "<email>"
+export function sendDigestOnNode(
+  projectId: string,
+  wf: SeededWorkflow,
+  email: string
+) {
+  onNodeOk([
+    `recipient = Lightning.Repo.get!(Lightning.Accounts.User, "${user(email).id}")`,
+    `project = Lightning.Projects.get_project!("${projectId}")`,
+    `workflow = Lightning.Repo.get!(Lightning.Workflows.Workflow, "${wf.id}")`,
+    `finish = DateTime.utc_now()`,
+    `start = DateTime.add(finish, -7, :day)`,
+    `Lightning.Accounts.UserNotifier.deliver_project_digest([%{workflow: workflow, successful_workorders: 1, failed_workorders: 2}], %{user: recipient, project: project, digest: :weekly, start_date: start, end_date: finish})`,
+  ]);
+}
+
+// The path of the link to <path> in the mail the dev mailbox holds for
+// "<email>". The mail's fields are searched whole, so it does not matter
+// whether the link is in the html or the text body.
+export async function mailedLinkTo(
+  request: APIRequestContext,
+  email: string,
+  path: string
+) {
+  const escaped = path.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+  const link = new RegExp(`https?://[^"\\\\\\s<>]*${escaped}`);
+  let found: string | undefined;
+  await expect
+    .poll(
+      async () => {
+        const res = await request.get('/dev/mailbox/json');
+        const { data } = (await res.json()) as { data: unknown[] };
+        for (const mail of data) {
+          const text = JSON.stringify(mail);
+          if (!text.includes(email)) continue;
+          found = text.match(link)?.[0];
+          if (found) return true;
+        }
+        return false;
+      },
+      { message: `a mail to ${email} linking to ${path}` }
+    )
+    .toBe(true);
+  return new URL(found!).pathname;
+}
+
+// ---------------------------------------------------------------------------
+// History page (annotations/views/history-work-orders.md)
+// ---------------------------------------------------------------------------
+
+/** "YYYY-MM-DD HH:MM:SS" in UTC, as the seeding steps take it. */
+export const utcStamp = (date: Date) =>
+  date.toISOString().slice(0, 19).replace('T', ' ');
+
+/** The moment <days> days ago. */
+export const daysAgo = (days: number) =>
+  new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+/** A date the way History's filter chips write it: "5-Mar", or "5-Mar-2024". */
+export function historyDate(date: Date) {
+  const month = date.toLocaleString('en-US', {
+    month: 'short',
+    timeZone: 'UTC',
+  });
+  const year = date.getUTCFullYear();
+  return `${date.getUTCDate()}-${month}${
+    year === new Date().getUTCFullYear() ? '' : `-${year}`
+  }`;
+}
+
+/**
+ * Text that names <date> to within a day, in whatever format a chip writes it:
+ * it has the day of the month of the day before, the day itself or the day
+ * after. Loose on purpose; the format and the time zone are not the point.
+ */
+export const nearDate = (date: Date) => {
+  const days = [-1, 0, 1].map(offset =>
+    new Date(date.getTime() + offset * 86_400_000).getUTCDate()
+  );
+  return new RegExp(`\\b(${days.join('|')})\\b`);
+};
+
+/** Where History lives. `filters` become `filters[...]` params. */
+export function historyPath(
+  projectId: string,
+  filters: Record<string, string | string[]> = {},
+  params: Record<string, string> = {}
+) {
+  const parts = Object.entries(filters).flatMap(([key, value]) =>
+    Array.isArray(value)
+      ? value.map(v => `filters[${key}][]=${encodeURIComponent(v)}`)
+      : [`filters[${key}]=${encodeURIComponent(value)}`]
+  );
+  for (const [key, value] of Object.entries(params))
+    parts.push(`${key}=${encodeURIComponent(value)}`);
+  return `/projects/${projectId}/history${parts.length ? `?${parts.join('&')}` : ''}`;
+}
+
+// Then the work orders have loaded (or the load has failed)
+export const historyLoaded = (page: Page) =>
+  expect(page.getByText('Loading work orders ...')).toBeHidden();
+
+// When I open the history page of project <projectId>
+export async function openHistory(
+  page: Page,
+  projectId: string,
+  filters?: Record<string, string | string[]>,
+  params?: Record<string, string>
+) {
+  await open(page, historyPath(projectId, filters, params));
+  await historyLoaded(page);
+}
+
+/** The table of work orders, which only the mounted page has. */
+export const historyRoot = (page: Page) => page.locator('#work-orders-table');
+
+export const historySearchBox = (page: Page) =>
+  page.getByPlaceholder('Search work orders...');
+
+/** The row of work order <id>. */
+export const historyRow = (page: Page, id: string) =>
+  page.locator(`#toggle_details_for_${id}`);
+
+const HISTORY_COLUMNS = [
+  'select',
+  'ID',
+  'Workflow',
+  'Input',
+  'Created',
+  'Last Activity',
+  'Duration',
+  'Status',
+  'Runs',
+] as const;
+
+/** One cell of a work order's row. */
+export const historyCell = (
+  row: Locator,
+  column: (typeof HISTORY_COLUMNS)[number]
+) => row.getByRole('cell').nth(HISTORY_COLUMNS.indexOf(column));
+
+/** The ids of the listed work orders, top to bottom. */
+export const listedWorkOrders = (page: Page) =>
+  page
+    .locator('[id^="toggle_details_for_"]')
+    .evaluateAll(rows =>
+      rows.map(row => row.id.replace('toggle_details_for_', ''))
+    );
+
+// Then the work orders are listed in this order
+export const expectHistoryOrder = (page: Page, ids: string[]) =>
+  expect.poll(() => listedWorkOrders(page)).toEqual(ids);
+
+// When I click a work order's row, which opens its runs
+export async function expandWorkOrder(page: Page, id: string) {
+  await historyCell(historyRow(page, id), 'Status').click();
+  await expect(
+    page.locator(`#workorder-${id} [id^="run_"]`).first()
+  ).toBeVisible();
+}
+
+/** The block of one run in an opened work order. */
+export const historyRun = (page: Page, runId: string) =>
+  page.locator(`#run_${runId}`);
+
+/** The link that opens a run, named by the run's short id. */
+export const runLink = (page: Page, runId: string) =>
+  page.getByRole('link', { name: shortId(runId), exact: true });
+
+/** The row of one step inside an opened run. */
+export const stepRow = (page: Page, stepId: string) =>
+  page.locator(`#step-${stepId}`);
+
+/** The "run this step again" icon of a step. */
+export const rerunStepIcon = (page: Page, stepId: string) =>
+  stepRow(page, stepId).getByLabel(
+    /run this step|cannot be rerun|cannot be retried/i
+  );
+
+/** The icon that opens a step in the editor. */
+export const inspectStepLink = (page: Page, stepId: string) =>
+  page.locator(`#inspect-step-${stepId}`);
+
+/** The marker of a step carried over from an earlier run. */
+export const carriedMarker = (within: Locator) =>
+  within.locator('[aria-label^="This step was originally executed"]');
+
+/** The button that cancels one run of an opened work order. */
+export const cancelRunButton = (page: Page, runId: string) =>
+  historyRun(page, runId).getByRole('button', { name: 'Cancel this run' });
+
+/** The retry button of a work order's row. */
+export const retryButton = (row: Locator) =>
+  row.getByRole('button', { name: 'Retry (run from the start)' });
+
+/** The stand-in for a retry button that is not available. */
+export const disabledRetry = (page: Page, workOrderId: string) =>
+  page.locator(`#retry-disabled-${workOrderId}`);
+
+/** The cancel button of a pending work order's row. */
+export const cancelWorkOrderButton = (row: Locator) =>
+  row.getByRole('button', { name: 'Cancel pending run' });
+
+/** The export button under the table. */
+export const exportButton = (page: Page) =>
+  page.getByRole('button', { name: /^Export all \d+ results/ });
+
+/** The tick-all box in the table header. */
+export const selectAll = (page: Page) =>
+  page.getByRole('columnheader').first().getByRole('checkbox');
+
+/** The tick box of one work order. */
+export const selectBox = (page: Page, id: string) =>
+  historyCell(historyRow(page, id), 'select').getByRole('checkbox');
+
+/** A bulk action above the table ("Cancel", "Retry", "Retry from"). */
+export const bulkAction = (page: Page, name: string) =>
+  page.getByRole('button', { name, exact: true });
+
+/** The wrapper that carries the tooltip of a disabled bulk action. */
+export const tipOf = (page: Page, text: string) =>
+  page.locator(`span[aria-label="${text}"]`);
+
+/** The filter chip whose button reads <name>. */
+export const chip = (page: Page, name: string | RegExp) =>
+  page.getByRole('button', { name }).locator('xpath=..');
+
+/** The button that drops a chip's filter. */
+export const clearChipButton = (chipBox: Locator) =>
+  chipBox.getByRole('button', { name: 'Clear filter' });
+
+// When I choose <name> from the workflow chip
+export async function chooseWorkflow(page: Page, name: string) {
+  await page.getByRole('button', { name: /^Workflow is/ }).click();
+  await page.getByRole('menuitem', { name, exact: true }).click();
+}
+
+// When I tick these statuses in the status chip
+export async function chooseStatuses(page: Page, ...labels: string[]) {
+  await page.getByRole('button', { name: /^Status (is|in)/ }).click();
+  for (const label of labels)
+    await page.getByRole('checkbox', { name: label, exact: true }).check();
+}
+
+// When I set "Received after" to <value> ("YYYY-MM-DDTHH:MM", UTC)
+export async function setReceivedAfter(page: Page, value: string) {
+  await page.getByRole('button', { name: /^Received/ }).click();
+  await field(page, 'Received After').fill(value);
+}
+
+// When I set "Activity After" to <value> ("YYYY-MM-DDTHH:MM", UTC)
+export async function setLastActivityAfter(page: Page, value: string) {
+  await page.getByRole('button', { name: /^Last activity/ }).click();
+  await field(page, 'Activity After').fill(value);
+}
+
+// When I include <what> in the search
+export async function includeInSearch(
+  page: Page,
+  what: 'IDs' | 'dataclip names' | 'inputs' | 'run logs'
+) {
+  await page
+    .getByRole('button', { name: new RegExp(`^Include ${what}`) })
+    .click();
+}
+
+// When I search for <term>
+export async function searchHistory(page: Page, term: string) {
+  await historySearchBox(page).fill(term);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+}
+
+// When I click the <column> column header
+export const sortHistoryBy = (page: Page, column: string) =>
+  page.getByRole('columnheader').getByRole('link', { name: column }).click();
+
+// When the page is sent the LiveView event <event> with <values>, even though
+// nothing on it offers that action. The sortable column header sends an event
+// named by its phx-click; repoint it and click.
+export async function sendEvent(
+  page: Page,
+  event: string,
+  values: Record<string, string> = {}
+) {
+  lightningOnly('needs a server: a forged event has nothing to reach');
+  const link = page
+    .getByRole('columnheader')
+    .getByRole('link', { name: 'Created' });
+  await link.evaluate(
+    (el, { event, values }) => {
+      el.removeAttribute('phx-value-by');
+      el.setAttribute('phx-click', event);
+      for (const [name, value] of Object.entries(values))
+        el.setAttribute(`phx-value-${name}`, value);
+    },
+    { event, values }
+  );
+  await link.click();
+}
+
+// When I click a step's "run again" icon after pointing it at <run> and <step>
+export async function rerunStepNaming(
+  icon: Locator,
+  runId: string,
+  stepId: string
+) {
+  lightningOnly('needs a server: a forged rerun has nothing to reach');
+  await icon.evaluate(
+    (el, ids) => {
+      el.setAttribute('phx-value-run_id', ids.runId);
+      el.setAttribute('phx-value-step_id', ids.stepId);
+    },
+    { runId, stepId }
+  );
+  await icon.click();
+}
+
+export type HistoryStepSeed = {
+  job: string;
+  /** the exit reason ("fail" unless said); null while the step is unfinished */
+  exit?: string | null;
+  error?: string | null;
+  /** this step is the one the previous run ran for the same job, carried over */
+  carried?: boolean;
+  /** the step's input was wiped by the retention policy */
+  inputWiped?: boolean;
+  /** the body of the step's input dataclip, which search reads */
+  input?: object;
+  /** how long the step has run for (unfinished) or ran for (finished) */
+  seconds?: number;
+  /** a line in the step's log */
+  log?: string;
+};
+
+export type HistoryRunSeed = {
+  /** available, claimed, started, or a final state */
+  state: string;
+  steps?: HistoryStepSeed[];
+  error?: string;
+  /** a line in the run's log */
+  log?: string;
+};
+
+const dataclipSql = (
+  id: string,
+  projectId: string,
+  { body, wiped, name }: { body?: object; wiped?: boolean; name?: string }
+) => {
+  const json = literal(JSON.stringify(body ?? {}));
+  return `insert into dataclips (id, body, type, project_id, inserted_at, updated_at, wiped_at, name, search_vector)
+          values ('${id}', ${wiped ? 'null' : `${json}::jsonb`}, 'http_request', '${projectId}', ${NOW}, ${NOW},
+                  ${wiped ? NOW : 'null'}, ${name ? literal(name) : 'null'},
+                  ${wiped || !body ? 'null' : `jsonb_to_tsvector('english_nostop', ${json}::jsonb, '"all"')`})`;
+};
+
+// Given a "<wf>" work order in <state> with these runs (oldest first), last
+// active <minutesAgo> minutes ago, or at <at> (UTC, "YYYY-MM-DD HH:MM:SS").
+// Run i is created i minutes after the work order and, once it has started,
+// finishes a minute later. The workflow's concurrency is set to 0, so Lightning
+// never offers its runs to a worker (a worker with no queue list reads every
+// queue, "*") and none is claimed while a test looks at it. Returns the ids.
+export function seedHistoryOrder(
+  wf: SeededWorkflow,
+  {
+    state,
+    runs = [],
+    minutesAgo = 60,
+    at,
+    input,
+  }: {
+    state: string;
+    runs?: HistoryRunSeed[];
+    minutesAgo?: number;
+    at?: string;
+    /** the work order's input dataclip */
+    input?: { body?: object; wiped?: boolean; name?: string };
+  }
+) {
+  const base = at
+    ? `('${at}'::timestamp)`
+    : `(${NOW} - interval '${minutesAgo} minutes')`;
+  const later = (minutes: number) =>
+    `(${base} + interval '${minutes} minutes')`;
+  const workOrderId = randomUUID();
+  const statements: string[] = [];
+  let clip = wf.dataclipId;
+  statements.push(`update workflows set concurrency = 0 where id = '${wf.id}'`);
+  if (input) {
+    clip = randomUUID();
+    statements.push(dataclipSql(clip, wf.projectId, input));
+  }
+  statements.push(
+    `insert into work_orders (id, workflow_id, inserted_at, updated_at, state, last_activity, snapshot_id, dataclip_id)
+     values ('${workOrderId}', '${wf.id}', ${base}, ${base}, '${state}', ${later(runs.length)}, '${wf.snapshotId}', '${clip}')`
+  );
+  const log = (
+    message: string,
+    runId: string,
+    stepId: string | null,
+    i: number
+  ) =>
+    `insert into log_lines (id, message, step_id, run_id, timestamp, level, source, search_vector)
+     values (gen_random_uuid(), ${literal(message)}, ${stepId ? `'${stepId}'` : 'null'}, '${runId}', ${later(i)}, 'info', 'R',
+             to_tsvector('english_nostop', ${literal(message)}))`;
+
+  const stepIds: Record<string, string>[] = [];
+  const runIds: string[] = [];
+  runs.forEach((run, i) => {
+    const runId = randomUUID();
+    runIds.push(runId);
+    const waiting = run.state === 'available';
+    const claimed = run.state === 'claimed';
+    const finished = !waiting && !claimed && run.state !== 'started';
+    statements.push(
+      `insert into runs (id, work_order_id, inserted_at, updated_at, state, claimed_at, started_at, finished_at, dataclip_id, error_type, snapshot_id, starting_job_id, queue)
+       values ('${runId}', '${workOrderId}', ${later(i)}, ${later(i + 1)}, '${run.state}',
+               ${claimed ? later(i) : 'null'}, ${waiting || claimed ? 'null' : later(i)}, ${finished ? later(i + 1) : 'null'},
+               '${clip}', ${run.error ? literal(run.error) : 'null'}, '${wf.snapshotId}',
+               '${wf.jobs[run.steps?.[0]?.job ?? ''] ?? Object.values(wf.jobs)[0]}', 'scenario-history')`
+    );
+    const ids: Record<string, string> = {};
+    for (const step of run.steps ?? []) {
+      const jobId = wf.jobs[step.job];
+      if (!jobId) throw new Error(`no job called ${step.job}`);
+      if (step.carried) {
+        const earlier = stepIds[i - 1]?.[step.job];
+        if (!earlier) throw new Error(`no earlier step for ${step.job}`);
+        ids[step.job] = earlier;
+        statements.push(
+          `insert into run_steps (id, run_id, step_id, inserted_at)
+           values (gen_random_uuid(), '${runId}', '${earlier}', ${later(i)})`
+        );
+        continue;
+      }
+      const stepId = randomUUID();
+      ids[step.job] = stepId;
+      let inputClip = wf.dataclipId;
+      if (step.input || step.inputWiped) {
+        inputClip = randomUUID();
+        statements.push(
+          dataclipSql(inputClip, wf.projectId, {
+            body: step.input,
+            wiped: step.inputWiped,
+          })
+        );
+      }
+      const exit = step.exit === undefined ? 'fail' : step.exit;
+      const unfinished = exit === null;
+      const startedAt =
+        unfinished && step.seconds !== undefined
+          ? `(${NOW} - interval '${step.seconds} seconds')`
+          : later(i);
+      const finishedAt = unfinished
+        ? 'null'
+        : step.seconds !== undefined
+          ? `(${later(i)} + interval '${step.seconds} seconds')`
+          : later(i + 1);
+      statements.push(
+        `insert into steps (id, started_at, finished_at, inserted_at, updated_at, job_id, input_dataclip_id, exit_reason, error_type, snapshot_id)
+         values ('${stepId}', ${startedAt}, ${finishedAt}, ${later(i)}, ${later(i + 1)}, '${jobId}', '${inputClip}',
+                 ${exit === null ? 'null' : literal(exit)}, ${step.error == null ? 'null' : literal(step.error)}, '${wf.snapshotId}')`,
+        `insert into run_steps (id, run_id, step_id, inserted_at)
+         values (gen_random_uuid(), '${runId}', '${stepId}', ${later(i)})`
+      );
+      if (step.log) statements.push(log(step.log, runId, stepId, i));
+    }
+    if (run.log) statements.push(log(run.log, runId, null, i));
+    stepIds.push(ids);
+  });
+  exec(statements.join(';\n'));
+  return {
+    id: workOrderId,
+    dataclipId: clip,
+    runs: runIds.map((id, i) => ({ id, steps: stepIds[i] })),
+  };
+}
+
+// Given <count> "<wf>" work orders, each with a failed run whose log holds
+// <message>, last active an hour ago
+export function seedLoggedWorkOrders(
+  wf: SeededWorkflow,
+  count: number,
+  message: string
+) {
+  exec(`with wo as (
+          insert into work_orders (id, workflow_id, inserted_at, updated_at, state, last_activity, snapshot_id, dataclip_id)
+          select gen_random_uuid(), '${wf.id}', t, t, 'failed', t, '${wf.snapshotId}', '${wf.dataclipId}'
+          from (select ${NOW} - interval '60 minutes' as t from generate_series(1, ${count})) s
+          returning id, inserted_at
+        ), r as (
+          insert into runs (id, work_order_id, inserted_at, updated_at, state, started_at, finished_at, dataclip_id, snapshot_id, starting_job_id, queue)
+          select gen_random_uuid(), wo.id, wo.inserted_at, wo.inserted_at, 'failed', wo.inserted_at, wo.inserted_at,
+                 '${wf.dataclipId}', '${wf.snapshotId}', '${Object.values(wf.jobs)[0]}', 'scenario-history'
+          from wo
+          returning id, inserted_at
+        )
+        insert into log_lines (id, message, run_id, timestamp, level, source, search_vector)
+        select gen_random_uuid(), ${literal(message)}, r.id, r.inserted_at, 'info', 'R',
+               to_tsvector('english_nostop', ${literal(message)})
+        from r`);
+}
+
+// Given the workflow's jobs run in this order after a webhook trigger. A
+// rerun from a step carries over the steps that come before it by walking
+// these edges.
+export function connectJobs(wf: SeededWorkflow, order: string[]) {
+  const triggerId = randomUUID();
+  const edge = (source: string, target: string) =>
+    `insert into workflow_edges (id, workflow_id, source_job_id, target_job_id, condition_type, enabled, inserted_at, updated_at)
+     values (gen_random_uuid(), '${wf.id}', '${wf.jobs[source]}', '${wf.jobs[target]}', 'always', true, ${NOW}, ${NOW})`;
+  exec(`insert into triggers (id, workflow_id, project_id, type, enabled, inserted_at, updated_at)
+          values ('${triggerId}', '${wf.id}', '${wf.projectId}', 'webhook', true, ${NOW}, ${NOW});
+        insert into workflow_edges (id, workflow_id, source_trigger_id, target_job_id, condition_type, enabled, inserted_at, updated_at)
+          values (gen_random_uuid(), '${wf.id}', '${triggerId}', '${wf.jobs[order[0]]}', 'always', true, ${NOW}, ${NOW});
+        ${order
+          .slice(1)
+          .map((job, i) => `${edge(order[i], job)};`)
+          .join('\n')}`);
+}
+
+// When a webhook request reaches the workflow's trigger (connectJobs made it),
+// which makes a new work order. Returns once Lightning has accepted it.
+export async function postWebhook(page: Page, wf: SeededWorkflow) {
+  lightningOnly('needs a server: a webhook has nothing to reach');
+  const [trigger] = sql<{ id: string }>(
+    `select id from triggers where workflow_id = '${wf.id}' and type = 'webhook'`
+  );
+  const response = await page.request.post(`/i/${trigger.id}`, {
+    data: { patient: { name: 'new arrival' } },
+  });
+  expect(response.ok(), `webhook answered ${response.status()}`).toBe(true);
+}
+
+// Given another session holds the log lines table locked, so that a search of
+// run logs waits for it. Returns the function that lets go. Nothing else may
+// read log lines meanwhile: the test using this is @serial.
+export async function lockLogLines(): Promise<() => void> {
+  lightningOnly('needs the database');
+  const holder = spawn(PSQL, [DB, '-AtX', '-v', 'ON_ERROR_STOP=1'], {
+    stdio: ['pipe', 'pipe', 'inherit'],
+  });
+  // The session sits idle in its transaction rather than in pg_sleep, so
+  // Postgres sees the client go at once, and lets go after 90s if nobody calls
+  // the release (a crashed run must not block the next one).
+  holder.stdin.write(
+    "set idle_in_transaction_session_timeout = '90s';\nbegin;\nlock table log_lines in access exclusive mode;\n\\echo locked\n"
+  );
+  await new Promise<void>((resolve, reject) => {
+    holder.stdout.on('data', chunk => {
+      if (String(chunk).includes('locked')) resolve();
+    });
+    holder.on('exit', () => reject(new Error('the lock was not taken')));
+  });
+  return () => void holder.stdin.end('rollback;\n');
+}
+
+// Given the workflow was deleted
+export function markWorkflowDeleted(wf: SeededWorkflow) {
+  exec(`update workflows set deleted_at = ${NOW} where id = '${wf.id}'`);
+}
+
+// Given the job <name> of the workflow was deleted since its steps ran.
+// Steps keep their job id, so remove them with removeStepsOf(wf, name) before
+// the project goes.
+export function deleteJobOf(wf: SeededWorkflow, name: string) {
+  exec(`delete from jobs where id = '${wf.jobs[name]}'`);
+}
+
+export function removeStepsOfJob(jobId: string) {
+  exec(`delete from steps where job_id = '${jobId}'`);
+}
+
+// Given a worker claimed the run after the page loaded
+export function claimRun(runId: string) {
+  exec(
+    `update runs set state = 'claimed', claimed_at = ${NOW} where id = '${runId}'`
+  );
+}
+
+/** The state a run is in now. */
+export const runStateOf = (runId: string) =>
+  sql<{ state: string }>(`select state from runs where id = '${runId}'`)[0]
+    ?.state;
+
+/** The ids of a work order's runs, oldest first. */
+export const runsOfWorkOrder = (workOrderId: string) =>
+  sql<{ id: string; starting_job_id: string }>(
+    `select id, starting_job_id from runs where work_order_id = '${workOrderId}'
+     order by inserted_at`
+  );
+
+/** The ids of the steps a run holds, carried over or its own. */
+export const stepsOfRun = (runId: string) =>
+  sql<{ step_id: string }>(
+    `select step_id from run_steps where run_id = '${runId}'`
+  ).map(row => row.step_id);
+
+/** The background jobs of <worker> that name <id> in their arguments. */
+export const obanJobsNaming = (worker: string, id: string) =>
+  sql<{ state: string }>(
+    `select state from oban_jobs where worker = '${worker}' and args::text like '%${id}%'`
+  );
+
+/** The duration shown for a step, run or work order inside <within>. */
+export const elapsedOf = (within: Locator) =>
+  within.locator('[phx-hook="ElapsedIndicator"]');
+
+/** The time a run's header shows, in its relative detailed form. */
+export const runTimestamp = (page: Page, runId: string) =>
+  historyRun(page, runId).locator('[data-format="relative_detailed"]');
+
+// ---------------------------------------------------------------------------
+// Log in page (annotations/views/auth-login.md)
+// ---------------------------------------------------------------------------
+
+export const REMEMBER_COOKIE = '_lightning_web_user_remember_me';
+
+/** Fills in and submits the log in form on the page already open. Resolves when the server has answered the POST. */
+export async function submitLogin(
+  page: Page,
+  email: string,
+  password: string,
+  { remember = false } = {}
+) {
+  await field(page, 'Email').fill(forWorker(email));
+  await field(page, 'Password').fill(password);
+  if (remember)
+    await page
+      .locator('input[type="checkbox"][name="user[remember_me]"]')
+      .check();
+  await Promise.all([
+    page.waitForResponse(
+      r => r.request().method() === 'POST' && r.url().includes('/users/log_in')
+    ),
+    page.getByRole('button', { name: 'Log in' }).click(),
+  ]);
+}
+
+// When I log in with "<email>" and "<password>" — from a fresh visit to the page
+export async function attemptLogin(
+  page: Page,
+  email: string,
+  password = PASSWORD,
+  options: { remember?: boolean } = {}
+) {
+  await page.goto('/users/log_in');
+  await submitLogin(page, email, password, options);
+}
+
+// Then I am logged in as "<email>" — the account menu on /projects names them
+export async function expectSignedInAs(page: Page, email: string) {
+  await expectAt(page, '/projects');
+  await open(page, '/projects');
+  const [{ name }] = sql<{ name: string }>(
+    `select first_name || ' ' || last_name as name from users where id = '${user(email).id}'`
+  );
+  await page.getByRole('button', { name: new RegExp(`${name}$`) }).click();
+  await expect(
+    page.getByRole('menu').getByText(user(email).email, { exact: true })
+  ).toBeVisible();
+}
+
+// Then I am not logged in — a protected page sends the browser to log in
+export async function expectSignedOut(page: Page) {
+  await page.goto('/projects');
+  await expectAt(page, '/users/log_in');
+}
+
+// When the browser is closed and opened again — only cookies that outlive the session remain
+export async function reopenBrowser(page: Page) {
+  const context = page.context();
+  const kept = (await context.cookies()).filter(c => c.expires !== -1);
+  await context.clearCookies();
+  await context.addCookies(kept);
+}
+
+// Given the instance setting :lightning, :<flag> is <value> — returns a function that puts it back
+export function withFlag(flag: string, value: boolean) {
+  const was = onNode(`Application.get_env(:lightning, :${flag})`).trim();
+  onNode(`Application.put_env(:lightning, :${flag}, ${value})`);
+  return () => onNode(`Application.put_env(:lightning, :${flag}, ${was})`);
+}
+
+// Given an external authentication provider "<name>" is configured — returns a function that removes it
+export function withAuthProvider(name: string) {
+  onNode(
+    `Lightning.AuthProviders.Store.put_handler("${name}", %Lightning.AuthProviders.Handler{name: "${name}"})`
+  );
+  return () =>
+    onNode(`Lightning.AuthProviders.Store.remove_handler("${name}")`);
+}
+
+// Given a password reset was asked for "<email>" — the path of the link its mail would carry
+export function resetPasswordLinkFor(email: string) {
+  const token = onNode(`
+    user = Lightning.Accounts.get_user_by_email("${user(email).email}")
+    {encoded, row} = Lightning.Accounts.UserToken.build_email_token(user, "reset_password", user.email)
+    Lightning.Repo.insert!(row)
+    encoded
+  `).replace(/"/g, '');
+  return `/users/reset_password/${token}`;
+}
+
+// Given "<email>" signed up <hours> hours ago and has not confirmed their email — returns a function that restores both
+export function unconfirmedSince(email: string, hours: number) {
+  const { id } = user(email);
+  const [row] = sql<{ confirmed_at: string | null; inserted_at: string }>(
+    `select confirmed_at, inserted_at from users where id = '${id}'`
+  );
+  exec(
+    `update users set confirmed_at = null, inserted_at = now() at time zone 'utc' - interval '${hours} hours' where id = '${id}'`
+  );
+  return () =>
+    exec(
+      `update users set confirmed_at = ${literal(row.confirmed_at)}, inserted_at = ${literal(row.inserted_at)} where id = '${id}'`
+    );
+}
+
+// Given "<email>"'s account is scheduled for deletion — returns a function that undoes it
+export function scheduledForDeletion(email: string) {
+  const { id } = user(email);
+  exec(
+    `update users set scheduled_deletion = now() at time zone 'utc' + interval '1 day' where id = '${id}'`
+  );
+  return () =>
+    exec(`update users set scheduled_deletion = null where id = '${id}'`);
+}
+
+// Given "<email>"'s account is disabled — keepAccount puts it back
+export function disableAccount(email: string) {
+  exec(`update users set disabled = true where id = '${user(email).id}'`);
+}
+
+// When I log out from the account menu
+export async function logOut(page: Page, email: string) {
+  await open(page, '/projects');
+  const [{ name }] = sql<{ name: string }>(
+    `select first_name || ' ' || last_name as name from users where id = '${user(email).id}'`
+  );
+  await page.getByRole('button', { name: new RegExp(`${name}$`) }).click();
+  await page.getByRole('menuitem', { name: 'Log out' }).click();
+}
+
+// The red or blue message inside the log in form
+export const loginAlert = (page: Page) =>
+  page
+    .getByRole('button', { name: 'Log in' })
+    .locator('xpath=ancestor::form')
+    .getByRole('alert');
+
+// The values in a Lightning session cookie. It is signed, not encrypted, so
+// the middle segment decodes on the node.
+export function sessionOf(cookieValue: string): Record<string, unknown> {
+  const payload = decodeURIComponent(cookieValue).split('.')[1];
+  const out = onNode(
+    `"${payload}" |> Base.url_decode64!(padding: false) |> :erlang.binary_to_term() |> Map.new(fn {k, v} -> {k, if(is_binary(v) and not String.valid?(v), do: Base.encode64(v), else: v)} end) |> Jason.encode!()`
+  );
+  return JSON.parse(JSON.parse(out)) as Record<string, unknown>;
+}
+
+// Given first setup is allowed and the instance has no superuser — returns a
+// function that puts both back. The test using this is @serial.
+export function firstSetupOpen() {
+  const restoreFlag = withFlag('allow_first_setup', true);
+  const ids = sql<{ id: string }>(
+    `select id from users where role = 'superuser'`
+  ).map(r => `'${r.id}'`);
+  const set = (role: string) =>
+    ids.length &&
+    exec(`update users set role = '${role}' where id in (${ids.join(', ')})`);
+  set('user');
+  return () => {
+    set('superuser');
+    restoreFlag();
+  };
+}

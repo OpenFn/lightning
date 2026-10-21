@@ -13,6 +13,7 @@ export const given = {
     today: '2026-10-14T12:00:00+02:00',
   },
   S02: { utc: '2024-03-05 08:30:00', today: '2026-10-14T12:00:00Z' },
+  S03: { utc: '2026-10-14 08:30:07', today: '2026-10-14T12:00:00Z' },
   S04: { utc: '2026-10-14 08:30:07' },
   S05: { utc: '2026-10-14 08:30:07' },
   S06: { utc: '2026-10-14 08:30:07.123456' },
@@ -31,6 +32,13 @@ export async function S01(_page: Page, cell: Locator) {
 //   Then the timestamp starts with "2024-03-05,"
 export async function S02(_page: Page, cell: Locator) {
   await expect(timestamp(cell)).toHaveText(/^2024-03-05,/);
+}
+
+// @S03 Detailed relative time shows seconds
+//   Given the browser's time zone is UTC
+//   Then the timestamp reads "today at 8:30:07 AM"
+export async function S03(_page: Page, cell: Locator) {
+  await expect(timestamp(cell)).toHaveText('today at 8:30:07 AM');
 }
 
 // @S04 Hovering a timestamp shows the exact UTC value

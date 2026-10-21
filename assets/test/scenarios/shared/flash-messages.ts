@@ -155,3 +155,29 @@ export async function S06(
   await main.getByRole('button', { name: 'Back' }).click();
   await expect.poll(() => page.url()).toBe(before);
 }
+
+// @S08 Sign-in and account forms show the flash inside the form
+//   Given I am on "/users/log_in"
+//   When I sign in with a wrong password
+//   Then I see "<text>" at the top of the form card
+//   And it stays there until the page is reloaded or submitted again
+// `act` is the host's own action that puts the flash; `firstField` is the
+// first field of the form, which the message must sit above.
+export async function S08(
+  page: Page,
+  text: string,
+  act: () => Promise<void>,
+  firstField: Locator
+) {
+  await act();
+  const message = page.getByRole('alert').filter({ hasText: text });
+  await expect(message).toBeVisible();
+
+  const [m, f] = [await message.boundingBox(), await firstField.boundingBox()];
+  expect(m!.y + m!.height, 'the message sits above the fields').toBeLessThan(
+    f!.y
+  );
+  // A toast would have gone by now
+  await page.waitForTimeout(6000);
+  await expect(message).toBeVisible();
+}

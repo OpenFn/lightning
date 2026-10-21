@@ -73,7 +73,8 @@ async function expectSidebarCollapsed(
   menuLabel: string
 ) {
   await page.mouse.move(800, 400);
-  const label = page.getByRole('navigation').getByText(menuLabel, {
+  // first navigation is the side menu; later ones are breadcrumbs
+  const label = page.getByRole('navigation').first().getByText(menuLabel, {
     exact: true,
   });
   if (collapsed) await expect(label).toBeHidden();
@@ -108,4 +109,15 @@ export async function S07(
   await open(later, path);
   await expectSidebarCollapsed(later, true, menuLabel);
   await later.context().close();
+}
+
+// @S11 An instance with no superuser sends pages to first setup
+//   Given first setup is allowed
+//   And there is no superuser
+//   When I visit "<path>"
+//   Then I am on "/first_setup"
+export async function S11(page: Page, path: string) {
+  await page.goto(path);
+
+  await expectAt(page, '/first_setup');
 }
