@@ -349,15 +349,16 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
 
     Mox.allow(LightningMock, self(), form_view.pid)
 
-    index = find_user_index_in_list(form_view, user)
+    # The page sends a role per user; the rest keep theirs.
+    roles =
+      page_props(form_view, "#admin-projects-page")["form"]["project"]["members"]
+      |> Map.new(&{&1["userId"], &1["role"]})
+      |> Map.put(user.id, role)
 
-    form_view
-    |> form("#project-form",
-      project: %{
-        "project_users" => %{index => %{"user_id" => user.id, "role" => role}}
-      }
-    )
-    |> render_submit()
+    push_page_event(form_view, "#admin-projects-page", "save_project", %{
+      "rawName" => project.name,
+      "roles" => roles
+    })
 
     assert Repo.get_by(ProjectUser, project_id: project.id, user_id: user.id).role ==
              String.to_existing_atom(role)

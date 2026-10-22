@@ -27,8 +27,30 @@ defmodule LightningWeb.ProjectLiveTest do
   setup :stub_usage_limiter_ok
   setup :verify_on_exit!
 
-  @create_attrs %{raw_name: "some name"}
-  @invalid_attrs %{raw_name: nil}
+  # The admin projects page is drawn by React from data-props. Sorting and
+  # filtering the list and the member rows, the owner messages, the disabled
+  # Save and the dialog's name check are tested in the design system's
+  # AdminProjectsPage.test.tsx; the events the island sends in
+  # assets/test/design-system/AdminProjectsPage.test.tsx. These tests cover
+  # the gates and what the server sends and does.
+  @admin_page "#admin-projects-page"
+
+  defp admin_props(view), do: page_props(view, @admin_page)
+
+  defp admin_rows(view), do: admin_props(view)["projects"]
+
+  defp save_project(view, raw_name, roles),
+    do:
+      push_page_event(view, @admin_page, "save_project", %{
+        "rawName" => raw_name,
+        "roles" => roles
+      })
+
+  defp delete_project(view, name),
+    do:
+      push_page_event(view, @admin_page, "delete_project", %{
+        "nameConfirmation" => name
+      })
 
   describe "Index as a regular user" do
     setup :register_and_log_in_user
@@ -68,101 +90,419 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Some banner text"
     end
 
-    test "lists all projects", %{conn: conn, project: project} do
-      {:ok, _index_live, html} =
-        live(conn, Routes.project_index_path(conn, :index))
+    test "lists all projects", %{conn: conn, project: project, user: superuser} do
+      owner = insert(:user, first_name: "John", last_name: "Owner")
+      insert(:project_user, project: project, user: owner, role: :owner)
+
+      {:ok, view, html} = live(conn, ~p"/settings/projects")
 
       assert html =~ "Projects"
-      assert html =~ project.name
+
+      assert %{
+               "name" => name,
+               "description" => _,
+               "insertedAt" => inserted_at,
+               "ownerName" => "John Owner",
+               "scheduledDeletion" => nil
+             } = Enum.find(admin_rows(view), &(&1["id"] == project.id))
+
+      assert name == project.name
+      assert String.ends_with?(inserted_at, "Z")
+      assert admin_props(view)["form"] == nil
+      assert admin_props(view)["deleteProject"] == nil
+
+      # The form routes send the users, not the list.
+      {:ok, view, _html} = live(conn, ~p"/settings/projects/new")
+      assert admin_rows(view) == []
+
+      assert superuser.id in Enum.map(
+               admin_props(view)["form"]["users"],
+               & &1["id"]
+             )
     end
 
     test "fails to save a project with no members", %{conn: conn} do
-      {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/projects/new")
 
-      assert index_live |> element("a", "New Project") |> render_click() =~
-               "Projects"
+      assert %{"form" => %{"project" => nil, "users" => users}} =
+               admin_props(view)
 
-      assert_patch(index_live, Routes.project_index_path(conn, :new))
+      assert Enum.all?(users, &Map.has_key?(&1, "email"))
 
-      html =
-        index_live
-        |> form("#project-form", project: @create_attrs)
-        |> render_submit()
+      save_project(view, "some name", %{})
 
-      assert html =~
-               "Every project must have exactly one owner. Please specify one below."
+      assert_reply(view, %{
+        fieldErrors: %{
+          "owner" => [
+            "Every project must have exactly one owner. Please specify one below."
+          ]
+        }
+      })
+
+      refute Repo.get_by(Project, name: "some-name")
     end
 
-    test "saves new project with members", %{conn: conn} do
+    test "saves new project with members", %{conn: conn, user: superuser} do
       user_1 = insert(:user, first_name: "1st", last_name: "user")
       user_2 = insert(:user, first_name: "another", last_name: "person")
 
-      {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/projects/new")
 
-      assert index_live |> element("a", "New Project") |> render_click() =~
-               "Projects"
+      save_project(view, "some name", %{
+        user_1.id => "owner",
+        user_2.id => "owner"
+      })
 
-      assert_patch(index_live, Routes.project_index_path(conn, :new))
+      assert_reply(view, %{
+        fieldErrors: %{"owner" => ["A project can have only one owner."]}
+      })
 
-      # error for no owner is not shown until you make a change
-      refute render(index_live) =~
-               "Every project must have exactly one owner. Please specify one below."
+      save_project(view, "", %{user_1.id => "owner"})
+      assert_reply(view, %{fieldErrors: %{"rawName" => [blank]}})
+      assert blank =~ "can't be blank"
 
-      assert index_live
-             |> form("#project-form", project: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+      save_project(view, "some name", %{
+        user_1.id => "owner",
+        user_2.id => "editor",
+        # Unknown users are ignored; the superuser is listed but gets no role.
+        Ecto.UUID.generate() => "owner",
+        superuser.id => ""
+      })
 
-      assert render(index_live) =~
-               "Every project must have exactly one owner. Please specify one below."
+      assert_reply(view, %{})
+      assert_patch(view, ~p"/settings/projects")
+      assert render(view) =~ "Project created successfully"
 
-      user_1_index = find_user_index_in_list(index_live, user_1)
-      user_2_index = find_user_index_in_list(index_live, user_2)
+      project =
+        Repo.get_by!(Project, name: "some-name") |> Repo.preload(:project_users)
 
-      # error for multiple owners is displayed
-      html =
-        index_live
-        |> form("#project-form",
-          project: %{
-            "project_users" => %{
-              user_1_index => %{"user_id" => user_1.id, "role" => "owner"},
-              user_2_index => %{"user_id" => user_2.id, "role" => "owner"}
-            }
-          }
-        )
-        |> render_change()
-
-      assert html =~ "A project can have only one owner."
-
-      index_live
-      |> form("#project-form",
-        project:
-          Map.merge(@create_attrs, %{
-            "project_users" => %{
-              user_1_index => %{"user_id" => user_1.id, "role" => "owner"},
-              user_2_index => %{"user_id" => user_2.id, "role" => "editor"}
-            }
-          })
-      )
-      |> render_change()
-
-      index_live |> form("#project-form") |> render_submit()
-
-      assert_patch(index_live, Routes.project_index_path(conn, :index))
-      assert render(index_live) =~ "Project created successfully"
-
-      project_name = String.replace(@create_attrs.raw_name, " ", "-")
+      assert project.project_users
+             |> Enum.map(&{&1.user_id, &1.role})
+             |> Enum.sort() ==
+               Enum.sort([{user_1.id, :owner}, {user_2.id, :editor}])
 
       assert_email_sent(
         to: [Swoosh.Email.Recipient.format(user_1)],
-        subject: "You now have access to \"#{project_name}\""
+        subject: "You now have access to \"some-name\""
       )
 
       assert_email_sent(
         to: [Swoosh.Email.Recipient.format(user_2)],
-        subject: "You now have access to \"#{project_name}\""
+        subject: "You now have access to \"some-name\""
       )
+    end
+
+    test "allows a superuser to schedule projects for deletion in the projects list",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}/delete")
+
+      assert admin_props(view)["deleteProject"] == %{
+               "id" => project.id,
+               "name" => project.name
+             }
+
+      assert admin_props(view)["gracePeriodDays"] >= 0
+
+      delete_project(view, "invalid name")
+      assert_reply(view, %{error: "doesn't match the project name"})
+      refute Repo.reload!(project).scheduled_deletion
+
+      {:ok, _view, html} =
+        view
+        |> delete_project(project.name)
+        |> follow_redirect(conn, ~p"/settings/projects")
+
+      assert html =~ "Project scheduled for deletion"
+      assert Repo.reload!(project).scheduled_deletion
+    end
+
+    test "refuses to act when the project's deletion changed since the dialog opened",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}/delete")
+
+      project
+      |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2030-01-01 00:00:00Z]})
+      |> Repo.update!()
+
+      delete_project(view, project.name)
+
+      assert_reply(view, %{
+        error:
+          "This project's deletion changed since the dialog opened. Reload the page."
+      })
+
+      assert Repo.get(Project, project.id)
+    end
+
+    test "refuses a delete when no dialog is open, and payloads that are not maps",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} = live(conn, ~p"/settings/projects")
+
+      delete_project(view, project.name)
+      assert_reply(view, %{error: "Project not found"})
+
+      for event <- ["cancel_deletion", "delete_project", "save_project"] do
+        push_page_event(view, @admin_page, event, ["x"])
+        assert_reply(view, %{error: "Invalid request"})
+      end
+
+      refute Repo.reload!(project).scheduled_deletion
+    end
+
+    test "sends the list back when the project to delete does not exist", %{
+      conn: conn
+    } do
+      # A patch during mount is a redirect to the test; the flash rides along.
+      for id <- [Ecto.UUID.generate(), "not-a-uuid"] do
+        assert {:error,
+                {:live_redirect, %{to: "/settings/projects", flash: flash}}} =
+                 live(conn, "/settings/projects/#{id}/delete")
+
+        assert flash["error"] == "Project not found"
+      end
+    end
+
+    test "allows a superuser to cancel scheduled deletion on a project", %{
+      conn: conn
+    } do
+      project =
+        project_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+
+      {:ok, view, _html} = live(conn, ~p"/settings/projects", on_error: :raise)
+
+      assert %{"scheduledDeletion" => scheduled} =
+               Enum.find(admin_rows(view), &(&1["id"] == project.id))
+
+      assert scheduled
+
+      push_page_event(view, @admin_page, "cancel_deletion", %{"id" => project.id})
+
+      assert_reply(view, %{})
+      assert_patch(view, ~p"/settings/projects")
+      assert render(view) =~ "Project deletion canceled"
+
+      assert %{"scheduledDeletion" => nil} =
+               Enum.find(admin_rows(view), &(&1["id"] == project.id))
+
+      refute Repo.reload!(project).scheduled_deletion
+
+      for id <- [Ecto.UUID.generate(), "not-a-uuid", nil] do
+        push_page_event(view, @admin_page, "cancel_deletion", %{"id" => id})
+        assert_reply(view, %{error: "Project not found"})
+      end
+
+      # Only a scheduled project has a deletion to cancel.
+      push_page_event(view, @admin_page, "cancel_deletion", %{"id" => project.id})
+
+      assert_reply(view, %{error: "Invalid request"})
+    end
+
+    test "allows a superuser to perform delete now action on a scheduled for deletion project",
+         %{conn: conn} do
+      project =
+        project_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}/delete", on_error: :raise)
+
+      {:ok, _view, html} =
+        view
+        |> delete_project(project.name)
+        |> follow_redirect(conn, ~p"/settings/projects")
+
+      assert html =~
+               "Project deletion started. This may take a while to complete."
+    end
+
+    test "Edits a project", %{conn: conn, user: superuser} do
+      user1 = insert(:user, first_name: "Alice", last_name: "Owner")
+      user2 = insert(:user, first_name: "Bob", last_name: "Viewer")
+
+      project =
+        insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      assert %{
+               "form" => %{
+                 "project" => %{"id" => id, "name" => name, "members" => members},
+                 "users" => users
+               }
+             } = admin_props(view)
+
+      assert id == project.id
+      assert name == project.name
+      assert members == [%{"userId" => user1.id, "role" => "owner"}]
+      assert user2.id in Enum.map(users, & &1["id"])
+
+      save_project(view, project.name, %{
+        user1.id => "owner",
+        user2.id => "viewer"
+      })
+
+      assert_reply(view, %{})
+      assert_patch(view, ~p"/settings/projects")
+      assert render(view) =~ "Project updated successfully"
+
+      updated_project =
+        Repo.preload(project, [:project_users], force: true)
+
+      assert Enum.count(updated_project.project_users) == 2
+
+      for p_user <- updated_project.project_users do
+        assert p_user.user_id in [user1.id, user2.id]
+        refute p_user.user_id == superuser.id
+      end
+    end
+
+    test "editing a project with a name that resolves to blank shows error", %{
+      conn: conn
+    } do
+      user1 = insert(:user, first_name: "Alice", last_name: "Owner")
+
+      project =
+        insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      save_project(view, "!!!", %{user1.id => "owner"})
+
+      assert_reply(view, %{fieldErrors: %{"rawName" => [message]}})
+      assert message =~ "can't be blank"
+      assert Repo.reload!(project).name == project.name
+    end
+
+    test "adding collaborators to project works correctly", %{conn: conn} do
+      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
+      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
+      user3 = insert(:user, first_name: "Charlie", last_name: "Brown")
+
+      # Create project with only user1 as owner
+      project = insert(:project)
+      insert(:project_user, project: project, user: user1, role: :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      # Add user2 as editor and user3 as viewer
+      save_project(view, project.name, %{
+        user1.id => "owner",
+        user2.id => "editor",
+        user3.id => "viewer"
+      })
+
+      assert_reply(view, %{})
+
+      # Check that users were added
+      updated_project = Repo.preload(project, [:project_users], force: true)
+
+      user_roles =
+        Enum.map(updated_project.project_users, &{&1.user_id, &1.role})
+
+      assert {user2.id, :editor} in user_roles
+      assert {user3.id, :viewer} in user_roles
+
+      # Check that newly added collaborators have failure_alert defaulting to false
+      user2_project_user =
+        Enum.find(updated_project.project_users, &(&1.user_id == user2.id))
+
+      user3_project_user =
+        Enum.find(updated_project.project_users, &(&1.user_id == user3.id))
+
+      assert user2_project_user.failure_alert == false
+      assert user3_project_user.failure_alert == false
+    end
+
+    test "removing collaborators from project works correctly", %{conn: conn} do
+      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
+      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
+      user3 = insert(:user, first_name: "Charlie", last_name: "Brown")
+
+      # Create project with all three users
+      project = insert(:project)
+      insert(:project_user, project: project, user: user1, role: :owner)
+      insert(:project_user, project: project, user: user2, role: :editor)
+      insert(:project_user, project: project, user: user3, role: :viewer)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      # A role outside the four is refused rather than read as "no access".
+      save_project(view, project.name, %{user2.id => "superuser"})
+      assert_reply(view, %{error: "Invalid request"})
+
+      # Remove user2 by giving them no access; user3, left out of the
+      # payload, keeps their role.
+      save_project(view, project.name, %{user1.id => "owner", user2.id => ""})
+
+      assert_reply(view, %{})
+
+      updated_project = Repo.preload(project, [:project_users], force: true)
+      user_ids = Enum.map(updated_project.project_users, & &1.user_id)
+
+      assert user1.id in user_ids
+      refute user2.id in user_ids
+      assert user3.id in user_ids
+    end
+
+    test "hands a project to a new owner in one save", %{conn: conn} do
+      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
+      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
+
+      project = insert(:project)
+      insert(:project_user, project: project, user: user1, role: :owner)
+      insert(:project_user, project: project, user: user2, role: :editor)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      save_project(view, project.name, %{
+        user1.id => "editor",
+        user2.id => "owner"
+      })
+
+      assert_reply(view, %{})
+
+      roles =
+        project
+        |> Repo.preload([:project_users], force: true)
+        |> Map.get(:project_users)
+        |> Map.new(&{&1.user_id, &1.role})
+
+      assert roles == %{user1.id => :editor, user2.id => :owner}
+    end
+
+    test "changing collaborator roles works correctly", %{conn: conn} do
+      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
+      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
+
+      # Create project with user1 as owner and user2 as viewer
+      project = insert(:project)
+      insert(:project_user, project: project, user: user1, role: :owner)
+      insert(:project_user, project: project, user: user2, role: :viewer)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
+
+      # Change user2 from viewer to admin
+      save_project(view, project.name, %{
+        user1.id => "owner",
+        user2.id => "admin"
+      })
+
+      assert_reply(view, %{})
+
+      # Check that user2's role was changed
+      updated_project = Repo.preload(project, [:project_users], force: true)
+
+      user2_project_user =
+        Enum.find(updated_project.project_users, &(&1.user_id == user2.id))
+
+      assert user2_project_user.role == :admin
     end
 
     test "project owners can delete a project from the settings page",
@@ -234,514 +574,6 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert html =~ "You are not authorize to perform this action"
       end)
-    end
-
-    test "allows a superuser to schedule projects for deletion in the projects list",
-         %{
-           conn: conn,
-           project: project
-         } do
-      {:ok, index_live, html} =
-        live(conn, Routes.project_index_path(conn, :index))
-
-      assert html =~ "Projects"
-
-      {:ok, form_live, _} =
-        index_live
-        |> element("#delete-#{project.id}", "Delete")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.project_index_path(conn, :delete, project)
-        )
-
-      assert form_live
-             |> form("#scheduled_deletion_form",
-               project: %{name_confirmation: "invalid name"}
-             )
-             |> render_change() =~
-               "Enter the project name to confirm deletion"
-
-      {:ok, _index_live, html} =
-        form_live
-        |> form("#scheduled_deletion_form",
-          project: %{
-            name_confirmation: project.name
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, Routes.project_index_path(conn, :index))
-
-      assert html =~ "Project scheduled for deletion"
-    end
-
-    test "allows superuser to click cancel for closing user deletion modal", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, index_live, html} =
-        live(conn, Routes.project_index_path(conn, :index))
-
-      assert html =~ "Projects"
-
-      {:ok, form_live, _} =
-        index_live
-        |> element("#delete-#{project.id}", "Delete")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.project_index_path(conn, :delete, project)
-        )
-
-      {:ok, index_live, _html} =
-        form_live
-        |> element("button", "Cancel")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.project_index_path(conn, :index)
-        )
-
-      assert has_element?(index_live, "#delete-#{project.id}")
-    end
-
-    test "allows a superuser to cancel scheduled deletion on a project", %{
-      conn: conn
-    } do
-      project =
-        project_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
-
-      {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index), on_error: :raise)
-
-      assert index_live
-             |> element("#cancel-deletion-#{project.id}", "Cancel deletion")
-             |> render_click() =~ "Project deletion canceled"
-    end
-
-    test "allows a superuser to perform delete now action on a scheduled for deletion project",
-         %{
-           conn: conn
-         } do
-      project =
-        project_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
-
-      {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index), on_error: :raise)
-
-      {:ok, form_live, _html} =
-        index_live
-        |> element("#delete-now-#{project.id}", "Delete now")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.project_index_path(conn, :delete, project)
-        )
-
-      {:ok, index_live, html} =
-        form_live
-        |> form("#scheduled_deletion_form",
-          project: %{
-            name_confirmation: project.name
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, Routes.project_index_path(conn, :index))
-
-      assert html =~
-               "Project deletion started. This may take a while to complete."
-
-      refute index_live |> element("project-#{project.id}") |> has_element?()
-    end
-
-    test "Edits a project", %{conn: conn, user: superuser} do
-      user1 = insert(:user, first_name: "Alice", last_name: "Owner")
-      user2 = insert(:user, first_name: "Bob", last_name: "Viewer")
-
-      project =
-        insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
-
-      {:ok, view, _html} =
-        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
-
-      view
-      |> form("#project-form",
-        project: %{
-          "project_users" => %{
-            find_user_index_in_list(view, user1) => %{
-              "user_id" => user1.id,
-              "role" => "owner"
-            },
-            find_user_index_in_list(view, user2) => %{
-              "user_id" => user2.id,
-              "role" => "viewer"
-            }
-          }
-        }
-      )
-      |> render_submit()
-
-      assert_patch(view, ~p"/settings/projects")
-      assert render(view) =~ "Project updated successfully"
-
-      updated_project =
-        Repo.preload(project, [:project_users], force: true)
-
-      assert Enum.count(updated_project.project_users) == 2
-
-      for p_user <- updated_project.project_users do
-        assert p_user.user_id in [user1.id, user2.id]
-        refute p_user.user_id == superuser.id
-      end
-    end
-
-    test "editing a project with a name that resolves to blank shows error", %{
-      conn: conn
-    } do
-      user1 = insert(:user, first_name: "Alice", last_name: "Owner")
-
-      project =
-        insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
-
-      {:ok, view, _html} =
-        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
-
-      view
-      |> form("#project-form",
-        project: %{raw_name: "!!!"}
-      )
-      |> render_submit()
-
-      html = render(view)
-      assert html =~ "can&#39;t be blank"
-    end
-
-    test "sorting projects by name works correctly", %{conn: conn} do
-      _project_a = insert(:project, name: "alpha-project")
-      _project_b = insert(:project, name: "beta-project")
-      _project_c = insert(:project, name: "charlie-project")
-
-      {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index))
-
-      # Click name header to sort descending (first click)
-      index_live
-      |> element("th a", "Name")
-      |> render_click()
-
-      html = render(index_live)
-
-      # Check that projects appear in reverse name order
-      [alpha_pos, beta_pos, charlie_pos] =
-        get_element_order(html, [
-          "alpha-project",
-          "beta-project",
-          "charlie-project"
-        ])
-
-      assert charlie_pos < beta_pos
-      assert beta_pos < alpha_pos
-
-      # Click name header again to sort ascending
-      index_live
-      |> element("th a", "Name")
-      |> render_click()
-
-      html = render(index_live)
-
-      # Check that projects appear in name alphabetical order
-      assert assert_elements_in_order(html, [
-               "alpha-project",
-               "beta-project",
-               "charlie-project"
-             ])
-    end
-
-    test "sorting projects by created date works correctly", %{conn: conn} do
-      # Create projects with different dates
-      _project_old =
-        insert(:project,
-          name: "old-project",
-          inserted_at: ~N[2023-01-01 00:00:00]
-        )
-
-      _project_new =
-        insert(:project,
-          name: "new-project",
-          inserted_at: ~N[2023-12-01 00:00:00]
-        )
-
-      {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index))
-
-      # Click created at header to sort
-      index_live
-      |> element("th a", "Created At")
-      |> render_click()
-
-      html = render(index_live)
-
-      # Old project should appear first when sorted by created date ascending
-      assert assert_elements_in_order(html, ["old-project", "new-project"])
-    end
-
-    test "filtering projects by search term works correctly", %{conn: conn} do
-      project_a =
-        insert(:project, name: "alpha-project", description: "First project")
-
-      _project_b =
-        insert(:project, name: "beta-project", description: "Second project")
-
-      # Add an owner to project_a so it shows up in owner search
-      user_owner = insert(:user, first_name: "John", last_name: "Owner")
-      insert(:project_user, project: project_a, user: user_owner, role: :owner)
-
-      {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index))
-
-      # Filter by project name
-      index_live
-      |> element("input[name=filter]")
-      |> render_keyup(%{"key" => "a", "value" => "alpha"})
-
-      html = render(index_live)
-      assert html =~ "alpha-project"
-      refute html =~ "beta-project"
-
-      # Filter by description
-      index_live
-      |> element("input[name=filter]")
-      |> render_keyup(%{"key" => "f", "value" => "First"})
-
-      html = render(index_live)
-      assert html =~ "alpha-project"
-      refute html =~ "beta-project"
-
-      # Filter by owner name
-      index_live
-      |> element("input[name=filter]")
-      |> render_keyup(%{"key" => "j", "value" => "John"})
-
-      html = render(index_live)
-      assert html =~ "alpha-project"
-      refute html =~ "beta-project"
-
-      # Clear filter
-      index_live
-      |> render_click("clear_filter")
-
-      html = render(index_live)
-      assert html =~ "alpha-project"
-      assert html =~ "beta-project"
-    end
-
-    test "project filter input shows correct placeholder and clear button", %{
-      conn: conn
-    } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index))
-
-      # Check filter input is present
-      assert has_element?(index_live, "input[name=filter]")
-
-      # Initially clear button should be hidden
-      assert has_element?(index_live, "#clear_filter_button.hidden")
-
-      # Type in filter
-      index_live
-      |> element("input[name=filter]")
-      |> render_keyup(%{"key" => "a", "value" => "test"})
-
-      # Clear button should now be visible (not hidden)
-      refute has_element?(index_live, "#clear_filter_button.hidden")
-      assert has_element?(index_live, "a[phx-click='clear_filter']")
-    end
-
-    test "adding collaborators to project works correctly", %{conn: conn} do
-      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
-      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
-      user3 = insert(:user, first_name: "Charlie", last_name: "Brown")
-
-      # Create project with only user1 as owner
-      project = insert(:project)
-      insert(:project_user, project: project, user: user1, role: :owner)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
-
-      # Find user indices in the form
-      user2_index = find_user_index_in_list(view, user2)
-      user3_index = find_user_index_in_list(view, user3)
-
-      # Add user2 as editor and user3 as viewer
-      view
-      |> form("#project-form",
-        project: %{
-          "project_users" => %{
-            user2_index => %{"user_id" => user2.id, "role" => "editor"},
-            user3_index => %{"user_id" => user3.id, "role" => "viewer"}
-          }
-        }
-      )
-      |> render_submit()
-
-      # Check that users were added
-      updated_project = Repo.preload(project, [:project_users], force: true)
-
-      user_roles =
-        Enum.map(updated_project.project_users, &{&1.user_id, &1.role})
-
-      assert {user2.id, :editor} in user_roles
-      assert {user3.id, :viewer} in user_roles
-
-      # Check that newly added collaborators have failure_alert defaulting to false
-      user2_project_user =
-        Enum.find(updated_project.project_users, &(&1.user_id == user2.id))
-
-      user3_project_user =
-        Enum.find(updated_project.project_users, &(&1.user_id == user3.id))
-
-      assert user2_project_user.failure_alert == false
-      assert user3_project_user.failure_alert == false
-    end
-
-    test "removing collaborators from project works correctly", %{conn: conn} do
-      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
-      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
-      user3 = insert(:user, first_name: "Charlie", last_name: "Brown")
-
-      # Create project with all three users
-      project = insert(:project)
-      insert(:project_user, project: project, user: user1, role: :owner)
-      insert(:project_user, project: project, user: user2, role: :editor)
-      insert(:project_user, project: project, user: user3, role: :viewer)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
-
-      # Find user indices in the form
-      user2_index = find_user_index_in_list(view, user2)
-      user3_index = find_user_index_in_list(view, user3)
-
-      # Remove user2 and user3 by setting their roles to empty
-      view
-      |> form("#project-form",
-        project: %{
-          "project_users" => %{
-            user2_index => %{"user_id" => user2.id, "role" => ""},
-            user3_index => %{"user_id" => user3.id, "role" => ""}
-          }
-        }
-      )
-      |> render_submit()
-
-      # Check that users were removed
-      updated_project = Repo.preload(project, [:project_users], force: true)
-      user_ids = Enum.map(updated_project.project_users, & &1.user_id)
-
-      assert user1.id in user_ids
-      refute user2.id in user_ids
-      refute user3.id in user_ids
-    end
-
-    test "changing collaborator roles works correctly", %{conn: conn} do
-      user1 = insert(:user, first_name: "Alice", last_name: "Smith")
-      user2 = insert(:user, first_name: "Bob", last_name: "Jones")
-
-      # Create project with user1 as owner and user2 as viewer
-      project = insert(:project)
-      insert(:project_user, project: project, user: user1, role: :owner)
-      insert(:project_user, project: project, user: user2, role: :viewer)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
-
-      # Find user2's index
-      user2_index = find_user_index_in_list(view, user2)
-
-      # Change user2 from viewer to admin
-      view
-      |> form("#project-form",
-        project: %{
-          "project_users" => %{
-            user2_index => %{"user_id" => user2.id, "role" => "admin"}
-          }
-        }
-      )
-      |> render_submit()
-
-      # Check that user2's role was changed
-      updated_project = Repo.preload(project, [:project_users], force: true)
-
-      user2_project_user =
-        Enum.find(updated_project.project_users, &(&1.user_id == user2.id))
-
-      assert user2_project_user.role == :admin
-    end
-
-    test "project user management form has sorting and filtering", %{conn: conn} do
-      user1 =
-        insert(:user,
-          first_name: "Alice",
-          last_name: "Alpha",
-          email: "alice@example.com"
-        )
-
-      _user2 =
-        insert(:user,
-          first_name: "Bob",
-          last_name: "Beta",
-          email: "bob@example.com"
-        )
-
-      _user3 =
-        insert(:user,
-          first_name: "Charlie",
-          last_name: "Gamma",
-          email: "charlie@example.com"
-        )
-
-      project = insert(:project)
-      insert(:project_user, project: project, user: user1, role: :owner)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
-
-      # Check that filter input is present
-      assert has_element?(view, "input[name=filter]")
-
-      # Test filtering by name
-      view
-      |> element("input[name=filter]")
-      |> render_keyup(%{"value" => "Alice"})
-
-      html = render(view)
-      assert html =~ "Alice Alpha"
-      refute html =~ "Bob Beta"
-      refute html =~ "Charlie Gamma"
-
-      # Clear the filter first to test sorting
-      view
-      |> element("#clear_filter_button")
-      |> render_click()
-
-      # Test sorting by name
-      view
-      |> element("th a", "NAME")
-      |> render_click()
-
-      html = render(view)
-      # Check that users are sorted in descending order (first click)
-      [charlie_pos, bob_pos, alice_pos] =
-        get_element_order(
-          html,
-          ["Charlie Gamma", "Bob Beta", "Alice Alpha"],
-          "#project_users_table tbody tr"
-        )
-
-      # First click sorts in descending order: Charlie, Bob, Alice
-      assert charlie_pos < bob_pos
-      assert bob_pos < alice_pos
     end
   end
 
@@ -7814,42 +7646,5 @@ defmodule LightningWeb.ProjectLiveTest do
     |> Floki.find(selector)
     |> Enum.map(&Floki.raw_html/1)
     |> Enum.find(fn el -> el =~ "selected=\"true\"" end)
-  end
-
-  # Helper to check element order in rendered HTML using proper parsing
-  defp assert_elements_in_order(
-         html,
-         elements,
-         table_selector \\ "table tbody tr"
-       ) do
-    parsed_html = Floki.parse_fragment!(html)
-    rows = Floki.find(parsed_html, table_selector)
-
-    row_texts = Enum.map(rows, fn row -> Floki.text(row) end)
-
-    # Find positions of each element in the row texts
-    positions =
-      Enum.map(elements, fn element ->
-        Enum.find_index(row_texts, fn row_text ->
-          String.contains?(row_text, element)
-        end)
-      end)
-
-    # Check if positions are in ascending order
-    positions == Enum.sort(positions)
-  end
-
-  defp get_element_order(html, elements, table_selector \\ "table tbody tr") do
-    parsed_html = Floki.parse_fragment!(html)
-    rows = Floki.find(parsed_html, table_selector)
-
-    row_texts = Enum.map(rows, fn row -> Floki.text(row) end)
-
-    # Find positions of each element in the row texts
-    Enum.map(elements, fn element ->
-      Enum.find_index(row_texts, fn row_text ->
-        String.contains?(row_text, element)
-      end)
-    end)
   end
 end
