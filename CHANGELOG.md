@@ -29,6 +29,12 @@ and this project adheres to
 
 ### Fixed
 
+- Provisioning a sandbox no longer links the parent project's webhook auth
+  methods to the cloned triggers. They were invisible and unmanageable from the
+  sandbox, yet still enforced on its webhook URLs, so an apparently
+  unauthenticated sandbox trigger rejected requests unless they carried the
+  parent project's credentials. Cloned triggers now start unauthenticated (and,
+  as before, disabled).
 - GitHub sync now prevents two projects in the same project tree (root,
   sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
   pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)

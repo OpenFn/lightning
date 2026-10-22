@@ -9,7 +9,11 @@ defmodule Lightning.Projects.Sandboxes do
   ## What gets copied to a sandbox
 
   * **Project settings**: retention policies, concurrency limits, MFA requirements
-  * **Workflow structure**: jobs, triggers (disabled), edges, and node positions
+  * **Workflow structure**: jobs, triggers (disabled), edges, and node positions.
+    Webhook auth methods are **not** copied: they belong to the parent project,
+    so the sandbox could neither display nor manage them, yet they would still
+    gate the sandbox's webhook URL. A cloned trigger starts unauthenticated and
+    disabled; protect it with a sandbox-owned auth method before enabling it.
   * **Credentials**: references to parent credentials (no secrets duplicated)
   * **Keychain metadata**: cloned for jobs that use them
   * **Version history**: latest workflow version per workflow
@@ -1054,7 +1058,7 @@ defmodule Lightning.Projects.Sandboxes do
     Repo.preload(parent,
       workflows: [
         jobs: [:project_credential, :keychain_credential],
-        triggers: [:webhook_auth_methods],
+        triggers: [],
         edges: []
       ],
       project_credentials: [:credential],
@@ -1275,17 +1279,11 @@ defmodule Lightning.Projects.Sandboxes do
 
         {:ok, sandbox_trigger} = insert_sandbox_trigger(sandbox_trigger_attrs)
 
-        if parent_trigger.webhook_auth_methods &&
-             parent_trigger.webhook_auth_methods != [] do
-          sandbox_trigger
-          |> Repo.preload(:webhook_auth_methods)
-          |> Ecto.Changeset.change()
-          |> Ecto.Changeset.put_assoc(
-            :webhook_auth_methods,
-            parent_trigger.webhook_auth_methods
-          )
-          |> Repo.update!()
-        end
+        # The parent's webhook auth methods are deliberately not linked here.
+        # They are parent-owned records, invisible to project-scoped listings
+        # in the sandbox, yet the webhook plug would still enforce them —
+        # auth nobody in the sandbox can see or remove. The trigger is cloned
+        # disabled, so nothing is exposed until someone chooses to enable it.
 
         {parent_trigger.id, sandbox_trigger.id}
       end)
