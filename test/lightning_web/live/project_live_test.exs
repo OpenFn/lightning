@@ -955,7 +955,7 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, credential} =
         Lightning.Credentials.create_credential(
           %{
-            body: %{},
+            credential_bodies: [%{name: "main", body: %{}}],
             name: "some name",
             user_id: user.id,
             schema: "raw",

@@ -557,6 +557,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     final_params =
       credential_params
+      |> Map.delete("body")
       |> Map.put("project_credentials", project_credentials)
       |> Map.put("credential_bodies", credential_bodies_list)
       |> Map.put("delete_environments", environments_to_delete)

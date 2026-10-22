@@ -408,6 +408,29 @@ defmodule LightningWeb.API.CredentialControllerTest do
   describe "create" do
     setup [:assign_bearer_for_api]
 
+    test "returns a validation error for the legacy body attribute", %{
+      conn: conn
+    } do
+      conn =
+        post(conn, ~p"/api/credentials", %{
+          "name" => "Legacy Credential",
+          "schema" => "raw",
+          "body" => %{"key" => "secret"}
+        })
+
+      assert json_response(conn, 422) == %{
+               "errors" => %{
+                 "body" => [
+                   "is no longer supported; use credential_bodies instead"
+                 ]
+               }
+             }
+
+      refute Lightning.Repo.get_by(Lightning.Credentials.Credential,
+               name: "Legacy Credential"
+             )
+    end
+
     test "refuses a repo connection token instead of crashing", %{conn: conn} do
       # `require_authenticated_api_resource` lets these through the pipeline,
       # and a credential belongs to a person, so there is no sensible owner to

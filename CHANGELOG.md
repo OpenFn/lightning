@@ -25,6 +25,12 @@ and this project adheres to
 
 ### Changed
 
+- Credential creation rejects the legacy top-level `body` attribute with a
+  validation error instead of silently discarding it. Use `credential_bodies`
+  with an explicit environment name; `SetupUtils.setup_user/3` still accepts
+  `body` as shorthand for `main`.
+  [#5164](https://github.com/OpenFn/lightning/issues/5164)
+
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
@@ -34,6 +40,10 @@ and this project adheres to
   [#5246](https://github.com/OpenFn/lightning/pull/5246)
 
 ### Fixed
+
+- Demo and setup credentials persist their environment-specific bodies, so the
+  DHIS2 demo credential can be resolved when a demo workflow runs.
+  [#5164](https://github.com/OpenFn/lightning/issues/5164)
 
 - GitHub sync now prevents two projects in the same project tree (root,
   sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`

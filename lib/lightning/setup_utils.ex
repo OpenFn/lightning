@@ -103,11 +103,16 @@ defmodule Lightning.SetupUtils do
     {:ok, credential} =
       Credentials.create_credential(
         %{
-          body: %{
-            username: "admin",
-            password: "district",
-            hostUrl: "https://play.dhis2.org/dev"
-          },
+          credential_bodies: [
+            %{
+              name: "main",
+              body: %{
+                "username" => "admin",
+                "password" => "district",
+                "hostUrl" => "https://play.dhis2.org/dev"
+              }
+            }
+          ],
           name: "DHIS2 play",
           user_id: user_id,
           schema: "@openfn/language-dhis2"
@@ -972,6 +977,10 @@ defmodule Lightning.SetupUtils do
   an entire lightning instance with a working project (including secrets)
   without using the web UI.
 
+  Credentials may specify `credential_bodies` for named environments. The legacy
+  `body` shorthand creates a single body in the `main` environment. Supplying both
+  attributes is rejected rather than choosing one.
+
   ## Examples
 
     iex> setup_user(%{email: "td@openfn.org", first_name: "taylor", last_name: "downs", password: "shh12345!"}, "secretToken", [%{name: "openmrs", schema: "raw", body: %{"a" => "secret"}}, %{ name: "dhis2", schema: "raw", body: %{"b" => "safe"}}])
@@ -1005,12 +1014,28 @@ defmodule Lightning.SetupUtils do
           Enum.each(credentials, fn credential ->
             {:ok, _credential} =
               Credentials.create_credential(
-                credential |> Map.put(:user_id, user.id),
+                credential
+                |> normalize_seed_credential()
+                |> Map.put("user_id", user.id),
                 user
               )
           end)
 
       :ok
     end)
+  end
+
+  defp normalize_seed_credential(attrs) do
+    attrs = Lightning.Helpers.normalize_keys(attrs)
+
+    case attrs do
+      %{"body" => body} when not is_map_key(attrs, "credential_bodies") ->
+        attrs
+        |> Map.delete("body")
+        |> Map.put("credential_bodies", [%{name: "main", body: body}])
+
+      _ ->
+        attrs
+    end
   end
 end

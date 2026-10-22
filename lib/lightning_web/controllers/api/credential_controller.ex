@@ -119,20 +119,25 @@ defmodule LightningWeb.API.CredentialController do
   Creates a new credential and optionally grants it access to projects.
 
   Creates a credential owned by the authenticated user. If project_credentials
-  are specified, the user must have access to all listed projects. The credential
-  body is included in the response only upon creation.
+  are specified, the user must have access to all listed projects. Credential
+  bodies are not included in the response.
+
+  The legacy top-level `body` parameter returns `422 Unprocessable Entity`, even
+  when `credential_bodies` is also present. Put each body in `credential_bodies`
+  with an explicit environment name instead.
 
   ## Parameters
 
   - `conn` - The Plug connection struct with the current resource assigned
   - `params` - Map containing:
     - `name` - Credential name (required)
-    - `body` - Credential JSON body with authentication details (required)
+    - `schema` - Credential schema (e.g. `raw`)
+    - `credential_bodies` - List of environment names and credential JSON bodies
     - `project_credentials` - List of project associations (optional)
 
   ## Returns
 
-  - `201 Created` with credential JSON including body
+  - `201 Created` with credential metadata
   - `422 Unprocessable Entity` on validation errors
   - `403 Forbidden` if user lacks access to specified projects
 
@@ -142,14 +147,20 @@ defmodule LightningWeb.API.CredentialController do
       POST /api/credentials
       {
         "name": "My API Key",
-        "body": {"apiKey": "secret123"}
+        "schema": "raw",
+        "credential_bodies": [
+          {"name": "main", "body": {"apiKey": "secret123"}}
+        ]
       }
 
       # Create credential with project associations
       POST /api/credentials
       {
         "name": "Shared Credential",
-        "body": {"token": "abc123"},
+        "schema": "raw",
+        "credential_bodies": [
+          {"name": "main", "body": {"token": "abc123"}}
+        ],
         "project_credentials": [
           {"project_id": "a1b2c3d4-..."}
         ]
