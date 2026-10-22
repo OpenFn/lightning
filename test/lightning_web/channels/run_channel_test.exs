@@ -878,6 +878,97 @@ defmodule LightningWeb.RunChannelTest do
     end
   end
 
+  describe "fetch:credential for a keychain when dataclips are not saved" do
+    setup do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user: user}],
+          retention_policy: :erase_all
+        )
+
+      [selected, default] =
+        for {external_id, username} <- [{"alice", "alice"}, {nil, "default"}] do
+          credential =
+            insert(:credential,
+              schema: "raw",
+              external_id: external_id,
+              user: user
+            )
+            |> with_body(%{name: "main", body: %{"username" => username}})
+
+          insert(:project_credential, project: project, credential: credential)
+          credential
+        end
+
+      keychain =
+        insert(:keychain_credential,
+          path: "$.user_id",
+          default_credential: default,
+          project: project,
+          created_by: user
+        )
+
+      workflow =
+        %{triggers: [trigger]} =
+        build(:workflow, project: project)
+        |> with_trigger(build(:trigger, type: :webhook, enabled: true))
+        |> with_job(build(:job, keychain_credential: keychain))
+        |> insert()
+
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
+      dataclip =
+        insert(:http_request_dataclip,
+          project: project,
+          body: %{"user_id" => "alice"}
+        )
+
+      run =
+        insert(:run,
+          work_order:
+            insert(:workorder,
+              workflow: workflow,
+              trigger: trigger,
+              dataclip: dataclip,
+              snapshot: snapshot
+            ),
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          options: %{save_dataclips: false}
+        )
+
+      %{run: run, keychain: keychain, selected: selected}
+      |> merge_setups([:create_socket, :join_run_channel])
+    end
+
+    test "resolves against the input as it was before the wipe", %{
+      socket: socket,
+      keychain: keychain
+    } do
+      ref = push(socket, "fetch:dataclip", %{})
+      assert_reply ref, :ok, {:binary, _}
+
+      ref = push(socket, "fetch:credential", %{"id" => keychain.id})
+      assert_reply ref, :ok, %{"username" => "alice"}
+    end
+
+    test "errors rather than falling back to the default when the input was never read",
+         %{run: run, keychain: keychain} = context do
+      # A rejoin lands in a fresh channel process; the worker does not fetch
+      # the dataclip again, and the stored copy is already gone.
+      Lightning.Runs.wipe_dataclips(run)
+
+      %{socket: socket} =
+        merge_setups(context, [:create_socket, :join_run_channel])
+
+      ref = push(socket, "fetch:credential", %{"id" => keychain.id})
+      assert_reply ref, :error, _
+    end
+  end
+
   describe "marking steps as started and finished" do
     setup :create_socket
 

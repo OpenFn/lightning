@@ -32,6 +32,10 @@ and this project adheres to
 - GitHub sync now prevents two projects in the same project tree (root,
   sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
   pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+- Keychain credentials do not resolve on projects with zero-persistence enabled
+  [#5091](https://github.com/OpenFn/lightning/issues/5091)
+- Ensure run credentials are loaded from the run's snapshot, not the live
+  workflow
 
 ## [2.19.2] - 2026-10-16
 
