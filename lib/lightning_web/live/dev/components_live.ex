@@ -4,9 +4,6 @@ defmodule LightningWeb.Dev.ComponentsLive do
   @moduledoc false
   use LightningWeb, {:live_view, layout: {LightningWeb.Layouts, :blank}}
 
-  alias Lightning.Run
-  alias LightningWeb.Components.Viewers
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -54,23 +51,6 @@ defmodule LightningWeb.Dev.ComponentsLive do
                 class=""
               /> --%>
             </div>
-          </.variation>
-          <.variation title="With data">
-            <%!-- <Viewers.log_viewer
-              id="log-viewer-data"
-              stream={@log_lines}
-              run_state={%Run{state: :success}}
-              highlight_id={@highlight_id}
-              stream_empty?={false}
-            /> --%>
-          </.variation>
-          <.variation title="Empty">
-            <Viewers.log_viewer
-              id="log-viewer"
-              logs_empty?={true}
-              run_id="run-id"
-              run_state={%Run{state: :crashed}}
-            />
           </.variation>
         </ul>
       </div>

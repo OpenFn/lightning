@@ -7,68 +7,6 @@ defmodule LightningWeb.Components.ViewerTest do
 
   import Lightning.Factories
 
-  describe "log_viewer/1" do
-    setup do
-      [workflow: insert(:simple_workflow)]
-    end
-
-    test "renders correct information", %{
-      workflow: %{jobs: [job | _rest]}
-    } do
-      finished_step =
-        insert(:step,
-          job: job,
-          input_dataclip:
-            insert(:dataclip, body: nil, wiped_at: DateTime.utc_now()),
-          output_dataclip: nil,
-          finished_at: DateTime.utc_now()
-        )
-
-      # finished step for a lost run
-      html =
-        render_component(&Viewers.log_viewer/1,
-          id: "test",
-          logs_empty?: true,
-          selected_step_id: finished_step.id,
-          run_state: :lost,
-          run_id: "run-id"
-        )
-
-      assert html =~ "No logs were received for this run."
-    end
-
-    test "shows 'Waiting for worker' when run state is :available", %{
-      workflow: %{jobs: [_job | _rest]}
-    } do
-      html =
-        render_component(&Viewers.log_viewer/1,
-          id: "test",
-          logs_empty?: true,
-          selected_step_id: nil,
-          run_state: :available,
-          run_id: "run-id"
-        )
-
-      assert html =~ "Waiting for worker"
-    end
-
-    test "shows 'Creating runtime & installing adaptors' when run state is :claimed",
-         %{
-           workflow: %{jobs: [_job | _rest]}
-         } do
-      html =
-        render_component(&Viewers.log_viewer/1,
-          id: "test",
-          logs_empty?: true,
-          selected_step_id: nil,
-          run_state: :claimed,
-          run_id: "run-id"
-        )
-
-      assert html =~ "Creating runtime &amp; installing adaptors"
-    end
-  end
-
   describe "step_dataclip_viewer/1" do
     setup do
       [workflow: insert(:simple_workflow)]

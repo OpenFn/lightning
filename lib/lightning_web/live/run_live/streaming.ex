@@ -19,7 +19,7 @@ defmodule LightningWeb.RunLive.Streaming do
         include: [
           :created_by,
           :starting_trigger,
-          steps: [:job, snapshot: [triggers: :webhook_auth_methods]],
+          steps: [snapshot: [triggers: :webhook_auth_methods]],
           workflow: [:project],
           snapshot: [triggers: :webhook_auth_methods]
         ]
@@ -27,10 +27,40 @@ defmodule LightningWeb.RunLive.Streaming do
     end)
   end
 
+  @doc """
+  Reads every log line of the loaded run and sends them to the LiveView in
+  chunks, which it pushes to the page. Runs when the page has said it is
+  listening and the run has loaded, whichever comes second; a second call
+  (a reconnect) sends the lines again, and the page drops the ones it has.
+  """
+  def stream_log_lines(socket, chunk_size) do
+    %{run: run} = socket.assigns
+
+    if run.ok? and socket.assigns.logs_wanted? do
+      live_view_pid = self()
+      loaded_run = run.result
+
+      assign_async(socket, :log_lines, fn ->
+        send_log_chunks(loaded_run, live_view_pid, chunk_size)
+      end)
+    else
+      socket
+    end
+  end
+
+  defp send_log_chunks(run, live_view_pid, chunk_size) do
+    Repo.transaction(fn ->
+      Runs.get_log_lines(run)
+      |> Stream.chunk_every(chunk_size)
+      |> Stream.each(&send(live_view_pid, {:log_line_chunk, &1}))
+      |> Stream.run()
+    end)
+
+    {:ok, %{log_lines: :ok}}
+  end
+
   def add_or_update_step(socket, step) do
     %{steps: steps} = socket.assigns
-
-    step = Lightning.Repo.preload(step, :job)
 
     case Enum.find_index(steps, &(&1.id == step.id)) do
       nil ->
@@ -101,8 +131,6 @@ defmodule LightningWeb.RunLive.Streaming do
       unquote(helpers())
       unquote(handle_infos())
       @impl true
-      unquote(handle_events())
-      @impl true
       unquote(handle_asyncs())
     end
   end
@@ -112,9 +140,9 @@ defmodule LightningWeb.RunLive.Streaming do
       @impl true
       def handle_info({:log_line_chunk, lines}, socket) do
         {:noreply,
-         socket
-         |> assign(:log_lines_empty?, false)
-         |> push_event("logs-#{socket.assigns.run.result.id}", %{logs: lines})}
+         push_event(socket, "logs-#{socket.assigns.run.result.id}", %{
+           logs: lines
+         })}
       end
 
       def handle_info(
@@ -142,9 +170,7 @@ defmodule LightningWeb.RunLive.Streaming do
             socket
           ) do
         {:noreply,
-         socket
-         |> assign(:log_lines_empty?, false)
-         |> push_event("logs-#{socket.assigns.run.result.id}", %{
+         push_event(socket, "logs-#{socket.assigns.run.result.id}", %{
            logs: [log_line]
          })}
       end
@@ -167,8 +193,6 @@ defmodule LightningWeb.RunLive.Streaming do
 
         Runs.subscribe(updated_run)
 
-        live_view_pid = self()
-
         {:noreply,
          socket
          |> assign(
@@ -178,21 +202,7 @@ defmodule LightningWeb.RunLive.Streaming do
            project: updated_run.workflow.project,
            workflow: updated_run.workflow
          )
-         |> assign_async(
-           :log_lines,
-           fn ->
-             Repo.transaction(fn ->
-               Runs.get_log_lines(updated_run)
-               |> Stream.chunk_every(@chunk_size)
-               |> Stream.each(fn lines ->
-                 send(live_view_pid, {:log_line_chunk, lines})
-               end)
-               |> Stream.run()
-             end)
-
-             {:ok, %{log_lines: :ok}}
-           end
-         )
+         |> stream_log_lines(@chunk_size)
          |> handle_steps_change()}
       end
 
@@ -205,25 +215,6 @@ defmodule LightningWeb.RunLive.Streaming do
            :run,
            AsyncResult.failed(run, {:exit, reason})
          )}
-      end
-    end
-  end
-
-  defp handle_events do
-    quote do
-      def handle_event(
-            "save-log-filter",
-            %{"desired_log_level" => log_level},
-            socket
-          ) do
-        {:ok, updated_user} =
-          Lightning.Accounts.update_user_preference(
-            socket.assigns.current_user,
-            "desired_log_level",
-            log_level
-          )
-
-        {:noreply, assign(socket, current_user: updated_user)}
       end
     end
   end

@@ -1,15 +1,16 @@
 defmodule LightningWeb.RunLive.Show do
+  @moduledoc """
+  One run: its details, its steps, the selected step's input and output, and
+  its log. The design system's page draws it from props; this LiveView loads
+  the run, follows its events, streams the log lines to the page as they
+  arrive, and answers Cancel and the log level.
+  """
   use LightningWeb, :live_view
   use LightningWeb.RunLive.Streaming, chunk_size: 100
-
-  import LightningWeb.Components.Icons
-  import LightningWeb.RunLive.Components
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias LightningWeb.Components.Tabbed
-  alias LightningWeb.Components.Viewers
   alias LightningWeb.RunLive.CancelHelper
   alias Phoenix.LiveView.AsyncResult
 
@@ -17,289 +18,17 @@ defmodule LightningWeb.RunLive.Show do
   on_mount {LightningWeb.Hooks, :ensure_run_belongs_to_project}
   on_mount {LightningWeb.Hooks, :check_limits}
 
-  attr :run, :map, required: true
-  attr :workflow, :map, required: true
-
-  defp snapshot_version(assigns) do
-    %{run: run, workflow: workflow} = assigns
-
-    snapshot_version =
-      if run.snapshot.lock_version == workflow.lock_version do
-        "latest"
-      else
-        String.slice(run.snapshot.id, 0..6)
-      end
-
-    assigns =
-      assign(assigns, snapshot_version: snapshot_version)
-
-    ~H"""
-    <LightningWeb.Components.Common.snapshot_version_chip
-      id="run-workflow-version"
-      version={@snapshot_version}
-      tooltip={
-        if @snapshot_version == "latest",
-          do: "This run is based on the latest version of this workflow.",
-          else:
-            "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at, "%F at %T")}"
-      }
-    />
-    """
-  end
+  @log_levels ~w(debug info warn error)
 
   @impl true
   def render(assigns) do
-    assigns =
-      assigns |> assign(:no_step_selected?, is_nil(assigns.selected_step_id))
-
     ~H"""
-    <LayoutComponents.page_content>
-      <:banner>
-        <Common.dynamic_component
-          :if={assigns[:banner]}
-          function={@banner.function}
-          args={@banner.attrs}
-        />
-      </:banner>
-      <:header>
-        <LayoutComponents.header current_user={@current_user}>
-          <:breadcrumbs>
-            <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker
-                project={@project}
-                label={@project_label}
-              />
-              <LayoutComponents.breadcrumb_items items={[
-                {"History", ~p"/projects/#{@project}/history"}
-              ]} />
-              <LayoutComponents.breadcrumb>
-                <:label>
-                  {@page_title}
-                  <span class="pl-2 font-light">
-                    {display_short_uuid(@id)}
-                  </span>
-                  <div class="mx-2"></div>
-                  <.async_result :let={run} assign={@run}>
-                    <%= if run do %>
-                      <.snapshot_version run={run} workflow={@workflow} />
-                    <% end %>
-                  </.async_result>
-                </:label>
-              </LayoutComponents.breadcrumb>
-            </LayoutComponents.breadcrumbs>
-          </:breadcrumbs>
-        </LayoutComponents.header>
-      </:header>
-
-      <LayoutComponents.centered class="@container/main h-full">
-        <.async_result :let={run} assign={@run}>
-          <:loading>
-            <.loading_filler />
-          </:loading>
-          <:failed :let={_reason}>
-            there was an error loading the run
-          </:failed>
-          <div class="flex gap-x-6 @5xl/main:flex-row flex-col h-full">
-            <div class="@5xl/main:basis-1/3 flex gap-y-6 @5xl/main:flex-col flex-row">
-              <.detail_list
-                id={"run-detail-#{run.id}"}
-                class="flex-1 @5xl/main:flex-none"
-              >
-                <.list_item>
-                  <:label>Workflow</:label>
-                  <:value>
-                    <.link
-                      navigate={
-                        ~p"/projects/#{@project}/w/#{@workflow.id}?#{maybe_add_snapshot_version(%{run: run.id}, run.snapshot.lock_version, @workflow.lock_version, @experimental_features)}"
-                      }
-                      class="link text-ellipsis"
-                    >
-                      {@workflow.name}
-                    </.link>
-                  </:value>
-                </.list_item>
-                <.list_item>
-                  <:label>Work Order</:label>
-                  <:value>
-                    <.link
-                      navigate={
-                        ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: run.work_order_id}}}"
-                      }
-                      class="link font-mono"
-                    >
-                      {display_short_uuid(run.work_order_id)}
-                    </.link>
-                  </:value>
-                </.list_item>
-                <%= if run.created_by || run.starting_trigger do %>
-                  <.list_item>
-                    <:label>Started by</:label>
-                    <:value>
-                      <%= cond do %>
-                        <% run.created_by -> %>
-                          {run.created_by.email}
-                        <% run.starting_trigger -> %>
-                          {String.capitalize(
-                            Atom.to_string(run.starting_trigger.type)
-                          )} trigger
-                        <% true -> %>
-                      <% end %>
-                    </:value>
-                  </.list_item>
-                <% end %>
-                <.list_item>
-                  <:label>Started</:label>
-                  <:value>
-                    <%= if run.started_at do %>
-                      <Common.datetime datetime={run.started_at} />
-                    <% end %>
-                  </:value>
-                </.list_item>
-                <.list_item>
-                  <:label>Finished</:label>
-                  <:value>
-                    <%= if run.finished_at do %>
-                      <Common.datetime datetime={run.finished_at} />
-                    <% end %>
-                  </:value>
-                </.list_item>
-                <.list_item>
-                  <:label>Final Output</:label>
-                  <:value>
-                    <%= if run.final_dataclip_id do %>
-                      <.link
-                        navigate={
-                          ~p"/projects/#{@project}/dataclips/#{run.final_dataclip_id}/show"
-                        }
-                        class="link font-mono"
-                      >
-                        {display_short_uuid(run.final_dataclip_id)}
-                      </.link>
-                    <% end %>
-                  </:value>
-                </.list_item>
-                <.list_item>
-                  <:label>Duration</:label>
-                  <:value>
-                    <.elapsed_indicator item={run} context="show" />
-                  </:value>
-                </.list_item>
-                <.list_item>
-                  <:label>Status</:label>
-                  <:value><.state_pill state={run.state} /></:value>
-                </.list_item>
-                <.list_item :if={run.state == :available and @can_run_workflow}>
-                  <:label>Action</:label>
-                  <:value>
-                    <.button
-                      size="sm"
-                      theme="secondary"
-                      phx-click="cancel-run"
-                      phx-value-run_id={run.id}
-                    >
-                      Cancel
-                    </.button>
-                  </:value>
-                </.list_item>
-              </.detail_list>
-
-              <.step_list
-                :let={step}
-                id={"step-list-#{run.id}"}
-                steps={@steps}
-                class="flex-1 items-center"
-              >
-                <.link patch={"?step=#{step.id}"}>
-                  <.step_item
-                    step={step}
-                    workflow_version={@workflow.lock_version}
-                    experimental_features={@experimental_features}
-                    is_clone={
-                      DateTime.compare(step.inserted_at, run.inserted_at) == :lt
-                    }
-                    selected={step.id == @selected_step_id}
-                    run_id={run.id}
-                    project_id={@project}
-                  />
-                </.link>
-              </.step_list>
-            </div>
-            <div class="@5xl/main:basis-2/3 flex flex-col gap-4 h-full">
-              <Tabbed.container
-                id={"run-#{run.id}-tabbed-container"}
-                class="run-tab-container"
-                default_hash="log"
-              >
-                <:tab hash="log">
-                  <.icon
-                    name="hero-command-line"
-                    class="h-5 w-5 inline-block mr-1 align-middle"
-                  />
-                  <span class="inline-block align-middle">Log</span>
-                </:tab>
-                <:tab
-                  hash="input"
-                  disabled={@no_step_selected?}
-                  disabled_msg="A valid step must be selected to view its input"
-                >
-                  <.icon
-                    name="hero-arrow-down-on-square"
-                    class="h-5 w-5 inline-block mr-1 align-middle"
-                  />
-                  <span class="inline-block align-middle">Input</span>
-                </:tab>
-                <:tab
-                  hash="output"
-                  disabled={@no_step_selected?}
-                  disabled_msg="A valid step (with a readable output) must be selected to view its output"
-                >
-                  <.icon
-                    name="hero-arrow-up-on-square"
-                    class="h-5 w-5 inline-block mr-1 align-middle rotate-180"
-                  />
-                  <span class="inline-block align-middle"> Output </span>
-                </:tab>
-                <:panel hash="input" class="flex-grow h-full">
-                  <Viewers.step_dataclip_viewer
-                    id={"step-input-#{@selected_step_id}"}
-                    run_state={@run.result.state}
-                    step={@selected_step}
-                    dataclip={@input_dataclip}
-                    input_or_output={:input}
-                    project_id={@project.id}
-                    admin_contacts={@admin_contacts}
-                    can_edit_data_retention={@can_edit_data_retention}
-                  />
-                </:panel>
-                <:panel hash="log" class="flex h-full">
-                  <Viewers.log_viewer
-                    id={"run-log-#{run.id}"}
-                    class="h-full"
-                    run_id={run.id}
-                    run_state={@run.result.state}
-                    logs_empty?={@log_lines_empty?}
-                    selected_step_id={@selected_step_id}
-                    current_user={@current_user}
-                  />
-                </:panel>
-                <:panel hash="output" class="flex-1">
-                  <Viewers.step_dataclip_viewer
-                    id={"step-output-#{@selected_step_id}"}
-                    run_state={@run.result.state}
-                    step={@selected_step}
-                    dataclip={@output_dataclip}
-                    input_or_output={:output}
-                    project_id={@project.id}
-                    admin_contacts={@admin_contacts}
-                    can_edit_data_retention={@can_edit_data_retention}
-                  />
-                </:panel>
-              </Tabbed.container>
-            </div>
-          </div>
-        </.async_result>
-      </LayoutComponents.centered>
-    </LayoutComponents.page_content>
+    <.design_system_page
+      name="RunShowPage"
+      props={page_props(assigns)}
+      banner={assigns[:banner]}
+      current_user={@current_user}
+    />
     """
   end
 
@@ -308,13 +37,8 @@ defmodule LightningWeb.RunLive.Show do
     %{current_user: user, project_user: project_user, project: project} =
       socket.assigns
 
-    can_run_workflow =
-      ProjectUsers
-      |> Permissions.can?(
-        :run_workflow,
-        user,
-        project
-      )
+    can_edit_data_retention =
+      Permissions.can?(ProjectUsers, :edit_data_retention, user, project_user)
 
     {:ok,
      socket
@@ -323,61 +47,71 @@ defmodule LightningWeb.RunLive.Show do
        page_title: "Run",
        id: id,
        selected_step_id: nil,
+       selected_step: nil,
        steps: [],
+       input_dataclip: nil,
+       output_dataclip: nil,
+       run: AsyncResult.loading(),
+       log_lines: AsyncResult.loading(),
+       logs_wanted?: false,
        experimental_features:
-         Lightning.Accounts.experimental_features_enabled?(user)
-     )
-     |> assign(:input_dataclip, nil)
-     |> assign(:output_dataclip, nil)
-     |> assign(:run, AsyncResult.loading())
-     |> assign(:log_lines, AsyncResult.loading())
-     |> assign(:log_lines_empty?, true)
-     |> assign(
-       can_edit_data_retention:
-         Permissions.can?(
-           ProjectUsers,
-           :edit_data_retention,
-           user,
-           project_user
+         Lightning.Accounts.experimental_features_enabled?(user),
+       can_run_workflow:
+         Permissions.can?(ProjectUsers, :run_workflow, user, project),
+       can_edit_data_retention: can_edit_data_retention,
+       # The emails are shown only to someone who cannot change the policy,
+       # on a wiped dataclip; nobody else gets them.
+       admin_contacts:
+         if(can_edit_data_retention,
+           do: [],
+           else: Projects.list_project_admin_emails(project.id)
          )
      )
-     |> assign(can_run_workflow: can_run_workflow)
-     |> assign(admin_contacts: Projects.list_project_admin_emails(project.id))
      |> get_run_async(id, project.id)}
   end
 
+  # A step id that is not one of this run's steps selects nothing, and shows
+  # no dataclip from an earlier selection.
   def handle_steps_change(socket) do
     %{selected_step_id: selected_step_id, steps: steps} = socket.assigns
 
-    selected_step =
-      steps
-      |> Enum.find(&(&1.id == selected_step_id))
+    case Enum.find(steps, &(&1.id == selected_step_id)) do
+      nil ->
+        assign(socket,
+          selected_step: nil,
+          input_dataclip: nil,
+          output_dataclip: nil
+        )
 
-    socket
-    |> assign(selected_step: selected_step)
-    |> maybe_load_input_dataclip()
-    |> maybe_load_output_dataclip()
+      selected_step ->
+        socket
+        |> assign(selected_step: selected_step)
+        |> maybe_load_input_dataclip()
+        |> maybe_load_output_dataclip()
+    end
   end
 
   @impl true
   def handle_params(params, _, socket) do
-    selected_step_id = Map.get(params, "step")
-
-    {:noreply, socket |> apply_selected_step_id(selected_step_id)}
+    {:noreply, apply_selected_step_id(socket, Map.get(params, "step"))}
   end
 
+  # Cancel acts on the run this page is for, never on an id from the browser.
   @impl true
-  def handle_event("cancel-run", %{"run_id" => run_id}, socket) do
-    if socket.assigns.can_run_workflow do
-      case CancelHelper.cancel_run(run_id, socket.assigns.project.id) do
+  def handle_event("cancel_run", _params, socket) do
+    %{can_run_workflow: can_run_workflow, id: id, project: project} =
+      socket.assigns
+
+    if can_run_workflow do
+      case CancelHelper.cancel_run(id, project.id) do
         {:ok, _run} ->
-          {:noreply, put_flash(socket, :info, "Run cancelled.")}
+          {:reply, %{}, put_flash(socket, :info, "Run cancelled.")}
 
         {:error, :not_found} ->
-          {:noreply, put_flash(socket, :error, "Run not found.")}
+          reply_error(socket, "Run not found.")
 
         {:error, :not_available} ->
-          {:noreply,
+          {:reply, %{},
            put_flash(
              socket,
              :info,
@@ -386,25 +120,151 @@ defmodule LightningWeb.RunLive.Show do
            )}
 
         {:error, _} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "An error occurred while cancelling."
-           )}
+          reply_error(socket, "An error occurred while cancelling.")
       end
     else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )}
+      reply_error(socket, "You are not authorized to perform this action.")
     end
+  end
+
+  def handle_event("save_log_level", %{"level" => level}, socket)
+      when level in @log_levels do
+    case Lightning.Accounts.update_user_preference(
+           socket.assigns.current_user,
+           "desired_log_level",
+           level
+         ) do
+      {:ok, user} -> {:reply, %{}, assign(socket, current_user: user)}
+      {:error, _} -> reply_error(socket, "Could not save the log level.")
+    end
+  end
+
+  def handle_event("save_log_level", _params, socket) do
+    reply_error(socket, "Invalid request")
+  end
+
+  # The page is listening for log lines: send them, now or once the run has
+  # loaded. A page that asks again (a reconnect) gets them again.
+  def handle_event("logs_ready", _params, socket) do
+    {:reply, %{},
+     socket
+     |> assign(logs_wanted?: true)
+     |> stream_log_lines(@chunk_size)}
   end
 
   @impl true
   def handle_info(%Lightning.Runs.Events.DataclipUpdated{}, socket) do
     {:noreply, socket}
+  end
+
+  # The shape the design system's RunShowPageProps expect, minus the log,
+  # which arrives by `push_event` as the lines are read.
+  defp page_props(assigns) do
+    %{run: run, project: project} = assigns
+
+    %{
+      project: %{
+        id: project.id,
+        parentId: project.parent_id,
+        color: project.color
+      },
+      projectLabel: assigns.project_label,
+      runId: assigns.id,
+      loading: not run.ok? and is_nil(run.failed),
+      run: if(run.ok?, do: run_json(run.result)),
+      workflow: workflow_json(assigns[:workflow]),
+      steps: Enum.map(assigns.steps, &step_json/1),
+      selectedStepId: assigns.selected_step_id,
+      inputDataclip: dataclip_json(assigns.input_dataclip),
+      outputDataclip: dataclip_json(assigns.output_dataclip),
+      logLevel: log_level(assigns.current_user),
+      experimentalFeatures: assigns.experimental_features,
+      canRunWorkflow: assigns.can_run_workflow,
+      canEditDataRetention: assigns.can_edit_data_retention,
+      # Named only by a wiped notice, so sent only when one is showing.
+      adminContacts:
+        if(wiped_showing?(assigns), do: assigns.admin_contacts, else: [])
+    }
+  end
+
+  defp wiped_showing?(%{selected_step: nil}), do: false
+
+  defp wiped_showing?(%{selected_step: step} = assigns) do
+    wiped?(assigns.input_dataclip, step.finished_at, step.input_dataclip_id) or
+      wiped?(assigns.output_dataclip, step.finished_at, step.output_dataclip_id)
+  end
+
+  defp wiped?(%{wiped_at: %DateTime{}}, _finished_at, _id), do: true
+  defp wiped?(nil, %DateTime{}, nil), do: true
+  defp wiped?(_dataclip, _finished_at, _id), do: false
+
+  defp run_json(run) do
+    %{
+      id: run.id,
+      workOrderId: run.work_order_id,
+      state: run.state,
+      startedBy: started_by(run),
+      insertedAt: run.inserted_at,
+      startedAt: run.started_at,
+      finishedAt: run.finished_at,
+      finalDataclipId: run.final_dataclip_id,
+      snapshot: %{
+        id: run.snapshot.id,
+        lockVersion: run.snapshot.lock_version,
+        insertedAt: run.snapshot.inserted_at
+      }
+    }
+  end
+
+  defp started_by(%{created_by: %{email: email}}), do: email
+
+  defp started_by(%{starting_trigger: %{type: type}}),
+    do: String.capitalize(Atom.to_string(type)) <> " trigger"
+
+  defp started_by(_run), do: nil
+
+  defp workflow_json(nil), do: nil
+
+  defp workflow_json(workflow),
+    do: %{
+      id: workflow.id,
+      name: workflow.name,
+      lockVersion: workflow.lock_version
+    }
+
+  defp step_json(step) do
+    %{
+      id: step.id,
+      jobId: step.job_id,
+      jobName: job_name(step),
+      exitReason: step.exit_reason,
+      errorType: step.error_type,
+      startedAt: step.started_at,
+      finishedAt: step.finished_at,
+      insertedAt: step.inserted_at,
+      inputDataclipId: step.input_dataclip_id,
+      outputDataclipId: step.output_dataclip_id,
+      snapshotLockVersion: step.snapshot.lock_version
+    }
+  end
+
+  # The job's name as it was in the snapshot the step ran on.
+  defp job_name(step) do
+    case Enum.find(step.snapshot.jobs, &(&1.id == step.job_id)) do
+      %{name: name} -> name
+      nil -> nil
+    end
+  end
+
+  defp dataclip_json(nil), do: nil
+
+  defp dataclip_json(dataclip),
+    do: %{id: dataclip.id, wiped: not is_nil(dataclip.wiped_at)}
+
+  defp log_level(user) do
+    case Map.get(user.preferences, "desired_log_level") do
+      level when level in @log_levels -> level
+      _ -> "info"
+    end
   end
 end

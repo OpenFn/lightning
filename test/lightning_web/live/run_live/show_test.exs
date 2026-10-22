@@ -3,12 +3,11 @@ defmodule LightningWeb.RunLive.ShowTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
-  import Lightning.WorkflowLive.Helpers
+  import LightningWeb.DesignSystemHelpers
 
   alias Lightning.WorkOrders
-  alias LightningWeb.LiveHelpers
 
-  import LiveHelpers, only: [display_short_uuid: 1]
+  @page "#run-show-page"
 
   setup :stub_rate_limiter_ok
 
@@ -66,7 +65,7 @@ defmodule LightningWeb.RunLive.ShowTest do
 
     test "lifecycle of a run", %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}], jobs: [job_a, job_b | _rest]} =
-        insert(:complex_workflow, project: project) |> with_snapshot()
+        workflow = insert(:complex_workflow, project: project) |> with_snapshot()
 
       # Post to webhook
       assert %{"work_order_id" => wo_id} =
@@ -80,25 +79,23 @@ defmodule LightningWeb.RunLive.ShowTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
 
-      assert view
-             |> element("#run-detail-#{run_id}")
-             |> render_async() =~ "Enqueued",
-             "has enqueued state"
+      # The run is loaded after the mount; the page knows its id from the start.
+      assert page_props(view, @page)["runId"] == run_id
 
-      # Check that webhook-triggered run shows "Webhook trigger" as the starter
-      assert view
-             |> element("#run-detail-#{run_id}")
-             |> render_async() =~ "Webhook trigger",
-             "shows webhook trigger as starter"
+      # The page says it is listening before the run has loaded.
+      push_page_event(view, @page, "logs_ready", %{})
+      assert_reply(view, %{})
 
-      assert has_element?(
-               view,
-               "div#log-panel [phx-hook='LogViewer'][data-run-id='#{run_id}']"
-             )
+      render_async(view)
 
-      refute view
-             |> has_element?("#step-list-#{run_id} > *"),
-             "has no steps"
+      props = page_props(view, @page)
+      assert props["loading"] == false
+      assert props["run"]["id"] == run_id
+      assert props["run"]["state"] == "available", "has enqueued state"
+      assert props["run"]["startedBy"] == "Webhook trigger"
+      assert props["workflow"]["name"] == workflow.name
+      assert props["steps"] == [], "has no steps"
+      assert props["selectedStepId"] == nil
 
       run =
         Lightning.Repo.update!(
@@ -111,14 +108,8 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       Lightning.Runs.start_run(run)
 
-      assert view
-             |> element("#run-detail-#{run_id}")
-             |> render_async() =~ "Running",
+      assert page_props(view, @page)["run"]["state"] == "started",
              "has running state"
-
-      refute view
-             |> has_element?("#step-list-#{run_id} > *"),
-             "has no steps"
 
       {:ok, step} =
         Lightning.Runs.start_step(run, %{
@@ -127,12 +118,11 @@ defmodule LightningWeb.RunLive.ShowTest do
           input_dataclip_id: input_dataclip_id = workorder.dataclip_id
         })
 
-      html = step_list_item(view, run, step)
-
-      assert html =~ job_a.name
-
-      assert html =~
-               "data-start-time=\"#{DateTime.to_unix(step.started_at, :millisecond)}\""
+      assert [step_props] = page_props(view, @page)["steps"]
+      assert step_props["id"] == step.id
+      assert step_props["jobName"] == job_a.name
+      assert step_props["startedAt"] == DateTime.to_iso8601(step.started_at)
+      assert step_props["exitReason"] == nil
 
       {:ok, log_line_1} = add_log(run, ["I'm the worker, I'm working!"])
 
@@ -143,19 +133,17 @@ defmodule LightningWeb.RunLive.ShowTest do
       assert_push_event(view, ^event_name, %{logs: [^log_line_1]})
       assert_push_event(view, ^event_name, %{logs: [^log_line_2]})
 
-      view |> select_step(run, job_a.name)
+      view |> select_step(project, run, step)
 
-      input_dataclip_viewer =
-        view
-        |> dataclip_viewer("step-input-dataclip-viewer")
-        |> get_attrs_and_inner_html()
-        |> decode_inner_json()
+      props = page_props(view, @page)
+      assert props["selectedStepId"] == step.id
 
-      # Check that the input dataclip is rendered
-      assert {_attrs, %{"dataclipId" => ^input_dataclip_id}} =
-               input_dataclip_viewer
+      assert props["inputDataclip"] == %{
+               "id" => input_dataclip_id,
+               "wiped" => false
+             }
 
-      assert view |> output_is_empty?(step)
+      assert props["outputDataclip"] == nil
 
       # Complete the step
       {:ok, step} =
@@ -168,16 +156,9 @@ defmodule LightningWeb.RunLive.ShowTest do
           reason: "success"
         })
 
-      # Check that the output dataclip is rendered
-      output_dataclip_viewer =
-        view
-        |> dataclip_viewer("step-output-dataclip-viewer")
-        |> get_attrs_and_inner_html()
-        |> decode_inner_json()
-
-      # Check that the output dataclip is rendered
-      assert {_attrs, %{"dataclipId" => ^output_dataclip_id}} =
-               output_dataclip_viewer
+      props = page_props(view, @page)
+      assert props["outputDataclip"]["id"] == output_dataclip_id
+      assert [%{"exitReason" => "success"}] = props["steps"]
 
       {:ok, step_2} =
         Lightning.Runs.start_step(run, %{
@@ -186,21 +167,16 @@ defmodule LightningWeb.RunLive.ShowTest do
           input_dataclip_id: output_dataclip_id
         })
 
-      html = step_list_item(view, run, step)
+      assert [%{"jobName" => name_a}, %{"jobName" => name_b}] =
+               page_props(view, @page)["steps"]
 
-      assert html =~ job_a.name
-      assert html =~ "text-green-500"
+      assert {name_a, name_b} == {job_a.name, job_b.name}
 
-      html = step_list_item(view, run, step_2)
+      view |> select_step(project, run, step_2)
 
-      assert html =~ job_b.name
-
-      assert html =~
-               "data-start-time=\"#{DateTime.to_unix(step_2.started_at, :millisecond)}\""
-
-      view |> select_step(run, job_b.name)
-
-      assert view |> output_is_empty?(step_2)
+      props = page_props(view, @page)
+      assert props["inputDataclip"]["id"] == output_dataclip_id
+      assert props["outputDataclip"] == nil
 
       {:ok, _step_2} =
         Lightning.Runs.complete_step(%{
@@ -212,37 +188,29 @@ defmodule LightningWeb.RunLive.ShowTest do
           reason: "success"
         })
 
-      output_dataclip_viewer =
-        view
-        |> dataclip_viewer("step-output-dataclip-viewer")
-        |> get_attrs_and_inner_html()
-        |> decode_inner_json()
-
-      assert {_attrs, %{"dataclipId" => ^step_2_output_dataclip_id}} =
-               output_dataclip_viewer
+      assert page_props(view, @page)["outputDataclip"]["id"] ==
+               step_2_output_dataclip_id
 
       # Go back to the previous step and check the output gets switched back
-      view |> select_step(run, job_a.name)
+      view |> select_step(project, run, step)
 
-      output_dataclip_viewer =
-        view
-        |> dataclip_viewer("step-output-dataclip-viewer")
-        |> get_attrs_and_inner_html()
-        |> decode_inner_json()
+      assert page_props(view, @page)["outputDataclip"]["id"] ==
+               output_dataclip_id
 
-      assert {_attrs, %{"dataclipId" => ^output_dataclip_id}} =
-               output_dataclip_viewer
+      # A step the run does not have shows neither of the previous step's dataclips
+      render_patch(view, ~p"/projects/#{project.id}/runs/#{run_id}?step=nope")
+
+      props = page_props(view, @page)
+      assert props["selectedStepId"] == "nope"
+      assert props["inputDataclip"] == nil
+      assert props["outputDataclip"] == nil
 
       {:ok, _} = Lightning.Runs.complete_run(run, %{state: "failed"})
 
-      html =
-        view
-        |> element("#run-detail-#{run_id}")
-        |> render_async()
-
-      assert html =~ "Failed"
-      assert html =~ "Final Output"
-      refute html =~ "dataclips/"
+      props = page_props(view, @page)
+      assert props["run"]["state"] == "failed"
+      assert props["run"]["finalDataclipId"] == nil
+      refute is_nil(props["run"]["finishedAt"])
     end
 
     test "shows final output when run completes with a final_dataclip_id", %{
@@ -292,16 +260,110 @@ defmodule LightningWeb.RunLive.ShowTest do
           final_dataclip_id: output_dataclip_id
         })
 
+      {:ok, %{id: stored_line_id}} = add_log(run, ["stored before the visit"])
+
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
 
-      html =
-        view
-        |> element("#run-detail-#{run_id}")
-        |> render_async()
+      render_async(view)
 
-      assert html =~ "Final Output"
-      assert html =~ display_short_uuid(output_dataclip_id)
+      assert page_props(view, @page)["run"]["finalDataclipId"] ==
+               output_dataclip_id
+
+      # The stored lines are streamed once the page says it is listening.
+      event_name = "logs-#{run_id}"
+
+      push_page_event(view, @page, "logs_ready", %{})
+      assert_reply(view, %{})
+      assert_push_event(view, ^event_name, %{logs: [%{id: ^stored_line_id}]})
+    end
+
+    @tag role: :viewer
+    test "names the project admins only when a wiped dataclip is showing", %{
+      conn: conn,
+      project: project
+    } do
+      insert(:project_user,
+        project: project,
+        user: insert(:user, email: "admin@example.org"),
+        role: :admin
+      )
+
+      %{triggers: [%{id: webhook_trigger_id}], jobs: [job | _rest]} =
+        insert(:complex_workflow, project: project) |> with_snapshot()
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id} = run]} =
+        workorder = WorkOrders.get(wo_id, include: [:runs])
+
+      run =
+        Lightning.Repo.update!(
+          Ecto.Changeset.change(run, %{
+            state: :claimed,
+            claimed_at: DateTime.utc_now()
+          })
+        )
+
+      Lightning.Runs.start_run(run)
+
+      {:ok, step} =
+        Lightning.Runs.start_step(run, %{
+          step_id: Ecto.UUID.generate(),
+          job_id: job.id,
+          input_dataclip_id: workorder.dataclip_id
+        })
+
+      Lightning.Invocation.Dataclip
+      |> Lightning.Repo.get!(workorder.dataclip_id)
+      |> Ecto.Changeset.change(
+        wiped_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+      |> Lightning.Repo.update!()
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      render_async(view)
+
+      props = page_props(view, @page)
+      assert props["canEditDataRetention"] == false
+      assert props["adminContacts"] == []
+
+      render_patch(
+        view,
+        ~p"/projects/#{project.id}/runs/#{run_id}?step=#{step.id}"
+      )
+
+      props = page_props(view, @page)
+      assert props["inputDataclip"]["wiped"] == true
+      assert "admin@example.org" in props["adminContacts"]
+    end
+
+    test "a step id the run does not have selects nothing", %{
+      conn: conn,
+      project: project
+    } do
+      %{triggers: [%{id: webhook_trigger_id}]} =
+        insert(:simple_workflow, project: project) |> with_snapshot()
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id}]} = WorkOrders.get(wo_id, include: [:runs])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}?step=nope")
+
+      render_async(view)
+
+      props = page_props(view, @page)
+      assert props["selectedStepId"] == "nope"
+      assert props["inputDataclip"] == nil
+      assert props["outputDataclip"] == nil
     end
   end
 
@@ -320,54 +382,19 @@ defmodule LightningWeb.RunLive.ShowTest do
     })
   end
 
-  defp step_list_item(view, run, step) do
-    view
-    |> element("#step-list-#{run.id} > [data-step-id='#{step.id}']")
-    |> render_async()
-  end
-
   describe "workflow link" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
 
-    test "excludes version param when run snapshot matches current workflow", %{
+    # The page builds the editor link from the run's snapshot version, the
+    # workflow's, and whether the user has experimental features.
+    test "sends the versions the page pins the editor link with", %{
       conn: conn,
       project: project
     } do
       workflow = insert(:simple_workflow, project: project) |> with_snapshot()
       %{triggers: [%{id: webhook_trigger_id}]} = workflow
 
-      # Post to webhook to create a run
-      assert %{"work_order_id" => wo_id} =
-               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
-               |> json_response(200)
-
-      %{runs: [%{id: run_id}]} = WorkOrders.get(wo_id, include: [:runs])
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
-
-      html = view |> element("#run-detail-#{run_id}") |> render_async()
-
-      # Find the workflow link - should NOT include version param
-      assert html =~
-               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?run=#{run_id}"/
-
-      refute html =~ ~r/&v=/
-    end
-
-    test "pins the run's own snapshot when it differs from the current workflow",
-         %{
-           conn: conn,
-           project: project
-         } do
-      # Create workflow with initial snapshot
-      workflow =
-        insert(:simple_workflow, project: project, lock_version: 1)
-        |> with_snapshot()
-
-      %{triggers: [%{id: webhook_trigger_id}]} = workflow
-
-      # Post to webhook to create a run on v1
       assert %{"work_order_id" => wo_id} =
                post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
                |> json_response(200)
@@ -375,27 +402,19 @@ defmodule LightningWeb.RunLive.ShowTest do
       %{runs: [%{id: run_id}], snapshot: snapshot} =
         WorkOrders.get(wo_id, include: [:runs, :snapshot])
 
-      # Update workflow to v2 (simulating a change after the run was created)
-      workflow =
-        Lightning.Repo.update!(Ecto.Changeset.change(workflow, lock_version: 2))
-
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+      render_async(view)
 
-      html = view |> element("#run-detail-#{run_id}") |> render_async()
-
-      # Find the workflow link - should include version param
-      # Note: & is HTML-escaped as &amp; in rendered output
-      assert html =~ ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?/
-      assert html =~ ~r/[?;]run=#{run_id}/
-      assert html =~ ~r/[?;]v=#{snapshot.lock_version}/
-      refute html =~ "as_run="
+      props = page_props(view, @page)
+      assert props["workflow"]["id"] == workflow.id
+      assert props["workflow"]["lockVersion"] == workflow.lock_version
+      assert props["run"]["snapshot"]["id"] == snapshot.id
+      assert props["run"]["snapshot"]["lockVersion"] == snapshot.lock_version
+      assert props["experimentalFeatures"] == false
     end
 
-    test "pins the run itself when the user has experimental features", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
+    test "sends the newer workflow version when the run's snapshot is older",
+         %{conn: conn, project: project, user: user} do
       Lightning.Accounts.update_user_preference(
         user,
         "experimental_features",
@@ -412,19 +431,18 @@ defmodule LightningWeb.RunLive.ShowTest do
                post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
                |> json_response(200)
 
-      %{runs: [%{id: run_id}]} =
+      %{runs: [%{id: run_id}], snapshot: snapshot} =
         WorkOrders.get(wo_id, include: [:runs, :snapshot])
 
-      workflow =
-        Lightning.Repo.update!(Ecto.Changeset.change(workflow, lock_version: 2))
+      Lightning.Repo.update!(Ecto.Changeset.change(workflow, lock_version: 2))
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+      render_async(view)
 
-      html = view |> element("#run-detail-#{run_id}") |> render_async()
-
-      assert html =~ ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?/
-      assert html =~ ~r/[?;]run=#{run_id}/
-      assert html =~ ~r/[?;]as_run=#{run_id}/
+      props = page_props(view, @page)
+      assert props["workflow"]["lockVersion"] == 2
+      assert props["run"]["snapshot"]["lockVersion"] == snapshot.lock_version
+      assert props["experimentalFeatures"] == true
     end
   end
 
@@ -432,7 +450,7 @@ defmodule LightningWeb.RunLive.ShowTest do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
 
-    test "cancel button visible when run is available and user has permission",
+    test "the page may offer Cancel on an enqueued run the user may run",
          %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}]} =
         insert(:simple_workflow, project: project) |> with_snapshot()
@@ -441,83 +459,20 @@ defmodule LightningWeb.RunLive.ShowTest do
                post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
                |> json_response(200)
 
-      %{runs: [%{id: run_id}]} =
-        WorkOrders.get(wo_id, include: [:runs])
+      %{runs: [%{id: run_id}]} = WorkOrders.get(wo_id, include: [:runs])
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
 
-      html =
-        view |> element("#run-detail-#{run_id}") |> render_async()
+      render_async(view)
 
-      assert html =~ "Cancel"
-      assert has_element?(view, "button[phx-click='cancel-run']")
-    end
-
-    test "cancel button not visible for non-available run states",
-         %{conn: conn, project: project} do
-      %{triggers: [%{id: webhook_trigger_id}], jobs: [job | _rest]} =
-        insert(:simple_workflow, project: project) |> with_snapshot()
-
-      assert %{"work_order_id" => wo_id} =
-               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
-               |> json_response(200)
-
-      %{runs: [%{id: run_id} = run]} =
-        workorder = WorkOrders.get(wo_id, include: [:runs])
-
-      # Transition to claimed
-      run =
-        Lightning.Repo.update!(
-          Ecto.Changeset.change(run, %{
-            state: :claimed,
-            claimed_at: DateTime.utc_now()
-          })
-        )
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
-
-      html =
-        view |> element("#run-detail-#{run_id}") |> render_async()
-
-      refute html =~ "cancel-run"
-
-      # Transition to started
-      Lightning.Runs.start_run(run)
-
-      html =
-        view |> element("#run-detail-#{run_id}") |> render_async()
-
-      refute html =~ "cancel-run"
-
-      # Complete the run
-      {:ok, step} =
-        Lightning.Runs.start_step(run, %{
-          step_id: Ecto.UUID.generate(),
-          job_id: job.id,
-          input_dataclip_id: workorder.dataclip_id
-        })
-
-      Lightning.Runs.complete_step(%{
-        run_id: run_id,
-        project_id: project.id,
-        step_id: step.id,
-        output_dataclip: %{"y" => 2},
-        output_dataclip_id: Ecto.UUID.generate(),
-        reason: "success"
-      })
-
-      {:ok, _} = Lightning.Runs.complete_run(run, %{state: "success"})
-
-      html =
-        view |> element("#run-detail-#{run_id}") |> render_async()
-
-      refute html =~ "cancel-run"
+      props = page_props(view, @page)
+      assert props["run"]["state"] == "available"
+      assert props["canRunWorkflow"] == true
     end
 
     @tag role: :viewer
-    test "cancel button not visible for viewer role",
+    test "a viewer may not run, and is refused on the server too",
          %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}]} =
         insert(:simple_workflow, project: project) |> with_snapshot()
@@ -526,19 +481,25 @@ defmodule LightningWeb.RunLive.ShowTest do
                post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
                |> json_response(200)
 
-      %{runs: [%{id: run_id}]} =
-        WorkOrders.get(wo_id, include: [:runs])
+      %{runs: [%{id: run_id}]} = WorkOrders.get(wo_id, include: [:runs])
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
 
-      html =
-        view |> element("#run-detail-#{run_id}") |> render_async()
+      render_async(view)
 
-      refute html =~ "cancel-run"
+      assert page_props(view, @page)["canRunWorkflow"] == false
+
+      push_page_event(view, @page, "cancel_run", %{})
+
+      assert_reply(view, %{
+        error: "You are not authorized to perform this action."
+      })
+
+      assert page_props(view, @page)["run"]["state"] == "available"
     end
 
-    test "clicking cancel transitions run to cancelled and button disappears",
+    test "cancelling transitions the run to cancelled and flashes",
          %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}]} =
         insert(:simple_workflow, project: project) |> with_snapshot()
@@ -547,25 +508,22 @@ defmodule LightningWeb.RunLive.ShowTest do
                post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
                |> json_response(200)
 
-      %{runs: [%{id: run_id}]} =
-        WorkOrders.get(wo_id, include: [:runs])
+      %{runs: [%{id: run_id}]} = WorkOrders.get(wo_id, include: [:runs])
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
 
-      view |> element("#run-detail-#{run_id}") |> render_async()
+      render_async(view)
 
-      # Cancel the run
-      html = render_click(view, "cancel-run", %{"run_id" => run_id})
-
-      assert html =~ "Run cancelled."
-
-      # Button should be gone and state should show Cancelled
+      # The run cancelled is this page's, whatever id the browser sends.
       html =
-        view |> element("#run-detail-#{run_id}") |> render_async()
+        push_page_event(view, @page, "cancel_run", %{
+          "run_id" => Ecto.UUID.generate()
+        })
 
-      refute html =~ "cancel-run"
-      assert html =~ "Cancelled"
+      assert_reply(view, %{})
+      assert html =~ "Run cancelled."
+      assert page_props(view, @page)["run"]["state"] == "cancelled"
     end
 
     test "cancel when run already claimed shows graceful flash",
@@ -577,13 +535,12 @@ defmodule LightningWeb.RunLive.ShowTest do
                post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
                |> json_response(200)
 
-      %{runs: [%{id: run_id} = run]} =
-        WorkOrders.get(wo_id, include: [:runs])
+      %{runs: [%{id: run_id} = run]} = WorkOrders.get(wo_id, include: [:runs])
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
 
-      view |> element("#run-detail-#{run_id}") |> render_async()
+      render_async(view)
 
       # Claim the run behind the scenes
       Lightning.Repo.update!(
@@ -593,46 +550,47 @@ defmodule LightningWeb.RunLive.ShowTest do
         })
       )
 
-      # Try to cancel — should get graceful error
-      html = render_click(view, "cancel-run", %{"run_id" => run_id})
+      html = push_page_event(view, @page, "cancel_run", %{})
 
+      assert_reply(view, %{})
       assert html =~ "already been claimed"
     end
+  end
 
-    test "cancel-run with nonexistent run shows error",
-         %{conn: conn, project: project} do
-      %{triggers: [%{id: webhook_trigger_id}]} =
-        insert(:simple_workflow, project: project) |> with_snapshot()
+  describe "log level" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
 
-      assert %{"work_order_id" => wo_id} =
-               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
-               |> json_response(200)
-
-      %{runs: [%{id: run_id}]} =
-        WorkOrders.get(wo_id, include: [:runs])
+    test "remembers a level the viewer picks, and refuses one it does not know",
+         %{conn: conn, project: project, user: user} do
+      run = run_in_project(project)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+        live(conn, ~p"/projects/#{project.id}/runs/#{run.id}")
 
-      view |> element("#run-detail-#{run_id}") |> render_async()
+      assert page_props(view, @page)["logLevel"] == "info"
 
-      html =
-        render_click(view, "cancel-run", %{
-          "run_id" => Ecto.UUID.generate()
-        })
+      push_page_event(view, @page, "save_log_level", %{"level" => "debug"})
+      assert_reply(view, %{})
+      assert page_props(view, @page)["logLevel"] == "debug"
 
-      assert html =~ "Run not found."
+      assert Lightning.Repo.reload!(user).preferences["desired_log_level"] ==
+               "debug"
+
+      push_page_event(view, @page, "save_log_level", %{"level" => "loud"})
+      assert_reply(view, %{error: "Invalid request"})
+
+      push_page_event(view, @page, "save_log_level", %{})
+      assert_reply(view, %{error: "Invalid request"})
+
+      assert page_props(view, @page)["logLevel"] == "debug"
     end
   end
 
-  defp select_step(view, run, job_name) do
-    view
-    |> element("#step-list-#{run.id} a[data-phx-link]", job_name)
-    |> render_click()
-  end
-
-  defp output_is_empty?(view, step) do
-    view
-    |> has_element?("#step-output-#{step.id}-nothing-yet")
+  defp select_step(view, project, run, step) do
+    render_patch(
+      view,
+      ~p"/projects/#{project.id}/runs/#{run.id}?step=#{step.id}"
+    )
   end
 end
