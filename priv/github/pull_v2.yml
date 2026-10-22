@@ -43,7 +43,7 @@ jobs:
     name: Pull project from OpenFn
     steps:
       - name: openfn pull and commit
-        uses: midigofrank/cli-pull-action@v2
+        uses: openfn/cli-pull-action@v2
         with:
           secret_input: ${{ secrets[inputs.apiSecretName] }}
           project_id_input: ${{ inputs.projectId }}

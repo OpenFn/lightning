@@ -28,7 +28,7 @@ jobs:
       contents: write
     steps:
       - name: openfn deploy
-        uses: midigofrank/cli-deploy-action@v2
+        uses: openfn/cli-deploy-action@v2
         with:
           secret_input: ${{ secrets.<%= @api_secret_name %> }}
           project_id_input: '<%= @project_id %>'
