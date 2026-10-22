@@ -5,8 +5,17 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
   import Lightning.Factories
 
   alias Lightning.Channels
+  alias LightningWeb.ChannelRequestLive.Helpers
 
   setup :stub_rate_limiter_ok
+
+  # The page is drawn by React from data-props. What it renders from them
+  # (the summary, the humanised errors, the timing phases and TTFB marker,
+  # the body states, the config-changed pill, the wiped notice for each
+  # role) is tested in the design system's ChannelRequestShowPage.test.tsx,
+  # and the error wording in channelHelpers.test.ts. These tests cover the
+  # gates and what the server sends.
+  @page "#channel-request-show-page"
 
   defp enable_experimental_features(%{user: user}) do
     Lightning.Accounts.update_user_preferences(user, %{
@@ -46,6 +55,13 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     ~p"/projects/#{project.id}/history/channels/#{request.id}"
   end
 
+  defp props(conn, project, request) do
+    {:ok, view, _html} = live(conn, detail_path(project, request))
+    page_props(view, @page)
+  end
+
+  defp event(props), do: List.first(props["request"]["events"])
+
   describe "feature gate" do
     setup [:register_and_log_in_user, :create_project_for_current_user]
 
@@ -64,49 +80,89 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    test "renders summary card, metadata, headers, and body previews", %{
+    test "sends the summary, the headers as stored and the body previews", %{
       conn: conn,
       project: project
     } do
-      {request, channel, _snapshot} = create_channel_request(project)
+      {request, channel, snapshot} = create_channel_request(project)
 
       insert(:channel_event,
         channel_request: request,
         request_query_string: "format=json"
       )
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
+      props = props(conn, project, request)
 
-      # Summary card
-      assert html =~ "POST"
-      assert html =~ "/api/v1/data"
-      assert html =~ "format=json"
-      assert html =~ "200"
-      assert html =~ "Success"
-      assert html =~ channel.name
+      assert props["project"] == %{
+               "id" => project.id,
+               "parentId" => nil,
+               "color" => nil
+             }
 
-      # Metadata
-      assert html =~ "192.168.1.1"
-      assert html =~ "api"
-      assert html =~ String.slice(request.id, 0..7)
-      assert html =~ "350"
-      # Destination URL from channel
-      assert html =~ channel.destination_url
-      # Timestamps
-      assert html =~ "2026"
-      assert html =~ "10:00"
+      assert props["projectLabel"] == project.name
 
-      # Request headers
-      assert html =~ "content-type"
-      assert html =~ "authorization"
-      assert html =~ "[REDACTED]"
+      assert %{
+               "id" => id,
+               "state" => "success",
+               "startedAt" => "2026-04-10T10:00:00.000000Z",
+               "completedAt" => "2026-04-10T10:00:00.350000Z",
+               "clientIdentity" => "192.168.1.1",
+               "clientAuth" => "API key",
+               "destinationAuth" => "None",
+               "isWiped" => false,
+               "snapshot" => %{
+                 "name" => snapshot_name,
+                 "destinationUrl" => snapshot_url,
+                 "lockVersion" => lock_version
+               }
+             } = props["request"]
 
-      # Body previews (quotes are HTML-entity-encoded by LiveView's test DOM serializer)
-      assert html =~ "key"
-      assert html =~ "value"
-      assert html =~ "status"
-      assert html =~ "ok"
+      assert id == request.id
+      assert snapshot_name == snapshot.name
+      assert snapshot_url == snapshot.destination_url
+      assert lock_version == snapshot.lock_version
+
+      # The old page never showed the proxy's request id or the raw ids.
+      refute Map.has_key?(props["request"], "requestId")
+      refute Map.has_key?(props["request"], "channelId")
+
+      assert props["channel"] == %{
+               "id" => channel.id,
+               "projectId" => project.id,
+               "name" => channel.name,
+               "destinationUrl" => channel.destination_url,
+               "lockVersion" => channel.lock_version
+             }
+
+      assert %{
+               "type" => "destination_response",
+               "requestMethod" => "POST",
+               "requestPath" => "/api/v1/data",
+               "requestQueryString" => "format=json",
+               "requestHeaders" => headers,
+               "responseStatus" => 200,
+               "latencyUs" => 350_000,
+               "reusedConnection" => false
+             } = event(props)
+
+      assert ["authorization", "[REDACTED]"] in headers
+      assert Enum.any?(headers, &match?(["content-type", _], &1))
+      assert event(props)["requestBodyPreview"] =~ "key"
+      assert event(props)["responseBodyPreview"] =~ "ok"
+    end
+
+    test "sends only the primary event", %{conn: conn, project: project} do
+      {request, _channel, _snapshot} = create_channel_request(project)
+
+      insert(:channel_error_event,
+        channel_request: request,
+        error_message: "econnreset"
+      )
+
+      insert(:channel_event, channel_request: request)
+
+      assert [%{"type" => "destination_response"}] =
+               props(conn, project, request)["request"]["events"]
     end
   end
 
@@ -114,7 +170,7 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    test "renders humanized error and raw string for transport error", %{
+    test "sends the error code for a transport error", %{
       conn: conn,
       project: project
     } do
@@ -127,14 +183,19 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
         latency_us: 100_000
       )
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
+      props = props(conn, project, request)
 
-      assert html =~ "Connection refused"
-      assert html =~ "econnrefused"
+      assert props["request"]["state"] == "error"
+
+      assert %{
+               "type" => "error",
+               "errorMessage" => "econnrefused",
+               "latencyUs" => 100_000,
+               "responseStatus" => nil
+             } = event(props)
     end
 
-    test "renders credential error with appropriate messaging", %{
+    test "sends the error code for a credential error", %{
       conn: conn,
       project: project
     } do
@@ -146,26 +207,22 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
         error_message: "credential_missing_auth_fields"
       )
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
-
-      assert html =~ "missing required authentication fields"
-      assert html =~ "credential_missing_auth_fields"
+      assert %{"errorMessage" => "credential_missing_auth_fields"} =
+               props(conn, project, request) |> event()
     end
   end
 
-  describe "detail page — timing section" do
+  describe "detail page — timing" do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    test "renders full nested timeline with all Finch phases, overhead, and reused connection",
+    test "sends every phase as stored, with a null reused flag as false",
          %{conn: conn, project: project} do
-      # --- Full phases with overhead ---
-      {req1, _ch1, _snap1} = create_channel_request(project)
+      {request, _channel, _snapshot} = create_channel_request(project)
 
-      # inner_sum = 2+15+5+158+65 = 245ms, latency = 260ms => 15ms overhead
       insert(:channel_event,
-        channel_request: req1,
+        channel_request: request,
+        reused_connection: nil,
         queue_us: 2_000,
         connect_us: 15_000,
         request_send_us: 5_000,
@@ -174,177 +231,41 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
         latency_us: 260_000
       )
 
-      {:ok, view1, _html} = live(conn, detail_path(project, req1))
-      html1 = render(view1)
-
-      # Timing section present with bookend labels
-      assert html1 =~ ~s(id="timing-section")
-      assert html1 =~ "0 ms"
-      assert html1 =~ "260 ms"
-
-      # Phase segment title attributes (tooltip text)
-      assert html1 =~ ~s(title="Queue: 2 ms")
-      assert html1 =~ ~s(title="Connect: 15 ms")
-      assert html1 =~ ~s(title="Send: 5 ms")
-      assert html1 =~ ~s(title="Processing: 158 ms")
-      assert html1 =~ ~s(title="Recv: 65 ms")
-
-      # TTFB marker and legend with overhead swatch
-      assert html1 =~ "TTFB: 180 ms"
-      assert html1 =~ "Proxy overhead"
-
-      # --- Reused connection ---
-      {req2, _ch2, _snap2} = create_channel_request(project)
-
-      insert(:channel_event,
-        channel_request: req2,
-        reused_connection: true,
-        queue_us: 1_000,
-        connect_us: 0,
-        request_send_us: 4_000,
-        ttfb_us: 120_000,
-        response_duration_us: 30_000,
-        latency_us: 155_000
-      )
-
-      {:ok, view2, _html} = live(conn, detail_path(project, req2))
-      html2 = render(view2)
-
-      assert html2 =~ ~s(id="timing-section")
-      assert html2 =~ "(reused)"
-
-      # --- Processing segment from nil queue/connect ---
-      {req3, _ch3, _snap3} = create_channel_request(project)
-
-      # wait = ttfb - 0 - 0 - send = 200k - 10k = 190k
-      insert(:channel_event,
-        channel_request: req3,
-        queue_us: nil,
-        connect_us: nil,
-        request_send_us: 10_000,
-        ttfb_us: 200_000,
-        response_duration_us: 50_000,
-        latency_us: 260_000
-      )
-
-      {:ok, view3, _html} = live(conn, detail_path(project, req3))
-      html3 = render(view3)
-
-      assert html3 =~ ~s(title="Processing: 190 ms")
+      assert %{
+               "queueUs" => 2_000,
+               "connectUs" => 15_000,
+               "requestSendUs" => 5_000,
+               "ttfbUs" => 180_000,
+               "responseDurationUs" => 65_000,
+               "latencyUs" => 260_000,
+               "reusedConnection" => false
+             } = props(conn, project, request) |> event()
     end
 
-    test "degrades gracefully through partial and minimal tiers",
+    test "sends a reused connection and missing phases as null",
          %{conn: conn, project: project} do
-      # Partial tier: TTFB + latency only => TTFB/Download segments
-      {req1, _ch1, _snap1} = create_channel_request(project)
+      {request, _channel, _snapshot} = create_channel_request(project)
 
       insert(:channel_event,
-        channel_request: req1,
-        request_send_us: nil,
-        response_duration_us: nil,
-        ttfb_us: 280_000,
-        latency_us: 350_000
-      )
-
-      {:ok, view1, _html} = live(conn, detail_path(project, req1))
-      html1 = render(view1)
-
-      assert html1 =~ ~s(title="TTFB: 280 ms")
-      assert html1 =~ ~s(title="Download: 70 ms")
-      assert html1 =~ "350 ms"
-      refute html1 =~ "Proxy overhead"
-
-      # Minimal tier: only latency_us => single Total bar
-      {req2, _ch2, _snap2} = create_channel_request(project)
-
-      insert(:channel_event,
-        channel_request: req2,
+        channel_request: request,
+        reused_connection: true,
+        queue_us: nil,
+        connect_us: nil,
         request_send_us: nil,
         response_duration_us: nil,
         ttfb_us: nil,
         latency_us: 420_000
       )
 
-      {:ok, view2, _html} = live(conn, detail_path(project, req2))
-      html2 = render(view2)
-
-      assert html2 =~ ~s(title="Total: 420 ms")
-      assert html2 =~ "420 ms"
-    end
-
-    test "positions TTFB marker on the inner-phase scale, not latency",
-         %{conn: conn, project: project} do
-      # inner_total = queue+connect+send+wait+recv
-      #             = 10 + 20 + 5 + (ttfb - 10 - 20 - 5) + recv
-      #             = ttfb + recv
-      # With ttfb=100ms and recv=100ms => inner_total=200ms => 50%
-      # latency_us is deliberately different (250ms) to prove the marker
-      # is scaled against inner_total, not total_us.
-      {req_half, _ch, _snap} = create_channel_request(project)
-
-      insert(:channel_event,
-        channel_request: req_half,
-        queue_us: 10_000,
-        connect_us: 20_000,
-        request_send_us: 5_000,
-        ttfb_us: 100_000,
-        response_duration_us: 100_000,
-        latency_us: 250_000
-      )
-
-      {:ok, view_half, _html} = live(conn, detail_path(project, req_half))
-      html_half = render(view_half)
-
-      assert html_half =~ ~s(style="left: 50.0%")
-
-      # Edge case: ttfb == inner_total => marker at 100%.
-      # inner_total = ttfb + recv, so set recv = 0 (response_duration_us = 0).
-      {req_full, _ch2, _snap2} = create_channel_request(project)
-
-      insert(:channel_event,
-        channel_request: req_full,
-        queue_us: 10_000,
-        connect_us: 20_000,
-        request_send_us: 5_000,
-        ttfb_us: 100_000,
-        response_duration_us: 0,
-        latency_us: 150_000
-      )
-
-      {:ok, view_full, _html} = live(conn, detail_path(project, req_full))
-      html_full = render(view_full)
-
-      assert html_full =~ ~s(style="left: 100.0%")
-    end
-
-    test "shows single bar for transport errors, hidden for credential errors",
-         %{conn: conn, project: project} do
-      {req_transport, _ch1, _snap1} =
-        create_channel_request(project, state: :timeout)
-
-      insert(:channel_error_event,
-        channel_request: req_transport,
-        error_message: "response_timeout",
-        latency_us: 30_000_000
-      )
-
-      {:ok, view1, _html} = live(conn, detail_path(project, req_transport))
-      html1 = render(view1)
-      assert html1 =~ ~s(id="timing-section")
-      assert html1 =~ ~s(title="Total: 30000 ms")
-
-      # Credential error: timing section hidden entirely
-      {req_cred, _ch2, _snap2} =
-        create_channel_request(project, state: :error)
-
-      insert(:channel_error_event,
-        channel_request: req_cred,
-        error_message: "credential_missing_auth_fields"
-      )
-
-      {:ok, view2, _html} = live(conn, detail_path(project, req_cred))
-      html2 = render(view2)
-      refute html2 =~ "timing-section"
+      assert %{
+               "reusedConnection" => true,
+               "queueUs" => nil,
+               "connectUs" => nil,
+               "requestSendUs" => nil,
+               "responseDurationUs" => nil,
+               "ttfbUs" => nil,
+               "latencyUs" => 420_000
+             } = props(conn, project, request) |> event()
     end
   end
 
@@ -352,7 +273,7 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    test "renders snapshot data and config changed indicator when versions differ",
+    test "sends the snapshot and the channel's current version, which differ after a change",
          %{conn: conn, project: project, user: user} do
       channel = insert(:channel, project: project)
       {:ok, snapshot} = Channels.get_or_create_current_snapshot(channel)
@@ -367,29 +288,30 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
 
       insert(:channel_event, channel_request: request)
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
+      props = props(conn, project, request)
 
-      # Snapshot data renders
-      assert html =~ snapshot.destination_url
-      assert html =~ to_string(snapshot.lock_version)
+      assert props["request"]["snapshot"]["destinationUrl"] ==
+               snapshot.destination_url
 
-      # Bump channel version to create mismatch
+      assert props["request"]["snapshot"]["lockVersion"] == snapshot.lock_version
+      assert props["channel"]["lockVersion"] == snapshot.lock_version
+
       {:ok, _updated} =
         Channels.update_channel(channel, %{name: "updated-name"}, actor: user)
 
-      {:ok, view2, _html} = live(conn, detail_path(project, request))
-      html2 = render(view2)
-
-      assert html2 =~ "changed" or html2 =~ "Config"
+      props = props(conn, project, request)
+      assert props["request"]["snapshot"]["lockVersion"] == snapshot.lock_version
+      assert props["channel"]["lockVersion"] == snapshot.lock_version + 1
+      assert props["channel"]["name"] == "updated-name"
+      assert props["request"]["snapshot"]["name"] == snapshot.name
     end
   end
 
-  describe "detail page — nil body" do
+  describe "detail page — bodies" do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    test "shows 'Body not captured' when body_preview is nil", %{
+    test "sends a size without a preview when the body was not captured", %{
       conn: conn,
       project: project
     } do
@@ -402,13 +324,14 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
         request_body_size: 2048
       )
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
-
-      assert html =~ "Body not captured"
+      assert %{
+               "requestBodyPreview" => nil,
+               "requestBodyHash" => nil,
+               "requestBodySize" => 2048
+             } = props(conn, project, request) |> event()
     end
 
-    test "hides body sub-section entirely when both preview and size are nil",
+    test "sends neither preview nor size when there was no body",
          %{conn: conn, project: project} do
       {request, _channel, _snapshot} =
         create_channel_request(project, state: :error)
@@ -421,14 +344,11 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
         request_body_size: nil
       )
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
-
-      refute html =~ "Body not captured"
-      refute html =~ "request-body"
+      assert %{"requestBodyPreview" => nil, "requestBodySize" => nil} =
+               props(conn, project, request) |> event()
     end
 
-    test "shows metadata only for binary (non-text) content-type", %{
+    test "sends the content type, size and hash of a binary body", %{
       conn: conn,
       project: project
     } do
@@ -442,14 +362,14 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
         response_body_hash: "binaryhash123"
       )
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
-
-      # Should show size and hash metadata
-      assert html =~ "4096" or html =~ "4.0 KB" or html =~ "4 KB"
-      assert html =~ "binaryhash123"
-      # Should NOT render a body preview <pre> block
-      refute html =~ ~s({"status":"ok"})
+      assert %{
+               "responseHeaders" => [
+                 ["content-type", "application/octet-stream"]
+               ],
+               "responseBodyPreview" => nil,
+               "responseBodySize" => 4096,
+               "responseBodyHash" => "binaryhash123"
+             } = props(conn, project, request) |> event()
     end
   end
 
@@ -457,9 +377,7 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    @tag role: :admin
-    test "renders a single combined wiped viewer with channel-request copy",
-         %{conn: conn, project: project} do
+    defp wiped_request(project) do
       {request, _channel, _snapshot} =
         create_channel_request(project, is_wiped: true, client_identity: nil)
 
@@ -475,89 +393,66 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
         response_body_hash: nil
       )
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
+      request
+    end
 
-      # One combined viewer replaces the side-by-side request/response cards.
-      assert html =~ ~s(id="payload-wiped-viewer")
-      assert html =~ "No Request/Response Data here!"
-      assert html =~ "Request/Response data for this channel request"
+    @tag role: :admin
+    test "an admin may change the policy and gets no contacts",
+         %{conn: conn, project: project} do
+      insert(:project_user,
+        project: project,
+        user: insert(:user, email: "admin@example.com"),
+        role: :admin
+      )
 
-      # Channel-flavoured policy link.
-      assert html =~ "for future requests"
-      # The "rerun this work order" copy is workflow-only and must not leak.
-      refute html =~ "rerun this work order"
+      props = props(conn, project, wiped_request(project))
 
-      # The Request and Response disclosure sections — and their size badges —
-      # are not rendered when the request is wiped.
-      refute html =~ ~s(id="request-section")
-      refute html =~ ~s(id="response-section")
-      refute html =~ ~s(id="req-headers-content")
-      refute html =~ ~s(id="req-body-content")
-      refute html =~ ~s(id="resp-headers-content")
-      refute html =~ ~s(id="resp-body-content")
+      assert props["request"]["isWiped"] == true
+      assert props["request"]["clientIdentity"] == nil
+      assert props["canEditDataRetention"] == true
+      assert props["adminContacts"] == []
+
+      assert %{
+               "requestPath" => nil,
+               "requestHeaders" => nil,
+               "requestBodyPreview" => nil,
+               "responseHeaders" => nil,
+               "responseBodyPreview" => nil
+             } = event(props)
     end
 
     @tag role: :editor
-    test "non-admin sees 'contact your admins' copy with admin email tooltip",
+    test "an editor gets the admins to contact instead",
          %{conn: conn, project: project} do
       admin = insert(:user, email: "admin@example.com")
       insert(:project_user, project: project, user: admin, role: :admin)
 
-      {request, _channel, _snapshot} =
-        create_channel_request(project, is_wiped: true, client_identity: nil)
+      props = props(conn, project, wiped_request(project))
 
-      insert(:channel_event,
-        channel_request: request,
-        request_path: nil,
-        request_query_string: nil,
-        request_headers: nil,
-        request_body_preview: nil,
-        request_body_hash: nil,
-        response_headers: nil,
-        response_body_preview: nil,
-        response_body_hash: nil
-      )
-
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
-
-      # The combined wiped viewer is rendered.
-      assert html =~ ~s(id="payload-wiped-viewer")
-
-      # The "can NOT edit data retention" branch is shown: the user sees the
-      # "contact your admins" copy and the tooltip carries admin emails.
-      assert html =~ "Contact one of your"
-      assert html =~ "project admins"
-
-      assert html =~
-               ~s(id="zero-persistence-admins-tooltip-payload-wiped-viewer")
-
-      assert html =~ ~s(aria-label="admin@example.com")
-
-      # The editable-branch copy ("change this policy for future requests")
-      # must not leak when the user can't edit the retention policy.
-      refute html =~ "for future requests"
-      refute html =~ ~s(href="/projects/#{project.id}/settings#data-storage")
+      assert props["canEditDataRetention"] == false
+      assert props["adminContacts"] == ["admin@example.com"]
     end
 
-    test "does not render wiped viewer when channel_request.is_wiped is false",
+    @tag role: :editor
+    test "sends no contacts when the request was not wiped",
          %{conn: conn, project: project} do
+      insert(:project_user,
+        project: project,
+        user: insert(:user, email: "admin@example.com"),
+        role: :admin
+      )
+
       {request, _channel, _snapshot} =
         create_channel_request(project, is_wiped: false)
 
       insert(:channel_event, channel_request: request)
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
+      props = props(conn, project, request)
 
-      refute html =~ ~s(id="payload-wiped-viewer")
-      refute html =~ "data for this channel request has not been retained"
-
-      # Sub-sections render normally (the sub_section component emits an
-      # `id="<id>-content"` div).
-      assert html =~ ~s(id="req-headers-content")
-      assert html =~ ~s(id="resp-headers-content")
+      assert props["request"]["isWiped"] == false
+      assert props["adminContacts"] == []
+      assert event(props)["requestHeaders"] != nil
+      assert event(props)["responseHeaders"] != nil
     end
   end
 
@@ -565,7 +460,7 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    test "cross-project isolation and invalid UUID both return 404", %{
+    test "cross-project isolation and invalid UUID both redirect", %{
       conn: conn,
       project: project
     } do
@@ -573,8 +468,10 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
       {request, _channel, _snapshot} = create_channel_request(other_project)
       insert(:channel_event, channel_request: request)
 
-      assert {:error, {:redirect, _}} =
+      assert {:error, {:redirect, %{to: to}}} =
                live(conn, detail_path(project, request))
+
+      assert to == "/projects/#{project.id}/history"
 
       assert {:error, {:redirect, _}} =
                live(
@@ -588,7 +485,7 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    test "renders client auth method name and destination credential name when both present",
+    test "names the client auth method and the destination credential when both are set",
          %{conn: conn, project: project, user: user} do
       webhook_auth_method =
         insert(:webhook_auth_method,
@@ -620,18 +517,13 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
 
       insert(:channel_event, channel_request: request)
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
-
-      # Client auth: method name and auth type label
-      assert html =~ "Prod API key"
-      assert html =~ "API key"
-
-      # Destination auth: credential name
-      assert html =~ "Destination API"
+      assert %{
+               "clientAuth" => "Prod API key (API key)",
+               "destinationAuth" => "Destination API"
+             } = props(conn, project, request)["request"]
     end
 
-    test "renders 'None' when no client auth configured and credential name when destination set",
+    test "sends 'None' when no client auth was configured and the credential name when the destination is set",
          %{conn: conn, project: project, user: user} do
       credential =
         insert(:credential, user: user, name: "Only Destination", schema: "http")
@@ -651,16 +543,13 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
 
       insert(:channel_event, channel_request: request)
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
-
-      # Client auth column shows "None"
-      assert html =~ "None"
-      # Destination credential name still renders
-      assert html =~ "Only Destination"
+      assert %{
+               "clientAuth" => "None",
+               "destinationAuth" => "Only Destination"
+             } = props(conn, project, request)["request"]
     end
 
-    test "renders '(deleted)' without crashing when destination credential id is set but association missing",
+    test "sends 'None' without crashing after the destination credential is deleted",
          %{conn: conn, project: project, user: user} do
       credential =
         insert(:credential, user: user, name: "Will Be Gone", schema: "http")
@@ -678,21 +567,13 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
 
       insert(:channel_event, channel_request: request)
 
-      # Break the FK with raw SQL to simulate a stale read: the id is
-      # still on the row but the credential row has been hard-deleted.
-      # `on_delete: :nilify_all` would clear the id under normal Ecto,
-      # so we bypass it with DELETE on project_credentials directly —
-      # which will cascade-nilify. The belt-and-suspenders render path
-      # for "id set, preload nil" is what we're covering here, so we
-      # then null out the id too and prove rendering still survives
-      # the absent credential through the helpers.
+      # The FK nilifies the id, so the helper answers "None"; the page still loads.
       Lightning.Repo.delete!(project_credential)
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
-
-      # After nilify, helper returns "None". Request still renders.
-      assert html =~ "None" or html =~ "(deleted)"
+      assert props(conn, project, request)["request"]["destinationAuth"] in [
+               "None",
+               "(deleted)"
+             ]
 
       reloaded =
         Lightning.Channels.get_channel_request_for_project(
@@ -715,12 +596,8 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
         destination_credential: nil
       }
 
-      assert LightningWeb.ChannelRequestLive.Helpers.format_client_auth(stale) =~
-               "(deleted)"
-
-      assert LightningWeb.ChannelRequestLive.Helpers.format_destination_auth(
-               stale
-             ) == "(deleted)"
+      assert Helpers.format_client_auth(stale) =~ "(deleted)"
+      assert Helpers.format_destination_auth(stale) == "(deleted)"
     end
   end
 
@@ -728,16 +605,17 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
     setup [:register_and_log_in_user, :create_project_for_current_user]
     setup :enable_experimental_features
 
-    test "breadcrumbs render correctly", %{conn: conn, project: project} do
+    test "the page is titled and the breadcrumb has the project's label", %{
+      conn: conn,
+      project: project
+    } do
       {request, _channel, _snapshot} = create_channel_request(project)
       insert(:channel_event, channel_request: request)
 
-      {:ok, view, _html} = live(conn, detail_path(project, request))
-      html = render(view)
+      {:ok, view, html} = live(conn, detail_path(project, request))
 
-      assert html =~ "History"
-      assert html =~ "Channel"
-      assert html =~ String.slice(request.id, 0..7)
+      assert html =~ "Channel Request"
+      assert page_props(view, @page)["projectLabel"] == project.name
     end
 
     test "channel logs table rows link to the detail page", %{
