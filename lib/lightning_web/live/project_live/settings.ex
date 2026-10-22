@@ -46,6 +46,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias LightningWeb.Components.GithubComponents
+  alias LightningWeb.CredentialLive.Helpers, as: CredentialHelpers
 
   require Logger
 
@@ -198,32 +199,14 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        can_receive_failure_alerts: can_receive_failure_alerts,
        collaborators_to_invite: [],
-       credentials_page: %{
-         entries: [],
-         page_size: 0,
-         total_entries: 0,
-         page_number: 1,
-         total_pages: 0
-       },
+       credentials_page: CredentialHelpers.empty_page(),
        credentials_url: nil,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
-       keychain_credentials_page: %{
-         entries: [],
-         page_size: 0,
-         total_entries: 0,
-         page_number: 1,
-         total_pages: 0
-       },
+       keychain_credentials_page: CredentialHelpers.empty_page(),
        keychain_url: nil,
        name: project.name,
-       oauth_clients_page: %{
-         entries: [],
-         page_size: 0,
-         total_entries: 0,
-         page_number: 1,
-         total_pages: 0
-       },
+       oauth_clients_page: CredentialHelpers.empty_page(),
        oauth_clients_url: nil,
        parent_project: parent_project,
        root_project: root_project,
@@ -277,14 +260,14 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     credentials_page =
       Credentials.list_credentials(project, creds_params)
-      |> map_credentials()
+      |> CredentialHelpers.with_credential_display_fields()
 
     keychain_credentials_page =
       Credentials.list_keychain_credentials_for_project(project, keychain_params)
 
     oauth_clients_page =
       OauthClients.list_clients(project, oauth_params)
-      |> map_oauth_clients()
+      |> CredentialHelpers.with_oauth_client_display_fields()
 
     socket
     |> assign(
@@ -992,34 +975,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:error, _reason, %{text: error}} ->
         error
     end
-  end
-
-  defp map_credentials(%Scrivener.Page{} = page) do
-    %{page | entries: Enum.map(page.entries, &add_credential_display_fields/1)}
-  end
-
-  defp add_credential_display_fields(credential) do
-    project_names = Map.get(credential, :projects, []) |> Enum.map(& &1.name)
-
-    environment_names =
-      credential |> Map.get(:credential_bodies, []) |> Enum.map(& &1.name)
-
-    credential
-    |> Map.put(:project_names, project_names)
-    |> Map.put(:environment_names, environment_names)
-  end
-
-  defp map_oauth_clients(%Scrivener.Page{} = page) do
-    %{page | entries: Enum.map(page.entries, &add_oauth_client_display_fields/1)}
-  end
-
-  defp add_oauth_client_display_fields(client) do
-    project_names =
-      if client.global,
-        do: ["GLOBAL"],
-        else: Map.get(client, :projects, []) |> Enum.map(& &1.name)
-
-    Map.put(client, :project_names, project_names)
   end
 
   attr :can_edit_project, :boolean, required: true

@@ -1628,6 +1628,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert updated.name == "Updated Name"
       assert updated.path == "$.updated_path"
+
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("close_active_modal", %{})
+
+      assert_patch(view)
+      assert has_element?(view, "#keychain-credentials-table", "Updated Name")
+      refute has_element?(view, "#keychain-credentials-table", "Original Name")
     end
 
     test "shows validation errors when creating invalid keychain credential",

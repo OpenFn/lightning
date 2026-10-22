@@ -6,14 +6,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.OauthClients
   alias Lightning.Policies
-
-  @empty_page %{
-    entries: [],
-    page_size: 0,
-    total_entries: 0,
-    page_number: 1,
-    total_pages: 0
-  }
+  alias LightningWeb.CredentialLive.Helpers
 
   @impl true
   def mount(socket) do
@@ -23,13 +16,13 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
        can_create_keychain_credential: false,
        can_create_project_credential: false,
        credential: nil,
-       credentials_page: @empty_page,
+       credentials_page: Helpers.empty_page(),
        credentials_url: nil,
        current_user: nil,
-       keychain_credentials_page: @empty_page,
+       keychain_credentials_page: Helpers.empty_page(),
        keychain_url: nil,
        oauth_client: nil,
-       oauth_clients_page: @empty_page,
+       oauth_clients_page: Helpers.empty_page(),
        oauth_clients_expanded: false,
        oauth_clients_url: nil,
        project: nil,
@@ -72,7 +65,8 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   def handle_event("close_active_modal", _params, socket) do
     {:noreply,
      socket
-     |> assign(active_modal: nil, credential: nil, oauth_client: nil)}
+     |> assign(active_modal: nil, credential: nil, oauth_client: nil)
+     |> push_patch(to: socket.assigns.return_to)}
   end
 
   def handle_event("toggle_oauth_clients", _params, socket) do
@@ -82,9 +76,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   def handle_event("show_modal", %{"target" => "new_credential"}, socket) do
     if socket.assigns.can_create_project_credential do
       project_credentials =
-        LightningWeb.CredentialLive.Helpers.default_project_credentials(
-          socket.assigns.project
-        )
+        Helpers.default_project_credentials(socket.assigns.project)
 
       {:noreply,
        assign(socket,

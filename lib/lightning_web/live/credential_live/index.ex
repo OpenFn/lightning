@@ -6,6 +6,7 @@ defmodule LightningWeb.CredentialLive.Index do
 
   alias Lightning.Credentials
   alias Lightning.OauthClients
+  alias LightningWeb.CredentialLive.Helpers
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
@@ -31,11 +32,11 @@ defmodule LightningWeb.CredentialLive.Index do
 
     credentials_page =
       Credentials.list_credentials(current_user, creds_params)
-      |> map_credentials()
+      |> Helpers.with_credential_display_fields()
 
     oauth_clients_page =
       OauthClients.list_clients(current_user, oauth_params)
-      |> map_oauth_clients()
+      |> Helpers.with_oauth_client_display_fields()
 
     socket
     |> assign(:credential, nil)
@@ -66,33 +67,5 @@ defmodule LightningWeb.CredentialLive.Index do
   def handle_info({:forward, mod, opts}, socket) do
     send_update(mod, opts)
     {:noreply, socket}
-  end
-
-  defp map_credentials(%Scrivener.Page{} = page) do
-    %{page | entries: Enum.map(page.entries, &add_credential_display_fields/1)}
-  end
-
-  defp add_credential_display_fields(credential) do
-    project_names = Map.get(credential, :projects, []) |> Enum.map(& &1.name)
-
-    environment_names =
-      credential |> Map.get(:credential_bodies, []) |> Enum.map(& &1.name)
-
-    credential
-    |> Map.put(:project_names, project_names)
-    |> Map.put(:environment_names, environment_names)
-  end
-
-  defp map_oauth_clients(%Scrivener.Page{} = page) do
-    %{page | entries: Enum.map(page.entries, &add_oauth_client_display_fields/1)}
-  end
-
-  defp add_oauth_client_display_fields(client) do
-    project_names =
-      if client.global,
-        do: ["GLOBAL"],
-        else: Map.get(client, :projects, []) |> Enum.map(& &1.name)
-
-    Map.put(client, :project_names, project_names)
   end
 end
