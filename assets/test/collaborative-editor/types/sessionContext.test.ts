@@ -368,6 +368,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
         ...validResponse,
         content_locked: false,
         experimental_features_enabled: false,
+        ai_skills: [],
       });
     }
   });
