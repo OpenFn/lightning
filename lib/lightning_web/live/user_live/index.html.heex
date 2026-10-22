@@ -1,24 +1,10 @@
-<LayoutComponents.page_content>
-  <:header>
-    <LayoutComponents.header current_user={@current_user}>
-      <:title>Users</:title>
-      <.button_link
-        theme="primary"
-        navigate={Routes.user_edit_path(@socket, :new)}
-        class="inline-flex items-center gap-x-1.5"
-      >
-        <.icon name="hero-plus-solid" class="h-4 w-4" />
-        <span class="align-middle">New User</span>
-      </.button_link>
-    </LayoutComponents.header>
-  </:header>
-  <LayoutComponents.centered>
-    <.live_component
-      id="users-table-live-component"
-      module={LightningWeb.UserLive.TableComponent}
-      delete_user={assigns[:delete_user]}
-      live_action={@live_action}
-      user_deletion_modal={LightningWeb.Components.UserDeletionModal}
-    />
-  </LayoutComponents.centered>
-</LayoutComponents.page_content>
+<.design_system_page
+  name="AdminUsersPage"
+  props={
+    %{
+      users: Enum.map(@users, &user_json/1),
+      deleteUser: delete_user_json(@delete_user)
+    }
+  }
+  current_user={@current_user}
+/>

@@ -1,18 +1,5 @@
-<LayoutComponents.page_content>
-  <:header>
-    <LayoutComponents.header current_user={@current_user}>
-      <:title>{@page_title}</:title>
-    </LayoutComponents.header>
-  </:header>
-  <LayoutComponents.centered>
-    <.live_component
-      module={LightningWeb.UserLive.FormComponent}
-      id={@user.id || :new}
-      title={@page_title}
-      action={@live_action}
-      user={@user}
-      current_user={@current_user}
-      return_to={Routes.user_index_path(@socket, :index)}
-    />
-  </LayoutComponents.centered>
-</LayoutComponents.page_content>
+<.design_system_page
+  name="AdminUserEditPage"
+  props={%{user: @user && user_json(@user)}}
+  current_user={@current_user}
+/>

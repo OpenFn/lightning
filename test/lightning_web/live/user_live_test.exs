@@ -1,160 +1,240 @@
 defmodule LightningWeb.UserLiveTest do
   use LightningWeb.ConnCase, async: true
 
-  alias Lightning.Accounts.User
-  alias Lightning.AccountsFixtures
-
   import Lightning.AccountsFixtures
   import Lightning.Factories
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
+  alias Lightning.Accounts.User
+  alias Lightning.AccountsFixtures
+
+  # Both pages are drawn by React from data-props. What they render from
+  # them is tested in the design system: sorting, filtering, the inert
+  # delete for superusers, the dialog's copy and email check
+  # (AdminUsersPage.test.tsx); the required fields, the support heads-up and
+  # the Scheduled Deletion field following the role (AdminUserEditPage.test.tsx).
+  # The events the islands send are in assets/test/design-system/.
+  @list "#admin-users-page"
+  @form "#admin-user-edit-page"
+
   @create_attrs %{
-    email: "test@example.com",
-    first_name: "some first_name",
-    last_name: "some last_name",
-    password: "some password",
-    role: "user"
+    "firstName" => "some first_name",
+    "lastName" => "some last_name",
+    "email" => "test@example.com",
+    "password" => "some password",
+    "role" => "user",
+    "supportUser" => false
   }
   @update_attrs %{
-    email: "test-updated@example.com",
-    first_name: "some updated first_name",
-    last_name: "some updated last_name",
-    password: "some updated password",
-    role: :superuser,
-    disabled: true
+    "firstName" => "some updated first_name",
+    "lastName" => "some updated last_name",
+    "email" => "test-updated@example.com",
+    "password" => "some updated password",
+    "role" => "superuser",
+    "disabled" => true
   }
-  @invalid_attrs %{email: nil, first_name: nil, last_name: nil, password: nil}
+  @invalid_attrs %{
+    "firstName" => "",
+    "lastName" => "",
+    "email" => "",
+    "password" => ""
+  }
 
-  @invalid_schedule_deletion_attrs %{
-    "scheduled_deletion_email" => "invalid@email.com"
-  }
+  defp rows(view), do: page_props(view, @list)["users"]
+  defp row(view, user), do: Enum.find(rows(view), &(&1["id"] == user.id))
+
+  # The page sends every field it holds; the test fills them from the account.
+  defp form_attrs(%User{} = user, changes) do
+    Map.merge(
+      %{
+        "firstName" => user.first_name,
+        "lastName" => user.last_name,
+        "email" => user.email,
+        "password" => "",
+        "role" => to_string(user.role),
+        "supportUser" => user.support_user,
+        "scheduledDeletion" => "",
+        "disabled" => user.disabled
+      },
+      changes
+    )
+  end
+
+  defp save(view, attrs), do: push_page_event(view, @form, "save_user", attrs)
+
+  defp delete_user(view, email),
+    do: push_page_event(view, @list, "delete_user", %{"email" => email})
+
+  defp cancel_deletion(view, id),
+    do: push_page_event(view, @list, "cancel_deletion", %{"id" => id})
 
   describe "Index for super user" do
     setup :register_and_log_in_superuser
 
     test "lists all users", %{conn: conn, user: user} do
-      {:ok, _index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, html} = live(conn, ~p"/settings/users")
 
       assert html =~ "Users"
-      assert html =~ user.email
+
+      assert %{
+               "email" => email,
+               "firstName" => first_name,
+               "role" => "superuser",
+               "disabled" => false,
+               "supportUser" => false,
+               "scheduledDeletion" => nil
+             } = row(view, user)
+
+      assert email == user.email
+      assert first_name == user.first_name
+      assert page_props(view, @list)["deleteUser"] == nil
     end
 
     test "saves new user", %{conn: conn} do
-      %{first_name: first_name, last_name: last_name} = @create_attrs
+      %{"firstName" => first_name, "lastName" => last_name} = @create_attrs
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users/new")
 
-      {:ok, edit_live, _html} =
-        index_live
-        |> element("a", "New User")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.user_edit_path(conn, :new)
-        )
+      assert page_props(view, @form) == %{"user" => nil}
 
-      assert edit_live
-             |> form("#user-form", user: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+      save(view, @invalid_attrs)
 
-      {:ok, _, html} =
-        edit_live
-        |> form("#user-form", user: @create_attrs)
-        |> render_submit()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+      assert_reply(view, %{fieldErrors: errors})
+      assert_blank(errors, ~w(firstName lastName email password))
+
+      {:ok, view, html} =
+        view
+        |> save(@create_attrs)
+        |> follow_redirect(conn, ~p"/settings/users")
 
       assert html =~ "User created successfully"
-      assert html =~ "test@example.com"
+      assert Enum.any?(rows(view), &(&1["email"] == "test@example.com"))
 
       assert %{
                first_name: ^first_name,
                last_name: ^last_name,
                role: :user
-             } = Repo.get_by(User, email: @create_attrs.email)
+             } = Repo.get_by(User, email: @create_attrs["email"])
+
+      assert_email_sent(
+        subject: "Confirm your OpenFn account",
+        to: {"#{first_name} #{last_name}", "test@example.com"}
+      )
     end
 
     test "allows creation of a super user", %{conn: conn} do
-      %{first_name: first_name, last_name: last_name} = @create_attrs
+      %{"firstName" => first_name, "lastName" => last_name} = @create_attrs
 
-      superuser_attrs = @create_attrs |> Map.put(:role, "superuser")
+      {:ok, view, _html} = live(conn, ~p"/settings/users/new")
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      {:ok, edit_live, _html} =
-        index_live
-        |> element("a", "New User")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.user_edit_path(conn, :new)
+      {:ok, view, html} =
+        view
+        |> save(
+          Map.merge(@create_attrs, %{
+            "role" => "superuser",
+            # The new-user form never showed these; a payload with them is ignored.
+            "disabled" => true,
+            "scheduledDeletion" => "2030-01-01T00:00:00Z"
+          })
         )
-
-      {:ok, _, html} =
-        edit_live
-        |> form("#user-form", user: superuser_attrs)
-        |> render_submit()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+        |> follow_redirect(conn, ~p"/settings/users")
 
       assert html =~ "User created successfully"
-      assert html =~ "test@example.com"
+      assert Enum.any?(rows(view), &(&1["email"] == "test@example.com"))
 
       assert %{
                first_name: ^first_name,
                last_name: ^last_name,
-               role: :superuser
-             } = Repo.get_by(User, email: @create_attrs.email)
+               role: :superuser,
+               disabled: false,
+               scheduled_deletion: nil
+             } = Repo.get_by(User, email: @create_attrs["email"])
+    end
+
+    test "refuses a new user with a taken email or a short password", %{
+      conn: conn,
+      user: superuser
+    } do
+      {:ok, view, _html} = live(conn, ~p"/settings/users/new")
+
+      save(
+        view,
+        Map.merge(@create_attrs, %{
+          "email" => superuser.email,
+          "password" => "short"
+        })
+      )
+
+      assert_reply(view, %{
+        fieldErrors: %{"email" => [email], "password" => [password]}
+      })
+
+      assert email =~ "should be unique"
+      assert password =~ "12"
+      refute Repo.get_by(User, email: "test@example.com")
     end
 
     test "updates user in listing", %{conn: conn} do
       user = user_fixture()
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}")
 
-      {:ok, form_live, _} =
-        index_live
-        |> element("#user-#{user.id} a", "Edit")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+      assert %{"user" => %{"id" => id, "email" => email}} =
+               page_props(view, @form)
 
-      assert form_live
-             |> form("#user-form", user: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+      assert id == user.id
+      assert email == user.email
+
+      save(view, form_attrs(user, @invalid_attrs))
+
+      assert_reply(view, %{fieldErrors: errors})
+      assert_blank(errors, ~w(firstName lastName email))
 
       refute user_attrs_match?(user, @update_attrs)
 
-      {:ok, _, html} =
-        form_live
-        |> form("#user-form", user: @update_attrs)
-        |> render_submit()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+      {:ok, _view, html} =
+        view
+        |> save(form_attrs(user, @update_attrs))
+        |> follow_redirect(conn, ~p"/settings/users")
 
       assert html =~ "User updated successfully"
 
       assert Repo.reload!(user) |> user_attrs_match?(@update_attrs)
     end
 
-    test "records the superuser behind a create, a change and a disable, but not a save that changes nothing",
-         %{conn: conn, user: superuser} do
-      {:ok, new_live, _html} = live(conn, Routes.user_edit_path(conn, :new))
+    test "leaves the password alone when the form sends it empty", %{
+      conn: conn
+    } do
+      user = user_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}")
 
       assert {:error, {:live_redirect, _}} =
-               new_live
-               |> form("#user-form", user: @create_attrs)
-               |> render_submit()
+               save(view, form_attrs(user, %{"lastName" => "Okafor-Bello"}))
 
-      created = Repo.get_by!(User, email: @create_attrs.email)
+      reloaded = Repo.reload!(user)
+      assert reloaded.last_name == "Okafor-Bello"
+      assert User.valid_password?(reloaded, valid_user_password())
+    end
 
-      for attrs <- [
-            %{first_name: "Renamed"},
-            %{disabled: true},
-            %{first_name: "Renamed"}
+    test "records the superuser behind a create, a change and a disable, but not a save that changes nothing",
+         %{conn: conn, user: superuser} do
+      {:ok, new_live, _html} = live(conn, ~p"/settings/users/new")
+
+      assert {:error, {:live_redirect, _}} = save(new_live, @create_attrs)
+
+      created = Repo.get_by!(User, email: @create_attrs["email"])
+
+      for changes <- [
+            %{"firstName" => "Renamed"},
+            %{"disabled" => true},
+            %{"firstName" => "Renamed"}
           ] do
-        {:ok, edit_live, _html} =
-          live(conn, Routes.user_edit_path(conn, :edit, created))
+        {:ok, edit_live, _html} = live(conn, ~p"/settings/users/#{created.id}")
 
         assert {:error, {:live_redirect, _}} =
-                 edit_live |> form("#user-form", user: attrs) |> render_submit()
+                 save(edit_live, form_attrs(Repo.reload!(created), changes))
       end
 
       %{entries: audits} = Lightning.Auditing.list_all()
@@ -176,256 +256,244 @@ defmodule LightningWeb.UserLiveTest do
     test "updates user as support user", %{conn: conn} do
       user = user_fixture()
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}")
 
-      {:ok, form_live, _} =
-        index_live
-        |> element("#user-#{user.id} a", "Edit")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+      assert %{"user" => %{"supportUser" => false}} = page_props(view, @form)
 
-      assert %{support_user: false} = user
-
-      refute has_element?(form_live, "#heads-up-description")
-
-      refute has_element?(
-               form_live,
-               "input[type='checkbox'][name='user[support_user]'][checked]"
-             )
-
-      assert form_live
-             |> element("input[type='checkbox'][phx-click='support_heads_up']")
-             |> render_click() =~
-               "This user will be able to access ALL projects that have support access enabled"
-
-      assert has_element?(form_live, "#heads-up-description")
-
-      assert has_element?(
-               form_live,
-               "input[type='checkbox'][name='user[support_user]'][value='true']"
-             )
-
-      {:ok, _, html} =
-        form_live
-        |> form("#user-form", user: %{support_user: true})
-        |> render_submit()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+      {:ok, _view, html} =
+        view
+        |> save(form_attrs(user, %{"supportUser" => true}))
+        |> follow_redirect(conn, ~p"/settings/users")
 
       assert html =~ "User updated successfully"
 
       assert %{support_user: true} = Repo.reload!(user)
     end
 
-    test "provides `Scheduled Deletion` when editing a normal user", %{
+    test "clears a scheduled deletion when the role becomes superuser", %{
       conn: conn
     } do
-      user = user_fixture()
+      user =
+        user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}")
 
-      {:ok, form_live, _} =
-        index_live
-        |> element("#user-#{user.id} a", "Edit")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+      assert {:error, {:live_redirect, _}} =
+               save(view, form_attrs(user, %{"role" => "superuser"}))
 
-      assert(
-        form_live
-        |> has_element?("input[name=\"user[scheduled_deletion]\"]")
-      )
+      assert %{role: :superuser, scheduled_deletion: nil} = Repo.reload!(user)
     end
 
-    test "hides `Scheduled Deletion` when changing to a superuser", %{
+    test "sets a scheduled deletion typed into the form", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}")
+
+      assert {:error, {:live_redirect, _}} =
+               save(
+                 view,
+                 form_attrs(user, %{
+                   "scheduledDeletion" => "2030-01-02T03:04:05Z"
+                 })
+               )
+
+      assert %{scheduled_deletion: ~U[2030-01-02 03:04:05Z]} =
+               Repo.reload!(user)
+    end
+
+    test "refuses a crafted save payload instead of raising", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}")
+
+      # Non-string values and unknown keys are ignored, so nothing changes:
+      # a save that changes nothing succeeds, as it always has.
+      assert {:error, {:live_redirect, _}} =
+               save(view, %{
+                 "firstName" => %{"$" => 1},
+                 "lastName" => ["x"],
+                 "email" => 42,
+                 "disabled" => "true",
+                 "confirmed" => false
+               })
+
+      reloaded = Repo.reload!(user)
+      assert reloaded.first_name == user.first_name
+      assert reloaded.confirmed_at == user.confirmed_at
+      refute reloaded.disabled
+    end
+
+    test "sends the list back when the account to edit does not exist", %{
       conn: conn
     } do
-      user = user_fixture()
+      for id <- [Ecto.UUID.generate(), "not-a-uuid"] do
+        assert {:error, {:live_redirect, %{to: "/settings/users", flash: flash}}} =
+                 live(conn, "/settings/users/#{id}")
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      {:ok, form_live, _} =
-        index_live
-        |> element("#user-#{user.id} a", "Edit")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
-
-      form_live
-      |> element("#user-form")
-      |> render_change(%{"user" => %{"role" => "superuser"}})
-
-      refute(
-        form_live
-        |> has_element?("input[name=\"user[scheduled_deletion]\"]")
-      )
-    end
-
-    test "does not show `Scheduled Deletion` field when editing superuser", %{
-      conn: conn,
-      user: user
-    } do
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      {:ok, form_live, _} =
-        index_live
-        |> element("#user-#{user.id} a", "Edit")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
-
-      refute(
-        form_live
-        |> has_element?("input[name=\"user[scheduled_deletion]\"]")
-      )
-    end
-
-    test "shows `Scheduled Deletion` field when changing to user", %{
-      conn: conn,
-      user: user
-    } do
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      {:ok, form_live, _} =
-        index_live
-        |> element("#user-#{user.id} a", "Edit")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
-
-      form_live
-      |> element("#user-form")
-      |> render_change(%{"user" => %{"role" => "user"}})
-
-      assert(
-        form_live
-        |> has_element?("input[name=\"user[scheduled_deletion]\"]")
-      )
+        assert flash["error"] == "User not found"
+      end
     end
 
     test "allows a superuser to schedule users for deletion in the users list",
-         %{
-           conn: conn
-         } do
+         %{conn: conn} do
       user = user_fixture()
 
-      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}/delete")
 
-      assert html =~ "Users"
+      assert %{
+               "id" => id,
+               "email" => email,
+               "scheduledDeletion" => nil,
+               "hasActivityInProjects" => false
+             } = page_props(view, @list)["deleteUser"]
 
-      formated_deletion_date =
-        DateTime.utc_now() |> Timex.shift(days: 7) |> Calendar.strftime("%d %b")
+      assert id == user.id
+      assert email == user.email
+      assert row(view, user)
 
-      refute html =~ formated_deletion_date
+      delete_user(view, "invalid@email.com")
 
-      {:ok, form_live, _} =
-        index_live
-        |> element("#user-#{user.id} a", "Delete")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+      assert_reply(view, %{
+        error: "This email doesn't match your current email"
+      })
 
-      assert form_live
-             |> form("#scheduled_deletion_form",
-               user: @invalid_schedule_deletion_attrs
-             )
-             |> render_change() =~
-               "This email doesn&#39;t match your current email"
+      {:ok, view, html} =
+        view
+        |> delete_user(user.email)
+        |> follow_redirect(conn, ~p"/settings/users")
 
-      {:ok, index_live, html} =
-        form_live
-        |> form("#scheduled_deletion_form",
-          user: %{
-            "scheduled_deletion_email" => user.email
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
-
-      assert has_element?(index_live, "#user-#{user.id}")
+      assert html =~ "User scheduled for deletion"
 
       assert_email_sent(
         subject: "Your account has been scheduled for deletion",
         to: Swoosh.Email.Recipient.format(user)
       )
 
-      assert html =~ formated_deletion_date
+      assert %{"scheduledDeletion" => scheduled, "disabled" => true} =
+               row(view, user)
+
+      {:ok, scheduled, _offset} = DateTime.from_iso8601(scheduled)
+      assert DateTime.diff(scheduled, DateTime.utc_now(), :day) in 6..7
     end
 
-    test "disables the delete link for listed superusers", %{
+    test "refuses to schedule a superuser opened by URL", %{
       conn: conn,
-      user: user
+      user: superuser
     } do
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/users/#{superuser.id}/delete")
 
-      assert(
-        index_live
-        |> has_element?(
-          "span#delete-#{user.id}.cursor-not-allowed",
-          "Delete"
-        )
-      )
+      delete_user(view, superuser.email)
 
-      refute(
-        index_live
-        |> has_element?("a#delete-#{user.id}", "Delete")
-      )
+      assert_reply(view, %{error: "You can't delete a superuser account."})
+      assert Repo.reload!(superuser).scheduled_deletion == nil
     end
 
-    test "allows superuser to click cancel for closing user deletion modal", %{
-      conn: conn
-    } do
+    test "refuses to act when the account's deletion changed since the dialog opened",
+         %{conn: conn} do
       user = user_fixture()
 
-      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}/delete")
 
-      assert html =~ "Users"
+      # Another admin schedules the account while this dialog shows "Delete".
+      user
+      |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2030-01-01 00:00:00Z]})
+      |> Repo.update!()
 
-      {:ok, form_live, _} =
-        index_live
-        |> element("#user-#{user.id} a", "Delete")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+      delete_user(view, user.email)
 
-      {:ok, index_live, _html} =
-        form_live
-        |> element("button", "Cancel")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.user_index_path(conn, :index)
-        )
+      assert_reply(view, %{
+        error:
+          "This account's deletion changed since the dialog opened. Reload the page."
+      })
 
-      assert has_element?(index_live, "#user-#{user.id}")
+      assert Repo.get(User, user.id)
+    end
+
+    test "refuses payloads that are not maps instead of raising", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}/delete")
+
+      for event <- ["cancel_deletion", "delete_user"] do
+        push_page_event(view, @list, event, ["x"])
+        assert_reply(view, %{error: "Invalid request"})
+      end
+
+      assert Repo.reload!(user).scheduled_deletion == nil
+    end
+
+    test "refuses a delete when no dialog is open", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/settings/users")
+
+      delete_user(view, user.email)
+
+      assert_reply(view, %{error: "User not found"})
+      assert Repo.reload!(user).scheduled_deletion == nil
+    end
+
+    test "sends the list back when the account to delete does not exist", %{
+      conn: conn
+    } do
+      for id <- [Ecto.UUID.generate(), "not-a-uuid"] do
+        assert {:error, {:live_redirect, %{to: "/settings/users", flash: flash}}} =
+                 live(conn, "/settings/users/#{id}/delete")
+
+        assert flash["error"] == "User not found"
+      end
     end
 
     test "allows a superuser to cancel scheduled deletion on users", %{
       conn: conn
     } do
       user =
-        user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+        user_fixture(
+          scheduled_deletion: Timex.now() |> Timex.shift(days: 7),
+          disabled: true
+        )
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users")
 
-      assert index_live
-             |> element("#user-#{user.id} a", "Cancel deletion")
-             |> render_click()
+      cancel_deletion(view, user.id)
 
-      flash = assert_redirected(index_live, ~p"/settings/users")
+      assert_reply(view, %{})
+      assert render(view) =~ "User deletion canceled"
 
-      assert flash["info"] == "User deletion canceled"
+      assert %{"scheduledDeletion" => nil, "disabled" => false} =
+               row(view, user)
+
+      assert %{scheduled_deletion: nil, disabled: false} = Repo.reload!(user)
     end
 
-    test "retains a cancel deletion button for superusers pending deletion", %{
-      conn: conn
-    } do
+    test "cancels a superuser's pending deletion too", %{conn: conn} do
       superuser = superuser_fixture()
 
       superuser
       |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
       |> Repo.update!()
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users")
 
-      assert index_live
-             |> has_element?(
-               "a#cancel-deletion-#{superuser.id}",
-               "Cancel deletion"
-             )
+      assert %{"scheduledDeletion" => "2024-12-28T01:02:03Z"} =
+               row(view, superuser)
+
+      cancel_deletion(view, superuser.id)
+
+      assert_reply(view, %{})
+      assert Repo.reload!(superuser).scheduled_deletion == nil
+    end
+
+    test "refuses to cancel a deletion for an unknown or malformed id", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/settings/users")
+
+      for id <- [Ecto.UUID.generate(), "not-a-uuid", nil, %{"a" => 1}] do
+        cancel_deletion(view, id)
+        assert_reply(view, %{error: "User not found"})
+      end
     end
 
     test "allows a superuser to perform delete now action on users", %{
@@ -434,105 +502,62 @@ defmodule LightningWeb.UserLiveTest do
       user =
         user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}/delete")
 
-      {:ok, form_live, _html} =
-        index_live
-        |> element("#user-#{user.id} a", "Delete now")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+      assert %{"scheduledDeletion" => scheduled} =
+               page_props(view, @list)["deleteUser"]
 
-      {:ok, index_live, html} =
-        form_live
-        |> form("#scheduled_deletion_form",
-          user: %{
-            "scheduled_deletion_email" => user.email
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+      assert scheduled
+
+      {:ok, view, html} =
+        view
+        |> delete_user(user.email)
+        |> follow_redirect(conn, ~p"/settings/users")
 
       assert html =~ "User deleted"
-
-      refute index_live |> element("user-#{user.id}") |> has_element?()
+      refute row(view, user)
+      refute Repo.get(User, user.id)
     end
 
-    test "delete now shows an error when purge fails due to associated runs",
+    test "delete now checks the email and the role again", %{conn: conn} do
+      user =
+        user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}/delete")
+
+      delete_user(view, "someone-else@example.com")
+      assert_reply(view, %{error: "This email doesn't match your current email"})
+
+      user |> Ecto.Changeset.change(%{role: :superuser}) |> Repo.update!()
+
+      delete_user(view, user.email)
+      assert_reply(view, %{error: "You can't delete a superuser account."})
+
+      assert Repo.get(User, user.id)
+    end
+
+    test "delete now shows an error when the user gained runs since the dialog opened",
          %{conn: conn} do
       user =
         user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
 
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}/delete")
 
-      {:ok, form_live, _html} =
-        index_live
-        |> element("#user-#{user.id} a", "Delete now")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+      assert %{"hasActivityInProjects" => false} =
+               page_props(view, @list)["deleteUser"]
 
-      # Simulate TOCTOU race: a run is created after the modal opens
-      # but before the admin clicks delete. The has_activity_in_projects?
-      # assign is now stale, so the delete path fires.
-      workflow = insert(:workflow)
-      trigger = insert(:trigger, workflow: workflow)
-      dataclip = insert(:dataclip)
+      # A run is created after the dialog opens but before the admin
+      # confirms; the server checks again rather than trusting the dialog.
+      insert_run_for(user)
 
-      work_order =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: dataclip
-        )
+      {:ok, _view, html} =
+        view
+        |> delete_user(user.email)
+        |> follow_redirect(conn, ~p"/settings/users")
 
-      insert(:run,
-        created_by: user,
-        work_order: work_order,
-        starting_trigger: trigger,
-        dataclip: dataclip
-      )
-
-      {:ok, _index_live, html} =
-        form_live
-        |> form("#scheduled_deletion_form",
-          user: %{
-            "scheduled_deletion_email" => user.email
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
-
-      # The UI should not claim the user was deleted when they weren't
       refute html =~ "User deleted"
-      assert html =~ "Cannot delete user with associated activity"
+      assert html =~ "Cannot delete user that has activities in other projects"
       assert Repo.get(User, user.id), "User should still exist in the database"
-    end
-
-    test "does not enable the `Delete now` button for a superuser", %{
-      conn: conn
-    } do
-      superuser = superuser_fixture()
-
-      superuser
-      |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
-      |> Repo.update!()
-
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      assert(
-        index_live
-        |> has_element?(
-          "span#delete-now-#{superuser.id}.cursor-not-allowed",
-          "Delete now"
-        )
-      )
-
-      refute(
-        index_live
-        |> has_element?(
-          "a#delete-now-#{superuser.id}",
-          "Delete now"
-        )
-      )
     end
 
     test "cannot delete user that has activities in other projects", %{
@@ -543,183 +568,13 @@ defmodule LightningWeb.UserLiveTest do
           scheduled_deletion: Timex.now() |> Timex.shift(days: 7)
         )
 
-      workflow = insert(:workflow)
-      trigger = insert(:trigger, workflow: workflow)
-      dataclip = insert(:dataclip)
+      insert_run_for(user)
 
-      work_order =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: dataclip
-        )
+      {:ok, view, _html} = live(conn, ~p"/settings/users/#{user.id}/delete")
 
-      insert(:run,
-        created_by: user,
-        work_order: work_order,
-        starting_trigger: trigger,
-        dataclip: dataclip
-      )
-
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      {:ok, _index_live, html} =
-        index_live
-        |> element("#user-#{user.id} a", "Delete now")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
-
-      assert html =~
-               "This user cannot be deleted until their auditable activities have also been purged."
-    end
-
-    test "sorting by email column works correctly", %{conn: conn} do
-      _user_a = user_fixture(email: "alpha@example.com", first_name: "Alpha")
-      _user_b = user_fixture(email: "beta@example.com", first_name: "Beta")
-      _user_c = user_fixture(email: "charlie@example.com", first_name: "Charlie")
-
-      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
-
-      # Check initial state (should be sorted by email ascending by default)
-      assert assert_elements_in_order(html, [
-               "alpha@example.com",
-               "beta@example.com",
-               "charlie@example.com"
-             ])
-
-      # Click email header to toggle to descending
-      index_live
-      |> element("a[phx-click='sort'][phx-value-by='email']")
-      |> render_click()
-
-      html = render(index_live)
-
-      # Check reverse order
-      assert assert_elements_in_order(html, [
-               "charlie@example.com",
-               "beta@example.com",
-               "alpha@example.com"
-             ])
-    end
-
-    test "sorting by first name column works correctly", %{conn: conn} do
-      _user_a = user_fixture(first_name: "Alice", email: "alice@example.com")
-      _user_b = user_fixture(first_name: "Bob", email: "bob@example.com")
-      _user_c = user_fixture(first_name: "Charlie", email: "charlie@example.com")
-
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      # Click first name header to sort ascending
-      index_live
-      |> element("a[phx-click='sort'][phx-value-by='first_name']")
-      |> render_click()
-
-      html = render(index_live)
-
-      # Check that first names are in alphabetical order
-      assert assert_elements_in_order(html, ["Alice", "Bob", "Charlie"])
-    end
-
-    test "sorting by role column works correctly", %{conn: conn} do
-      _user_a = user_fixture(role: :user, email: "user@example.com")
-      _user_b = user_fixture(role: :superuser, email: "super@example.com")
-
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      # Click role header to sort
-      index_live
-      |> element("a[phx-click='sort'][phx-value-by='role']")
-      |> render_click()
-
-      html = render(index_live)
-
-      # Check that superuser appears before user (alphabetical order)
-      assert assert_elements_in_order(html, ["superuser", "user@example.com"])
-    end
-
-    test "sorting by enabled status works correctly", %{conn: conn} do
-      _user_enabled = user_fixture(disabled: false, email: "enabled@example.com")
-
-      _user_disabled =
-        user_fixture(disabled: true, email: "disabled@example.com")
-
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      # Click enabled header to sort (enabled users should appear first)
-      index_live
-      |> element("a[phx-click='sort'][phx-value-by='enabled']")
-      |> render_click()
-
-      html = render(index_live)
-
-      # Check that disabled user appears before enabled user (false < true)
-      assert assert_elements_in_order(html, [
-               "disabled@example.com",
-               "enabled@example.com"
-             ])
-    end
-
-    test "filtering users by search term works correctly", %{conn: conn} do
-      _user_a =
-        user_fixture(
-          first_name: "Alice",
-          last_name: "Smith",
-          email: "alice@example.com",
-          role: :user
-        )
-
-      _user_b =
-        user_fixture(
-          first_name: "Bob",
-          last_name: "Johnson",
-          email: "bob@example.com",
-          role: :superuser
-        )
-
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      # Filter by first name
-      index_live
-      |> element("input[name=filter]")
-      |> render_keyup(%{"key" => "a", "value" => "alice"})
-
-      html = render(index_live)
-      assert html =~ "alice@example.com"
-      refute html =~ "bob@example.com"
-
-      # Filter by role
-      index_live
-      |> element("input[name=filter]")
-      |> render_keyup(%{"key" => "s", "value" => "superuser"})
-
-      html = render(index_live)
-      assert html =~ "bob@example.com"
-      refute html =~ "alice@example.com"
-
-      # Clear filter
-      index_live
-      |> element("#clear_filter_button")
-      |> render_click()
-
-      html = render(index_live)
-      assert html =~ "alice@example.com"
-      assert html =~ "bob@example.com"
-    end
-
-    test "filter input shows clear button when text is entered", %{conn: conn} do
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      # Initially clear button should be hidden
-      assert has_element?(index_live, "#clear_filter_button.hidden")
-
-      # Type in filter
-      index_live
-      |> element("input[name=filter]")
-      |> render_keyup(%{"key" => "a", "value" => "test"})
-
-      # Clear button should now be visible (no longer hidden)
-      refute has_element?(index_live, "#clear_filter_button.hidden")
-      assert has_element?(index_live, "a[phx-click='clear_filter']")
+      # The page then shows only why the account cannot be deleted yet.
+      assert %{"hasActivityInProjects" => true, "scheduledDeletion" => _} =
+               page_props(view, @list)["deleteUser"]
     end
   end
 
@@ -731,7 +586,7 @@ defmodule LightningWeb.UserLiveTest do
       user: _user
     } do
       {:ok, conn} =
-        live(conn, Routes.user_index_path(conn, :index))
+        live(conn, ~p"/settings/users")
         |> follow_redirect(conn, "/projects")
 
       assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
@@ -742,43 +597,57 @@ defmodule LightningWeb.UserLiveTest do
       user: user
     } do
       {:ok, conn} =
-        live(conn, Routes.user_edit_path(conn, :edit, user.id))
+        live(conn, ~p"/settings/users/#{user.id}")
         |> follow_redirect(conn, "/projects")
 
       assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
   end
 
-  def user_attrs_match?(user, attrs) do
-    Enum.all?(attrs, fn
-      {:password, password} ->
-        Lightning.Accounts.User.valid_password?(user, password)
-
-      {key, value} ->
-        Map.get(user, key) == value
-    end)
+  # The changesets word it "This field can't be blank."; the page shows it as is.
+  defp assert_blank(errors, fields) do
+    for field <- fields do
+      assert [message] = errors[field], "no error for #{field}"
+      assert message =~ "can't be blank"
+    end
   end
 
-  # Helper to check element order in rendered HTML using proper parsing
-  defp assert_elements_in_order(
-         html,
-         elements,
-         table_selector \\ "table tbody tr"
-       ) do
-    parsed_html = Floki.parse_fragment!(html)
-    rows = Floki.find(parsed_html, table_selector)
+  defp insert_run_for(user) do
+    workflow = insert(:workflow)
+    trigger = insert(:trigger, workflow: workflow)
+    dataclip = insert(:dataclip)
 
-    row_texts = Enum.map(rows, fn row -> Floki.text(row) end)
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip
+      )
 
-    # Find positions of each element in the row texts
-    positions =
-      Enum.map(elements, fn element ->
-        Enum.find_index(row_texts, fn row_text ->
-          String.contains?(row_text, element)
-        end)
-      end)
+    insert(:run,
+      created_by: user,
+      work_order: work_order,
+      starting_trigger: trigger,
+      dataclip: dataclip
+    )
+  end
 
-    # Check if positions are in ascending order
-    positions == Enum.sort(positions)
+  def user_attrs_match?(user, attrs) do
+    Enum.all?(attrs, fn
+      {"password", password} ->
+        Lightning.Accounts.User.valid_password?(user, password)
+
+      {"firstName", value} ->
+        user.first_name == value
+
+      {"lastName", value} ->
+        user.last_name == value
+
+      {"role", value} ->
+        to_string(user.role) == value
+
+      {key, value} ->
+        Map.get(user, String.to_existing_atom(key)) == value
+    end)
   end
 end
