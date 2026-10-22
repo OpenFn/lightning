@@ -105,8 +105,13 @@ defmodule LightningWeb.ConfirmationLockoutLiveTest do
       # the landing page is behind the same authenticated pipeline as
       # everything else, so it has to be exempted from the request check and
       # kept clear of the mount check at the same time.
-      {:ok, _view, html} = live(conn, ~p"/users/confirm-required")
-      assert html =~ "blocked pending email confirmation"
+      # The page's copy is React's; its props carry the address it explains.
+      {:ok, view, html} = live(conn, ~p"/users/confirm-required")
+      assert html =~ "Confirm your email"
+
+      assert page_props(view, "#auth-confirmation-required-page") == %{
+               "email" => user.email
+             }
 
       assert conn |> get(~p"/users/confirm-required") |> html_response(200)
     end

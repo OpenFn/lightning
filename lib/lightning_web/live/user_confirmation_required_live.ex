@@ -4,7 +4,8 @@ defmodule LightningWeb.UserConfirmationRequiredLive do
 
   It explains the block and carries both ways out: resend the confirmation link,
   or correct a mistyped address. `Accounts.update_user_email/2` sets
-  `confirmed_at`, so the correction form is a complete escape hatch.
+  `confirmed_at`, so the correction form is a complete escape hatch. The page
+  asks with one event each and shows what the server answers.
   """
   use LightningWeb, :live_view
 
@@ -24,99 +25,76 @@ defmodule LightningWeb.UserConfirmationRequiredLive do
     if user && Accounts.locked_out?(user) do
       {:ok,
        socket
-       |> assign(
-         page_title: "Confirm your email",
-         current_user: user,
-         email_changeset: Accounts.validate_change_user_email(user),
-         email_sent: false,
-         resend_throttled: false,
-         send_failed: false,
-         correction_throttled: false,
-         email_change_requested: nil
-       ), layout: {LightningWeb.Layouts, :app}}
+       |> assign(page_title: "Confirm your email", current_user: user),
+       layout: {LightningWeb.Layouts, :app}}
     else
       {:ok, redirect(socket, to: ~p"/projects")}
     end
   end
 
+  # Asks for a new link to the account's own address. The answer is a status
+  # the page shows; the rate limit, not a disabled button, bounds resends.
   @impl true
-  def handle_event("resend-confirmation-email", _params, socket) do
+  def handle_event("resend_confirmation_email", _params, socket) do
     user = socket.assigns.current_user
 
     case Accounts.remind_account_confirmation(user) do
       {:error, :rate_limited} ->
-        {:noreply, assign(socket, :resend_throttled, true)}
+        {:reply,
+         %{
+           status: "throttled",
+           message: ConfirmationLockout.resend_throttled_message()
+         }, socket}
 
       {:ok, _email} ->
-        {:noreply,
-         assign(socket,
-           email_sent: true,
-           resend_throttled: false,
-           send_failed: false
-         )}
+        {:reply, %{status: "sent"}, socket}
 
       {:error, reason} ->
         Logger.error("Failed to resend confirmation email #{inspect(reason)}")
-
-        {:noreply,
-         assign(socket,
-           email_sent: false,
-           resend_throttled: false,
-           send_failed: true
-         )}
+        {:reply, %{status: "failed"}, socket}
     end
   end
 
-  def handle_event("validate_email", %{"user" => user_params}, socket) do
-    changeset =
-      socket.assigns.current_user
-      |> Accounts.validate_change_user_email(user_params)
-      |> Map.put(:action, :validate_email)
-
-    {:noreply, assign(socket, :email_changeset, changeset)}
-  end
-
-  def handle_event("change_email", %{"user" => user_params}, socket) do
+  # The page sends the address and the password once, on submit; the server
+  # checks both here, as the old `validate_email` did on every change.
+  def handle_event("change_email", params, socket) when is_map(params) do
     user = socket.assigns.current_user
+
+    user_params = %{
+      "email" => string(params["email"]),
+      "current_password" => string(params["currentPassword"])
+    }
+
     changeset = Accounts.validate_change_user_email(user, user_params)
-    socket = assign(socket, :correction_throttled, false)
 
     with {:ok, _data} <- Ecto.Changeset.apply_action(changeset, :validate),
          {:ok, _email} <-
            Accounts.request_email_correction(user, user_params["email"]) do
-      {:noreply,
-       socket
-       |> assign(:email_change_requested, user_params["email"])
-       |> assign(:email_changeset, Accounts.validate_change_user_email(user))}
+      {:reply, %{status: "requested", email: user_params["email"]}, socket}
     else
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply,
-         socket
-         |> assign(:email_change_requested, nil)
-         |> assign(:email_changeset, Map.put(changeset, :action, :validate))}
+        reply_error(socket, changeset)
 
       {:error, :rate_limited} ->
-        {:noreply,
-         socket
-         |> assign(:correction_throttled, true)
-         |> assign(:email_change_requested, nil)
-         |> assign(:email_changeset, Map.put(changeset, :action, :validate))}
+        {:reply, %{status: "throttled"}, socket}
 
       {:error, reason} ->
         Logger.error("Failed to request email update #{inspect(reason)}")
 
-        {:noreply,
-         socket
-         |> assign(:email_change_requested, nil)
-         |> assign(
-           :email_changeset,
-           changeset
-           |> Ecto.Changeset.add_error(
-             :email,
-             "could not be updated, please try again"
-           )
-           |> Map.put(:action, :validate)
-         )}
+        reply_error(
+          socket,
+          Ecto.Changeset.add_error(
+            changeset,
+            :email,
+            "could not be updated, please try again"
+          )
+        )
     end
   end
+
+  def handle_event("change_email", _params, socket),
+    do: reply_error(socket, "Invalid request")
+
+  defp string(value) when is_binary(value), do: value
+  defp string(_value), do: ""
 end

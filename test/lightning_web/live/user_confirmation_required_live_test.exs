@@ -8,6 +8,13 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
 
   alias Lightning.Accounts
 
+  # The page is drawn by React from data-props (the address). Its copy, the
+  # alert each answer shows, the form's own checks and the field errors are
+  # tested in the design system's AuthConfirmationRequiredPage.test.tsx; the
+  # events the island sends in assets/test/design-system/. These tests cover
+  # the gate and what the server answers.
+  @page "#auth-confirmation-required-page"
+
   @password "hello world!"
 
   setup do
@@ -29,23 +36,28 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
     }
   end
 
+  defp resend(view),
+    do: push_page_event(view, @page, "resend_confirmation_email")
+
+  defp change_email(view, email, password),
+    do:
+      push_page_event(view, @page, "change_email", %{
+        "email" => email,
+        "currentPassword" => password
+      })
+
   describe "a locked-out account" do
     setup [:locked_out_user]
 
-    test "sees the block explained and every way out", %{
+    test "sees the block explained for their address", %{
       conn: conn,
       user: user
     } do
-      {:ok, view, html} =
+      {:ok, view, _html} =
         conn |> log_in_user(user) |> live(~p"/users/confirm-required")
 
-      assert html =~ "Confirm your email address"
-      assert html =~ "blocked pending email confirmation"
-      assert html =~ user.email
-
-      assert has_element?(view, "#resend-confirmation-email-button")
-      assert has_element?(view, "#email-form")
-      assert has_element?(view, ~s{a[href="/users/log_out"]})
+      assert page_title(view) =~ "Confirm your email"
+      assert page_props(view, @page) == %{"email" => user.email}
     end
 
     test "gets no chrome, and no project inventory, on the landing page",
@@ -69,16 +81,8 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
       {:ok, view, _html} =
         conn |> log_in_user(user) |> live(~p"/users/confirm-required")
 
-      refute has_element?(view, "#confirmation-email-sent")
-
-      html =
-        view |> element("#resend-confirmation-email-button") |> render_click()
-
-      assert html =~ "We have sent a new confirmation link to #{user.email}"
-
-      # Not disabled on success: mail goes astray, and the rate limit is what
-      # bounds resends.
-      refute has_element?(view, "#resend-confirmation-email-button[disabled]")
+      resend(view)
+      assert_reply(view, %{status: "sent"})
 
       assert_email_sent(
         subject: "Confirm your OpenFn account",
@@ -94,19 +98,19 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
         conn |> log_in_user(user) |> live(~p"/users/confirm-required")
 
       for _ <- 1..3 do
-        view |> element("#resend-confirmation-email-button") |> render_click()
+        resend(view)
+        assert_reply(view, %{status: "sent"})
       end
 
-      html =
-        view |> element("#resend-confirmation-email-button") |> render_click()
+      resend(view)
+      assert_reply(view, %{status: "throttled", message: message})
+      assert message =~ "you can request another in a few minutes"
 
       for _ <- 1..3 do
         assert_email_sent(subject: "Confirm your OpenFn account", to: user.email)
       end
 
       refute_email_sent(subject: "Confirm your OpenFn account")
-
-      assert html =~ "you can request another in a few minutes"
     end
 
     test "cannot spend that window on /users/send-confirmation-email instead", %{
@@ -127,14 +131,9 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/users/confirm-required")
 
-      html =
-        view |> element("#resend-confirmation-email-button") |> render_click()
-
+      resend(view)
+      assert_reply(view, %{status: "throttled"})
       refute_email_sent(subject: "Confirm your OpenFn account")
-
-      assert html =~ "you can request another in a few minutes"
-      refute html =~ "We have sent a new confirmation link"
-      refute has_element?(view, "#resend-confirmation-email-button[disabled]")
     end
   end
 
@@ -145,15 +144,44 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
       {:ok, view, _html} =
         conn |> log_in_user(user) |> live(~p"/users/confirm-required")
 
-      html =
-        view
-        |> form("#email-form",
-          user: %{email: "typo-fixed@example.com", current_password: "wrong"}
-        )
-        |> render_submit()
+      change_email(view, "typo-fixed@example.com", "wrong")
 
-      assert html =~ "Your passwords do not match."
-      refute html =~ "We have sent confirmation instructions"
+      assert_reply(view, %{
+        fieldErrors: %{"currentPassword" => ["Your passwords do not match."]}
+      })
+
+      refute_email_sent(subject: "Please confirm your new email")
+    end
+
+    test "is refused with the same, a malformed or a missing address", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} =
+        conn |> log_in_user(user) |> live(~p"/users/confirm-required")
+
+      change_email(view, user.email, @password)
+      assert_reply(view, %{fieldErrors: %{"email" => messages}})
+      assert Enum.any?(messages, &(&1 =~ "change your email"))
+
+      change_email(view, "not an email", @password)
+      assert_reply(view, %{fieldErrors: %{"email" => [_]}})
+
+      taken = insert(:user).email
+      change_email(view, taken, @password)
+      assert_reply(view, %{fieldErrors: %{"email" => [unique]}})
+      assert unique =~ "unique"
+
+      # Crafted payloads: non-string fields read as blank, a non-map is refused.
+      change_email(view, %{"$" => 1}, ["x"])
+
+      assert_reply(view, %{
+        fieldErrors: %{"email" => [_], "currentPassword" => [_]}
+      })
+
+      push_page_event(view, @page, "change_email", ["x"])
+      assert_reply(view, %{error: "Invalid request"})
+
       refute_email_sent(subject: "Please confirm your new email")
     end
 
@@ -161,18 +189,15 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
       {:ok, view, _html} =
         conn |> log_in_user(user) |> live(~p"/users/confirm-required")
 
-      html =
-        view
-        |> form("#email-form",
-          user: %{email: "typo-fixed@example.com", current_password: @password}
-        )
-        |> render_submit()
+      change_email(view, "typo-fixed@example.com", @password)
 
-      assert html =~
-               "We have sent confirmation instructions to typo-fixed@example.com"
+      # The password typed to authorise the change is not echoed.
+      assert_reply(
+        view,
+        %{status: "requested", email: "typo-fixed@example.com"} = reply
+      )
 
-      # The password typed to authorise the change is not retained.
-      refute html =~ @password
+      refute inspect(reply) =~ @password
 
       # request_email_update/2 warns the old address before instructing the new
       # one; Swoosh asserts in order.
@@ -190,11 +215,8 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/users/confirm-required")
 
-      view
-      |> form("#email-form",
-        user: %{email: "typo-fixed@example.com", current_password: @password}
-      )
-      |> render_submit()
+      change_email(view, "typo-fixed@example.com", @password)
+      assert_reply(view, %{status: "requested"})
 
       assert_email_sent(subject: "Your OpenFn email was changed")
 
@@ -215,30 +237,18 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
       refute Accounts.locked_out?(confirmed)
     end
 
-    test "is throttled after three corrections, and told so without losing the address",
+    test "is throttled after three corrections, and told so",
          %{conn: conn, user: user} do
       {:ok, view, _html} =
         conn |> log_in_user(user) |> live(~p"/users/confirm-required")
 
-      submit = fn address ->
-        view
-        |> form("#email-form",
-          user: %{email: address, current_password: @password}
-        )
-        |> render_submit()
+      for n <- 1..3 do
+        change_email(view, "typo-fixed-#{n}@example.com", @password)
+        assert_reply(view, %{status: "requested"})
       end
 
-      for n <- 1..3, do: submit.("typo-fixed-#{n}@example.com")
-
-      html = submit.("typo-fixed-4@example.com")
-
-      assert html =~ "asked us to change this address a few times recently"
-      assert has_element?(view, "#email-change-throttled")
-
-      # Nothing was sent, so the page must not say otherwise, and the address
-      # they typed must survive the refusal.
-      refute html =~ "We have sent confirmation instructions"
-      assert html =~ "typo-fixed-4@example.com"
+      change_email(view, "typo-fixed-4@example.com", @password)
+      assert_reply(view, %{status: "throttled"})
 
       for _ <- 1..3 do
         assert_email_sent(subject: "Your OpenFn email was changed")
@@ -256,24 +266,16 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
         conn |> log_in_user(user) |> live(~p"/users/confirm-required")
 
       for _ <- 1..4 do
-        view |> element("#resend-confirmation-email-button") |> render_click()
+        resend(view)
+        assert_reply(view, %{status: _})
       end
 
       for _ <- 1..3 do
         assert_email_sent(subject: "Confirm your OpenFn account", to: user.email)
       end
 
-      html =
-        view
-        |> form("#email-form",
-          user: %{email: "typo-fixed@example.com", current_password: @password}
-        )
-        |> render_submit()
-
-      assert html =~
-               "We have sent confirmation instructions to typo-fixed@example.com"
-
-      refute has_element?(view, "#email-change-throttled")
+      change_email(view, "typo-fixed@example.com", @password)
+      assert_reply(view, %{status: "requested"})
 
       assert_email_sent(subject: "Your OpenFn email was changed")
       assert_email_sent(subject: "Please confirm your new email")
