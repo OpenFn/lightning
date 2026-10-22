@@ -729,10 +729,13 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:error, changeset}` - Validation error
 
   ## Example
-    {:ok, updated} = Sandboxes.update_sandbox(sandbox, user, %{
-      name: "new-name",
-      color: "#ff6b35"
-    })
+
+  ```elixir
+  {:ok, updated} = Sandboxes.update_sandbox(sandbox, user, %{
+    name: "new-name",
+    color: "#ff6b35"
+  })
+  ```
   """
   @spec update_sandbox(Project.t() | Ecto.UUID.t(), User.t(), map()) ::
           {:ok, Project.t()}
@@ -1264,7 +1267,10 @@ defmodule Lightning.Projects.Sandboxes do
           enabled: false,
           comment: parent_trigger.comment,
           custom_path: parent_trigger.custom_path,
-          cron_expression: parent_trigger.cron_expression
+          cron_expression: parent_trigger.cron_expression,
+          webhook_reply: parent_trigger.webhook_reply,
+          webhook_response_config:
+            webhook_response_config_attrs(parent_trigger.webhook_response_config)
         }
 
         {:ok, sandbox_trigger} = insert_sandbox_trigger(sandbox_trigger_attrs)
@@ -1285,6 +1291,12 @@ defmodule Lightning.Projects.Sandboxes do
       end)
     end)
     |> Map.new()
+  end
+
+  defp webhook_response_config_attrs(nil), do: nil
+
+  defp webhook_response_config_attrs(config) do
+    %{success_code: config.success_code, error_code: config.error_code}
   end
 
   # A parent can hold a pre-migration path the clone's changeset rejects. The

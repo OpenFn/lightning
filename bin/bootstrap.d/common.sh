@@ -262,6 +262,7 @@ run_bootstrap() {
   echo "Platform: $OS $ARCH"
   echo ""
 
+  platform_setup_tool_build_environment
   ensure_tool_versions
   echo ""
 

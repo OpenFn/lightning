@@ -12,7 +12,7 @@ defmodule Lightning.Projects.MailRecipients do
   never reach. An unconfirmed address counts for more here than it does there,
   because nothing has established that the mailbox belongs to the member.
 
-  Only for mail carrying a project's own contents — run logs, digests,
+  Only for mail carrying a project's own contents — failure alerts, digests,
   retention notices. Account mail must not be routed through this: the notice
   that an account is being deleted has to reach an account this refuses.
   """

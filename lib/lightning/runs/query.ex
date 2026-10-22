@@ -164,7 +164,8 @@ defmodule Lightning.Runs.Query do
   of data processed by expensive window functions, significantly improving query
   performance on large datasets.
 
-  > ### Note {: .info}
+  > #### Note {: .info}
+  >
   > The default `:per_workflow_claim_limit` is 50.
   > This can be configured via the `PER_WORKFLOW_CLAIM_LIMIT` environment variable.
   > The value must be larger than the max concurrency of any individual workflow.

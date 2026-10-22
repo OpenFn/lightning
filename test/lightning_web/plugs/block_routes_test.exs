@@ -54,6 +54,8 @@ defmodule MyAppWeb.Plugs.BlockRoutesTest do
     test "passes through for /other/path when feature is enabled", %{
       routes_flags: routes_flags
     } do
+      expect(Lightning.MockConfig, :check_flag?, fn :allow_other -> true end)
+
       conn = conn(:get, "/other/path") |> BlockRoutes.call(routes_flags)
       assert conn.status != 404
     end
@@ -99,7 +101,7 @@ defmodule MyAppWeb.Plugs.BlockRoutesTest do
 
   describe "call/2 with all routes enabled" do
     setup do
-      expect(Lightning.MockConfig, :check_flag?, fn _flag -> true end)
+      stub(Lightning.MockConfig, :check_flag?, fn _flag -> true end)
 
       routes_flags = [
         {"/users/register", :allow_signup, "Self-signup is enabled."},
@@ -115,5 +117,19 @@ defmodule MyAppWeb.Plugs.BlockRoutesTest do
       conn = conn(:get, "/other/path") |> BlockRoutes.call(routes_flags)
       assert conn.status != 404
     end
+  end
+
+  test "checks rules after the first" do
+    stub(Lightning.MockConfig, :check_flag?, fn _flag -> false end)
+
+    routes_flags = [
+      {"/users/register", :allow_signup, "Self-signup is disabled."},
+      {"/other/path", :allow_other, "Other is disabled."}
+    ]
+
+    conn = conn(:get, "/other/path") |> BlockRoutes.call(routes_flags)
+
+    assert conn.status == 404
+    assert conn.resp_body == "Other is disabled."
   end
 end

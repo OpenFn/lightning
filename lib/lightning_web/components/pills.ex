@@ -15,6 +15,7 @@ defmodule LightningWeb.Components.Pills do
   <.pill color="red">
     Red pill
   </.pill>
+  ```
 
   ## Colors
 

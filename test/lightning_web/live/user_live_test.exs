@@ -134,6 +134,45 @@ defmodule LightningWeb.UserLiveTest do
       assert Repo.reload!(user) |> user_attrs_match?(@update_attrs)
     end
 
+    test "records the superuser behind a create, a change and a disable, but not a save that changes nothing",
+         %{conn: conn, user: superuser} do
+      {:ok, new_live, _html} = live(conn, Routes.user_edit_path(conn, :new))
+
+      assert {:error, {:live_redirect, _}} =
+               new_live
+               |> form("#user-form", user: @create_attrs)
+               |> render_submit()
+
+      created = Repo.get_by!(User, email: @create_attrs.email)
+
+      for attrs <- [
+            %{first_name: "Renamed"},
+            %{disabled: true},
+            %{first_name: "Renamed"}
+          ] do
+        {:ok, edit_live, _html} =
+          live(conn, Routes.user_edit_path(conn, :edit, created))
+
+        assert {:error, {:live_redirect, _}} =
+                 edit_live |> form("#user-form", user: attrs) |> render_submit()
+      end
+
+      %{entries: audits} = Lightning.Auditing.list_all()
+
+      assert Enum.all?(
+               audits,
+               &({&1.actor_type, &1.actor_id, &1.item_id} ==
+                   {:user, superuser.id, created.id})
+             )
+
+      assert audits |> Enum.map(&{&1.event, &1.changes.before}) |> Enum.sort() ==
+               [
+                 {"created", nil},
+                 {"updated", %{"disabled" => false}},
+                 {"updated", %{"first_name" => "some first_name"}}
+               ]
+    end
+
     test "updates user as support user", %{conn: conn} do
       user = user_fixture()
 

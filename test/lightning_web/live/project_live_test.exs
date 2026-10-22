@@ -198,7 +198,7 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, index_live, html} = live(conn, ~p"/projects/#{project.id}/settings")
 
       assert html =~
-               "Export your project as code, to save this version or edit your project locally"
+               "Save your project as a YAML file to be edited locally, backed up, or deployed elsewhere"
 
       assert index_live
              |> element(~s{a[target="_blank"]}, "Export project")
@@ -756,7 +756,7 @@ defmodule LightningWeb.ProjectLiveTest do
     test "having edge with condition_type=always", %{
       conn: conn,
       project: project,
-      workflow: %{edges: [edge]}
+      workflow: %{edges: [edge], jobs: [job]}
     } do
       edge
       |> Ecto.Changeset.change(%{condition_type: :always})
@@ -764,13 +764,15 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      assert response =~ ~S[condition_type: always]
+      # v2 emits the verbose `next:` form with `condition: always` literal
+      # (per portability.d.ts:60 the bare-string shortcut is being removed).
+      assert response =~ ~s[#{job.name}:\n            condition: always]
     end
 
     test "having edge with condition_type=on_job_success", %{
       conn: conn,
       project: project,
-      workflow: %{edges: [edge]}
+      workflow: %{edges: [edge], jobs: [job]}
     } do
       edge
       |> Ecto.Changeset.change(%{condition_type: :on_job_success})
@@ -778,13 +780,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      assert response =~ ~S[condition_type: on_job_success]
+      # v2 emits the named condition literal (per lightning.d.ts:102 union).
+      assert response =~ ~s[#{job.name}:\n            condition: on_job_success]
     end
 
     test "having edge with condition_type=on_job_failure", %{
       conn: conn,
       project: project,
-      workflow: %{edges: [edge]}
+      workflow: %{edges: [edge], jobs: [job]}
     } do
       edge
       |> Ecto.Changeset.change(%{condition_type: :on_job_failure})
@@ -792,13 +795,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      assert response =~ ~S[condition_type: on_job_failure]
+      assert response =~
+               ~s[#{job.name}:\n            condition: on_job_failure]
     end
 
     test "having edge with condition_type=js_expression", %{
       conn: conn,
       project: project,
-      workflow: %{edges: [edge]}
+      workflow: %{edges: [edge], jobs: [job]}
     } do
       edge
       |> Ecto.Changeset.change(%{
@@ -810,11 +814,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       response = get(conn, "/download/yaml?id=#{project.id}") |> response(200)
 
-      assert response =~ ~S[condition_type: js_expression]
-      assert response =~ ~S[condition_label: not underaged]
-
+      # v2: `condition` IS the JS body (no separate condition_expression);
+      # `label` is the optional human-readable string.
       assert response =~
-               ~s[condition_expression: |\n          state.data.age > 18]
+               ~s[#{job.name}:\n            condition: state.data.age > 18]
+
+      assert response =~ ~S[label: not underaged]
     end
   end
 
@@ -5071,7 +5076,7 @@ defmodule LightningWeb.ProjectLiveTest do
         view
         |> element("#select-repos-input")
         |> render_async()
-        |> find_selected_option("#select-repos-input li")
+        |> find_selected_option("#select-repos-input li[role=option]")
 
       assert selected_repo =~ expected_repo["full_name"]
 
@@ -5090,7 +5095,7 @@ defmodule LightningWeb.ProjectLiveTest do
         view
         |> element("#select-branches-input")
         |> render_async()
-        |> find_selected_option("#select-branches-input li")
+        |> find_selected_option("#select-branches-input li[role=option]")
 
       assert selected_branch =~ expected_branch["name"]
 
@@ -5101,9 +5106,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
       html = render_async(view)
 
-      refute find_selected_option(html, "#select-repos-input li")
+      refute find_selected_option(html, "#select-repos-input li[role=option]")
 
-      refute find_selected_option(html, "#select-branches-input li")
+      refute find_selected_option(html, "#select-branches-input li[role=option]")
 
       # let us list the branches again by following the ritual again
       view
@@ -5136,7 +5141,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input li")
+        |> Floki.find("#select-branches-input li[role=option]")
 
       assert Enum.count(options) == 2
 
@@ -5163,7 +5168,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input li")
+        |> Floki.find("#select-branches-input li[role=option]")
 
       assert Enum.count(options) == 3
     end
@@ -5234,7 +5239,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input li")
+        |> Floki.find("#select-branches-input li[role=option]")
 
       # Only the "Select a branch" prompt is present; no branches leaked.
       assert Enum.count(options) == 1
@@ -5252,7 +5257,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> element("#select-branches-input")
         |> render_async()
         |> Floki.parse_fragment!()
-        |> Floki.find("#select-branches-input li")
+        |> Floki.find("#select-branches-input li[role=option]")
 
       assert Enum.count(options) == 1
     end
@@ -5312,7 +5317,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # We just have the default option
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
       [repos_input] = Floki.find(floki_fragment, "#select-repos-input")
-      options = Floki.children(repos_input)
+      options = Floki.find(repos_input, "li[role=option]")
       assert Enum.count(options) == 1
       options |> hd() |> Floki.raw_html() =~ "Select a repo"
 
@@ -5326,7 +5331,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # we should now have the repos listed
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
       [repos_input] = Floki.find(floki_fragment, "#select-repos-input")
-      options = Floki.children(repos_input)
+      options = Floki.find(repos_input, "li[role=option]")
       assert Enum.count(options) == 2
       [default_option, repo_option] = options
       Floki.raw_html(default_option) =~ "Select a repo"
@@ -5337,7 +5342,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
       [branches_input] = Floki.find(floki_fragment, "#select-branches-input")
-      options = Floki.children(branches_input)
+      options = Floki.find(branches_input, "li[role=option]")
       assert Enum.count(options) == 1
       options |> hd() |> Floki.raw_html() =~ "Select a branch"
 
@@ -5362,7 +5367,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # we should now have the branches listed
       floki_fragment = view |> render_async() |> Floki.parse_fragment!()
       [branches_input] = Floki.find(floki_fragment, "#select-branches-input")
-      options = Floki.children(branches_input)
+      options = Floki.find(branches_input, "li[role=option]")
       assert Enum.count(options) == 2
       [default_option, branch_option] = options
       Floki.raw_html(default_option) =~ "Select a branch"
@@ -5398,24 +5403,22 @@ defmodule LightningWeb.ProjectLiveTest do
         expected_repo["default_branch"]
       )
 
-      # push deploy.yml + config.json
-      # deploy.yml blob
-      expect_create_blob(expected_repo["full_name"])
-      # config.json blob
+      # write secret
+      expect_get_public_key(expected_repo["full_name"])
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(expected_repo["full_name"], secret_name)
+
+      # push deploy.yml (v2 by default: the CLI writes openfn.yaml on pull)
       expect_create_blob(expected_repo["full_name"])
       expect_get_commit(expected_repo["full_name"], expected_branch["name"])
       expect_create_tree(expected_repo["full_name"])
       expect_create_commit(expected_repo["full_name"])
       expect_update_ref(expected_repo["full_name"], expected_branch["name"])
 
-      # write secret
-      expect_get_public_key(expected_repo["full_name"])
-      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
-      expect_create_repo_secret(expected_repo["full_name"], secret_name)
-
       # initialize sync
       expect_create_installation_token(expected_installation["id"])
       expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+      expect_pull_workflow(expected_repo["full_name"], "pull_v2.yml")
 
       expect_create_workflow_dispatch(
         expected_repo["full_name"],
@@ -5525,6 +5528,11 @@ defmodule LightningWeb.ProjectLiveTest do
         expected_repo["default_branch"]
       )
 
+      # write secret
+      expect_get_public_key(expected_repo["full_name"])
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(expected_repo["full_name"], secret_name)
+
       # push deploy.yml
       # only 1 blob is created for the deploy.yml
       expect_create_blob(expected_repo["full_name"])
@@ -5532,11 +5540,6 @@ defmodule LightningWeb.ProjectLiveTest do
       expect_create_tree(expected_repo["full_name"])
       expect_create_commit(expected_repo["full_name"])
       expect_update_ref(expected_repo["full_name"], expected_branch["name"])
-
-      # write secret
-      expect_get_public_key(expected_repo["full_name"])
-      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
-      expect_create_repo_secret(expected_repo["full_name"], secret_name)
 
       # sync is not initialized
 
@@ -5547,6 +5550,7 @@ defmodule LightningWeb.ProjectLiveTest do
           branch: expected_branch["name"],
           sync_direction: "deploy",
           config_path: "./config.json",
+          sync_version: false,
           accept: true
         }
       )
@@ -5742,6 +5746,7 @@ defmodule LightningWeb.ProjectLiveTest do
           branch: expected_branch["name"],
           sync_direction: "deploy",
           config_path: "./config.json",
+          sync_version: false,
           accept: true
         }
       )
@@ -5838,6 +5843,7 @@ defmodule LightningWeb.ProjectLiveTest do
           branch: expected_branch["name"],
           sync_direction: "deploy",
           config_path: "./config.json",
+          sync_version: false,
           accept: true
         }
       )
@@ -5950,6 +5956,409 @@ defmodule LightningWeb.ProjectLiveTest do
         assert html =~ repo_connection.branch
         assert html =~ repo_connection.github_installation_id
       end
+    end
+
+    test "warns before connecting a workspace with another project under the same alias",
+         %{conn: conn} do
+      project = insert(:project, name: "My Project")
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+      other_id = Ecto.UUID.generate()
+      contents = "https://api.github.com/repos/someaccount/somerepo/contents/"
+
+      stub_connect_form(%{
+        (contents <> "ws/.projects") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: [
+               %{
+                 "name" => "main@app.example.org.yaml",
+                 "path" => "ws/.projects/main@app.example.org.yaml"
+               }
+             ]
+           }},
+        (contents <> "ws/.projects/main@app.example.org.yaml") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "content" => Base.encode64("openfn:\n  uuid: #{other_id}\n")
+             }
+           }}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      change = fn params ->
+        view
+        |> form("#project-repo-connection-form")
+        |> render_change(
+          connection:
+            Map.merge(
+              %{github_installation_id: "1234", repo: "someaccount/somerepo"},
+              params
+            )
+        )
+
+        render_async(view)
+      end
+
+      change.(%{})
+      change.(%{branch: "main", workspace_path: "ws", accept: "true"})
+
+      assert view |> element("#workspace-alias-clash") |> render() =~ other_id
+      # the CLI won't pull while the alias clashes
+      assert has_element?(view, "#connect-and-sync-button[disabled]")
+
+      # the warning's link opens the section with the alias field
+      assert has_element?(view, "#advanced-settings.hidden")
+
+      view
+      |> element("#workspace-alias-clash button", "Advanced settings")
+      |> render_click()
+
+      refute has_element?(view, "#advanced-settings.hidden")
+
+      change.(%{
+        branch: "main",
+        workspace_path: "ws",
+        accept: "true",
+        local_alias: "my-project"
+      })
+
+      refute has_element?(view, "#workspace-alias-clash")
+      assert view |> element("#workspace-alias") |> render() =~ "my-project"
+      refute has_element?(view, "#connect-and-sync-button[disabled]")
+
+      # a fresh workspace has nothing to clash with
+      change.(%{branch: "main", workspace_path: "other", local_alias: ""})
+
+      assert view |> element("#workspace-alias") |> render() =~ "main"
+    end
+
+    test "asks to confirm taking over a folder another project syncs to",
+         %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+      other_id = Ecto.UUID.generate()
+      contents = "https://api.github.com/repos/someaccount/somerepo/contents/"
+      copy = "main@app.example.org.yaml"
+
+      stub_connect_form(%{
+        (contents <> "ws/.openfn/branches/main/checkout.yaml") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"content" => Base.encode64("uuid: #{other_id}\n")}
+           }},
+        (contents <> "ws/.projects") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: [%{"name" => copy, "path" => "ws/.projects/" <> copy}]
+           }},
+        (contents <> "ws/.projects/" <> copy) =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "content" =>
+                 Base.encode64(
+                   "name: their-project\nopenfn:\n  uuid: #{other_id}\n"
+                 )
+             }
+           }}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      change = fn params ->
+        view
+        |> form("#project-repo-connection-form")
+        |> render_change(
+          connection:
+            Map.merge(
+              %{github_installation_id: "1234", repo: "someaccount/somerepo"},
+              params
+            )
+        )
+
+        render_async(view)
+      end
+
+      change.(%{})
+      change.(%{branch: "main", workspace_path: "ws"})
+
+      assert view |> element("#workspace-warning") |> render() =~
+               "their-project already syncs to this folder"
+
+      # their copy is also saved as "main", so the alias clashes too
+      assert view |> element("#workspace-alias-clash") |> render() =~
+               "This project would also be saved as"
+
+      assert view |> element("#replaces-project") |> render() =~
+               "their-project&#39;s files in this folder will be replaced"
+
+      # importing that project into this one is the normal case
+      change.(%{branch: "main", workspace_path: "ws", sync_direction: "deploy"})
+
+      refute has_element?(view, "#workspace-tracks-other-project")
+      refute has_element?(view, "#replaces-project")
+    end
+
+    test "warns that connecting replaces a pull workflow of the other format",
+         %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      legacy_pull_yml =
+        :code.priv_dir(:lightning)
+        |> Path.join("github/pull.yml")
+        |> File.read!()
+
+      stub_connect_form(%{
+        "https://api.github.com/repos/someaccount/somerepo/contents/.github/workflows/openfn-pull.yml" =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"content" => Base.encode64(legacy_pull_yml)}
+           }}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      change = fn params ->
+        view
+        |> form("#project-repo-connection-form")
+        |> render_change(
+          connection:
+            Map.merge(
+              %{
+                github_installation_id: "1234",
+                repo: "someaccount/somerepo",
+                branch: "main",
+                sync_direction: "pull",
+                accept: "true"
+              },
+              params
+            )
+        )
+
+        render_async(view)
+      end
+
+      change.(%{sync_version: "true"})
+
+      assert view |> element("#pull-workflow-other-format") |> render() =~
+               "set up for the legacy format"
+
+      # a warning, not a block
+      refute view |> element("#connect-and-sync-button") |> render() =~
+               "disabled=\"disabled\""
+
+      change.(%{sync_version: "false"})
+
+      refute has_element?(view, "#pull-workflow-other-format")
+    end
+
+    test "shows the sync status of a v2 connection", %{conn: conn} do
+      project = insert(:project)
+
+      stub_sync_status(project,
+        checkout: project.id,
+        pull_runs: [
+          %{
+            "display_title" => "sync (#{project.id})",
+            "status" => "completed",
+            "conclusion" => "failure",
+            "html_url" => "https://github.com/runs/1",
+            "created_at" => "2026-10-14T09:00:00Z"
+          }
+        ]
+      )
+
+      view = live_sync_tab(conn, project)
+
+      assert has_element?(view, "#check-tracking .hero-check-circle-solid")
+      assert view |> element("#last-pull-run") |> render() =~ "failure"
+
+      assert has_element?(
+               view,
+               "#last-pull-run a[href='https://github.com/runs/1']"
+             )
+
+      assert view |> element("#last-deploy-run") |> render() =~ "No runs yet"
+      # the failed run needs looking at
+      assert view |> element("#sync-health-title") |> render() =~
+               "Needs attention"
+    end
+
+    test "offers admins to reconnect when the workflow files are v1", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      stub_sync_status(project, workflows: {"pull_v2.yml", "deploy.yml"})
+
+      [{admin_conn, admin}] = setup_project_users(conn, project, [:admin])
+      set_valid_github_oauth_token!(admin)
+
+      {:ok, view, _html} =
+        live(admin_conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      render_async(view)
+
+      assert has_element?(view, "#outdated-workflows")
+      assert has_element?(view, "#outdated-workflows-reconnect")
+
+      # viewers see why, but can't reconnect
+      viewer_view = live_sync_tab(conn, project)
+      assert has_element?(viewer_view, "#outdated-workflows")
+      refute has_element?(viewer_view, "#outdated-workflows-reconnect")
+    end
+
+    test "shows no update banner when the workflow files are current", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      stub_sync_status(project, checkout: project.id)
+
+      view = live_sync_tab(conn, project)
+
+      refute has_element?(view, "#outdated-workflows")
+    end
+
+    test "shows a running first sync as setting up, not as a problem", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      stub_sync_status(project,
+        checkout: nil,
+        pull_runs: [
+          %{
+            "display_title" => "sync (#{project.id})",
+            "status" => "in_progress",
+            "conclusion" => nil,
+            "html_url" => "https://github.com/runs/1",
+            "created_at" => "2026-10-14T09:00:00Z"
+          }
+        ]
+      )
+
+      view = live_sync_tab(conn, project)
+
+      assert view |> element("#sync-health-title") |> render() =~ "Setting up"
+
+      assert has_element?(
+               view,
+               "#first-sync-running a[href='https://github.com/runs/1']"
+             )
+    end
+
+    test "shows a failed first sync with its run", %{conn: conn} do
+      project = insert(:project)
+
+      stub_sync_status(project,
+        checkout: nil,
+        deploy_runs: [
+          %{
+            "status" => "completed",
+            "conclusion" => "failure",
+            "html_url" => "https://github.com/runs/2",
+            "created_at" => "2026-10-14T09:00:00Z"
+          }
+        ]
+      )
+
+      view = live_sync_tab(conn, project)
+
+      assert view |> element("#first-sync-failed") |> render() =~
+               "The first sync failure"
+
+      assert has_element?(
+               view,
+               "#first-sync-failed a[href='https://github.com/runs/2']"
+             )
+    end
+
+    test "flags a branch that tracks another project", %{conn: conn} do
+      project = insert(:project)
+      other_id = Ecto.UUID.generate()
+
+      stub_sync_status(project, checkout: other_id)
+
+      view = live_sync_tab(conn, project)
+
+      assert view |> element("#tracking-other-project") |> render() =~ other_id
+    end
+
+    test "warns about another project under the same alias", %{conn: conn} do
+      project = insert(:project)
+      other_id = Ecto.UUID.generate()
+
+      stub_sync_status(project,
+        checkout: project.id,
+        projects: %{
+          "main@app.example.org.yaml" => other_id,
+          "main@#{URI.parse(LightningWeb.Endpoint.url()).host}.yaml" =>
+            project.id
+        }
+      )
+
+      view = live_sync_tab(conn, project)
+
+      html = view |> element("#alias-clash") |> render()
+      assert html =~ ".projects/main@app.example.org.yaml"
+      assert html =~ "Project #{other_id}"
+    end
+
+    test "reads the project's alias back from the workspace", %{conn: conn} do
+      project = insert(:project)
+
+      stub_sync_status(project,
+        checkout: project.id,
+        projects: %{"staging@app.example.org.yaml" => project.id}
+      )
+
+      view = live_sync_tab(conn, project)
+
+      assert view |> element("#workspace-alias") |> render() =~ "staging"
+    end
+
+    test "doesn't offer to reconnect while a new connection's files appear", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      # the pull yml isn't visible on GitHub yet
+      stub_sync_status(project, checkout: nil, verified: false)
+
+      view = live_sync_tab(conn, project)
+
+      assert view |> element("#sync-health-title") |> render() =~ "Setting up"
+      refute has_element?(view, "#verify-connection-error")
+    end
+
+    test "offers to reconnect once an older connection's files are missing", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      stub_sync_status(project,
+        checkout: project.id,
+        verified: false,
+        inserted_at: DateTime.add(DateTime.utc_now(), -1, :hour)
+      )
+
+      view = live_sync_tab(conn, project)
+
+      assert view |> element("#verify-connection-error") |> render() =~
+               "openfn-pull.yml does not exist"
     end
 
     test "unauthorized users cannot reconnect project even if they have access to the installation",
@@ -6159,6 +6568,11 @@ defmodule LightningWeb.ProjectLiveTest do
           expected_repo["default_branch"]
         )
 
+        # write secret
+        expect_get_public_key(repo_connection.repo)
+        secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+        expect_create_repo_secret(repo_connection.repo, secret_name)
+
         # push deploy.yml + config.json
         # deploy.yml blob
         expect_create_blob(repo_connection.repo)
@@ -6168,11 +6582,6 @@ defmodule LightningWeb.ProjectLiveTest do
         expect_create_tree(repo_connection.repo)
         expect_create_commit(repo_connection.repo)
         expect_update_ref(repo_connection.repo, repo_connection.branch)
-
-        # write secret
-        expect_get_public_key(repo_connection.repo)
-        secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
-        expect_create_repo_secret(repo_connection.repo, secret_name)
 
         # initialize sync
         expect_create_installation_token(repo_connection.github_installation_id)
@@ -6220,11 +6629,6 @@ defmodule LightningWeb.ProjectLiveTest do
       expected_installation = %{
         "id" => repo_connection.github_installation_id,
         "account" => %{"type" => "User", "login" => "username"}
-      }
-
-      expected_repo = %{
-        "full_name" => repo_connection.repo,
-        "default_branch" => "main"
       }
 
       expected_access_token_endpoint =
@@ -6494,9 +6898,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
         html = render_async(view)
 
-        refute has_element?(view, "#reconnect-project-button")
+        refute has_element?(view, "#reconnect-button")
 
-        assert html =~ "Your repository is properly configured."
+        assert html =~ "Sync healthy"
       end
     end
 
@@ -7850,6 +8254,165 @@ defmodule LightningWeb.ProjectLiveTest do
       Enum.find_index(row_texts, fn row_text ->
         String.contains?(row_text, element)
       end)
+    end)
+  end
+
+  defp live_sync_tab(conn, project) do
+    [{conn, _user}] = setup_project_users(conn, project, [:viewer])
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+    render_async(view)
+    view
+  end
+
+  # Stubs GitHub for the connect form: one installation holding
+  # someaccount/somerepo (default branch main), a main branch, and 404 for any
+  # other url. `routes` maps more urls to responses.
+  defp stub_connect_form(routes) do
+    stub(Lightning.Tesla.Mock, :call, fn
+      %{url: url}, _opts when is_map_key(routes, url) ->
+        routes[url]
+
+      %{url: "https://api.github.com/user/installations"}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "installations" => [
+               %{"id" => 1234, "account" => %{"type" => "User", "login" => "u"}}
+             ]
+           }
+         }}
+
+      %{url: "https://api.github.com/app/installations/1234/access_tokens"},
+      _opts ->
+        {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
+
+      %{url: "https://api.github.com/installation/repositories"}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "repositories" => [
+               %{
+                 "full_name" => "someaccount/somerepo",
+                 "default_branch" => "main"
+               }
+             ]
+           }
+         }}
+
+      %{url: "https://api.github.com/repos/someaccount/somerepo"}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "full_name" => "someaccount/somerepo",
+             "default_branch" => "main"
+           }
+         }}
+
+      %{url: "https://api.github.com/repos/someaccount/somerepo/branches"},
+      _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{"name" => "main"}]}}
+
+      # no pull workflow, checkout or workspace yet
+      %{url: _url}, _opts ->
+        {:ok, %Tesla.Env{status: 404, body: %{}}}
+    end)
+  end
+
+  # Stubs GitHub for a v2 connection on someaccount/somerepo@somebranch. The
+  # verify and sync status requests run concurrently, so match on url.
+  defp stub_sync_status(project, opts) do
+    insert(:project_repo_connection,
+      project: project,
+      repo: "someaccount/somerepo",
+      branch: "somebranch",
+      github_installation_id: "1234",
+      sync_version: true,
+      inserted_at: opts[:inserted_at] || DateTime.utc_now()
+    )
+
+    repo_url = "https://api.github.com/repos/someaccount/somerepo"
+    contents = repo_url <> "/contents/"
+    checkout_url = contents <> ".openfn/branches/somebranch/checkout.yaml"
+    projects_url = contents <> ".projects"
+    pull_runs_url = repo_url <> "/actions/workflows/openfn-pull.yml/runs"
+    pull_yml_url = contents <> ".github/workflows/openfn-pull.yml"
+    projects = opts[:projects] || %{}
+    verified = Keyword.get(opts, :verified, true)
+
+    {pull_template, deploy_template} =
+      opts[:workflows] || {"pull_v2.yml", "deploy_v2.yml"}
+
+    workflow_file = fn template ->
+      %{
+        "content" =>
+          :code.priv_dir(:lightning)
+          |> Path.join("github/#{template}")
+          |> File.read!()
+          |> Base.encode64()
+      }
+    end
+
+    ok = fn body -> {:ok, %Tesla.Env{status: 200, body: body}} end
+    not_found = {:ok, %Tesla.Env{status: 404, body: %{}}}
+
+    stub(Lightning.Tesla.Mock, :call, fn
+      %{url: "https://api.github.com/app/installations/1234/access_tokens"},
+      _opts ->
+        {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
+
+      %{url: ^checkout_url}, _opts ->
+        if uuid = opts[:checkout],
+          do: ok.(%{"content" => Base.encode64("uuid: #{uuid}\n")}),
+          else: not_found
+
+      %{url: ^projects_url}, _opts ->
+        if projects == %{},
+          do: not_found,
+          else:
+            ok.(
+              for {name, _uuid} <- projects,
+                  do: %{"name" => name, "path" => ".projects/" <> name}
+            )
+
+      %{url: ^projects_url <> "/" <> name}, _opts ->
+        ok.(%{
+          "content" =>
+            Base.encode64(
+              "name: Project #{projects[name]}\nopenfn:\n  uuid: #{projects[name]}\n"
+            )
+        })
+
+      %{url: ^pull_runs_url}, _opts ->
+        ok.(%{"workflow_runs" => opts[:pull_runs] || []})
+
+      %{url: ^repo_url <> "/actions/workflows/" <> _deploy_runs}, _opts ->
+        ok.(%{"workflow_runs" => opts[:deploy_runs] || []})
+
+      %{url: ^repo_url}, _opts ->
+        ok.(%{"default_branch" => "main"})
+
+      %{url: ^pull_yml_url}, _opts ->
+        if verified, do: ok.(workflow_file.(pull_template)), else: not_found
+
+      %{url: ^contents <> ".github/workflows/" <> _deploy_yml}, _opts ->
+        ok.(workflow_file.(deploy_template))
+
+      %{url: ^repo_url <> "/actions/secrets/" <> _secret}, _opts ->
+        ok.(%{})
+
+      %{url: "https://api.github.com/user/installations"}, _opts ->
+        ok.(%{
+          "installations" => [
+            %{"id" => "1234", "account" => %{"type" => "User", "login" => "u"}}
+          ]
+        })
+
+      # the installations list, which isn't under test here
+      %{url: _url}, _opts ->
+        not_found
     end)
   end
 end

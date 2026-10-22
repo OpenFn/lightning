@@ -17,6 +17,7 @@ config :logger, level: :info
 
 # Filter sensitive parameters from logs
 config :phoenix, :filter_parameters, [
+  "assertion",
   "authorization",
   "body",
   "credential",

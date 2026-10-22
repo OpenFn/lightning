@@ -40,7 +40,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIChannelRegistry', () => ({
 describe('useAISession', () => {
   let mockStore: ReturnType<typeof createAIAssistantStore>;
   let wrapper: ({ children }: { children: ReactNode }) => JSX.Element;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let onSessionIdChange: MockInstance<any[], any>;
 
   beforeEach(() => {
@@ -63,7 +62,6 @@ describe('useAISession', () => {
         value={
           {
             aiAssistantStore: mockStore,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any
         }
       >

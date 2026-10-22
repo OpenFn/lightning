@@ -21,9 +21,58 @@ and this project adheres to
   assistant, and the assistant's conversation history is now stored as Apollo
   returns it. Needs the matching Apollo release first.
   [#5236](https://github.com/OpenFn/lightning/pull/5236)
+- GitHub sync connections using the v2 format now install `@v2` of the OpenFn
+  deploy and pull GitHub Actions, which sync `openfn.yaml` workspaces with
+  `openfn project pull/deploy`. Lightning no longer commits a config file for
+  v2, and disconnecting leaves `openfn.yaml` in place. Legacy connections keep
+  using `@v1`.
+
+### Changed
+
+- Update Project and Workflow yaml exports to match the v4 portability spec
+  [#4718](https://github.com/OpenFn/lightning/issues/4718)
+- The workflow version hash no longer includes a trigger's `enabled` state
+  [#5241](https://github.com/OpenFn/lightning/pull/5241)
+- Bump decimal to 3.2.0 and cowlib to 2.21.0 for security fixes, and ignore two
+  Cloak advisories that don't affect us
+  [#5246](https://github.com/OpenFn/lightning/pull/5246)
+
+### Fixed
+
+- GitHub sync now prevents two projects in the same project tree (root,
+  sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
+  pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+
+## [2.19.2] - 2026-10-16
+
+### Fixed
+
+- History retention no longer leaves steps behind when it deletes work orders in
+  batches. A workflow purge that still fails now says why.
+  [#5242](https://github.com/OpenFn/lightning/pull/5242)
+- A background job, queued two hours after upgrading, deletes the steps that
+  history retention left behind, which were stopping deleted workflows from
+  being purged. It runs on a new `maintenance` Oban queue.
+  [#5242](https://github.com/OpenFn/lightning/pull/5242)
+
+## [2.19.1] - 2026-10-16
+
+## [2.19.1-pre] - 2026-10-09
+
+### Added
+
 - The AI assistant now shows a warning banner above its chat input when the
   current workflow is live.
   [#5205](https://github.com/OpenFn/lightning/pull/5205)
+- Service accounts, for configuring an instance through its API rather than as a
+  person. Set `SERVICE_ACCOUNT_PUBLIC_KEY` and the service account gets
+  short-lived OAuth 2.0 access tokens from `POST /api/oauth/token`, then
+  creates, changes and finds users with `/api/users`. First setup is turned off
+  while it is set. See [SERVICE_ACCOUNTS.md](SERVICE_ACCOUNTS.md).
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- The audit log now records users that superusers create, change, disable or
+  schedule for deletion from the users page.
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
 - Channel joins now attach identity and resource scope (user, project, workflow,
   run, worker) to both log lines and Sentry events, so an issue shows who and
   what it affected rather than `Users Impacted: 0`.
@@ -41,9 +90,15 @@ and this project adheres to
   opened it, with a notice that stays until you reload or close it. Previously
   an open editor could keep running the old version for hours after a deploy.
   [#5202](https://github.com/OpenFn/lightning/pull/5202)
+- Index to improve the performance of the dataclip deletion query.
+  [#5226](https://github.com/OpenFn/lightning/issues/5226)
+- The Repository and Branch dropdowns on the GitHub sync form now have a text
+  filter. [#5235](https://github.com/OpenFn/lightning/pull/5235)
 
 ### Changed
 
+- API list endpoints now return at most 100 items a page, however large the
+  `page_size` asked for. [#5232](https://github.com/OpenFn/lightning/pull/5232)
 - On Linux, database connections now detect a silently dead network path (e.g. a
   node drain during a node-pool upgrade) within about 20s, including queries run
   with no timeout, which previously could hang indefinitely. Connections use TCP
@@ -62,6 +117,25 @@ and this project adheres to
   does not know one, still gets UTC; one that sends a zone the tz database does
   not know now gets an error.
   [#5191](https://github.com/OpenFn/lightning/pull/5191)
+- Superusers now need a first and last name, like every other user.
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- Signup, first setup and the profile page now refuse names with control
+  characters or no visible characters, and names over 255 characters, as admin
+  and API changes already do.
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- Failure alert emails no longer include the run's logs, since jobs can log
+  sensitive data. The email links to the run, where the logs are.
+  [#2663](https://github.com/OpenFn/lightning/issues/2663)
+- The workflow health page now has separate tabs for work orders and runs. The
+  donuts show the success rate and the failure count in their middle. Triage
+  rows show each failure's state and adaptor, and the step bars show each step's
+  adaptor. [#5229](https://github.com/OpenFn/lightning/pull/5229)
+- The project settings "Sync to GitHub" tab is now "Sync", and holds the project
+  export and a new CLI section with commands for pulling, deploying and running
+  a project locally. New GitHub connections default to the v2 `openfn.yaml`
+  format, with a switch to use the legacy format, and the connected panel now
+  carries its own title, verification banner and a "Remove integration" button.
+  [#5235](https://github.com/OpenFn/lightning/pull/5235)
 
 ### Removed
 
@@ -86,9 +160,17 @@ and this project adheres to
   classes were misspelt or didn't exist, so they took the text colour around
   them. Buttons in the OAuth credential alerts also now show their hover and
   focus colours. [#5212](https://github.com/OpenFn/lightning/pull/5212)
+- Indexing dataclips for search no longer blocks new steps from being saved
+  while a batch is running.
+  [#5221](https://github.com/OpenFn/lightning/issues/5221)
 
 ### Security
 
+- Passwords containing a NUL character are now refused. Only the part before the
+  NUL was checked at login.
+  [#5206](https://github.com/OpenFn/lightning/pull/5206)
+- Signup no longer accepts a password hash, a disabled flag or a deletion date
+  from the form. [#5206](https://github.com/OpenFn/lightning/pull/5206)
 - Bumped `mint` to 1.10.1, clearing
   [CVE-2026-82672](https://github.com/elixir-mint/mint/security/advisories/GHSA-rj5m-69wp-cxq9).
   Mint accepted any bytes between a chunk's size and the line ending in an

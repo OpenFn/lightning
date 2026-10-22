@@ -398,6 +398,10 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :button_placement, :string, default: nil
 
+  attr :searchable, :boolean,
+    default: false,
+    doc: "custom-select only: show a text box that filters the options"
+
   attr :placeholder, :string, default: ""
 
   attr :autocomplete, :string, default: "off"
@@ -524,7 +528,9 @@ defmodule LightningWeb.Components.NewInputs do
       </.label>
       <div class="flex w-full items-center">
         <div
+          id={@searchable && "#{@id}-searchable"}
           class="relative w-full"
+          phx-hook={@searchable && "SearchableSelect"}
           phx-click={JS.show(to: {:inner, "ul[role='listbox']"})}
         >
           <button
@@ -559,6 +565,22 @@ defmodule LightningWeb.Components.NewInputs do
             role="listbox"
             phx-click-away={JS.hide()}
           >
+            <li
+              :if={@searchable}
+              role="presentation"
+              class="sticky top-0 bg-white px-2 pt-1 pb-2"
+            >
+              <%!-- form="none" points at no real form, so typing here doesn't
+                    fire the surrounding form's phx-change --%>
+              <input
+                type="text"
+                form="none"
+                data-select-search
+                autocomplete="off"
+                placeholder="Filter…"
+                class="block w-full rounded-md border border-secondary-300 py-1 text-sm focus:border-primary-300 focus:ring focus:ring-primary-200/50"
+              />
+            </li>
             <li
               :for={option <- @options}
               class="relative cursor-default py-2 pr-4 pl-8 text-gray-900 select-none group hover:bg-primary-600 hover:text-white hover:outline-hidden"

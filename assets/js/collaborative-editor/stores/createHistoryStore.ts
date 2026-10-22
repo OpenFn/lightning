@@ -926,7 +926,7 @@ export const createHistoryStore = (
     notify('_viewRun/start');
 
     // Create dedicated channel: run:${runId}
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const channel: Channel = (_channelProvider.socket as any).channel(
       `run:${runId}`,
       {}
@@ -946,17 +946,15 @@ export const createHistoryStore = (
     });
 
     // Join channel and fetch initial data
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     _pendingRunChannel = channel;
 
     const channelJoin = (channel as any).join();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     channelJoin.receive('ok', () => {
       if (attempt !== _runAttempt) {
         logger.debug('Ignoring stale run response', {
           runId,
         });
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (channel as any).leave(); // Clean up the stale channel
         return;
       }
@@ -978,7 +976,7 @@ export const createHistoryStore = (
             notify('_viewRun/success');
           } else {
             // Switched to different run during fetch
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (channel as any).leave();
           }
           return undefined;
@@ -994,13 +992,12 @@ export const createHistoryStore = (
           return undefined;
         });
     });
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     channelJoin.receive('error', (error: any) => {
       if (attempt === _runAttempt) {
         _pendingRunChannel = null;
         logger.error('Failed to join run channel', error);
         setActiveRunError(
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           `Failed to connect: ${error.reason || 'Unknown error'}`
         );
       }
@@ -1013,7 +1010,7 @@ export const createHistoryStore = (
 
     // Leave the curren run channel before switch happens
     if (state.activeRunChannel) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (state.activeRunChannel as any).leave();
     }
 
@@ -1034,7 +1031,7 @@ export const createHistoryStore = (
 
     // Leave channel before updating state (can't call methods on draft)
     if (state.activeRunChannel) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (state.activeRunChannel as any).leave();
     }
 

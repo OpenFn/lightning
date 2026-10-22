@@ -276,7 +276,6 @@ defmodule Lightning.WorkflowVersions do
       :type,
       :custom_path,
       :cron_expression,
-      :enabled,
       :webhook_reply,
       :webhook_response_config,
       :cron_cursor_job_id

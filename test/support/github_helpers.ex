@@ -138,6 +138,25 @@ defmodule Lightning.GithubHelpers do
     )
   end
 
+  # the repo's shared openfn-pull.yml, as committed from one of our templates
+  def expect_pull_workflow(repo, template),
+    do: expect_workflow_file(repo, "openfn-pull.yml", template)
+
+  def expect_workflow_file(repo, file, template) do
+    content =
+      :code.priv_dir(:lightning)
+      |> Path.join("github/#{template}")
+      |> File.read!()
+      |> Base.encode64()
+
+    expect_get_repo_content(
+      repo,
+      ".github/workflows/#{file}",
+      200,
+      %{"content" => content}
+    )
+  end
+
   def expect_delete_repo_content(
         repo,
         content_path,
@@ -312,6 +331,22 @@ defmodule Lightning.GithubHelpers do
          },
          _opts ->
         {:ok, %Tesla.Env{status: resp_status, body: resp_body}}
+      end
+    )
+  end
+
+  def expect_list_workflow_runs(repo, workflow_file, runs, resp_status \\ 200) do
+    Mox.expect(
+      Lightning.Tesla.Mock,
+      :call,
+      fn %{
+           method: :get,
+           url:
+             "https://api.github.com/repos/" <>
+               ^repo <> "/actions/workflows/" <> ^workflow_file <> "/runs"
+         },
+         _opts ->
+        {:ok, %Tesla.Env{status: resp_status, body: %{"workflow_runs" => runs}}}
       end
     )
   end

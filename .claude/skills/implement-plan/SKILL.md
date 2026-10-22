@@ -22,5 +22,5 @@ Plans from `/create-plan` carry three things a fresh session should honour:
 
 When the code disagrees with the plan, stop and ask before adapting.
 
-When every phase passes: `/code-review`, fix what holds, then `/commit`.
+When every phase passes: `/code-review`, fix what holds, then commit.
 Report any manual criteria still outstanding.

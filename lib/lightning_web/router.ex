@@ -33,12 +33,22 @@ defmodule LightningWeb.Router do
         "/users/register",
         :allow_signup,
         "Self-signup has been disabled for this instance. Please contact the administrator."
+      },
+      {
+        "/first_setup",
+        :allow_first_setup,
+        "First setup is disabled for this instance."
       }
     ]
   end
 
   pipeline :api do
     plug :accepts, ["json"]
+  end
+
+  pipeline :access_token_api do
+    plug :accepts, ["json"]
+    plug LightningWeb.Plugs.AccessTokenAuth
   end
 
   pipeline :authenticated_api do
@@ -73,7 +83,23 @@ defmodule LightningWeb.Router do
         :show
   end
 
+  scope "/", LightningWeb do
+    get "/.well-known/oauth-authorization-server",
+        TokenExchangeController,
+        :metadata
+
+    post "/api/oauth/token", TokenExchangeController, :token
+  end
+
   ## JSON API
+
+  ## Service account access tokens only, never a personal access token
+  scope "/api", LightningWeb, as: :api do
+    pipe_through [:access_token_api]
+
+    resources "/users", API.UserController, only: [:index, :show, :create]
+    patch "/users/:id", API.UserController, :update
+  end
 
   scope "/api", LightningWeb, as: :api do
     pipe_through [:api]

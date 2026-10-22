@@ -416,7 +416,7 @@ defmodule Lightning.WorkflowVersionsTest do
       # key costs nothing for the workflows that have no path. @openfn/project
       # skips undefined for the same reason, which keeps the two sides equal.
       assert WorkflowVersions.canonical_form(without_path) ==
-               "Testtruewebhookbefore_start@openfn/language-common@latestcodeJob A"
+               "Testwebhookbefore_start@openfn/language-common@latestcodeJob A"
 
       Repo.update_all(
         from(x in Lightning.Workflows.Trigger, where: x.id == ^trigger.id),
@@ -801,7 +801,7 @@ defmodule Lightning.WorkflowVersionsTest do
     end
 
     test "generates the same hash for this simple workflow" do
-      predetermined_hash = "05c455a228e6"
+      predetermined_hash = "ab95156e6e01"
 
       simple_workflow = %{
         name: "Simple Workflow",
