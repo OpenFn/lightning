@@ -90,7 +90,7 @@ defimpl Scrivener.Paginater, for: Ecto.Query do
   defp aggregate(
          %{
            group_bys: [
-             %{
+             %Ecto.Query.ByExpr{
                expr: [
                  {{:., [], [{:&, [], [source_index]}, field]}, [], []} | _
                ]
