@@ -1,0 +1,54 @@
+# Lightning finds this project's runs by the project id in the run name
+run-name: ${{ inputs.commitMessage }} (${{ inputs.projectId }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      projectId:
+        description: 'OpenFN Project ID'
+        required: true
+      apiSecretName:
+        description: 'OpenFN API Key secret name i.e OPENFN_project_API_KEY'
+        required: true
+      endpoint:
+        description: 'OpenFn instance URL'
+        required: true
+      branch:
+        description: 'Branch to commit the project to'
+        required: true
+      workspace:
+        description: 'Folder holding the project openfn.yaml'
+        required: false
+        default: '.'
+      commitMessage:
+        description: 'Commit message for the project'
+        required: true
+      alias:
+        description:
+          'Local alias for the project in the workspace (first pull only)'
+        required: false
+        default: ''
+
+# Shared with openfn-<project>-deploy.yml so a pull and a deploy never push to
+# the same branch at once
+concurrency:
+  group: openfn-${{ inputs.branch }}
+  cancel-in-progress: false
+
+jobs:
+  pull-from-lightning:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    name: Pull project from OpenFn
+    steps:
+      - name: openfn pull and commit
+        uses: openfn/cli-pull-action@v2
+        with:
+          secret_input: ${{ secrets[inputs.apiSecretName] }}
+          project_id_input: ${{ inputs.projectId }}
+          endpoint_input: ${{ inputs.endpoint }}
+          branch_input: ${{ inputs.branch }}
+          workspace_input: ${{ inputs.workspace }}
+          commit_message_input: ${{ inputs.commitMessage }}
+          alias_input: ${{ inputs.alias }}

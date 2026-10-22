@@ -4817,13 +4817,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert_redirect(view, ~p"/projects/#{parent.id}/w")
     end
 
-    test "commits to GitHub using YAML config when sync_version is true",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox,
-           snapshot: snapshot
-         } do
+    test "commits to GitHub with v2 inputs when sync_version is true",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
       repo_connection =
         insert(:project_repo_connection,
           project: parent,
@@ -4837,6 +4832,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
+      expect_pull_workflow(repo_connection.repo, "pull_v2.yml")
 
       expect_create_workflow_dispatch_with_request_body(
         repo_connection.repo,
@@ -4846,16 +4842,17 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           inputs: %{
             projectId: parent.id,
             apiSecretName: api_secret_name(parent),
+            endpoint: LightningWeb.Endpoint.url(),
             branch: repo_connection.branch,
-            pathToConfig: path_to_config(repo_connection),
-            commitMessage: "pre-merge commit",
-            snapshots: "#{snapshot.id}"
+            workspace: ".",
+            commitMessage: "pre-merge commit"
           }
         }
       )
 
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
+      expect_pull_workflow(repo_connection.repo, "pull_v2.yml")
 
       expect_create_workflow_dispatch_with_request_body(
         repo_connection.repo,
@@ -4865,10 +4862,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           inputs: %{
             projectId: parent.id,
             apiSecretName: api_secret_name(parent),
+            endpoint: LightningWeb.Endpoint.url(),
             branch: repo_connection.branch,
-            pathToConfig: path_to_config(repo_connection),
-            commitMessage: "Merged sandbox #{sandbox.name}",
-            snapshots: "#{snapshot.id}"
+            workspace: ".",
+            commitMessage: "Merged sandbox #{sandbox.name}"
           }
         }
       )

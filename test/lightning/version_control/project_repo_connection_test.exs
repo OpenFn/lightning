@@ -233,6 +233,117 @@ defmodule Lightning.VersionControl.ProjectRepoConnectionTest do
     end
   end
 
+  describe "config path when importing from GitHub (configure_changeset/2)" do
+    setup do
+      %{
+        attrs: %{
+          project_id: insert(:project).id,
+          repo: "openfn/example",
+          branch: "main",
+          github_installation_id: "1234",
+          sync_direction: "deploy",
+          accept: true
+        }
+      }
+    end
+
+    test "a legacy import needs a path to config", %{attrs: attrs} do
+      changeset =
+        ProjectRepoConnection.configure_changeset(
+          %ProjectRepoConnection{},
+          Map.put(attrs, :sync_version, false)
+        )
+
+      refute changeset.valid?
+
+      assert {"you must specify a path to an existing config file", _} =
+               changeset.errors[:config_path]
+    end
+
+    test "a legacy import is valid with a path", %{attrs: attrs} do
+      changeset =
+        ProjectRepoConnection.configure_changeset(
+          %ProjectRepoConnection{},
+          Map.merge(attrs, %{sync_version: false, config_path: "./config.json"})
+        )
+
+      assert changeset.valid?
+    end
+
+    test "a v2 import needs no path and uses openfn.yaml", %{attrs: attrs} do
+      changeset =
+        ProjectRepoConnection.configure_changeset(
+          %ProjectRepoConnection{},
+          Map.put(attrs, :sync_version, true)
+        )
+
+      assert changeset.valid?
+
+      assert ProjectRepoConnection.config_path(
+               Ecto.Changeset.apply_changes(changeset)
+             ) == "openfn.yaml"
+    end
+  end
+
+  describe "workspace_path" do
+    test "must be a plain folder inside the repo" do
+      errors = fn path ->
+        ProjectRepoConnection.changeset(%ProjectRepoConnection{}, %{
+          project_id: insert(:project).id,
+          repo: "openfn/example",
+          branch: "main",
+          github_installation_id: "1234",
+          sync_version: true,
+          workspace_path: path
+        }).errors[:workspace_path]
+      end
+
+      assert errors.("projects/a") == nil
+      assert {"must stay inside the repository", _} = errors.("../a")
+      assert {"must stay inside the repository", _} = errors.("/a")
+      # it's written into the GitHub workflow files
+      assert {"can only contain" <> _, _} = errors.("a'b")
+    end
+
+    test "defaults to the repo root, where openfn.yaml is the config" do
+      connection = %ProjectRepoConnection{sync_version: true}
+
+      assert ProjectRepoConnection.workspace_path(connection) == "."
+      assert ProjectRepoConnection.config_path(connection) == "openfn.yaml"
+
+      connection = %{connection | workspace_path: "./projects/a"}
+
+      assert ProjectRepoConnection.workspace_path(connection) == "projects/a"
+
+      assert ProjectRepoConnection.config_path(connection) ==
+               "projects/a/openfn.yaml"
+    end
+  end
+
+  describe "local_alias" do
+    test "must be usable in the CLI's <alias>@<host>.yaml filename" do
+      errors = fn local_alias ->
+        ProjectRepoConnection.configure_changeset(%ProjectRepoConnection{}, %{
+          project_id: insert(:project).id,
+          repo: "openfn/example",
+          branch: "main",
+          github_installation_id: "1234",
+          sync_version: true,
+          sync_direction: "pull",
+          accept: true,
+          local_alias: local_alias
+        }).errors[:local_alias]
+      end
+
+      assert errors.("my-project_2") == nil
+      assert errors.("") == nil
+
+      for bad <- ["Main", "a@b", "a/b", "-a"] do
+        assert {"use lowercase letters" <> _, _} = errors.(bad)
+      end
+    end
+  end
+
   describe "tree_branch_conflict?/4" do
     test "returns false when no other connection in the tree uses the (repo, branch)" do
       root = insert(:project)

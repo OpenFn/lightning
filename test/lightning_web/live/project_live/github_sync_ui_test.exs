@@ -1,0 +1,442 @@
+defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
+  @moduledoc """
+  Tests for the Sync tab UI on project settings: the new connection form (title,
+  searchable dropdowns, legacy format switch) and the connected-state panel.
+  """
+
+  use LightningWeb.ConnCase, async: false
+
+  import Phoenix.LiveViewTest
+  import Lightning.Factories
+  import Lightning.GithubHelpers
+  import Mox
+  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+
+  setup :stub_usage_limiter_ok
+  setup :verify_on_exit!
+
+  @installation %{
+    "id" => "1234",
+    "account" => %{"type" => "User", "login" => "username"}
+  }
+
+  @switch "#toggle-legacy-format-switch"
+  @sync_version_input ~s{input[name="connection[sync_version]"]}
+  @config_path_input ~s{input[name="connection[config_path]"]}
+
+  defp open_new_connection_form(conn) do
+    project = insert(:project)
+    {conn, user} = setup_project_user(conn, project, :admin)
+    set_valid_github_oauth_token!(user)
+
+    expect_get_user_installations(200, %{"installations" => [@installation]})
+    expect_create_installation_token(@installation["id"])
+    expect_get_installation_repos(200, %{"repositories" => []})
+
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+    render_async(view)
+
+    view
+  end
+
+  defp stub_failed_verification do
+    Mox.stub(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+      {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+    end)
+  end
+
+  defp open_connected_panel(conn, role, connection_attrs) do
+    project = insert(:project)
+    {conn, _user} = setup_project_user(conn, project, role)
+
+    insert(
+      :project_repo_connection,
+      Keyword.merge(
+        [
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234"
+        ],
+        connection_attrs
+      )
+    )
+
+    stub_failed_verification()
+
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+    {view, render_async(view)}
+  end
+
+  describe "new connection form" do
+    test "shows the title and the docs banner", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      assert has_element?(view, "h6", "Configure two-way sync to GitHub")
+
+      assert has_element?(
+               view,
+               ~s{#project-repo-connection-form a[href="https://docs.openfn.org/documentation/link-to-GitHub"]}
+             )
+    end
+
+    test "repository and branch dropdowns are searchable, installation is not",
+         %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      assert has_element?(
+               view,
+               "#select-repos-input-searchable input[data-select-search]"
+             )
+
+      assert has_element?(
+               view,
+               "#select-branches-input-searchable input[data-select-search]"
+             )
+
+      refute has_element?(view, "#select-installations-input-searchable")
+    end
+
+    test "defaults to the v2 format with the legacy switch off", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      assert has_element?(view, "#{@switch}[aria-checked=false]")
+      assert has_element?(view, ~s{#{@sync_version_input}[value=true]})
+    end
+
+    test "flipping the switch selects the legacy format and flips it back",
+         %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view |> element(@switch) |> render_click()
+
+      assert has_element?(view, "#{@switch}[aria-checked=true]")
+      assert has_element?(view, ~s{#{@sync_version_input}[value=false]})
+
+      view |> element(@switch) |> render_click()
+
+      assert has_element?(view, "#{@switch}[aria-checked=false]")
+      assert has_element?(view, ~s{#{@sync_version_input}[value=true]})
+    end
+
+    test "the legacy choice survives changing a dropdown", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view |> element(@switch) |> render_click()
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(
+        connection: %{github_installation_id: @installation["id"]}
+      )
+
+      assert has_element?(view, "#{@switch}[aria-checked=true]")
+      assert has_element?(view, ~s{#{@sync_version_input}[value=false]})
+    end
+
+    test "the switch stays visible when importing from GitHub", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{sync_direction: "deploy"})
+
+      assert has_element?(view, @switch)
+    end
+
+    test "a v2 import has no path to config input", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{sync_direction: "deploy"})
+
+      assert has_element?(view, "#{@switch}[aria-checked=false]")
+      refute has_element?(view, @config_path_input)
+    end
+
+    test "a legacy import asks for the path to config", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{sync_direction: "deploy"})
+
+      view |> element(@switch) |> render_click()
+
+      assert has_element?(view, @config_path_input)
+
+      view |> element(@switch) |> render_click()
+
+      refute has_element?(view, @config_path_input)
+    end
+
+    test "an export-first v2 sync has no path to config", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      refute has_element?(view, @config_path_input)
+    end
+
+    test "an export-first legacy sync shows an optional path to config",
+         %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view |> element(@switch) |> render_click()
+
+      assert has_element?(view, @config_path_input)
+      assert render(view) =~ "Path to config (optional)"
+
+      view |> element(@switch) |> render_click()
+
+      refute has_element?(view, @config_path_input)
+    end
+
+    test "a legacy import marks the path to config as required", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{sync_direction: "deploy"})
+
+      view |> element(@switch) |> render_click()
+
+      assert render(view) =~ "Path to config (required)"
+    end
+
+    test "the confirm box waits until a branch is picked", %{conn: conn} do
+      view = open_new_connection_form(conn)
+      confirm = ~s{input[name="connection[accept]"]}
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(
+        connection: %{github_installation_id: @installation["id"]}
+      )
+
+      refute has_element?(view, confirm)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(connection: %{branch: "main"})
+
+      assert has_element?(view, confirm)
+    end
+  end
+
+  describe "docs banner" do
+    @banner "#github-sync-docs-banner"
+
+    test "shows in the new connection form", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      assert has_element?(view, "#project-repo-connection-form #{@banner}")
+    end
+
+    test "shows when the user must first connect their GitHub account",
+         %{conn: conn} do
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert has_element?(view, "#connect-github-link")
+      assert has_element?(view, @banner)
+    end
+
+    test "shows when version control is not configured on the instance",
+         %{conn: conn} do
+      put_temporary_env(:lightning, :github_app,
+        cert: nil,
+        app_id: nil,
+        app_name: nil,
+        client_id: nil,
+        client_secret: nil
+      )
+
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, :viewer)
+
+      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert html =~ "Version Control is not configured"
+      assert has_element?(view, @banner)
+    end
+
+    test "shows on the connected panel", %{conn: conn} do
+      {view, _html} = open_connected_panel(conn, :admin, sync_version: true)
+
+      assert has_element?(view, "div.bg-white:has(h6) #{@banner}")
+    end
+
+    test "links to the sync docs", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      assert has_element?(
+               view,
+               ~s{#{@banner} a[target="_blank"][href="https://docs.openfn.org/documentation/link-to-GitHub"]}
+             )
+    end
+  end
+
+  describe "CLI card" do
+    test "warns that a personal access token is needed", %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      assert has_element?(
+               view,
+               "#cli-auth-banner",
+               "You'll need to configure a Personal Access Token"
+             )
+
+      assert has_element?(
+               view,
+               ~s{#cli-auth-banner a[target="_blank"][href="https://docs.openfn.org/documentation/sync#authorization"]}
+             )
+    end
+
+    test "links to more CLI examples", %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      assert has_element?(
+               view,
+               ~s{#cli-more-examples-link[target="_blank"][href="https://docs.openfn.org/documentation/cli-usage"]},
+               "See more CLI commands"
+             )
+    end
+  end
+
+  describe "permissions banner" do
+    @permissions_banner "#vcs-permissions-banner"
+
+    defp open_sync_tab(conn, role) do
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, role)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      view
+    end
+
+    test "viewers are told they can't change the connection", %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      assert has_element?(
+               view,
+               @permissions_banner,
+               "You cannot modify this project's version control configuration."
+             )
+
+      refute render(view) =~ "but you can initiate a sync"
+    end
+
+    test "editors are told they can still initiate a sync", %{conn: conn} do
+      view = open_sync_tab(conn, :editor)
+
+      assert has_element?(
+               view,
+               @permissions_banner,
+               "version control configuration but you can initiate a sync."
+             )
+    end
+
+    test "admins see no permissions banner", %{conn: conn} do
+      view = open_sync_tab(conn, :admin)
+
+      refute has_element?(view, @permissions_banner)
+    end
+
+    test "the message sits in a plain box where the form would be",
+         %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      assert has_element?(
+               view,
+               "#vcs-permissions-box h6",
+               "Configure two-way sync to GitHub"
+             )
+
+      assert has_element?(
+               view,
+               "#vcs-permissions-box #vcs-permissions-banner"
+             )
+
+      # the real form is not rendered, so nothing calls GitHub
+      refute has_element?(view, "#project-repo-connection-form")
+      refute has_element?(view, "#connect-github-link")
+    end
+
+    test "admins get the real form and no permissions box", %{conn: conn} do
+      view = open_new_connection_form(conn)
+
+      refute has_element?(view, "#vcs-permissions-box")
+      assert has_element?(view, "#project-repo-connection-form")
+    end
+
+    test "a connected project shows its connection, not the box",
+         %{conn: conn} do
+      {view, _html} = open_connected_panel(conn, :editor, sync_version: true)
+
+      assert has_element?(view, "h6", "Connected to GitHub")
+      refute has_element?(view, "#vcs-permissions-box")
+    end
+
+    test "the message no longer sits in the section header", %{conn: conn} do
+      view = open_sync_tab(conn, :viewer)
+
+      refute has_element?(view, "#vcs-panel small.text-red-700")
+    end
+  end
+
+  describe "connected panel" do
+    test "v2 connections show the title and no legacy note or config path",
+         %{conn: conn} do
+      {view, html} = open_connected_panel(conn, :admin, sync_version: true)
+
+      assert has_element?(view, "h6", "Connected to GitHub")
+      refute html =~ "legacy sync format"
+      refute html =~ "Path to config"
+      refute html =~ "Sync version:"
+    end
+
+    test "v1 connections show the legacy note and the config path",
+         %{conn: conn} do
+      {view, html} = open_connected_panel(conn, :admin, sync_version: false)
+
+      assert has_element?(view, "h6", "Connected to GitHub")
+
+      assert html =~
+               "This connection uses the legacy sync format (config.json). Reconnect to update to v2 sync formats"
+
+      assert html =~ "Path to config"
+    end
+
+    test "admins get a remove integration button next to the sync button",
+         %{conn: conn} do
+      {view, _html} = open_connected_panel(conn, :admin, sync_version: true)
+
+      assert has_element?(
+               view,
+               "#remove-integration-button",
+               "Remove integration"
+             )
+
+      assert has_element?(view, "#initiate-sync-button")
+      assert has_element?(view, "#remove_connection_modal")
+    end
+
+    test "editors can't remove the integration", %{conn: conn} do
+      {view, _html} = open_connected_panel(conn, :editor, sync_version: true)
+
+      refute has_element?(view, "#remove-integration-button")
+      refute has_element?(view, "#remove_connection_modal")
+    end
+
+    test "the sync status renders inside the connected card",
+         %{conn: conn} do
+      {view, _html} = open_connected_panel(conn, :admin, sync_version: true)
+
+      # the status block is a descendant of the card that holds the title
+      assert has_element?(view, "div.bg-white:has(h6) #sync-health")
+    end
+  end
+end
