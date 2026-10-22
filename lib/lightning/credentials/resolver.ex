@@ -62,7 +62,9 @@ defmodule Lightning.Credentials.Resolver do
 
   @type resolve_error :: {error_reason(), Credential.t() | nil}
 
-  @type keychain_selectors :: %{Ecto.UUID.t() => String.t() | nil}
+  @type keychain_selectors :: %{
+          Ecto.UUID.t() => String.t() | nil | :invalid_path
+        }
 
   @doc """
   Resolves a credential for a run by matching the project's environment,
@@ -121,6 +123,9 @@ defmodule Lightning.Credentials.Resolver do
 
       {:error, :keychain_input_unavailable} ->
         {:error, {:keychain_input_unavailable, nil}}
+
+      {:error, :invalid_keychain_path} ->
+        {:error, {:invalid_keychain_path, nil}}
     end
   end
 
@@ -140,30 +145,55 @@ defmodule Lightning.Credentials.Resolver do
     keychain_ids =
       for %{keychain_credential_id: id} <- jobs, id, uniq: true, do: id
 
+    keychain_selectors(dataclip_id, keychain_ids)
+  end
+
+  defp keychain_selectors(_dataclip_id, []), do: %{}
+
+  defp keychain_selectors(dataclip_id, keychain_ids) do
+    # One query per keychain, so a path Postgres can't parse or evaluate only
+    # breaks the job that uses it, not every keychain in the run.
+    Map.new(keychain_ids, &{&1, select_external_id(dataclip_id, &1)})
+  end
+
+  defp select_external_id(dataclip_id, keychain_id) do
     from(k in KeychainCredential,
       join: d in Dataclip,
       on: d.id == ^dataclip_id,
-      where: k.id in ^keychain_ids,
+      where: k.id == ^keychain_id,
       select:
-        {k.id,
-         fragment(
-           "jsonb_path_query_first(?, ?::jsonpath) #>> '{}'",
-           d.body,
-           k.path
-         )}
+        fragment(
+          "jsonb_path_query_first(?, ?::jsonpath) #>> '{}'",
+          d.body,
+          k.path
+        )
     )
-    |> Repo.all()
-    |> Map.new()
+    |> Repo.one()
+  rescue
+    Postgrex.Error -> :invalid_path
   end
 
   defp select_credential(%Credential{} = credential, _run, _selectors),
     do: {:ok, credential}
 
   defp select_credential(%KeychainCredential{} = keychain, run, nil),
-    do: select_credential(keychain, run, keychain_selectors(run))
+    do:
+      select_credential(
+        keychain,
+        run,
+        keychain_selectors(run.dataclip_id, [keychain.id])
+      )
 
   defp select_credential(%KeychainCredential{} = keychain, run, selectors) do
     case Map.fetch(selectors, keychain.id) do
+      {:ok, :invalid_path} ->
+        log_resolution_error(:invalid_keychain_path,
+          keychain_id: keychain.id,
+          path: keychain.path
+        )
+
+        {:error, :invalid_keychain_path}
+
       {:ok, external_id} ->
         {:ok,
          find_credential_by_external_id(run, external_id) ||
@@ -301,6 +331,13 @@ defmodule Lightning.Credentials.Resolver do
     do:
       Logger.warning(
         "Keychain input was wiped before this channel could read it",
+        meta
+      )
+
+  defp log_resolution_error(:invalid_keychain_path, meta),
+    do:
+      Logger.warning(
+        "Keychain path could not be evaluated against the run's input",
         meta
       )
 

@@ -647,6 +647,19 @@ defmodule LightningWeb.RunChannel do
         "the run's input was erased before it could be read"}, socket}
   end
 
+  defp handle_credential_error(
+         socket,
+         {:invalid_keychain_path, _credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    {:reply,
+     {:error,
+      "Could not select a keychain credential: " <>
+        "its path could not be evaluated against the run's input"}, socket}
+  end
+
   # Fallback for unexpected error terms
   defp handle_credential_error(socket, error, id, _project_id, run_id) do
     Logger.warning(

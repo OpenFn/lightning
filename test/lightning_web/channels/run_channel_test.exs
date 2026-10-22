@@ -955,6 +955,20 @@ defmodule LightningWeb.RunChannelTest do
       assert_reply ref, :ok, %{"username" => "alice"}
     end
 
+    test "a path Postgres can't parse only fails that keychain's credential", %{
+      socket: socket,
+      keychain: keychain
+    } do
+      # Passes the changeset's regex, but isn't SQL/JSON path syntax.
+      keychain |> Ecto.Changeset.change(path: "$..user_id") |> Repo.update!()
+
+      ref = push(socket, "fetch:dataclip", %{})
+      assert_reply ref, :ok, {:binary, _}
+
+      ref = push(socket, "fetch:credential", %{"id" => keychain.id})
+      assert_reply ref, :error, "Could not select a keychain credential: " <> _
+    end
+
     test "errors rather than falling back to the default when the input was never read",
          %{run: run, keychain: keychain} = context do
       # A rejoin lands in a fresh channel process; the worker does not fetch
