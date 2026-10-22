@@ -4,6 +4,7 @@ import DesignSystemRunShowPage, {
 import type { LogLine, StepDataclip } from '@openfn/ui/types/history.ts';
 import { useEffect, useRef, useState } from 'react';
 
+import { fetchDataclipBody } from '../dataclip-body';
 import { designSystemPage } from '../page';
 
 /** What RunLive.Show puts in `data-props`: the page's props minus the log and the handlers. */
@@ -38,23 +39,6 @@ const entryOf = (line: PushedLogLine): Entry => ({
     stepId: line.step_id,
   },
 });
-
-/** The body of a dataclip, pretty-printed when it is JSON, as DataclipViewer shows it. */
-const fetchBody = async (id: string) => {
-  try {
-    const response = await fetch(`/dataclip/body/${id}`);
-    if (response.status === 404) return 'Dataclip not found';
-    if (!response.ok) return 'Failed to load content';
-    const text = await response.text();
-    try {
-      return JSON.stringify(JSON.parse(text), null, 2);
-    } catch {
-      return text;
-    }
-  } catch {
-    return 'Failed to load content';
-  }
-};
 
 /**
  * The design system's run page, fed by RunLive.Show. The island keeps the
@@ -107,7 +91,7 @@ export const RunShowPage = designSystemPage(
     useEffect(() => {
       for (const id of wanted) {
         if (id in bodies) continue;
-        void fetchBody(id).then(body =>
+        void fetchDataclipBody(id).then(body =>
           setBodies(current => ({ ...current, [id]: body }))
         );
       }
