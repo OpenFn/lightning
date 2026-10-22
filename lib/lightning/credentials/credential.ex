@@ -31,6 +31,9 @@ defmodule Lightning.Credentials.Credential do
     has_many :projects, through: [:project_credentials, :project]
     has_many :credential_bodies, Lightning.Credentials.CredentialBody
 
+    field :project_names, {:array, :string}, virtual: true
+    field :environment_names, {:array, :string}, virtual: true
+
     timestamps()
   end
 
