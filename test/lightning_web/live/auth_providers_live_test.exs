@@ -6,18 +6,59 @@ defmodule LightningWeb.AuthProvidersLiveTest do
 
   alias Lightning.AuthProviders
 
+  # The page is drawn by React from data-props. The form's own checks, the
+  # Test button's states, the redirect URI preview and the field errors are
+  # tested in the design system's AdminAuthProvidersPage.test.tsx; the events
+  # the island sends in assets/test/design-system/. These tests cover the
+  # gate and what the server answers.
+  @page "#admin-auth-providers-page"
+
+  defp props(view), do: page_props(view, @page)["provider"]
+
+  defp values(endpoint_url, handler_name, overrides \\ %{}) do
+    Map.merge(
+      %{
+        "name" => handler_name,
+        "discoveryUrl" => "#{endpoint_url}/auth/.well-known",
+        "clientId" => "client-id",
+        "clientSecret" => "client-secret",
+        "redirectHost" => "http://localhost:4002",
+        "allowUnverifiedEmail" => false
+      },
+      overrides
+    )
+  end
+
+  defp save(view, values),
+    do: push_page_event(view, @page, "save_provider", values)
+
+  defp test_provider(view, values),
+    do: push_page_event(view, @page, "test_provider", values)
+
   describe "index for superuser" do
     setup :register_and_log_in_superuser
 
     test "super users can access the auth providers page", %{
       conn: conn
     } do
-      {:ok, _index_live, html} =
+      {:ok, view, html} =
         live(conn, ~p"/settings/authentication", on_error: :raise)
         |> follow_redirect(conn, ~p"/settings/authentication/new")
 
       assert html =~ "Users"
       assert html =~ "Back"
+
+      assert %{
+               "id" => nil,
+               "name" => "",
+               "discoveryUrl" => "",
+               "clientId" => "",
+               "hasClientSecret" => false,
+               "redirectHost" => redirect_host,
+               "allowUnverifiedEmail" => false
+             } = props(view)
+
+      assert redirect_host =~ "http://"
     end
   end
 
@@ -32,6 +73,61 @@ defmodule LightningWeb.AuthProvidersLiveTest do
         |> follow_redirect(conn, "/projects")
 
       assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
+    end
+  end
+
+  describe "refusing a provider" do
+    setup :register_and_log_in_superuser
+
+    # Nothing here reaches the network: every save is refused before that.
+    test "refuses a provider with a blank or malformed name before saving", %{
+      conn: conn
+    } do
+      endpoint_url = "http://localhost:1"
+      handler_name = "refused"
+      {:ok, view, _html} = live(conn, ~p"/settings/authentication/new")
+
+      save(view, values(endpoint_url, handler_name, %{"name" => ""}))
+      assert_reply(view, %{fieldErrors: %{"name" => [blank]}})
+      assert blank =~ "can't be blank"
+
+      save(view, values(endpoint_url, handler_name, %{"name" => "Not Lower"}))
+      assert_reply(view, %{fieldErrors: %{"name" => [format]}})
+      assert format =~ "lower-case"
+
+      # A host the URI parser rejects is a field error, not a crash.
+      save(
+        view,
+        values(endpoint_url, handler_name, %{"redirectHost" => "http://bad host"})
+      )
+
+      assert_reply(view, %{
+        fieldErrors: %{"redirectHost" => ["must be a valid URL"]}
+      })
+
+      # The columns hold 255 characters; a longer value is a field error, not a crash.
+      save(
+        view,
+        values(endpoint_url, handler_name, %{
+          "clientId" => String.duplicate("a", 256)
+        })
+      )
+
+      assert_reply(view, %{fieldErrors: %{"clientId" => [long]}})
+      assert long =~ "at most 255"
+
+      # No stored secret on /new, so a blank one is a missing one.
+      save(view, values(endpoint_url, handler_name, %{"clientSecret" => ""}))
+      assert_reply(view, %{fieldErrors: %{"clientSecret" => [_]}})
+
+      # Crafted payloads: non-strings read as blank, a non-map is refused.
+      save(view, %{"name" => 1, "discoveryUrl" => nil})
+      assert_reply(view, %{fieldErrors: %{"name" => [_], "clientId" => [_]}})
+
+      push_page_event(view, @page, "save_provider", ["x"])
+      assert_reply(view, %{error: "Invalid request"})
+
+      refute AuthProviders.get_existing()
     end
   end
 
@@ -73,57 +169,67 @@ defmodule LightningWeb.AuthProvidersLiveTest do
         )
         |> follow_redirect(conn, Routes.auth_providers_index_path(conn, :new))
 
-      assert view
-             |> form("#auth-provider-form", auth_provider: %{name: ""})
-             |> render_change()
+      test_provider(
+        view,
+        values(endpoint_url, handler_name, %{
+          "discoveryUrl" => "#{endpoint_url}/auth/.well-know"
+        })
+      )
 
-      assert view |> get_error_tag("name") =~
-               "can&#39;t be blank"
+      assert_reply(view, %{error: "error parsing .well-known"})
 
-      assert view
-             |> form("#auth-provider-form",
-               auth_provider: %{
-                 name: handler_name,
-                 discovery_url: "#{endpoint_url}/auth/.well-know",
-                 client_id: "client-id",
-                 client_secret: "client-secret"
-               }
-             )
-             |> render_change()
+      test_provider(view, values(endpoint_url, handler_name))
+      assert_reply(view, %{})
 
-      assert view |> element("button#test-button", "Test") |> render_click() =~
-               "error parsing .well-known"
-
-      assert view
-             |> form("#auth-provider-form",
-               auth_provider: %{
-                 discovery_url: "#{endpoint_url}/auth/.well-known"
-               }
-             )
-             |> render_change()
-
-      assert view |> element("button", "Test") |> render_click() =~
-               "Success"
+      # Nothing is written by a test; nothing is removed without a provider.
+      refute AuthProviders.get_existing()
+      push_page_event(view, @page, "remove_provider")
+      assert_reply(view, %{error: "No provider is configured"})
 
       {:ok, view, html} =
         view
-        |> form("#auth-provider-form")
-        |> render_submit()
+        |> save(
+          values(endpoint_url, handler_name, %{"allowUnverifiedEmail" => true})
+        )
         |> follow_redirect(conn, Routes.auth_providers_index_path(conn, :edit))
 
       assert html =~ "Authentication Provider created."
 
-      assert AuthProviders.get_existing(handler_name),
+      assert %{allow_unverified_email: true} =
+               AuthProviders.get_existing(handler_name),
              "Should be able to find the handler in the store"
 
       assert AuthProviders.get_handler(handler_name)
 
-      assert view |> element("button", "Remove") |> render_click()
+      # The stored secret is not sent to the page, only that there is one.
+      assert %{
+               "id" => id,
+               "hasClientSecret" => true,
+               "allowUnverifiedEmail" => true
+             } =
+               props(view)
+
+      assert is_binary(id)
+      refute Map.has_key?(props(view), "clientSecret")
+      refute render(view) =~ "client-secret"
+
+      # One provider: a second one from /new is refused.
+      {:ok, new_view, _html} = live(conn, ~p"/settings/authentication/new")
+      save(new_view, values(endpoint_url, "second"))
+
+      assert_reply(new_view, %{
+        error: "A provider is already configured. Edit it instead."
+      })
+
+      refute AuthProviders.get_existing("second")
+
+      assert {:error, {:live_redirect, %{to: to}}} =
+               push_page_event(view, @page, "remove_provider")
+
+      assert to == Routes.auth_providers_index_path(conn, :new)
 
       refute AuthProviders.get_existing(handler_name)
       assert {:error, :not_found} == AuthProviders.get_handler(handler_name)
-
-      #  "Should be able to find the handler in the store"
     end
   end
 
@@ -166,53 +272,49 @@ defmodule LightningWeb.AuthProvidersLiveTest do
           on_error: :raise
         )
 
-      assert view |> element("button#test-button", "Test") |> render_click() =~
-               "Success"
+      assert %{
+               "name" => ^handler_name,
+               "clientId" => "id",
+               "hasClientSecret" => true,
+               "redirectHost" => "http://localhost/"
+             } = props(view)
 
-      assert view
-             |> form("#auth-provider-form",
-               auth_provider: %{
-                 client_id: "new-client-id",
-                 redirect_host: "http://localhost:3030"
-               }
-             )
-             |> render_change()
+      refute render(view) =~ "secret"
 
-      assert view
-             |> element("#auth-provider-form")
-             |> render_submit() =~ "Authentication Provider updated."
+      # A blank secret keeps the stored one, for Test and for Save.
+      current =
+        values(endpoint_url, handler_name, %{
+          "clientId" => "new-client-id",
+          "clientSecret" => "",
+          "redirectHost" => "http://localhost:3030"
+        })
+
+      test_provider(view, current)
+      assert_reply(view, %{})
+
+      save(view, current)
+      assert_reply(view, %{})
+      assert render(view) =~ "Authentication Provider updated."
 
       new_redirect_uri =
         "http://localhost:3030/authenticate/#{handler_name}/callback"
 
-      assert view
-             |> element(
-               "#redirect-uri-preview",
-               new_redirect_uri
-             )
-             |> render()
-
       {:ok, handler} = AuthProviders.get_handler(handler_name)
 
       assert handler.client.client_id == "new-client-id"
+      assert handler.client.client_secret == "secret"
       assert handler.client.redirect_uri == new_redirect_uri
 
-      assert view
-             |> element("button", "Remove")
-             |> render_click()
-             |> follow_redirect(
-               conn,
-               Routes.auth_providers_index_path(conn, :new)
-             )
+      assert %{"hasClientSecret" => true, "clientId" => "new-client-id"} =
+               props(view)
+
+      assert {:error, {:live_redirect, %{to: to}}} =
+               push_page_event(view, @page, "remove_provider")
+
+      assert to == Routes.auth_providers_index_path(conn, :new)
 
       refute AuthProviders.get_existing(handler_name)
       assert {:error, :not_found} == AuthProviders.get_handler(handler_name)
     end
-  end
-
-  defp get_error_tag(live, field) do
-    live
-    |> element(~s{#auth-provider-form_#{field} + [data-tag="error_message"]})
-    |> render()
   end
 end
