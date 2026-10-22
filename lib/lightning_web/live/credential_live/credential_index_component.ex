@@ -339,7 +339,8 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => credential_id},
         socket
       ) do
-    %{current_user: current_user, credentials: credentials} = socket.assigns
+    %{current_user: current_user} = socket.assigns
+    credentials = socket.assigns.credentials_page.entries
     credential = Enum.find(credentials, &(&1.id == credential_id))
 
     if credential && can_delete_credential(current_user, credential) do
