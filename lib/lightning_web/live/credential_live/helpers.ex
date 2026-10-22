@@ -178,7 +178,7 @@ defmodule LightningWeb.CredentialLive.Helpers do
       page_number: 1,
       page_size: 0,
       total_entries: 0,
-      total_pages: 0
+      total_pages: 1
     }
   end
 
