@@ -880,6 +880,21 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           <span class="sr-only">Refresh sync status</span>
         </.button>
       </div>
+      <div
+        :if={outdated_workflows?(@sync_status)}
+        class="border-b border-gray-200 px-4 py-3"
+      >
+        <Common.alert
+          id="outdated-workflows"
+          type="warning"
+          header="This repository has the old OpenFn GitHub workflows"
+          actions={reconnect_action(@can_reconnect, "outdated-workflows-reconnect")}
+        >
+          <:message>
+            This project was connected with an earlier version of GitHub sync. Reconnect to update the workflow files and get full sync status.
+          </:message>
+        </Common.alert>
+      </div>
       <ul class="divide-y divide-gray-100">
         <.repo_row check={@checks[:repo]} can_reconnect={@can_reconnect} />
         <%= if @project_repo_connection.sync_version do %>
@@ -911,6 +926,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     </div>
     """
   end
+
+  defp outdated_workflows?(sync_status),
+    do:
+      match?(
+        %AsyncResult{ok?: true, result: %{workflows: :outdated}},
+        sync_status
+      )
 
   defp reconnect_action(true, id),
     do: [

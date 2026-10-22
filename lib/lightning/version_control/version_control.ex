@@ -165,6 +165,8 @@ defmodule Lightning.VersionControl do
     `:pending` until the first pull commits it, `{:other_project, uuid}` when
     the branch tracks a different project.
   - `last_pull` / `last_deploy`: the latest run of each GitHub workflow, or nil.
+  - `workflows`: `:current`, or `:outdated` when the repo still has the v1
+    workflow files. Reconnecting replaces them.
   """
   @spec get_sync_status(ProjectRepoConnection.t()) ::
           {:ok, map()} | {:error, GithubError.t() | Tesla.Env.t() | term()}
@@ -176,6 +178,7 @@ defmodule Lightning.VersionControl do
              repo_connection.github_installation_id
            ),
          {:ok, workspace} <- workspace_state(client, repo_connection),
+         {:ok, workflows} <- workflows_state(client, repo_connection),
          # openfn-pull.yml is shared by every project in the repo, so pick this
          # project's runs by the run-name set in pull_v2.yml.
          {:ok, last_pull} <-
@@ -195,7 +198,27 @@ defmodule Lightning.VersionControl do
              per_page: 1
            ) do
       {:ok,
-       Map.merge(workspace, %{last_pull: last_pull, last_deploy: last_deploy})}
+       Map.merge(workspace, %{
+         last_pull: last_pull,
+         last_deploy: last_deploy,
+         workflows: workflows
+       })}
+    end
+  end
+
+  # v2 connections made before the v2 templates existed got the v1 ones
+  defp workflows_state(client, %{repo: repo, branch: branch} = repo_connection) do
+    with {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
+           GithubClient.get_repo(client, repo),
+         {:ok, pull} <- pull_workflow_version(client, repo, default_branch),
+         {:ok, deploy} <-
+           workflow_version(
+             client,
+             repo,
+             deploy_yml_target_path(repo_connection),
+             branch
+           ) do
+      {:ok, if(:v1 in [pull, deploy], do: :outdated, else: :current)}
     end
   end
 
@@ -228,24 +251,26 @@ defmodule Lightning.VersionControl do
   defp pull_workflow_version(client, %{repo: repo}) do
     with {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
            GithubClient.get_repo(client, repo) do
-      case GithubClient.get_repo_content(
-             client,
-             repo,
-             pull_yml_target_path(),
-             "heads/#{default_branch}"
-           ) do
-        {:ok, %{body: %{"content" => content}}} ->
-          with {:ok, yaml} <- Base.decode64(content, ignore: :whitespace) do
-            # pathToConfig is a pull.yml (v1) input, pull_v2.yml has none
-            {:ok, if(yaml =~ "pathToConfig", do: :v1, else: :v2)}
-          end
+      pull_workflow_version(client, repo, default_branch)
+    end
+  end
 
-        {:error, %Tesla.Env{status: 404}} ->
-          {:ok, nil}
+  defp pull_workflow_version(client, repo, default_branch),
+    do: workflow_version(client, repo, pull_yml_target_path(), default_branch)
 
-        error ->
-          error
-      end
+  # Our v1 templates use the @v1 actions, the v2 ones @v2
+  defp workflow_version(client, repo, path, branch) do
+    case GithubClient.get_repo_content(client, repo, path, "heads/#{branch}") do
+      {:ok, %{body: %{"content" => content}}} ->
+        with {:ok, yaml} <- Base.decode64(content, ignore: :whitespace) do
+          {:ok, if(yaml =~ "action@v1", do: :v1, else: :v2)}
+        end
+
+      {:error, %Tesla.Env{status: 404}} ->
+        {:ok, nil}
+
+      error ->
+        error
     end
   end
 
@@ -446,6 +471,8 @@ defmodule Lightning.VersionControl do
            ),
          {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
            GithubClient.get_repo(client, repo_connection.repo),
+         {:ok, pull_workflow} <-
+           dispatch_format(client, repo_connection, default_branch),
          {:ok, %Tesla.Env{status: 204}} <-
            GithubClient.create_workflow_dispatch_event(
              client,
@@ -453,16 +480,52 @@ defmodule Lightning.VersionControl do
              pull_yml_target_path() |> Path.basename(),
              %{
                ref: default_branch,
-               inputs: pull_inputs(repo_connection, commit_message, snapshots)
+               inputs:
+                 pull_inputs(
+                   pull_workflow,
+                   repo_connection,
+                   commit_message,
+                   snapshots
+                 )
              }
            ) do
       :ok
     end
   end
 
+  # GitHub rejects a dispatch whose inputs don't match the repo's pull.yml.
+  # v2 connections made before the v2 templates were committed with the v1
+  # ones, so ask the repo which format it has.
+  defp dispatch_format(
+         client,
+         %{sync_version: true, repo: repo},
+         default_branch
+       ),
+       do: pull_workflow_version(client, repo, default_branch)
+
+  defp dispatch_format(_client, _legacy_connection, _default_branch),
+    do: {:ok, :v1}
+
+  defp pull_inputs(:v1, repo_connection, commit_message, snapshots) do
+    %{
+      projectId: repo_connection.project_id,
+      apiSecretName: api_secret_name(repo_connection),
+      # a v2 connection on v1 workflows was set up with config_path or
+      # openfn.yaml at the root
+      pathToConfig:
+        Path.relative_to(
+          repo_connection.config_path || config_target_path(repo_connection),
+          "."
+        ),
+      branch: repo_connection.branch,
+      commitMessage: commit_message
+    }
+    |> maybe_add_snapshots(snapshots)
+  end
+
   # v2 pulls the live project with `openfn project pull`, which has no
   # snapshot or config path options
-  defp pull_inputs(%{sync_version: true} = repo_connection, commit_message, _) do
+  defp pull_inputs(_v2, repo_connection, commit_message, _snapshots) do
     %{
       projectId: repo_connection.project_id,
       apiSecretName: api_secret_name(repo_connection),
@@ -472,17 +535,6 @@ defmodule Lightning.VersionControl do
       commitMessage: commit_message
     }
     |> maybe_put_alias(repo_connection.local_alias)
-  end
-
-  defp pull_inputs(repo_connection, commit_message, snapshots) do
-    %{
-      projectId: repo_connection.project_id,
-      apiSecretName: api_secret_name(repo_connection),
-      pathToConfig: config_target_path(repo_connection),
-      branch: repo_connection.branch,
-      commitMessage: commit_message
-    }
-    |> maybe_add_snapshots(snapshots)
   end
 
   # Only the first pull needs it: the CLI keeps the alias of a local copy

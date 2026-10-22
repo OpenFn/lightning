@@ -5418,6 +5418,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # initialize sync
       expect_create_installation_token(expected_installation["id"])
       expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+      expect_pull_workflow(expected_repo["full_name"], "pull_v2.yml")
 
       expect_create_workflow_dispatch(
         expected_repo["full_name"],
@@ -6196,6 +6197,40 @@ defmodule LightningWeb.ProjectLiveTest do
       # the failed run needs looking at
       assert view |> element("#sync-health-title") |> render() =~
                "Needs attention"
+    end
+
+    test "offers admins to reconnect when the workflow files are v1", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      stub_sync_status(project, workflows: {"pull_v2.yml", "deploy.yml"})
+
+      [{admin_conn, admin}] = setup_project_users(conn, project, [:admin])
+      set_valid_github_oauth_token!(admin)
+
+      {:ok, view, _html} =
+        live(admin_conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      render_async(view)
+
+      assert has_element?(view, "#outdated-workflows")
+      assert has_element?(view, "#outdated-workflows-reconnect")
+
+      # viewers see why, but can't reconnect
+      viewer_view = live_sync_tab(conn, project)
+      assert has_element?(viewer_view, "#outdated-workflows")
+      refute has_element?(viewer_view, "#outdated-workflows-reconnect")
+    end
+
+    test "shows no update banner when the workflow files are current", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      stub_sync_status(project, checkout: project.id)
+
+      view = live_sync_tab(conn, project)
+
+      refute has_element?(view, "#outdated-workflows")
     end
 
     test "shows a running first sync as setting up, not as a problem", %{
@@ -8307,6 +8342,19 @@ defmodule LightningWeb.ProjectLiveTest do
     projects = opts[:projects] || %{}
     verified = Keyword.get(opts, :verified, true)
 
+    {pull_template, deploy_template} =
+      opts[:workflows] || {"pull_v2.yml", "deploy_v2.yml"}
+
+    workflow_file = fn template ->
+      %{
+        "content" =>
+          :code.priv_dir(:lightning)
+          |> Path.join("github/#{template}")
+          |> File.read!()
+          |> Base.encode64()
+      }
+    end
+
     ok = fn body -> {:ok, %Tesla.Env{status: 200, body: body}} end
     not_found = {:ok, %Tesla.Env{status: 404, body: %{}}}
 
@@ -8347,13 +8395,20 @@ defmodule LightningWeb.ProjectLiveTest do
         ok.(%{"default_branch" => "main"})
 
       %{url: ^pull_yml_url}, _opts ->
-        if verified, do: ok.(%{"sha" => "sha"}), else: not_found
+        if verified, do: ok.(workflow_file.(pull_template)), else: not_found
 
       %{url: ^contents <> ".github/workflows/" <> _deploy_yml}, _opts ->
-        ok.(%{"sha" => "sha"})
+        ok.(workflow_file.(deploy_template))
 
       %{url: ^repo_url <> "/actions/secrets/" <> _secret}, _opts ->
         ok.(%{})
+
+      %{url: "https://api.github.com/user/installations"}, _opts ->
+        ok.(%{
+          "installations" => [
+            %{"id" => "1234", "account" => %{"type" => "User", "login" => "u"}}
+          ]
+        })
 
       # the installations list, which isn't under test here
       %{url: _url}, _opts ->

@@ -138,6 +138,25 @@ defmodule Lightning.GithubHelpers do
     )
   end
 
+  # the repo's shared openfn-pull.yml, as committed from one of our templates
+  def expect_pull_workflow(repo, template),
+    do: expect_workflow_file(repo, "openfn-pull.yml", template)
+
+  def expect_workflow_file(repo, file, template) do
+    content =
+      :code.priv_dir(:lightning)
+      |> Path.join("github/#{template}")
+      |> File.read!()
+      |> Base.encode64()
+
+    expect_get_repo_content(
+      repo,
+      ".github/workflows/#{file}",
+      200,
+      %{"content" => content}
+    )
+  end
+
   def expect_delete_repo_content(
         repo,
         content_path,

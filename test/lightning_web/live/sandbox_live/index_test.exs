@@ -4832,6 +4832,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
+      expect_pull_workflow(repo_connection.repo, "pull_v2.yml")
 
       expect_create_workflow_dispatch_with_request_body(
         repo_connection.repo,
@@ -4851,6 +4852,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
+      expect_pull_workflow(repo_connection.repo, "pull_v2.yml")
 
       expect_create_workflow_dispatch_with_request_body(
         repo_connection.repo,

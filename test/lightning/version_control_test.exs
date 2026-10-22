@@ -577,6 +577,7 @@ defmodule Lightning.VersionControlTest do
       # first pull
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo)
+      expect_pull_workflow(repo, "pull_v2.yml")
 
       Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url, body: body},
                                                  _opts ->
@@ -690,6 +691,30 @@ defmodule Lightning.VersionControlTest do
       }
     end
 
+    defp expect_workflow_files(
+           %{repo: repo, project_id: project_id},
+           {pull, deploy} \\ {"pull_v2.yml", "deploy_v2.yml"}
+         ) do
+      expect_get_repo(repo)
+      expect_pull_workflow(repo, pull)
+      expect_workflow_file(repo, "openfn-#{project_id}-deploy.yml", deploy)
+    end
+
+    test "flags workflow files committed from the v1 templates", %{
+      repo_connection: repo_connection,
+      checkout_path: checkout_path,
+      deploy_file: deploy_file
+    } do
+      expect_get_repo_content(repo_connection.repo, checkout_path, 404, %{})
+      expect_get_repo_content(repo_connection.repo, ".projects", 404, %{})
+      expect_workflow_files(repo_connection, {"pull_v2.yml", "deploy.yml"})
+      expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [])
+      expect_list_workflow_runs(repo_connection.repo, deploy_file, [])
+
+      assert {:ok, %{workflows: :outdated}} =
+               VersionControl.get_sync_status(repo_connection)
+    end
+
     defp checkout_content(uuid) do
       %{"content" => Base.encode64("alias: main\nuuid: #{uuid}\n")}
     end
@@ -724,6 +749,8 @@ defmodule Lightning.VersionControlTest do
       )
 
       # openfn-pull.yml is shared: skip another project's run
+      expect_workflow_files(repo_connection)
+
       expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [
         %{"display_title" => "sync (#{Ecto.UUID.generate()})"},
         %{
@@ -761,7 +788,8 @@ defmodule Lightning.VersionControlTest do
                   url: "https://github.com/runs/1",
                   created_at: ~U[2026-10-14 09:00:00Z]
                 },
-                last_deploy: %{status: "in_progress", conclusion: nil}
+                last_deploy: %{status: "in_progress", conclusion: nil},
+                workflows: :current
               }} = VersionControl.get_sync_status(repo_connection)
     end
 
@@ -772,6 +800,8 @@ defmodule Lightning.VersionControlTest do
     } do
       expect_get_repo_content(repo_connection.repo, checkout_path, 404, %{})
       expect_get_repo_content(repo_connection.repo, ".projects", 404, %{})
+      expect_workflow_files(repo_connection)
+
       expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [])
       expect_list_workflow_runs(repo_connection.repo, deploy_file, [])
 
@@ -792,6 +822,8 @@ defmodule Lightning.VersionControlTest do
     } do
       expect_get_repo_content(repo_connection.repo, checkout_path, 404, %{})
       expect_get_repo_content(repo_connection.repo, ".projects", 404, %{})
+      expect_workflow_files(repo_connection)
+
       expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [])
       expect_list_workflow_runs(repo_connection.repo, deploy_file, [], 404)
 
@@ -822,6 +854,8 @@ defmodule Lightning.VersionControlTest do
         %{}
       )
 
+      expect_workflow_files(repo_connection)
+
       expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [])
       expect_list_workflow_runs(repo_connection.repo, deploy_file, [])
 
@@ -844,6 +878,8 @@ defmodule Lightning.VersionControlTest do
       )
 
       expect_get_repo_content(repo_connection.repo, ".projects", 404, %{})
+
+      expect_workflow_files(repo_connection)
 
       expect_list_workflow_runs(repo_connection.repo, "openfn-pull.yml", [])
       expect_list_workflow_runs(repo_connection.repo, deploy_file, [])
@@ -1217,6 +1253,7 @@ defmodule Lightning.VersionControlTest do
 
       expect_create_installation_token(yaml_connection.github_installation_id)
       expect_get_repo(yaml_connection.repo)
+      expect_pull_workflow(yaml_connection.repo, "pull_v2.yml")
 
       repo = yaml_connection.repo
 
@@ -1253,11 +1290,51 @@ defmodule Lightning.VersionControlTest do
 
       expect_create_installation_token(yaml_connection.github_installation_id)
       expect_get_repo(yaml_connection.repo)
+      expect_pull_workflow(yaml_connection.repo, "pull_v2.yml")
 
       Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url, body: body},
                                                  _opts ->
         assert url =~ "/actions/workflows/openfn-pull.yml/dispatches"
         assert Jason.decode!(body)["inputs"]["alias"] == "staging"
+        {:ok, %Tesla.Env{status: 204, body: ""}}
+      end)
+
+      assert :ok = VersionControl.initiate_sync(yaml_connection, commit_message)
+    end
+
+    test "sends v1 inputs when the repo still has the v1 pull.yml (sync_version: true)",
+         %{
+           commit_message: commit_message,
+           repo_connection: repo_connection,
+           snapshots: [snapshot, other_snapshot]
+         } do
+      # v2 connections made before the v2 templates existed got the v1 ones
+      yaml_connection =
+        repo_connection
+        |> Ecto.Changeset.change(sync_version: true)
+        |> Lightning.Repo.update!()
+
+      expect_create_installation_token(yaml_connection.github_installation_id)
+      expect_get_repo(yaml_connection.repo)
+      expect_pull_workflow(yaml_connection.repo, "pull.yml")
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url, body: body},
+                                                 _opts ->
+        assert url =~ "/actions/workflows/openfn-pull.yml/dispatches"
+
+        inputs = Jason.decode!(body)["inputs"]
+
+        assert Map.delete(inputs, "snapshots") == %{
+                 "projectId" => yaml_connection.project_id,
+                 "apiSecretName" => api_secret_name(yaml_connection),
+                 "pathToConfig" => "openfn.yaml",
+                 "branch" => yaml_connection.branch,
+                 "commitMessage" => commit_message
+               }
+
+        assert inputs["snapshots"] |> String.split() |> Enum.sort() ==
+                 Enum.sort([snapshot.id, other_snapshot.id])
+
         {:ok, %Tesla.Env{status: 204, body: ""}}
       end)
 
@@ -1550,6 +1627,7 @@ defmodule Lightning.VersionControlTest do
         installation_id,
         # openfn.yaml is written by the CLI on the first pull
         config_blob_expectation: fn -> :ok end,
+        pull_workflow: "pull_v2.yml",
         pull_blob_expectation: fn ->
           expect_blob_content(repo, "openfn/cli-pull-action@v2")
         end,
@@ -1586,6 +1664,7 @@ defmodule Lightning.VersionControlTest do
         project.id,
         installation_id,
         config_blob_expectation: fn -> :ok end,
+        pull_workflow: "pull_v2.yml",
         deploy_blob_expectation: fn ->
           Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
             content = Jason.decode!(env.body)["content"]
@@ -1719,6 +1798,10 @@ defmodule Lightning.VersionControlTest do
     if Keyword.get(opts, :sync, true) do
       expect_create_installation_token(installation_id)
       expect_get_repo(repo, 200, expected_repo)
+
+      if pull_workflow = Keyword.get(opts, :pull_workflow),
+        do: expect_pull_workflow(repo, pull_workflow)
+
       expect_create_workflow_dispatch(repo, "openfn-pull.yml")
     end
   end
