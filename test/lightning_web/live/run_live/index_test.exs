@@ -593,6 +593,12 @@ defmodule LightningWeb.RunLive.IndexTest do
       assert html =~ "Work Orders"
     end
 
+    # The channel logs tab is drawn by React from data-props: the filter chip,
+    # the tab bar, the empty state and the row cells are tested in the design
+    # system's HistoryChannelLogsPage.test.tsx. These tests cover what the
+    # server sends for it.
+    @channel_logs "#history-channel-logs-page"
+
     test "navigating to channel logs tab renders channel logs content", %{
       conn: conn,
       project: project,
@@ -602,27 +608,32 @@ defmodule LightningWeb.RunLive.IndexTest do
         "experimental_features" => true
       })
 
+      channel = insert(:channel, project: project, name: "test-channel")
+
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/history/channels")
 
-      html = render(view)
-      assert html =~ "Channel is"
-      assert html =~ "channel_filter_dropdown"
+      assert %{
+               "project" => %{"id" => project_id},
+               "projectLabel" => project_label,
+               "channelsEnabled" => true,
+               "channels" => [%{"id" => channel_id, "name" => "test-channel"}],
+               "channelId" => nil,
+               "rows" => [],
+               "page" => %{"number" => 1, "size" => 10, "totalEntries" => 0}
+             } = page_props(view, @channel_logs)
+
+      assert project_id == project.id
+      assert project_label == project.name
+      assert channel_id == channel.id
     end
 
-    test "channel logs tab shows empty state with no requests", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      Lightning.Accounts.update_user_preferences(user, %{
-        "experimental_features" => true
-      })
-
-      {:ok, _view, html} =
+    test "channel logs tab says the tab bar is hidden without experimental features",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/history/channels")
 
-      assert html =~ "No channel requests found."
+      assert %{"channelsEnabled" => false} = page_props(view, @channel_logs)
     end
 
     test "channel logs tab renders channel request rows", %{
@@ -639,17 +650,33 @@ defmodule LightningWeb.RunLive.IndexTest do
       {:ok, snapshot} =
         Lightning.Channels.get_or_create_current_snapshot(channel)
 
-      insert(:channel_request,
-        channel: channel,
-        channel_snapshot: snapshot,
-        state: :success,
-        started_at: DateTime.utc_now()
-      )
+      request =
+        insert(:channel_request,
+          channel: channel,
+          channel_snapshot: snapshot,
+          state: :success,
+          started_at: DateTime.utc_now()
+        )
 
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/history/channels")
 
-      assert html =~ "test-channel"
+      assert %{
+               "rows" => [
+                 %{
+                   "id" => id,
+                   "requestId" => request_id,
+                   "channelName" => "test-channel",
+                   "state" => "success",
+                   "requestPath" => nil,
+                   "errorMessage" => nil
+                 }
+               ],
+               "page" => %{"totalEntries" => 1}
+             } = page_props(view, @channel_logs)
+
+      assert id == request.id
+      assert request_id == request.request_id
     end
 
     test "channel filter works within history page", %{
@@ -686,14 +713,45 @@ defmodule LightningWeb.RunLive.IndexTest do
           started_at: DateTime.utc_now()
         )
 
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(
           conn,
           ~p"/projects/#{project.id}/history/channels?#{%{filters: %{channel_id: ch1.id}}}"
         )
 
-      assert html =~ cr1.request_id
-      refute html =~ cr2.request_id
+      props = page_props(view, @channel_logs)
+      assert props["channelId"] == ch1.id
+      assert Enum.map(props["rows"], & &1["id"]) == [cr1.id]
+      refute cr2.id in Enum.map(props["rows"], & &1["id"])
+
+      # A malformed filter is dropped, as the old component's search params did.
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/history/channels?#{%{filters: %{channel_id: "nope"}}}"
+        )
+
+      props = page_props(view, @channel_logs)
+      assert props["channelId"] == nil
+      assert length(props["rows"]) == 2
+
+      # A well-formed id that is not one of this project's channels is also
+      # "any channel", so the chip and the rows agree.
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/history/channels?#{%{filters: %{channel_id: Ecto.UUID.generate()}}}"
+        )
+
+      props = page_props(view, @channel_logs)
+      assert props["channelId"] == nil
+      assert length(props["rows"]) == 2
+
+      # Filters that are not a map do not crash the page.
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/history/channels?filters=abc")
+
+      assert page_props(view, @channel_logs)["channelId"] == nil
     end
 
     test "work orders content is hidden on channel logs tab", %{
@@ -705,10 +763,15 @@ defmodule LightningWeb.RunLive.IndexTest do
         "experimental_features" => true
       })
 
-      {:ok, _view, html} =
+      {:ok, view, html} =
         live(conn, ~p"/projects/#{project.id}/history/channels")
 
+      assert has_element?(view, @channel_logs)
       refute html =~ "workorder-filter-form"
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/history")
+      refute has_element?(view, @channel_logs)
+      assert has_element?(view, "#workorder-filter-form")
     end
 
     test "old /channels/requests route no longer works", %{
@@ -745,21 +808,11 @@ defmodule LightningWeb.RunLive.IndexTest do
         request_path: "/some/upstream/path"
       )
 
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/history/channels")
 
-      doc = Floki.parse_fragment!(html)
-
-      # "Request Path" header is the second column.
-      assert doc
-             |> Floki.find("#channel-requests-table thead th:nth-child(2)")
-             |> Floki.text() =~ "Request Path"
-
-      # The path cell in the row is the second td.
-      assert doc
-             |> Floki.find("tr#request-#{request.id} td:nth-child(2)")
-             |> Floki.text()
-             |> String.trim() == "/some/upstream/path"
+      assert %{"rows" => [%{"requestPath" => "/some/upstream/path"}]} =
+               page_props(view, @channel_logs)
     end
 
     test "request path column shows a dash when the request was wiped (request_path nil)",
@@ -792,21 +845,12 @@ defmodule LightningWeb.RunLive.IndexTest do
         request_path: nil
       )
 
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/history/channels")
 
-      doc = Floki.parse_fragment!(html)
-
-      # Column header stays put.
-      assert doc
-             |> Floki.find("#channel-requests-table thead th:nth-child(2)")
-             |> Floki.text() =~ "Request Path"
-
-      # The path cell in the row renders a dash placeholder (not the path).
-      assert doc
-             |> Floki.find("tr#request-#{request.id} td:nth-child(2)")
-             |> Floki.text()
-             |> String.trim() == "—"
+      # The page shows a dash for a path it does not get.
+      assert %{"rows" => [%{"requestPath" => nil}]} =
+               page_props(view, @channel_logs)
     end
   end
 

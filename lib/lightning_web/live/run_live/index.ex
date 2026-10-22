@@ -150,9 +150,42 @@ defmodule LightningWeb.RunLive.Index do
        can_run_workflow: can_run_workflow,
        pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"],
-       channel_logs_params: %{}
+       channel_logs: nil
      )}
   end
+
+  # --- Channel logs props ---
+
+  # The shape the design system's ChannelLogRow type expects: the path and
+  # the error picked from the events here, as the old component did.
+  defp channel_log_rows(page) do
+    Enum.map(page.entries, fn entry ->
+      %{
+        id: entry.id,
+        requestId: entry.request_id,
+        channelId: entry.channel_id,
+        channelName: entry.channel.name,
+        startedAt: entry.started_at,
+        state: entry.state,
+        requestPath: event_field(entry, :destination_response, :request_path),
+        errorMessage: event_field(entry, :error, :error_message)
+      }
+    end)
+  end
+
+  defp event_field(channel_request, event_type, field) do
+    case Enum.find(channel_request.channel_events, &(&1.type == event_type)) do
+      nil -> nil
+      event -> Map.get(event, field)
+    end
+  end
+
+  defp page_json(page),
+    do: %{
+      number: page.page_number,
+      size: page.page_size,
+      totalEntries: page.total_entries
+    }
 
   defp init_filters,
     do: %{
@@ -168,14 +201,35 @@ defmodule LightningWeb.RunLive.Index do
       "sort_direction" => "desc"
     }
 
+  # The channel logs tab is the design system's page: the list, the channel
+  # filter and the page come from the URL, as the old component read them.
   @impl true
   def handle_params(
         params,
         _url,
-        %{assigns: %{live_action: :channel_logs}} = socket
+        %{assigns: %{live_action: :channel_logs, project: project}} = socket
       ) do
+    socket =
+      socket
+      |> assign(page_title: "History")
+      |> assign_new(:channels, fn ->
+        Lightning.Channels.list_channels_for_project(project.id)
+      end)
+
+    search_params = channel_search_params(params, socket.assigns.channels)
+
     {:noreply,
-     assign(socket, page_title: "History", channel_logs_params: params)}
+     assign(socket,
+       channel_logs: %{
+         channel_id: search_params.channel_id,
+         page:
+           Lightning.Channels.list_channel_requests(
+             project,
+             search_params,
+             Map.take(params, ["page"])
+           )
+       }
+     )}
   end
 
   def handle_params(params, _url, socket) do
@@ -198,6 +252,24 @@ defmodule LightningWeb.RunLive.Index do
      |> start_async(:load_workorders, fn ->
        perform_search(project, params)
      end)}
+  end
+
+  # A channel id from the URL only counts when it is one of this project's
+  # channels; anything else, and any non-map filters, means "any channel".
+  defp channel_search_params(params, channels) do
+    filters =
+      case params["filters"] do
+        %{} = filters -> filters
+        _ -> %{}
+      end
+
+    search_params = Lightning.Channels.SearchParams.new(filters)
+
+    if Enum.any?(channels, &(&1.id == search_params.channel_id)) do
+      search_params
+    else
+      %{search_params | channel_id: nil}
+    end
   end
 
   # returns the search result
@@ -345,15 +417,6 @@ defmodule LightningWeb.RunLive.Index do
       )
 
     {:noreply, socket |> update_page(work_order)}
-  end
-
-  def handle_info({:channel_logs_filter, filters}, socket) do
-    %{project: project} = socket.assigns
-
-    {:noreply,
-     push_patch(socket,
-       to: ~p"/projects/#{project.id}/history/channels?#{%{filters: filters}}"
-     )}
   end
 
   # Work order / run events are irrelevant on the channel logs tab

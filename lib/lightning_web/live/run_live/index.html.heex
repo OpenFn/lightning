@@ -1,4 +1,26 @@
-<LayoutComponents.page_content>
+<%!-- The channel logs tab is the design system's page; the work orders tab is still HEEx. --%>
+<.design_system_page
+  :if={@live_action == :channel_logs}
+  name="HistoryChannelLogsPage"
+  props={
+    %{
+      project: %{
+        id: @project.id,
+        parentId: @project.parent_id,
+        color: @project.color
+      },
+      projectLabel: @project_label,
+      channelsEnabled: @channels_enabled,
+      channels: Enum.map(@channels, &%{id: &1.id, name: &1.name}),
+      channelId: @channel_logs.channel_id,
+      rows: channel_log_rows(@channel_logs.page),
+      page: page_json(@channel_logs.page)
+    }
+  }
+  banner={assigns[:banner]}
+  current_user={@current_user}
+/>
+<LayoutComponents.page_content :if={@live_action != :channel_logs}>
   <:banner>
     <Common.dynamic_component
       :if={assigns[:banner]}
@@ -712,14 +734,5 @@
         show={Map.get(assigns, :show_bulk_rerun_from_job_modal, false)}
       />
     </div>
-  </LayoutComponents.centered>
-  <LayoutComponents.centered :if={@live_action == :channel_logs}>
-    <.live_component
-      module={LightningWeb.RunLive.ChannelLogsComponent}
-      id="channel-logs"
-      project={@project}
-      current_user={@current_user}
-      params={@channel_logs_params}
-    />
   </LayoutComponents.centered>
 </LayoutComponents.page_content>
