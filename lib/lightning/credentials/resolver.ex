@@ -74,23 +74,13 @@ defmodule Lightning.Credentials.Resolver do
   `keychain_selectors/1`). When it is `nil` they are read from the run's
   stored input.
   """
-  @spec resolve_credential(
-          Run.t(),
-          credential_id :: String.t(),
-          keychain_selectors() | nil
-        ) ::
-          {:ok, ResolvedCredential.t() | nil}
-          | {:error, :not_found | resolve_error()}
   @spec resolve_credential(Credential.t(), environment :: String.t()) ::
           {:ok, ResolvedCredential.t()}
           | {:error, resolve_error()}
-  def resolve_credential(
-        run_or_credential,
-        id_or_environment,
-        keychain_selectors \\ nil
-      )
-
-  def resolve_credential(%Credential{} = credential, environment, nil) do
+  @spec resolve_credential(Run.t(), credential_id :: String.t()) ::
+          {:ok, ResolvedCredential.t() | nil}
+          | {:error, :not_found | resolve_error()}
+  def resolve_credential(%Credential{} = credential, environment) do
     case Credentials.resolve_credential_body(credential, environment) do
       {:ok, body} ->
         {:ok, ResolvedCredential.from(credential, body)}
@@ -101,6 +91,16 @@ defmodule Lightning.Credentials.Resolver do
     end
   end
 
+  def resolve_credential(%Run{} = run, id),
+    do: resolve_credential(run, id, nil)
+
+  @spec resolve_credential(
+          Run.t(),
+          credential_id :: String.t(),
+          keychain_selectors() | nil
+        ) ::
+          {:ok, ResolvedCredential.t() | nil}
+          | {:error, :not_found | resolve_error()}
   def resolve_credential(%Run{} = run, id, keychain_selectors) do
     Logger.metadata(run_id: run.id, credential_id: id)
 
