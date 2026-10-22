@@ -431,17 +431,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncUiTest do
       refute has_element?(view, "#remove_connection_modal")
     end
 
-    test "the verification banner renders inside the connected card",
+    test "the sync status renders inside the connected card",
          %{conn: conn} do
       {view, _html} = open_connected_panel(conn, :admin, sync_version: true)
 
-      assert has_element?(view, "#verify-connection-banner")
-
-      # the banner is a descendant of the card that holds the title
-      assert has_element?(
-               view,
-               "div.bg-white:has(h6) #verify-connection-banner"
-             )
+      # the status block is a descendant of the card that holds the title
+      assert has_element?(view, "div.bg-white:has(h6) #sync-health")
     end
   end
 end

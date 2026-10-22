@@ -3,6 +3,7 @@ import type { PhoenixHook } from './PhoenixHook';
 type SearchableSelect = PhoenixHook<{
   search: HTMLInputElement | null;
   applyFilter(): void;
+  focusSearch(framesLeft?: number): void;
 }>;
 
 /**
@@ -35,16 +36,24 @@ const SearchableSelect = {
     // The wrapper's phx-click opens the list; focus the search box and start
     // with a clean filter whenever the toggle button is clicked.
     this.el.querySelector('button')?.addEventListener('click', () => {
-      requestAnimationFrame(() => {
-        if (!this.search) return;
-        this.search.value = '';
-        this.applyFilter();
-        this.search.focus();
-      });
+      if (!this.search) return;
+      this.search.value = '';
+      this.applyFilter();
+      this.focusSearch();
     });
   },
   updated() {
     this.applyFilter();
+  },
+  // LiveView shows the list after this click handler runs, and a hidden input
+  // can't take focus, so retry for a few frames until the focus sticks.
+  focusSearch(framesLeft = 10) {
+    requestAnimationFrame(() => {
+      this.search?.focus();
+      if (document.activeElement !== this.search && framesLeft > 0) {
+        this.focusSearch(framesLeft - 1);
+      }
+    });
   },
   applyFilter() {
     const term = (this.search?.value ?? '').trim().toLowerCase();

@@ -28,10 +28,15 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     field :repo, :string
     field :branch, :string
     field :access_token, :binary
+    # v1 config path
     field :config_path, :string
+    # v2 CLI workspace folder
+    field :workspace_path, :string
     field :sync_version, :boolean, default: false
     field :root_project_id, Ecto.UUID
     field :accept, :boolean, virtual: true
+    # v2 CLI alias
+    field :local_alias, :string, virtual: true
 
     field :sync_direction, Ecto.Enum,
       values: [:deploy, :pull],
@@ -65,7 +70,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
   end
 
   @required_fields ~w(github_installation_id repo branch project_id)a
-  @other_fields ~w(config_path sync_version)a
+  @other_fields ~w(config_path workspace_path sync_version)a
 
   def changeset(project_repo_connection, attrs) do
     project_repo_connection
@@ -80,13 +85,32 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
       message: @tree_branch_error
     )
     |> validate_no_tree_branch_conflict()
+    |> validate_repo_path(:config_path)
+    |> validate_repo_path(:workspace_path)
+  end
+
+  # Both paths are written into the GitHub workflow files, so keep them to
+  # plain paths inside the repo
+  defp validate_repo_path(changeset, field) do
+    changeset
+    |> validate_format(field, ~r{\A[\w./-]+\z},
+      message: "can only contain letters, numbers, ., _, - and /"
+    )
+    |> validate_change(field, fn ^field, path ->
+      if Path.type(path) == :absolute or ".." in Path.split(path) do
+        [{field, "must stay inside the repository"}]
+      else
+        []
+      end
+    end)
   end
 
   def configure_changeset(project_repo_connection, attrs) do
     project_repo_connection
     |> changeset(attrs)
-    |> cast(attrs, [:sync_direction, :accept])
+    |> cast(attrs, [:sync_direction, :accept, :local_alias])
     |> validate_required([:sync_direction, :accept])
+    |> validate_local_alias()
     |> validate_change(:accept, fn :accept, accept ->
       if accept do
         []
@@ -97,11 +121,21 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     |> validate_sync_direction()
   end
 
+  # A v2 reconnect can also move the workspace folder or set a local alias
   def reconfigure_changeset(project_repo_connection, attrs) do
     project_repo_connection
-    |> cast(attrs, [:sync_direction, :accept])
+    |> cast(attrs, [:sync_direction, :accept, :workspace_path, :local_alias])
     |> validate_required([:sync_direction, :accept])
+    |> validate_repo_path(:workspace_path)
+    |> validate_local_alias()
     |> validate_sync_direction()
+  end
+
+  # It ends up in the CLI's <alias>@<host>.yaml filename
+  defp validate_local_alias(changeset) do
+    validate_format(changeset, :local_alias, ~r/\A[a-z0-9][a-z0-9_-]*\z/,
+      message: "use lowercase letters, numbers, - and _"
+    )
   end
 
   def create_changeset(project_repo_connection, attrs) do
@@ -224,16 +258,25 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     token
   end
 
+  # v2's config is the CLI workspace's openfn.yaml, legacy's a config.json
+  def config_path(%{sync_version: true} = repo_connection),
+    do: workspace_file(repo_connection, "openfn.yaml")
+
   def config_path(repo_connection) do
     repo_connection.config_path ||
-      if repo_connection.sync_version do
-        path_to_openfn_yaml()
-      else
-        "./openfn-#{repo_connection.project_id}-config.json"
-      end
+      "./openfn-#{repo_connection.project_id}-config.json"
   end
 
-  def path_to_openfn_yaml do
-    "openfn.yaml"
+  @doc "The CLI workspace (v2), relative to the repo root"
+  def workspace_path(repo_connection) do
+    Path.relative_to(repo_connection.workspace_path || ".", ".")
+  end
+
+  @doc "A file inside the CLI workspace (v2), relative to the repo root"
+  def workspace_file(repo_connection, path) do
+    repo_connection
+    |> workspace_path()
+    |> Path.join(path)
+    |> Path.relative_to(".")
   end
 end
