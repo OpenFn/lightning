@@ -1,7 +1,17 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
+  "additionalProperties": false,
   "properties": {
+    "pendingHref": {
+      "type": "string"
+    },
+    "failedHref": {
+      "type": "string"
+    },
+    "lifecycle": {
+      "type": "boolean"
+    },
     "project": {
       "$ref": "#/definitions/CurrentProject"
     },
@@ -20,48 +30,33 @@
     "metrics": {
       "$ref": "#/definitions/ProjectMetrics"
     },
-    "pendingHref": {
-      "type": "string"
-    },
-    "failedHref": {
-      "type": "string"
-    },
     "searchTerm": {
       "type": "string"
     },
-    "sortKey": {
-      "type": "string"
-    },
-    "sortDirection": {
-      "type": "string",
-      "enum": ["asc", "desc"]
+    "sort": {
+      "$ref": "#/definitions/SortState"
     },
     "canCreateWorkflow": {
       "type": "boolean"
     },
     "canDeleteWorkflow": {
       "type": "boolean"
-    },
-    "lifecycle": {
-      "type": "boolean"
     }
   },
   "required": [
-    "project",
-    "projectLabel",
-    "period",
-    "stats",
-    "metrics",
-    "pendingHref",
-    "failedHref",
-    "searchTerm",
-    "sortKey",
-    "sortDirection",
     "canCreateWorkflow",
     "canDeleteWorkflow",
-    "lifecycle"
+    "failedHref",
+    "lifecycle",
+    "metrics",
+    "pendingHref",
+    "period",
+    "project",
+    "projectLabel",
+    "searchTerm",
+    "sort",
+    "stats"
   ],
-  "additionalProperties": false,
   "definitions": {
     "CurrentProject": {
       "type": "object",
@@ -229,6 +224,20 @@
         }
       },
       "required": ["workOrders", "runs"],
+      "additionalProperties": false
+    },
+    "SortState": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["asc", "desc"]
+        }
+      },
+      "required": ["key", "direction"],
       "additionalProperties": false
     }
   }

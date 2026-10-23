@@ -110,14 +110,14 @@ defmodule LightningWeb.AuditLiveTest do
 
       {:ok, live, _html} = live(conn, ~p"/settings/audit", on_error: :raise)
 
-      assert %{"pageNumber" => 1, "pageSize" => 10, "totalEntries" => 25} =
+      assert %{"page" => %{"number" => 1, "size" => 10, "totalEntries" => 25}} =
                props(live)
 
       assert length(events(live)) == 10
 
       render_patch(live, ~p"/settings/audit?page=3")
 
-      assert %{"pageNumber" => 3, "totalEntries" => 25} = props(live)
+      assert %{"page" => %{"number" => 3, "totalEntries" => 25}} = props(live)
       assert length(events(live)) == 5
     end
 

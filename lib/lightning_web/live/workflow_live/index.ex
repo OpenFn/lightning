@@ -147,24 +147,6 @@ defmodule LightningWeb.WorkflowLive.Index do
      )}
   end
 
-  def handle_event("sort", %{"by" => field}, socket) do
-    %{search_term: search_term} = socket.assigns
-
-    {sort_key, sort_direction} =
-      TableHelpers.toggle_sort_direction(
-        socket.assigns.sort_direction,
-        socket.assigns.sort_key,
-        field
-      )
-
-    query_params = build_query_params(search_term, sort_key, sort_direction)
-
-    {:reply, %{},
-     push_patch(socket,
-       to: ~p"/projects/#{socket.assigns.project.id}/w?#{query_params}"
-     )}
-  end
-
   def handle_event(
         "toggle_workflow_state",
         %{"workflow_state" => state, "value_key" => workflow_id},

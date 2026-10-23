@@ -14,8 +14,7 @@
       pendingHref: history_path(@project, pending_wo_filters()),
       failedHref: history_path(@project, failed_wo_filters()),
       searchTerm: @search_term,
-      sortKey: @sort_key,
-      sortDirection: @sort_direction,
+      sort: %{key: @sort_key, direction: @sort_direction},
       canCreateWorkflow: @can_create_workflow,
       canDeleteWorkflow: @can_delete_workflow,
       lifecycle: @lifecycle

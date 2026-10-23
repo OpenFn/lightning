@@ -47,21 +47,20 @@ const props: Props = {
   pendingHref: '/projects/p1/history?filters[pending]=true',
   failedHref: '/projects/p1/history?filters[failed]=true',
   searchTerm: '',
-  sortKey: 'name',
-  sortDirection: 'asc',
+  sort: { key: 'name', direction: 'asc' },
   canCreateWorkflow: true,
   canDeleteWorkflow: true,
   lifecycle: false,
 };
 
 const renderPage = (overrides: Partial<Props> = {}) => {
-  const { pushEvent, redirect, setProps } = renderIsland<Props>(
+  const { pushEvent, navigate, redirect, setProps } = renderIsland<Props>(
     WorkflowsIndexPage,
     { ...props, ...overrides }
   );
   // The LiveView's next props, as a patch would bring them.
   const patch = (next: Partial<Props>) => setProps({ ...props, ...next });
-  return { pushEvent, redirect, patch };
+  return { pushEvent, navigate, redirect, patch };
 };
 
 const deferred = () => {
@@ -137,17 +136,27 @@ describe('WorkflowsIndexPage', () => {
     expect(box.value).toBe('');
   });
 
-  test('sorts through the server, with the next order in each column link', () => {
-    const { pushEvent } = renderPage();
+  test('sorts by patching the URL, keeping the search, with the next order in each column link', () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/projects/p1/w?q=in&sort=name&dir=asc'
+    );
+    const { navigate } = renderPage({ searchTerm: 'in' });
     const name = screen.getByRole('link', { name: 'Name' });
-    expect(name.getAttribute('href')).toBe('/projects/p1/w?sort=name&dir=desc');
+    expect(name.getAttribute('href')).toBe(
+      '/projects/p1/w?q=in&sort=name&dir=desc'
+    );
     expect(
       screen.getByRole('link', { name: 'Work Orders' }).getAttribute('href')
-    ).toBe('/projects/p1/w?sort=workorders_count&dir=asc');
+    ).toBe('/projects/p1/w?q=in&sort=workorders_count&dir=asc');
 
     fireEvent.click(name);
 
-    expect(pushEvent).toHaveBeenCalledWith('sort', { by: 'name' });
+    expect(navigate).toHaveBeenCalledWith(
+      '/projects/p1/w?q=in&sort=name&dir=desc',
+      { replace: false }
+    );
   });
 
   test('switches and deletes with the payloads the LiveView reads', () => {

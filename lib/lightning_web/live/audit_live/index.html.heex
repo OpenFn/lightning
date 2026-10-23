@@ -3,9 +3,11 @@
   props={
     %{
       events: events_json(@page.entries),
-      pageNumber: @page.page_number,
-      pageSize: @page.page_size,
-      totalEntries: @page.total_entries
+      page: %{
+        number: @page.page_number,
+        size: @page.page_size,
+        totalEntries: @page.total_entries
+      }
     }
   }
   banner={assigns[:banner]}

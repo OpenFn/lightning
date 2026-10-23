@@ -8,17 +8,11 @@
         "$ref": "#/definitions/AuditEvent"
       }
     },
-    "pageNumber": {
-      "type": "number"
-    },
-    "pageSize": {
-      "type": "number"
-    },
-    "totalEntries": {
-      "type": "number"
+    "page": {
+      "$ref": "#/definitions/PageInfo"
     }
   },
-  "required": ["events", "pageNumber", "pageSize", "totalEntries"],
+  "required": ["events", "page"],
   "additionalProperties": false,
   "definitions": {
     "AuditEvent": {
@@ -103,6 +97,22 @@
     },
     "AuditValue": {
       "type": ["string", "number", "boolean", "null"]
+    },
+    "PageInfo": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "number"
+        },
+        "size": {
+          "type": "number"
+        },
+        "totalEntries": {
+          "type": "number"
+        }
+      },
+      "required": ["number", "size", "totalEntries"],
+      "additionalProperties": false
     }
   }
 }

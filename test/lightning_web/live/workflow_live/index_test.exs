@@ -886,19 +886,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         assert names.() == Enum.map(expected_order, & &1.name),
                "Failed to sort by #{sort_field} in #{direction} direction"
 
-        assert %{"sortKey" => ^sort_field, "sortDirection" => ^direction} =
+        assert %{"sort" => %{"key" => ^sort_field, "direction" => ^direction}} =
                  props(view)
-
-        if direction == "asc" do
-          # Sorting by the current column flips it.
-          push_page_event(view, @page, "sort", %{"by" => sort_field})
-
-          assert names.() ==
-                   expected_order |> Enum.reverse() |> Enum.map(& &1.name),
-                 "Failed to reverse sort order for #{sort_field}"
-
-          assert %{"sortDirection" => "desc"} = props(view)
-        end
       end
     end
 

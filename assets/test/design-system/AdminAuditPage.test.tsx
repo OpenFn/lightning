@@ -26,14 +26,14 @@ describe('AdminAuditPage', () => {
     window.history.replaceState(null, '', '/settings/audit');
     const { navigate } = renderIsland<Props>(AdminAuditPage, {
       events: [event],
-      pageNumber: 1,
-      pageSize: 10,
-      totalEntries: 25,
+      page: { number: 1, size: 10, totalEntries: 25 },
     });
 
     expect(screen.getByText('Amy Admin')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('link', { name: '3' }));
 
-    expect(navigate).toHaveBeenCalledWith('/settings/audit?page=3', undefined);
+    expect(navigate).toHaveBeenCalledWith('/settings/audit?page=3', {
+      replace: false,
+    });
   });
 });

@@ -1,38 +1,39 @@
 import {
-  type CurrentProject,
-  type ProjectMetrics,
-  type WorkflowRow,
   WorkflowsIndexPage as DesignSystemWorkflowsIndexPage,
+  type WorkflowsIndexPageProps,
 } from '@openfn/ui';
 import { useEffect, useRef, useState } from 'react';
 
 import { designSystemPage } from '../page';
 
-/** What WorkflowLive.Index puts in `data-props`. */
-export interface Props {
-  project: CurrentProject;
-  projectLabel: string;
-  period: string;
-  stats: WorkflowRow[];
-  metrics: ProjectMetrics;
+/**
+ * What WorkflowLive.Index puts in `data-props`: the page's data, without its
+ * callbacks. Lightning always sends the History links and the lifecycle flag,
+ * so its schema requires them where the page doesn't.
+ */
+export type Props = Omit<
+  WorkflowsIndexPageProps,
+  | 'pendingHref'
+  | 'failedHref'
+  | 'lifecycle'
+  | 'onSearch'
+  | 'onClear'
+  | 'onToggle'
+  | 'onDelete'
+> & {
   pendingHref: string;
   failedHref: string;
-  searchTerm: string;
-  sortKey: string;
-  sortDirection: 'asc' | 'desc';
-  canCreateWorkflow: boolean;
-  canDeleteWorkflow: boolean;
   lifecycle: boolean;
-}
+};
 
 const SEARCH_DEBOUNCE = 300;
 
-/** The design system's workflows page, fed by WorkflowLive.Index. */
+/** The design system's workflows page, fed by WorkflowLive.Index. Sorting is a URL patch. */
 export const WorkflowsIndexPage = designSystemPage(
   'WorkflowsIndexPage',
   DesignSystemWorkflowsIndexPage,
   ['/projects/:project_id/w'],
-  ({ searchTerm, sortKey, sortDirection, ...props }: Props, { send }) => {
+  ({ searchTerm, ...props }: Props, { send }) => {
     // What's typed stays while the LiveView answers. The box follows the
     // URL's term only when nothing is being typed and every search has been
     // answered, so a slow reply to an older search never overwrites it.
@@ -54,25 +55,10 @@ export const WorkflowsIndexPage = designSystemPage(
           inFlight.current -= 1;
         });
     };
-    const base = `/projects/${props.project.id}/w`;
-    const query = (sort: string, dir: string) =>
-      `${base}?sort=${sort}&dir=${dir}${searchTerm ? `&q=${encodeURIComponent(searchTerm)}` : ''}`;
 
     return {
       ...props,
       searchTerm: draft,
-      sort: {
-        key: sortKey,
-        direction: sortDirection,
-        // The server flips the direction for the current column and starts
-        // another ascending; the href says where a left click will go.
-        hrefFor: (key: string) =>
-          query(
-            key,
-            key === sortKey && sortDirection === 'asc' ? 'desc' : 'asc'
-          ),
-        onSort: (key: string) => void send('sort', { by: key }),
-      },
       onSearch: (term: string) => {
         setDraft(term);
         if (timer.current) window.clearTimeout(timer.current);

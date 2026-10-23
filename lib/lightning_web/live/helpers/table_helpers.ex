@@ -1,6 +1,6 @@
 defmodule LightningWeb.Live.Helpers.TableHelpers do
   @moduledoc """
-  Helpers for resolving and toggling a table's sort column and direction.
+  Helpers for resolving a table's sort column and direction from the URL.
   """
 
   @doc """
@@ -24,28 +24,4 @@ defmodule LightningWeb.Live.Helpers.TableHelpers do
   @spec sort_direction(String.t() | nil) :: :asc | :desc
   def sort_direction("desc"), do: :desc
   def sort_direction(_value), do: :asc
-
-  @doc """
-  Toggles sort direction between "asc" and "desc".
-
-  ## Examples
-
-      iex> toggle_sort_direction("asc", "name", "name")
-      {"name", "desc"}
-
-      iex> toggle_sort_direction("desc", "name", "name")
-      {"name", "asc"}
-
-      iex> toggle_sort_direction("asc", "name", "email")
-      {"email", "asc"}
-  """
-  def toggle_sort_direction(current_direction, current_key, new_key)
-      when current_key == new_key do
-    new_direction = if current_direction == "asc", do: "desc", else: "asc"
-    {new_key, new_direction}
-  end
-
-  def toggle_sort_direction(_current_direction, _current_key, new_key) do
-    {new_key, "asc"}
-  end
 end
