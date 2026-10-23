@@ -40,6 +40,8 @@ and this project adheres to
 - Bump decimal to 3.2.0 and cowlib to 2.21.0 for security fixes, and ignore two
   Cloak advisories that don't affect us
   [#5246](https://github.com/OpenFn/lightning/pull/5246)
+- Bump plug_crypto to 2.2.1 for a security fix
+  [#5259](https://github.com/OpenFn/lightning/pull/5259)
 
 ### Fixed
 
