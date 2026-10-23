@@ -3,7 +3,7 @@ interface StepIconProps {
   errorType: string | null;
 }
 
-// Mirrors LightningWeb.RunLive.Components.step_icon/1.
+// Mirrors the step icon on History's work orders page (the design system's StepIcon).
 export function StepIcon({ exitReason, errorType }: StepIconProps) {
   // Note: mr-1.5 and inline are intentionally omitted here as they're context-dependent
   // The parent component should handle spacing

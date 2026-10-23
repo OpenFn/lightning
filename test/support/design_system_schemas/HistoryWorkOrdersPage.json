@@ -1,0 +1,459 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "project": {
+      "$ref": "#/definitions/CurrentProject"
+    },
+    "projectLabel": {
+      "type": "string"
+    },
+    "channelsEnabled": {
+      "type": "boolean"
+    },
+    "workOrdersHref": {
+      "type": "string"
+    },
+    "channelLogsHref": {
+      "type": "string"
+    },
+    "workflows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/HistoryWorkflowRef"
+      }
+    },
+    "filters": {
+      "$ref": "#/definitions/WorkOrderFilters"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/WorkOrderRow"
+      }
+    },
+    "state": {
+      "type": "string",
+      "enum": ["loading", "error", "ready"]
+    },
+    "page": {
+      "$ref": "#/definitions/PageInfo"
+    },
+    "sort": {
+      "$ref": "#/definitions/SortState"
+    },
+    "searchLimit": {
+      "type": "number"
+    },
+    "canRunWorkflow": {
+      "type": "boolean"
+    },
+    "dataStorageHref": {
+      "type": ["string", "null"]
+    }
+  },
+  "required": [
+    "project",
+    "projectLabel",
+    "channelsEnabled",
+    "workOrdersHref",
+    "channelLogsHref",
+    "workflows",
+    "filters",
+    "rows",
+    "state",
+    "page",
+    "sort",
+    "searchLimit",
+    "canRunWorkflow",
+    "dataStorageHref"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "CurrentProject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": ["string", "null"]
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "parentId", "color"],
+      "additionalProperties": false
+    },
+    "HistoryWorkflowRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "name"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["id", "name", "jobs"],
+      "additionalProperties": false
+    },
+    "WorkOrderFilters": {
+      "type": "object",
+      "properties": {
+        "workflowId": {
+          "type": ["string", "null"]
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/HistoryWorkOrderState"
+          }
+        },
+        "receivedAfter": {
+          "type": ["string", "null"]
+        },
+        "receivedBefore": {
+          "type": ["string", "null"]
+        },
+        "activityAfter": {
+          "type": ["string", "null"]
+        },
+        "activityBefore": {
+          "type": ["string", "null"]
+        },
+        "runStatuses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RunState"
+          }
+        },
+        "runCreatedAfter": {
+          "type": ["string", "null"]
+        },
+        "runCreatedBefore": {
+          "type": ["string", "null"]
+        },
+        "workorderId": {
+          "type": ["string", "null"]
+        },
+        "errorSignature": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ErrorSignatureFilter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "searchTerm": {
+          "type": "string"
+        },
+        "searchFields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SearchFieldId"
+          }
+        }
+      },
+      "required": [
+        "workflowId",
+        "statuses",
+        "receivedAfter",
+        "receivedBefore",
+        "activityAfter",
+        "activityBefore",
+        "runStatuses",
+        "runCreatedAfter",
+        "runCreatedBefore",
+        "workorderId",
+        "errorSignature",
+        "searchTerm",
+        "searchFields"
+      ],
+      "additionalProperties": false
+    },
+    "HistoryWorkOrderState": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "running",
+        "success",
+        "failed",
+        "crashed",
+        "cancelled",
+        "killed",
+        "exception",
+        "lost",
+        "rejected"
+      ]
+    },
+    "RunState": {
+      "type": "string",
+      "enum": [
+        "available",
+        "claimed",
+        "started",
+        "success",
+        "failed",
+        "crashed",
+        "cancelled",
+        "killed",
+        "exception",
+        "lost"
+      ]
+    },
+    "ErrorSignatureFilter": {
+      "type": "object",
+      "properties": {
+        "exitReason": {
+          "type": "string"
+        },
+        "errorType": {
+          "type": ["string", "null"]
+        },
+        "jobId": {
+          "type": ["string", "null"]
+        },
+        "jobName": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["exitReason", "errorType", "jobId", "jobName"],
+      "additionalProperties": false
+    },
+    "SearchFieldId": {
+      "type": "string",
+      "enum": ["id", "dataclip_name", "body", "log"]
+    },
+    "WorkOrderRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workflowId": {
+          "type": "string"
+        },
+        "workflowName": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/HistoryWorkOrderState"
+        },
+        "dataclipId": {
+          "type": "string"
+        },
+        "dataclipWiped": {
+          "type": "boolean"
+        },
+        "insertedAt": {
+          "type": "string"
+        },
+        "lastActivity": {
+          "type": "string"
+        },
+        "runs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RunRow"
+          }
+        },
+        "href": {
+          "type": "string"
+        },
+        "workflowHref": {
+          "type": ["string", "null"]
+        },
+        "dataclipHref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "workflowId",
+        "workflowName",
+        "state",
+        "dataclipId",
+        "dataclipWiped",
+        "insertedAt",
+        "lastActivity",
+        "runs",
+        "href",
+        "workflowHref",
+        "dataclipHref"
+      ],
+      "additionalProperties": false
+    },
+    "RunRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/RunState"
+        },
+        "insertedAt": {
+          "type": "string"
+        },
+        "claimedAt": {
+          "type": ["string", "null"]
+        },
+        "startedAt": {
+          "type": ["string", "null"]
+        },
+        "finishedAt": {
+          "type": ["string", "null"]
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "href": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StepRow"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "state",
+        "insertedAt",
+        "claimedAt",
+        "startedAt",
+        "finishedAt",
+        "updatedAt",
+        "href",
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "StepRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "jobName": {
+          "type": "string"
+        },
+        "exitReason": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StepExitReason"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "errorType": {
+          "type": ["string", "null"]
+        },
+        "startedAt": {
+          "type": ["string", "null"]
+        },
+        "finishedAt": {
+          "type": ["string", "null"]
+        },
+        "cloned": {
+          "type": "boolean"
+        },
+        "inputWiped": {
+          "type": "boolean"
+        },
+        "jobDeleted": {
+          "type": "boolean"
+        },
+        "href": {
+          "type": "string"
+        },
+        "inspectHref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "jobId",
+        "jobName",
+        "exitReason",
+        "errorType",
+        "startedAt",
+        "finishedAt",
+        "cloned",
+        "inputWiped",
+        "jobDeleted",
+        "href",
+        "inspectHref"
+      ],
+      "additionalProperties": false
+    },
+    "StepExitReason": {
+      "type": "string",
+      "enum": [
+        "success",
+        "fail",
+        "crash",
+        "cancel",
+        "kill",
+        "exception",
+        "lost"
+      ]
+    },
+    "PageInfo": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "number"
+        },
+        "size": {
+          "type": "number"
+        },
+        "totalEntries": {
+          "type": "number"
+        }
+      },
+      "required": ["number", "size", "totalEntries"],
+      "additionalProperties": false
+    },
+    "SortState": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["asc", "desc"]
+        }
+      },
+      "required": ["key", "direction"],
+      "additionalProperties": false
+    }
+  }
+}

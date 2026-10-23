@@ -10,7 +10,6 @@ import WorkflowToYAML from '../yaml/WorkflowToYAML';
 import YAMLToWorkflow from '../yaml/YAMLToWorkflow';
 
 import CredentialSelector from './CredentialSelector';
-import ElapsedIndicator from './ElapsedIndicator';
 import FileDropzone from './FileDropzone';
 import {
   SaveViaCtrlS,
@@ -30,7 +29,6 @@ export {
   WorkflowToYAML,
   YAMLToWorkflow,
   TemplateToWorkflow,
-  ElapsedIndicator,
   TabbedContainer,
   SaveViaCtrlS,
   InspectorSaveViaCtrlS,

@@ -5,11 +5,8 @@ defmodule LightningWeb.RunLive.Index do
   use LightningWeb, :live_view
 
   import Ecto.Changeset, only: [get_change: 2]
-  import LightningWeb.Components.Icons
 
   alias Lightning.Invocation
-  alias Lightning.Invocation.Step
-  alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Run
@@ -19,10 +16,10 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.CancelHelper
-  alias LightningWeb.RunLive.Components
 
   alias Phoenix.LiveView.AsyncResult
-  alias Phoenix.LiveView.JS
+
+  require Logger
 
   @filters_types %{
     search_term: :string,
@@ -56,9 +53,14 @@ defmodule LightningWeb.RunLive.Index do
     error_signature_job_id: :string
   }
 
+  # The status filters and the search toggles, in the order the page lists them.
+  @statuses ~w(pending running success failed crashed cancelled killed exception lost rejected)a
+  @search_fields ~w(id dataclip_name body log)a
+  @known_kill_errors ~w(SecurityError ImportError TimeoutError OOMError StateTooLargeError)
+
   @empty_page %{
     entries: [],
-    page_size: 0,
+    page_size: 10,
     total_entries: 0,
     page_number: 1,
     total_pages: 0
@@ -82,8 +84,17 @@ defmodule LightningWeb.RunLive.Index do
     WorkOrders.subscribe(project.id)
 
     workflows =
-      Lightning.Workflows.get_workflows_for(project)
-      |> Enum.map(&{&1.name || "Untitled", &1.id})
+      Lightning.Workflows.get_workflows_for(project, include: [:jobs])
+      |> Enum.map(fn workflow ->
+        %{
+          id: workflow.id,
+          name: workflow.name || "Untitled",
+          jobs:
+            workflow.jobs
+            |> Enum.sort_by(& &1.name)
+            |> Enum.map(&%{id: &1.id, name: &1.name})
+        }
+      end)
 
     can_run_workflow =
       ProjectUsers
@@ -101,56 +112,22 @@ defmodule LightningWeb.RunLive.Index do
         project_user
       )
 
-    statuses = [
-      %{id: :pending, label: "Enqueued"},
-      %{id: :running, label: "Running"},
-      %{id: :success, label: "Success"},
-      %{id: :failed, label: "Failed"},
-      %{id: :crashed, label: "Crashed"},
-      %{id: :cancelled, label: "Cancelled"},
-      %{id: :killed, label: "Killed"},
-      %{id: :exception, label: "Exception"},
-      %{id: :lost, label: "Lost"},
-      %{id: :rejected, label: "Rejected"}
-    ]
-
-    search_fields = [
-      %{id: :id, icon: "hero-finger-print-mini", label: "Include IDs"},
-      %{
-        id: :dataclip_name,
-        icon: "hero-identification",
-        label: "Include dataclip names"
-      },
-      %{
-        id: :body,
-        icon: "hero-document-arrow-down",
-        label:
-          "Include inputs (note that very large/complex inputs—often around 10MB—may not appear in string search due to a ts_vector index length limit of 1MB)"
-      },
-      %{id: :log, icon: "hero-bars-arrow-down-mini", label: "Include run logs"}
-    ]
-
     params = Map.put_new(params, "filters", init_filters())
 
     {:ok,
      socket
      |> assign(
        workflows: workflows,
-       statuses: statuses,
-       search_fields: search_fields,
        string_search_limit: Invocation.get_workorders_count_limit(),
        channels_enabled:
          Lightning.Accounts.experimental_features_enabled?(current_user),
        active_menu_item: :runs,
-       work_orders: [],
-       selected_work_orders: [],
-       available_actions: [],
-       show_export_modal: false,
        can_edit_data_retention: can_edit_data_retention,
        can_run_workflow: can_run_workflow,
-       pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"],
-       channel_logs: nil
+       channel_logs: nil,
+       reported_kills: MapSet.new(),
+       search_again: false
      )}
   end
 
@@ -186,6 +163,216 @@ defmodule LightningWeb.RunLive.Index do
       size: page.page_size,
       totalEntries: page.total_entries
     }
+
+  # --- Work orders props ---
+
+  # The shape the design system's HistoryWorkOrdersPageProps expect, minus
+  # the handlers. Sent whole on every change, live updates included.
+  defp work_orders_props(assigns) do
+    %{project: project, filters: filters} = assigns
+
+    %{
+      project: %{
+        id: project.id,
+        parentId: project.parent_id,
+        color: project.color
+      },
+      projectLabel: assigns.project_label,
+      channelsEnabled: assigns.channels_enabled,
+      workOrdersHref: ~p"/projects/#{project}/history",
+      channelLogsHref: ~p"/projects/#{project}/history/channels",
+      workflows: assigns.workflows,
+      filters:
+        filters_json(
+          assigns.filters_changeset,
+          assigns.error_signature_job_name
+        ),
+      rows: Enum.map(assigns.page.entries, &work_order_row(&1, assigns)),
+      state: async_state(assigns.async_page),
+      page: page_json(assigns.page),
+      sort: %{
+        key: Map.get(filters, "sort_by") || "last_activity",
+        direction: Map.get(filters, "sort_direction") || "desc"
+      },
+      searchLimit: assigns.string_search_limit,
+      canRunWorkflow: assigns.can_run_workflow,
+      dataStorageHref:
+        if(assigns.can_edit_data_retention,
+          do: ~p"/projects/#{project}/settings#data-storage"
+        )
+    }
+  end
+
+  defp filters_json(changeset, error_signature_job_name) do
+    change = &get_change(changeset, &1)
+
+    %{
+      workflowId: change.(:workflow_id),
+      statuses: Enum.filter(@statuses, &(change.(&1) == true)),
+      receivedAfter: change.(:wo_date_after),
+      receivedBefore: change.(:wo_date_before),
+      activityAfter: change.(:date_after),
+      activityBefore: change.(:date_before),
+      runStatuses: change.(:run_status) || [],
+      runCreatedAfter: change.(:run_date_after),
+      runCreatedBefore: change.(:run_date_before),
+      workorderId: change.(:workorder_id),
+      errorSignature:
+        if(exit_reason = change.(:error_signature_exit_reason),
+          do: %{
+            exitReason: exit_reason,
+            errorType: change.(:error_signature_error_type),
+            jobId: change.(:error_signature_job_id),
+            jobName: error_signature_job_name
+          }
+        ),
+      searchTerm: change.(:search_term) || "",
+      searchFields: Enum.filter(@search_fields, &(change.(&1) == true))
+    }
+  end
+
+  defp async_state(%AsyncResult{failed: failed}) when not is_nil(failed),
+    do: "error"
+
+  defp async_state(%AsyncResult{ok?: true}), do: "ready"
+  defp async_state(_loading), do: "loading"
+
+  defp work_order_row(work_order, assigns) do
+    %{project: project} = assigns
+    last_run = List.first(work_order.runs)
+
+    %{
+      id: work_order.id,
+      workflowId: work_order.workflow_id,
+      workflowName:
+        cond do
+          work_order.snapshot -> work_order.snapshot.name
+          work_order.workflow -> work_order.workflow.name
+          true -> "Untitled"
+        end,
+      state: work_order.state,
+      dataclipId: work_order.dataclip_id,
+      dataclipWiped: not is_nil(work_order.dataclip.wiped_at),
+      insertedAt: work_order.inserted_at,
+      lastActivity: work_order.last_activity,
+      runs: Enum.map(work_order.runs, &run_row(&1, work_order, assigns)),
+      href:
+        ~p"/projects/#{project}/history?#{%{filters: %{workorder_id: work_order.id}}}",
+      workflowHref:
+        if(last_run,
+          do:
+            ~p"/projects/#{project}/w/#{work_order.workflow_id}?#{maybe_add_snapshot_version(%{run: last_run.id}, work_order.snapshot.lock_version, work_order.workflow.lock_version, assigns.channels_enabled)}"
+        ),
+      dataclipHref:
+        ~p"/projects/#{project}/dataclips/#{work_order.dataclip_id}/show"
+    }
+  end
+
+  defp run_row(run, work_order, assigns) do
+    %{
+      id: run.id,
+      state: run.state,
+      insertedAt: run.inserted_at,
+      claimedAt: run.claimed_at,
+      startedAt: run.started_at,
+      finishedAt: run.finished_at,
+      updatedAt: run.updated_at,
+      href: ~p"/projects/#{assigns.project}/runs/#{run}",
+      steps: Enum.map(run.steps, &step_row(&1, run, work_order, assigns))
+    }
+  end
+
+  # The page shows an unknown kill like an OOM, so say that one turned up,
+  # once per step as the page loads it rather than on every render.
+  defp report_unknown_kills(socket, work_orders) do
+    %{reported_kills: reported} = socket.assigns
+
+    steps =
+      for %{runs: runs} <- work_orders,
+          %{steps: steps} <- runs,
+          %{exit_reason: "kill", error_type: error_type} = step <- steps,
+          error_type not in @known_kill_errors,
+          not MapSet.member?(reported, step.id),
+          do: step
+
+    for %{error_type: error_type} <- steps do
+      Logger.warning("Unknown kill error_type: #{inspect(error_type)}")
+
+      Lightning.Sentry.capture_message("Unknown kill error_type",
+        level: :warning,
+        extra: %{error_type: error_type}
+      )
+    end
+
+    assign(socket,
+      reported_kills: MapSet.union(reported, MapSet.new(steps, & &1.id))
+    )
+  end
+
+  # A step may have no snapshot, or one without its job: the name falls back
+  # to the job itself, which may be deleted, and the link to the workflow as
+  # it is now.
+  defp step_row(step, run, work_order, assigns) do
+    %{project: project} = assigns
+
+    snapshot =
+      step.snapshot ||
+        %{jobs: [], lock_version: work_order.workflow.lock_version}
+
+    snapshot_job = Enum.find(snapshot.jobs, &(&1.id == step.job_id))
+
+    inspect_params =
+      maybe_add_snapshot_version(
+        %{run: run.id, panel: "editor", job: step.job_id},
+        snapshot.lock_version,
+        work_order.workflow.lock_version,
+        assigns.channels_enabled
+      )
+
+    %{
+      id: step.id,
+      jobId: step.job_id,
+      # A job gone from both, named by its id as the error signature chip does.
+      jobName:
+        (snapshot_job || step.job || %{name: String.slice(step.job_id, 0, 8)}).name,
+      exitReason: step.exit_reason,
+      errorType: step.error_type,
+      startedAt: step.started_at,
+      finishedAt: step.finished_at,
+      # Reused from an earlier run, so it's older than this one.
+      cloned: DateTime.compare(step.inserted_at, run.inserted_at) == :lt,
+      inputWiped:
+        is_nil(step.input_dataclip) or
+          not is_nil(step.input_dataclip.wiped_at),
+      jobDeleted: is_nil(step.job),
+      href: ~p"/projects/#{project}/runs/#{run}?#{%{step: step.id}}",
+      inspectHref:
+        ~p"/projects/#{project}/w/#{work_order.workflow_id}?#{inspect_params}" <>
+          "#log"
+    }
+  end
+
+  # A run of the current version needs no pin. With experimental features a
+  # historical run is pinned with `?as_run=`, which resolves the run's own
+  # snapshot and so works for runs that were never released; without them it
+  # is `?v=` and the snapshot's lock_version.
+  defp maybe_add_snapshot_version(
+         params,
+         snapshot_version,
+         workflow_version,
+         experimental_features
+       ) do
+    cond do
+      snapshot_version == workflow_version ->
+        params
+
+      experimental_features ->
+        Map.merge(params, %{as_run: params[:run]})
+
+      true ->
+        Map.merge(params, %{v: snapshot_version})
+    end
+  end
 
   defp init_filters,
     do: %{
@@ -232,6 +419,8 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
+  # The work orders tab is the design system's page too: the search, the
+  # sort and the page come from the URL's `filters[…]` and `page`.
   def handle_params(params, _url, socket) do
     %{project: project} = socket.assigns
     filters = Map.get(params, "filters", init_filters())
@@ -241,17 +430,26 @@ defmodule LightningWeb.RunLive.Index do
      |> assign(
        filters: filters,
        page_title: "History",
-       step: %Step{},
        filters_changeset: filters_changeset(filters),
        error_signature_job_name:
-         Jobs.get_job_name(project.id, filters["error_signature_job_id"]),
-       pagination_path: &pagination_path(socket, project, &1, filters),
+         Lightning.Jobs.get_job_name(
+           project.id,
+           filters["error_signature_job_id"]
+         ),
        page: @empty_page,
-       async_page: AsyncResult.loading()
+       async_page: AsyncResult.loading(),
+       page_params: params,
+       search_again: false
      )
-     |> start_async(:load_workorders, fn ->
-       perform_search(project, params)
-     end)}
+     |> load_workorders()}
+  end
+
+  defp load_workorders(socket) do
+    %{project: project, page_params: params} = socket.assigns
+
+    start_async(socket, :load_workorders, fn ->
+      perform_search(project, params)
+    end)
   end
 
   # A channel id from the URL only counts when it is one of this project's
@@ -296,15 +494,20 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_async(:load_workorders, {:ok, searched_page}, socket) do
-    %{async_page: async_page} = socket.assigns
+    %{async_page: async_page, search_again: search_again} = socket.assigns
 
-    {:noreply,
-     socket
-     |> assign(
-       page: searched_page,
-       async_page: AsyncResult.ok(async_page, searched_page)
-     )
-     |> maybe_show_selected_workorder_details()}
+    socket =
+      socket
+      |> report_unknown_kills(searched_page.entries)
+      |> assign(
+        page: searched_page,
+        async_page: AsyncResult.ok(async_page, searched_page),
+        search_again: false
+      )
+
+    # Shown at once, then searched once more, no longer loading, so events
+    # update the rows meanwhile: a busy project can't keep the page loading.
+    {:noreply, if(search_again, do: load_workorders(socket), else: socket)}
   end
 
   def handle_async(:load_workorders, {:exit, reason}, socket) do
@@ -319,20 +522,6 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   @doc """
-  Takes a changeset used for querying workorders and checks to see if the given
-  filter is present in that changeset. Returns true or false.
-  """
-  def checked?(changeset, id) do
-    case Ecto.Changeset.fetch_field(changeset, id) do
-      value when value in [{:changes, true}] ->
-        true
-
-      _ ->
-        false
-    end
-  end
-
-  @doc """
   Creates a changeset based on given parameters and the fixed workorder filter types.
   """
   def filters_changeset(params),
@@ -343,7 +532,24 @@ defmodule LightningWeb.RunLive.Index do
         Map.keys(@filters_types)
       )
 
+  # A change while the rows are loading has no row to update yet, and the
+  # search may have read the rows before it: a background retry or cancel
+  # often lands while the page it navigated to is still searching. So the
+  # search runs again once it has answered.
   @impl true
+  def handle_info(
+        %mod{},
+        %{assigns: %{live_action: :index, async_page: %{loading: true}}} = socket
+      )
+      when mod in [
+             Events.RunCreated,
+             Events.RunUpdated,
+             Events.WorkOrderCreated,
+             Events.WorkOrderUpdated
+           ] do
+    {:noreply, assign(socket, search_again: true)}
+  end
+
   def handle_info(%mod{run: run}, %{assigns: %{live_action: :index}} = socket)
       when mod in [Events.RunCreated, Events.RunUpdated] do
     work_order = Invocation.reload_workorder_for_list(run)
@@ -396,6 +602,8 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, socket}
   end
 
+  # Each event below answers the page: `{:reply, %{}, socket}` when it
+  # worked (the flash says what happened), `reply_error/2` when it didn't.
   @impl true
   def handle_event(
         "rerun",
@@ -416,22 +624,19 @@ defmodule LightningWeb.RunLive.Index do
            :ok <- WorkOrders.limit_run_creation(project_id),
            {:ok, _run} <-
              WorkOrders.retry(run_id, step_id, created_by: current_user) do
-        {:noreply, socket}
+        {:reply, %{}, socket}
       else
         result when result in [false, nil] ->
-          {:noreply, put_flash(socket, :error, "Run not found.")}
+          reply_error(socket, "Run not found.")
 
         {:error, _reason, %{text: error_text}} ->
-          {:noreply, socket |> put_flash(:error, error_text)}
+          reply_error(socket, error_text)
 
         {:error, :workflow_deleted} ->
-          {:noreply,
-           socket
-           |> put_flash(:error, "Runs for deleted workflows cannot be retried")}
+          reply_error(socket, "Runs for deleted workflows cannot be retried")
 
         {:error, _changeset} ->
-          {:noreply,
-           socket |> put_flash(:error, "Oops! an error occured during retry.")}
+          reply_error(socket, "Oops! an error occured during retry.")
       end
     end)
   end
@@ -440,175 +645,65 @@ defmodule LightningWeb.RunLive.Index do
     require_run_workflow(socket, fn ->
       case handle_bulk_rerun(socket, attrs) do
         {:ok, count, discarded_count} ->
-          {:noreply,
+          {:reply, %{},
            socket
-           |> put_flash(
-             :info,
-             "New run#{if count > 1, do: "s"} enqueued for #{count} workorder#{if count > 1, do: "s"}"
-             |> then(fn msg ->
-               if discarded_count > 0 do
-                 "#{msg} (#{discarded_count} were discarded due to wiped dataclip/workflow being deleted)"
-               else
-                 msg
-               end
-             end)
-           )
-           |> push_navigate(
-             to:
-               ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
-           )}
+           |> put_flash(:info, rerun_message(count, discarded_count))
+           |> push_navigate(to: history_path(socket))}
+
+        :not_found ->
+          reply_error(socket, "Work order not found.")
 
         {:error, _changes} ->
-          {:noreply,
-           socket
-           |> put_flash(:error, "Oops! an error occured during retries.")}
+          reply_error(socket, "Oops! an error occured during retries.")
 
         {:error, _reason, %{text: error_message}} ->
-          {:noreply,
-           socket
-           |> put_flash(:error, error_message)}
+          reply_error(socket, error_message)
       end
     end)
   end
 
-  def handle_event(
-        "toggle_selection",
-        %{
-          "workorder_id" => workorder_id,
-          "selected" => selected?
-        },
-        socket
-      ) do
-    %{page: page, selected_work_orders: selected_work_orders} = socket.assigns
+  # Retry and Retry from ask before opening their modal, so a project over
+  # its run limit hears why on the click.
+  def handle_event("validate_bulk_rerun", %{"count" => count}, socket)
+      when is_integer(count) do
+    case WorkOrders.limit_run_creation(socket.assigns.project.id, count) do
+      {:error, _reason, %{text: error_message}} ->
+        reply_error(socket, error_message)
 
-    selected? = String.to_existing_atom(selected?)
-    workorder = Enum.find(page.entries, &(&1.id == workorder_id))
-
-    work_orders =
-      if selected? and !is_nil(workorder) do
-        selected_workorder = %Lightning.WorkOrder{
-          id: workorder.id,
-          workflow_id: workorder.workflow_id,
-          state: workorder.state
-        }
-
-        [selected_workorder | selected_work_orders]
-      else
-        {_wo, rest} =
-          Enum.split_with(selected_work_orders, &(&1.id == workorder_id))
-
-        rest
-      end
-
-    {:noreply,
-     assign(socket,
-       selected_work_orders: work_orders,
-       available_actions: available_bulk_actions(work_orders)
-     )}
+      _ok ->
+        {:reply, %{}, socket}
+    end
   end
 
-  def handle_event(
-        "toggle_all_selections",
-        %{"all_selections" => selection},
-        %{assigns: %{page: page}} = socket
-      ) do
-    selection = String.to_existing_atom(selection)
-
-    work_orders =
-      if selection do
-        page.entries
-        |> Enum.filter(fn wo -> is_nil(wo.dataclip.wiped_at) end)
-        |> Enum.map(fn entry ->
-          %Lightning.WorkOrder{
-            id: entry.id,
-            workflow_id: entry.workflow_id,
-            state: entry.state
-          }
-        end)
-      else
-        []
-      end
-
-    {:noreply,
-     assign(socket,
-       selected_work_orders: work_orders,
-       available_actions: available_bulk_actions(work_orders)
-     )}
-  end
-
-  def handle_event("apply_filters", %{"filters" => new_filters}, socket) do
-    %{filters: prev_filters, project: project} = socket.assigns
-
-    filters =
-      Map.merge(prev_filters, new_filters)
-      |> Map.reject(fn {_k, v} -> Enum.member?(["false", ""], v) end)
-
-    {:noreply,
-     socket
-     |> assign(filters: filters)
-     |> push_patch(
-       to: ~p"/projects/#{project.id}/history?#{%{filters: filters}}"
-     )}
-  end
-
-  def handle_event("sort", %{"by" => sort_by}, socket) do
-    %{filters: filters, project: project} = socket.assigns
-
-    current_sort_by = Map.get(filters, "sort_by")
-    current_sort_direction = Map.get(filters, "sort_direction", "desc")
-
-    # Toggle direction if clicking the same column, otherwise use desc as default
-    new_sort_direction =
-      if current_sort_by == sort_by do
-        if current_sort_direction == "desc", do: "asc", else: "desc"
-      else
-        "desc"
-      end
-
-    new_filters =
-      filters
-      |> Map.put("sort_by", sort_by)
-      |> Map.put("sort_direction", new_sort_direction)
-
-    {:noreply,
-     socket
-     |> assign(filters: new_filters)
-     |> push_patch(
-       to: ~p"/projects/#{project.id}/history?#{%{filters: new_filters}}"
-     )}
-  end
-
-  def handle_event("invalid-rerun:" <> error_message, _params, socket) do
-    {:noreply,
-     socket
-     |> put_flash(:error, error_message)}
-  end
+  def handle_event("validate_bulk_rerun", _params, socket),
+    do: reply_error(socket, "Invalid request")
 
   def handle_event("bulk-cancel", attrs, socket) do
     require_run_workflow(socket, fn ->
-      redirect_to =
-        ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
-
       case handle_bulk_cancel(socket, attrs) do
         {:ok, cancelled} ->
           message =
             "Cancelled #{cancelled} run#{if cancelled != 1, do: "s"}"
 
-          {:noreply,
-           socket |> put_flash(:info, message) |> push_navigate(to: redirect_to)}
+          {:reply, %{},
+           socket
+           |> put_flash(:info, message)
+           |> push_navigate(to: history_path(socket))}
 
         {:async, count} ->
           message =
             "Cancelling runs for #{count} work order#{if count != 1, do: "s"} in the background..."
 
-          {:noreply,
-           socket |> put_flash(:info, message) |> push_navigate(to: redirect_to)}
+          {:reply, %{},
+           socket
+           |> put_flash(:info, message)
+           |> push_navigate(to: history_path(socket))}
+
+        :not_found ->
+          reply_error(socket, "Work order not found.")
 
         {:error, _reason} ->
-          {:noreply,
-           socket
-           |> put_flash(:error, "An error occurred while cancelling.")
-           |> push_navigate(to: redirect_to)}
+          reply_error(socket, "An error occurred while cancelling.")
       end
     end)
   end
@@ -619,17 +714,19 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     require_run_workflow(socket, fn ->
-      work_order = %WorkOrder{id: workorder_id}
-
-      case WorkOrders.cancel_many(
-             [work_order],
-             project_id: socket.assigns.project.id
-           ) do
-        {:ok, n} when n > 0 ->
-          {:noreply, put_flash(socket, :info, "Work order cancelled.")}
+      with true <- Lightning.Validators.valid_uuid?(workorder_id),
+           {:ok, n} when n > 0 <-
+             WorkOrders.cancel_many(
+               [%WorkOrder{id: workorder_id}],
+               project_id: socket.assigns.project.id
+             ) do
+        {:reply, %{}, put_flash(socket, :info, "Work order cancelled.")}
+      else
+        false ->
+          reply_error(socket, "Work order not found.")
 
         {:ok, 0} ->
-          {:noreply,
+          {:reply, %{},
            put_flash(
              socket,
              :info,
@@ -638,12 +735,7 @@ defmodule LightningWeb.RunLive.Index do
            )}
 
         {:error, _reason} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "An error occurred while cancelling."
-           )}
+          reply_error(socket, "An error occurred while cancelling.")
       end
     end)
   end
@@ -652,13 +744,13 @@ defmodule LightningWeb.RunLive.Index do
     require_run_workflow(socket, fn ->
       case CancelHelper.cancel_run(run_id, socket.assigns.project.id) do
         {:ok, _run} ->
-          {:noreply, put_flash(socket, :info, "Run cancelled.")}
+          {:reply, %{}, put_flash(socket, :info, "Run cancelled.")}
 
         {:error, :not_found} ->
-          {:noreply, put_flash(socket, :error, "Run not found.")}
+          reply_error(socket, "Run not found.")
 
         {:error, :not_available} ->
-          {:noreply,
+          {:reply, %{},
            put_flash(
              socket,
              :info,
@@ -667,24 +759,9 @@ defmodule LightningWeb.RunLive.Index do
            )}
 
         {:error, _} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "An error occurred while cancelling."
-           )}
+          reply_error(socket, "An error occurred while cancelling.")
       end
     end)
-  end
-
-  def handle_event("show-export-modal", _params, socket) do
-    require_run_workflow(socket, fn ->
-      {:noreply, assign(socket, :show_export_modal, true)}
-    end)
-  end
-
-  def handle_event("close-export-modal", _params, socket) do
-    {:noreply, socket |> assign(:show_export_modal, false)}
   end
 
   def handle_event("confirm-export", _params, socket) do
@@ -696,101 +773,92 @@ defmodule LightningWeb.RunLive.Index do
 
       case Invocation.export_workorders(project, current_user, search_params) do
         {:ok, _} ->
-          {:noreply,
-           socket
-           |> assign(:show_export_modal, false)
-           |> put_flash(
+          {:reply, %{},
+           put_flash(
+             socket,
              :info,
              "History export started successfully. You will be notified by email after completion."
            )}
 
         {:error, _failed_operation, _reason, _changes} ->
-          {:noreply,
-           socket
-           |> put_flash(:error, "Failed to start export. Please try again.")}
+          reply_error(socket, "Failed to start export. Please try again.")
       end
     end)
   end
 
-  defp find_workflow_name(workflows, workflow_id) do
-    Enum.find_value(workflows, fn {name, id} ->
-      if id == workflow_id do
-        name
-      end
-    end)
+  defp rerun_message(count, discarded_count) do
+    message =
+      "New run#{if count > 1, do: "s"} enqueued for #{count} workorder#{if count > 1, do: "s"}"
+
+    if discarded_count > 0 do
+      "#{message} (#{discarded_count} were discarded due to wiped dataclip/workflow being deleted)"
+    else
+      message
+    end
+  end
+
+  defp history_path(socket) do
+    ~p"/projects/#{socket.assigns.project.id}/history?#{%{filters: socket.assigns.filters}}"
   end
 
   # Every workflow-mutating action on this page needs the run-workflow
   # permission. Runs fun when the user has it, otherwise replies with the
-  # standard not-authorized flash.
+  # standard not-authorized error.
   defp require_run_workflow(socket, fun) do
     if socket.assigns.can_run_workflow do
       fun.()
     else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )}
+      reply_error(socket, "You are not authorized to perform this action.")
     end
   end
 
-  defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
-    socket.assigns.selected_work_orders
-    |> WorkOrders.retry_many(job_id,
-      created_by: socket.assigns.current_user,
-      project_id: socket.assigns.project.id
-    )
+  defp handle_bulk_rerun(
+         socket,
+         %{"type" => "selected", "workorder_ids" => ids} = attrs
+       ) do
+    with {:ok, work_orders} <- on_this_page(socket, ids) do
+      retry_many(socket, work_orders, attrs["job"])
+    end
   end
 
-  defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
+  defp handle_bulk_rerun(socket, %{"type" => "all"} = attrs) do
     filter = SearchParams.new(socket.assigns.filters)
 
-    socket.assigns.project
-    |> Invocation.search_workorders_for_retry(filter)
-    |> WorkOrders.retry_many(job_id,
+    work_orders =
+      Invocation.search_workorders_for_retry(socket.assigns.project, filter)
+
+    retry_many(socket, work_orders, attrs["job"])
+  end
+
+  defp handle_bulk_rerun(_socket, _attrs), do: :not_found
+
+  defp retry_many(socket, work_orders, nil) do
+    WorkOrders.retry_many(work_orders,
       created_by: socket.assigns.current_user,
       project_id: socket.assigns.project.id
     )
   end
 
-  defp handle_bulk_rerun(socket, %{
-         "type" => "single",
-         "workorder_id" => workorder_id
-       }) do
-    work_order =
-      Enum.find(socket.assigns.page.entries, fn wo -> wo.id == workorder_id end)
+  defp retry_many(socket, work_orders, job_id) do
+    cond do
+      not Lightning.Validators.valid_uuid?(job_id) ->
+        :not_found
 
-    [work_order]
-    |> WorkOrders.retry_many(
-      created_by: socket.assigns.current_user,
-      project_id: socket.assigns.project.id
-    )
+      work_orders == [] ->
+        {:ok, 0, 0}
+
+      true ->
+        WorkOrders.retry_many(work_orders, job_id,
+          created_by: socket.assigns.current_user,
+          project_id: socket.assigns.project.id
+        )
+    end
   end
 
-  defp handle_bulk_rerun(socket, %{"type" => "selected"}) do
-    socket.assigns.selected_work_orders
-    |> WorkOrders.retry_many(
-      created_by: socket.assigns.current_user,
-      project_id: socket.assigns.project.id
-    )
-  end
-
-  defp handle_bulk_rerun(socket, %{"type" => "all"}) do
-    filter = SearchParams.new(socket.assigns.filters)
-
-    socket.assigns.project
-    |> Invocation.search_workorders_for_retry(filter)
-    |> WorkOrders.retry_many(
-      created_by: socket.assigns.current_user,
-      project_id: socket.assigns.project.id
-    )
-  end
-
-  defp handle_bulk_cancel(socket, %{"type" => "selected"}) do
-    socket.assigns.selected_work_orders
-    |> WorkOrders.cancel_many(project_id: socket.assigns.project.id)
+  defp handle_bulk_cancel(socket, %{"type" => "selected", "workorder_ids" => ids}) do
+    with {:ok, work_orders} <- on_this_page(socket, ids) do
+      WorkOrders.cancel_many(work_orders, project_id: socket.assigns.project.id)
+    end
   end
 
   defp handle_bulk_cancel(socket, %{"type" => "all"}) do
@@ -815,97 +883,19 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  @retryable_states [
-    :success,
-    :failed,
-    :crashed,
-    :killed,
-    :exception,
-    :lost,
-    :cancelled,
-    :rejected
-  ]
+  defp handle_bulk_cancel(_socket, _attrs), do: :not_found
 
-  def available_bulk_actions(selected_work_orders) do
-    states = Enum.map(selected_work_orders, & &1.state)
+  # The page sends the ids it has ticked. Each must be a work order this page
+  # is showing, which also keeps them to this project; otherwise none is acted on.
+  defp on_this_page(socket, [_ | _] = ids) do
+    work_orders = Enum.filter(socket.assigns.page.entries, &(&1.id in ids))
 
-    actions = []
-
-    actions =
-      if Enum.all?(states, &(&1 == :pending)) do
-        [:cancel | actions]
-      else
-        actions
-      end
-
-    if Enum.all?(states, &(&1 in @retryable_states)) do
-      [:retry | actions]
-    else
-      actions
-    end
+    if length(work_orders) == length(Enum.uniq(ids)),
+      do: {:ok, work_orders},
+      else: :not_found
   end
 
-  defp all_selected?(work_orders, entries) do
-    Enum.count(work_orders) == Enum.count(entries)
-  end
-
-  defp partially_selected?(work_orders, entries) do
-    entries != [] && !none_selected?(work_orders) &&
-      !all_selected?(work_orders, entries)
-  end
-
-  defp none_selected?(selected_orders) do
-    selected_orders == []
-  end
-
-  defp selected_workflow_count(selected_orders) do
-    selected_orders
-    |> Enum.map(fn workorder -> workorder.workflow_id end)
-    |> Enum.uniq()
-    |> Enum.count()
-  end
-
-  defp maybe_humanize_date(date) do
-    if date do
-      if date.year == DateTime.utc_now().year do
-        Timex.format!(date, "{D}-{Mshort}")
-      else
-        Timex.format!(date, "{D}-{Mshort}") <>
-          "-" <> Timex.format!(date, "{YYYY}")
-      end
-    end
-  end
-
-  # The run-date chip's range.
-  #
-  # Stamped in UTC and says so: the bars this comes from are cut on the
-  # reader's clock, nothing in Lightning records what that clock is, and a bare
-  # "14:00" under a bar labelled "16:00" is worse than a suffix. The suffix
-  # goes on once, at the end, rather than on both ends of a range.
-  defp format_run_range(nil, nil), do: "any time"
-  defp format_run_range(from, nil), do: "after #{run_stamp(from)} UTC"
-  defp format_run_range(nil, to), do: "before #{run_stamp(to)} UTC"
-
-  defp format_run_range(from, to),
-    do: "#{run_stamp(from)} – #{run_stamp(to)} UTC"
-
-  defp run_stamp(date), do: Timex.format!(date, "{D}-{Mshort} {h24}:{m}")
-
-  defp format_date_range(date_after, date_before) do
-    case {date_after, date_before} do
-      {nil, nil} ->
-        "any time"
-
-      {after_date, nil} ->
-        "after #{maybe_humanize_date(after_date)}"
-
-      {nil, before_date} ->
-        "before #{maybe_humanize_date(before_date)}"
-
-      {after_date, before_date} ->
-        "#{maybe_humanize_date(after_date)} to #{maybe_humanize_date(before_date)}"
-    end
-  end
+  defp on_this_page(_socket, _ids), do: :not_found
 
   defp append_to_page(socket, workorder) do
     %{page: page, async_page: async_page} = socket.assigns
@@ -918,7 +908,9 @@ defmodule LightningWeb.RunLive.Index do
           total_entries: page.total_entries + 1
       }
 
-    assign(socket,
+    socket
+    |> report_unknown_kills([workorder])
+    |> assign(
       async_page: AsyncResult.ok(async_page, new_page),
       page: new_page
     )
@@ -929,7 +921,9 @@ defmodule LightningWeb.RunLive.Index do
 
     updated_page = %{page | entries: update_workorder(page.entries, workorder)}
 
-    assign(socket,
+    socket
+    |> report_unknown_kills([workorder])
+    |> assign(
       async_page: AsyncResult.ok(async_page, updated_page),
       page: updated_page
     )
@@ -945,38 +939,5 @@ defmodule LightningWeb.RunLive.Index do
       end
     end)
     |> Enum.reverse()
-  end
-
-  defp pagination_path(socket, project, route_params, filters \\ %{}) do
-    Routes.project_run_index_path(
-      socket,
-      :index,
-      project,
-      Keyword.merge(route_params, filters: filters)
-    )
-  end
-
-  defp maybe_show_selected_workorder_details(socket) do
-    %{filters_changeset: changeset} = socket.assigns
-
-    if workorder_id = Ecto.Changeset.get_change(changeset, :workorder_id) do
-      send_update(LightningWeb.RunLive.WorkOrderComponent,
-        id: workorder_id,
-        show_details: true,
-        show_prev_runs: true
-      )
-    end
-
-    socket
-  end
-
-  def validate_bulk_rerun(selected_work_orders, %{id: project_id}) do
-    with {:error, _reason, %{text: error_message}} <-
-           WorkOrders.limit_run_creation(
-             project_id,
-             length(selected_work_orders)
-           ) do
-      "invalid-rerun:#{error_message}"
-    end
   end
 end

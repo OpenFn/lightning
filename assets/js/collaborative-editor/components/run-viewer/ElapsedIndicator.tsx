@@ -5,7 +5,7 @@ interface ElapsedIndicatorProps {
   finishedAt: string | null;
 }
 
-// Ported from assets/js/hooks/ElapsedIndicator.ts
+// Ported from the ElapsedIndicator hook History's old work orders page used.
 function formatParts(elapsedTimeMs: number): [number, string] {
   if (elapsedTimeMs < 1000) {
     return [elapsedTimeMs, 'ms'];

@@ -718,16 +718,7 @@ defmodule Lightning.WorkOrders do
     |> Repo.all()
   end
 
-  def get_last_runs_steps_with_dataclips(workorders, jobs) do
-    job_ids = Enum.map(jobs, & &1.id)
-
-    workorders
-    |> Enum.map(& &1.id)
-    |> last_run_steps_query(job_ids, non_wiped_dataclip?: true)
-    |> Repo.all()
-  end
-
-  defp last_run_steps_query(workorder_ids, job_ids, opts \\ []) do
+  defp last_run_steps_query(workorder_ids, job_ids) do
     last_runs_query =
       from(r in Run,
         where: r.work_order_id in ^workorder_ids,
@@ -750,15 +741,6 @@ defmodule Lightning.WorkOrders do
       order_by: [asc: wo.inserted_at],
       select: %{rs | step: s, run: r}
     )
-    |> then(fn query ->
-      if Keyword.get(opts, :non_wiped_dataclip?) do
-        query
-        |> join(:inner, [rs, _r, s, _wo, _lr], d in assoc(s, :input_dataclip))
-        |> where([_rs, _r, _s, _wo, _lr, d], is_nil(d.wiped_at))
-      else
-        query
-      end
-    end)
   end
 
   @doc """
