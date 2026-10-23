@@ -27,11 +27,11 @@ defmodule LightningWeb.ChannelProxyPlug do
   @behaviour Plug
 
   import Plug.Conn
-  import Phoenix.Controller, only: [json: 2]
 
   alias Lightning.Channels
   alias Lightning.Channels.PersistencePolicy
   alias Lightning.Projects.Environment
+  alias LightningWeb.API.Problem
   alias LightningWeb.Auth
 
   require Logger
@@ -95,11 +95,11 @@ defmodule LightningWeb.ChannelProxyPlug do
        }}
     else
       :error ->
-        conn = error_response(conn, :not_found, "Not Found")
+        conn = Problem.halt(conn, Problem.new(:not_found))
         {conn, %{outcome: :invalid_uuid, status: conn.status}}
 
       :not_found ->
-        conn = error_response(conn, :not_found, "Not Found")
+        conn = Problem.halt(conn, Problem.new(:not_found))
         {conn, %{outcome: :unknown_channel, status: conn.status}}
     end
   end
@@ -117,7 +117,7 @@ defmodule LightningWeb.ChannelProxyPlug do
               forward_request(conn, channel, rest, matched_auth)
 
             {:unauthorized, conn} ->
-              error_response(conn, :unauthorized, "Unauthorized")
+              Auth.refuse(conn, channel.client_webhook_auth_methods)
           end
 
         {result,
@@ -143,7 +143,7 @@ defmodule LightningWeb.ChannelProxyPlug do
         handle_credential_error(conn, channel, reason)
 
       {:error, _} ->
-        error_response(conn, :internal_server_error, "Internal Server Error")
+        Problem.halt(conn, Problem.new(:internal))
     end
   end
 
@@ -395,19 +395,15 @@ defmodule LightningWeb.ChannelProxyPlug do
           event_attrs
         )
 
-        error_response(conn, :bad_gateway, "Bad Gateway")
+        Problem.halt(conn, Problem.new(:bad_gateway))
 
       {:error, _} ->
         Logger.error(
           "Failed to create snapshot for credential error on channel #{channel.id}"
         )
 
-        error_response(conn, :bad_gateway, "Bad Gateway")
+        Problem.halt(conn, Problem.new(:bad_gateway))
     end
-  end
-
-  defp error_response(conn, status, message) do
-    conn |> put_status(status) |> json(%{"error" => message}) |> halt()
   end
 
   defp classify_credential_error(:environment_not_found),
