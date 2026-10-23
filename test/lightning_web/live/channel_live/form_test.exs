@@ -340,6 +340,31 @@ defmodule LightningWeb.ChannelLive.FormTest do
     end
 
     @tag role: :editor
+    test "saving a channel another request changed flashes and returns to the list",
+         %{conn: conn, project: project} do
+      channel = insert(:channel, project: project, name: "old-name")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/#{channel.id}/edit")
+
+      Repo.query!(
+        "UPDATE channels SET lock_version = lock_version + 1 WHERE id = $1",
+        [Ecto.UUID.dump!(channel.id)]
+      )
+
+      view
+      |> form("#channel-form-#{channel.id}", channel: %{name: "updated-name"})
+      |> render_submit()
+
+      assert_patch(view, ~p"/projects/#{project.id}/channels")
+
+      assert render(view) =~
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
+
+      assert Channels.get_channel!(channel.id).name == "old-name"
+    end
+
+    @tag role: :editor
     test "edit form shows available auth methods and credentials", %{
       conn: conn,
       project: project,

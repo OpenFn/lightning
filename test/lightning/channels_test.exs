@@ -496,7 +496,8 @@ defmodule Lightning.ChannelsTest do
       assert reloaded.destination_auth_method == nil
     end
 
-    test "returns stale error on lock_version conflict", %{user: user} do
+    test "a channel another request changed is a concurrent edit, not a changeset",
+         %{user: user} do
       channel = insert(:channel)
 
       # Simulate concurrent update by updating lock_version in DB
@@ -506,12 +507,12 @@ defmodule Lightning.ChannelsTest do
           set: [lock_version: channel.lock_version + 1]
         )
 
-      assert {:error, changeset} =
+      assert {:error, :concurrent_edit} =
                Channels.update_channel(channel, %{name: "stale-update"},
                  actor: user
                )
 
-      assert changeset.errors[:lock_version]
+      assert Lightning.Repo.reload(channel).name == channel.name
     end
   end
 

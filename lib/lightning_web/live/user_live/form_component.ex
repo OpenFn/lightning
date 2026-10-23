@@ -69,6 +69,12 @@ defmodule LightningWeb.UserLive.FormComponent do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
+
+      {:error, :concurrent_edit} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, save_error_message(:concurrent_edit))
+         |> push_navigate(to: socket.assigns.return_to)}
     end
   end
 

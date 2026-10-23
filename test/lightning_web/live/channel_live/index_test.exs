@@ -4,6 +4,7 @@ defmodule LightningWeb.ChannelLive.IndexTest do
   import Ecto.Query
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Lightning.RaceHelpers
 
   alias Lightning.Auditing.Audit
   alias Lightning.Channels
@@ -204,6 +205,37 @@ defmodule LightningWeb.ChannelLive.IndexTest do
       view
       |> element("#toggle-control-#{channel.id}")
       |> render_click()
+
+      assert Channels.get_channel!(channel.id).enabled == true
+    end
+
+    @tag role: :editor
+    test "toggling a channel another request changed flashes and leaves it as it was",
+         %{conn: conn, project: project} do
+      channel =
+        insert(:channel, project: project, name: "toggle-me", enabled: true)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      after_first_query(
+        "channels",
+        channel.id,
+        fn id ->
+          Repo.query!(
+            "UPDATE channels SET lock_version = lock_version + 1 WHERE id = $1",
+            [id]
+          )
+        end,
+        view.pid
+      )
+
+      html =
+        view
+        |> element("#toggle-control-#{channel.id}")
+        |> render_click()
+
+      assert html =~
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
 
       assert Channels.get_channel!(channel.id).enabled == true
     end
