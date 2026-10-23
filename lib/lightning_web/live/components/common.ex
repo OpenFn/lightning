@@ -277,33 +277,6 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :id, :string, required: true
-  attr :version, :string, required: true
-  attr :tooltip, :string, required: false
-
-  def snapshot_version_chip(assigns) do
-    styles =
-      if assigns.version == "latest",
-        do: "bg-primary-100 text-primary-800",
-        else: "bg-yellow-100 text-yellow-800"
-
-    has_tooltip? = Map.has_key?(assigns, :tooltip)
-
-    assigns = assign(assigns, has_tooltip?: has_tooltip?, styles: styles)
-
-    ~H"""
-    <div id={"#{@id}-container"} class="flex items-middle text-sm font-normal">
-      <span
-        id={@id}
-        {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": @tooltip], else: []}
-        class={"inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium #{@styles}"}
-      >
-        {@version}
-      </span>
-    </div>
-    """
-  end
-
   # The release shown under the logo: the commit for an edge build, else the label.
   def release_label do
     case Lightning.release() do
@@ -612,37 +585,6 @@ defmodule LightningWeb.Components.Common do
         {"transition ease-in duration-300", "transform opacity-100 scale-100",
          "transform opacity-0 scale-95"}
     )
-  end
-
-  attr :type, :atom,
-    required: true,
-    values: [:step_result, :http_request, :global, :saved_input]
-
-  def dataclip_type_pill(assigns) do
-    base_classes = ~w[
-      px-2 py-1 rounded-full inline-block text-sm font-mono
-    ]
-
-    class =
-      base_classes ++
-        case assigns[:type] do
-          :step_result -> ~w[bg-purple-500 text-purple-900]
-          :http_request -> ~w[bg-green-500 text-green-900]
-          :global -> ~w[bg-blue-500 text-blue-900]
-          :saved_input -> ~w[bg-yellow-500 text-yellow-900]
-          # Dataclips stored by the removed Kafka trigger keep their type and are
-          # still displayed.
-          :kafka -> ~w[bg-green-500 text-green-900]
-          _other -> []
-        end
-
-    assigns = assign(assigns, class: class)
-
-    ~H"""
-    <div class={@class}>
-      {@type}
-    </div>
-    """
   end
 
   attr :sort_direction, :string,

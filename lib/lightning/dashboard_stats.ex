@@ -220,7 +220,7 @@ defmodule Lightning.DashboardStats do
   @doc """
   Start of the window every dashboard figure is bound to.
 
-  The history links in `LightningWeb.WorkflowLive.DashboardComponents` use it
+  The history links in `LightningWeb.WorkflowLive.Index` use it
   too, so a link opens the same window its count was taken from.
   """
   def window_start do

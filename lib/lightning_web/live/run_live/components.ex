@@ -49,45 +49,6 @@ defmodule LightningWeb.RunLive.Components do
     end
   end
 
-  slot :inner_block
-  attr :class, :string, default: ""
-  attr :rest, :global
-
-  def detail_list(assigns) do
-    ~H"""
-    <ul
-      {@rest}
-      role="list"
-      class={["flex-1 @5xl/viewer:flex-none", "divide-y divide-gray-200", @class]}
-    >
-      {render_slot(@inner_block)}
-    </ul>
-    """
-  end
-
-  slot :label do
-    attr :class, :string
-  end
-
-  slot :value
-
-  def list_item(assigns) do
-    ~H"""
-    <li class="px-0 py-2 xl:px-3 xl:py-3 2xl:px-4 2xl:py-4">
-      <div class="flex justify-between items-baseline text-sm @md/viewer:text-base">
-        <%= for label <- @label do %>
-          <dt class={["font-medium items-center", label[:class]]}>
-            {render_slot(label)}
-          </dt>
-        <% end %>
-        <dd class="text-gray-900">
-          {render_slot(@value)}
-        </dd>
-      </div>
-    </li>
-    """
-  end
-
   attr :text, :string, required: true
   attr :classes, :string, required: true
 
@@ -131,28 +92,6 @@ defmodule LightningWeb.RunLive.Components do
         text: display_text_from_state(state),
         classes: Map.get(chip_styles, state)
       )
-
-    ~H"""
-    <.base_pill text={@text} classes={@classes} />
-    """
-  end
-
-  attr :state, :atom, required: true
-
-  @doc """
-  Renders a status pill for channel request states.
-  """
-  def channel_state_pill(%{state: state} = assigns) do
-    config = %{
-      pending: %{text: "In Progress", classes: "bg-blue-200 text-blue-800"},
-      success: %{text: "Success", classes: "bg-green-200 text-green-800"},
-      failed: %{text: "Failed", classes: "bg-red-200 text-red-800"},
-      timeout: %{text: "Timeout", classes: "bg-orange-200 text-orange-800"},
-      error: %{text: "Error", classes: "bg-red-200 text-red-800"}
-    }
-
-    %{text: text, classes: classes} = Map.fetch!(config, state)
-    assigns = assign(assigns, text: text, classes: classes)
 
     ~H"""
     <.base_pill text={@text} classes={@classes} />
@@ -311,37 +250,6 @@ defmodule LightningWeb.RunLive.Components do
       true ->
         Map.merge(params, %{v: snapshot_version})
     end
-  end
-
-  def loading_filler(assigns) do
-    ~H"""
-    <.detail_list class="animate-pulse">
-      <.list_item>
-        <:label>
-          <span class="inline-block bg-slate-500 rounded-full h-3 w-16">&nbsp;</span>
-        </:label>
-        <:value>
-          <span class="inline-block bg-slate-500 rounded-full h-3 w-24"></span>
-        </:value>
-      </.list_item>
-      <.list_item>
-        <:label>
-          <span class="inline-block bg-slate-500 rounded-full h-3 w-12">&nbsp;</span>
-        </:label>
-        <:value>
-          <span class="inline-block bg-slate-500 rounded-full h-3 w-12"></span>
-        </:value>
-      </.list_item>
-      <.list_item>
-        <:label>
-          <span class="inline-block bg-slate-500 rounded-full h-3 w-12">&nbsp;</span>
-        </:label>
-        <:value>
-          <span class="inline-block bg-slate-500 rounded-full h-3 w-24"></span>
-        </:value>
-      </.list_item>
-    </.detail_list>
-    """
   end
 
   attr :message, :string, required: true
