@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Slash-command skills (`/design`, `/diagnose`, `/qa`) in the global AI
+  assistant, and the assistant's conversation history is now stored as Apollo
+  returns it. Needs the matching Apollo release first.
+  [#5236](https://github.com/OpenFn/lightning/pull/5236)
 - AI assistant diff blocks show the step with its adaptor logo. Clicking it
   opens the step and highlights the code the AI added.
 - GitHub sync connections using the v2 format now install `@v2` of the OpenFn

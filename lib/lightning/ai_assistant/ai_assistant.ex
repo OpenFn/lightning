@@ -656,6 +656,7 @@ defmodule Lightning.AiAssistant do
     - `:usage` - Map containing AI usage metrics (default: `%{}`)
     - `:meta` - Session metadata to update (default: keeps existing)
     - `:code` - Optional workflow code to attach to the message
+    - `:apollo_history` - Apollo's history to store on the session (default: keeps existing)
 
   ## Returns
 
@@ -668,6 +669,7 @@ defmodule Lightning.AiAssistant do
     usage = Keyword.get(opts, :usage, %{})
     meta = Keyword.get(opts, :meta)
     code = Keyword.get(opts, :code)
+    apollo_history = Keyword.get(opts, :apollo_history)
 
     message_attrs = prepare_message_attrs(message_attrs, session, code)
 
@@ -678,7 +680,7 @@ defmodule Lightning.AiAssistant do
       ChatMessage.changeset(%ChatMessage{}, message_attrs)
     )
     |> Multi.update(:session, fn %{message: _message} ->
-      update_session_meta(session, meta)
+      update_session_meta(session, meta, apollo_history)
     end)
     |> Multi.merge(&maybe_increment_ai_usage/1)
     |> Multi.run(:enqueue_if_user_message, &enqueue_user_message/2)
@@ -734,13 +736,18 @@ defmodule Lightning.AiAssistant do
     end
   end
 
-  defp update_session_meta(session, nil),
-    do: ChatSession.meta_changeset(session, %{meta: session.meta})
+  defp update_session_meta(session, meta, apollo_history) do
+    attrs =
+      %{meta: Map.merge(session.meta || %{}, meta || %{})}
+      |> put_apollo_history(apollo_history)
 
-  defp update_session_meta(session, meta) do
-    merged_meta = Map.merge(session.meta || %{}, meta)
-    ChatSession.meta_changeset(session, %{meta: merged_meta})
+    ChatSession.meta_changeset(session, attrs)
   end
+
+  defp put_apollo_history(attrs, history) when is_list(history),
+    do: Map.put(attrs, :apollo_history, history)
+
+  defp put_apollo_history(attrs, _history), do: attrs
 
   defp enqueue_user_message(_repo, %{message: message}) do
     if message.role == :user && message.status == :pending do
@@ -978,6 +985,7 @@ defmodule Lightning.AiAssistant do
     workflow_yaml = Keyword.get(opts, :workflow_yaml)
     page = Keyword.get(opts, :page)
     attachments = Keyword.get(opts, :attachments, [])
+    skill = Keyword.get(opts, :skill)
     history = build_history(session)
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
@@ -990,7 +998,8 @@ defmodule Lightning.AiAssistant do
            history: history,
            meta: meta,
            metrics_opt_in: metrics_opt_in,
-           attachments: attachments
+           attachments: attachments,
+           skill: skill
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
@@ -1167,7 +1176,12 @@ defmodule Lightning.AiAssistant do
     case acc do
       %{complete: payload} when is_map(payload) ->
         {message_attrs, opts} = message_builder.(payload)
-        save_message(session, message_attrs, opts)
+
+        save_message(
+          session,
+          message_attrs,
+          Keyword.put(opts, :apollo_history, payload["history"])
+        )
 
       _ ->
         save_partial_response(session, acc)
@@ -1857,6 +1871,10 @@ defmodule Lightning.AiAssistant do
 
   defp extract_global_workflow_yaml(_), do: nil
 
+  defp build_history(%{apollo_history: history}) when is_list(history),
+    do: history
+
+  # Sessions from before Apollo's history was stored.
   defp build_history(session) do
     messages = session.messages || []
 

@@ -137,6 +137,7 @@ export const createSessionContextStore = (
       workflow_template: null,
       suppressEnableTriggerWarning: false,
       limits: {},
+      aiSkills: [],
       isNewWorkflow,
       isLoading: false,
       error: null,
@@ -209,6 +210,7 @@ export const createSessionContextStore = (
         draft.suppressEnableTriggerWarning =
           sessionContext.suppress_enable_trigger_warning;
         draft.limits = sessionContext.limits;
+        draft.aiSkills = sessionContext.ai_skills;
         draft.isLoading = false;
         draft.error = null;
         draft.lastUpdated = Date.now();

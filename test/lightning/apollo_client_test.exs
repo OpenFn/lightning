@@ -239,6 +239,7 @@ defmodule Lightning.ApolloClientTest do
         decoded = Jason.decode!(body)
         refute Map.has_key?(decoded, "workflow_yaml")
         refute Map.has_key?(decoded, "page")
+        refute Map.has_key?(decoded, "skill")
         assert decoded["options"] == %{"stream" => true}
         assert decoded["content"] == "Hello"
         assert decoded["history"] == []
@@ -334,6 +335,22 @@ defmodule Lightning.ApolloClientTest do
       end)
 
       {:ok, _} = ApolloClient.global_chat_stream("hi")
+    end
+
+    test "names the skill and leaves its command in the content" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        decoded = Jason.decode!(env.body)
+        assert decoded["skill"] == %{"name" => "diagnose"}
+        assert decoded["content"] == "/diagnose why did this fail?"
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} =
+        ApolloClient.global_chat_stream("/diagnose why did this fail?",
+          skill: "diagnose"
+        )
     end
   end
 
