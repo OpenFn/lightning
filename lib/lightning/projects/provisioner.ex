@@ -28,7 +28,6 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Services.CollectionHook
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.ProjectRepoConnection
-  alias Lightning.VersionControl.VersionControlUsageLimiter
 
   alias Lightning.Validators
   alias Lightning.Workflows
@@ -43,12 +42,18 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkflowVersions
 
+  require Logger
+
   @doc """
   Import a project document into the database.
 
   Upserts the project and the associations carried in the document
   (workflows, project credentials, collections) inside a single transaction,
   then fires audit, version-bump, and snapshot side effects.
+
+  Returns `{:error, :concurrent_edit}`, with nothing written, when another
+  request changed a workflow or channel the document writes, or deleted any
+  row it writes, while the import ran, unless `:allow_stale` is set.
 
   Generic pipeline shared by YAML provisioning, CLI deploys, GitHub syncs,
   and sandbox merges. It only acts on what the document contains —
@@ -75,10 +80,10 @@ defmodule Lightning.Projects.Provisioner do
           map(),
           keyword()
         ) ::
-          {:error,
-           Ecto.Changeset.t(Project.t())
-           | Lightning.Extensions.UsageLimiting.message()}
-          | {:ok, Project.t()}
+          {:ok, Project.t()}
+          | {:error, Ecto.Changeset.t(Project.t())}
+          | {:error, :concurrent_edit}
+          | Lightning.Extensions.UsageLimiting.error()
   def import_document(project, user_or_repo_connection, data, opts \\ [])
 
   def import_document(nil, %User{} = user, data, opts) do
@@ -93,53 +98,55 @@ defmodule Lightning.Projects.Provisioner do
 
     release = Keyword.get(opts, :release)
 
+    project_changeset =
+      build_import_changeset(project, user_or_repo_connection, data)
+
     result =
-      Repo.transact(fn ->
-        with :ok <-
-               maybe_limit_provisioning(project.id, user_or_repo_connection),
-             project_changeset <-
-               build_import_changeset(project, user_or_repo_connection, data),
-             edges_to_cleanup <-
-               edges_referencing_deleted_jobs(project_changeset),
-             :ok <- release_paths_of_soft_deleted_workflows(project_changeset),
-             {:ok, %{workflows: workflows} = project} <-
-               Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
-             :ok <- check_credential_scoping(project, project_changeset),
-             :ok <- cleanup_orphaned_edges(edges_to_cleanup),
-             :ok <-
-               disable_triggers_for_soft_deleted_workflows(project_changeset),
-             :ok <- release_paths_of_hidden_workflows(project),
-             :ok <- handle_collection_deletion(project_changeset),
-             updated_project <- preload_dependencies(project),
-             {:ok, _changes} <-
-               audit_workflows(project_changeset, user_or_repo_connection),
-             {:ok, _changes} <-
-               audit_channels(project_changeset, user_or_repo_connection),
-             {:ok, _changes} <-
-               update_workflows_version(
-                 project_changeset,
-                 updated_project.workflows
-               ),
-             {:ok, _changes} <-
-               create_snapshots(
-                 project_changeset,
-                 updated_project.workflows,
-                 user_or_repo_connection,
-                 release
-               ) do
-          Enum.each(workflows, &Workflows.Events.workflow_updated/1)
+      with :ok <-
+             maybe_limit_provisioning(project_changeset, user_or_repo_connection) do
+        Repo.transact(fn ->
+          with edges_to_cleanup <-
+                 edges_referencing_deleted_jobs(project_changeset),
+               :ok <- release_paths_of_soft_deleted_workflows(project_changeset),
+               {:ok, %{workflows: workflows} = project} <-
+                 write_document(project_changeset, allow_stale),
+               :ok <- check_credential_scoping(project, project_changeset),
+               :ok <- cleanup_orphaned_edges(edges_to_cleanup),
+               :ok <-
+                 disable_triggers_for_soft_deleted_workflows(project_changeset),
+               :ok <- release_paths_of_hidden_workflows(project),
+               :ok <- handle_collection_deletion(project_changeset),
+               updated_project <- preload_dependencies(project),
+               {:ok, _changes} <-
+                 audit_workflows(project_changeset, user_or_repo_connection),
+               {:ok, _changes} <-
+                 audit_channels(project_changeset, user_or_repo_connection),
+               {:ok, _changes} <-
+                 update_workflows_version(
+                   project_changeset,
+                   updated_project.workflows
+                 ),
+               {:ok, _changes} <-
+                 create_snapshots(
+                   project_changeset,
+                   updated_project.workflows,
+                   user_or_repo_connection,
+                   release
+                 ) do
+            Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
-          workflows
-          |> Enum.filter(& &1.deleted_at)
-          |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
+            workflows
+            |> Enum.filter(& &1.deleted_at)
+            |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
 
-          Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
-            Lightning.Projects.Project.sandbox?(updated_project)
-          )
+            Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
+              Lightning.Projects.Project.sandbox?(updated_project)
+            )
 
-          {:ok, updated_project}
-        end
-      end)
+            {:ok, updated_project}
+          end
+        end)
+      end
 
     case result do
       {:ok, updated_project} ->
@@ -151,9 +158,26 @@ defmodule Lightning.Projects.Provisioner do
 
         {:ok, updated_project}
 
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:error,
+         changeset
+         |> report_destination_credentials()
+         |> report_project_credential_links()}
+
       error ->
         error
     end
+  end
+
+  defp write_document(changeset, allow_stale) do
+    Repo.insert_or_update(changeset, allow_stale: allow_stale)
+  rescue
+    # Ecto hands `allow_stale` down to the workflows, jobs and channels this
+    # changeset writes through cast_assoc, but not `stale_error_field`, so a
+    # nested row another request changed can only be reported by its raise.
+    e in Ecto.StaleEntryError ->
+      Logger.info("Import lost a race: #{Exception.message(e)}")
+      {:error, :concurrent_edit}
   end
 
   @doc """
@@ -305,18 +329,81 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   defp add_channel_credential_error(channel_cs) do
-    message = Scoping.violation_message(:project_credential_id)
+    add_error(
+      channel_cs,
+      :destination_credential_id,
+      Scoping.violation_message(:project_credential_id),
+      code: :credential_not_allowed
+    )
+  end
 
-    case get_change(channel_cs, :destination_auth_method) do
+  # The request names a channel's credential as `destination_credential_id`,
+  # which `channel_changeset/2` turns into a `destination_auth_method`, so that
+  # child's errors are reported on the key the request sent.
+  defp report_destination_credentials(changeset) do
+    case get_change(changeset, :channels) do
       nil ->
-        add_error(channel_cs, :project_credential_id, message)
+        changeset
 
-      auth_method_cs ->
+      channels ->
         put_change(
-          channel_cs,
-          :destination_auth_method,
-          add_error(auth_method_cs, :project_credential_id, message)
+          changeset,
+          :channels,
+          Enum.map(channels, &lift_destination_errors/1)
         )
+    end
+  end
+
+  defp lift_destination_errors(
+         %Ecto.Changeset{
+           changes: %{
+             destination_auth_method: %Ecto.Changeset{errors: [_ | _]} = method
+           }
+         } = channel_cs
+       ) do
+    lifted =
+      Enum.map(method.errors, fn {_field, error} ->
+        {:destination_credential_id, error}
+      end)
+
+    %{channel_cs | errors: lifted ++ channel_cs.errors, valid?: false}
+    |> put_change(:destination_auth_method, %{method | errors: [], valid?: true})
+  end
+
+  defp lift_destination_errors(channel_cs), do: channel_cs
+
+  # A link `maybe_add_project_credentials/2` builds carries no params, and the
+  # links aren't in the request's order, so its one possible error, an id
+  # another link already holds, is reported on the project at the position the
+  # request gave that id.
+  defp report_project_credential_links(changeset) do
+    case get_change(changeset, :project_credentials) do
+      nil ->
+        changeset
+
+      links ->
+        request_ids =
+          Enum.map(changeset.params["project_credentials"], & &1["id"])
+
+        {links, changeset} =
+          Enum.map_reduce(links, changeset, fn
+            %{valid?: true} = link, project_cs ->
+              {link, project_cs}
+
+            link, project_cs ->
+              index = Enum.find_index(request_ids, &(&1 == link.data.id))
+
+              {%{link | errors: [], valid?: true},
+               add_error(
+                 project_cs,
+                 :project_credentials,
+                 "has already been taken",
+                 key: ["project_credentials", index, "id"],
+                 code: :taken
+               )}
+          end)
+
+        put_change(changeset, :project_credentials, links)
     end
   end
 
@@ -566,7 +653,7 @@ defmodule Lightning.Projects.Provisioner do
           changeset
 
         {:error, _reason, %{text: message}} ->
-          add_error(changeset, :id, message)
+          add_error(changeset, :id, message, code: :exceeds_limit)
       end
     end)
     |> then(fn changeset ->
@@ -575,7 +662,7 @@ defmodule Lightning.Projects.Provisioner do
           changeset
 
         {:error, _reason, %{text: message}} ->
-          add_error(changeset, :id, message)
+          add_error(changeset, :id, message, code: :exceeds_limit)
       end
     end)
   end
@@ -731,6 +818,7 @@ defmodule Lightning.Projects.Provisioner do
     collection
     |> cast(attrs, [:id, :name, :delete])
     |> validate_required([:id])
+    |> unique_constraint(:id, name: :collections_pkey)
     |> maybe_mark_for_deletion()
     |> validate_extraneous_params()
     |> Collection.validate()
@@ -748,6 +836,7 @@ defmodule Lightning.Projects.Provisioner do
       :delete
     ])
     |> validate_required([:id, :name, :destination_url])
+    |> unique_constraint(:id, name: :channels_pkey)
     |> block_channel_deletion()
     |> cast_assoc(:destination_auth_method, with: &ChannelAuthMethod.changeset/2)
     |> validate_extraneous_params()
@@ -764,7 +853,8 @@ defmodule Lightning.Projects.Provisioner do
         changeset,
         :delete,
         "channel deletion is not supported via the provisioning API; " <>
-          "delete from the dashboard instead"
+          "delete from the dashboard instead",
+        code: :not_supported
       )
     else
       changeset
@@ -888,7 +978,7 @@ defmodule Lightning.Projects.Provisioner do
 
       if is_map(attrs) and
            (Map.has_key?(attrs, key) or Map.has_key?(attrs, field)) do
-        add_error(acc, :base, "extraneous parameters: %{params}", params: key)
+        add_unknown_key(acc, key)
       else
         acc
       end
@@ -916,7 +1006,9 @@ defmodule Lightning.Projects.Provisioner do
 
       {true, others} when map_size(others) > 0 ->
         changeset
-        |> add_error(:delete, "cannot change or add a record while deleting")
+        |> add_error(:delete, "cannot change or add a record while deleting",
+          code: :deleting
+        )
 
       _ ->
         changeset
@@ -932,13 +1024,19 @@ defmodule Lightning.Projects.Provisioner do
 
       {true, others} when map_size(others) > 0 ->
         changeset
-        |> add_error(:delete, "cannot change or add a record while deleting")
+        |> add_error(:delete, "cannot change or add a record while deleting",
+          code: :deleting
+        )
 
       _ ->
         changeset
     end
   end
 
+  # New links are filtered, then put ahead of the stored ones, so their
+  # positions aren't the request's. A name that matches none of the caller's
+  # credentials is reported on the project, at the link's position in the
+  # request.
   defp maybe_add_project_credentials(changeset, user_or_repo_connection) do
     credentials_params = changeset.params["project_credentials"]
 
@@ -951,38 +1049,34 @@ defmodule Lightning.Projects.Provisioner do
       existing_project_credential_ids =
         Enum.map(changeset.data.project_credentials, fn pc -> pc.id end)
 
-      new_credential_params =
-        Enum.filter(credentials_params, fn cred_params ->
+      {new_links, changeset} =
+        credentials_params
+        |> Enum.with_index()
+        # Keeps only unlinked items the caller owns. An item already linked, or
+        # an unlinked one naming another owner, is skipped with no error and the
+        # request still answers 201, as kit's sync sends links it doesn't own.
+        |> Enum.filter(fn {cred_params, _index} ->
           cred_params["id"] not in existing_project_credential_ids and
             cred_params["owner"] == user_or_repo_connection.email
         end)
+        |> Enum.flat_map_reduce(changeset, fn {cred_params, index}, acc ->
+          case find_credential_by_name(user_credentials, cred_params["name"]) do
+            nil ->
+              {[],
+               add_error(acc, :project_credentials, "names nothing you can see",
+                 key: ["project_credentials", index, "name"],
+                 code: :not_found
+               )}
 
-      new_project_creds_to_add =
-        Enum.map(new_credential_params, fn cred_params ->
-          # The stored name went through `validate_name/3` and the spec body
-          # never did. Without normalising both sides, a spec carrying a
-          # decomposed accent is refused with an error naming a credential the
-          # user can see on screen.
-          wanted = Validators.normalize_name_for_match(cred_params["name"])
-
-          credential =
-            Enum.find(user_credentials, fn cred ->
-              Validators.normalize_name_for_match(cred.name) == wanted
-            end)
-
-          if credential do
-            change(%ProjectCredential{
-              id: cred_params["id"],
-              credential_id: credential.id
-            })
-          else
-            change(%ProjectCredential{
-              id: cred_params["id"]
-            })
-            |> add_error(
-              :credential,
-              "No credential found with name #{cred_params["name"]}"
-            )
+            credential ->
+              {[
+                 %ProjectCredential{
+                   id: cred_params["id"],
+                   credential_id: credential.id
+                 }
+                 |> change()
+                 |> unique_constraint(:id, name: :project_credentials_pkey)
+               ], acc}
           end
         end)
 
@@ -992,11 +1086,22 @@ defmodule Lightning.Projects.Provisioner do
       put_assoc(
         changeset,
         :project_credentials,
-        new_project_creds_to_add ++ project_credentials
+        new_links ++ project_credentials
       )
     else
       changeset
     end
+  end
+
+  # The stored name went through `validate_name/3` and the spec body never
+  # did. Without normalising both sides, a spec carrying a decomposed accent is
+  # refused, naming a credential the user can see on screen.
+  defp find_credential_by_name(credentials, name) do
+    wanted = Validators.normalize_name_for_match(name)
+
+    Enum.find(credentials, fn credential ->
+      Validators.normalize_name_for_match(credential.name) == wanted
+    end)
   end
 
   @doc """
@@ -1016,16 +1121,20 @@ defmodule Lightning.Projects.Provisioner do
 
     field_keys = changeset.types |> Map.keys() |> MapSet.new(&to_string/1)
 
-    extraneous_params = MapSet.difference(param_keys, field_keys)
-
-    if MapSet.size(extraneous_params) > 0 do
-      add_error(changeset, :base, "extraneous parameters: %{params}",
-        params: MapSet.to_list(extraneous_params) |> Enum.join(", ")
-      )
-    else
-      changeset
-    end
+    param_keys
+    |> MapSet.difference(field_keys)
+    |> Enum.sort()
+    |> Enum.reduce(changeset, &add_unknown_key(&2, &1))
   end
+
+  # A key from the request can't safely become an atom, so the error names it
+  # in `key:` instead of as its field.
+  defp add_unknown_key(changeset, key),
+    do:
+      add_error(changeset, :base, "is not accepted",
+        key: key,
+        code: :unknown_key
+      )
 
   # A hidden row must not keep a name reserved. Released whatever the trigger's
   # enabled state, and before the insert so one document can drop a workflow and
@@ -1088,9 +1197,17 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp maybe_limit_provisioning(project_id, %ProjectRepoConnection{}) do
-    VersionControlUsageLimiter.limit_github_sync(project_id)
+  # A limit is checked once the document is valid, so an invalid one is refused
+  # for what is wrong with it. The limiter's reason is kept, since each answers
+  # differently.
+  defp maybe_limit_provisioning(
+         %Ecto.Changeset{valid?: true, data: %Project{id: project_id}},
+         %ProjectRepoConnection{}
+       ) do
+    UsageLimiter.limit_action(%Action{type: :github_sync}, %Context{
+      project_id: project_id
+    })
   end
 
-  defp maybe_limit_provisioning(_project_id, %User{}), do: :ok
+  defp maybe_limit_provisioning(_changeset, _actor), do: :ok
 end
