@@ -2,6 +2,7 @@ defmodule LightningWeb.LayoutComponentsTest do
   @moduledoc false
   use LightningWeb.ConnCase
 
+  import Phoenix.Component, only: [sigil_H: 2]
   import Phoenix.LiveViewTest
   import Lightning.Factories
 
@@ -335,6 +336,34 @@ defmodule LightningWeb.LayoutComponentsTest do
       assert html =~ "Workflow"
       assert html =~ "/projects/123/w/abc"
       assert html =~ "hero-chevron-right"
+    end
+  end
+
+  describe "flash_bridge/1" do
+    test "hands a text message to the toaster and draws no banner" do
+      html =
+        render_component(&LayoutComponents.flash_bridge/1, %{
+          flash: %{"info" => "Saved"}
+        })
+
+      assert html =~ ~s(data-info="Saved")
+      refute html =~ "data-flash-kind"
+    end
+
+    test "keeps the old banner for a message that isn't text" do
+      message = %LightningWeb.DynamicComponent{
+        function: fn assigns -> ~H"<b>Saved</b>" end,
+        args: %{}
+      }
+
+      html =
+        render_component(&LayoutComponents.flash_bridge/1, %{
+          flash: %{"info" => message}
+        })
+
+      assert html =~ ~s(data-flash-kind="info")
+      assert html =~ "<b>Saved</b>"
+      refute html =~ "data-info"
     end
   end
 

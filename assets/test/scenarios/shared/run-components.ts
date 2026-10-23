@@ -8,7 +8,10 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { carriedMarker, expectAt, runStateOf } from '../steps';
 
 const flash = (page: Page, text: string | RegExp) =>
-  page.getByRole('alert').filter({ hasText: text });
+  page
+    .getByRole('alert')
+    .or(page.getByRole('status'))
+    .filter({ hasText: text });
 
 // What an outcome icon looks like: its colour, and its markup, which differs
 // from one icon to the next. The icon is the leftmost element in the row that
@@ -306,5 +309,8 @@ export async function S14(page: Page, icon: Locator, runCount: () => number) {
   await page.waitForTimeout(1500);
 
   expect(runCount()).toBe(before);
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  // An info toast is role=status, but so is the tooltip's own span
+  await expect(
+    page.getByRole('alert').or(page.locator('[data-ui="toast"]'))
+  ).toHaveCount(0);
 }

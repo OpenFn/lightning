@@ -140,7 +140,10 @@ function givenHistory(
 }
 
 const flash = (page: Page, text: string | RegExp) =>
-  page.getByRole('alert').filter({ hasText: text });
+  page
+    .getByRole('alert')
+    .or(page.getByRole('status'))
+    .filter({ hasText: text });
 
 // The runs of a work order that failed at "Load" after "Fetch" went well
 const failedRun = (): HistoryRunSeed => ({

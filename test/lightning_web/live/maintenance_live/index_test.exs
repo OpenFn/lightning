@@ -50,8 +50,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
 
       assert has_element?(
                live,
-               "p[role=alert][phx-value-key=info]",
-               "Adaptor refresh queued."
+               "#flash-bridge[data-info='Adaptor refresh queued.']"
              )
     end
 
@@ -70,8 +69,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
 
       assert has_element?(
                live,
-               "p[role=alert][phx-value-key=info]",
-               "Icon refresh complete"
+               "#flash-bridge[data-info^='Icon refresh complete']"
              )
     end
 
@@ -89,8 +87,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
 
       assert has_element?(
                live,
-               "p[role=alert][phx-value-key=error]",
-               "Icon refresh failed"
+               "#flash-bridge[data-error^='Icon refresh failed']"
              )
     end
   end

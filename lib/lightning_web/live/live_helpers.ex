@@ -16,63 +16,6 @@ defmodule LightningWeb.LiveHelpers do
   alias Phoenix.LiveView.JS
 
   attr :flash, :map, required: true
-  attr :myself, :string, default: nil
-
-  def live_info_block(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:id, fn -> Ecto.UUID.generate() end)
-      |> assign(:msg, Phoenix.Flash.get(assigns[:flash], :info))
-
-    ~H"""
-    <div
-      :if={@msg}
-      class="fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
-      id={@id}
-    >
-      <p
-        class="bg-blue-200 border-blue-300 border opacity-75 py-4 px-5 rounded-md drop-shadow-lg"
-        role="alert"
-        phx-click="lv:clear-flash"
-        phx-value-key="info"
-        phx-target={@myself}
-      >
-        {@msg}
-      </p>
-    </div>
-    """
-  end
-
-  attr :flash, :map, required: true
-  attr :myself, :string, default: nil
-
-  def live_error_block(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:myself, fn -> nil end)
-      |> assign_new(:id, fn -> Ecto.UUID.generate() end)
-      |> assign(:msg, Phoenix.Flash.get(assigns[:flash], :error))
-
-    ~H"""
-    <div
-      :if={@msg}
-      class="fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
-      id={@id}
-    >
-      <p
-        class="bg-red-300 border-red-400 text-red-900 border opacity-75 py-4 px-5 rounded-md drop-shadow-lg"
-        role="alert"
-        phx-click="lv:clear-flash"
-        phx-value-key="error"
-        phx-target={@myself}
-      >
-        {@msg}
-      </p>
-    </div>
-    """
-  end
-
-  attr :flash, :map, required: true
   slot :inner_block
 
   def live_nav_block(assigns) do

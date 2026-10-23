@@ -20,8 +20,7 @@
       />
     <% end %>
     <div class="flex-auto">
-      <Common.flash flash={@flash} kind={:info} />
-      <Common.flash flash={@flash} kind={:error} />
+      <LayoutComponents.flash_bridge flash={@flash} />
       <.live_nav_block flash={@flash}>
         {@inner_content}
       </.live_nav_block>

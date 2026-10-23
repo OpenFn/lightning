@@ -1898,9 +1898,7 @@ defmodule LightningWeb.ProjectLiveTest do
                "Enabled"
              )
 
-      view
-      |> element("[data-flash-kind='info']")
-      |> render_hook("lv:clear-flash")
+      render_hook(view, "lv:clear-flash", %{key: "info"})
 
       form_id = "#digest-#{authenticated_user_project_user.id}"
 

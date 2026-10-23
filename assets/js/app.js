@@ -31,6 +31,7 @@ import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar.cjs';
 
+import { mountFlash } from './design-system/flash';
 import { mountShell } from './design-system/shell';
 import * as Hooks from './hooks';
 import LogViewer from './log-viewer';
@@ -134,6 +135,8 @@ window.addEventListener('phx:page-loading-stop', () => {
 liveSocket.connect();
 // The design system's sidebar, outside the LiveView so it survives navigation
 mountShell(liveSocket);
+// LiveView's flash, drawn as the design system's toast on every page
+mountFlash();
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session

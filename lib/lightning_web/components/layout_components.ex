@@ -2,6 +2,7 @@ defmodule LightningWeb.LayoutComponents do
   @moduledoc false
   use LightningWeb, :html
 
+  alias LightningWeb.Components.Common
   alias LightningWeb.Components.Menu
   alias Phoenix.LiveView.JS
 
@@ -245,6 +246,33 @@ defmodule LightningWeb.LayoutComponents do
       data-props={@props}
     >
     </div>
+    """
+  end
+
+  attr :flash, :map, required: true
+
+  @doc """
+  Hands the page's flash to the design system's toaster, which app.js mounts
+  once outside the LiveView, so every page shows its messages the same way.
+  A message that isn't text keeps the old banner.
+  """
+  def flash_bridge(assigns) do
+    assigns =
+      assign(assigns,
+        info: Phoenix.Flash.get(assigns.flash, :info),
+        error: Phoenix.Flash.get(assigns.flash, :error)
+      )
+
+    ~H"""
+    <div
+      id="flash-bridge"
+      phx-hook="FlashBridge"
+      data-info={is_binary(@info) && @info}
+      data-error={is_binary(@error) && @error}
+    >
+    </div>
+    <Common.flash :if={!is_binary(@info)} flash={@flash} kind={:info} />
+    <Common.flash :if={!is_binary(@error)} flash={@flash} kind={:error} />
     """
   end
 

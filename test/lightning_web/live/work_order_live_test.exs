@@ -1947,7 +1947,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       })
 
       assert view
-             |> has_element?("[data-flash-kind='error']", "Runs limit exceeded")
+             |> has_element?("#flash-bridge[data-error='Runs limit exceeded']")
     end
 
     @tag role: :viewer

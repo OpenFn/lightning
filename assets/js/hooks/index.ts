@@ -48,6 +48,7 @@ export {
 };
 
 export { ReactComponent, HeexReactComponent } from '#/react/hooks';
+export { FlashBridge } from '#/design-system/flash';
 export { SidebarBridge } from '#/design-system/shell';
 
 export const TabIndent = {

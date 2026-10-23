@@ -17,8 +17,7 @@
       />
     <% end %>
     <div class="flex-auto">
-      <.live_info_block flash={@flash} />
-      <.live_error_block flash={@flash} />
+      <LayoutComponents.flash_bridge flash={@flash} />
       {@inner_content}
     </div>
   </div>
