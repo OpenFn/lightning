@@ -6,55 +6,50 @@ defmodule LightningWeb.API.WorkflowHealthController do
   health LiveView mounts. This is its own trust boundary — the LiveView's
   `on_mount` guards do not protect it, since a client can request any path.
   Access to the project is re-checked here, via the same policy the rest of the
-  app uses, so support users get in and soft-deleted projects don't.
+  app uses, so support users get in and a project scheduled for deletion is
+  refused.
 
   One action per chart, so a cheap chart isn't held up by an expensive one.
   """
   use LightningWeb, :controller
 
-  alias Lightning.Policies.Permissions
-  alias Lightning.Projects.Project
+  alias Ecto.Changeset
   alias Lightning.Workflows
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Problem
+  alias LightningWeb.API.Target
 
-  plug :authorize_workflow
-  # After :authorize_workflow so a 404 wins over a 400.
-  plug :validate_days
-  plug :validate_timezone when action in [:runs]
+  action_fallback FallbackController
 
-  def outcomes(conn, _params) do
-    json(
-      conn,
-      Workflows.Stats.outcomes(conn.assigns.workflow, conn.assigns.days_back)
-    )
+  def outcomes(conn, params) do
+    with {:ok, workflow} <- authorize(conn, params),
+         {:ok, days_back} <- fetch_days(params) do
+      json(conn, Workflows.Stats.outcomes(workflow, days_back))
+    end
   end
 
-  def error_signatures(conn, _params) do
-    json(
-      conn,
-      Workflows.Stats.error_signatures(
-        conn.assigns.workflow,
-        conn.assigns.days_back
-      )
-    )
+  def error_signatures(conn, params) do
+    with {:ok, workflow} <- authorize(conn, params),
+         {:ok, days_back} <- fetch_days(params) do
+      json(conn, Workflows.Stats.error_signatures(workflow, days_back))
+    end
   end
 
   # `vary` because this is the one action whose body depends on a request
   # header, and nothing between the browser and here would guess that.
-  def runs(conn, _params) do
-    conn
-    |> put_resp_header("vary", "x-timezone")
-    |> json(
-      Workflows.Stats.runs(
-        conn.assigns.workflow,
-        conn.assigns.days_back,
-        conn.assigns.timezone
-      )
-    )
+  def runs(conn, params) do
+    with {:ok, workflow} <- authorize(conn, params),
+         {:ok, days_back} <- fetch_days(params),
+         {:ok, timezone} <- fetch_timezone(conn) do
+      conn
+      |> put_resp_header("vary", "x-timezone")
+      |> json(Workflows.Stats.runs(workflow, days_back, timezone))
+    end
   end
 
-  # Closed set, string-matched — no free integer, no parse to defend.
+  # A closed set matched as strings, so there is no integer to parse.
   @days %{"1" => 1, "7" => 7, "30" => 30}
-  @default_days "7"
   @default_timezone "Etc/UTC"
 
   # CLDR's sentinel for a host clock it could not map to an IANA zone. A
@@ -62,17 +57,16 @@ defmodule LightningWeb.API.WorkflowHealthController do
   # as not telling us.
   @unknown_timezone "Etc/Unknown"
 
-  defp validate_days(conn, _opts) do
-    case Map.fetch(@days, conn.params["days"] || @default_days) do
-      {:ok, days_back} ->
-        assign(conn, :days_back, days_back)
+  @not_allowed {"is invalid", validation: :inclusion}
 
-      :error ->
-        conn
-        |> put_status(:bad_request)
-        |> json(%{error: "days must be one of 1, 7, 30"})
-        |> halt()
-    end
+  defp fetch_days(params) do
+    with {:ok, %{days: days}} <-
+           {%{days: "7"}, %{days: :string}}
+           |> Changeset.cast(params, [:days], empty_values: [])
+           |> Changeset.validate_inclusion(:days, Map.keys(@days))
+           |> Changeset.apply_action(:validate)
+           |> Errors.refuse_parameters(),
+         do: {:ok, Map.fetch!(@days, days)}
   end
 
   # The reader's timezone, because nothing in Lightning records one. The only
@@ -82,53 +76,44 @@ defmodule LightningWeb.API.WorkflowHealthController do
   #
   # Validated before it reaches the cache key, so `:workflow_stats` is keyed on
   # the tz database rather than on anything a header can carry.
-  defp validate_timezone(conn, _opts) do
+  defp fetch_timezone(conn) do
     case get_req_header(conn, "x-timezone") do
       [] ->
-        assign(conn, :timezone, @default_timezone)
+        {:ok, @default_timezone}
 
       [@unknown_timezone] ->
-        assign(conn, :timezone, @default_timezone)
+        {:ok, @default_timezone}
 
       [timezone] ->
         if Tzdata.zone_exists?(timezone),
-          do: assign(conn, :timezone, timezone),
-          else: reject_timezone(conn)
+          do: {:ok, timezone},
+          else: refuse_timezone()
 
       _ ->
-        reject_timezone(conn)
+        refuse_timezone()
     end
   end
 
-  defp reject_timezone(conn) do
-    conn
-    |> put_status(:bad_request)
-    |> json(%{error: "x-timezone must be an IANA timezone name"})
-    |> halt()
+  defp refuse_timezone do
+    {:error,
+     Problem.new(:invalid_header,
+       errors: [Errors.entry({:header, "x-timezone"}, @not_allowed)]
+     )}
   end
 
-  defp authorize_workflow(conn, _opts) do
-    %{"project_id" => project_id, "workflow_id" => workflow_id} = conn.params
+  defp authorize(conn, %{"project_id" => project_id, "workflow_id" => id}) do
+    Target.in_project(
+      conn.assigns.current_user,
+      project_id,
+      {:project_users, :access_project},
+      &fetch_workflow(&1, id)
+    )
+  end
 
-    with %_{} = user <- conn.assigns[:current_user],
-         {:ok, project_id} <- Ecto.UUID.cast(project_id),
-         %{project: project} = workflow <-
-           Workflows.get_workflow_for_project(
-             %Project{id: project_id},
-             workflow_id,
-             include: [:project]
-           ),
-         :ok <- Permissions.can(:project_users, :access_project, user, project) do
-      assign(conn, :workflow, workflow)
-    else
-      # 404 for every failure, not 403: a 403 would confirm the workflow exists
-      # to someone who can't see the project.
-      _ ->
-        conn
-        |> put_status(:not_found)
-        |> put_view(LightningWeb.ErrorView)
-        |> render(:"404")
-        |> halt()
+  defp fetch_workflow(project, id) do
+    case Workflows.get_workflow_for_project(project, id) do
+      nil -> {:error, :not_found}
+      workflow -> {:ok, workflow}
     end
   end
 end
