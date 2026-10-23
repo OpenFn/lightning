@@ -4,13 +4,19 @@ defmodule Lightning.Collections do
   """
   import Ecto.Query
 
+  alias Ecto.Changeset
   alias Ecto.Multi
 
+  alias Lightning.Accounts.User
+  alias Lightning.Collections.Audit
   alias Lightning.Collections.Collection
   alias Lightning.Collections.Item
+  alias Lightning.Config
   alias Lightning.Extensions.Message
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Run
+  alias Lightning.Scope
   alias Lightning.Services.CollectionHook
 
   @doc """
@@ -55,21 +61,9 @@ defmodule Lightning.Collections do
     Repo.all(query)
   end
 
-  @doc """
-  Looks up a collection by name across all projects.
-
-  Returns `{:error, :conflict}` when the name exists in more than one
-  project; the caller should then retry with `get_collection/2`.
-  """
-  @spec get_collection(String.t()) ::
-          {:ok, Collection.t()} | {:error, :not_found} | {:error, :conflict}
-  def get_collection(name) do
-    case Repo.all(from c in Collection, where: c.name == ^name) do
-      [] -> {:error, :not_found}
-      [collection] -> {:ok, collection}
-      [_ | _] -> {:error, :conflict}
-    end
-  end
+  @doc "The collection with primary key `id`, or `nil`."
+  @spec get_collection_by_id(Ecto.UUID.t()) :: Collection.t() | nil
+  def get_collection_by_id(id), do: Repo.get(Collection, id)
 
   @doc """
   Looks up a collection scoped to a specific project.
@@ -87,30 +81,85 @@ defmodule Lightning.Collections do
   end
 
   @doc """
-  Creates a new collection with the given attributes.
+  The collection `name` names for `subject`, among the collections it has
+  standing on: a user's standing is a project role or support access, a run's
+  is its own project. `project_id`, as the request sent it, narrows the search
+  to one project; one that isn't a UUID names nothing.
 
-  ## Parameters
+  A collection the subject has no standing on never counts, so neither
+  `{:error, :not_found}` nor `{:error, :ambiguous_name}` says anything about
+  projects it can't see. Whether the subject may act on the collection is still
+  the policy's call.
+  """
+  @spec resolve_collection(
+          User.t() | Run.t(),
+          String.t(),
+          String.t() | nil
+        ) ::
+          {:ok, Collection.t()} | {:error, :not_found | :ambiguous_name}
+  def resolve_collection(subject, name, project_id \\ nil) do
+    case named(name, project_id) do
+      nil -> {:error, :not_found}
+      query -> query |> standing_collections(subject) |> only_one()
+    end
+  end
 
-    - `attrs`: A map of attributes to create the collection.
+  defp only_one([]), do: {:error, :not_found}
+  defp only_one([collection]), do: {:ok, collection}
+  defp only_one([_ | _]), do: {:error, :ambiguous_name}
+
+  defp named(name, nil), do: from(c in Collection, where: c.name == ^name)
+
+  defp named(name, project_id) do
+    if Lightning.Validators.valid_uuid?(project_id),
+      do: from(c in named(name, nil), where: c.project_id == ^project_id)
+  end
+
+  defp standing_collections(query, %Run{} = run) do
+    project_id =
+      run |> Ecto.assoc([:work_order, :workflow]) |> select([w], w.project_id)
+
+    query |> where([c], c.project_id in subquery(project_id)) |> Repo.all()
+  end
+
+  defp standing_collections(query, %User{} = user) do
+    collections = Repo.all(query)
+    scopes = Scope.fetch_all(user, Enum.map(collections, & &1.project_id))
+
+    standing =
+      for {project_id, scope} <- scopes,
+          Scope.has_standing?(scope),
+          into: MapSet.new(),
+          do: project_id
+
+    Enum.filter(collections, &(&1.project_id in standing))
+  end
+
+  @doc """
+  Creates a collection, recording `actor` as having created it.
+
+  Returns `{:error, :exceeds_limit, message}`, and writes nothing, when the
+  collection hook refuses the create.
+
+  ## Options
+
+    * `:id` - The id to create the collection under, rather than a new one
 
   ## Examples
 
-      iex> create_collection(%{name: "New Collection", project_id: "a7895d29-02a9-42cd-845b-7ad893557c24"})
+      iex> create_collection(%{"name" => "patients", "project_id" => project_id}, actor)
       {:ok, %Collection{}}
 
-      iex> create_collection(%{name: nil, project_id: "a7895d29-02a9-42cd-845b-7ad893557c24"}})
+      iex> create_collection(%{"name" => nil, "project_id" => project_id}, actor)
       {:error, %Ecto.Changeset{}}
-
-  ## Returns
-
-    - `{:ok, %Collection{}}` on success.
-    - `{:error, %Ecto.Changeset{}}` on failure due to validation errors.
   """
-  @spec create_collection(map()) ::
+  @spec create_collection(map(), Lightning.Actor.t(), [{:id, Ecto.UUID.t()}]) ::
           {:ok, Collection.t()}
           | {:error, Ecto.Changeset.t()}
           | {:error, :exceeds_limit, Message.t()}
-  def create_collection(attrs) do
+  def create_collection(attrs, actor, opts \\ []) do
+    changeset = Collection.changeset(%Collection{id: opts[:id]}, attrs)
+
     Multi.new()
     |> Multi.run(:limiter, fn _repo, _changes ->
       case CollectionHook.handle_create(attrs) do
@@ -118,42 +167,68 @@ defmodule Lightning.Collections do
         {:error, :exceeds_limit, message} -> {:error, message}
       end
     end)
-    |> Multi.insert(:create, Collection.changeset(%Collection{}, attrs))
+    |> Multi.insert(:create, changeset)
+    |> Multi.insert(:audit, fn %{create: collection} ->
+      Audit.event("created", collection.id, actor, changeset)
+    end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{create: collection}} -> {:ok, collection}
-      {:error, :limiter, message, _changes} -> {:error, :exceeds_limit, message}
-      {:error, _op, changeset, _changes} -> {:error, changeset}
+      {:ok, %{create: collection}} ->
+        {:ok, collection}
+
+      {:error, :limiter, message, _changes} ->
+        {:error, :exceeds_limit, message}
+
+      {:error, :create, changeset, _changes} ->
+        {:error, changeset}
+
+      {:error, :audit, changeset, _changes} ->
+        raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
     end
   end
 
   @doc """
-  Updates an existing collection with the given attributes.
+  Renames a collection, recording `actor` as having renamed it. A write that
+  leaves the name as it was records nothing.
 
-  ## Parameters
-
-    - `collection`: The existing `%Collection{}` struct to update.
-    - `attrs`: A map of attributes to update the collection.
+  Returns `{:error, :concurrent_edit}` when another request deleted the
+  collection while this one ran.
 
   ## Examples
 
-      iex> update_collection(collection, %{name: "Updated Name"})
+      iex> update_collection(collection, %{"name" => "patients"}, actor)
       {:ok, %Collection{}}
 
-      iex> update_collection(collection, %{name: nil})
+      iex> update_collection(collection, %{"name" => nil}, actor)
       {:error, %Ecto.Changeset{}}
-
-  ## Returns
-
-    - `{:ok, %Collection{}}` on success.
-    - `{:error, %Ecto.Changeset{}}` on failure due to validation errors.
   """
-  @spec update_collection(Collection.t(), map()) ::
-          {:ok, Collection.t()} | {:error, Ecto.Changeset.t()}
-  def update_collection(collection, attrs) do
-    collection
-    |> Collection.changeset(attrs)
-    |> Repo.update()
+  @spec update_collection(Collection.t(), map(), Lightning.Actor.t()) ::
+          {:ok, Collection.t()} | {:error, Ecto.Changeset.t() | :concurrent_edit}
+  def update_collection(collection, attrs, actor) do
+    changeset = Collection.rename_changeset(collection, attrs)
+
+    Multi.new()
+    |> Multi.update(:update, changeset, stale_error_field: :id)
+    |> then(fn multi ->
+      case Audit.event("updated", collection.id, actor, changeset) do
+        :no_changes -> multi
+        event -> Multi.insert(multi, :audit, event)
+      end
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{update: collection}} ->
+        {:ok, collection}
+
+      {:error, :update, %Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
+      {:error, :update, changeset, _changes} ->
+        {:error, changeset}
+
+      {:error, :audit, changeset, _changes} ->
+        raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+    end
   end
 
   @spec delete_collection(Ecto.UUID.t()) ::
@@ -161,7 +236,7 @@ defmodule Lightning.Collections do
           | {:error, Ecto.Changeset.t()}
           | {:error, :not_found}
   def delete_collection(collection_id) do
-    case Repo.get(Collection, collection_id) do
+    case get_collection_by_id(collection_id) do
       nil ->
         {:error, :not_found}
 
@@ -203,28 +278,155 @@ defmodule Lightning.Collections do
     |> Repo.all()
   end
 
-  @spec put(Collection.t(), String.t(), String.t()) ::
-          :ok | {:error, Ecto.Changeset.t()}
-  def put(collection, key, value) do
-    case get(collection, key) do
-      nil ->
-        upsert_item(collection, %Item{collection_id: collection.id}, key, value)
+  @doc """
+  Every item `get_all/3` would find for `filters` and `key_pattern`, from
+  `filters`' cursor on and at most `filters`' `:limit` of them when it has one.
+  Items are read a page at a time, so that no transaction is held while the
+  caller consumes the stream.
+  """
+  @spec stream_all(Collection.t(), map(), String.t() | nil) :: Enumerable.t()
+  def stream_all(collection, filters, key_pattern \\ nil) do
+    {limit, filters} = Map.pop(filters, :limit)
+    max_page_size = Config.collections_stream_page_size()
+    page_size = if limit, do: min(limit, max_page_size), else: max_page_size
+    filters = Map.put(filters, :limit, page_size)
 
-      item ->
-        upsert_item(collection, item, key, value)
+    Map.get(filters, :cursor)
+    |> Stream.unfold(fn
+      :drained ->
+        nil
+
+      cursor ->
+        case get_all(collection, Map.put(filters, :cursor, cursor), key_pattern) do
+          [] -> nil
+          page when length(page) < page_size -> {page, :drained}
+          page -> {page, List.last(page).id}
+        end
+    end)
+    |> Stream.flat_map(& &1)
+    |> then(&if(limit, do: Stream.take(&1, limit), else: &1))
+  end
+
+  @doc """
+  Writes `value` under `key`. The item is validated before the collection hook
+  is asked about its size, so an invalid item is refused as invalid, never as
+  over a limit.
+
+  A bad value or a key that can't be stored is refused with one changeset
+  holding every error. The key's errors are on `:key`.
+  """
+  @spec put(Collection.t(), String.t(), term()) ::
+          :ok
+          | {:error, Changeset.t()}
+          | {:error, :exceeds_limit, Message.t()}
+  def put(collection, key, value) do
+    item = get(collection, key) || %Item{collection_id: collection.id}
+
+    changeset =
+      item
+      |> Item.value_changeset(%{value: value})
+      |> Item.key_changeset(%{key: key})
+
+    if changeset.valid?,
+      do: upsert_item(collection, changeset),
+      else: {:error, changeset}
+  end
+
+  @doc """
+  Writes every item of `items`, the request's list of
+  `%{"key" => _, "value" => _}` objects, in one transaction.
+
+  A list with any bad item is refused whole, writing nothing, with a changeset
+  whose errors carry each bad item's position in `items` as their `key:`. An
+  item is bad if it isn't an object or fails validation, or if an earlier item
+  already uses its key, and then the error names the earlier one. The
+  collection hook is asked about the size only once every item is valid.
+  """
+  @spec put_all(Collection.t(), term()) ::
+          {:ok, non_neg_integer()}
+          | {:error, Changeset.t()}
+          | {:error, :exceeds_limit, Message.t()}
+  def put_all(collection, items) do
+    with {:ok, items} <- validate_items(collection, items) do
+      insert_items(collection, items)
     end
   end
 
-  @spec put_all(Collection.t(), [{String.t(), String.t()}]) ::
-          {:ok, non_neg_integer()}
-          | {:error, :duplicate_key}
-          | {:error, :exceeds_limit, Message.t()}
-  def put_all(collection, kv_list) do
+  defp validate_items(collection, items) when is_list(items) do
+    {checked, _firsts} =
+      items
+      |> Enum.with_index()
+      |> Enum.map_reduce(%{}, fn {item, index}, firsts ->
+        key = request_key(item)
+        first = if key, do: Map.get(firsts, key)
+        firsts = if key, do: Map.put_new(firsts, key, index), else: firsts
+
+        {check_item(collection, item, index, first), firsts}
+      end)
+
+    case Enum.flat_map(checked, fn {_item, errors} -> errors end) do
+      [] -> {:ok, Enum.map(checked, fn {item, []} -> item end)}
+      errors -> refuse_items(errors)
+    end
+  end
+
+  defp validate_items(_collection, nil),
+    do: refuse_items(items: {"can't be blank", validation: :required})
+
+  defp validate_items(_collection, _items),
+    do:
+      refuse_items(
+        items: {"is invalid", validation: :cast, type: {:array, :map}}
+      )
+
+  defp request_key(%{"key" => key}) when is_binary(key), do: key
+  defp request_key(_item), do: nil
+
+  # `{item, errors}`, each error placed at this item's position by `key:`.
+  # `first` is the position of the earlier item holding the same key.
+  defp check_item(collection, item, index, first) when is_map(item) do
+    changeset =
+      Item.changeset(
+        %Item{collection_id: collection.id},
+        Map.take(item, ["key", "value"])
+      )
+
+    own =
+      for {field, {message, opts}} <- Enum.reverse(changeset.errors),
+          do: {:items, {message, [{:key, ["items", index, field]} | opts]}}
+
+    duplicate =
+      if first,
+        do: [
+          items:
+            {"names the same key as #/items/#{first}",
+             code: :duplicate, key: ["items", index, "key"]}
+        ],
+        else: []
+
+    {Changeset.apply_changes(changeset), own ++ duplicate}
+  end
+
+  defp check_item(_collection, _item, index, _first) do
+    {nil,
+     [
+       items:
+         {"is invalid", key: ["items", index], validation: :cast, type: :map}
+     ]}
+  end
+
+  # A changeset holds its errors newest first, as add_error leaves them.
+  defp refuse_items(errors) do
+    changeset = Changeset.change({%{}, %{items: {:array, :map}}})
+    {:error, %{changeset | errors: Enum.reverse(errors), valid?: false}}
+  end
+
+  defp insert_items(collection, items) do
     now = DateTime.utc_now()
 
     {item_list, {key_list, new_used_mem}} =
-      Enum.map_reduce(kv_list, {[], 0}, fn %{"key" => key, "value" => value},
-                                           {key_list, mem_used} ->
+      Enum.map_reduce(items, {[], 0}, fn %Item{key: key, value: value},
+                                         {key_list, mem_used} ->
         {
           %{
             collection_id: collection.id,
@@ -276,13 +478,6 @@ defmodule Lightning.Collections do
       {:error, :hook, message, _changes} -> {:error, :exceeds_limit, message}
       {:error, _op, changeset, _changes} -> {:error, changeset}
     end
-  rescue
-    e in Postgrex.Error ->
-      if e.postgres.code == :cardinality_violation do
-        {:error, :duplicate_key}
-      else
-        reraise e, __STACKTRACE__
-      end
   end
 
   @spec delete(Collection.t(), String.t()) :: :ok | {:error, :not_found}
@@ -347,39 +542,25 @@ defmodule Lightning.Collections do
     end
   end
 
-  defp upsert_item(
-         collection,
-         %Item{value: old_value} = item,
-         key,
-         value
-       ) do
+  defp upsert_item(collection, %Changeset{data: %Item{} = stored} = changeset) do
+    %Item{key: key, value: value} = Changeset.apply_changes(changeset)
+
+    increment_size =
+      if is_nil(stored.value),
+        do: byte_size(key) + byte_size(value),
+        else: byte_size(value) - byte_size(stored.value)
+
     Multi.new()
-    |> Multi.run(:increment_size, fn _repo, _changes ->
-      if is_nil(old_value) do
-        {:ok, byte_size(key) + byte_size(value)}
-      else
-        {:ok, byte_size(value) - byte_size(old_value)}
-      end
-    end)
-    |> Multi.run(:limiter, fn _repo, %{increment_size: increment_size} ->
+    |> Multi.run(:limiter, fn _repo, _changes ->
       handle_put_items(collection, increment_size)
     end)
-    |> Multi.insert(
-      :item,
-      fn _no_change ->
-        Item.changeset(item, %{
-          key: key,
-          value: value
-        })
-      end,
+    |> Multi.insert(:item, changeset,
       conflict_target: [:collection_id, :key],
-      on_conflict: [
-        set: [value: value, updated_at: DateTime.utc_now()]
-      ]
+      on_conflict: [set: [value: value, updated_at: DateTime.utc_now()]]
     )
     |> Multi.update_all(
       :collection,
-      fn %{item: %{collection_id: collection_id}, increment_size: increment_size} ->
+      fn %{item: %{collection_id: collection_id}} ->
         from(c in Collection,
           where: c.id == ^collection_id,
           update: [inc: ^[byte_size_sum: increment_size]]

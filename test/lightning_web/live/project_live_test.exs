@@ -7,6 +7,7 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.AccountsFixtures
   import Lightning.AdaptorTestHelpers
   import Lightning.Factories
+  import Lightning.RaceHelpers
   import LightningWeb.CredentialLiveHelpers
 
   import Lightning.ApplicationHelpers,
@@ -153,16 +154,14 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(index_live) =~ "Project created successfully"
 
       project_name = String.replace(@create_attrs.raw_name, " ", "-")
+      subject = "You now have access to \"#{project_name}\""
 
-      assert_email_sent(
-        to: [Swoosh.Email.Recipient.format(user_1)],
-        subject: "You now have access to \"#{project_name}\""
-      )
+      for user <- [user_1, user_2] do
+        recipient = Swoosh.Email.Recipient.format(user)
 
-      assert_email_sent(
-        to: [Swoosh.Email.Recipient.format(user_2)],
-        subject: "You now have access to \"#{project_name}\""
-      )
+        assert_received {:email,
+                         %Swoosh.Email{to: [^recipient], subject: ^subject}}
+      end
     end
 
     test "project owners can delete a project from the settings page",
@@ -1854,6 +1853,27 @@ defmodule LightningWeb.ProjectLiveTest do
       assert %{name: "dep-burundi-datafi"} = Repo.get!(Project, project.id)
     end
 
+    test "saving settings for a project deleted mid-save flashes and keeps the form",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      delete_project_mid_save(project.id, view.pid)
+
+      assert view
+             |> form("#project-settings-form", project: %{raw_name: "renamed"})
+             |> render_submit() =~
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
+
+      assert has_element?(view, "#project-settings-form")
+    end
+
     test "saving project settings with name that resolves to blank shows error",
          %{
            conn: conn,
@@ -2275,6 +2295,34 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view
              |> element("#toggle-mfa-switch")
              |> render_click() =~ "Project MFA requirement updated successfully"
+    end
+
+    test "a refused MFA or support access toggle says so instead of crashing",
+         %{conn: conn} do
+      project = insert(:project)
+
+      project_user =
+        insert(:project_user, role: :owner, project: project, user: build(:user))
+
+      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _, _ ->
+        :ok
+      end)
+
+      stub(Lightning.Extensions.MockProjectHook, :handle_project_validation, fn
+        changeset -> Ecto.Changeset.add_error(changeset, :name, "is refused")
+      end)
+
+      conn = log_in_user(conn, project_user.user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/settings#security")
+
+      assert render_click(view, "toggle-mfa", %{}) =~
+               "Changes couldn&#39;t be saved, please try again"
+
+      assert render_click(view, "toggle_support_access", %{}) =~
+               "Changes couldn&#39;t be saved, please try again"
+
+      assert %{requires_mfa: false, allow_support_access: false} =
+               Lightning.Repo.reload!(project)
     end
 
     test "MFA limited: banner displayed, button is disabled, and MFA cannot be toggled",
@@ -7570,7 +7618,7 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {{conn, _user}, index} <-
+      for {{conn, user}, index} <-
             setup_project_users(conn, project, [:owner, :admin])
             |> Enum.with_index() do
         {:ok, view, _html} =
@@ -7616,9 +7664,16 @@ defmodule LightningWeb.ProjectLiveTest do
         assert flash["info"] == "Collection created"
 
         # collection now exists
-        assert Lightning.Repo.get_by(Lightning.Collections.Collection,
-                 project_id: project.id,
-                 name: expected_collection_name
+        assert collection =
+                 Lightning.Repo.get_by(Lightning.Collections.Collection,
+                   project_id: project.id,
+                   name: expected_collection_name
+                 )
+
+        assert Lightning.Repo.get_by(Lightning.Collections.Audit.base_query(),
+                 item_id: collection.id,
+                 event: "created",
+                 actor_id: user.id
                )
       end
     end
@@ -7754,7 +7809,7 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {conn, _user} <-
+      for {conn, user} <-
             setup_project_users(conn, project, [:owner, :admin]) do
         collection = insert(:collection, project: project)
 
@@ -7807,7 +7862,45 @@ defmodule LightningWeb.ProjectLiveTest do
                  project_id: project.id,
                  name: new_collection_name
                )
+
+        assert Lightning.Repo.get_by(Lightning.Collections.Audit.base_query(),
+                 item_id: collection.id,
+                 event: "updated",
+                 actor_id: user.id
+               )
       end
+    end
+
+    test "saving a collection deleted since the modal opened flashes and closes it",
+         %{conn: conn} do
+      project = insert(:project)
+      [{conn, _user}] = setup_project_users(conn, project, [:admin])
+      collection = insert(:collection, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      view
+      |> element("#edit-collection-#{collection.id}-button")
+      |> render_click()
+
+      view
+      |> form("#edit-collection-#{collection.id}-modal form",
+        collection: %{raw_name: "renamed"}
+      )
+      |> render_change()
+
+      Repo.delete!(collection)
+
+      view
+      |> form("#edit-collection-#{collection.id}-modal form")
+      |> render_submit()
+
+      flash =
+        assert_redirected(view, ~p"/projects/#{project.id}/settings#collections")
+
+      assert flash["error"] ==
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
     end
 
     test "unauthorized users cannot delete a collection", %{
