@@ -1,5 +1,5 @@
 import { RequestError, RouterProvider, ToastProvider } from '@openfn/ui';
-import { StrictMode, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
@@ -9,6 +9,8 @@ import {
   registerComponent,
 } from '#/react/lib/preloaded';
 import { replaceEqualDeep } from '#/react/lib/replace-equal-deep';
+import { rootTree, type PropsSource } from '#/react/lib/with-props';
+import type { Portals } from '#/react/types';
 
 import { showToast } from './flash';
 import { useLiveViewRouter } from './router';
@@ -176,19 +178,22 @@ export const designSystemPage = <Props, PageProps extends object>(
   Island.displayName = `designSystemPage(${name})`;
   // The module is loaded with the page, so the hook finds the island here
   // and renders it before the LiveView reports itself connected.
-  registerComponent(name, Island as unknown as React.ComponentType<object>);
-  prerender(name, Island);
+  const Component = Island as unknown as React.ComponentType<object>;
+  registerComponent(name, Component);
+  prerender(name, Component);
   return Island;
 };
 
 /**
  * Draws the page into its container from the dead render's `data-props`,
  * before the LiveView joins, so the content is there as soon as the HTML
- * is, like a server-rendered page. The hook adopts the root when it mounts
- * and re-renders with the real actions. Until then an action rejects, as
- * LiveView refuses a push before it has joined.
+ * is, like a server-rendered page. It draws the tree the hook would, so the
+ * hook adopts the root when it mounts and feeds it the real props and
+ * actions without remounting the page: what the page loaded or holds
+ * survives. Until then an action rejects, as LiveView refuses a push before
+ * it has joined.
  */
-const prerender = (name: string, Island: React.ComponentType<IslandProps>) => {
+const prerender = (name: string, Island: React.ComponentType<object>) => {
   if (typeof document === 'undefined') return;
   const el = document.querySelector<HTMLElement>(
     `[phx-hook="ReactComponent"][data-react-name="${name}"]`
@@ -208,20 +213,26 @@ const prerender = (name: string, Island: React.ComponentType<IslandProps>) => {
   const notConnected = () =>
     Promise.reject(new RequestError('Not connected yet. Please try again.'));
   const load = (path: string) => window.location.assign(path);
+  const props = { 'data-props': json };
+  const portals: Portals = new Map();
+  const source: PropsSource = {
+    subscribe: () => () => {},
+    getProps: () => props,
+    getPortals: () => portals,
+    actions: {
+      pushEvent: notConnected,
+      pushEventTo: notConnected,
+      handleEvent: () => () => {},
+      navigate: load,
+      redirect: load,
+      el,
+      containerEl: el,
+    },
+  };
   const root = createRoot(el);
   try {
     flushSync(() => {
-      root.render(
-        <StrictMode>
-          <Island
-            data-props={json}
-            pushEvent={notConnected}
-            handleEvent={() => () => {}}
-            navigate={load}
-            redirect={load}
-          />
-        </StrictMode>
-      );
+      root.render(rootTree(Island, source));
     });
     keepPrerenderedRoot(el, root);
   } catch (error) {

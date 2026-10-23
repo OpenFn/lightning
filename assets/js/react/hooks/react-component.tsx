@@ -1,5 +1,4 @@
 import type { ViewHook } from 'phoenix_live_view';
-import { StrictMode } from 'react';
 import { flushSync } from 'react-dom';
 import ReactDOMClient from 'react-dom/client';
 import invariant from 'tiny-invariant';
@@ -14,8 +13,10 @@ import {
   isReactHookedElement,
   lazyLoadComponent,
   preloadedComponent,
+  renderSlots,
   replaceEqualDeep,
-  withProps,
+  rootTree,
+  WithProps,
   RootObserver,
 } from '#/react/lib';
 import type { ReactComponentHook } from '#/react/types';
@@ -61,17 +62,20 @@ export const ReactComponent = {
     claimContainer(this.el);
     const preloaded = preloadedComponent(this._name);
     this._preloaded = preloaded !== undefined;
-    this._Component = withProps(
+    this._Component =
       preloaded ??
-        lazyLoadComponent(
-          () => importComponent(this._file, this._name),
-          this._name
-        ),
+      lazyLoadComponent(
+        () => importComponent(this._file, this._name),
+        this._name
+      );
+    const view = this.__view();
+    const cID = view.componentID(this.el);
+    this._source = {
       /* eslint-disable @typescript-eslint/unbound-method -- bound using `Function.prototype.bind` */
-      this._subscribe,
-      this._getProps,
-      this._getPortals,
-      {
+      subscribe: this._subscribe,
+      getProps: this._getProps,
+      getPortals: this._getPortals,
+      actions: {
         pushEvent: this.pushEvent.bind(this),
         handleEvent: (name, callback) => {
           const ref = this.handleEvent(name, callback);
@@ -98,9 +102,8 @@ export const ReactComponent = {
         },
       },
       /* eslint-enable */
-      this.__view(),
-      this.__view().componentID(this.el)
-    );
+      withSlots: props => renderSlots({ props, view, cID }),
+    };
 
     this._mount();
   },
@@ -267,7 +270,9 @@ export const ReactComponent = {
     );
 
     // A module loaded with the page may have drawn the component already,
-    // from the dead render; its root is taken over and re-rendered below.
+    // from the dead render, with the same tree; its root is taken over and
+    // re-rendered below with this hook's props and actions, so it stays
+    // mounted.
     this._root =
       adoptPrerenderedRoot(this._containerEl) ??
       ReactDOMClient.createRoot(this._containerEl, {
@@ -291,17 +296,8 @@ export const ReactComponent = {
     // `useSyncExternalStore`, and so we don't need to manually trigger re-renders.
     const render = () =>
       this._root?.render(
-        // Find common bugs early in development with [`StrictMode`](https://react.dev/reference/react/StrictMode)
-        <StrictMode>
-          <Boundary
-            ref={
-              // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
-              this._onBoundary
-            }
-          >
-            <this._Component />
-          </Boundary>
-        </StrictMode>
+        // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
+        rootTree(this._Component, this._source, this._onBoundary)
       );
 
     // A preloaded component commits before the join finishes. A lazy one
@@ -329,7 +325,7 @@ export const ReactComponent = {
                   this._onBoundary
                 }
               >
-                <this._Component />
+                <WithProps Component={this._Component} source={this._source} />
               </Boundary>
             ),
             this._containerEl,

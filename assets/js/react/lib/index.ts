@@ -37,4 +37,4 @@ export {
   isNamedExotic,
   isIntrinsic,
 } from './react-is-type';
-export { withProps } from './with-props';
+export { rootTree, WithProps, type PropsSource } from './with-props';

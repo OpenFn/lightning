@@ -1,6 +1,7 @@
 import type * as ReactDOMClient from 'react-dom/client';
 
 import type { PhoenixHook } from '#/hooks/PhoenixHook';
+import type { PropsSource } from '#/react/lib/with-props';
 
 export type ReactHookedElement = HTMLElement & {
   type: 'application/json';
@@ -42,7 +43,10 @@ export type ReactComponentHook<Props = object> = PhoenixHook<
     _portalTarget?: string | undefined;
 
     /** The [React component](https://react.dev/learn/your-first-component) that will actually be rendered */
-    _Component: React.ComponentType<t.EmptyObject>;
+    _Component: React.ComponentType<object>;
+
+    /** Where `_Component` gets its props, portals and actions (see `WithProps`) */
+    _source: PropsSource;
 
     /** Whether the component was registered by a module loaded with the page */
     _preloaded: boolean;
