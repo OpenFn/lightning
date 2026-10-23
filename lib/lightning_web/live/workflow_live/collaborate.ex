@@ -13,7 +13,6 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   alias Lightning.AiAssistant
   alias Lightning.Credentials.Credential
   alias Lightning.Policies.Permissions
-  alias Lightning.Policies.Users
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Workflows
@@ -155,7 +154,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
            Lightning.Credentials.get_credential(credential_id),
          true <-
            Permissions.can?(
-             Users,
+             :credentials,
              :edit_credential,
              socket.assigns.current_user,
              credential

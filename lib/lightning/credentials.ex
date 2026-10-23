@@ -154,6 +154,21 @@ defmodule Lightning.Credentials do
   def get_credential(id), do: Repo.get(Credential, id)
 
   @doc """
+  Loads the credential's project links.
+  """
+  @spec preload_links(Credential.t()) :: Credential.t()
+  def preload_links(%Credential{} = credential),
+    do: Repo.preload(credential, :project_credentials)
+
+  @doc """
+  Loads the credential's project links and the projects they name, fresh
+  even when either was loaded before.
+  """
+  @spec preload_links_and_projects(Credential.t()) :: Credential.t()
+  def preload_links_and_projects(%Credential{} = credential),
+    do: Repo.preload(credential, [:project_credentials, :projects], force: true)
+
+  @doc """
   Gets a credential body for a specific environment.
 
   Returns nil if no body exists for the given credential and environment combination.
@@ -187,32 +202,43 @@ defmodule Lightning.Credentials do
         * `name` - Environment name (e.g., "production", "staging")
         * `body` - Credential configuration data
       * `expected_scopes` - List of expected scopes (for OAuth credentials)
+    * `actor` - Who is asking: the owner, or a service account writing for them
+    * `opts`:
+      * `:id` - The id to create the credential under, rather than a new one
 
   ## Returns
     * `{:ok, credential}` - Successfully created credential
-    * `{:error, error}` - Error with creation process
+    * `{:error, changeset}` - With an error on `project_credentials` if the
+      owner has no access to a project it links to. A refused body, OAuth token
+      included, puts its errors on `credential_bodies`, each with a `key:`
+      option naming its place in `attrs`, as
+      `[:credential_bodies, index, :body, key]`
+    * `{:error, :unauthorized}` - `actor` may not create it for its owner
   """
-  @spec create_credential(map(), User.t()) ::
-          {:ok, Credential.t()} | {:error, any()}
-  def create_credential(attrs, %User{} = actor) do
+  @spec create_credential(map(), Lightning.Actor.t(), [{:id, Ecto.UUID.t()}]) ::
+          {:ok, Credential.t()}
+          | {:error, :unauthorized | Ecto.Changeset.t()}
+  def create_credential(attrs, actor, opts \\ []) do
     attrs = normalize_keys(attrs)
 
     with :ok <-
-           authorize_credential_owner(actor, %Credential{
+           authorize_credential(:edit_credential, actor, %Credential{
              user_id: attrs["user_id"]
            }) do
-      do_create_credential(attrs)
+      do_create_credential(attrs, actor, opts[:id])
     end
   end
 
-  defp do_create_credential(attrs) do
+  defp do_create_credential(attrs, actor, id) do
     credential_bodies = get_credential_bodies(attrs)
 
-    with :ok <- validate_credential_bodies(credential_bodies, attrs),
-         changeset <- Credential.create_changeset(%Credential{}, attrs),
-         :ok <- validate_external_id(changeset) do
+    changeset = Credential.create_changeset(%Credential{id: id}, attrs)
+
+    with :ok <- validate_credential_bodies(changeset, credential_bodies, attrs),
+         :ok <- validate_external_id(changeset),
+         :ok <- validate_owner_access(changeset) do
       build_create_multi(changeset, credential_bodies)
-      |> derive_events(changeset)
+      |> derive_events(changeset, actor)
       |> Repo.transaction()
       |> handle_transaction_result(changeset)
     end
@@ -227,7 +253,7 @@ defmodule Lightning.Credentials do
     |> Enum.with_index()
     |> Enum.reduce(multi, fn {body_attrs, index}, acc ->
       acc
-      |> Multi.insert(:"credential_body_#{index}", fn %{credential: credential} ->
+      |> Multi.insert({:credential_body, index}, fn %{credential: credential} ->
         %CredentialBody{}
         |> CredentialBody.changeset(%{
           credential_id: credential.id,
@@ -249,25 +275,56 @@ defmodule Lightning.Credentials do
 
   ## Returns
     * `{:ok, credential}` - Successfully updated credential
-    * `{:error, error}` - Error with update process
+    * `{:error, :scheduled_for_deletion}` - The credential is scheduled for
+      deletion. Only cancelling that, or deleting it now, can change it
+    * `{:error, changeset}` - With an error on `project_credentials` if the
+      owner has no access to a project a new link points to. Links the
+      credential already holds are not checked. A refused body is placed as
+      `create_credential/3` places it
+    * `{:error, :unauthorized}` - `actor` may not edit it
+    * `{:error, :concurrent_edit}` - another request deleted the credential
+      while this one ran
   """
-  @spec update_credential(Credential.t(), map(), User.t()) ::
-          {:ok, Credential.t()} | {:error, any()}
-  def update_credential(%Credential{} = credential, attrs, %User{} = actor) do
-    with :ok <- authorize_credential_owner(actor, credential) do
-      do_update_credential(credential, attrs)
+  @spec update_credential(Credential.t(), map(), Lightning.Actor.t()) ::
+          {:ok, Credential.t()}
+          | {:error,
+             :unauthorized
+             | :scheduled_for_deletion
+             | :concurrent_edit
+             | Ecto.Changeset.t()}
+  def update_credential(%Credential{} = credential, attrs, actor) do
+    with :ok <-
+           authorize_credential(
+             :edit_credential,
+             actor,
+             with_stored_schedule(credential)
+           ) do
+      do_update_credential(credential, attrs, actor)
     end
   end
 
-  defp do_update_credential(%Credential{} = credential, attrs) do
-    credential = Repo.preload(credential, :project_credentials)
+  # A screen may hand in a struct loaded before the deletion was scheduled, so
+  # the policy is asked about the schedule as stored.
+  defp with_stored_schedule(%Credential{id: id} = credential) do
+    scheduled_deletion =
+      Repo.one(
+        from c in Credential, where: c.id == ^id, select: c.scheduled_deletion
+      )
+
+    %{credential | scheduled_deletion: scheduled_deletion}
+  end
+
+  defp do_update_credential(%Credential{} = credential, attrs, actor) do
+    credential = preload_links(credential)
     attrs = normalize_keys(attrs)
+    changeset = Credential.changeset(credential, attrs)
+    schema = Ecto.Changeset.get_field(changeset, :schema)
 
     credential_bodies =
       attrs
       |> get_credential_bodies()
       |> then(fn bodies ->
-        if credential.schema == "oauth" do
+        if schema == "oauth" do
           preserve_refresh_tokens(bodies, credential)
         else
           bodies
@@ -276,14 +333,15 @@ defmodule Lightning.Credentials do
 
     with :ok <-
            validate_credential_bodies(
+             changeset,
              credential_bodies,
              attrs,
-             credential.schema
+             schema
            ),
-         changeset <- Credential.changeset(credential, attrs),
-         :ok <- validate_external_id(changeset) do
+         :ok <- validate_external_id(changeset),
+         :ok <- validate_owner_access(changeset) do
       build_update_multi(credential, changeset, credential_bodies)
-      |> derive_events(changeset)
+      |> derive_events(changeset, actor)
       |> Repo.transaction()
       |> handle_transaction_result(changeset)
     end
@@ -294,7 +352,7 @@ defmodule Lightning.Credentials do
     delete_environments = Map.get(changeset.params, "delete_environments", [])
 
     Multi.new()
-    |> Multi.update(:credential, changeset)
+    |> Multi.update(:credential, changeset, stale_error_field: :id)
     |> add_environment_deletions(credential.id, delete_environments)
     |> add_credential_body_upserts(credential.id, credential_bodies, schema_name)
   end
@@ -303,7 +361,7 @@ defmodule Lightning.Credentials do
 
   defp add_environment_deletions(multi, credential_id, delete_environments) do
     Enum.reduce(delete_environments, multi, fn env_name, acc ->
-      Multi.run(acc, :"delete_env_#{env_name}", fn _repo, _changes ->
+      Multi.run(acc, {:delete_environment, env_name}, fn _repo, _changes ->
         delete_credential_body_if_exists(credential_id, env_name)
       end)
     end)
@@ -318,8 +376,7 @@ defmodule Lightning.Credentials do
         {:ok, :not_found}
 
       credential_body ->
-        Repo.delete(credential_body)
-        {:ok, :deleted}
+        with {:ok, _} <- Repo.delete(credential_body), do: {:ok, :deleted}
     end
   end
 
@@ -335,7 +392,7 @@ defmodule Lightning.Credentials do
     credential_bodies
     |> Enum.with_index()
     |> Enum.reduce(multi, fn {body_attrs, index}, acc ->
-      Multi.run(acc, :"credential_body_#{index}", fn _repo, _changes ->
+      Multi.run(acc, {:credential_body, index}, fn _repo, _changes ->
         upsert_credential_body(credential_id, body_attrs, schema_name)
       end)
     end)
@@ -363,9 +420,17 @@ defmodule Lightning.Credentials do
         credential_body
         |> CredentialBody.changeset(%{body: body_data})
         |> cast_credential_body_change(schema_name)
-        |> Repo.update()
+        |> update_body_if_changed()
     end
   end
+
+  # Compared after casting to the schema's types, so a form resending "5432"
+  # for a stored 5432 is no change.
+  defp update_body_if_changed(%Ecto.Changeset{valid?: true, changes: changes})
+       when map_size(changes) == 0,
+       do: {:ok, :unchanged}
+
+  defp update_body_if_changed(changeset), do: Repo.update(changeset)
 
   defp get_credential_bodies(attrs) do
     case Map.get(attrs, "credential_bodies") do
@@ -413,20 +478,41 @@ defmodule Lightning.Credentials do
 
   defp parse_nested_value(_), do: %{}
 
-  defp validate_credential_bodies(credential_bodies, attrs, schema \\ nil) do
-    credential_schema = schema || Map.get(attrs, "schema")
-
-    if credential_schema == "oauth" do
+  # An OAuth token is refused at the key it is about, inside the body at its
+  # position in `credential_bodies`.
+  defp validate_credential_bodies(
+         changeset,
+         credential_bodies,
+         attrs,
+         schema \\ nil
+       ) do
+    if (schema || Map.get(attrs, "schema")) == "oauth" do
       credential_bodies
-      |> Enum.reduce_while(:ok, fn body_attrs, _acc ->
+      |> Enum.with_index()
+      |> Enum.find_value(:ok, fn {body_attrs, index} ->
         case validate_oauth_body(body_attrs["body"], attrs) do
-          :ok -> {:cont, :ok}
-          error -> {:halt, error}
+          :ok ->
+            nil
+
+          {:error, %OauthValidation.Error{} = error} ->
+            changeset
+            |> Ecto.Changeset.add_error(:credential_bodies, error.message,
+              code: error.code,
+              key: [:credential_bodies, index, :body | List.wrap(error.field)]
+            )
+            |> refused()
         end
       end)
     else
       :ok
     end
+  end
+
+  defp refused(changeset) do
+    action =
+      if changeset.data.__meta__.state == :built, do: :insert, else: :update
+
+    {:error, Map.put(changeset, :action, action)}
   end
 
   defp validate_oauth_body(body_data, attrs) do
@@ -488,6 +574,37 @@ defmodule Lightning.Credentials do
     |> Enum.reject(&is_nil/1)
   end
 
+  # Only links being added are checked. Some existing links point to projects
+  # the owner has since lost access to, and the credential must stay editable.
+  # The error names projects by id because an API caller may link to a project
+  # whose name it isn't allowed to see.
+  defp validate_owner_access(%Ecto.Changeset{valid?: false}), do: :ok
+
+  defp validate_owner_access(changeset) do
+    project_ids =
+      changeset
+      |> Ecto.Changeset.get_change(:project_credentials, [])
+      |> Enum.map(&Ecto.Changeset.get_change(&1, :project_id))
+      |> Enum.reject(&is_nil/1)
+
+    owner_id = Ecto.Changeset.get_field(changeset, :user_id)
+
+    case projects_without_access(owner_id, project_ids) do
+      [] ->
+        :ok
+
+      projects ->
+        changeset
+        |> Ecto.Changeset.add_error(
+          :project_credentials,
+          "the owner has no access to these projects: " <>
+            Enum.map_join(projects, ", ", & &1.id),
+          code: :no_access
+        )
+        |> refused()
+    end
+  end
+
   # NOTE: This is an app-level check only (not DB-enforced). It has a TOCTOU
   # race window — two concurrent inserts can both pass Repo.exists? before
   # either commits. Acceptable for now given low collision likelihood;
@@ -520,15 +637,9 @@ defmodule Lightning.Credentials do
         end
 
       if Repo.exists?(query) do
-        action =
-          if changeset.data.__meta__.state == :built, do: :insert, else: :update
-
-        changeset =
-          changeset
-          |> Ecto.Changeset.add_error(:external_id, message)
-          |> Map.put(:action, action)
-
-        {:error, changeset}
+        changeset
+        |> Ecto.Changeset.add_error(:external_id, message, code: :taken)
+        |> refused()
       else
         :ok
       end
@@ -538,33 +649,20 @@ defmodule Lightning.Credentials do
   @doc false
   def handle_transaction_result(transaction_result, credential_changeset) do
     case transaction_result do
+      {:error, :credential, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
       {:error, :credential, %Ecto.Changeset{} = changeset, _changes} ->
         {:error, changeset}
 
-      {:error, op, %Ecto.Changeset{} = body_changeset, _changes} ->
-        # When a credential_body operation fails, we need to return
-        # a Credential changeset with the error, not a CredentialBody changeset.
-        # Extract which environment failed from the operation name.
-        env_index =
-          op
-          |> Atom.to_string()
-          |> String.replace("credential_body_", "")
-          |> String.to_integer()
-
-        errors = body_changeset.errors
-
-        changeset_with_errors =
-          Enum.reduce(errors, credential_changeset, fn {field, {msg, opts}},
-                                                       acc ->
-            Ecto.Changeset.add_error(
-              acc,
-              :credential_bodies,
-              "Environment #{env_index + 1}: #{field} #{msg}",
-              opts
-            )
-          end)
-
-        {:error, changeset_with_errors}
+      {:error, {:credential_body, index}, %Ecto.Changeset{} = failed, _changes} ->
+        {:error,
+         nest_errors(
+           credential_changeset,
+           :credential_bodies,
+           [:credential_bodies, index],
+           failed.errors
+         )}
 
       {:error, _op, error, _changes} ->
         {:error, error}
@@ -580,6 +678,23 @@ defmodule Lightning.Credentials do
            :credential_bodies
          ])}
     end
+  end
+
+  defp nest_errors(changeset, field, prefix, child_errors) do
+    Enum.reduce(child_errors, changeset, fn
+      {child_field, {message, opts}}, acc ->
+        key = prefix ++ List.wrap(opts[:key] || child_field)
+
+        # The options are the child changeset's own, so they already carry a
+        # code or Ecto's validation options.
+        # credo:disable-for-next-line Lightning.Credo.Check.ChangesetErrorCode
+        Ecto.Changeset.add_error(
+          acc,
+          field,
+          message,
+          Keyword.put(opts, :key, key)
+        )
+    end)
   end
 
   @doc """
@@ -652,15 +767,28 @@ defmodule Lightning.Credentials do
       {:ok, updated_body} ->
         Ecto.Changeset.put_change(changeset, :body, updated_body)
 
+      {:error, %Ecto.Changeset{errors: typed_errors}} ->
+        nest_errors(
+          changeset,
+          :body,
+          [:body],
+          Enum.map(typed_errors, fn {field, error} ->
+            {Atom.to_string(field), error}
+          end)
+        )
+
       {:error, reason} when reason in [:not_ready, :timeout, :unavailable] ->
         Ecto.Changeset.add_error(
           changeset,
           :body,
-          "adaptor catalogue is not ready yet, try again shortly"
+          "adaptor catalogue is not ready yet, try again shortly",
+          code: :not_ready
         )
 
       {:error, _reason} ->
-        Ecto.Changeset.add_error(changeset, :body, "Invalid body types")
+        Ecto.Changeset.add_error(changeset, :body, "Invalid body types",
+          code: :type
+        )
     end
   end
 
@@ -684,63 +812,63 @@ defmodule Lightning.Credentials do
   end
 
   defp extract_environment_bodies(changes) do
-    Enum.reduce(changes, [], fn
-      {key, credential_body}, acc when is_atom(key) ->
-        case Atom.to_string(key) do
-          "credential_body_" <> _ ->
-            [{credential_body.name, credential_body.body} | acc]
+    for {{:credential_body, _index}, %CredentialBody{} = body} <- changes,
+        do: {body.name, body.body}
+  end
 
-          _ ->
-            acc
-        end
-
-      _, acc ->
-        acc
-    end)
-    |> Enum.reverse()
+  defp extract_deleted_environments(changes) do
+    Enum.sort(for {{:delete_environment, name}, :deleted} <- changes, do: name)
   end
 
   defp derive_events(
          multi,
          %Ecto.Changeset{data: %Credential{__meta__: %{state: state}}} =
-           changeset
+           changeset,
+         actor
        ) do
-    case changeset.changes do
-      map when map_size(map) == 0 ->
-        multi
+    project_credentials_multi =
+      Ecto.Changeset.get_change(changeset, :project_credentials, [])
+      |> Enum.reduce(Multi.new(), fn changeset, multi ->
+        derive_event(multi, changeset, actor)
+      end)
 
-      _ ->
-        project_credentials_multi =
-          Ecto.Changeset.get_change(changeset, :project_credentials, [])
-          |> Enum.reduce(Multi.new(), fn changeset, multi ->
-            derive_event(multi, changeset)
-          end)
+    multi
+    |> Multi.run(:audit, fn repo, %{credential: credential} = changes ->
+      case {extract_environment_bodies(changes),
+            extract_deleted_environments(changes)} do
+        {[], []} when map_size(changeset.changes) == 0 ->
+          {:ok, nil}
 
-        multi
-        |> Multi.run(:collect_env_bodies, fn _repo, changes ->
-          {:ok, extract_environment_bodies(changes)}
-        end)
-        |> Multi.insert(
-          :audit,
-          fn %{credential: credential, collect_env_bodies: env_bodies} ->
-            Audit.user_initiated_event(
-              if(state == :built, do: "created", else: "updated"),
-              credential,
-              changeset,
-              env_bodies
-            )
-          end
-        )
-        |> Multi.append(project_credentials_multi)
-    end
+        {env_bodies, deleted} ->
+          Audit.user_initiated_event(
+            if(state == :built, do: "created", else: "updated"),
+            credential,
+            actor,
+            field_changes(changeset),
+            bodies: env_bodies,
+            deleted: deleted
+          )
+          |> repo.insert()
+      end
+    end)
+    |> Multi.append(project_credentials_multi)
   end
+
+  # An empty changeset makes Audit.event record nothing, so a write that changed
+  # only a body passes an empty map instead.
+  defp field_changes(%Ecto.Changeset{changes: changes})
+       when map_size(changes) == 0,
+       do: %{}
+
+  defp field_changes(changeset), do: changeset
 
   defp derive_event(
          multi,
          %Ecto.Changeset{
            action: :delete,
            data: %Lightning.Projects.ProjectCredential{}
-         } = changeset
+         } = changeset,
+         actor
        ) do
     Multi.insert(
       multi,
@@ -749,6 +877,7 @@ defmodule Lightning.Credentials do
         Audit.user_initiated_event(
           "removed_from_project",
           credential,
+          actor,
           %{
             before: %{
               project_id: Ecto.Changeset.get_field(changeset, :project_id)
@@ -765,7 +894,8 @@ defmodule Lightning.Credentials do
          %Ecto.Changeset{
            action: :insert,
            data: %Lightning.Projects.ProjectCredential{}
-         } = changeset
+         } = changeset,
+         actor
        ) do
     project_id = Ecto.Changeset.get_field(changeset, :project_id)
 
@@ -773,7 +903,7 @@ defmodule Lightning.Credentials do
     |> Multi.insert(
       {:audit, project_id},
       fn %{credential: credential} ->
-        Audit.user_initiated_event("added_to_project", credential, %{
+        Audit.user_initiated_event("added_to_project", credential, actor, %{
           before: %{project_id: nil},
           after: %{project_id: project_id}
         })
@@ -787,10 +917,14 @@ defmodule Lightning.Credentials do
     )
   end
 
-  defp derive_event(multi, %Ecto.Changeset{
-         action: :update,
-         data: %Lightning.Projects.ProjectCredential{}
-       }) do
+  defp derive_event(
+         multi,
+         %Ecto.Changeset{
+           action: :update,
+           data: %Lightning.Projects.ProjectCredential{}
+         },
+         _actor
+       ) do
     multi
   end
 
@@ -822,30 +956,53 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Deletes a credential.
+  Deletes a credential, recording an audit event in the same transaction.
+
+  Returns `{:error, :unauthorized}` when `actor` doesn't own it,
+  `{:error, :in_use}` when runs have used it, and `{:error, :not_found}` when
+  it is already gone, deleted since it was loaded. A refused audit event is
+  `{:error, changeset}`.
 
   ## Examples
 
       iex> delete_credential(credential, actor)
-      {:ok, %{credential: %Credential{}, audit: %Audit{}}}
+      {:ok, %{credential: %Credential{}, audit: %Lightning.Auditing.Audit{}}}
 
       iex> delete_credential(credential, actor)
       {:error, :unauthorized}
 
   """
+  @spec delete_credential(Credential.t(), User.t()) ::
+          {:ok,
+           %{credential: Credential.t(), audit: Lightning.Auditing.Audit.t()}}
+          | {:error, :unauthorized | :in_use | :not_found | Ecto.Changeset.t()}
   def delete_credential(%Credential{} = credential, %User{} = actor) do
-    with :ok <- authorize_credential_owner(actor, credential) do
+    with :ok <- authorize_credential(:delete_credential, actor, credential),
+         :ok <- refuse_in_use(credential) do
       do_delete_credential(credential)
     end
   end
 
+  defp refuse_in_use(credential) do
+    if has_activity_in_projects?(credential),
+      do: {:error, :in_use},
+      else: :ok
+  end
+
   defp do_delete_credential(%Credential{} = credential) do
+    %{user: owner} = Repo.preload(credential, :user)
+
     Multi.new()
-    |> Multi.delete(:credential, credential)
+    |> Multi.delete(:credential, credential, stale_error_field: :id)
     |> Multi.insert(:audit, fn _ ->
-      Audit.user_initiated_event("deleted", credential)
+      Audit.user_initiated_event("deleted", credential, owner)
     end)
     |> Repo.transaction()
+    |> case do
+      {:ok, deleted} -> {:ok, deleted}
+      {:error, :credential, _stale, _changes} -> {:error, :not_found}
+      {:error, :audit, changeset, _changes} -> {:error, changeset}
+    end
   end
 
   @doc """
@@ -869,6 +1026,8 @@ defmodule Lightning.Credentials do
 
     - `{:ok, credential}`: Returns an `:ok` tuple with the updated credential struct if the
       update was successful.
+    - `{:error, :scheduled_for_deletion}`: The credential is already scheduled
+      for deletion. Scheduling it again would move the date.
     - `{:error, changeset}`: Returns an `:error` tuple with the changeset if the update failed.
 
   ## Examples
@@ -881,7 +1040,8 @@ defmodule Lightning.Credentials do
 
   """
   def schedule_credential_deletion(%Credential{} = credential, %User{} = actor) do
-    with :ok <- authorize_credential_owner(actor, credential) do
+    with :ok <- authorize_credential(:delete_credential, actor, credential),
+         :ok <- refuse_scheduled(credential) do
       do_schedule_credential_deletion(credential)
     end
   end
@@ -929,33 +1089,37 @@ defmodule Lightning.Credentials do
 
   Takes an id rather than a struct because the screen that calls it has only the
   id to hand. It loads the credential and asks the same ownership question as
-  every other write here, so the id being caller-supplied does not matter.
+  deleting it, so the id being caller-supplied does not matter.
   """
   @spec cancel_scheduled_deletion(Ecto.UUID.t(), User.t()) ::
-          {:ok, Credential.t()} | {:error, :unauthorized | Ecto.Changeset.t()}
+          {:ok, Credential.t()}
+          | {:error, :unauthorized | Ecto.Changeset.t() | :concurrent_edit}
   def cancel_scheduled_deletion(credential_id, %User{} = actor) do
     credential = get_credential!(credential_id)
 
-    with :ok <- authorize_credential_owner(actor, credential) do
-      do_update_credential(credential, %{scheduled_deletion: nil})
+    with :ok <- authorize_credential(:delete_credential, actor, credential) do
+      do_update_credential(credential, %{scheduled_deletion: nil}, actor)
     end
   end
 
-  # A credential belongs to the person who made it, and that is the rule the UI
-  # has always drawn its buttons from. Asking here rather than at each screen
-  # means a screen cannot act on someone else's credential by forgetting to
-  # check - the signature will not let it call in without saying who is asking.
-  defp authorize_credential_owner(%User{} = actor, %Credential{} = credential) do
-    if Permissions.can?(
-         :users,
-         :delete_credential,
-         actor,
-         credential
-       ) do
-      :ok
-    else
-      {:error, :unauthorized}
-    end
+  # Authorising here rather than in each caller means no caller can act on
+  # someone else's credential by forgetting to check. Every caller has to say
+  # who is asking.
+  defp authorize_credential(action, actor, %Credential{} = credential),
+    do: Permissions.can(:credentials, action, actor, credential)
+
+  # Refused for every caller, so it lives here rather than in the policy. It
+  # runs after the policy so a caller without rights learns nothing about the
+  # credential. It reads the database because a screen may hand in a struct
+  # loaded before the deletion was scheduled.
+  defp refuse_scheduled(%Credential{id: id}) do
+    scheduled? =
+      Repo.exists?(
+        from c in Credential,
+          where: c.id == ^id and not is_nil(c.scheduled_deletion)
+      )
+
+    if scheduled?, do: {:error, :scheduled_for_deletion}, else: :ok
   end
 
   defp maybe_revoke_oauth_tokens(%Credential{schema: "oauth"} = credential) do
@@ -1681,7 +1845,7 @@ defmodule Lightning.Credentials do
         })
       end)
       |> Multi.insert(:audit, fn %{credential: updated_credential} ->
-        Audit.user_initiated_event("transfered", credential, %{
+        Audit.user_initiated_event("transfered", credential, owner, %{
           before: %{user_id: credential.user_id},
           after: %{user_id: updated_credential.user_id}
         })
@@ -1826,30 +1990,61 @@ defmodule Lightning.Credentials do
       Ecto.Changeset.add_error(
         changeset,
         :email,
-        "User doesn't have access to these projects: #{project_names}"
+        "User doesn't have access to these projects: #{project_names}",
+        code: :no_access
       )
     else
       _ -> changeset
     end
   end
 
-  @spec projects_blocking_credential_transfer(
-          Lightning.Credentials.Credential.t(),
-          Lightning.Accounts.User.t()
-        ) :: [Lightning.Projects.Project.t()]
-  defp projects_blocking_credential_transfer(
-         %Credential{id: credential_id},
-         %User{id: user_id}
-       ) do
-    from(p in Lightning.Projects.Project,
-      join: pc in Lightning.Projects.ProjectCredential,
-      on: pc.project_id == p.id and pc.credential_id == ^credential_id,
-      left_join: pu in Lightning.Projects.ProjectUser,
-      on: pu.project_id == p.id and pu.user_id == ^user_id,
-      where: is_nil(pu.id),
-      distinct: true,
-      select: p
-    )
+  defp projects_blocking_credential_transfer(%Credential{id: id}, %User{} = user) do
+    project_ids =
+      from(pc in Lightning.Projects.ProjectCredential,
+        where: pc.credential_id == ^id,
+        select: pc.project_id
+      )
+      |> Repo.all()
+
+    projects_without_access(user.id, project_ids, support_access: false)
+  end
+
+  @doc """
+  Returns the projects among `project_ids` that the user has no access to.
+
+  A user has access to a project they are a member of. A support user also has
+  access to a project that allows support access, unless `support_access: false`
+  is given. Returns `[]` for a user that doesn't exist.
+  """
+  @spec projects_without_access(Ecto.UUID.t(), [Ecto.UUID.t()], [
+          {:support_access, boolean()}
+        ]) :: [Project.t()]
+  def projects_without_access(user_id, project_ids, opts \\ [])
+
+  def projects_without_access(_user_id, [], _opts), do: []
+
+  def projects_without_access(user_id, project_ids, opts) do
+    query =
+      from(p in Project,
+        join: u in User,
+        on: u.id == ^user_id,
+        left_join: pu in Lightning.Projects.ProjectUser,
+        on: pu.project_id == p.id and pu.user_id == u.id,
+        where: p.id in ^project_ids and is_nil(pu.id),
+        order_by: p.name,
+        select: p
+      )
+
+    if Keyword.get(opts, :support_access, true) do
+      where(
+        query,
+        [p, u],
+        not (coalesce(u.support_user, false) and
+               coalesce(p.allow_support_access, false))
+      )
+    else
+      query
+    end
     |> Repo.all()
   end
 
@@ -1864,11 +2059,14 @@ defmodule Lightning.Credentials do
         Ecto.Changeset.add_error(
           changeset,
           :email,
-          "You cannot transfer a credential to yourself"
+          "You cannot transfer a credential to yourself",
+          code: :not_allowed
         )
 
       !Lightning.Repo.exists?(User |> where(email: ^recipient_email)) ->
-        Ecto.Changeset.add_error(changeset, :email, "User does not exist")
+        Ecto.Changeset.add_error(changeset, :email, "User does not exist",
+          code: :not_found
+        )
 
       true ->
         changeset

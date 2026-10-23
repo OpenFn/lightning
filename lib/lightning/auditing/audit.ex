@@ -7,6 +7,8 @@ defmodule Lightning.Auditing.Audit do
   require Ecto.Query
   require Logger
 
+  @type t :: %__MODULE__{}
+
   @doc """
   Callback to update changes before saving to the database.
   """
