@@ -88,6 +88,8 @@ vi.mock('../../../js/monaco', () => ({
       updateOptions: vi.fn(),
       focus: vi.fn(),
       addCommand: vi.fn(),
+      onMouseDown: vi.fn(() => ({ dispose: vi.fn() })),
+      onKeyDown: vi.fn(() => ({ dispose: vi.fn() })),
     };
     const mockMonaco = {
       editor: {

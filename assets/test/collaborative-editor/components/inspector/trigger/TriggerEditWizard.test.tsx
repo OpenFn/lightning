@@ -422,6 +422,7 @@ describe('TriggerEditWizard — cron', () => {
       // Next → Configure (Configure-only control present).
       await userEvent.click(screen.getByRole('button', { name: 'Next' }));
       expect(screen.getByLabelText('Cron Input Source')).toBeInTheDocument();
+      expect(screen.getByText('All times in UTC')).toBeInTheDocument();
 
       // Breadcrumb "Choose" crumb returns to Choose.
       await userEvent.click(screen.getByRole('button', { name: 'Choose' }));

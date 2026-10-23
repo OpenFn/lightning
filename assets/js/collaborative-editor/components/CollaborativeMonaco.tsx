@@ -18,8 +18,12 @@ import _logger from '#/utils/logger';
 
 import { type Monaco, MonacoEditor, setTheme } from '../../monaco';
 import { addKeyboardShortcutOverrides } from '../../monaco/keyboard-overrides';
-import { useHandleDiffDismissed } from '../contexts/MonacoRefContext';
+import {
+  useHandleDiffDismissed,
+  usePendingHighlight,
+} from '../contexts/MonacoRefContext';
 
+import { locateAddedRuns } from '../utils/locateAddedRuns';
 import createCompletionProvider from '../utils/magic-completion';
 
 import { LoadingIndicator } from './common/LoadingIndicator';
@@ -173,6 +177,55 @@ export const CollaborativeMonaco = forwardRef<
       }
     };
   }, []);
+
+  const highlightRef = useRef<editor.IEditorDecorationsCollection>();
+  // Monaco keeps a decoration's DOM when its markup is unchanged, so a
+  // repeat highlight alternates class names to restart the flash.
+  const replayRef = useRef(false);
+  const { pendingHighlight, setPendingHighlight } = usePendingHighlight();
+
+  // Runs after the binding effect, so the model already holds this ytext.
+  useEffect(() => {
+    const editor = editorRef.current;
+    const model = editor?.getModel();
+    if (!editor || !model) return;
+    if (!pendingHighlight || pendingHighlight.ytext !== ytext) return;
+    setPendingHighlight?.(null);
+
+    const ranges = locateAddedRuns(model, pendingHighlight.added);
+
+    const className = replayRef.current
+      ? 'ai-change-highlight ai-change-replay'
+      : 'ai-change-highlight';
+    replayRef.current = !replayRef.current;
+    highlightRef.current?.clear();
+    highlightRef.current = editor.createDecorationsCollection(
+      ranges.map(range => ({
+        range,
+        options: { className },
+      }))
+    );
+    // A run edited since can't be found, so scroll to where it was rather
+    // than leave the click looking like it did nothing.
+    const fallbackLine = pendingHighlight.added[0]?.line;
+    if (ranges[0]) editor.revealRangeInCenterIfOutsideViewport(ranges[0]);
+    else if (fallbackLine)
+      editor.revealLineInCenterIfOutsideViewport(
+        Math.min(fallbackLine, model.getLineCount())
+      );
+  }, [pendingHighlight, ytext, editorReady, setPendingHighlight]);
+
+  // Dismissed the way a selection is: by clicking or typing in the code.
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const clear = () => highlightRef.current?.clear();
+    const subscriptions = [editor.onMouseDown(clear), editor.onKeyDown(clear)];
+    return () => {
+      clear();
+      subscriptions.forEach(subscription => subscription.dispose());
+    };
+  }, [ytext, editorReady]);
 
   useEffect(() => {
     if (editorRef.current) {

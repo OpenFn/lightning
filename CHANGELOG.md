@@ -21,6 +21,8 @@ and this project adheres to
   assistant, and the assistant's conversation history is now stored as Apollo
   returns it. Needs the matching Apollo release first.
   [#5236](https://github.com/OpenFn/lightning/pull/5236)
+- AI assistant diff blocks show the step with its adaptor logo. Clicking it
+  opens the step and highlights the code the AI added.
 - GitHub sync connections using the v2 format now install `@v2` of the OpenFn
   deploy and pull GitHub Actions, which sync `openfn.yaml` workspaces with
   `openfn project pull/deploy`. Lightning no longer commits a config file for
@@ -29,6 +31,8 @@ and this project adheres to
 
 ### Changed
 
+- Cron schedules now show "UTC" after the time, on the canvas and in the trigger
+  panels [#5247](https://github.com/OpenFn/lightning/issues/5247)
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state

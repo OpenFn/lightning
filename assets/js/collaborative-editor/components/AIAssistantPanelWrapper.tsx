@@ -19,6 +19,7 @@ import { randomUUID } from '#/common';
 import { useURLState } from '../../react/lib/use-url-state';
 import {
   useMonacoRef,
+  usePendingHighlight,
   useRegisterDiffDismissalCallback,
 } from '../contexts/MonacoRefContext';
 import {
@@ -69,6 +70,7 @@ import {
   useWorkflowActions,
   useWorkflowReadOnly,
   useWorkflowState,
+  useWorkflowStoreContext,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { usePinnedView } from '../lib/pinnedView';
@@ -83,6 +85,7 @@ import {
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { AlertDialog } from './AlertDialog';
 import { MessageList } from './MessageList';
+import type { OpenStepTarget } from './WorkflowDiffBlocks';
 
 /**
  * AIAssistantPanelWrapper Component
@@ -210,12 +213,16 @@ export function AIAssistantPanelWrapper({
     [jobs]
   );
 
+  const workflowStore = useWorkflowStoreContext();
+  const { setPendingHighlight } = usePendingHighlight();
   const handleOpenStep = useCallback(
-    ({ jobId, name }: { jobId?: string; name: string }) => {
+    ({ jobId, name, added }: OpenStepTarget) => {
       const match =
         (jobId && jobs.find(job => job.id === jobId)) ??
         jobs.find(job => job.name === name);
       if (!match) return;
+      const ytext = workflowStore.getJobBodyYText(match.id);
+      if (ytext) setPendingHighlight?.({ ytext, added });
       // Clears the sibling selections too: leaving a stale trigger or edge
       // behind still resolves to the job, but leaves a URL that is wrong to
       // share and wrong to go back to.
@@ -226,7 +233,7 @@ export function AIAssistantPanelWrapper({
         edge: null,
       });
     },
-    [jobs, updateSearchParams]
+    [jobs, updateSearchParams, workflowStore, setPendingHighlight]
   );
   const edges = useWorkflowState(state => state.edges);
   const positions = useWorkflowState(state => state.positions);
