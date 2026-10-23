@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Changed
 
+- Cron schedules now show "UTC" after the time, on the canvas and in the trigger
+  panels [#5247](https://github.com/OpenFn/lightning/issues/5247)
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state

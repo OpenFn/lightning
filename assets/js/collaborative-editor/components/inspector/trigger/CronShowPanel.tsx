@@ -1,8 +1,9 @@
+import { humanizeCron } from '#/utils/humanizeCron';
+
 import { useWorkflowState } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
 import { InspectorLayout } from '../InspectorLayout';
 
-import { humanizeCron } from './cronSchedule';
 import { EditFooter } from './EditFooter';
 import { ReadOnlyField } from './ReadOnlyField';
 import { TriggerTypeBadge } from './TriggerTypeBadge';
