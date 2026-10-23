@@ -1,5 +1,5 @@
 import {
-  type Project,
+  type CurrentProject,
   type ProjectMetrics,
   type WorkflowRow,
   WorkflowsIndexPage as DesignSystemWorkflowsIndexPage,
@@ -10,7 +10,7 @@ import { designSystemPage } from '../page';
 
 /** What WorkflowLive.Index puts in `data-props`. */
 export interface Props {
-  project: Pick<Project, 'id' | 'parentId' | 'color'>;
+  project: CurrentProject;
   projectLabel: string;
   period: string;
   stats: WorkflowRow[];

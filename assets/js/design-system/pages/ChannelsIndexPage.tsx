@@ -3,14 +3,14 @@ import {
   type ChannelFormValues,
   type ChannelRow,
   ChannelsIndexPage as DesignSystemChannelsIndexPage,
-  type Project,
+  type CurrentProject,
 } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** What ChannelLive.Index puts in `data-props`. */
 export interface Props {
-  project: Pick<Project, 'id' | 'parentId' | 'color'>;
+  project: CurrentProject;
   projectLabel: string;
   channels: ChannelRow[];
   totalChannels: number;

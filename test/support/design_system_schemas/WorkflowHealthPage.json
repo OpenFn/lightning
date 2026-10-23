@@ -4,7 +4,11 @@
   "properties": {
     "project": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
+        "historyRetentionPeriod": {
+          "type": ["number", "null"]
+        },
         "id": {
           "type": "string"
         },
@@ -13,13 +17,9 @@
         },
         "color": {
           "type": ["string", "null"]
-        },
-        "historyRetentionPeriod": {
-          "type": ["number", "null"]
         }
       },
-      "required": ["id", "parentId", "color", "historyRetentionPeriod"],
-      "additionalProperties": false
+      "required": ["color", "historyRetentionPeriod", "id", "parentId"]
     },
     "projectLabel": {
       "type": "string"

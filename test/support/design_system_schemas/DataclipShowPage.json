@@ -3,6 +3,19 @@
   "type": "object",
   "properties": {
     "project": {
+      "$ref": "#/definitions/CurrentProject"
+    },
+    "projectLabel": {
+      "type": "string"
+    },
+    "dataclip": {
+      "$ref": "#/definitions/DataclipDetail"
+    }
+  },
+  "required": ["project", "projectLabel", "dataclip"],
+  "additionalProperties": false,
+  "definitions": {
+    "CurrentProject": {
       "type": "object",
       "properties": {
         "id": {
@@ -18,16 +31,6 @@
       "required": ["id", "parentId", "color"],
       "additionalProperties": false
     },
-    "projectLabel": {
-      "type": "string"
-    },
-    "dataclip": {
-      "$ref": "#/definitions/DataclipDetail"
-    }
-  },
-  "required": ["project", "projectLabel", "dataclip"],
-  "additionalProperties": false,
-  "definitions": {
     "DataclipDetail": {
       "type": "object",
       "properties": {

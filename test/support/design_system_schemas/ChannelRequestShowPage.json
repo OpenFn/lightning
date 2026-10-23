@@ -3,20 +3,7 @@
   "type": "object",
   "properties": {
     "project": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "parentId": {
-          "type": ["string", "null"]
-        },
-        "color": {
-          "type": ["string", "null"]
-        }
-      },
-      "required": ["id", "parentId", "color"],
-      "additionalProperties": false
+      "$ref": "#/definitions/CurrentProject"
     },
     "projectLabel": {
       "type": "string"
@@ -47,6 +34,22 @@
   ],
   "additionalProperties": false,
   "definitions": {
+    "CurrentProject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": ["string", "null"]
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "parentId", "color"],
+      "additionalProperties": false
+    },
     "ChannelRequestDetail": {
       "type": "object",
       "properties": {
