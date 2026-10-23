@@ -109,6 +109,8 @@ config :esbuild,
       ~w(--loader:.woff2=file
          --loader:.ttf=copy
          --format=esm --splitting --bundle
+         --alias:react=./node_modules/react
+         --alias:react-dom=./node_modules/react-dom
          --external:path
          --jsx=automatic
          --tsconfig=tsconfig.browser.json

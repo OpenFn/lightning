@@ -40,11 +40,16 @@ export default defineConfig({
     server: {
       deps: {
         // Don't try to optimize monaco-editor (it's mocked in tests)
-        inline: ['monaco-editor'],
+        // and inline the linked @openfn/ui's own dependencies, so dedupe
+        // gives them Lightning's React rather than Node's lookup
+        inline: ['monaco-editor', /openfn-ia-demo-overnight\/node_modules/],
       },
     },
   },
   resolve: {
+    // @openfn/ui is linked from a local checkout with its own node_modules;
+    // one React for both, as config/config.exs aliases for esbuild
+    dedupe: ['react', 'react-dom', 'use-sync-external-store'],
     alias: {
       // Ensure path aliases are resolved correctly
       '#': path.resolve(__dirname, './js'),
