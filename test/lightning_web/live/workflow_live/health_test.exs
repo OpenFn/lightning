@@ -3,22 +3,16 @@ defmodule LightningWeb.WorkflowLive.HealthTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import LightningWeb.DesignSystemHelpers
 
   alias Lightning.Repo
+
+  @page "#workflow-health-page"
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
-  test "renders the workflow name", %{conn: conn, project: project} do
-    workflow = insert(:workflow, project: project)
-
-    {:ok, _view, html} =
-      live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/health")
-
-    assert html =~ workflow.name
-  end
-
-  test "the workflow crumb leads back to its editor", %{
+  test "gives the page the project and the workflow", %{
     conn: conn,
     project: project
   } do
@@ -27,9 +21,24 @@ defmodule LightningWeb.WorkflowLive.HealthTest do
     {:ok, view, _html} =
       live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/health")
 
-    assert view
-           |> element("nav[aria-label='Breadcrumbs'] a", workflow.name)
-           |> render() =~ ~p"/projects/#{project.id}/w/#{workflow.id}"
+    props = page_props(view, @page)
+
+    assert props["workflow"] == %{"id" => workflow.id, "name" => workflow.name}
+    assert props["project"]["id"] == project.id
+    assert props["projectLabel"] == project.name
+  end
+
+  test "shows the book-a-demo banner when it is on", %{
+    conn: conn,
+    project: project
+  } do
+    Mox.stub(Lightning.MockConfig, :book_demo_banner_enabled?, fn -> true end)
+    workflow = insert(:workflow, project: project)
+
+    {:ok, view, _html} =
+      live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/health")
+
+    assert has_element?(view, "#book-demo-banner")
   end
 
   test "redirects when the workflow is in another project", %{
@@ -45,27 +54,19 @@ defmodule LightningWeb.WorkflowLive.HealthTest do
     assert flash["error"] == "Workflow not found"
   end
 
-  test "passes the project's history retention period to the React component",
+  test "passes the project's history retention period, or nil when history is kept forever",
        %{conn: conn, project: project} do
     workflow = insert(:workflow, project: project)
+    path = ~p"/projects/#{project.id}/w/#{workflow.id}/health"
+
+    {:ok, view, _html} = live(conn, path)
+    assert page_props(view, @page)["project"]["historyRetentionPeriod"] == nil
 
     project
     |> Ecto.Changeset.change(history_retention_period: 14)
     |> Repo.update!()
 
-    {:ok, _view, html} =
-      live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/health")
-
-    assert html =~ ~s(data-history-retention-period="14")
-  end
-
-  test "leaves the retention period off when the project keeps history forever",
-       %{conn: conn, project: project} do
-    workflow = insert(:workflow, project: project)
-
-    {:ok, _view, html} =
-      live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/health")
-
-    refute html =~ "data-history-retention-period"
+    {:ok, view, _html} = live(conn, path)
+    assert page_props(view, @page)["project"]["historyRetentionPeriod"] == 14
   end
 end

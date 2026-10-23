@@ -1,7 +1,8 @@
 defmodule LightningWeb.WorkflowLive.Health do
   @moduledoc """
   Workflow health page: a summary of a single workflow's work orders over the
-  window the reader picks.
+  window the reader picks. The design system's page draws it; the page asks
+  the health endpoints for its numbers itself.
   """
   use LightningWeb, :live_view
 
@@ -25,42 +26,27 @@ defmodule LightningWeb.WorkflowLive.Health do
   @impl true
   def render(assigns) do
     ~H"""
-    <LayoutComponents.page_content>
-      <:header>
-        <LayoutComponents.header current_user={@current_user}>
-          <:breadcrumbs>
-            <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker
-                project={@project}
-                label={@project_label}
-              />
-              <LayoutComponents.breadcrumb_items items={[
-                {"Workflows", ~p"/projects/#{@project}/w"},
-                {@workflow.name, ~p"/projects/#{@project}/w/#{@workflow}"}
-              ]} />
-              <LayoutComponents.breadcrumb>
-                <:label>Health</:label>
-              </LayoutComponents.breadcrumb>
-            </LayoutComponents.breadcrumbs>
-          </:breadcrumbs>
-        </LayoutComponents.header>
-      </:header>
-
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div
-          id="workflow-health"
-          phx-hook="ReactComponent"
-          phx-update="ignore"
-          data-react-name="WorkflowHealth"
-          data-react-file={~p"/assets/js/health/WorkflowHealth.js"}
-          data-workflow-id={@workflow.id}
-          data-project-id={@project.id}
-          data-workflow-name={@workflow.name}
-          data-history-retention-period={@project.history_retention_period}
-        >
-        </div>
-      </div>
-    </LayoutComponents.page_content>
+    <.design_system_page
+      name="WorkflowHealthPage"
+      props={page_props(assigns)}
+      banner={assigns[:banner]}
+      current_user={@current_user}
+    />
     """
+  end
+
+  # The shape the design system's WorkflowHealthPageProps expect, minus the
+  # range and the endpoint replies, which the page keeps itself.
+  defp page_props(%{project: project, workflow: workflow} = assigns) do
+    %{
+      project: %{
+        id: project.id,
+        parentId: project.parent_id,
+        color: project.color,
+        historyRetentionPeriod: project.history_retention_period
+      },
+      projectLabel: assigns.project_label,
+      workflow: %{id: workflow.id, name: workflow.name}
+    }
   end
 end
