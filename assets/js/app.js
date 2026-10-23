@@ -34,7 +34,6 @@ import topbar from '../vendor/topbar.cjs';
 import { mountFlash } from './design-system/flash';
 import { mountShell } from './design-system/shell';
 import * as Hooks from './hooks';
-import LogViewer from './log-viewer';
 
 enableMapSet();
 const sentry = Sentry.init({
@@ -55,7 +54,6 @@ const sentry = Sentry.init({
 window.sentry = sentry;
 
 const hooks = {
-  LogViewer,
   ...Hooks,
 };
 

@@ -671,25 +671,18 @@ defmodule Lightning.WorkflowLive.Helpers do
   ## Examples
 
       view
-      |> dataclip_viewer("step-output-dataclip-viewer")
+      |> job_editor()
       |> get_attrs_and_inner_html()
       |> decode_inner_json()
 
       # =>
       # {
-      #   %{"data-react-id" => "step-output-dataclip-viewer"},
-      #   %{"body" => "..."}
+      #   %{"id" => "JobEditor-1"},
+      #   %{"job" => ...}
       # }
   """
   def decode_inner_json({attrs, inner_html}) do
     {attrs, inner_html |> Jason.decode!()}
-  end
-
-  def dataclip_viewer(view, id) do
-    view
-    |> element(
-      "script[phx-hook='HeexReactComponent'][data-react-name='DataclipViewer'][id='#{id}']"
-    )
   end
 
   def job_editor(view, id \\ 1) do

@@ -23,12 +23,10 @@ import {
   ToggleSidebarViaCtrlM,
   OpenProjectPickerViaCtrlP,
 } from './KeyHandlers';
-import LogLineHighlight from './LogLineHighlight';
 import type { PhoenixHook } from './PhoenixHook';
 import { TabbedContainer } from './TabbedContainer';
 
 export {
-  LogLineHighlight,
   WorkflowToYAML,
   YAMLToWorkflow,
   TemplateToWorkflow,
