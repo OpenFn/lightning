@@ -9,8 +9,8 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
   instead, which is the only place it is written.
 
   Nearly every assertion here funnels through the same `ProjectUsers`
-  `:access_project` check and so fires the same clause —
-  `permitted?(_action, %Scope{mfa_satisfied?: false})`. Another route adds no
+  `:access_project` check and so hits the same MFA refusal in
+  `Lightning.Policies.Decision.project/4`. Another route adds no
   MFA coverage on top of that. What a route proves, and the policy unit tests
   cannot, is that it reaches the policy at all rather than authorising off a raw
   query: this file is here to catch a bypass.
@@ -37,6 +37,7 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
 
   # The member the policy is aimed at: a real member of an MFA-required
   # project who has never set up a second factor.
@@ -209,10 +210,8 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
       }
     end
 
-    # `:access_collection` is the read half of `Policies.Collections`, and the
-    # only half that delegates to `:access_project`. The write actions go
-    # through `Scope.role_in?/3` instead and are covered by the scope unit
-    # tests, so this is the clause those do not reach.
+    # These routes only read, so they reach `:access_collection`. The write
+    # actions are held to MFA by the same check in `Policies.Decision`.
     test "are refused for a member who has not enrolled", %{
       conn: conn,
       user: user,
@@ -221,11 +220,19 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
     } do
       api_conn = bearer_conn(user)
 
-      assert get(api_conn, ~p"/collections/#{collection.name}").status == 401,
-             "an unenrolled member streamed a collection"
+      assert_problem(
+        get(api_conn, ~p"/collections/#{collection.name}"),
+        403,
+        :forbidden,
+        []
+      )
 
-      assert get(api_conn, ~p"/collections/#{collection.name}/a-key").status ==
-               401
+      assert_problem(
+        get(api_conn, ~p"/collections/#{collection.name}/a-key"),
+        403,
+        :forbidden,
+        []
+      )
 
       assert get(
                conn,
@@ -284,23 +291,20 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
     } do
       workflow = insert(:workflow, project: project) |> with_snapshot()
 
-      for {path, refusals} <- [
-            {~p"/api/projects/#{project.id}", [401, 403]},
-            {~p"/api/projects/#{project.id}/workflows", [401, 403]},
-            {~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
-             [401, 403]},
-            {~p"/api/projects/#{project.id}/credentials", [401, 403]},
-            {~p"/api/projects/#{project.id}/work_orders", [401, 403]},
-            {~p"/api/projects/#{project.id}/jobs", [401]},
-            {~p"/api/projects/#{project.id}/runs", [401]},
-            {~p"/api/provision/#{project.id}", [401, 403]},
-            {~p"/api/provision/yaml?#{%{id: project.id}}", [401, 403]}
+      for path <- [
+            ~p"/api/projects/#{project.id}",
+            ~p"/api/projects/#{project.id}/workflows",
+            ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+            ~p"/api/projects/#{project.id}/credentials",
+            ~p"/api/projects/#{project.id}/work_orders",
+            ~p"/api/projects/#{project.id}/jobs",
+            ~p"/api/projects/#{project.id}/runs",
+            ~p"/api/provision/#{project.id}",
+            ~p"/api/provision/yaml?#{%{id: project.id}}"
           ] do
-        status = get(conn, path).status
+        conn = get(conn, path)
 
-        assert status in refusals,
-               "#{path} answered #{status} to an unenrolled member, not " <>
-                 "#{inspect(refusals)}"
+        assert_problem(conn, 403, :forbidden, [])
       end
     end
 

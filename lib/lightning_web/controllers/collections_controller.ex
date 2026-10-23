@@ -1,67 +1,48 @@
 defmodule LightningWeb.CollectionsController do
   use LightningWeb, :controller
 
+  alias Ecto.Changeset
   alias Lightning.Collections
-  alias Lightning.Extensions.Message
   alias Lightning.Policies.Permissions
+  alias Lightning.Run
+  alias Lightning.Scope
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Filters
+  alias LightningWeb.API.Filters.Cursor
+  alias LightningWeb.API.Problem
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
 
   require Logger
 
   @max_chunk_size 100
 
-  @limits Application.compile_env!(:lightning, __MODULE__)
+  def put(conn, %{"name" => name, "key" => key}) do
+    with {:ok, collection} <- fetch_collection(conn, name, :put_collection_item) do
+      case Collections.put(collection, key, conn.body_params["value"]) do
+        :ok ->
+          json(conn, %{upserted: 1, error: nil})
 
-  @default_stream_limit @limits[:default_stream_limit]
-  @max_database_limit @limits[:max_database_limit]
+        {:error, %Changeset{} = changeset} ->
+          {:error, Errors.problem(changeset, %{}, path: [:key])}
 
-  @timestamp_params [
-    "created_after",
-    "created_before",
-    "updated_after",
-    "updated_before"
-  ]
-
-  @valid_params ["key", "cursor", "limit" | @timestamp_params]
-
-  def put(conn, %{"name" => name, "key" => key, "value" => value}) do
-    with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, :put_collection_item, collection),
-         :ok <- Collections.put(collection, key, value) do
-      json(conn, %{upserted: 1, error: nil})
-    else
-      {:error, %Ecto.Changeset{}} ->
-        json(conn, %{upserted: 0, error: "Format error"})
-
-      error ->
-        maybe_handle_limit_error(conn, error)
+        error ->
+          error
+      end
     end
   end
 
-  def put(conn, %{"name" => _, "key" => _}), do: missing_body(conn, "value")
-
-  def put_all(conn, %{"name" => name, "items" => items}) do
-    with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, :put_collection_item, collection),
-         {:ok, count} <- Collections.put_all(collection, items) do
+  def put_all(conn, %{"name" => name}) do
+    with {:ok, collection} <- fetch_collection(conn, name, :put_collection_item),
+         {:ok, count} <-
+           Collections.put_all(collection, conn.body_params["items"]) do
       json(conn, %{upserted: count, error: nil})
-    else
-      {:error, :duplicate_key} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{upserted: 0, error: "Duplicate key found"})
-
-      error ->
-        maybe_handle_limit_error(conn, error)
     end
   end
-
-  def put_all(conn, %{"name" => _}), do: missing_body(conn, "items")
 
   def get(conn, %{"name" => name, "key" => key}) do
-    with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, :access_collection, collection) do
+    with {:ok, collection} <- fetch_collection(conn, name, :access_collection) do
       case Collections.get(collection, key) do
         nil -> resp(conn, :no_content, "")
         item -> json(conn, item)
@@ -69,36 +50,40 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
+  # A missing item is a success with nothing in it (error-format spec §10).
   def delete(conn, %{"name" => name, "key" => key}) do
-    with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, :delete_collection_item, collection) do
+    with {:ok, collection} <-
+           fetch_collection(conn, name, :delete_collection_item) do
       case Collections.delete(collection, key) do
-        :ok ->
-          json(conn, %{key: key, deleted: 1, error: nil})
-
-        {:error, :not_found} ->
-          json(conn, %{key: key, deleted: 0, error: "Item Not Found"})
+        :ok -> json(conn, %{key: key, deleted: 1})
+        {:error, :not_found} -> json(conn, %{key: key, deleted: 0})
       end
     end
   end
 
   def delete_all(conn, %{"name" => name} = params) do
-    with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, :delete_all_collection_items, collection) do
+    with {:ok, collection} <-
+           fetch_collection(conn, name, :delete_all_collection_items) do
       key_param = params["key"]
       {:ok, n} = Collections.delete_all(collection, key_param)
-      json(conn, %{key: key_param, deleted: n, error: nil})
+      json(conn, %{key: key_param, deleted: n})
     end
   end
 
   def stream(conn, %{"name" => name}) do
-    with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, :access_collection, collection),
+    with {:ok, collection} <- fetch_collection(conn, name, :access_collection),
          {:ok, filters} <-
-           parse_query_params(Map.drop(conn.query_params, ["project_id"])) do
-      key_pattern = conn.query_params["key"]
-      items_stream = stream_all_in_chunks(collection, filters, key_pattern)
-      response_limit = Map.fetch!(filters, :limit)
+           stream_filters(Map.delete(conn.query_params, "project_id")) do
+      {key_pattern, filters} = Map.pop(filters, :key)
+      response_limit = filters.limit
+
+      # One item past the limit tells the response whether to carry a cursor.
+      items_stream =
+        Collections.stream_all(
+          collection,
+          %{filters | limit: response_limit + 1},
+          key_pattern
+        )
 
       case stream_chunked(conn, items_stream, response_limit) do
         {:error, conn} -> conn
@@ -107,106 +92,26 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def download(conn, %{"project_id" => project_id, "name" => name}) do
-    with {:ok, uuid} <- cast_uuid(project_id),
-         {:ok, collection} <- Collections.get_collection(uuid, name),
-         :ok <- authorize(conn, :access_collection, collection) do
-      items_stream =
-        stream_all_in_chunks(
-          collection,
-          %{cursor: nil, limit: @max_database_limit + 1},
-          nil
-        )
+  defp fetch_collection(conn, name, action) do
+    subject = conn.assigns.subject
 
-      conn
-      |> put_resp_content_type("application/json")
-      |> put_resp_header(
-        "content-disposition",
-        ~s(attachment; filename="#{name}.json")
-      )
-      |> stream_as_json_array(items_stream)
-    end
+    with {:ok, collection} <-
+           Collections.resolve_collection(
+             subject,
+             name,
+             conn.query_params["project_id"]
+           ),
+         :ok <- authorize(subject, action, collection),
+         do: {:ok, collection}
   end
 
-  defp resolve(conn, name) do
-    case Map.get(conn.query_params, "project_id") do
-      nil ->
-        Collections.get_collection(name)
+  # A run is never asked Lightning.Policies.Collections. It may do anything to
+  # its own project's collections, and resolve_collection/3 finds it no others.
+  defp authorize(%Run{}, _action, _collection), do: :ok
 
-      project_id ->
-        with {:ok, uuid} <- cast_uuid(project_id) do
-          Collections.get_collection(uuid, name)
-        end
-    end
-  end
-
-  defp cast_uuid(project_id) do
-    case Ecto.UUID.cast(project_id) do
-      {:ok, uuid} -> {:ok, uuid}
-      :error -> {:error, :bad_request}
-    end
-  end
-
-  defp authorize(conn, action, collection) do
-    subject = conn.assigns[:subject] || conn.assigns[:current_user]
-
-    Permissions.can(
-      Lightning.Policies.Collections,
-      action,
-      subject,
-      collection
-    )
-  end
-
-  defp missing_body(conn, field) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{error: "Missing required field: #{field}"})
-  end
-
-  defp stream_as_json_array(conn, items_stream) do
-    conn = send_chunked(conn, 200)
-    {:ok, conn} = Plug.Conn.chunk(conn, "[")
-
-    {conn, _first?} =
-      Enum.reduce_while(items_stream, {conn, true}, fn item, {conn, first?} ->
-        prefix = if first?, do: "", else: ","
-
-        case Plug.Conn.chunk(conn, prefix <> Jason.encode!(item)) do
-          {:ok, conn} -> {:cont, {conn, false}}
-          {:error, :closed} -> {:halt, {conn, false}}
-        end
-      end)
-
-    {:ok, conn} = Plug.Conn.chunk(conn, "]")
-    conn
-  end
-
-  # Streams records from database without depending on holding a transaction from database pool.
-  # It streams one more than the limit to allow determining if there are more items for the response cursor.
-  defp stream_all_in_chunks(collection, %{limit: limit} = filters, key_pattern)
-       when limit <= @max_database_limit do
-    filters = Map.put(filters, :limit, limit + 1)
-
-    Collections.get_all(collection, filters, key_pattern)
-  end
-
-  defp stream_all_in_chunks(
-         collection,
-         %{cursor: initial_cursor} = filters,
-         key_pattern
-       ) do
-    filters = Map.put(filters, :limit, @max_database_limit + 1)
-
-    Stream.unfold(initial_cursor, fn cursor ->
-      filters = Map.put(filters, :cursor, cursor)
-
-      case Collections.get_all(collection, filters, key_pattern) do
-        [] -> nil
-        list -> {list, List.last(list).id}
-      end
-    end)
-    |> Stream.flat_map(& &1)
+  defp authorize(actor, action, collection) do
+    with {:ok, scope} <- Scope.fetch(actor, collection),
+         do: Permissions.permit(:collections, action, scope, collection)
   end
 
   defmodule ChunkAcc do
@@ -230,55 +135,39 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  defp parse_query_params(query_params) do
-    query_params
-    |> Enum.into(%{
-      "cursor" => nil,
-      "limit" => "#{@default_stream_limit}"
-    })
-    |> validate_query_params()
-  end
+  # Every bad parameter is reported, in name order, and none is quoted
+  # (error-format spec §9.4).
+  defp stream_filters(query_params) do
+    {params, unknown} =
+      Map.split(query_params, Filters.collection_item_parameters())
 
-  defp validate_query_params(
-         %{"cursor" => cursor, "limit" => limit} = query_params
-       ) do
-    with invalid_params when map_size(invalid_params) == 0 <-
-           Map.drop(query_params, @valid_params),
-         {:ok, cursor} <- validate_cursor(cursor),
-         {limit, ""} <- Integer.parse(limit),
-         :ok <- validate_timestamps(query_params) do
-      filters =
-        query_params
-        |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
-        |> Map.put(:limit, limit)
-        |> Map.put(:cursor, cursor)
-
-      {:ok, filters}
-    else
-      _invalid ->
-        {:error, :bad_request}
-    end
-  end
-
-  defp validate_cursor(nil), do: {:ok, nil}
-
-  defp validate_cursor(cursor) do
-    with {:ok, decoded} <- Base.decode64(cursor),
-         {id, ""} <- Integer.parse(decoded) do
-      {:ok, id}
-    end
-  end
-
-  defp validate_timestamps(params) do
     params
-    |> Map.take(@timestamp_params)
-    |> Enum.all?(fn {_key, value} ->
-      match?({:ok, _dt, _time}, DateTime.from_iso8601(value))
-    end)
-    |> case do
-      true -> :ok
-      false -> :error
-    end
+    |> Filters.collection_items()
+    |> Errors.refuse_parameters()
+    |> refuse_unknown(Map.keys(unknown))
+  end
+
+  defp refuse_unknown({:ok, _filters} = ok, []), do: ok
+
+  defp refuse_unknown(result, unknown) do
+    refused =
+      case result do
+        {:ok, _filters} -> []
+        {:error, %Problem{errors: errors}} -> errors
+      end
+
+    entries =
+      for name <- unknown,
+          do:
+            Errors.entry(
+              {:parameter, name},
+              {"is not accepted", code: :unknown_key}
+            )
+
+    {:error,
+     Problem.new(:invalid_parameter,
+       errors: Enum.sort_by(refused ++ entries, & &1.parameter)
+     )}
   end
 
   defp begin_chunking(conn) do
@@ -297,10 +186,7 @@ defmodule LightningWeb.CollectionsController do
   end
 
   defp finish_chunking(%ChunkAcc{conn: conn, cursor_data: cursor_data}) do
-    cursor =
-      if cursor_data do
-        Base.encode64(to_string(cursor_data))
-      end
+    cursor = if cursor_data, do: Cursor.encode(cursor_data)
 
     Plug.Conn.chunk(conn, ~S(], "cursor":) <> Jason.encode!(cursor) <> "}")
   end
@@ -373,15 +259,4 @@ defmodule LightningWeb.CollectionsController do
         {:halt, {:error, conn}}
     end
   end
-
-  defp maybe_handle_limit_error(
-         conn,
-         {:error, :exceeds_limit, %Message{text: error_msg}}
-       ) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{upserted: 0, error: error_msg})
-  end
-
-  defp maybe_handle_limit_error(_conn, error), do: error
 end

@@ -2,17 +2,16 @@ defmodule Lightning.Policies.ProvisioningTest do
   @moduledoc """
   Tests for the provisioning API's authorization policy.
 
-  The clauses that resolve a `Lightning.Projects.Scope` are held to the
-  project's MFA requirement; the ones that cannot be (a project that does not
-  exist yet, and a machine credential) are not.
+  A person is held to the project's MFA requirement; a superuser creating a
+  project and a repo connection are not.
   """
   use Lightning.DataCase, async: true
 
   import Lightning.Factories
 
   alias Lightning.Policies.Permissions
-  alias Lightning.Policies.Provisioning
-  alias Lightning.Projects.Project
+  alias Lightning.Scope
+  alias Lightning.ServiceAccount.AccessToken
 
   describe ":provision_project on a project that requires MFA" do
     test "is refused for an unenrolled :owner or :admin" do
@@ -25,12 +24,8 @@ defmodule Lightning.Policies.ProvisioningTest do
         # Control: the same unenrolled actor CAN provision a project that
         # does not require MFA, so the refusal below is about the
         # requirement and not about the role.
-        assert Permissions.can?(
-                 Provisioning,
-                 :provision_project,
-                 actor,
-                 unrestricted_project
-               )
+        assert permit_target(actor, :provision_project, unrestricted_project) ==
+                 :ok
 
         mfa_project =
           insert(:project,
@@ -38,14 +33,7 @@ defmodule Lightning.Policies.ProvisioningTest do
             project_users: [%{user_id: actor.id, role: role}]
           )
 
-        refute Permissions.can?(
-                 Provisioning,
-                 :provision_project,
-                 actor,
-                 mfa_project
-               )
-
-        assert Provisioning.authorize(:provision_project, actor, mfa_project) ==
+        assert permit_target(actor, :provision_project, mfa_project) ==
                  {:error, :forbidden}
       end
     end
@@ -60,12 +48,7 @@ defmodule Lightning.Policies.ProvisioningTest do
             project_users: [%{user_id: actor.id, role: role}]
           )
 
-        assert Permissions.can?(
-                 Provisioning,
-                 :provision_project,
-                 actor,
-                 mfa_project
-               )
+        assert permit_target(actor, :provision_project, mfa_project) == :ok
       end
     end
 
@@ -79,38 +62,19 @@ defmodule Lightning.Policies.ProvisioningTest do
             project_users: [%{user_id: actor.id, role: role}]
           )
 
-        refute Permissions.can?(
-                 Provisioning,
-                 :provision_project,
-                 actor,
-                 mfa_project
-               )
+        assert permit_target(actor, :provision_project, mfa_project) ==
+                 {:error, :forbidden}
       end
     end
-  end
 
-  describe "clauses that resolve no project membership" do
-    test "a superuser can still create a project that does not exist yet" do
-      # `%Project{id: nil}` has no `requires_mfa` to read and no members to
-      # consult; the MFA guard cannot apply and must not have been added here.
-      superuser = insert(:user, role: :superuser, mfa_enabled: false)
-
-      assert Permissions.can?(
-               Provisioning,
-               :provision_project,
-               superuser,
-               %Project{id: nil}
-             )
-    end
-
-    test "a repo connection is unaffected by the project's MFA requirement" do
+    test "does not apply to a repo connection" do
       # No MFA concept applies to a machine credential, so the connection
       # keeps working on a project its human members must enrol to touch.
       project = insert(:project, requires_mfa: true)
       repo_connection = insert(:project_repo_connection, project: project)
 
       for action <- [:provision_project, :describe_project] do
-        assert Permissions.can?(Provisioning, action, repo_connection, project)
+        assert permit_target(repo_connection, action, project) == :ok
       end
     end
   end
@@ -128,19 +92,200 @@ defmodule Lightning.Policies.ProvisioningTest do
       unrestricted_project =
         insert(:project, project_users: [%{user_id: actor.id, role: :viewer}])
 
-      assert Permissions.can?(
-               Provisioning,
-               :describe_project,
-               actor,
-               unrestricted_project
-             )
+      assert permit_target(actor, :describe_project, unrestricted_project) ==
+               :ok
 
-      refute Permissions.can?(
-               Provisioning,
-               :describe_project,
-               actor,
-               mfa_project
-             )
+      assert permit_target(actor, :describe_project, mfa_project) ==
+               {:error, :forbidden}
     end
   end
+
+  describe "a scope for one project" do
+    test "is refused another project's subject" do
+      owner = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: owner.id, role: :owner}])
+
+      repo_connection = insert(:project_repo_connection, project: project)
+      other = insert(:project)
+
+      {:ok, owner_scope} = Scope.fetch(owner, project)
+      {:ok, connection_scope} = Scope.fetch(repo_connection, project)
+
+      for action <- [:provision_project, :describe_project],
+          scope <- [owner_scope, connection_scope, Scope.new(repo_connection)] do
+        assert Permissions.permit(:provisioning, action, scope, other) ==
+                 {:error, :forbidden}
+      end
+
+      # Shows the refusals above are about the project, not the scopes.
+      for action <- [:provision_project, :describe_project],
+          scope <- [owner_scope, connection_scope] do
+        assert Permissions.permit(:provisioning, action, scope, project) == :ok
+      end
+    end
+  end
+
+  describe "an operator on an existing project" do
+    setup do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{account: account, project: insert(:project)}
+    end
+
+    test "is refused both actions without projects:provision, whatever else it holds",
+         %{account: account, project: project} do
+      account = %{account | grants: MapSet.new(AccessToken.scopes())}
+
+      for action <- [:provision_project, :describe_project] do
+        assert permit_target(account, action, project) ==
+                 {:error, {:insufficient_scope, "projects:provision"}}
+      end
+    end
+
+    test "may provision with projects:provision", %{
+      account: account,
+      project: project
+    } do
+      account = %{account | grants: MapSet.new(["projects:provision"])}
+
+      assert permit_target(account, :provision_project, project) == :ok
+    end
+
+    test "needs projects:write as well to describe, as :access_project does", %{
+      account: account,
+      project: project
+    } do
+      provision_only = %{account | grants: MapSet.new(["projects:provision"])}
+
+      both = %{
+        account
+        | grants: MapSet.new(["projects:provision", "projects:write"])
+      }
+
+      assert permit_target(provision_only, :describe_project, project) ==
+               {:error, :forbidden}
+
+      assert permit_target(both, :describe_project, project) == :ok
+    end
+
+    test "hears the project is scheduled for deletion only once allowed", %{
+      account: account
+    } do
+      project =
+        insert(:project,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.add(1, :day)
+        )
+
+      assert permit_target(account, :provision_project, project) ==
+               {:error, {:insufficient_scope, "projects:provision"}}
+
+      account = %{account | grants: MapSet.new(["projects:provision"])}
+
+      assert permit_target(account, :provision_project, project) ==
+               {:error, :scheduled_for_deletion}
+    end
+  end
+
+  describe ":create_project" do
+    test "is allowed for a superuser, who is not held to MFA" do
+      superuser = insert(:user, role: :superuser, mfa_enabled: false)
+
+      assert permit_create(superuser) == :ok
+    end
+
+    test "is allowed for an operator holding projects:write, and only then" do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      assert permit_create(%{account | grants: MapSet.new(["projects:write"])}) ==
+               :ok
+
+      assert permit_create(%{account | grants: MapSet.new(["users:write"])}) ==
+               {:error, {:insufficient_scope, "projects:write"}}
+    end
+
+    test "is refused for a user who is not a superuser, whatever roles they hold elsewhere" do
+      for role <- [:owner, :admin, :editor, :viewer] do
+        user = insert(:user)
+        insert(:project, project_users: [%{user_id: user.id, role: role}])
+
+        assert permit_create(user) == {:error, :forbidden}
+      end
+    end
+
+    # A repo connection holds no `projects:write`, so the grant refuses it first.
+    test "is refused for a repo connection" do
+      repo_connection = insert(:project_repo_connection)
+
+      assert permit_create(repo_connection) ==
+               {:error, {:insufficient_scope, "projects:write"}}
+    end
+  end
+
+  # The routes reach only people (every grant) and repo connections
+  # (projects:provision), so these refusals are for tokens that can't reach
+  # /api/provision.
+  describe "before the target is loaded" do
+    setup do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{account: account}
+    end
+
+    test "describing needs projects:provision", %{account: account} do
+      assert permit(account, [], :describe_project) ==
+               {:error, {:insufficient_scope, "projects:provision"}}
+
+      assert permit(account, ["projects:write"], :describe_project) ==
+               {:error, {:insufficient_scope, "projects:provision"}}
+
+      assert permit(account, ["projects:provision"], :describe_project) == :ok
+    end
+
+    # Creating needs projects:write and provisioning an existing project
+    # projects:provision; which applies waits for the body's target.
+    test "provisioning needs either grant", %{account: account} do
+      assert permit(account, ["users:write"], :provision_project) ==
+               {:error, {:insufficient_scope, "projects:provision"}}
+
+      assert permit(account, ["projects:write"], :provision_project) == :ok
+      assert permit(account, ["projects:provision"], :provision_project) == :ok
+    end
+
+    test "passes a repo connection" do
+      scope = Scope.new(insert(:project_repo_connection))
+
+      for action <- [:describe_project, :provision_project] do
+        assert Permissions.permit(:provisioning, action, scope) == :ok
+      end
+    end
+
+    defp permit(account, grants, action) do
+      scope = Scope.new(%{account | grants: MapSet.new(grants)})
+      Permissions.permit(:provisioning, action, scope)
+    end
+  end
+
+  describe "a caller with no standing on the project" do
+    test "is told so, for the API to answer as a project that doesn't exist" do
+      user = insert(:user)
+      project = insert(:project)
+
+      for action <- [:provision_project, :describe_project] do
+        assert permit_target(user, action, project) == {:error, :no_standing}
+      end
+    end
+  end
+
+  defp permit_target(actor, action, project) do
+    {:ok, scope} = Scope.fetch(actor, project)
+    Permissions.permit(:provisioning, action, scope, project)
+  end
+
+  defp permit_create(actor),
+    do: Permissions.permit(:provisioning, :create_project, Scope.new(actor), nil)
 end

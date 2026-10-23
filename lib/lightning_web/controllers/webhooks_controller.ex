@@ -1,12 +1,16 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
+  alias Lightning.Extensions.Message
   alias Lightning.Extensions.RateLimiting
   alias Lightning.Invocation.RequestHeaders
   alias Lightning.Retry
   alias Lightning.Services.RateLimiter
   alias Lightning.Workflows
   alias Lightning.WorkOrders
+  alias LightningWeb.API.Codes
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.Problem
 
   require Logger
 
@@ -15,11 +19,7 @@ defmodule LightningWeb.WebhooksController do
   defp reject_unfetched(conn, _) do
     case conn.body_params do
       %Plug.Conn.Unfetched{} ->
-        conn
-        |> put_status(415)
-        |> put_view(LightningWeb.ErrorView)
-        |> render(:"415")
-        |> halt()
+        Problem.halt(conn, Problem.new(:unsupported_media_type))
 
       _ ->
         conn
@@ -78,43 +78,38 @@ defmodule LightningWeb.WebhooksController do
               workflow_id: trigger.workflow.id,
               project_id: project_id
             },
-            message:
-              "Unable to process request due to temporary database issues. Please try again in %{s}s.",
             halt?: false
           )
 
-        {:error, %Ecto.Changeset{} = changeset} ->
-          errors = Ecto.Changeset.traverse_errors(changeset, fn {m, _} -> m end)
-
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{error: :invalid_request, details: errors})
-
-        {:error, reason} when is_atom(reason) ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{error: reason})
+        # The work order is built from the trigger and the workflow, not shaped
+        # by the request, so its errors have no place in the body to point at
+        # and the walker would raise on them. The body as a whole is what could
+        # not be saved, at 422 as /i/* always answered (spec §12).
+        {:error, reason}
+        when is_atom(reason) or is_struct(reason, Ecto.Changeset) ->
+          entry = Errors.entry([], {"is invalid", code: :invalid})
+          Problem.respond(conn, Problem.new(:invalid, errors: [entry]))
       end
     else
-      {:error, reason, %{text: message}} ->
-        conn
-        |> put_status(:too_many_requests)
-        |> json(%{error: reason, message: message})
+      {:error, reason, %Message{}} ->
+        Problem.respond(conn, limited(reason))
 
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{"error" => "Webhook not found"})
+        Problem.respond(conn, Problem.new(:not_found))
 
       _disabled ->
-        put_status(conn, :forbidden)
-        |> json(%{
-          error: :trigger_disabled,
-          message:
-            "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
-        })
+        Problem.respond(conn, Problem.new(:trigger_disabled))
     end
   end
+
+  # Every limiter refusal on /i/* is a 429, whatever the reason, and an unknown
+  # project's is `exceeds_limit` where the API's is 404 (spec §12).
+  defp limited(reason, opts \\ [])
+
+  defp limited(:unknown_project, opts), do: limited(:exceeds_limit, opts)
+
+  defp limited(reason, opts),
+    do: Problem.new(Codes.for_limiter(reason), [status: 429] ++ opts)
 
   defp put_work_order_headers(conn, work_order) do
     conn
@@ -149,12 +144,10 @@ defmodule LightningWeb.WebhooksController do
     end
   end
 
-  # The limiter's own message is deliberately not echoed here: it is copy written
-  # for the project UI, and `/i/*` is anonymous whenever the trigger carries no
-  # auth methods. The reason code says why no run was created without disclosing
-  # a project's plan or quota wording to whoever holds the webhook URL.
+  # The one success body that carries `error`: the payload was saved, so a 4xx
+  # would make senders resend it (spec §10).
   defp rejection_details(nil), do: %{}
-  defp rejection_details(reason) when is_atom(reason), do: %{error: reason}
+  defp rejection_details({reason, %Message{}}), do: %{error: reason}
 
   defp has_run?(%{runs: [_ | _]}), do: true
   defp has_run?(_work_order), do: false
@@ -163,26 +156,23 @@ defmodule LightningWeb.WebhooksController do
   # by a completion broadcast, so reply now with the reason the run was not
   # created rather than holding the connection open for the full timeout.
   defp respond_without_run(conn, work_order, run_rejection) do
-    status =
-      if is_nil(run_rejection) do
-        Logger.warning(
-          "Synchronous webhook work order created without a run: " <>
-            inspect(work_order.id)
-        )
+    extensions = %{work_order_id: work_order.id}
 
-        :internal_server_error
-      else
-        :too_many_requests
+    problem =
+      case run_rejection do
+        {reason, _message} ->
+          limited(reason, extensions: extensions)
+
+        nil ->
+          Logger.warning(
+            "Synchronous webhook work order created without a run: " <>
+              inspect(work_order.id)
+          )
+
+          Problem.new(:internal, extensions: extensions)
       end
 
-    conn
-    |> put_status(status)
-    |> json(
-      Map.merge(
-        %{work_order_id: work_order.id},
-        rejection_details(run_rejection || :no_run_created)
-      )
-    )
+    Problem.respond(conn, problem)
   end
 
   defp handle_delayed_response(conn, work_order) do
@@ -203,27 +193,24 @@ defmodule LightningWeb.WebhooksController do
           "Webhook response timeout for work_order: #{inspect(work_order.id)}"
         )
 
-        conn
-        |> put_status(:gateway_timeout)
-        |> json(%{
-          error: :timeout,
-          message: "Workflow did not complete within timeout period",
-          work_order_id: work_order.id
-        })
+        Problem.respond(
+          conn,
+          Problem.new(:timeout, extensions: %{work_order_id: work_order.id})
+        )
     end
   end
 
   # `{:error, :too_many_runs, _}` is not fatal: the payload is still recorded as
-  # a rejected work order, just without a run. The reason travels with that
+  # a rejected work order, just without a run. The refusal travels with that
   # decision instead of being collapsed into a bare boolean, so the response can
-  # say why no run was created.
+  # say why no run was created, and when to try again.
   defp check_skip_run_creation(project_id) do
     case WorkOrders.limit_run_creation(project_id) do
       :ok ->
         {:ok, nil}
 
-      {:error, :too_many_runs, _message} ->
-        {:ok, :too_many_runs}
+      {:error, :too_many_runs, message} ->
+        {:ok, {:too_many_runs, message}}
 
       error ->
         error

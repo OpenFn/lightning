@@ -13,15 +13,27 @@ defmodule LightningWeb.API.ProvisioningController do
   """
   use LightningWeb, :controller
 
-  alias Lightning.Policies.Permissions
-  alias Lightning.Policies.Provisioning
+  alias Ecto.Changeset
+  alias Lightning.Extensions.Message
   alias Lightning.Projects
-  alias Lightning.Projects.Project
   alias Lightning.Projects.Provisioner
   alias Lightning.Workflows
   alias Lightning.WorkflowVersions
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Problem
+  alias LightningWeb.API.Request
+  alias LightningWeb.API.Target
 
-  action_fallback(LightningWeb.FallbackController)
+  action_fallback(FallbackController)
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:provisioning, :provision_project}
+       when action == :create
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:provisioning, :describe_project}
+       when action in [:show, :show_yaml]
 
   @doc """
   Creates or updates a project based on a JSON payload.
@@ -38,8 +50,16 @@ defmodule LightningWeb.API.ProvisioningController do
   ## Returns
 
   - `201 Created` with project JSON on success
-  - `422 Unprocessable Entity` with changeset errors on validation failure
-  - `403 Forbidden` if user lacks provisioning permissions
+  - `404 Not Found` if the body names a project the caller has no standing on
+  - `403 Forbidden` if the caller lacks the role or grant to provision it, or
+    to create a project
+  - `409 Conflict` to a caller who may provision the project, if it is
+    scheduled for deletion, or if a value that must be unique is taken
+  - `422 Unprocessable Content` when the document is not valid
+  - `402 Payment Required` when a plan limit is reached
+  - `503 Service Unavailable` while the adaptor catalogue is still loading
+
+  Every error is a problem document.
 
   ## Examples
 
@@ -58,45 +78,32 @@ defmodule LightningWeb.API.ProvisioningController do
         "workflows": [...]
       }
   """
-  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec create(Plug.Conn.t(), map()) ::
+          Plug.Conn.t() | {:error, term()} | {:error, term(), Message.t()}
   def create(conn, params) do
-    with project <- get_or_build_project(params),
-         :ok <-
-           Permissions.can(
-             Provisioning,
-             :provision_project,
-             conn.assigns.current_resource,
-             project
-           ) do
-      case Provisioner.import_document(
+    with {:ok, project} <- provision_target(conn.assigns.scope, params["id"]),
+         {:ok, project} <-
+           Provisioner.import_document(
              project,
              conn.assigns.current_resource,
              params
            ) do
-        {:ok, project} ->
-          conn
-          |> put_status(:created)
-          |> put_resp_header("location", ~p"/api/provision/#{project.id}")
-          |> render("create.json", project: project)
-
-        {:error, %Ecto.Changeset{} = changeset} ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> render("error.json", changeset: changeset)
-
-        {:error, error} ->
-          conn
-          |> put_status(:forbidden)
-          |> put_view(LightningWeb.ErrorView)
-          |> render(:"403",
-            error:
-              case error do
-                %Lightning.Extensions.Message{text: text} -> text
-                _ -> error
-              end
-          )
-      end
+      conn
+      |> put_status(:created)
+      |> put_resp_header("location", ~p"/api/provision/#{project.id}")
+      |> render("create.json", project: project)
     end
+  end
+
+  # The project the body names is the target, as if it were in the path (spec
+  # §4).
+  defp provision_target(scope, nil),
+    do: Target.project_or_new(scope, nil, {:provisioning, :provision_project})
+
+  defp provision_target(scope, id) do
+    with {:ok, id} <- Request.path_id(id),
+         do:
+           Target.project_or_new(scope, id, {:provisioning, :provision_project})
   end
 
   @doc """
@@ -111,13 +118,19 @@ defmodule LightningWeb.API.ProvisioningController do
   - `conn` - The Plug connection struct with the current resource assigned
   - `params` - Map containing:
     - `id` - Project UUID (required)
-    - `snapshots` - Whether to include workflow snapshots (optional)
+    - `snapshots` - A list of snapshot ids, each a UUID, to return in place
+      of the workflows' current state (optional)
 
   ## Returns
 
   - `200 OK` with project JSON on success
-  - `404 Not Found` if project doesn't exist
-  - `403 Forbidden` if user lacks describe permissions
+  - `400 Bad Request` if `snapshots` isn't a list of UUIDs
+  - `404 Not Found` if the project doesn't exist or the caller has no standing
+    on it
+  - `403 Forbidden` if the caller lacks the grant, or hasn't met the
+    project's MFA requirement
+  - `409 Conflict` to a caller who may see the project, if it is scheduled
+    for deletion
 
   ## Examples
 
@@ -125,25 +138,19 @@ defmodule LightningWeb.API.ProvisioningController do
       GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
 
       # Get project state with snapshots
-      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d?snapshots=true
+      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d?snapshots[]=6f1e2d3c-4b5a-4968-8776-5a4b3c2d1e0f
   """
-  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def show(conn, params) do
-    with project = %Project{} <-
-           Projects.get_project(params["id"]) || {:error, :not_found},
-         :ok <-
-           Permissions.can(
-             Provisioning,
-             :describe_project,
-             conn.assigns.current_resource,
-             project
-           ),
-         :ok <- ensure_workflows_have_versions(project),
-         project <-
-           Provisioner.preload_dependencies(project, params["snapshots"]) do
+  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def show(conn, %{"id" => id} = params) do
+    with {:ok, project} <- describe_target(conn.assigns.scope, id),
+         {:ok, snapshot_ids} <- fetch_snapshot_ids(params) do
+      ensure_workflows_have_versions(project)
+
       conn
       |> put_status(:ok)
-      |> render("create.json", project: project)
+      |> render("create.json",
+        project: Provisioner.preload_dependencies(project, snapshot_ids)
+      )
     end
   end
 
@@ -168,13 +175,20 @@ defmodule LightningWeb.API.ProvisioningController do
   - `conn` - The Plug connection struct with the current resource assigned
   - `params` - Map containing:
     - `id` - Project UUID (required)
-    - `snapshots` - Whether to include workflow snapshots (optional)
+    - `snapshots` - A list of snapshot ids, each a UUID, to return in place
+      of the workflows' current state (optional)
 
   ## Returns
 
   - `200 OK` with YAML content on success
-  - `404 Not Found` if project doesn't exist
-  - `403 Forbidden` if user lacks describe permissions
+  - `400 Bad Request` without an `id`
+  - `400 Bad Request` if `snapshots` isn't a list of UUIDs
+  - `404 Not Found` if the project doesn't exist or the caller has no standing
+    on it
+  - `403 Forbidden` if the caller lacks the grant, or hasn't met the
+    project's MFA requirement
+  - `409 Conflict` to a caller who may see the project, if it is scheduled
+    for deletion
 
   ## Examples
 
@@ -182,21 +196,14 @@ defmodule LightningWeb.API.ProvisioningController do
       GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.yaml
 
       # Get project state as YAML with snapshots
-      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.yaml?snapshots=true
+      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.yaml?snapshots[]=6f1e2d3c-4b5a-4968-8776-5a4b3c2d1e0f
   """
-  @spec show_yaml(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec show_yaml(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show_yaml(conn, %{"id" => id} = params) do
-    with %Projects.Project{} = project <-
-           Projects.get_project(id) || {:error, :not_found},
-         :ok <-
-           Permissions.can(
-             Provisioning,
-             :describe_project,
-             conn.assigns.current_resource,
-             project
-           ),
+    with {:ok, project} <- describe_target(conn.assigns.scope, id),
+         {:ok, snapshot_ids} <- fetch_snapshot_ids(params),
          {:ok, yaml} <-
-           Projects.export_project(:yaml, id, params["snapshots"], :v1) do
+           Projects.export_project(:yaml, project.id, snapshot_ids, :v1) do
       conn
       |> put_resp_content_type("text/yaml")
       |> put_root_layout(false)
@@ -204,11 +211,28 @@ defmodule LightningWeb.API.ProvisioningController do
     end
   end
 
-  defp get_or_build_project(params) do
-    params
-    |> case do
-      %{"id" => id} -> Projects.get_project(id) || %Project{}
-      _ -> %Project{}
+  def show_yaml(_conn, _params) do
+    {:error,
+     Problem.new(:invalid_parameter,
+       errors: [
+         Errors.entry(
+           {:parameter, "id"},
+           {"can't be blank", validation: :required}
+         )
+       ]
+     )}
+  end
+
+  defp fetch_snapshot_ids(params) do
+    with {:ok, filters} <-
+           {%{}, %{snapshots: {:array, Ecto.UUID}}}
+           |> Changeset.cast(params, [:snapshots])
+           |> Changeset.apply_action(:validate)
+           |> Errors.refuse_parameters() do
+      {:ok, filters[:snapshots]}
     end
   end
+
+  defp describe_target(scope, id),
+    do: Target.project(scope, id, {:provisioning, :describe_project})
 end

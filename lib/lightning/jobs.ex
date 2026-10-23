@@ -6,6 +6,7 @@ defmodule Lightning.Jobs do
   import Ecto.Query
 
   alias Ecto.Multi
+  alias Lightning.Accounts.User
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows
@@ -27,14 +28,20 @@ defmodule Lightning.Jobs do
     |> Enum.map(fn e -> e.target_job end)
   end
 
-  @spec jobs_for_project_query(Project.t()) :: Ecto.Queryable.t()
-  def jobs_for_project_query(%Project{} = project) do
-    Query.jobs_for(project)
+  @doc """
+  A page of the jobs of `project`, or of every project `user` may access.
+  """
+  @spec paginate_jobs_for(Project.t() | User.t(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_jobs_for(project_or_user, page) do
+    project_or_user
+    |> Query.jobs_for()
+    |> Repo.paginate(page)
   end
 
   @spec jobs_for_project(Project.t()) :: [Job.t()]
   def jobs_for_project(%Project{} = project) do
-    jobs_for_project_query(project) |> Repo.all()
+    Query.jobs_for(project) |> Repo.all()
   end
 
   @doc """
@@ -46,9 +53,7 @@ defmodule Lightning.Jobs do
   @spec job_in_project?(Ecto.UUID.t(), Project.t()) :: boolean()
   def job_in_project?(job_id, %Project{} = project) do
     match?({:ok, _}, Ecto.UUID.cast(job_id)) and
-      Repo.exists?(
-        from(j in jobs_for_project_query(project), where: j.id == ^job_id)
-      )
+      Repo.exists?(from(j in Query.jobs_for(project), where: j.id == ^job_id))
   end
 
   @doc """

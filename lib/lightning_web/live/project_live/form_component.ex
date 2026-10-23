@@ -181,7 +181,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :new, project_params) do
-    case Projects.create_project(project_params) do
+    case Projects.create_project(project_params, socket.assigns.current_user) do
       {:ok, _project} ->
         {:noreply,
          socket

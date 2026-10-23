@@ -123,6 +123,39 @@ defmodule Lightning.Projects.MembershipEventsTest do
       assert audit_count(project_id) == 3
     end
 
+    test "audits a rename alongside the membership it changes", %{
+      project: %{id: project_id, name: old_name} = project,
+      actor: %{id: actor_id} = actor,
+      owner_project_user: owner_project_user,
+      member_project_user: member_project_user
+    } do
+      assert {:ok, _project} =
+               Projects.update_project_with_users(
+                 project,
+                 %{
+                   name: "renamed",
+                   project_users: [
+                     %{id: owner_project_user.id},
+                     %{id: member_project_user.id, delete: true}
+                   ]
+                 },
+                 actor,
+                 false
+               )
+
+      assert %{
+               item_id: ^project_id,
+               actor_id: ^actor_id,
+               changes: %Audit.Changes{
+                 before: %{"name" => ^old_name},
+                 after: %{"name" => "renamed"}
+               }
+             } = Repo.get_by!(Audit, event: "name_updated")
+
+      assert Repo.get_by!(Audit, event: "collaborator_removed").actor_id ==
+               actor_id
+    end
+
     test "broadcasts and audits nothing when membership is resubmitted unchanged",
          %{
            project: %{id: project_id} = project,

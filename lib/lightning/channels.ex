@@ -220,7 +220,7 @@ defmodule Lightning.Channels do
   Updates a channel's config fields, bumping lock_version.
   """
   @spec update_channel(Channel.t(), map(), actor: User.t()) ::
-          {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Channel.t()} | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def update_channel(%Channel{} = channel, attrs, actor: %User{} = actor) do
     changeset = Channel.changeset(channel, attrs)
 
@@ -240,9 +240,18 @@ defmodule Lightning.Channels do
     end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{channel: channel}} -> {:ok, channel}
-      {:error, :channel, changeset, _} -> {:error, changeset}
-      {:error, :credential_scope_check, changeset, _} -> {:error, changeset}
+      {:ok, %{channel: channel}} ->
+        {:ok, channel}
+
+      {:error, :channel,
+       %Ecto.Changeset{errors: [lock_version: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
+      {:error, :channel, changeset, _} ->
+        {:error, changeset}
+
+      {:error, :credential_scope_check, changeset, _} ->
+        {:error, changeset}
     end
   end
 
@@ -322,7 +331,8 @@ defmodule Lightning.Channels do
       Ecto.Changeset.add_error(
         dest,
         :project_credential_id,
-        Scoping.violation_message(:project_credential_id)
+        Scoping.violation_message(:project_credential_id),
+        code: :credential_not_allowed
       )
 
     changeset

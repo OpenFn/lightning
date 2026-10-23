@@ -8,6 +8,7 @@ defmodule LightningWeb.Utils do
     * A macro to set up multiple plugs dynamically (`add_dynamic_plugs/1`)
   """
 
+  alias LightningWeb.API.Problem
   alias Phoenix.HTML.Form
   alias Plug.Conn.Query
 
@@ -92,17 +93,13 @@ defmodule LightningWeb.Utils do
   def ok(socket), do: {:ok, socket}
 
   @doc """
-  Standard **503 Service Unavailable** response for transient DB outages
-  during webhook handling.
-
-  This function is typically called inside a `with_webhook_retry/2` error branch
-  when retries against the database have been exhausted.
+  Answers 503 `service_unavailable` with `Retry-After` for a transient DB outage
+  during webhook handling (error-format spec §9.10, §12), once
+  `with_webhook_retry/2` has exhausted its retries against the database.
 
   ## Options
 
-    * `:message` — custom response message, may include `"%{s}"` placeholder
-      which will be replaced with the retry-after value.
-    * `:halt?` — whether to halt the connection after sending the response.
+    * `:halt?` - whether to halt the connection after sending the response.
       Defaults to `true`.
   """
   @spec respond_service_unavailable(
@@ -119,13 +116,6 @@ defmodule LightningWeb.Utils do
         opts \\ []
       ) do
     halt? = Keyword.get(opts, :halt?, true)
-
-    message =
-      Keyword.get(
-        opts,
-        :message,
-        "Temporary database issue. Please retry in %{s}s."
-      )
 
     retry_after =
       Lightning.Config.webhook_retry(:timeout_ms) |> div(1000) |> max(1)
@@ -151,17 +141,11 @@ defmodule LightningWeb.Utils do
         " error=#{Exception.message(error)}"
     )
 
-    body = %{
-      error: :service_unavailable,
-      message: String.replace(message, "%{s}", Integer.to_string(retry_after)),
-      retry_after: retry_after
-    }
-
     conn =
-      conn
-      |> Plug.Conn.put_resp_header("retry-after", Integer.to_string(retry_after))
-      |> Plug.Conn.put_status(:service_unavailable)
-      |> Phoenix.Controller.json(body)
+      Problem.respond(
+        conn,
+        Problem.new(:service_unavailable, retry_after: retry_after)
+      )
 
     if halt?, do: Plug.Conn.halt(conn), else: conn
   end

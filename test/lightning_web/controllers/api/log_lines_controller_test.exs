@@ -1,526 +1,177 @@
 defmodule LightningWeb.API.LogLinesControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
+  import LightningWeb.ApiReadHelpers
   import Lightning.Factories
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
 
-  test "without a token", %{conn: conn} do
-    conn = get(conn, ~p"/api/log_lines")
-
-    assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+  defp ids(conn) do
+    conn |> json_response(200) |> Map.fetch!("data") |> Enum.map(& &1["id"])
   end
 
-  describe "with invalid token" do
-    test "gets a 401", %{conn: conn} do
-      token = "InvalidToken"
-      conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
-      conn = get(conn, ~p"/api/log_lines")
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
-    end
+  defp insert_log_line(run, attrs \\ []) do
+    insert(
+      :log_line,
+      [run: run, timestamp: ~U[2024-01-01 10:00:00.000000Z]] ++ attrs
+    )
   end
 
   describe "index" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
-    test "lists log lines for runs in projects I have access to", %{
-      conn: conn,
-      project: project
-    } do
-      # Create a workflow and run in my project
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+    test "lists the log lines of the projects the caller can reach, newest first",
+         %{conn: conn, project: project} do
+      run = insert_run(project)
 
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
-
-      run = List.first(workorder.runs)
-
-      # Create log lines for this run
-      log1 =
-        insert(:log_line,
-          run: run,
+      older =
+        insert_log_line(run,
           message: "First log message",
           level: :info,
-          timestamp: DateTime.utc_now()
+          timestamp: ~U[2024-01-01 10:00:00.000000Z]
         )
 
-      log2 =
-        insert(:log_line,
-          run: run,
+      newer =
+        insert_log_line(run,
           message: "Second log message",
           level: :error,
-          timestamp: DateTime.utc_now() |> DateTime.add(1, :second)
+          timestamp: ~U[2024-01-01 11:00:00.000000Z]
         )
 
-      # Create a run in another project (should not be accessible)
-      other_project = insert(:project)
-      other_workflow = insert(:workflow, project: other_project)
-      other_trigger = insert(:trigger, workflow: other_workflow)
+      insert_log_line(insert_run(insert(:project)))
 
-      other_workorder =
-        insert(:workorder,
-          workflow: other_workflow,
-          trigger: other_trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: other_trigger
-            }
-          ]
-        )
+      page = "#{LightningWeb.Endpoint.url()}/api/log_lines?page=1&page_size=10"
 
-      other_run = List.first(other_workorder.runs)
-
-      other_log =
-        insert(:log_line,
-          run: other_run,
-          message: "Other project log",
-          level: :info,
-          timestamp: DateTime.utc_now()
-        )
-
-      conn = get(conn, ~p"/api/log_lines")
-
-      response = json_response(conn, 200)
-
-      # Should only return logs from my project
-      assert length(response["data"]) == 2
-
-      log_ids = Enum.map(response["data"], & &1["id"])
-      assert log1.id in log_ids
-      assert log2.id in log_ids
-      refute other_log.id in log_ids
-
-      # Verify pagination metadata
-      assert response["meta"]["total_entries"] == 2
-      assert response["meta"]["page_number"] == 1
+      assert conn |> get(~p"/api/log_lines") |> json_response(200) == %{
+               "data" => [
+                 %{
+                   "type" => "log_lines",
+                   "id" => newer.id,
+                   "attributes" => %{
+                     "source" => nil,
+                     "level" => "error",
+                     "message" => "Second log message",
+                     "timestamp" => "2024-01-01T11:00:00.000000Z",
+                     "step_id" => nil,
+                     "run_id" => run.id
+                   }
+                 },
+                 %{
+                   "type" => "log_lines",
+                   "id" => older.id,
+                   "attributes" => %{
+                     "source" => nil,
+                     "level" => "info",
+                     "message" => "First log message",
+                     "timestamp" => "2024-01-01T10:00:00.000000Z",
+                     "step_id" => nil,
+                     "run_id" => run.id
+                   }
+                 }
+               ],
+               "included" => [],
+               "meta" => %{
+                 "total_entries" => 2,
+                 "total_pages" => 1,
+                 "page_number" => 1,
+                 "page_size" => 10
+               },
+               "links" => %{
+                 "self" => page,
+                 "first" => page,
+                 "last" => page,
+                 "next" => nil,
+                 "prev" => nil
+               }
+             }
     end
 
-    test "filters log lines by timestamp_after", %{
-      conn: conn,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+    test "narrows by timestamp_after", %{conn: conn, project: project} do
+      run = insert_run(project)
+      insert_log_line(run, timestamp: ~U[2024-01-01 10:00:00.000000Z])
+      new = insert_log_line(run, timestamp: ~U[2024-01-01 12:00:00.000000Z])
 
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
+      conn = get(conn, ~p"/api/log_lines?timestamp_after=2024-01-01T11:00:00Z")
 
-      run = List.first(workorder.runs)
-
-      old_time = ~U[2024-01-01 10:00:00Z]
-      new_time = ~U[2024-01-01 12:00:00Z]
-
-      _old_log =
-        insert(:log_line,
-          run: run,
-          message: "Old log",
-          timestamp: old_time
-        )
-
-      new_log =
-        insert(:log_line,
-          run: run,
-          message: "New log",
-          timestamp: new_time
-        )
-
-      conn =
-        get(
-          conn,
-          ~p"/api/log_lines?timestamp_after=2024-01-01T11:00:00Z"
-        )
-
-      response = json_response(conn, 200)
-
-      assert length(response["data"]) == 1
-      assert List.first(response["data"])["id"] == new_log.id
+      assert ids(conn) == [new.id]
     end
 
-    test "filters log lines by timestamp_before", %{
-      conn: conn,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+    test "narrows by timestamp_before", %{conn: conn, project: project} do
+      run = insert_run(project)
+      old = insert_log_line(run, timestamp: ~U[2024-01-01 10:00:00.000000Z])
+      insert_log_line(run, timestamp: ~U[2024-01-01 12:00:00.000000Z])
 
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
+      conn = get(conn, ~p"/api/log_lines?timestamp_before=2024-01-01T11:00:00Z")
 
-      run = List.first(workorder.runs)
-
-      old_time = ~U[2024-01-01 10:00:00Z]
-      new_time = ~U[2024-01-01 12:00:00Z]
-
-      old_log =
-        insert(:log_line,
-          run: run,
-          message: "Old log",
-          timestamp: old_time
-        )
-
-      _new_log =
-        insert(:log_line,
-          run: run,
-          message: "New log",
-          timestamp: new_time
-        )
-
-      conn =
-        get(
-          conn,
-          ~p"/api/log_lines?timestamp_before=2024-01-01T11:00:00Z"
-        )
-
-      response = json_response(conn, 200)
-
-      assert length(response["data"]) == 1
-      assert List.first(response["data"])["id"] == old_log.id
+      assert ids(conn) == [old.id]
     end
 
-    test "filters log lines by level", %{
-      conn: conn,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+    test "narrows by level", %{conn: conn, project: project} do
+      run = insert_run(project)
+      insert_log_line(run, level: :info)
+      error = insert_log_line(run, level: :error)
 
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
-
-      run = List.first(workorder.runs)
-
-      _info_log =
-        insert(:log_line,
-          run: run,
-          message: "Info message",
-          level: :info,
-          timestamp: DateTime.utc_now()
-        )
-
-      error_log =
-        insert(:log_line,
-          run: run,
-          message: "Error message",
-          level: :error,
-          timestamp: DateTime.utc_now()
-        )
-
-      conn = get(conn, ~p"/api/log_lines?level=error")
-
-      response = json_response(conn, 200)
-
-      assert length(response["data"]) == 1
-      assert List.first(response["data"])["id"] == error_log.id
-      assert List.first(response["data"])["attributes"]["level"] == "error"
+      assert ids(get(conn, ~p"/api/log_lines?level=error")) == [error.id]
     end
 
-    test "filters log lines by run_id", %{
-      conn: conn,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+    test "narrows by run_id", %{conn: conn, project: project} do
+      run1 = insert_run(project)
+      log1 = insert_log_line(run1)
+      insert_log_line(insert_run(project))
 
-      # Create two runs
-      workorder1 =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
-
-      workorder2 =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
-
-      run1 = List.first(workorder1.runs)
-      run2 = List.first(workorder2.runs)
-
-      log1 = insert(:log_line, run: run1, message: "Run 1 log")
-      _log2 = insert(:log_line, run: run2, message: "Run 2 log")
-
-      conn = get(conn, ~p"/api/log_lines?run_id=#{run1.id}")
-
-      response = json_response(conn, 200)
-
-      assert length(response["data"]) == 1
-      assert List.first(response["data"])["id"] == log1.id
+      assert ids(get(conn, ~p"/api/log_lines?run_id=#{run1.id}")) == [log1.id]
     end
 
-    test "filters log lines by work_order_id", %{
-      conn: conn,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+    test "narrows by work_order_id", %{conn: conn, project: project} do
+      run1 = insert_run(project)
+      log1 = insert_log_line(run1)
+      insert_log_line(insert_run(project))
 
-      workorder1 =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
+      conn = get(conn, ~p"/api/log_lines?work_order_id=#{run1.work_order_id}")
 
-      workorder2 =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
-
-      run1 = List.first(workorder1.runs)
-      run2 = List.first(workorder2.runs)
-
-      log1 = insert(:log_line, run: run1, message: "WorkOrder 1 log")
-      _log2 = insert(:log_line, run: run2, message: "WorkOrder 2 log")
-
-      conn = get(conn, ~p"/api/log_lines?work_order_id=#{workorder1.id}")
-
-      response = json_response(conn, 200)
-
-      assert length(response["data"]) == 1
-      assert List.first(response["data"])["id"] == log1.id
+      assert ids(conn) == [log1.id]
     end
 
-    test "filters log lines by workflow_id", %{
-      conn: conn,
-      project: project
-    } do
+    test "narrows by workflow_id", %{conn: conn, project: project} do
       workflow1 = insert(:workflow, project: project)
-      workflow2 = insert(:workflow, project: project)
-      trigger1 = insert(:trigger, workflow: workflow1)
-      trigger2 = insert(:trigger, workflow: workflow2)
+      log1 = workflow1 |> insert_run() |> insert_log_line()
+      insert_log_line(insert_run(project))
 
-      workorder1 =
-        insert(:workorder,
-          workflow: workflow1,
-          trigger: trigger1,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger1
-            }
-          ]
-        )
-
-      workorder2 =
-        insert(:workorder,
-          workflow: workflow2,
-          trigger: trigger2,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger2
-            }
-          ]
-        )
-
-      run1 = List.first(workorder1.runs)
-      run2 = List.first(workorder2.runs)
-
-      log1 = insert(:log_line, run: run1, message: "Workflow 1 log")
-      _log2 = insert(:log_line, run: run2, message: "Workflow 2 log")
-
-      conn = get(conn, ~p"/api/log_lines?workflow_id=#{workflow1.id}")
-
-      response = json_response(conn, 200)
-
-      assert length(response["data"]) == 1
-      assert List.first(response["data"])["id"] == log1.id
+      assert ids(get(conn, ~p"/api/log_lines?workflow_id=#{workflow1.id}")) ==
+               [log1.id]
     end
 
-    test "filters log lines by project_id", %{
-      conn: conn,
-      user: user
-    } do
-      # User has access to both projects
+    test "narrows by project_id", %{conn: conn, user: user} do
       project1 = insert(:project, project_users: [%{user: user, role: :owner}])
       project2 = insert(:project, project_users: [%{user: user, role: :owner}])
+      log1 = project1 |> insert_run() |> insert_log_line()
+      insert_log_line(insert_run(project2))
 
-      workflow1 = insert(:workflow, project: project1)
-      workflow2 = insert(:workflow, project: project2)
-      trigger1 = insert(:trigger, workflow: workflow1)
-      trigger2 = insert(:trigger, workflow: workflow2)
-
-      workorder1 =
-        insert(:workorder,
-          workflow: workflow1,
-          trigger: trigger1,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger1
-            }
-          ]
-        )
-
-      workorder2 =
-        insert(:workorder,
-          workflow: workflow2,
-          trigger: trigger2,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger2
-            }
-          ]
-        )
-
-      run1 = List.first(workorder1.runs)
-      run2 = List.first(workorder2.runs)
-
-      log1 = insert(:log_line, run: run1, message: "Project 1 log")
-      _log2 = insert(:log_line, run: run2, message: "Project 2 log")
-
-      conn = get(conn, ~p"/api/log_lines?project_id=#{project1.id}")
-
-      response = json_response(conn, 200)
-
-      assert length(response["data"]) == 1
-      assert List.first(response["data"])["id"] == log1.id
+      assert ids(get(conn, ~p"/api/log_lines?project_id=#{project1.id}")) ==
+               [log1.id]
     end
 
-    test "combines multiple filters", %{
-      conn: conn,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+    test "narrows by every filter at once", %{conn: conn, project: project} do
+      run = insert_run(project)
 
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
-
-      run = List.first(workorder.runs)
-
-      old_time = ~U[2024-01-01 10:00:00Z]
-      new_time = ~U[2024-01-01 12:00:00Z]
-
-      # Should match filters
-      _match_log =
-        insert(:log_line,
-          run: run,
-          message: "Match",
+      match =
+        insert_log_line(run,
           level: :error,
-          timestamp: new_time
+          timestamp: ~U[2024-01-01 12:00:00.000000Z]
         )
 
-      # Wrong level
-      _wrong_level =
-        insert(:log_line,
-          run: run,
-          message: "Wrong level",
-          level: :info,
-          timestamp: new_time
-        )
+      insert_log_line(run,
+        level: :info,
+        timestamp: ~U[2024-01-01 12:00:00.000000Z]
+      )
 
-      # Wrong time
-      _wrong_time =
-        insert(:log_line,
-          run: run,
-          message: "Wrong time",
-          level: :error,
-          timestamp: old_time
-        )
+      insert_log_line(run,
+        level: :error,
+        timestamp: ~U[2024-01-01 10:00:00.000000Z]
+      )
 
       conn =
         get(
@@ -528,237 +179,169 @@ defmodule LightningWeb.API.LogLinesControllerTest do
           ~p"/api/log_lines?level=error&timestamp_after=2024-01-01T11:00:00Z"
         )
 
-      response = json_response(conn, 200)
-
-      assert length(response["data"]) == 1
-      assert List.first(response["data"])["attributes"]["message"] == "Match"
+      assert ids(conn) == [match.id]
     end
 
-    test "supports pagination", %{
+    test "pages with exact links to the neighbouring pages", %{
       conn: conn,
       project: project
     } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+      run = insert_run(project)
 
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
+      for n <- 1..25 do
+        insert_log_line(run,
+          timestamp: DateTime.add(~U[2024-01-01 00:00:00Z], n)
         )
+      end
 
-      run = List.first(workorder.runs)
+      url = "#{LightningWeb.Endpoint.url()}/api/log_lines"
 
-      # Create 25 log lines
-      Enum.each(1..25, fn i ->
-        insert(:log_line,
-          run: run,
-          message: "Log #{i}",
-          timestamp: DateTime.utc_now() |> DateTime.add(i, :second)
-        )
-      end)
+      assert %{"data" => data, "meta" => meta, "links" => links} =
+               conn
+               |> get(~p"/api/log_lines?page=2&page_size=10")
+               |> json_response(200)
 
-      # Get first page
-      conn = get(conn, ~p"/api/log_lines?page=1&page_size=10")
-      response = json_response(conn, 200)
+      assert length(data) == 10
 
-      assert length(response["data"]) == 10
-      assert response["meta"]["total_entries"] == 25
-      assert response["meta"]["total_pages"] == 3
-      assert response["meta"]["page_number"] == 1
-      assert response["meta"]["page_size"] == 10
+      assert meta == %{
+               "total_entries" => 25,
+               "total_pages" => 3,
+               "page_number" => 2,
+               "page_size" => 10
+             }
 
-      # Verify pagination links exist
-      assert Map.has_key?(response["links"], "first")
-      assert Map.has_key?(response["links"], "next")
-      assert Map.has_key?(response["links"], "last")
+      assert links == %{
+               "self" => "#{url}?page=2&page_size=10",
+               "first" => "#{url}?page=1&page_size=10",
+               "last" => "#{url}?page=3&page_size=10",
+               "next" => "#{url}?page=3&page_size=10",
+               "prev" => "#{url}?page=1&page_size=10"
+             }
     end
 
     test "returns logs ordered by timestamp desc (newest first)", %{
       conn: conn,
       project: project
     } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
-
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
-
-      run = List.first(workorder.runs)
-
-      _log1 =
-        insert(:log_line,
-          run: run,
-          message: "First",
-          timestamp: ~U[2024-01-01 10:00:00Z]
-        )
+      run = insert_run(project)
+      insert_log_line(run, message: "First", timestamp: ~U[2024-01-01 10:00:00Z])
 
       log2 =
-        insert(:log_line,
-          run: run,
+        insert_log_line(run,
           message: "Second",
           timestamp: ~U[2024-01-01 11:00:00Z]
         )
 
-      _log3 =
-        insert(:log_line,
-          run: run,
-          message: "Third",
-          timestamp: ~U[2024-01-01 12:00:00Z]
-        )
+      insert_log_line(run, message: "Third", timestamp: ~U[2024-01-01 12:00:00Z])
 
       conn = get(conn, ~p"/api/log_lines?page_size=1")
       response = json_response(conn, 200)
 
-      # Should get the newest log first
       assert List.first(response["data"])["attributes"]["message"] == "Third"
 
-      # Get second page
       conn = get(conn, ~p"/api/log_lines?page=2&page_size=1")
       response = json_response(conn, 200)
 
       assert List.first(response["data"])["id"] == log2.id
     end
 
-    test "returns error for invalid timestamp_after format", %{
+    test "pagination links carry the filters applied and nothing else", %{
       conn: conn,
       project: project
     } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+      run = insert_run(project)
+      insert_log_line(run, level: :error)
+      insert_log_line(run, level: :error)
 
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
+      %{"links" => links} =
+        conn
+        |> get(
+          ~p"/api/log_lines?page_size=1&foo=bar&level=error&timestamp_after=2024-01-01T02:00:00%2B02:00"
         )
+        |> json_response(200)
 
-      run = List.first(workorder.runs)
+      uri = URI.parse(links["next"])
+      assert uri.path == "/api/log_lines"
 
-      insert(:log_line,
-        run: run,
-        message: "Test log",
-        timestamp: DateTime.utc_now()
-      )
+      assert URI.decode_query(uri.query) == %{
+               "level" => "error",
+               "timestamp_after" => "2024-01-01T00:00:00.000000Z",
+               "page" => "2",
+               "page_size" => "1"
+             }
 
-      conn =
-        get(
-          conn,
-          ~p"/api/log_lines?timestamp_after=not-a-valid-datetime"
-        )
+      self_uri = URI.parse(links["self"])
+      assert self_uri.path == "/api/log_lines"
 
-      response = json_response(conn, 400)
-
-      assert %{"error" => error_message} = response
-      assert error_message =~ "Invalid datetime format for 'timestamp_after'"
-      assert error_message =~ "not-a-valid-datetime"
+      assert URI.decode_query(self_uri.query) == %{
+               "level" => "error",
+               "timestamp_after" => "2024-01-01T00:00:00.000000Z",
+               "page" => "1",
+               "page_size" => "1"
+             }
     end
 
-    test "returns error for invalid timestamp_before format", %{
-      conn: conn,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+    test "every bad query parameter is reported, none quoted", %{conn: conn} do
+      bad = plant_sentinel(%{"v" => "x"})["v"]
 
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
+      query =
+        URI.encode_query(%{
+          "timestamp_after" => bad,
+          "timestamp_before" => bad,
+          "level" => bad,
+          "run_id" => bad,
+          "job_id" => bad,
+          "workflow_id" => bad,
+          "work_order_id" => bad
+        })
 
-      run = List.first(workorder.runs)
-
-      insert(:log_line,
-        run: run,
-        message: "Test log",
-        timestamp: DateTime.utc_now()
-      )
-
-      conn =
-        get(
-          conn,
-          ~p"/api/log_lines?timestamp_before=2024-13-45"
-        )
-
-      response = json_response(conn, 400)
-
-      assert %{"error" => error_message} = response
-      assert error_message =~ "Invalid datetime format for 'timestamp_before'"
-      assert error_message =~ "2024-13-45"
+      conn
+      |> get("/api/log_lines?" <> query)
+      |> refute_sentinel()
+      |> assert_problem(400, :invalid_parameter, [
+        %{
+          "parameter" => "timestamp_after",
+          "code" => "type",
+          "detail" => "is invalid"
+        },
+        %{
+          "parameter" => "timestamp_before",
+          "code" => "type",
+          "detail" => "is invalid"
+        },
+        %{
+          "parameter" => "level",
+          "code" => "not_allowed",
+          "detail" => "is invalid"
+        },
+        %{"parameter" => "run_id", "code" => "type", "detail" => "is invalid"},
+        %{"parameter" => "job_id", "code" => "type", "detail" => "is invalid"},
+        %{
+          "parameter" => "workflow_id",
+          "code" => "type",
+          "detail" => "is invalid"
+        },
+        %{
+          "parameter" => "work_order_id",
+          "code" => "type",
+          "detail" => "is invalid"
+        }
+      ])
     end
+  end
 
-    test "returns error for invalid datetime with integer", %{
-      conn: conn,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, workflow: workflow)
+  describe "who may reach it" do
+    setup [:assign_bearer_for_api, :create_project_for_current_user]
 
-      workorder =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            %{
-              state: :started,
-              dataclip: build(:dataclip),
-              starting_trigger: trigger
-            }
-          ]
-        )
+    test "filtering by a project the caller has no standing on lists nothing",
+         %{conn: conn} do
+      elsewhere = insert(:project)
+      insert_log_line(insert_run(elsewhere), level: :error)
 
-      run = List.first(workorder.runs)
-
-      insert(:log_line,
-        run: run,
-        message: "Test log",
-        timestamp: DateTime.utc_now()
-      )
-
-      conn = get(conn, ~p"/api/log_lines?timestamp_after=123456")
-
-      response = json_response(conn, 400)
-
-      assert %{"error" => error_message} = response
-      assert error_message =~ "Invalid datetime format for 'timestamp_after'"
-      assert error_message =~ "123456"
+      assert %{"data" => []} =
+               conn
+               |> get(~p"/api/log_lines?#{%{project_id: elsewhere.id}}")
+               |> json_response(200)
     end
   end
 end

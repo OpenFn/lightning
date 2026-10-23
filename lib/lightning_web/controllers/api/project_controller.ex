@@ -2,8 +2,8 @@ defmodule LightningWeb.API.ProjectController do
   @moduledoc """
   API controller for project management.
 
-  Provides read access to projects for authenticated users and API tokens.
-  Users can list projects they have access to and retrieve individual project details.
+  Lists, shows, creates and replaces projects for authenticated users and API
+  tokens.
 
   ## Query Parameters (index)
 
@@ -33,11 +33,36 @@ defmodule LightningWeb.API.ProjectController do
   """
   use LightningWeb, :controller
 
-  alias Lightning.Policies.Permissions
-  alias Lightning.Policies.ProjectUsers
-  alias Lightning.Projects
+  import Ecto.Changeset
 
-  action_fallback LightningWeb.FallbackController
+  alias Lightning.Accounts
+  alias Lightning.Projects
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectUser
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Filters
+  alias LightningWeb.API.Request
+  alias LightningWeb.API.Target
+  alias LightningWeb.Plugs.AuthorizeAction
+
+  action_fallback FallbackController
+
+  plug AuthorizeAction,
+       {:project_users, :access_project}
+       when action in [:index, :show]
+
+  plug AuthorizeAction,
+       {:project_users, :edit_project}
+       when action == :update
+
+  @accepted [:id, :name, :description, :members, :notify]
+  @request_types %{members: {:array, :map}, notify: :boolean}
+  @member_types %{email: :string, role: ProjectUser.RolesEnum}
+
+  # The project changeset reports member errors under `owner` and
+  # `project_users`. This API calls them `members`.
+  @renames %{owner: :members, project_users: :members}
 
   @doc """
   Lists all projects accessible to the authenticated user.
@@ -61,32 +86,22 @@ defmodule LightningWeb.API.ProjectController do
   """
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, params) do
-    pagination_attrs = Map.take(params, ["page_size", "page"])
-
     page =
-      Projects.projects_for_user_query(conn.assigns.current_resource)
-      |> Lightning.Repo.paginate(pagination_attrs)
+      Projects.paginate_projects_for_user(
+        conn.assigns.current_resource,
+        Filters.page(params)
+      )
 
     render(conn, "index.json", page: page, conn: conn)
   end
 
   @doc """
-  Retrieves a specific project by ID.
+  Shows a project to a caller who may access it.
 
-  Returns detailed information about a single project if the authenticated
-  user has access to it.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `id` - Project UUID (required)
-
-  ## Returns
-
-  - `200 OK` with project JSON on success
-  - `404 Not Found` if project doesn't exist
-  - `403 Forbidden` if user lacks access to the project
+  A project the caller isn't a member of answers 404 `not_found`, as if it
+  didn't exist. A member who hasn't met its MFA requirement, or a token without
+  `projects:write`, gets 403. A project scheduled for deletion answers 409
+  `scheduled_for_deletion` to a caller who may see it.
 
   ## Examples
 
@@ -94,19 +109,185 @@ defmodule LightningWeb.API.ProjectController do
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"id" => id}) do
-    with %Lightning.Projects.Project{} = project <-
-           Projects.get_project(id),
-         :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             conn.assigns.current_resource,
-             project
+    with {:ok, project} <-
+           Target.project(
+             conn.assigns.scope,
+             id,
+             {:project_users, :access_project}
            ) do
-      render(conn, "show.json", project: project, conn: conn)
-    else
-      nil -> {:error, :not_found}
-      error -> error
+      render_project(conn, project)
     end
+  end
+
+  @doc """
+  Creates the project under the path's id, or replaces the name and description
+  of the one that has it.
+
+  `members` and `notify` only apply when the project is created. A refused body
+  answers one 422 with every error in it, the body's keys, its members and the
+  project's own fields together (error-format spec §9.6).
+  """
+  @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def update(conn, %{"id" => id}) do
+    body = conn.body_params
+
+    with {:ok, id} <- Request.path_id(id),
+         {:ok, target} <-
+           Target.project_or_new(
+             conn.assigns.scope,
+             id,
+             {:project_users, :edit_project}
+           ),
+         {:ok, body_entries} <- Request.check(body, id, @accepted) do
+      request =
+        {%{notify: true}, @request_types}
+        |> cast(body, Map.keys(@request_types))
+        |> validate_required(:notify)
+
+      fields = %{name: body["name"], description: body["description"]}
+      entries = body_entries ++ Errors.from_changeset(request)
+
+      case target do
+        %Project{__meta__: %{state: :built}} ->
+          create(conn, Map.put(fields, :id, id), request, entries)
+
+        project ->
+          replace(conn, project, fields, entries)
+      end
+    end
+  end
+
+  defp replace(conn, project, fields, entries) do
+    changeset = Project.changeset(project, fields)
+
+    with :ok <-
+           Errors.refuse(entries ++ Errors.from_changeset(changeset, @renames)),
+         {:ok, project} <-
+           Projects.update_project(
+             project,
+             fields,
+             conn.assigns.current_resource
+           ) do
+      render_project(conn, project)
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:error, Errors.problem(changeset, @renames)}
+
+      error ->
+        error
+    end
+  end
+
+  defp create(conn, fields, request, entries) do
+    {member_entries, fields, changeset} =
+      case members(request) do
+        {:ok, project_users} ->
+          fields = Map.put(fields, :project_users, project_users)
+          {[], fields, Project.project_with_users_changeset(%Project{}, fields)}
+
+        # Without its members a new project can't be checked for an owner, so
+        # only its own fields are.
+        {:error, member_entries} ->
+          {member_entries, fields, Project.changeset(%Project{}, fields)}
+      end
+
+    with :ok <-
+           Errors.refuse(
+             entries ++
+               member_entries ++ Errors.from_changeset(changeset, @renames)
+           ) do
+      insert(conn, fields, notify: get_field(request, :notify))
+    end
+  end
+
+  # A members list of the wrong type is already among the request's entries.
+  defp members(request) do
+    if Keyword.has_key?(request.errors, :members),
+      do: {:error, []},
+      else: resolve_members(get_field(request, :members) || [])
+  end
+
+  defp insert(conn, attrs, opts) do
+    case Projects.create_project(attrs, conn.assigns.current_resource, opts) do
+      {:ok, project} ->
+        conn |> put_status(:created) |> render_project(project)
+
+      # Someone else created it since the lookup. Rerun the request so the
+      # caller is checked against that project.
+      {:error, changeset} ->
+        if Request.id_taken?(changeset),
+          do: update(conn, %{"id" => attrs.id}),
+          else: {:error, Errors.problem(changeset, @renames)}
+    end
+  end
+
+  # Resolves each member's email to its user. Errors point at the member's
+  # position in the request, which the project changeset doesn't keep
+  # (error-format spec §7 items 3 and 4).
+  defp resolve_members(members) do
+    changesets =
+      Enum.map(members, fn member ->
+        {%{}, @member_types}
+        |> cast(member, Map.keys(@member_types))
+        |> validate_required(Map.keys(@member_types))
+      end)
+
+    user_ids =
+      for(
+        %{valid?: true} = changeset <- changesets,
+        do: get_field(changeset, :email)
+      )
+      |> Accounts.list_users_by_emails()
+      |> Map.new(&{String.downcase(&1.email), &1.id})
+
+    {project_users, entries, _firsts} =
+      changesets
+      |> Enum.with_index()
+      |> Enum.reduce({[], [], %{}}, fn {changeset, index}, acc ->
+        resolve_member(changeset, [:members, index], user_ids, acc)
+      end)
+
+    if entries == [],
+      do: {:ok, Enum.reverse(project_users)},
+      else: {:error, Enum.reverse(entries)}
+  end
+
+  defp resolve_member(%{valid?: false} = changeset, path, _user_ids, acc) do
+    {project_users, entries, firsts} = acc
+
+    member_entries =
+      for {field, error} <- changeset.errors,
+          do: Errors.entry(path ++ [field], error)
+
+    {project_users, member_entries ++ entries, firsts}
+  end
+
+  defp resolve_member(changeset, path, user_ids, acc) do
+    {project_users, entries, firsts} = acc
+
+    refuse_email =
+      &{project_users, [Errors.entry(path ++ [:email], &1) | entries], firsts}
+
+    case Map.fetch(user_ids, String.downcase(get_field(changeset, :email))) do
+      :error ->
+        refuse_email.(Errors.not_visible())
+
+      {:ok, user_id} when is_map_key(firsts, user_id) ->
+        refuse_email.(
+          {"names the same user as " <> Errors.pointer(firsts[user_id]),
+           code: :duplicate}
+        )
+
+      {:ok, user_id} ->
+        project_user = %{user_id: user_id, role: get_field(changeset, :role)}
+        {[project_user | project_users], entries, Map.put(firsts, user_id, path)}
+    end
+  end
+
+  defp render_project(conn, project) do
+    render(conn, "show.json",
+      project: Projects.get_project_with_users!(project.id),
+      conn: conn
+    )
   end
 end

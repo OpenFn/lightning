@@ -51,109 +51,67 @@ defmodule LightningWeb.API.JobController do
   use LightningWeb, :controller
 
   alias Lightning.Jobs
-  alias Lightning.Policies.Permissions
-  alias Lightning.Policies.ProjectUsers
-  alias Lightning.Workflows
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Filters
+  alias LightningWeb.API.Request
+  alias LightningWeb.API.Target
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project}
 
   @doc """
-  Lists jobs with optional project filtering.
-
-  This function has two variants:
-  - With `project_id`: Returns jobs for a specific project
-  - Without `project_id`: Returns jobs across all accessible projects
-
-  Returns a paginated list of jobs.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `project_id` - Project UUID (optional, filters to specific project)
-    - `page` - Page number (optional, default: 1)
-    - `page_size` - Items per page (optional, default: 10, at most 100)
-
-  ## Returns
-
-  - Renders JSON with paginated list of jobs
-  - `404 Not Found` if project doesn't exist (when project_id provided)
-  - `403 Forbidden` if user lacks project access (when project_id provided)
+  Lists the jobs of the projects the caller may access, or of one project named
+  by the nested route or the `project_id` parameter.
 
   ## Examples
 
-      # All jobs accessible to user
-      GET /api/jobs
       GET /api/jobs?page=3&page_size=25
-
-      # Jobs for specific project
       GET /api/jobs?project_id=a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
-      GET /api/jobs?project_id=a1b2c3d4-...&page=2&page_size=50
+      GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/jobs
   """
-  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def index(conn, %{"project_id" => project_id} = params) do
-    pagination_attrs = Map.take(params, ["page_size", "page"])
-
-    with project <- Lightning.Projects.get_project(project_id),
-         :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             conn.assigns.current_resource,
-             project
+    with {:ok, project} <-
+           Target.project(
+             conn.assigns.scope,
+             project_id,
+             {:project_users, :access_project}
            ) do
-      page =
-        Jobs.jobs_for_project_query(project)
-        |> Lightning.Repo.paginate(pagination_attrs)
-
-      render(conn, "index.json", page: page, conn: conn)
+      list(project, conn, params, %{project_id: project.id})
     end
   end
 
   def index(conn, params) do
-    pagination_attrs = Map.take(params, ["page_size", "page"])
-
-    page =
-      Workflows.Query.jobs_for(conn.assigns.current_resource)
-      |> Lightning.Repo.paginate(pagination_attrs)
-
-    render(conn, "index.json", page: page, conn: conn)
+    list(conn.assigns.current_resource, conn, params, %{})
   end
 
   @doc """
-  Retrieves a specific job by ID.
-
-  Returns detailed information about a single job including its body, adaptor,
-  and workflow association. Access is granted if the user has access to the
-  job's parent project.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `id` - Job UUID (required)
-
-  ## Returns
-
-  - `200 OK` with job JSON on success
-  - `404 Not Found` if job doesn't exist
-  - `403 Forbidden` if user lacks project access
+  Shows a job to a caller who may access its project. A job the caller has no
+  standing on answers 404 `not_found`, as if it didn't exist.
 
   ## Examples
 
       GET /api/jobs/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
-  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show(conn, %{"id" => id}) do
-    with {:ok, job} <- Jobs.get_job(id, include: [workflow: :project]),
-         :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             conn.assigns.current_resource,
-             job.workflow.project
+    with {:ok, id} <- Request.path_id(id),
+         {:ok, job} <- Jobs.get_job(id, include: [:workflow]),
+         {:ok, _project} <-
+           Target.project(
+             conn.assigns.scope,
+             job.workflow.project_id,
+             {:project_users, :access_project}
            ) do
       render(conn, "show.json", job: job, conn: conn)
     end
+  end
+
+  defp list(project_or_user, conn, params, filters) do
+    page = Jobs.paginate_jobs_for(project_or_user, Filters.page(params))
+
+    render(conn, "index.json", page: page, filters: filters, conn: conn)
   end
 end

@@ -481,6 +481,18 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
+  A page of the log lines of every project `user` may access, narrowed by
+  `filters` (see `Query.filter_log_lines/2`).
+  """
+  @spec paginate_log_lines_for(User.t(), map(), keyword()) :: Scrivener.Page.t()
+  def paginate_log_lines_for(%User{} = user, filters, page) do
+    user
+    |> Query.log_lines_for()
+    |> Query.filter_log_lines(filters)
+    |> Repo.paginate(page)
+  end
+
+  @doc """
   Gets a single step.
 
   Raises `Ecto.NoResultsError` if the Step does not exist.

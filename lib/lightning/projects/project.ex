@@ -127,7 +127,7 @@ defmodule Lightning.Projects.Project do
 
   defp disallow_self_parent(changeset) do
     if get_field(changeset, :parent_id) == changeset.data.id,
-      do: add_error(changeset, :parent_id, "cannot be self"),
+      do: add_error(changeset, :parent_id, "cannot be self", code: :not_allowed),
       else: changeset
   end
 
@@ -262,7 +262,8 @@ defmodule Lightning.Projects.Project do
       add_error(
         changeset,
         :dataclip_retention_period,
-        "dataclip retention period must be less or equal to the history retention period"
+        "dataclip retention period must be less or equal to the history retention period",
+        code: :out_of_range
       )
     else
       changeset
@@ -299,6 +300,31 @@ defmodule Lightning.Projects.Project do
     |> cast_assoc(:project_users, required: true, sort_param: :users_sort)
     |> validate()
     |> validate_project_owner()
+    |> write_owner_last()
+    |> unique_constraint(:id, name: :projects_pkey)
+  end
+
+  # Children are written in list order and the one-owner index can't be
+  # deferred, so an ownership handover only succeeds if the old owner's
+  # demotion reaches the database before the new owner's row. A new project
+  # has no owner to demote, so its members keep the order they were given.
+  defp write_owner_last(%{data: %{__meta__: %{state: :built}}} = changeset),
+    do: changeset
+
+  defp write_owner_last(changeset) do
+    case get_change(changeset, :project_users) do
+      nil ->
+        changeset
+
+      project_users ->
+        {owners, others} =
+          Enum.split_with(project_users, fn project_user ->
+            project_user.action in [:insert, :update] and
+              get_field(project_user, :role) == :owner
+          end)
+
+        put_change(changeset, :project_users, others ++ owners)
+    end
   end
 
   defp validate_project_owner(changeset) do
@@ -316,11 +342,14 @@ defmodule Lightning.Projects.Project do
         add_error(
           changeset,
           :owner,
-          "Every project must have exactly one owner. Please specify one below."
+          "Every project must have exactly one owner. Please specify one below.",
+          code: :one_owner
         )
 
       _more_than_1 ->
-        add_error(changeset, :owner, "A project can have only one owner.")
+        add_error(changeset, :owner, "A project can have only one owner.",
+          code: :one_owner
+        )
     end
   end
 end

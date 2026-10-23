@@ -41,6 +41,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Runs
@@ -348,7 +349,8 @@ defmodule Lightning.WorkOrders do
          |> Ecto.Changeset.change()
          |> Ecto.Changeset.add_error(
            :input_dataclip_id,
-           "cannot retry run using a wiped dataclip"
+           "cannot retry run using a wiped dataclip",
+           code: :dataclip_wiped
          )}
     end)
     |> Multi.run(:steps, &get_workflow_steps_from/2)
@@ -859,12 +861,17 @@ defmodule Lightning.WorkOrders do
   end
 
   @doc """
-  Returns a query for work orders belonging to a specific project
+  A page of the work orders of `project`, or of every project `user` may
+  access, narrowed by `filters` (see
+  `Lightning.Invocation.Query.filter_work_orders/2`).
   """
-  @spec work_orders_for_project_query(Lightning.Projects.Project.t()) ::
-          Ecto.Queryable.t()
-  def work_orders_for_project_query(%Lightning.Projects.Project{} = project) do
-    Lightning.Invocation.Query.work_orders_for(project)
+  @spec paginate_work_orders_for(Project.t() | User.t(), map(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_work_orders_for(project_or_user, filters, page) do
+    project_or_user
+    |> Lightning.Invocation.Query.work_orders_for()
+    |> Lightning.Invocation.Query.filter_work_orders(filters)
+    |> Repo.paginate(page)
   end
 
   defp new_retry_run(

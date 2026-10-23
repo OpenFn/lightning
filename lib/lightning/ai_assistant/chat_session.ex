@@ -100,7 +100,8 @@ defmodule Lightning.AiAssistant.ChatSession do
         add_error(
           changeset,
           :session_type,
-          "must be either 'job_code' or 'workflow_template'"
+          "must be either 'job_code' or 'workflow_template'",
+          code: :not_allowed
         )
     end
   end

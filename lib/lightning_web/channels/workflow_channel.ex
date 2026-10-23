@@ -24,8 +24,8 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.Sandboxes
-  alias Lightning.Projects.Scope
   alias Lightning.Repo
+  alias Lightning.Scope
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows
@@ -460,7 +460,7 @@ defmodule LightningWeb.WorkflowChannel do
     with :ok <- authorize_edit_workflow(socket),
          %WorkflowRelease{snapshot: %_{}} = release <-
            WorkflowReleases.get_by_version_number(workflow.id, number),
-         {:ok, restored} <- restore_or_conflict(workflow, release, user) do
+         {:ok, restored} <- Workflows.restore_version(workflow, release, user) do
       WorkflowReconciler.request_reconciliation(workflow.id)
 
       broadcast_workflow_saved(socket, restored)
@@ -1426,12 +1426,6 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
-  defp restore_or_conflict(workflow, release, user) do
-    Workflows.restore_version(workflow, release, user)
-  rescue
-    Ecto.StaleEntryError -> {:error, :workflow_moved_on}
-  end
-
   defp render_losing_triggers(workflow, snapshot) do
     kept = MapSet.new(snapshot.triggers, & &1.id)
 
@@ -1529,7 +1523,8 @@ defmodule LightningWeb.WorkflowChannel do
               Permissions.can?(:sandboxes, :delete_sandbox, user, project)
         }
 
-      # No such project, or one scheduled for deletion.
+      # No such project. A project scheduled for deletion loads instead, and
+      # every check above refuses it.
       {:error, _reason} ->
         %{
           can_edit_workflow: false,
@@ -1668,11 +1663,11 @@ defmodule LightningWeb.WorkflowChannel do
      }}
   end
 
-  defp workflow_error_reply({:error, :workflow_moved_on}) do
+  defp workflow_error_reply({:error, :concurrent_edit}) do
     {:error,
      %{
        errors: %{
-         base: ["Someone else saved this workflow. Try the restore again."]
+         base: ["Someone else saved this workflow. Try again."]
        },
        type: "workflow_moved_on"
      }}

@@ -579,4 +579,231 @@ defmodule Lightning.Policies.CredentialsTest do
       end
     end
   end
+
+  describe "Credential ownership" do
+    setup do
+      owner = insert(:user)
+
+      %{
+        owner: owner,
+        credential: insert(:credential, user: owner),
+        superuser: insert(:user, role: :superuser),
+        other_user: insert(:user)
+      }
+    end
+
+    test "the owner can edit and delete their credential", %{
+      owner: owner,
+      credential: credential
+    } do
+      assert Credentials
+             |> Bodyguard.permit?(:edit_credential, owner, credential)
+
+      assert Credentials
+             |> Bodyguard.permit?(:delete_credential, owner, credential)
+    end
+
+    test "anyone else, a superuser included, can do neither", %{
+      credential: credential,
+      superuser: superuser,
+      other_user: other_user
+    } do
+      for user <- [superuser, other_user],
+          action <- [:edit_credential, :delete_credential] do
+        refute Credentials |> Bodyguard.permit?(action, user, credential),
+               "#{action} was granted to someone who does not own the credential"
+      end
+    end
+
+    test "a role in a project the credential is linked to grants neither", %{
+      owner: owner
+    } do
+      [admin, editor, viewer] = insert_list(3, :user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: admin, role: :admin},
+            %{user: editor, role: :editor},
+            %{user: viewer, role: :viewer}
+          ]
+        )
+
+      credential = insert(:credential, user: owner)
+      insert(:project_credential, project: project, credential: credential)
+
+      for user <- [admin, editor, viewer],
+          action <- [:edit_credential, :delete_credential] do
+        refute Credentials |> Bodyguard.permit?(action, user, credential),
+               "#{action} was granted through a project role"
+      end
+    end
+
+    test "linking to a project takes an owner, admin or editor there, or a service account" do
+      [owner, admin, editor, viewer, outsider] = insert_list(5, :user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: admin, role: :admin},
+            %{user: editor, role: :editor},
+            %{user: viewer, role: :viewer}
+          ]
+        )
+
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      account = %{account | grants: MapSet.new(["credentials:write"])}
+
+      may_link? =
+        &Bodyguard.permit?(
+          Lightning.Policies.ProjectUsers,
+          :create_project_credential,
+          &1,
+          project
+        )
+
+      assert Enum.map(
+               [owner, admin, editor, viewer, outsider, account],
+               may_link?
+             ) ==
+               [true, true, true, false, false, true]
+    end
+
+    test "a service account without credentials:write cannot link to a project" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      account = %{account | grants: MapSet.new(["projects:write"])}
+
+      assert Lightning.Policies.ProjectUsers.authorize(
+               :create_project_credential,
+               account,
+               insert(:project)
+             ) == {:error, {:insufficient_scope, "credentials:write"}}
+    end
+
+    test "a service account can write any credential but never delete one", %{
+      credential: credential
+    } do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      account = %{account | grants: MapSet.new(["credentials:write"])}
+
+      assert Credentials
+             |> Bodyguard.permit?(:edit_credential, account, credential)
+
+      refute Credentials
+             |> Bodyguard.permit?(:delete_credential, account, credential)
+    end
+
+    test "only an operator may name another owner, and only with the grant" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      operator = %{account | grants: MapSet.new(["credentials:write"])}
+      bare = %{account | grants: MapSet.new(["projects:write"])}
+
+      assert Credentials.authorize(:name_credential_owner, operator, nil) == true
+
+      assert Credentials.authorize(:name_credential_owner, insert(:user), nil) ==
+               false
+
+      assert Credentials.authorize(:name_credential_owner, bare, nil) ==
+               {:error, {:insufficient_scope, "credentials:write"}}
+
+      assert Credentials.authorize(:list_credentials, insert(:user), nil) == true
+
+      assert Credentials.authorize(:edit_credential, bare, insert(:credential)) ==
+               {:error, {:insufficient_scope, "credentials:write"}}
+    end
+
+    test "only a person may list their credentials or create one for themselves" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      operator = %{account | grants: MapSet.new(["credentials:write"])}
+      person = insert(:user)
+
+      assert Credentials.authorize(:list_credentials, person, nil) == true
+
+      assert Credentials.authorize(
+               :edit_credential,
+               person,
+               %Lightning.Credentials.Credential{user_id: person.id}
+             ) == true
+
+      assert Credentials.authorize(:list_credentials, operator, nil) == false
+
+      assert Credentials.authorize(
+               :edit_credential,
+               operator,
+               %Lightning.Credentials.Credential{user_id: operator.id}
+             ) == false
+
+      # An operator can't own a credential, but can create one for a person.
+      assert Credentials.authorize(
+               :edit_credential,
+               operator,
+               %Lightning.Credentials.Credential{user_id: person.id}
+             ) == true
+    end
+  end
+
+  describe "a credential scheduled for deletion" do
+    setup do
+      owner = insert(:user)
+
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      credential =
+        insert(:credential,
+          user: owner,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      %{
+        owner: owner,
+        operator: %{account | grants: MapSet.new(["credentials:write"])},
+        bare: %{account | grants: MapSet.new(["projects:write"])},
+        credential: Repo.preload(credential, :project_credentials)
+      }
+    end
+
+    test "refuses editing with scheduled_for_deletion to a caller who may edit it",
+         %{owner: owner, operator: operator, credential: credential} do
+      for actor <- [owner, operator] do
+        assert Credentials.authorize(:edit_credential, actor, credential) ==
+                 {:error, :scheduled_for_deletion}
+      end
+    end
+
+    test "tells anyone else only what it would tell them before the schedule",
+         %{bare: bare, credential: credential} do
+      assert Credentials.authorize(:edit_credential, insert(:user), credential) ==
+               false
+
+      assert Credentials.authorize(:edit_credential, bare, credential) ==
+               {:error, {:insufficient_scope, "credentials:write"}}
+    end
+
+    test "still lets the owner see it and delete it", %{
+      owner: owner,
+      credential: credential
+    } do
+      assert Credentials.authorize(
+               :see_credential,
+               Lightning.Scope.new(owner),
+               credential
+             ) == true
+
+      assert Credentials.authorize(:delete_credential, owner, credential) ==
+               true
+    end
+  end
 end

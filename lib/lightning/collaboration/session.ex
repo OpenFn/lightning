@@ -222,6 +222,9 @@ defmodule Lightning.Collaboration.Session do
     save's transaction, so the whole save rolled back and nothing persisted
   - `{:error, :adaptor_catalogue_unavailable}` - The adaptor catalogue's
     first load did not complete, so no validation could run
+  - `{:error, :concurrent_edit}` - Another save changed the workflow while
+    this one ran
+  - `{:error, :read_only_view}` - The session is a read-only view
   - `{:error, changeset}` - Validation or persistence error
 
   ## Examples
@@ -240,6 +243,8 @@ defmodule Lightning.Collaboration.Session do
              | :deserialization_failed
              | :internal_error
              | :adaptor_catalogue_unavailable
+             | :concurrent_edit
+             | :read_only_view
              | Ecto.Changeset.t()}
   def save_workflow(session_pid, user) do
     GenServer.call(
@@ -568,6 +573,13 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :snapshot_failed}, state}
+
+      {:error, :concurrent_edit} ->
+        Logger.info(
+          "Cannot save workflow #{state.workflow.id}: another save changed it first"
+        )
+
+        {:reply, {:error, :concurrent_edit}, state}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         all_errors =

@@ -12,7 +12,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
 
   alias Lightning.Accounts
   alias Lightning.Policies.{Permissions, ProjectUsers}
-  alias Lightning.Projects.Scope
+  alias Lightning.Scope
 
   @project_user_actions ~w(
     create_workflow
@@ -112,9 +112,9 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
     end
 
     # A %Project{} subject never carries a client-supplied project_user_id, so
-    # there is no "whose row is this" question to answer — Scope already
-    # resolved it to the caller's own standing. This goes through `permitted?`
-    # rather than the id == user_id clause above.
+    # there is no "whose row is this" question to answer. Scope already
+    # resolved it to the caller's own standing, so the check that a row
+    # belongs to the caller isn't consulted.
     test "can edit their own digest and failure alerts given only the project",
          %{project: project, editor: editor} do
       ~w(
@@ -387,9 +387,8 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
                "MFA: " <> Enum.join(allowed, ", ")
     end
 
-    # The sweep above passes a project, so it never reaches the clause that
-    # takes a `%ProjectUser{}`. That clause does not call permitted?/2 at all,
-    # so it needs — and has — its own MFA check.
+    # The sweep above passes a project, so it never reaches the rule for a
+    # `%ProjectUser{}` subject. This checks MFA refuses that subject too.
     test "refuses every action when the subject is the member's own row",
          context do
       actions = ProjectUsers.actions()
@@ -454,6 +453,169 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
 
       refute_can(ProjectUsers, :access_project, support_user, mfa_project)
       refute_can(ProjectUsers, @project_user_actions, support_user, mfa_project)
+    end
+  end
+
+  describe "an operator" do
+    setup do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{
+        account: %{
+          account
+          | grants: MapSet.new(["projects:write", "credentials:write"])
+        },
+        bare_account: account
+      }
+    end
+
+    test "is allowed what an owner is, but nothing about its own row",
+         %{account: account, project: project} do
+      # The expected set is written out rather than read from the module, so a
+      # new action fails here until someone decides whether an operator gets it.
+      expected =
+        ~w(
+          access_project
+          list_project_credentials
+          delete_project
+          add_project_user
+          remove_project_user
+          edit_project
+          edit_data_retention
+          edit_run_settings
+          write_webhook_auth_method
+          write_github_connection
+          create_workflow
+          edit_workflow
+          delete_workflow
+          run_workflow
+          create_project_credential
+          initiate_github_sync
+          create_channel
+          update_channel
+          delete_channel
+        )a
+
+      refused = ~w(publish_template edit_digest_alerts edit_failure_alerts)a
+
+      assert Enum.sort(ProjectUsers.actions()) ==
+               Enum.sort(expected ++ refused),
+             "classify every new action as allowed or refused for an operator"
+
+      allowed =
+        for action <- ProjectUsers.actions(),
+            Permissions.can?(ProjectUsers, action, account, project),
+            do: action
+
+      assert Enum.sort(allowed) == Enum.sort(expected)
+    end
+
+    test "is refused for want of the grant before anything else",
+         %{bare_account: account, project: project} do
+      projects_only = %{account | grants: MapSet.new(["projects:write"])}
+      credentials_only = %{account | grants: MapSet.new(["credentials:write"])}
+
+      assert ProjectUsers.authorize(:access_project, credentials_only, project) ==
+               {:error, {:insufficient_scope, "projects:write"}}
+
+      assert ProjectUsers.authorize(
+               :list_project_credentials,
+               projects_only,
+               project
+             ) == {:error, {:insufficient_scope, "credentials:write"}}
+
+      assert ProjectUsers.authorize(
+               :create_project_credential,
+               projects_only,
+               project
+             ) == {:error, {:insufficient_scope, "credentials:write"}}
+
+      assert ProjectUsers.authorize(
+               :create_project_credential,
+               credentials_only,
+               project
+             ) == true
+
+      # The grant is about the caller alone, so it is answered before any
+      # target is loaded.
+      assert ProjectUsers.authorize(
+               :edit_project,
+               Scope.new(credentials_only),
+               :before_target
+             ) == {:error, {:insufficient_scope, "projects:write"}}
+
+      assert ProjectUsers.authorize(
+               :edit_project,
+               Scope.new(projects_only),
+               :before_target
+             ) == true
+    end
+
+    test "is told a project is scheduled only when asking with a scope",
+         %{account: account} do
+      project =
+        insert(:project,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, scope} = Scope.fetch(account, project)
+
+      assert ProjectUsers.authorize(:edit_project, scope, project) ==
+               {:error, :scheduled_for_deletion}
+
+      assert ProjectUsers.authorize(:edit_project, account, project) == false
+      refute ProjectUsers.permitted?(:edit_project, scope)
+    end
+
+    # Only the row's member may change its alert settings, and an operator has
+    # no row.
+    test "is refused the self actions given someone's membership row", %{
+      account: account,
+      project: project
+    } do
+      refute_can(
+        ProjectUsers,
+        [:edit_digest_alerts, :edit_failure_alerts],
+        account,
+        hd(project.project_users)
+      )
+    end
+  end
+
+  describe "a person asking with a scope" do
+    test "is told a project is scheduled only once otherwise allowed" do
+      owner = insert(:user)
+      outsider = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user: owner, role: :owner}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, owner_scope} = Scope.fetch(owner, project)
+      {:ok, outsider_scope} = Scope.fetch(outsider, project)
+
+      assert ProjectUsers.authorize(:edit_project, owner_scope, project) ==
+               {:error, :scheduled_for_deletion}
+
+      assert ProjectUsers.authorize(:edit_project, outsider_scope, project) ==
+               {:error, :no_standing}
+
+      assert ProjectUsers.authorize(:edit_project, owner, project) == false
+    end
+
+    test "is refused when the subject is not the scope's project" do
+      owner = insert(:user)
+      project = insert(:project, project_users: [%{user: owner, role: :owner}])
+      {:ok, scope} = Scope.fetch(owner, project)
+
+      assert ProjectUsers.authorize(:edit_project, scope, project) == true
+      assert ProjectUsers.authorize(:edit_project, scope, project.id) == true
+
+      assert ProjectUsers.authorize(:edit_project, scope, insert(:project)) ==
+               false
     end
   end
 

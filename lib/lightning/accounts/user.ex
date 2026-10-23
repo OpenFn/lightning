@@ -200,7 +200,11 @@ defmodule Lightning.Accounts.User do
       if terms_accepted do
         []
       else
-        [terms_accepted: "Please accept the terms and conditions to register."]
+        [
+          terms_accepted:
+            {"Please accept the terms and conditions to register.",
+             code: :must_accept}
+        ]
       end
     end)
   end
@@ -242,7 +246,10 @@ defmodule Lightning.Accounts.User do
     changeset
     |> validate_change(:email, fn :email, email ->
       if Lightning.Repo.exists?(User |> where(email: ^email)) do
-        [email: {"has already been taken", validation: :unsafe_unique}]
+        [
+          email:
+            {"has already been taken", validation: :unsafe_unique, code: :taken}
+        ]
       else
         []
       end
@@ -327,8 +334,11 @@ defmodule Lightning.Accounts.User do
     |> cast(attrs, [:email])
     |> validate_email()
     |> case do
-      %{changes: %{email: _}} = changeset -> changeset
-      %{} = changeset -> add_error(changeset, :email, "did not change")
+      %{changes: %{email: _}} = changeset ->
+        changeset
+
+      %{} = changeset ->
+        add_error(changeset, :email, "did not change", code: :unchanged)
     end
   end
 
@@ -411,7 +421,7 @@ defmodule Lightning.Accounts.User do
     if valid_password?(changeset.data, password) do
       changeset
     else
-      add_error(changeset, :current_password, "is not valid")
+      add_error(changeset, :current_password, "is not valid", code: :mismatch)
     end
   end
 
@@ -420,7 +430,8 @@ defmodule Lightning.Accounts.User do
       add_error(
         changeset,
         :scheduled_deletion_email,
-        "You can't delete a superuser account."
+        "You can't delete a superuser account.",
+        code: :not_allowed
       )
     else
       changeset
@@ -434,7 +445,8 @@ defmodule Lightning.Accounts.User do
       add_error(
         changeset,
         :scheduled_deletion_email,
-        "This email doesn't match your current email"
+        "This email doesn't match your current email",
+        code: :mismatch
       )
     end
   end

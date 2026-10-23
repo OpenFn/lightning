@@ -192,6 +192,34 @@ defmodule Lightning.JobsTest do
     end
   end
 
+  describe "paginate_jobs_for/2" do
+    test "pages a project's jobs, or those of every project a user may access" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user_id: user.id}])
+      other_project = insert(:project, project_users: [%{user_id: user.id}])
+      %{jobs: [job]} = insert(:simple_workflow, project: project)
+      %{jobs: [other_job]} = insert(:simple_workflow, project: other_project)
+      insert(:simple_workflow)
+
+      assert %Scrivener.Page{entries: [%{id: job_id}], total_entries: 1} =
+               Jobs.paginate_jobs_for(project, [])
+
+      assert job_id == job.id
+
+      page = Jobs.paginate_jobs_for(user, page_size: 1)
+
+      assert %Scrivener.Page{
+               page_number: 1,
+               page_size: 1,
+               total_entries: 2,
+               total_pages: 2
+             } = page
+
+      assert MapSet.new(Jobs.paginate_jobs_for(user, []).entries, & &1.id) ==
+               MapSet.new([job.id, other_job.id])
+    end
+  end
+
   describe "create_job/2" do
     setup :isolated_adaptors
 

@@ -1,6 +1,11 @@
 defmodule Lightning.Validators do
   @moduledoc """
   Extra validators for Ecto.Changeset.
+
+  `code:` on a changeset error is the rule
+  `Lightning.Credo.Check.ChangesetErrorCode` enforces. An error about one
+  element of a list field also carries `key:`, the path to that element, such
+  as `["items", 2, "key"]`.
   """
 
   import Ecto.Changeset
@@ -82,10 +87,12 @@ defmodule Lightning.Validators do
     changeset
     |> update_change(field, &normalize_name/1)
     |> validate_change(field, fn ^field, value ->
-      if valid_name?(value), do: [], else: [{field, message}]
+      if valid_name?(value), do: [], else: [{field, {message, code: :format}}]
     end)
     |> validate_change(field, fn ^field, value ->
-      if invisible_only?(value), do: [{field, "can't be blank"}], else: []
+      if invisible_only?(value),
+        do: [{field, {"can't be blank", code: :required}}],
+        else: []
     end)
   end
 
@@ -114,7 +121,9 @@ defmodule Lightning.Validators do
           Ecto.Changeset.t()
   def validate_no_null_bytes(changeset, field, message) do
     validate_change(changeset, field, fn ^field, value ->
-      if storable_in_jsonb?(value), do: [], else: [{field, message}]
+      if storable_in_jsonb?(value),
+        do: [],
+        else: [{field, {message, code: :format}}]
     end)
   end
 
@@ -128,7 +137,7 @@ defmodule Lightning.Validators do
           Ecto.Changeset.t()
   def validate_no_null_bytes_deep(changeset, field, message) do
     validate_change(changeset, field, fn ^field, value ->
-      if jsonb_safe?(value), do: [], else: [{field, message}]
+      if jsonb_safe?(value), do: [], else: [{field, {message, code: :format}}]
     end)
   end
 
@@ -210,7 +219,7 @@ defmodule Lightning.Validators do
           |> Enum.find(fn [_, {kind, _}] -> kind == :changes end)
           |> List.first()
 
-        add_error(changeset, error_field, message)
+        add_error(changeset, error_field, message, code: :exclusive)
       else
         changeset
       end
@@ -228,7 +237,7 @@ defmodule Lightning.Validators do
     |> Enum.reject(&is_nil/1)
     |> case do
       [] ->
-        add_error(changeset, fields |> List.first(), message)
+        add_error(changeset, fields |> List.first(), message, code: :required)
 
       _any ->
         changeset
@@ -251,7 +260,7 @@ defmodule Lightning.Validators do
     |> get_field(assoc)
     |> case do
       nil ->
-        add_error(changeset, assoc, message)
+        add_error(changeset, assoc, message, code: :required)
 
       _any ->
         changeset
@@ -302,7 +311,9 @@ defmodule Lightning.Validators do
 
   def validate_uuid(changeset, field) when is_atom(field) do
     validate_change(changeset, field, fn _, value ->
-      if valid_uuid?(value), do: [], else: [{field, "is not a valid UUID"}]
+      if valid_uuid?(value),
+        do: [],
+        else: [{field, {"is not a valid UUID", code: :format}}]
     end)
   end
 
@@ -323,22 +334,22 @@ defmodule Lightning.Validators do
            {:ok, uri} <- URI.new(url) do
         cond do
           uri.scheme not in ["http", "https"] ->
-            [{field, "must be either a http or https URL"}]
+            [{field, {"must be either a http or https URL", code: :format}}]
 
           is_nil(uri.host) or byte_size(uri.host) == 0 ->
-            [{field, "host can't be blank"}]
+            [{field, {"host can't be blank", code: :format}}]
 
           byte_size(uri.host) > 255 ->
-            [{field, "host must be less than 255 characters"}]
+            [{field, {"host must be less than 255 characters", code: :format}}]
 
           not valid_host?(uri.host) ->
-            [{field, "host has invalid characters"}]
+            [{field, {"host has invalid characters", code: :format}}]
 
           true ->
             []
         end
       else
-        _ -> [{field, "must be a valid URL"}]
+        _ -> [{field, {"must be a valid URL", code: :format}}]
       end
     end)
   end

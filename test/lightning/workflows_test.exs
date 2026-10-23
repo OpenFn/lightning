@@ -1305,11 +1305,11 @@ defmodule Lightning.WorkflowsTest do
 
       assert updated_workflow.lock_version == 2
 
-      # Throws an error because the lock_version is outdated
-      assert_raise Ecto.StaleEntryError, fn ->
-        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
-        |> Workflows.save_workflow(user)
-      end
+      assert {:error, :concurrent_edit} =
+               Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
+               |> Workflows.save_workflow(user)
+
+      assert Repo.reload(workflow).lock_version == 2
     end
 
     test "change_workflow/1 returns a workflow changeset" do
@@ -1678,24 +1678,6 @@ defmodule Lightning.WorkflowsTest do
 
       refute cs.valid?
       assert {"contains an invalid value", _} = cs.errors[:base]
-    end
-
-    test "stale lock still raises Ecto.StaleEntryError (not rescued)" do
-      # Guards that the rescue does NOT swallow optimistic-lock conflicts
-      # (mirrors the "saving with locks" test above).
-      user = insert(:user)
-      valid_attrs = params_with_assocs(:workflow, jobs: [params_for(:job)])
-
-      {:ok, workflow} = Workflows.save_workflow(valid_attrs, insert(:user))
-
-      {:ok, _} =
-        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
-        |> Workflows.save_workflow(user)
-
-      assert_raise Ecto.StaleEntryError, fn ->
-        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
-        |> Workflows.save_workflow(user)
-      end
     end
   end
 
@@ -2591,6 +2573,44 @@ defmodule Lightning.WorkflowsTest do
     test "ignores empty search term", %{project: project} do
       workflows = Workflows.get_workflows_for(project, search: "")
       assert length(workflows) == 3
+    end
+  end
+
+  describe "list_workflows_for_user/2" do
+    test "lists the live workflows in the user's projects, newest first" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      older =
+        insert(:workflow,
+          project: project,
+          inserted_at: ~U[2024-01-01 00:00:00Z]
+        )
+
+      newer =
+        insert(:workflow,
+          project: project,
+          inserted_at: ~U[2024-02-01 00:00:00Z]
+        )
+
+      insert(:workflow, project: project, deleted_at: DateTime.utc_now())
+      insert(:workflow)
+
+      assert Workflows.list_workflows_for_user(user) |> Enum.map(& &1.id) ==
+               [newer.id, older.id]
+    end
+
+    test "preloads the associations named in include:" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+
+      assert [%{jobs: [%{id: job_id}]} = listed] =
+               Workflows.list_workflows_for_user(user, include: [:jobs])
+
+      assert job_id == job.id
+      refute Ecto.assoc_loaded?(listed.edges)
     end
   end
 

@@ -2,71 +2,92 @@ defmodule Lightning.Policies.Provisioning do
   @moduledoc """
   The Bodyguard Policy module for the provisioning API.
 
-  Two kinds of caller reach this: a person with an API token, and a
-  `%ProjectRepoConnection{}` — a GitHub connection pushing a project definition
-  back to us. Both resolve through `Lightning.Projects.Scope`, so both are
-  refused on a project scheduled for deletion. A person is additionally held to
-  the project's MFA requirement; a repo connection has no MFA concept, and
-  `Scope` says so for it.
+  Three kinds of caller reach this: a person with an API token, a service
+  account creating a project, and a `%ProjectRepoConnection{}` (a GitHub
+  connection pushing a project definition back to us). All resolve through
+  `Lightning.Scope`. A person is additionally held to the project's MFA
+  requirement; a repo connection has no MFA concept, and `Scope` says so for
+  it. A caller who would otherwise be allowed on a project scheduled for
+  deletion hears `{:error, :scheduled_for_deletion}`, and one with no standing
+  on the project `{:error, :no_standing}`, which reveals nothing about the
+  project, not even that it exists.
 
-  The repo-connection clauses previously compared
-  `repo_connection.project_id == project.id`, which is trivially true for the
-  project the connection belongs to and asks nothing about the project's state —
-  so a push could re-enable the triggers that shutting the project down had
-  disabled.
-
-  Only a superuser can provision a project that does not exist yet. Owners and
-  admins can update an existing one.
+  Only a superuser or an operator holding `projects:write` can create a
+  project. Owners and admins can update an existing one.
+  `:provision_project` and `:describe_project` on an existing project need
+  `projects:provision`, the one grant a repo connection holds.
   """
   @behaviour Bodyguard.Policy
 
-  alias Lightning.Accounts.User
-  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Decision
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.Project
-  alias Lightning.Projects.Scope
+  alias Lightning.Scope
   alias Lightning.VersionControl.ProjectRepoConnection
 
-  @type actor :: User.t() | ProjectRepoConnection.t()
-  @type actions :: :provision_project | :describe_project
+  @type actions :: :create_project | :provision_project | :describe_project
 
-  @spec authorize(actions(), actor(), Project.t()) ::
-          boolean() | {:error, :forbidden}
+  @spec authorize(
+          actions(),
+          Scope.t(),
+          Project.t() | nil | :before_target
+        ) ::
+          boolean()
+          | {:error,
+             :forbidden
+             | Decision.insufficient_scope()
+             | :no_standing
+             | :scheduled_for_deletion}
 
-  # STAYS FIRST. A project that does not exist yet cannot be scheduled for
-  # deletion, and has no members to consult. Reordering this below the clauses
-  # that resolve a Scope breaks project creation through the API.
-  def authorize(:provision_project, %User{role: role}, %Project{id: nil}) do
-    role in [:superuser] or {:error, :forbidden}
+  # `false` becomes `{:error, :forbidden}`, so `/api/provision` answers 403, not
+  # 401.
+  def authorize(:create_project, %Scope{} = scope, subject) do
+    Decision.instance(
+      scope,
+      subject,
+      "projects:write",
+      scope.instance_role in [:superuser, :operator]
+    ) || {:error, :forbidden}
   end
 
-  def authorize(:provision_project, %User{} = user, %Project{} = project) do
-    case Scope.fetch(user, project) do
-      {:ok, %Scope{role: role, mfa_satisfied?: true}}
-      when role in [:owner, :admin] ->
-        true
+  def authorize(:describe_project, %Scope{} = scope, :before_target),
+    do: Decision.instance(scope, :before_target, "projects:provision", true)
 
-      _ ->
-        {:error, :forbidden}
+  # Which grant applies waits for the body's project: creating one needs
+  # projects:write, provisioning one that exists projects:provision.
+  def authorize(:provision_project, %Scope{} = scope, :before_target) do
+    Scope.allows?(scope, "projects:write") or
+      Decision.instance(scope, :before_target, "projects:provision", true)
+  end
+
+  def authorize(action, %Scope{} = scope, %Project{} = project)
+      when action in [:provision_project, :describe_project] do
+    case Decision.project(
+           scope,
+           project,
+           "projects:provision",
+           judge(action, scope)
+         ) do
+      false -> {:error, :forbidden}
+      answer -> answer
     end
   end
 
-  # Delegated rather than copied, so it cannot drift from `:access_project`.
-  def authorize(:describe_project, %User{} = user, %Project{} = project) do
-    Permissions.can?(:project_users, :access_project, user, project) or
-      {:error, :forbidden}
-  end
-
-  # Resolving a Scope at all is the whole check: Scope refuses a project this
-  # connection does not belong to, and one scheduled for deletion.
-  def authorize(
-        action,
-        %ProjectRepoConnection{} = repo_connection,
-        %Project{} = project
-      )
-      when action in [:provision_project, :describe_project] do
-    match?({:ok, _}, Scope.fetch(repo_connection, project)) or
-      {:error, :forbidden}
-  end
-
   def authorize(_, _, _), do: false
+
+  # A repo connection's standing is the project it belongs to, which
+  # `describes?/2` has already checked.
+  defp judge(_action, %Scope{actor: %ProjectRepoConnection{}}), do: true
+
+  defp judge(:provision_project, scope),
+    do: Scope.holds_role?(scope, [:owner, :admin])
+
+  # Delegated rather than copied, so it cannot drift from `:access_project`.
+  # It answers `:scheduled_for_deletion` only to a caller it would allow.
+  defp judge(:describe_project, scope),
+    do:
+      ProjectUsers.authorize(:access_project, scope, scope.project) in [
+        true,
+        {:error, :scheduled_for_deletion}
+      ]
 end

@@ -72,24 +72,33 @@ defmodule Lightning.AuthProviders.AuthConfigForm do
     |> case do
       {:error, %{reason: :econnrefused}} ->
         changeset
-        |> add_error(:discovery_url, "could not connect to discovery endpoint")
+        |> add_error(:discovery_url, "could not connect to discovery endpoint",
+          code: :discovery_failed
+        )
 
       {:error, %HTTPoison.Error{reason: message}} when is_binary(message) ->
-        changeset |> add_error(:discovery_url, message)
+        changeset |> add_error(:discovery_url, message, code: :discovery_failed)
 
       {:error, %Jason.DecodeError{}} ->
-        changeset |> add_error(:discovery_url, "error parsing .well-known")
+        changeset
+        |> add_error(:discovery_url, "error parsing .well-known",
+          code: :discovery_failed
+        )
 
       {:error, message} when is_binary(message) ->
-        changeset |> add_error(:discovery_url, message)
+        changeset |> add_error(:discovery_url, message, code: :discovery_failed)
 
       {:error, :insecure_discovery_url} ->
         changeset
-        |> add_error(:discovery_url, "discovery endpoint must use https")
+        |> add_error(:discovery_url, "discovery endpoint must use https",
+          code: :format
+        )
 
       {:error, _reason} ->
         changeset
-        |> add_error(:discovery_url, "could not fetch the discovery document")
+        |> add_error(:discovery_url, "could not fetch the discovery document",
+          code: :discovery_failed
+        )
 
       {:ok, _provider} ->
         changeset

@@ -59,141 +59,94 @@ defmodule LightningWeb.API.WorkOrdersController do
   """
   use LightningWeb, :controller
 
-  alias Lightning.Invocation
-  alias Lightning.Policies.Permissions
-  alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrders
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Filters
+  alias LightningWeb.API.Request
+  alias LightningWeb.API.Target
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project}
 
   @doc """
-  Lists work orders with optional project filtering.
+  Lists the work orders of the projects the caller may access, or of one project
+  on the nested route, narrowed by the query's filters.
 
-  This function has two variants:
-  - With `project_id`: Returns work orders for a specific project
-  - Without `project_id`: Returns work orders across all accessible projects
-
-  Returns a paginated list of work orders with optional datetime filtering.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `project_id` - Project UUID (optional, filters to specific project)
-    - `page` - Page number (optional, default: 1)
-    - `page_size` - Items per page (optional, default: 10, at most 100)
-    - `state` - Comma-separated list of states to filter by (optional)
-    - `inserted_after` - Filter work orders created after ISO8601 datetime (optional)
-    - `inserted_before` - Filter work orders created before ISO8601 datetime (optional)
-    - `updated_after` - Filter work orders updated after ISO8601 datetime (optional)
-    - `updated_before` - Filter work orders updated before ISO8601 datetime (optional)
-
-  ## Returns
-
-  - Renders JSON with paginated list of work orders
-  - `404 Not Found` if project doesn't exist (when project_id provided)
-  - `403 Forbidden` if user lacks project access (when project_id provided)
-  - `422 Unprocessable Entity` if datetime parameters are invalid
+  The caller is authorised before the query is read, so a caller who may not see
+  the project learns nothing from its filters. Every bad filter is reported in
+  one 400 `invalid_parameter` (error-format spec §9.4).
 
   ## Examples
 
-      # All work orders accessible to user
-      GET /api/work_orders
-      GET /api/work_orders?page=2&page_size=50
-      GET /api/work_orders?inserted_after=2024-01-01T00:00:00Z
-
-      # Work orders for specific project
-      GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/work_orders
-      GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/work_orders?page=2
+      GET /api/work_orders?page=2&page_size=50&state=failed,crashed
       GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/work_orders?inserted_after=2024-01-01T00:00:00Z
   """
-  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def index(conn, %{"project_id" => project_id} = params) do
-    pagination_attrs = Map.take(params, ["page_size", "page"])
-
-    with :ok <-
-           Invocation.Query.validate_datetime_params(params, [
-             "inserted_after",
-             "inserted_before",
-             "updated_after",
-             "updated_before"
-           ]),
-         :ok <- Invocation.Query.validate_state_param(params),
-         project <- Lightning.Projects.get_project(project_id),
-         :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             conn.assigns.current_resource,
-             project
-           ) do
-      page =
-        WorkOrders.work_orders_for_project_query(project)
-        |> Invocation.Query.filter_work_orders(params)
-        |> Lightning.Repo.paginate(pagination_attrs)
-
-      render(conn, "index.json", page: page, conn: conn)
+    with {:ok, project} <-
+           Target.project(
+             conn.assigns.scope,
+             project_id,
+             {:project_users, :access_project}
+           ),
+         {:ok, filters} <-
+           params
+           |> Filters.work_orders()
+           |> Errors.refuse_parameters() do
+      list(project, conn, params, filters)
     end
   end
 
   def index(conn, params) do
-    with :ok <-
-           Invocation.Query.validate_datetime_params(params, [
-             "inserted_after",
-             "inserted_before",
-             "updated_after",
-             "updated_before"
-           ]),
-         :ok <- Invocation.Query.validate_state_param(params) do
-      pagination_attrs = Map.take(params, ["page_size", "page"])
-
-      page =
-        Invocation.Query.work_orders_for(conn.assigns.current_resource)
-        |> Invocation.Query.filter_work_orders(params)
-        |> Lightning.Repo.paginate(pagination_attrs)
-
-      render(conn, "index.json", page: page, conn: conn)
+    with {:ok, filters} <-
+           params
+           |> Filters.work_orders()
+           |> Errors.refuse_parameters() do
+      list(conn.assigns.current_resource, conn, params, filters)
     end
   end
 
   @doc """
-  Retrieves a specific work order by ID.
-
-  Returns detailed information about a single work order including its
-  associated workflow and runs. Access is granted if the user has access
-  to the work order's parent project.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `id` - Work order UUID (required)
-
-  ## Returns
-
-  - `200 OK` with work order JSON including workflow and runs
-  - `404 Not Found` if work order doesn't exist
-  - `403 Forbidden` if user lacks project access
+  Shows a work order, with its runs, to a caller who may access its project. A
+  work order the caller has no standing on answers 404 `not_found`, as if it
+  didn't exist.
 
   ## Examples
 
       GET /api/work_orders/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
-  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show(conn, %{"id" => id}) do
-    with %Lightning.WorkOrder{} = work_order <-
-           WorkOrders.get(id, include: [workflow: :project, runs: []]),
-         :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             conn.assigns.current_resource,
-             work_order.workflow.project
+    with {:ok, id} <- Request.path_id(id),
+         {:ok, work_order} <- fetch_work_order(id),
+         {:ok, _project} <-
+           Target.project(
+             conn.assigns.scope,
+             work_order.workflow.project_id,
+             {:project_users, :access_project}
            ) do
       render(conn, "show.json", work_order: work_order, conn: conn)
-    else
-      nil -> {:error, :not_found}
-      error -> error
     end
+  end
+
+  defp fetch_work_order(id) do
+    case WorkOrders.get(id, include: [:workflow, runs: []]) do
+      nil -> {:error, :not_found}
+      work_order -> {:ok, work_order}
+    end
+  end
+
+  defp list(project_or_user, conn, params, filters) do
+    page =
+      WorkOrders.paginate_work_orders_for(
+        project_or_user,
+        filters,
+        Filters.page(params)
+      )
+
+    render(conn, "index.json", page: page, filters: filters, conn: conn)
   end
 end

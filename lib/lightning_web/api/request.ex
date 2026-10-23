@@ -1,0 +1,110 @@
+defmodule LightningWeb.API.Request do
+  @moduledoc """
+  The checks on a request's path id and JSON body before the body reaches a
+  changeset (error-format spec §7 item 8, §9.5, §9.6), and telling when a
+  create-or-replace `PUT /:id` lost the race for its id.
+  """
+  alias Ecto.Changeset
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.Problem
+
+  @mismatch {"does not match the id in the path", code: :mismatch}
+
+  @doc """
+  Checks `body` against the keys the route accepts and the id in its path.
+
+  `path_id` is the path's id, already cast as a UUID.
+
+  Returns `{:error, problem}` with a 400 `malformed` problem when the body is
+  not a JSON object. Otherwise returns `{:ok, entries}`, empty when the body
+  passes: one `unknown_key` entry for each key outside `accepted`, and a
+  `mismatch` entry when the body's `id` is not `path_id`.
+  """
+  @spec check(map(), Ecto.UUID.t(), [atom()]) ::
+          {:ok, [Errors.entry()]} | {:error, Problem.t()}
+  def check(body, path_id, accepted) do
+    with :ok <- check_object(body) do
+      {:ok, unknown_keys(body, [], accepted) ++ id_mismatch(body, path_id)}
+    end
+  end
+
+  @doc """
+  One `unknown_key` entry for each key of `object` outside `accepted`, in key
+  order, each under `path`.
+  """
+  @spec unknown_keys(map(), [Errors.segment()], [atom()]) :: [Errors.entry()]
+  def unknown_keys(object, path, accepted) do
+    (Map.keys(object) -- Enum.map(accepted, &Atom.to_string/1))
+    |> Enum.sort()
+    |> Enum.map(
+      &Errors.entry(path ++ [&1], {"is not accepted", code: :unknown_key})
+    )
+  end
+
+  @doc """
+  `:ok` when `body`, a request's body params, was a JSON object. Otherwise a
+  400 `malformed` problem, for any route that takes an object (spec §9.5).
+  Plug.Parsers puts any other JSON value under `"_json"`.
+  """
+  @spec check_object(map()) :: :ok | {:error, Problem.t()}
+  def check_object(%{"_json" => _not_an_object}),
+    do: {:error, Problem.new(:malformed)}
+
+  def check_object(_body), do: :ok
+
+  @doc """
+  The path's id, written out as a UUID.
+
+  Returns `{:error, :not_found}` for anything else, since an id that isn't a
+  UUID names nothing (spec §4). `Ecto.UUID.cast/1` would also take any 16-byte
+  string as a raw UUID, landing the request under an id it doesn't name.
+  """
+  @spec path_id(term()) :: {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def path_id(id) do
+    with {:ok, raw} <- Ecto.UUID.dump(id),
+         {:ok, uuid} <- Ecto.UUID.load(raw) do
+      {:ok, uuid}
+    else
+      :error -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Whether an insert at the path's id failed because the id's row now exists,
+  that is, another request created it after the route looked the id up.
+  """
+  @spec id_taken?(Changeset.t()) :: boolean()
+  def id_taken?(changeset) do
+    changeset.errors
+    |> Keyword.get_values(:id)
+    |> Enum.any?(fn {_message, opts} -> opts[:constraint] == :unique end)
+  end
+
+  @doc """
+  `changeset` with a `mismatch` error on `field` when `body` names an id there
+  that is not `path_id`.
+  """
+  @spec validate_matches_path(Changeset.t(), map(), atom(), Ecto.UUID.t()) ::
+          Changeset.t()
+  def validate_matches_path(changeset, body, field, path_id) do
+    if matches_path?(body, field, path_id) do
+      changeset
+    else
+      {message, opts} = @mismatch
+      Changeset.add_error(changeset, field, message, opts)
+    end
+  end
+
+  defp id_mismatch(body, path_id) do
+    if matches_path?(body, :id, path_id),
+      do: [],
+      else: [Errors.entry([:id], @mismatch)]
+  end
+
+  defp matches_path?(body, field, path_id) do
+    case Map.fetch(body, Atom.to_string(field)) do
+      {:ok, value} -> path_id(value) == {:ok, path_id}
+      :error -> true
+    end
+  end
+end

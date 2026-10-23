@@ -127,7 +127,8 @@ defmodule Lightning.Workflows.Edge do
       add_error(
         changeset,
         :source_job_id,
-        "source_job_id or source_trigger_id must be present"
+        "source_job_id or source_trigger_id must be present",
+        code: :required
       )
     end
   end
@@ -197,7 +198,8 @@ defmodule Lightning.Workflows.Edge do
         add_error(
           changeset,
           :target_job_id,
-          "target_job_id must be different from source_job_id"
+          "target_job_id must be different from source_job_id",
+          code: :cycle
         )
 
       _else ->

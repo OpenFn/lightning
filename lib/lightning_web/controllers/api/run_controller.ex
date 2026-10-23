@@ -52,141 +52,89 @@ defmodule LightningWeb.API.RunController do
   """
   use LightningWeb, :controller
 
-  alias Lightning.Invocation
-  alias Lightning.Policies.Permissions
-  alias Lightning.Policies.ProjectUsers
   alias Lightning.Runs
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Filters
+  alias LightningWeb.API.Request
+  alias LightningWeb.API.Target
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project}
 
   @doc """
-  Lists runs with optional project filtering.
+  Lists the runs of the projects the caller may access, or of one project on the
+  nested route, narrowed by the query's filters.
 
-  This function has two variants:
-  - With `project_id`: Returns runs for a specific project
-  - Without `project_id`: Returns runs across all accessible projects
-
-  Returns a paginated list of runs with optional datetime filtering.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `project_id` - Project UUID (optional, filters to specific project)
-    - `page` - Page number (optional, default: 1)
-    - `page_size` - Items per page (optional, default: 10, at most 100)
-    - `state` - Comma-separated list of states to filter by (optional)
-    - `inserted_after` - Filter runs created after ISO8601 datetime (optional)
-    - `inserted_before` - Filter runs created before ISO8601 datetime (optional)
-    - `updated_after` - Filter runs updated after ISO8601 datetime (optional)
-    - `updated_before` - Filter runs updated before ISO8601 datetime (optional)
-
-  ## Returns
-
-  - Renders JSON with paginated list of runs
-  - `404 Not Found` if project doesn't exist (when project_id provided)
-  - `403 Forbidden` if user lacks project access (when project_id provided)
-  - `422 Unprocessable Entity` if datetime parameters are invalid
+  The caller is authorised before the query is read, so a caller who may not see
+  the project learns nothing from its filters. Every bad filter is reported in
+  one 400 `invalid_parameter` (error-format spec §9.4).
 
   ## Examples
 
-      # All runs accessible to user
-      GET /api/runs
-      GET /api/runs?page=2&page_size=50
-      GET /api/runs?inserted_after=2024-01-01T00:00:00Z
-
-      # Runs for specific project
-      GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/runs
-      GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/runs?page=2
+      GET /api/runs?page=2&page_size=50&state=failed,crashed
       GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/runs?inserted_after=2024-01-01T00:00:00Z
   """
-  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def index(conn, %{"project_id" => project_id} = params) do
-    pagination_attrs = Map.take(params, ["page_size", "page"])
-
-    with :ok <-
-           Invocation.Query.validate_datetime_params(params, [
-             "inserted_after",
-             "inserted_before",
-             "updated_after",
-             "updated_before"
-           ]),
-         :ok <- Invocation.Query.validate_run_state_param(params),
-         project <- Lightning.Projects.get_project(project_id),
-         :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             conn.assigns.current_resource,
-             project
-           ) do
-      page =
-        Runs.runs_for_project_query(project)
-        |> Invocation.Query.filter_runs(params)
-        |> Lightning.Repo.paginate(pagination_attrs)
-
-      render(conn, "index.json", page: page, conn: conn)
+    with {:ok, project} <-
+           Target.project(
+             conn.assigns.scope,
+             project_id,
+             {:project_users, :access_project}
+           ),
+         {:ok, filters} <-
+           params
+           |> Filters.runs()
+           |> Errors.refuse_parameters() do
+      list(project, conn, params, filters)
     end
   end
 
   def index(conn, params) do
-    with :ok <-
-           Invocation.Query.validate_datetime_params(params, [
-             "inserted_after",
-             "inserted_before",
-             "updated_after",
-             "updated_before"
-           ]),
-         :ok <- Invocation.Query.validate_run_state_param(params) do
-      pagination_attrs = Map.take(params, ["page_size", "page"])
-
-      page =
-        Runs.runs_for_user_query(conn.assigns.current_resource)
-        |> Invocation.Query.filter_runs(params)
-        |> Lightning.Repo.paginate(pagination_attrs)
-
-      render(conn, "index.json", page: page, conn: conn)
+    with {:ok, filters} <-
+           params
+           |> Filters.runs()
+           |> Errors.refuse_parameters() do
+      list(conn.assigns.current_resource, conn, params, filters)
     end
   end
 
   @doc """
-  Retrieves a specific run by ID.
-
-  Returns detailed information about a single run including its associated
-  work order and workflow. Access is granted if the user has access to the
-  run's parent project.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `id` - Run UUID (required)
-
-  ## Returns
-
-  - `200 OK` with run JSON including work order and workflow
-  - `404 Not Found` if run doesn't exist
-  - `403 Forbidden` if user lacks project access
+  Shows a run to a caller who may access its project. A run the caller has no
+  standing on answers 404 `not_found`, as if it didn't exist.
 
   ## Examples
 
       GET /api/runs/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
-  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show(conn, %{"id" => id}) do
-    with %Lightning.Run{} = run <-
-           Runs.get(id, include: [work_order: [workflow: :project]]),
-         :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             conn.assigns.current_resource,
-             run.work_order.workflow.project
+    with {:ok, id} <- Request.path_id(id),
+         {:ok, run} <- fetch_run(id),
+         {:ok, _project} <-
+           Target.project(
+             conn.assigns.scope,
+             run.work_order.workflow.project_id,
+             {:project_users, :access_project}
            ) do
       render(conn, "show.json", run: run, conn: conn)
-    else
-      nil -> {:error, :not_found}
-      error -> error
     end
+  end
+
+  defp fetch_run(id) do
+    case Runs.get(id, include: [work_order: :workflow]) do
+      nil -> {:error, :not_found}
+      run -> {:ok, run}
+    end
+  end
+
+  defp list(project_or_user, conn, params, filters) do
+    page =
+      Runs.paginate_runs_for(project_or_user, filters, Filters.page(params))
+
+    render(conn, "index.json", page: page, filters: filters, conn: conn)
   end
 end

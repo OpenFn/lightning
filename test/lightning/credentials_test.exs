@@ -147,6 +147,25 @@ defmodule Lightning.CredentialsTest do
       assert job.project_credential_id == nil
     end
 
+    test "delete_credential/2 answers not_found for a credential deleted since it was loaded" do
+      user = insert(:user)
+      credential = insert(:credential, user: user)
+
+      assert {:ok, _deleted} = Credentials.delete_credential(credential, user)
+
+      assert Credentials.delete_credential(credential, user) ==
+               {:error, :not_found}
+    end
+
+    test "delete_credential/2 refuses a credential runs have used, keeping it" do
+      user = insert(:user)
+      credential = insert(:credential, user: user)
+      insert(:step, credential: credential)
+
+      assert Credentials.delete_credential(credential, user) == {:error, :in_use}
+      assert Credentials.get_credential(credential.id)
+    end
+
     test "schedule_credential_deletion/1 schedules a deletion date according to the :purge_deleted_after_days env" do
       days = Lightning.Config.purge_deleted_after_days()
 
@@ -343,6 +362,26 @@ defmodule Lightning.CredentialsTest do
       :ok
     end
 
+    test "creates under the id it is given, and refuses that id a second time" do
+      owner = insert(:user)
+      id = Ecto.UUID.generate()
+
+      attrs = fn name ->
+        %{"name" => name, "schema" => "raw", "user_id" => owner.id}
+      end
+
+      assert {:ok, %Credential{id: ^id}} =
+               Credentials.create_credential(attrs.("first"), owner, id: id)
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               Credentials.create_credential(attrs.("second"), owner, id: id)
+
+      assert {_, [constraint: :unique, constraint_name: "credentials_pkey"]} =
+               errors[:id]
+
+      assert Repo.get!(Credential, id).name == "first"
+    end
+
     test "fails if another cred exists with the same name for the same user" do
       user = insert(:user)
 
@@ -379,7 +418,9 @@ defmodule Lightning.CredentialsTest do
         user_id: user.id,
         schema: "raw",
         project_credentials: [
-          %{project_id: insert(:project).id}
+          %{
+            project_id: insert(:project, project_users: [%{user_id: user.id}]).id
+          }
         ],
         credential_bodies: [
           %{
@@ -440,7 +481,9 @@ defmodule Lightning.CredentialsTest do
         user_id: user.id,
         schema: "postgresql",
         project_credentials: [
-          %{project_id: insert(:project).id}
+          %{
+            project_id: insert(:project, project_users: [%{user_id: user.id}]).id
+          }
         ],
         # ✅ Use new credential_bodies structure
         credential_bodies: [
@@ -499,12 +542,244 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
+  describe "writes by a service account" do
+    setup do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      owner = insert(:user)
+
+      %{
+        account: %{account | grants: MapSet.new(["credentials:write"])},
+        owner: owner,
+        project: insert(:project, project_users: [%{user_id: owner.id}])
+      }
+    end
+
+    test "are refused without credentials:write, saying so", %{
+      account: account,
+      owner: owner
+    } do
+      credential = insert(:credential, user: owner, name: "before")
+      account = %{account | grants: MapSet.new(["projects:write"])}
+
+      assert Credentials.update_credential(credential, %{"name" => "x"}, account) ==
+               {:error, {:insufficient_scope, "credentials:write"}}
+    end
+
+    test "create a credential owned by the named user and record the account as the actor",
+         %{account: account, owner: owner, project: project} do
+      assert {:ok, credential} =
+               Credentials.create_credential(
+                 %{
+                   "name" => "provisioned",
+                   "schema" => "raw",
+                   "user_id" => owner.id,
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"a" => "1"}}
+                   ],
+                   "project_credentials" => [%{"project_id" => project.id}]
+                 },
+                 account
+               )
+
+      assert credential.user_id == owner.id
+
+      assert [
+               {"added_to_project", account.uuid, :service_account},
+               {"created", account.uuid, :service_account}
+             ] == audit_actors(credential)
+    end
+
+    test "update a credential and record the account as the actor", %{
+      account: account,
+      owner: owner
+    } do
+      credential =
+        insert(:credential, user: owner, name: "before", schema: "raw")
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{"name" => "after"},
+                 account
+               )
+
+      assert [{"updated", account.uuid, :service_account}] ==
+               audit_actors(credential)
+    end
+  end
+
+  describe "a credential scheduled for deletion" do
+    setup do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential,
+          user: owner,
+          name: "before",
+          schema: "raw",
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      %{owner: owner, credential: credential}
+    end
+
+    test "cannot be updated by its owner", %{owner: owner, credential: c} do
+      assert Credentials.update_credential(c, %{"name" => "after"}, owner) ==
+               {:error, :scheduled_for_deletion}
+
+      assert Repo.reload!(c).name == "before"
+    end
+
+    # A form opened before the credential was scheduled still holds this struct.
+    test "cannot be updated through a struct loaded before it was scheduled",
+         %{owner: owner, credential: c} do
+      stale = %{c | scheduled_deletion: nil}
+
+      assert Credentials.update_credential(stale, %{"name" => "after"}, owner) ==
+               {:error, :scheduled_for_deletion}
+    end
+
+    test "tells a stranger only that they may not", %{credential: c} do
+      assert Credentials.update_credential(c, %{"name" => "x"}, insert(:user)) ==
+               {:error, :unauthorized}
+    end
+
+    test "cannot be scheduled again, which would move the date", %{
+      owner: owner,
+      credential: c
+    } do
+      assert Credentials.schedule_credential_deletion(c, owner) ==
+               {:error, :scheduled_for_deletion}
+
+      assert Repo.reload!(c).scheduled_deletion == c.scheduled_deletion
+    end
+
+    test "can still be deleted now, or have its deletion cancelled", %{
+      owner: owner,
+      credential: c
+    } do
+      other =
+        insert(:credential,
+          user: owner,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      assert {:ok, %Credential{scheduled_deletion: nil}} =
+               Credentials.cancel_scheduled_deletion(c.id, owner)
+
+      assert {:ok, %{credential: _}} =
+               Credentials.delete_credential(other, owner)
+
+      refute Repo.get(Credential, other.id)
+    end
+  end
+
+  defp audit_query(credential) do
+    from(a in Audit.base_query(), where: a.item_id == ^credential.id)
+  end
+
+  defp audit_actors(credential) do
+    from(a in Audit.base_query(),
+      where: a.item_id == ^credential.id,
+      order_by: a.event,
+      select: {a.event, a.actor_id, a.actor_type}
+    )
+    |> Repo.all()
+  end
+
   describe "update_credential/2" do
     setup :isolated_adaptors
 
     setup do
       Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
       :ok
+    end
+
+    test "a credential another request deleted is a concurrent edit, not a raise" do
+      user = insert(:user)
+      credential = insert(:credential, schema: "raw", user: user)
+      Repo.delete!(credential)
+
+      assert Credentials.update_credential(credential, %{name: "renamed"}, user) ==
+               {:error, :concurrent_edit}
+    end
+
+    test "holds a credential switched to oauth to an OAuth token body" do
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "raw", user: user)
+        |> with_body(%{name: "main", body: %{"foo" => 1}})
+
+      assert {:error,
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {_message,
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "access_token"]
+                     ]}
+                ]
+              }} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "schema" => "oauth",
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"foo" => 2}}
+                   ]
+                 },
+                 user
+               )
+
+      assert Repo.reload!(credential).schema == "raw"
+    end
+
+    test "refuses a typed body at each key its schema refuses" do
+      user = insert(:user)
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               Credentials.create_credential(
+                 %{
+                   "name" => "typed",
+                   "schema" => "postgresql",
+                   "user_id" => user.id,
+                   "credential_bodies" => [
+                     %{
+                       "name" => "main",
+                       "body" => %{
+                         "host" => "https://a.example",
+                         "port" => 5432,
+                         "database" => "acme"
+                       }
+                     },
+                     %{"name" => "staging", "body" => %{"host" => "b.example"}}
+                   ]
+                 },
+                 user
+               )
+
+      assert Enum.sort(errors) ==
+               Enum.sort(
+                 credential_bodies:
+                   {"can't be blank",
+                    [
+                      key: [:credential_bodies, 1, :body, "port"],
+                      code: :required
+                    ]},
+                 credential_bodies:
+                   {"can't be blank",
+                    [
+                      key: [:credential_bodies, 1, :body, "database"],
+                      code: :required
+                    ]},
+                 credential_bodies:
+                   {"expected to be a URI or an IPv4 address",
+                    [key: [:credential_bodies, 1, :body, "host"], code: :type]}
+               )
     end
 
     test "updates an OAuth credential with new scopes" do
@@ -588,7 +863,7 @@ defmodule Lightning.CredentialsTest do
         Enum.at(credential.project_credentials, 0)
         |> Map.from_struct()
 
-      new_project = insert(:project)
+      new_project = insert(:project, project_users: [%{user_id: user.id}])
 
       update_attrs = %{
         body: %{},
@@ -862,6 +1137,313 @@ defmodule Lightning.CredentialsTest do
       persisted = Repo.get!(Credential, credential.id)
       assert persisted.user_id == owner.id
       assert is_nil(persisted.transfer_status)
+    end
+
+    test "a write that changes only a body records one updated event holding only that body" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential, user: owner, name: "unchanged", schema: "raw")
+        |> with_body(%{name: "main", body: %{"a" => "old-secret"}})
+        |> with_body(%{name: "staging", body: %{"b" => "staging-secret"}})
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "unchanged",
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"a" => "new-secret"}},
+                     %{"name" => "staging", "body" => %{"b" => "staging-secret"}}
+                   ]
+                 },
+                 owner
+               )
+
+      assert [audit] = Repo.all(audit_query(credential))
+      assert audit.event == "updated"
+      assert audit.actor_id == owner.id
+      assert audit.metadata["environments"] == ["main"]
+      assert Map.keys(audit.metadata["credential_bodies"]) == ["body:main"]
+
+      assert {:ok, %{"a" => "new-secret"}} =
+               audit.metadata["credential_bodies"]["body:main"]
+               |> Base.decode64!()
+               |> Lightning.Encrypted.Map.load()
+
+      refute inspect(Map.from_struct(audit), limit: :infinity) =~ "secret"
+    end
+
+    test "deleting only an environment records one updated event naming it" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential, user: owner, name: "unchanged", schema: "raw")
+        |> with_body(%{name: "main", body: %{"a" => "main-secret"}})
+        |> with_body(%{name: "staging", body: %{"b" => "staging-secret"}})
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "unchanged",
+                   "delete_environments" => ["staging", "never-existed"]
+                 },
+                 owner
+               )
+
+      assert [audit] = Repo.all(audit_query(credential))
+      assert audit.event == "updated"
+      assert audit.metadata == %{"deleted_environments" => ["staging"]}
+    end
+
+    test "an edit that writes one environment and deletes another records both" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential, user: owner, name: "unchanged", schema: "raw")
+        |> with_body(%{name: "main", body: %{"a" => "old-secret"}})
+        |> with_body(%{name: "staging", body: %{"b" => "staging-secret"}})
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "unchanged",
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"a" => "new-secret"}}
+                   ],
+                   "delete_environments" => ["staging"]
+                 },
+                 owner
+               )
+
+      assert [audit] = Repo.all(audit_query(credential))
+
+      assert %{
+               "environments" => ["main"],
+               "deleted_environments" => ["staging"],
+               "credential_bodies" => %{"body:main" => _}
+             } = audit.metadata
+    end
+
+    test "a typed body resent as a form sends it records nothing" do
+      owner = insert(:user)
+
+      stored = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "https://dbhost",
+        "database" => "test_db",
+        "port" => 5000,
+        "ssl" => true,
+        "allowSelfSignedCert" => false
+      }
+
+      credential =
+        insert(:credential, user: owner, name: "pg", schema: "postgresql")
+        |> with_body(%{name: "main", body: stored})
+
+      assert {:ok, _} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "pg",
+                   "credential_bodies" => [
+                     %{
+                       "name" => "main",
+                       "body" =>
+                         Map.merge(stored, %{
+                           "port" => "5000",
+                           "ssl" => "true",
+                           "allowSelfSignedCert" => "false"
+                         })
+                     }
+                   ]
+                 },
+                 owner
+               )
+
+      assert Repo.all(audit_query(credential)) == []
+
+      assert Credentials.get_credential_body(credential.id, "main").body ==
+               stored
+    end
+
+    test "re-authorising an OAuth credential records the new tokens, an unchanged save nothing" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential,
+          user: owner,
+          name: "oauth",
+          schema: "oauth",
+          oauth_client: insert(:oauth_client)
+        )
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "access_token" => "old_token",
+            "refresh_token" => "existing_refresh",
+            "expires_in" => 3600,
+            "scope" => "read write",
+            "token_type" => "Bearer"
+          }
+        })
+
+      # The form never sends the refresh token back, so the stored one is kept.
+      save = fn access_token ->
+        Credentials.update_credential(
+          credential,
+          %{
+            "name" => "oauth",
+            "credential_bodies" => [
+              %{
+                "name" => "main",
+                "body" => %{
+                  "access_token" => access_token,
+                  "expires_in" => 3600,
+                  "scope" => "read write",
+                  "token_type" => "Bearer"
+                }
+              }
+            ]
+          },
+          owner
+        )
+      end
+
+      assert {:ok, _} = save.("old_token")
+      assert Repo.all(audit_query(credential)) == []
+
+      assert {:ok, _} = save.("new_token")
+
+      assert [%{event: "updated", metadata: %{"environments" => ["main"]}}] =
+               Repo.all(audit_query(credential))
+    end
+
+    test "existing links passed back with their ids are kept beside a new one" do
+      owner = insert(:user)
+
+      [linked, added] =
+        insert_list(2, :project, project_users: [%{user_id: owner.id}])
+
+      credential =
+        insert(:credential,
+          user: owner,
+          schema: "raw",
+          project_credentials: [%{project_id: linked.id}]
+        )
+
+      [existing] = credential.project_credentials
+
+      assert {:ok, updated} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "project_credentials" => [
+                     %{"id" => existing.id, "project_id" => linked.id},
+                     %{"project_id" => added.id}
+                   ]
+                 },
+                 owner
+               )
+
+      assert updated.project_credentials
+             |> Enum.map(& &1.project_id)
+             |> Enum.sort() ==
+               Enum.sort([linked.id, added.id])
+
+      assert existing.id in Enum.map(updated.project_credentials, & &1.id)
+
+      assert ["added_to_project", "updated"] ==
+               credential
+               |> audit_query()
+               |> Repo.all()
+               |> Enum.map(& &1.event)
+               |> Enum.sort()
+    end
+
+    test "refuses a new link to a project the owner has no access to" do
+      owner = insert(:user)
+      elsewhere = insert(:project)
+      credential = insert(:credential, user: owner, schema: "raw")
+
+      assert {:error, changeset} =
+               Credentials.update_credential(
+                 credential,
+                 %{"project_credentials" => [%{"project_id" => elsewhere.id}]},
+                 owner
+               )
+
+      assert errors_on(changeset).project_credentials == [
+               "the owner has no access to these projects: #{elsewhere.id}"
+             ]
+
+      assert Repo.preload(credential, :project_credentials, force: true).project_credentials ==
+               []
+    end
+
+    test "keeps editable a credential already linked to a project the owner has no access to" do
+      owner = insert(:user)
+      elsewhere = insert(:project)
+
+      credential =
+        insert(:credential,
+          user: owner,
+          schema: "raw",
+          project_credentials: [%{project_id: elsewhere.id}]
+        )
+
+      [existing] = credential.project_credentials
+
+      assert {:ok, %Credential{name: "Renamed"}} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "name" => "Renamed",
+                   "project_credentials" => [
+                     %{"id" => existing.id, "project_id" => elsewhere.id}
+                   ]
+                 },
+                 owner
+               )
+    end
+  end
+
+  describe "preload_links/1" do
+    test "loads the credential's project links and not the projects" do
+      project = insert(:project)
+
+      credential =
+        insert(:credential, project_credentials: [%{project: project}])
+
+      loaded =
+        credential.id
+        |> Credentials.get_credential()
+        |> Credentials.preload_links()
+
+      assert [%{project_id: project_id}] = loaded.project_credentials
+      assert project_id == project.id
+      refute Ecto.assoc_loaded?(loaded.projects)
+    end
+  end
+
+  describe "preload_links_and_projects/1" do
+    test "loads the credential's project links and the projects they name" do
+      project = insert(:project, name: "linked")
+
+      credential =
+        insert(:credential, project_credentials: [%{project: project}])
+
+      loaded =
+        credential.id
+        |> Credentials.get_credential()
+        |> Credentials.preload_links_and_projects()
+
+      assert [%{project_id: project_id}] = loaded.project_credentials
+      assert project_id == project.id
+      assert [%{name: "linked"}] = loaded.projects
     end
   end
 
@@ -1517,7 +2099,9 @@ defmodule Lightning.CredentialsTest do
       result =
         Credentials.validate_credential_transfer(changeset, sender, credential)
 
-      assert {:email, {"You cannot transfer a credential to yourself", []}} in result.errors
+      assert {:email,
+              {"You cannot transfer a credential to yourself",
+               [code: :not_allowed]}} in result.errors
     end
 
     test "adds error when recipient does not exist" do
@@ -1530,7 +2114,7 @@ defmodule Lightning.CredentialsTest do
       result =
         Credentials.validate_credential_transfer(changeset, sender, credential)
 
-      assert {:email, {"User does not exist", []}} in result.errors
+      assert {:email, {"User does not exist", [code: :not_found]}} in result.errors
     end
 
     test "adds error when recipient lacks access to required projects" do
@@ -1549,7 +2133,8 @@ defmodule Lightning.CredentialsTest do
         Credentials.validate_credential_transfer(changeset, sender, credential)
 
       assert {:email,
-              {"User doesn't have access to these projects: Secret Project", []}} in result.errors
+              {"User doesn't have access to these projects: Secret Project",
+               [code: :no_access]}} in result.errors
     end
   end
 
@@ -1588,9 +2173,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_scope,
-                message: "Missing required OAuth field: scope or scopes"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required OAuth field: scope or scopes",
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "scope"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
     end
 
@@ -1634,9 +2225,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_scope,
-                message: "Missing required OAuth field: scope or scopes"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required OAuth field: scope or scopes",
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "scope"]
+                     ]}
+                ]
               }} = Credentials.update_credential(credential, update_attrs, user)
     end
   end
@@ -1670,10 +2267,14 @@ defmodule Lightning.CredentialsTest do
 
       assert {:error, changeset} = Credentials.create_credential(attrs, user)
 
-      # Error should be on :credential_bodies with environment info
-      assert [credential_bodies: {msg, _}] = changeset.errors
-      assert msg =~ "Environment 1"
-      assert msg =~ "must be a short slug"
+      assert [
+               credential_bodies:
+                 {"must be a short slug",
+                  [
+                    key: [:credential_bodies, 0, :name],
+                    validation: :format
+                  ]}
+             ] = changeset.errors
     end
 
     test "returns credential changeset error when second credential body fails" do
@@ -1691,10 +2292,14 @@ defmodule Lightning.CredentialsTest do
 
       assert {:error, changeset} = Credentials.create_credential(attrs, user)
 
-      # Error should reference Environment 2 (second body at index 1)
-      assert [credential_bodies: {msg, _}] = changeset.errors
-      assert msg =~ "Environment 2"
-      assert msg =~ "must be a short slug"
+      assert [
+               credential_bodies:
+                 {"must be a short slug",
+                  [
+                    key: [:credential_bodies, 1, :name],
+                    validation: :format
+                  ]}
+             ] = changeset.errors
     end
   end
 
@@ -1792,9 +2397,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_access_token,
-                message: "Missing required OAuth field: access_token"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required OAuth field: access_token",
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "access_token"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
 
       # ✅ Test missing refresh_token
@@ -1816,9 +2427,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_refresh_token,
-                message: "Missing required OAuth field: refresh_token"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required OAuth field: refresh_token",
+                     [
+                       code: :required,
+                       key: [:credential_bodies, 0, :body, "refresh_token"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
 
       # ✅ Test missing expiration fields
@@ -1841,10 +2458,16 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_expiration,
-                message:
-                  "Missing expiration field: either expires_in or expires_at is required"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies: {
+                    "Missing expiration field: either expires_in or expires_at is required",
+                    [
+                      code: :required,
+                      key: [:credential_bodies, 0, :body, "expires_in"]
+                    ]
+                  }
+                ]
               }} = Credentials.create_credential(attrs, user)
 
       # ✅ Test valid token data
@@ -1895,13 +2518,16 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :missing_scopes,
-                message: message,
-                details: %{missing_scopes: ["write"]}
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Missing required scopes. Please reauthorize and grant all selected permissions.",
+                     [
+                       code: :scope_not_granted,
+                       key: [:credential_bodies, 0, :body, "scope"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
-
-      assert message =~ "Missing required scopes: write"
     end
   end
 
@@ -2092,9 +2718,15 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert {:error,
-              %Lightning.Credentials.OauthValidation.Error{
-                type: :unsupported_token_type,
-                message: "Unsupported token type: 'Basic'. Expected 'Bearer'"
+              %Ecto.Changeset{
+                errors: [
+                  credential_bodies:
+                    {"Unsupported token type. Expected 'Bearer'",
+                     [
+                       code: :not_allowed,
+                       key: [:credential_bodies, 0, :body, "token_type"]
+                     ]}
+                ]
               }} = Credentials.create_credential(attrs, user)
     end
 
@@ -2299,8 +2931,8 @@ defmodule Lightning.CredentialsTest do
     test "same external_id in different projects is allowed" do
       user1 = insert(:user)
       user2 = insert(:user)
-      project1 = insert(:project)
-      project2 = insert(:project)
+      project1 = insert(:project, project_users: [%{user_id: user1.id}])
+      project2 = insert(:project, project_users: [%{user_id: user2.id}])
 
       attrs1 = %{
         name: "cred one",
@@ -2327,7 +2959,11 @@ defmodule Lightning.CredentialsTest do
     test "cross-user duplicate external_id in the same project is rejected" do
       user1 = insert(:user)
       user2 = insert(:user)
-      project = insert(:project)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user1.id}, %{user_id: user2.id}]
+        )
 
       attrs1 = %{
         name: "cred one",
@@ -2359,8 +2995,8 @@ defmodule Lightning.CredentialsTest do
 
     test "removing a project association resolves the conflict in that project" do
       user = insert(:user)
-      project1 = insert(:project)
-      project2 = insert(:project)
+      project1 = insert(:project, project_users: [%{user_id: user.id}])
+      project2 = insert(:project, project_users: [%{user_id: user.id}])
 
       # Create our credential in both projects (no conflict yet)
       {:ok, credential} =
@@ -2415,6 +3051,7 @@ defmodule Lightning.CredentialsTest do
 
       # Now another user can use the same external_id in project1
       other_user = insert(:user)
+      insert(:project_user, project: project1, user: other_user)
 
       {:ok, _other} =
         Credentials.create_credential(
@@ -2433,8 +3070,13 @@ defmodule Lightning.CredentialsTest do
     test "removing credential from a conflicting project allows the update" do
       user_a = insert(:user)
       user_b = insert(:user)
-      shared_project = insert(:project)
-      other_project = insert(:project)
+
+      shared_project =
+        insert(:project,
+          project_users: [%{user_id: user_a.id}, %{user_id: user_b.id}]
+        )
+
+      other_project = insert(:project, project_users: [%{user_id: user_b.id}])
 
       # User A has a credential with external_id "conflict-id" in shared_project
       {:ok, _cred_a} =
@@ -2530,6 +3172,8 @@ defmodule Lightning.CredentialsTest do
           env: "staging"
         })
 
+      insert(:project_user, project: sandbox, user: user2)
+
       # User A adds credential with external_id directly to sandbox
       {:ok, _sandbox_cred} =
         Credentials.create_credential(
@@ -2566,7 +3210,7 @@ defmodule Lightning.CredentialsTest do
 
     test "updating a credential keeps its own external_id without error" do
       user = insert(:user)
-      project = insert(:project)
+      project = insert(:project, project_users: [%{user_id: user.id}])
 
       {:ok, credential} =
         Credentials.create_credential(
@@ -2927,8 +3571,8 @@ defmodule Lightning.CredentialsTest do
 
       assert [
                credential_bodies:
-                 {"Environment 1: body adaptor catalogue is not ready yet, try again shortly",
-                  []}
+                 {"adaptor catalogue is not ready yet, try again shortly",
+                  [key: [:credential_bodies, 0, :body], code: :not_ready]}
              ] = changeset.errors
     end
   end

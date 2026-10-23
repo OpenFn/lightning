@@ -3,36 +3,59 @@ defmodule LightningWeb.API.UserController do
   The users resource, for service accounts only.
 
   `POST /api/users` takes a flat object of `email`, `password`, `first_name`,
-  `last_name`, `role` (`user` or `superuser`) and `confirmed`, and ignores any
-  other key. It answers 201 with the new user, or 409 with the existing user,
-  rendered the same way, when the email is already taken in any case.
+  `last_name`, `role` (`user` or `superuser`) and `confirmed`, and refuses any
+  other key with a 422 `unknown_key` entry at that key, alongside every other
+  error in the body. It answers 201 with the new user. When the email is
+  already taken in any case and nothing else is wrong, it answers 409 `taken`
+  with the existing user's id in `existing`, and nothing else of that user
+  (error-format spec §9.9).
 
   `PATCH /api/users/:id` takes any of `first_name`, `last_name`, `role`,
-  `password` and `confirmed`, with the same rules as a create, and answers 200
-  with the user rendered as a 201 renders one. The email can't be changed, and
-  `confirmed` only ever confirms.
+  `password` and `confirmed`, with the same rules as a create, and refuses any
+  other key the same way, `email` included, since the email can't be changed.
+  It answers 200 with the user rendered as a 201 renders one. `confirmed` only
+  ever confirms.
+
+  Either answers 400 `malformed` to a body that isn't a JSON object.
 
   `GET /api/users` is paginated, at most 100 a page, and filters by `?email=`
-  without regard to case. An `email` that isn't a string answers 422.
+  without regard to case. An `email` that isn't a string answers 400
+  `invalid_parameter`.
   """
   use LightningWeb, :controller
 
-  import LightningWeb.Plugs.AccessTokenAuth, only: [require_scope: 2]
-
+  alias Ecto.Changeset
   alias Lightning.Accounts
   alias Lightning.Accounts.User
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Problem
+  alias LightningWeb.API.Request
+  alias LightningWeb.Plugs.AuthorizeAction
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
 
-  @create_fields ~w(email password first_name last_name role confirmed)
-  @update_fields ~w(first_name last_name role password confirmed)
+  @create_fields ~w(email password first_name last_name role confirmed)a
+  @update_fields ~w(first_name last_name role password confirmed)a
+  @create_keys Enum.map(@create_fields, &Atom.to_string/1)
+  @update_keys Enum.map(@update_fields, &Atom.to_string/1)
 
-  plug :require_scope, "users:read" when action in [:index, :show]
-  plug :require_scope, "users:write" when action in [:create, :update]
+  plug AuthorizeAction,
+       {:users, :read_users}
+       when action in [:index, :show]
+
+  plug AuthorizeAction,
+       {:users, :write_users}
+       when action in [:create, :update]
 
   def index(conn, params) do
-    with {:ok, page} <- Accounts.paginate_users(params) do
-      render(conn, "index.json", page: page, conn: conn)
+    with {:ok, page} <-
+           params |> Accounts.paginate_users() |> Errors.refuse_parameters() do
+      render(conn, "index.json",
+        page: page,
+        filters: applied_filters(params),
+        conn: conn
+      )
     end
   end
 
@@ -42,59 +65,81 @@ defmodule LightningWeb.API.UserController do
     end
   end
 
-  def update(conn, %{"id" => id} = params) do
+  def update(conn, %{"id" => id}) do
+    body = conn.body_params
+    attrs = Map.take(body, @update_keys)
+
     with {:ok, user} <- fetch_user(id),
+         :ok <- Request.check_object(body),
+         :ok <-
+           refuse_unknown_keys(body, @update_fields, fn ->
+             User.details_changeset(user, attrs)
+           end),
          {:ok, user} <-
-           Accounts.update_user(
-             user,
-             Map.take(params, @update_fields),
-             conn.assigns.service_account
-           ) do
+           Accounts.update_user(user, attrs, conn.assigns.current_resource) do
       render(conn, "show.json", user: user, conn: conn)
     end
   end
 
-  def create(conn, params) do
-    case Accounts.create_user(
-           Map.take(params, @create_fields),
-           conn.assigns.service_account
-         ) do
-      {:ok, user} ->
-        conn
-        |> put_status(:created)
-        |> render("show.json", user: user, conn: conn)
+  def create(conn, _params) do
+    body = conn.body_params
+    attrs = Map.take(body, @create_keys)
 
-      {:error, changeset} ->
-        case holder_of_taken_email(changeset) do
-          %User{} = user ->
-            conn
-            |> put_status(:conflict)
-            |> render("show.json", user: user, conn: conn)
+    with :ok <- Request.check_object(body),
+         :ok <-
+           refuse_unknown_keys(body, @create_fields, fn ->
+             Accounts.change_user(%User{}, attrs)
+           end) do
+      case Accounts.create_user(attrs, conn.assigns.current_resource) do
+        {:ok, user} ->
+          conn
+          |> put_status(:created)
+          |> render("show.json", user: user, conn: conn)
 
-          nil ->
-            {:error, changeset}
-        end
+        {:error, changeset} ->
+          {:error, creation_problem(changeset)}
+      end
     end
   end
 
-  defp holder_of_taken_email(changeset) do
-    taken? =
-      changeset.errors
-      |> Keyword.get_values(:email)
-      |> Enum.any?(fn {_message, opts} ->
-        opts[:validation] == :unsafe_unique or opts[:constraint] == :unique
-      end)
+  # An unknown key refuses the body together with every error its changeset
+  # holds, so a taken email beside one is a 422 and never the 409.
+  defp refuse_unknown_keys(body, accepted, build_changeset) do
+    case Request.unknown_keys(body, [], accepted) do
+      [] ->
+        :ok
 
-    if taken?,
-      do: Accounts.get_user_by_email(Ecto.Changeset.get_field(changeset, :email))
+      unknown ->
+        Errors.refuse(unknown ++ Errors.from_changeset(build_changeset.()))
+    end
   end
 
+  # A create's only unique field is the email, so a `taken` problem means a
+  # user holds it, unless that user was deleted since.
+  defp creation_problem(changeset) do
+    case Errors.problem(changeset) do
+      %Problem{code: :taken} = problem ->
+        case Accounts.get_user_by_email(Changeset.get_field(changeset, :email)) do
+          %User{id: id} -> %{problem | extensions: %{existing: %{id: id}}}
+          nil -> problem
+        end
+
+      problem ->
+        problem
+    end
+  end
+
+  # Reached only once `paginate_users` has accepted the email as a string.
+  defp applied_filters(%{"email" => email}), do: %{email: email}
+  defp applied_filters(_params), do: %{}
+
   defp fetch_user(id) do
-    with {:ok, id} <- Ecto.UUID.cast(id),
+    with {:ok, id} <- Request.path_id(id),
          %User{} = user <- Accounts.get_user(id) do
       {:ok, user}
     else
-      _ -> {:error, :not_found}
+      nil -> {:error, :not_found}
+      error -> error
     end
   end
 end

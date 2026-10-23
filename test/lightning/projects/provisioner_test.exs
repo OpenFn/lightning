@@ -10,7 +10,6 @@ defmodule Lightning.Projects.ProvisionerTest do
   import Ecto.Query
   import Lightning.AdaptorTestHelpers
   import Lightning.Factories
-  import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   describe "parse_document/2 with a new project" do
     setup :isolated_adaptors
@@ -21,8 +20,8 @@ defmodule Lightning.Projects.ProvisionerTest do
       changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, %{})
 
       assert flatten_errors(changeset) == %{
-               id: ["This field can't be blank."],
-               name: ["This field can't be blank."]
+               id: ["can't be blank"],
+               name: ["can't be blank"]
              }
 
       %{body: body} = valid_document()
@@ -56,8 +55,8 @@ defmodule Lightning.Projects.ProvisionerTest do
                workflows: [
                  %{
                    jobs: [
-                     %{id: ["This field can't be blank."]},
-                     %{id: ["This field can't be blank."]}
+                     %{id: ["can't be blank"]},
+                     %{id: ["can't be blank"]}
                    ]
                  }
                ]
@@ -72,10 +71,18 @@ defmodule Lightning.Projects.ProvisionerTest do
         })
 
       assert flatten_errors(changeset) == %{
-               id: ["This field can't be blank."],
-               name: ["This field can't be blank."],
-               base: ["extraneous parameters: baz, foo"]
+               id: ["can't be blank"],
+               name: ["can't be blank"],
+               base: ["is not accepted", "is not accepted"]
              }
+
+      assert Enum.sort(changeset.errors) ==
+               Enum.sort(
+                 id: {"can't be blank", [validation: :required]},
+                 name: {"can't be blank", [validation: :required]},
+                 base: {"is not accepted", [key: "foo", code: :unknown_key]},
+                 base: {"is not accepted", [key: "baz", code: :unknown_key]}
+               )
     end
 
     test "with server-owned trigger fields" do
@@ -96,10 +103,15 @@ defmodule Lightning.Projects.ProvisionerTest do
 
         refute changeset.valid?
 
-        assert %{workflows: [%{triggers: [%{base: [error]}]}]} =
+        assert %{workflows: [%{triggers: [%{base: ["is not accepted"]}]}]} =
                  flatten_errors(changeset)
 
-        assert error == "extraneous parameters: #{field}"
+        assert %{workflows: [%{triggers: [%{base: unknown}]}]} =
+                 raw_errors(changeset)
+
+        assert unknown == [
+                 {"is not accepted", [key: field, code: :unknown_key]}
+               ]
       end
     end
 
@@ -345,6 +357,51 @@ defmodule Lightning.Projects.ProvisionerTest do
                )
 
       assert project_credential.credential_id == credential.id
+    end
+
+    test "reports a credential name it can't find at the link's place in the request" do
+      user = insert(:user)
+      other = insert(:user)
+      known = insert(:credential, name: "known", user: user)
+      insert(:credential, name: "theirs", user: other)
+
+      %{body: body} = valid_document()
+
+      body =
+        Map.put(body, "project_credentials", [
+          %{
+            "id" => Ecto.UUID.generate(),
+            "name" => "theirs",
+            "owner" => other.email
+          },
+          %{
+            "id" => Ecto.UUID.generate(),
+            "name" => "missing",
+            "owner" => user.email
+          },
+          %{
+            "id" => Ecto.UUID.generate(),
+            "name" => known.name,
+            "owner" => user.email
+          }
+        ])
+
+      Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _a, _c ->
+        :ok
+      end)
+
+      assert {:error, changeset} =
+               Provisioner.import_document(
+                 %Lightning.Projects.Project{},
+                 user,
+                 body
+               )
+
+      assert changeset.errors == [
+               project_credentials:
+                 {"names nothing you can see",
+                  [key: ["project_credentials", 1, "name"], code: :not_found]}
+             ]
     end
 
     test "with valid data" do
@@ -1123,7 +1180,7 @@ defmodule Lightning.Projects.ProvisionerTest do
                workflows: [
                  %{
                    jobs: [
-                     %{id: ["This value should be unique."]},
+                     %{id: ["has already been taken"]},
                      %{},
                      %{}
                    ]
@@ -1146,7 +1203,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert flatten_errors(changeset) == %{
                workflows: [
                  %{
-                   triggers: [%{id: ["This value should be unique."]}, %{}]
+                   triggers: [%{id: ["has already been taken"]}, %{}]
                  }
                ]
              }
@@ -1169,7 +1226,7 @@ defmodule Lightning.Projects.ProvisionerTest do
                workflows: [
                  %{
                    edges: [
-                     %{id: ["This value should be unique."]},
+                     %{id: ["has already been taken"]},
                      %{},
                      %{}
                    ]
@@ -1931,13 +1988,15 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert {:error, changeset} =
                Provisioner.import_document(project, user, body)
 
-      assert %{
-               channels: [
-                 %{destination_auth_method: %{project_credential_id: [msg]}}
-               ]
-             } = flatten_errors(changeset)
+      assert %{channels: [%{destination_credential_id: [msg]}]} =
+               flatten_errors(changeset)
 
       assert msg =~ "isn't available in this project"
+
+      assert %{channels: [%{destination_credential_id: [{_, opts}]}]} =
+               raw_errors(changeset)
+
+      assert opts == [code: :credential_not_allowed]
 
       # Channel was not persisted
       refute Repo.get(Lightning.Channels.Channel, channel_id)
@@ -1967,13 +2026,18 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert {:error, changeset} =
                Provisioner.import_document(project, user, body)
 
-      assert %{
-               channels: [
-                 %{destination_auth_method: %{project_credential_id: [msg]}}
-               ]
-             } = flatten_errors(changeset)
+      assert %{channels: [%{destination_credential_id: [msg]}]} =
+               flatten_errors(changeset)
 
       assert msg == Scoping.violation_message(:project_credential_id)
+
+      assert %{channels: [%{destination_credential_id: [{_, opts}]}]} =
+               raw_errors(changeset)
+
+      assert opts == [
+               constraint: :foreign,
+               constraint_name: "channel_auth_methods_project_credential_id_fkey"
+             ]
 
       # Channel was not persisted
       refute Repo.get(Lightning.Channels.Channel, channel_id)
@@ -2687,15 +2751,40 @@ defmodule Lightning.Projects.ProvisionerTest do
         :limit_action,
         fn
           %{type: :github_sync}, _context ->
-            {:error, :upgrade_required, error_message}
+            {:error, :exceeds_limit, error_message}
 
           _action, _context ->
             :ok
         end
       )
 
-      assert {:error, ^error_message} =
+      assert {:error, :exceeds_limit, ^error_message} =
                Provisioner.import_document(project, repo_connection, body)
+    end
+
+    test "refuses an invalid document for its errors before asking the limiter",
+         %{project: project} do
+      repo_connection = insert(:project_repo_connection, project: project)
+      %{body: body} = valid_document(project.id)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :github_sync}, _context ->
+            flunk("the limiter was asked about github sync")
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      assert {:error, %Ecto.Changeset{valid?: false}} =
+               Provisioner.import_document(
+                 project,
+                 repo_connection,
+                 Map.put(body, "name", nil)
+               )
     end
 
     test "allows import when actor is a repo_connection and plan allows github sync",
@@ -2896,8 +2985,10 @@ defmodule Lightning.Projects.ProvisionerTest do
     }
   end
 
+  defp raw_errors(changeset), do: Ecto.Changeset.traverse_errors(changeset, & &1)
+
   defp flatten_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, &translate_error/1)
+    errors_on(changeset)
   end
 
   defp add_entity_to_workflow(document, workflow_id, key, params) do

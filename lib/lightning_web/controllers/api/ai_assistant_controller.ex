@@ -4,14 +4,31 @@ defmodule LightningWeb.API.AiAssistantController do
   """
   use LightningWeb, :controller
 
+  import Ecto.Changeset
+
   alias Lightning.AiAssistant
   alias Lightning.Jobs
-  alias Lightning.Policies.Permissions
-  alias Lightning.Projects
   alias Lightning.Workflows
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Request
+  alias LightningWeb.API.Target
   alias LightningWeb.Channels.AiAssistantJSON
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
+
+  @session_types ["job_code", "workflow_template"]
+
+  @access_project {:project_users, :access_project}
+
+  @params %{
+    session_type: :string,
+    job_id: :string,
+    project_id: :string,
+    workflow_id: Ecto.UUID,
+    offset: :integer,
+    limit: :integer
+  }
 
   @doc """
   List AI Assistant sessions for a given context (job or project).
@@ -20,39 +37,30 @@ defmodule LightningWeb.API.AiAssistantController do
   - `session_type`: "job_code" or "workflow_template" (required)
   - `job_id`: Job ID (required if session_type is "job_code")
   - `project_id`: Project ID (required if session_type is "workflow_template")
+  - `workflow_id`: narrows "workflow_template" sessions to one workflow
   - `offset`: Pagination offset (optional, default: 0)
   - `limit`: Pagination limit (optional, default: 20)
+
+  The job or project the query names is the target: it is authorised before the
+  other parameters are read, and a caller with no standing on it gets 404
+  (error-format spec §4). Every bad parameter is reported in one 400
+  `invalid_parameter` (§9.4).
 
   ## Examples
   - GET /api/ai_assistant/sessions?session_type=job_code&job_id=123
   - GET /api/ai_assistant/sessions?session_type=workflow_template&project_id=456
   """
   def list_sessions(conn, params) do
-    user = conn.assigns[:current_user]
+    changeset = cast_params(params)
 
-    with {:ok, session_type} <- validate_session_type(params),
-         {:ok, resource} <- get_resource(session_type, params),
-         :ok <- authorize_access(session_type, resource, user) do
-      offset = Map.get(params, "offset", "0") |> String.to_integer()
-      limit = Map.get(params, "limit", "20") |> String.to_integer()
-
-      opts = [offset: offset, limit: limit]
-
-      opts =
-        if session_type == "workflow_template" do
-          workflow =
-            case params["workflow_id"] do
-              nil -> nil
-              workflow_id -> Workflows.get_workflow(workflow_id)
-            end
-
-          Keyword.put(opts, :workflow, workflow)
-        else
-          opts
-        end
-
+    with {:ok, target} <- target(changeset),
+         {:ok, resource} <- authorize(target, conn.assigns.current_user),
+         {:ok, query} <-
+           changeset
+           |> apply_action(:validate)
+           |> Errors.refuse_parameters() do
       %{sessions: sessions, pagination: pagination} =
-        AiAssistant.list_sessions(resource, :desc, opts)
+        AiAssistant.list_sessions(resource, :desc, list_opts(query))
 
       json(conn, %{
         sessions: AiAssistantJSON.format_sessions(sessions),
@@ -65,101 +73,85 @@ defmodule LightningWeb.API.AiAssistantController do
     end
   end
 
-  defp validate_session_type(%{"session_type" => session_type})
-       when session_type in ["job_code", "workflow_template"] do
-    {:ok, session_type}
+  defp cast_params(params) do
+    {%{offset: 0, limit: 20, workflow_id: nil}, @params}
+    |> cast(params, Map.keys(@params))
+    |> validate_required([:session_type])
+    |> validate_inclusion(:session_type, @session_types)
+    |> validate_target_id()
+    |> validate_number(:offset, greater_than_or_equal_to: 0)
+    |> validate_number(:limit, greater_than: 0)
   end
 
-  defp validate_session_type(_params) do
-    {:error, :bad_request}
-  end
-
-  defp get_resource("job_code", %{"job_id" => job_id}) do
-    {:ok, job_id}
-  end
-
-  defp get_resource("job_code", _params) do
-    {:error, :bad_request}
-  end
-
-  defp get_resource("workflow_template", %{"project_id" => project_id}) do
-    case Projects.get_project(project_id) do
-      nil -> {:error, :not_found}
-      project -> {:ok, project}
+  defp validate_target_id(changeset) do
+    case get_change(changeset, :session_type) do
+      "job_code" -> validate_required(changeset, [:job_id])
+      "workflow_template" -> validate_required(changeset, [:project_id])
+      _other -> changeset
     end
   end
 
-  defp get_resource("workflow_template", _params) do
-    {:error, :bad_request}
+  # With no target named there is nothing to authorise, so every bad parameter
+  # is reported at once.
+  defp target(%{changes: %{session_type: "job_code", job_id: job_id}}),
+    do: {:ok, {:job_code, job_id}}
+
+  defp target(%{changes: %{session_type: "workflow_template", project_id: id}}),
+    do: {:ok, {:workflow_template, id}}
+
+  defp target(changeset), do: {:error, Errors.parameters(changeset)}
+
+  defp list_opts(%{session_type: "workflow_template"} = query) do
+    workflow = query.workflow_id && Workflows.get_workflow(query.workflow_id)
+    [offset: query.offset, limit: query.limit, workflow: workflow]
   end
 
-  defp authorize_access("job_code", job_id, user) when is_binary(job_id) do
-    alias Lightning.AiAssistant.ChatSession
-    alias Lightning.Repo
-    import Ecto.Query
+  defp list_opts(query), do: [offset: query.offset, limit: query.limit]
 
-    case Jobs.get_job(job_id,
-           include: [workflow: [project: :project_users]]
-         ) do
-      {:ok, job} ->
-        check_job_access(job, user)
+  defp authorize({:workflow_template, project_id}, user),
+    do: Target.project(user, project_id, @access_project)
 
-      {:error, :not_found} ->
-        session =
-          from(s in ChatSession,
-            where: s.session_type == "job_code",
-            where:
-              s.job_id == ^job_id or
-                fragment("? -> 'unsaved_job' ->> 'id' = ?", s.meta, ^job_id),
-            limit: 1
-          )
-          |> Repo.one()
+  defp authorize({:job_code, job_id}, user) do
+    with {:ok, job_id} <- Request.path_id(job_id),
+         :ok <- authorize_job(job_id, user),
+         do: {:ok, job_id}
+  end
 
-        check_unsaved_job_access(session, user)
+  defp authorize_job(job_id, user) do
+    case Jobs.get_job(job_id, include: [:workflow]) do
+      {:ok, job} -> authorize_workflow(job.workflow, user)
+      {:error, :not_found} -> authorize_unsaved_job(job_id, user)
     end
   end
 
-  defp authorize_access("workflow_template", project, user) do
-    case Permissions.can(:workflows, :access_read, user, project) do
-      :ok -> :ok
-      {:error, _reason} -> {:error, :forbidden}
-    end
-  end
+  defp authorize_unsaved_job(job_id, user) do
+    session = AiAssistant.unsaved_job_session(job_id)
 
-  defp check_job_access(job, user) do
-    check_workflow_access(job.workflow, user)
-  end
-
-  defp check_unsaved_job_access(nil, _user) do
-    # No matching session: listing returns nothing, so allowing is safe.
-    :ok
-  end
-
-  defp check_unsaved_job_access(
-         %{meta: %{"unsaved_job" => %{"workflow_id" => workflow_id}}} = session,
-         user
-       ) do
-    case Workflows.get_workflow(workflow_id) do
+    case session do
+      # No matching session: listing returns nothing, so allowing is safe.
       nil ->
-        owner_or_forbidden(session, user)
+        :ok
 
-      workflow ->
-        workflow = Lightning.Repo.preload(workflow, project: [:project_users])
-        check_workflow_access(workflow, user)
+      %{meta: %{"unsaved_job" => %{"workflow_id" => workflow_id}}} ->
+        case Workflows.get_workflow(workflow_id) do
+          nil -> owner_only(session, user)
+          workflow -> authorize_workflow(workflow, user)
+        end
+
+      # No workflow to authorise against: owner-only, never allow-all (H-8a).
+      session ->
+        owner_only(session, user)
     end
   end
 
-  # No workflow to authorise against: owner-only, never allow-all (H-8a).
-  defp check_unsaved_job_access(session, user),
-    do: owner_or_forbidden(session, user)
+  # Someone else's session with no workflow is one the caller has no standing
+  # on, so it answers as if it didn't exist (spec §4 row 3).
+  defp owner_only(%{user_id: user_id}, %{id: user_id}), do: :ok
+  defp owner_only(_session, _user), do: {:error, :not_found}
 
-  defp owner_or_forbidden(%{user_id: user_id}, %{id: user_id}), do: :ok
-  defp owner_or_forbidden(_session, _user), do: {:error, :forbidden}
-
-  defp check_workflow_access(workflow, user) do
-    case Permissions.can(:workflows, :access_read, user, workflow.project) do
-      :ok -> :ok
-      {:error, _reason} -> {:error, :forbidden}
-    end
+  defp authorize_workflow(workflow, user) do
+    with {:ok, _project} <-
+           Target.project(user, workflow.project_id, @access_project),
+         do: :ok
   end
 end

@@ -127,14 +127,16 @@ defmodule Lightning.Adaptors.Catalogue.Adaptor do
         add_error(
           changeset,
           sha_field,
-          "must be nil when #{ext_field} is nil"
+          "must be nil when #{ext_field} is nil",
+          code: :not_allowed
         )
 
       {_ext, nil} ->
         add_error(
           changeset,
           sha_field,
-          "must not be nil when #{ext_field} is set"
+          "must not be nil when #{ext_field} is set",
+          code: :required
         )
 
       {_ext, _sha} ->

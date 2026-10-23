@@ -2946,6 +2946,62 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "paginate_log_lines_for/3" do
+    test "pages the log lines of the user's projects, narrowed by the filters" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          runs: [
+            %{
+              state: :started,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger
+            }
+          ]
+        )
+
+      info = insert(:log_line, run: run, level: :info)
+      error = insert(:log_line, run: run, level: :error)
+
+      insert(:log_line,
+        run:
+          insert(:run,
+            work_order: insert(:workorder, dataclip: build(:dataclip)),
+            dataclip: build(:dataclip),
+            starting_trigger: build(:trigger)
+          ),
+        level: :error
+      )
+
+      assert %Scrivener.Page{entries: [%{id: id}], total_entries: 1} =
+               Invocation.paginate_log_lines_for(user, %{level: "error"}, [])
+
+      assert id == error.id
+
+      page = Invocation.paginate_log_lines_for(user, %{}, page_size: 1)
+
+      assert %Scrivener.Page{
+               page_number: 1,
+               page_size: 1,
+               total_entries: 2,
+               total_pages: 2
+             } = page
+
+      assert MapSet.new(
+               Invocation.paginate_log_lines_for(user, %{}, []).entries,
+               & &1.id
+             ) == MapSet.new([info.id, error.id])
+    end
+  end
+
   describe "scrubbed_io_for_run/2" do
     setup do
       project = insert(:project)

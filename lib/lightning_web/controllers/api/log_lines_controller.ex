@@ -26,41 +26,34 @@ defmodule LightningWeb.API.LogLinesController do
   use LightningWeb, :controller
 
   alias Lightning.Invocation
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Filters
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project}
 
   @doc """
-  Lists log lines with pagination and filtering.
-
-  Returns a paginated list of log lines filtered by the query parameters.
-  Validates datetime parameters before applying filters and enforces
-  authorization based on the current resource (user or API token).
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map of query parameters for filtering and pagination
-
-  ## Returns
-
-  - Renders JSON with paginated log lines on success
-  - Returns error via fallback controller if datetime validation fails
+  Lists the log lines of the projects the caller may access, narrowed by the
+  query's filters. Every bad filter is reported in one 400 `invalid_parameter`
+  (error-format spec §9.4).
   """
-  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def index(conn, params) do
-    with :ok <-
-           Invocation.Query.validate_datetime_params(params, [
-             "timestamp_after",
-             "timestamp_before"
-           ]) do
-      pagination_attrs = Map.take(params, ["page_size", "page"])
-
+    with {:ok, filters} <-
+           params
+           |> Filters.log_lines()
+           |> Errors.refuse_parameters() do
       page =
-        Invocation.Query.log_lines_for(conn.assigns.current_resource)
-        |> Invocation.Query.filter_log_lines(params)
-        |> Lightning.Repo.paginate(pagination_attrs)
+        Invocation.paginate_log_lines_for(
+          conn.assigns.current_resource,
+          filters,
+          Filters.page(params)
+        )
 
-      render(conn, "index.json", page: page, conn: conn)
+      render(conn, "index.json", page: page, filters: filters, conn: conn)
     end
   end
 end

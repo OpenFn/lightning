@@ -42,7 +42,9 @@ defmodule Lightning.CredentialsFixtures do
             %{
               project_id:
                 attrs[:project_id] ||
-                  Lightning.ProjectsFixtures.project_fixture().id
+                  Lightning.ProjectsFixtures.project_fixture(
+                    project_users: [%{user_id: built.user_id}]
+                  ).id
             }
           ]
         },
