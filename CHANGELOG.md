@@ -15,11 +15,472 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Breaking
+
+- Every `/api` route except `/api/oauth/token`, every `/collections` route and
+  `/adaptors/catalogue` answer these errors with a problem document, whatever
+  the request's `Accept` header, where they used to answer an HTML page or
+  `{"error": "<status text>"}`:
+  - A body that isn't valid JSON answers 400 `malformed`, and one over the size
+    limit answers 413 `content_too_large`, both before authentication.
+  - A query string or form body that isn't valid UTF-8 answers 400 `bad_request`
+    before authentication, as does any other request Lightning can't read.
+  - A `POST`, `PUT`, `PATCH` or `DELETE` whose `Content-Type` is one Lightning
+    doesn't parse, such as `text/plain`, answers 415 `unsupported_media_type`
+    before authentication, where the request used to reach the route with its
+    body ignored. A request with no body is let through whatever its type.
+  - A path that matches no route answers 404 `not_found` before authentication.
+  - An `Accept` header that doesn't allow JSON answers 406 `not_acceptable` with
+    a problem document as `application/json`. A body that doesn't arrive in time
+    answers 408 `request_timeout`, and a query string over 1,000,000 bytes 414
+    `uri_too_long`. Every other request Lightning refuses answers by its own
+    status, so only a failure inside Lightning answers 500 `internal`, with a
+    problem document whose content type follows `Accept` like the rest. That
+    includes a failure in a plug before the router, such as the session or CORS,
+    which used to answer an HTML page to `Accept: */*`.
+  - An id that isn't a UUID answers 404 `not_found` instead of 400 on
+    `GET /api/jobs/:id`, `/api/runs/:id`, `/api/work_orders/:id` and
+    `/api/provision/:id`, their `/api/projects/:project_id/...` forms, the
+    `/api/projects/:project_id/jobs`, `/runs` and `/work_orders` lists, and the
+    `run_id` of `GET /api/log_lines`, the `project_id` of `GET /api/runs` and
+    the `id` of `GET /api/provision/yaml`.
+- A failed login on a JSON route answers a 401 problem document instead of
+  `{"error": "Unauthorized"}`:
+  - Every `/api` route that takes a bearer token, and every `/collections`
+    route, answers a request with no bearer token with
+    `"code": "unauthenticated"` and `WWW-Authenticate: Bearer`, and one whose
+    token is refused (unknown, expired, revoked, or a locked-out user's) with
+    `"code": "invalid_token"` and
+    `WWW-Authenticate: Bearer error="invalid_token"`. These 401s sent no
+    `WWW-Authenticate` header before.
+  - A `Bearer` header with no token after it, with whitespace inside the token,
+    or sent twice answers 400 `invalid_request` instead, with
+    `WWW-Authenticate: Bearer error="invalid_request"` (RFC 6750 §3.1), where it
+    used to answer 401 `{"error": "Unauthorized"}`.
+  - These routes read the `Authorization` scheme without regard to case, so
+    `bearer <token>` works as `Bearer <token>` does, and a header with another
+    scheme, such as `Basic`, counts as no bearer token.
+  - `/api/users` answers a request with no token with
+    `"code": "unauthenticated"` and `WWW-Authenticate: Bearer`, and a refused
+    token with `"code": "invalid_token"`, both instead of
+    `{"error": "invalid_token"}`.
+  - The routes that take only the session cookie (`/api/ai_assistant/sessions`,
+    the workflow health routes under `/api/projects` and `/adaptors/catalogue`)
+    answer a missing session, a pending MFA code and a locked-out user with
+    `"code": "unauthenticated"` and
+    `WWW-Authenticate: Session realm="Lightning"`, a challenge no browser
+    prompts for.
+- A token without the scope a route needs gets a 403 problem document with
+  `"code": "insufficient_scope"`, and its `WWW-Authenticate` header names the
+  one scope the request needed, as in
+  `Bearer error="insufficient_scope", scope="credentials:write"`:
+  - Where a route already checked scopes, this replaces
+    `{"error": "insufficient_scope"}`.
+  - On the projects, workflows, jobs, runs, work orders and log lines routes,
+    the 403 comes whether or not what the token names exists, instead of 404
+    or 500.
+- `/api/users` answers every error with a problem document, whose `errors` list
+  has one entry per field, each with a `pointer`, a `code` and a `detail`:
+  - `POST /api/users` with an email already taken answers 409 with
+    `"code": "taken"`, an entry at `#/email` and the existing user's id in
+    `existing.id`, instead of the existing user as `{"data": {...}}`. When
+    another field is also wrong it answers 422 `invalid`, with the email as one
+    of the entries, instead of 409.
+  - `POST /api/users` and `PATCH /api/users/:id` answer a field error with 422
+    `invalid` instead of `{"errors": {"<field>": ["<message>"]}}`.
+  - `POST /api/users` and `PATCH /api/users/:id` with a body that isn't a JSON
+    object, such as an array, answer 400 `malformed`, where a create answered
+    422 and an update changed nothing and answered 200.
+  - `POST /api/users` and `PATCH /api/users/:id` with a key they don't take,
+    `email` on a `PATCH` included, answer 422 `invalid` with an `unknown_key`
+    entry at that key, as in `#/email`, where the key used to be ignored and the
+    request answered 201 or 200.
+  - `POST /api/users` and `PATCH /api/users/:id` take the user's fields from the
+    body alone, where a field in the query string, `role` included, was written
+    as if the body held it.
+  - `GET /api/users` with an `email` that isn't a string answers 400
+    `invalid_parameter` with an entry naming the `email` parameter, instead
+    of 422.
+  - `GET /api/users/:id` and `PATCH /api/users/:id` for a user that doesn't
+    exist, or an id that isn't a UUID, answer 404 `not_found` instead of
+    `{"error": "Not Found"}`.
+- `POST /api/users/register` on an instance with no registration extension
+  answers 501 `not_implemented` with a problem document instead of
+  `{"error": "Not Implemented"}`.
+- `GET /api/projects/:id` answers every error with a problem document:
+  - A project that doesn't exist answers 404 `not_found` instead of
+    `{"error": "Not Found"}`, and so does an id that isn't a UUID, instead of
+    400 `{"error": "Bad Request"}`.
+  - A caller who isn't a member of the project gets 404 `not_found`, the same
+    answer as for a project that doesn't exist, and a member who hasn't met its
+    MFA requirement gets 403 `forbidden`, both instead of 401
+    `{"error": "Unauthorized"}`.
+  - A project scheduled for deletion answers 409 `scheduled_for_deletion` to a
+    caller who may see the project, 404 `not_found` to a non-member and 403
+    `forbidden` to a member who hasn't met its MFA requirement, instead of 401
+    `{"error": "Unauthorized"}`.
+- `/api/credentials` answers every error with a problem document, whose `errors`
+  list has one entry per refused field, each with a `pointer`, a `code` and a
+  `detail`:
+  - `GET /api/credentials` and `GET /api/projects/:project_id/credentials`, with
+    a repo connection's token, answer 403 `insufficient_scope` instead of
+    `{"error": "Forbidden"}`.
+  - `GET /api/projects/:project_id/credentials` (and `?project_id=`) for a
+    project that doesn't exist answers 404 `not_found` instead of
+    `{"error": "Not Found"}`, and so does an id that isn't a UUID, instead of
+    400 `{"error": "Bad Request"}`. A caller who isn't a member gets 404
+    `not_found`, the same answer as for a project that doesn't exist, instead of
+    403 `{"error": "Forbidden"}`. A project scheduled for deletion answers 409
+    `scheduled_for_deletion` to a member, instead of 403.
+  - `POST /api/credentials` with a link to a project the caller can't see, or
+    that doesn't exist, answers 422 `invalid` with a `not_found` entry at that
+    link's `project_id`, and a link to a project where the caller may not add
+    credentials answers a `no_access` entry there, instead of 403
+    `{"error": "Forbidden"}` for the whole request. Each entry points at the
+    link's position in the request, as in `#/project_credentials/1/project_id`.
+  - `POST /api/credentials` answers a field error with 422 `invalid` instead of
+    `{"errors": {"<field>": ["<message>"]}}`. A credential body's errors point
+    into the body at its position: a typed body's at each field its schema
+    refuses (`#/credential_bodies/0/body/host`), where every refusal used to be
+    one `"Environment 1: body Invalid body types"`, and an OAuth token's at the
+    field it refuses, where the request used to fail with a 500.
+  - `POST /api/credentials` with a body that isn't a JSON object, such as an
+    array, answers 400 `malformed` instead of 422.
+  - `POST /api/credentials` with a name the user already holds, or an external
+    ID already in use, answers 409 `taken` with an entry at `#/name` or
+    `#/external_id`, instead of 422.
+  - `POST /api/credentials` with a typed body while the adaptor catalogue is
+    still loading answers 503 `not_ready` with `Retry-After: 5`, instead of 422.
+  - `DELETE /api/credentials/:id` for a credential that doesn't exist, or an id
+    that isn't a UUID, answers 404 `not_found` instead of
+    `{"error": "Not Found"}`. Someone else's credential answers 404 `not_found`,
+    the same answer as for one that doesn't exist, unless the caller sees it
+    linked to a project whose credentials they may list, when it answers 403
+    `forbidden`; both were `{"error": "Forbidden"}`.
+  - `DELETE /api/credentials/:id` for a credential that runs have used answers
+    409 `in_use` and keeps the credential, instead of failing with a 500.
+- `POST /api/provision` answers every error with a problem document, whose
+  `errors` list has one entry per problem, each with a `pointer`, a `code` and a
+  `detail`:
+  - A document that isn't valid answers 422 `invalid` with entries that point at
+    the request's own keys and positions, as in `#/workflows/0/jobs/1/name`,
+    instead of `{"errors": {"workflows": {"<name>": ...}}}` keyed by workflow
+    and job names. Each `detail` is the validation's own message, such as
+    `can't be blank`, instead of `This field can't be blank.`.
+  - A key the document doesn't accept gets its own `unknown_key` entry at that
+    key, as in `#/workflows/0/colour`, instead of one
+    `extraneous parameters: <keys>` error listing them all.
+  - A `project_credentials` entry whose name matches none of the caller's
+    credentials answers a `not_found` entry at `#/project_credentials/<i>/name`,
+    instead of an error quoting the name. A channel's credential errors point at
+    `#/channels/<i>/destination_credential_id`, the key the document sends.
+  - Two jobs with one name in a workflow, or any other value that must be
+    unique, answers 409 `taken` with an entry at the clashing field, instead
+    of 422.
+  - A project credential, collection or channel `id` that another project
+    already uses answers 409 `taken` with an entry at that item's `id`, as in
+    `#/collections/1/id`, instead of failing with a 500.
+  - A project `id` naming a project the caller has no standing on (not a member,
+    or for a repo connection any project but its own) answers 404 `not_found`,
+    the same answer as for one that doesn't exist, instead of 403
+    `{"error": "Forbidden"}`. So does an `id` that isn't a UUID, instead of 400.
+  - A viewer, an editor, a member who hasn't met the project's MFA requirement
+    and a caller who may not create a project answer 403 `forbidden` instead of
+    `{"error": "Forbidden"}`.
+  - A project scheduled for deletion answers 409 `scheduled_for_deletion` to a
+    caller who may provision it, instead of 403.
+  - A repo connection refused by the GitHub sync plan limit answers 402
+    `exceeds_limit`, instead of 403 with the limiter's message, and only once
+    the document is valid, so an invalid document gets its 422 first.
+  - A job whose adaptor needs checking while the adaptor catalogue is still
+    loading answers 503 `not_ready` with `Retry-After: 5` at once, instead of
+    waiting up to 90 seconds for the catalogue.
+- A write that loses a race with another request answers 409 `concurrent_edit`,
+  with nothing written, instead of `{"error": "Conflict"}`:
+  - `POST /api/provision`, when another request changed a workflow or channel
+    the document writes, or deleted a row it writes.
+  - `PUT /api/projects/:id`, `PUT /api/credentials/:id`,
+    `PUT /api/projects/:project_id/collections/:id` and `PATCH /api/users/:id`,
+    when another request deleted the row they change, or a project member,
+    credential link or credential body they write.
+  - `PUT` and `PATCH /api/projects/:project_id/workflows/:id`, when another
+    request saved the workflow first, or deleted a job, edge or trigger it
+    writes.
+- `GET /api/provision/:id` and `GET /api/provision/yaml` answer every error with
+  a problem document:
+  - A project the caller has no standing on (not a member, or for a repo
+    connection any project but its own) answers 404 `not_found`, the same answer
+    as for one that doesn't exist, instead of 403 `{"error": "Forbidden"}`. A
+    project that doesn't exist answers 404 `not_found` instead of
+    `{"error": "Not Found"}`.
+  - A member who hasn't met the project's MFA requirement answers 403
+    `forbidden` instead of `{"error": "Forbidden"}`.
+  - A project scheduled for deletion answers 409 `scheduled_for_deletion` to a
+    caller who may see it, instead of 403.
+  - A `snapshots` that isn't a list of UUIDs answers 400 `invalid_parameter`
+    with an entry naming the `snapshots` parameter, on both routes. One that
+    isn't a list, such as `?snapshots=true`, used to fail with a 500.
+  - `GET /api/provision/yaml` without `id` answers 400 `invalid_parameter` with
+    an entry naming the `id` parameter, instead of a 400 that named nothing.
+- The workflows routes (`GET /api/workflows`, `GET /api/workflows/:id`, and
+  `GET` and `POST /api/projects/:project_id/workflows`, `GET`, `PATCH` and
+  `PUT /api/projects/:project_id/workflows/:id`) answer every error with a
+  problem document, and their success bodies no longer carry `"errors": {}`:
+  - A project or workflow that doesn't exist, an id that isn't a UUID, or a
+    workflow outside the path's project answers 404 `not_found`, instead of
+    `{"id": ..., "errors": ["Not Found"]}`, 400 `{"error": "Bad Request"}` or a
+    422 quoting the id.
+  - A caller who isn't a member of the project gets 404 `not_found`, the same
+    answer as for a project that doesn't exist, whether or not the workflow is
+    open in the editor. A viewer creating or updating a workflow, and a member
+    who hasn't met the project's MFA requirement, get 403 `forbidden`. Both used
+    to get 401 `{"error": "Unauthorized"}`.
+  - A project scheduled for deletion answers 409 `scheduled_for_deletion` to a
+    caller who may see it.
+  - `PATCH` and `PUT` on a workflow open in the editor answer 409
+    `being_edited`, before the body is read, instead of
+    `{"id": ..., "errors": {"workflow": ["Cannot save a workflow (<name>) ..."]}}`.
+  - `POST`, `PATCH` and `PUT` with a body that isn't a JSON object, such as an
+    array, answer 400 `malformed`.
+  - `POST`, `PATCH` and `PUT` with a body that isn't valid answer one 422
+    `invalid` with every problem as an entry pointing at the request's keys and
+    positions, as in `#/jobs/1/name`, instead of the first problem found as
+    `{"id": ..., "errors": {"<field>": ["<sentence>"]}}`. The workflow rules
+    have their own codes: `cycle` at the edge that closes a cycle, as in
+    `#/edges/3/target_job_id`, instead of `Cycle detected on job <id>`;
+    `one_enabled` and `trigger_removed` at `#/triggers`; `missing_trigger_edge`,
+    `one_enabled_edge` and `single_target` at `#/edges`; and `required` at the
+    `id` of a job or trigger sent without one, which used to fail with a 500 on
+    `POST`. A `project_id`, or on `PATCH` and `PUT` an `id`, that differs from
+    the path's is a `mismatch` entry in the same answer.
+  - On `POST`, an edge naming a job or trigger id that no job or trigger in the
+    request carries gets an entry at that edge's key, where the reference used
+    to be dropped.
+  - A job, trigger or edge id already in use, or any other value that must be
+    unique, answers 409 `taken` with an entry at the clashing field, instead
+    of 422.
+  - The plan limit on active workflows answers 402 `exceeds_limit`, instead of
+    422 with the limiter's message at `project_id`, and only once the body is
+    valid, so an invalid body gets its 422 first. Only a request that enables a
+    trigger counts against the limit: a `PATCH` or `PUT` that leaves an enabled
+    trigger enabled no longer does.
+  - A deleted workflow answers 404 `not_found`. `GET` used to return it, and
+    `PATCH` and `PUT` failed with a 500.
+- The jobs routes (`GET /api/jobs`, `GET /api/jobs/:id` and
+  `GET /api/projects/:project_id/jobs`) answer every error with a problem
+  document:
+  - A job or project the caller isn't a member of, including one named by
+    `GET /api/jobs?project_id=`, answers 404 `not_found`, the same answer as for
+    one that doesn't exist, instead of 401 `{"error": "Unauthorized"}`. A member
+    who hasn't met the project's MFA requirement gets 403 `forbidden` instead
+    of 401.
+  - The `self`, `first`, `last`, `next` and `prev` links carry `project_id` when
+    the request filtered by it, the page and the page size, and no other query
+    parameter from the request.
+- The runs and work orders routes (`GET /api/runs`, `GET /api/runs/:id`,
+  `GET /api/work_orders`, `GET /api/work_orders/:id`, and
+  `GET /api/projects/:project_id/runs` and `/work_orders`) answer every error
+  with a problem document:
+  - A run, work order or project the caller isn't a member of answers 404
+    `not_found`, the same answer as for one that doesn't exist, instead of 401
+    `{"error": "Unauthorized"}`. A member who hasn't met the project's MFA
+    requirement gets 403 `forbidden` instead of 401.
+  - The caller is authorised before the query is read, so a caller who may not
+    see the project gets its 404 or 403 whatever the query holds, where a bad
+    query used to be answered first.
+  - Bad query parameters answer one 400 `invalid_parameter` with an entry per
+    bad parameter, as in
+    `{"parameter": "inserted_after", "code": "type", "detail": "is invalid"}` or
+    `{"parameter": "state", "code": "not_allowed", ...}`, instead of the first
+    one found as `{"error": "Invalid datetime format for '<key>': <value>"}` or
+    `{"error": "Invalid state filter: <values>..."}`. No entry quotes the value.
+  - A `workflow_id` or `work_order_id` filter on the runs lists, and an `id` or
+    `workflow_id` filter on the work orders lists, that isn't a UUID is one of
+    those entries.
+  - The `self`, `first`, `last`, `next` and `prev` links of a list carry the
+    filters the list applied, the page and the page size, and no other query
+    parameter from the request.
+- The log lines route (`GET /api/log_lines`) answers every error with a problem
+  document:
+  - Bad query parameters answer one 400 `invalid_parameter` with an entry per
+    bad parameter, as in
+    `{"parameter": "timestamp_after", "code": "type", "detail": "is invalid"}`,
+    instead of the first bad timestamp as
+    `{"error": "Invalid datetime format for '<key>': <value>"}`. No entry quotes
+    the value.
+  - A `level` that isn't one of `success`, `always`, `info`, `warn`, `error` or
+    `debug` is one of those entries, with code `not_allowed`, where it used to
+    fail with a 500.
+  - A `project_id`, `workflow_id`, `job_id`, `work_order_id` or `run_id` filter
+    that isn't a UUID is one of those entries too, where it used to answer 404.
+  - The `self` and pagination links carry the filters the list applied, the page
+    and the page size, and no other query parameter from the request.
+- `GET /api/ai_assistant/sessions` answers every error with a problem document:
+  - A missing or unknown `session_type`, or a missing `job_id` or `project_id`,
+    answers 400 `invalid_parameter` with one entry per bad parameter, instead of
+    `{"error": "Bad Request"}`. An `offset` or `limit` that isn't a whole
+    number, a negative `offset`, a `limit` below 1 and a `workflow_id` that
+    isn't a UUID answer the same, where they used to fail with a 500 or a 400
+    with no entries. The job or project the query names is checked first, so a
+    caller who can't see it gets 404 whatever the other parameters say.
+  - A caller who isn't a member of the project, or of the job's project, and
+    someone else's session for an unsaved job with no workflow, answer 404
+    `not_found`, the same answer as for a project that doesn't exist, instead of
+    403 `{"error": "Forbidden"}`. A project that doesn't exist answers 404
+    `not_found` instead of `{"error": "Not Found"}`, and so does a `job_id` or
+    `project_id` that isn't a UUID, instead of 400.
+  - A member who hasn't met the project's MFA requirement answers 403
+    `forbidden`, and a project scheduled for deletion answers 409
+    `scheduled_for_deletion` to a member, both instead of 403
+    `{"error": "Forbidden"}`.
+- The workflow health routes
+  (`GET /api/projects/:project_id/workflows/:workflow_id/health/outcomes`,
+  `/failures` and `/runs`) answer every error with a problem document:
+  - A `days` other than 1, 7 or 30 answers 400 `invalid_parameter` with an entry
+    naming `days`, instead of `{"error": "days must be one of 1, 7, 30"}`.
+  - On `/runs`, an `x-timezone` header that isn't an IANA timezone name, or more
+    than one of them, answers 400 `invalid_header` with an entry at
+    `"header": "x-timezone"`, instead of
+    `{"error": "x-timezone must be an IANA timezone name"}`. A bad `days` is
+    reported first.
+  - A workflow or project that doesn't exist, an id that isn't a UUID, and a
+    caller who isn't a member answer 404 `not_found` instead of
+    `{"error": "Not Found"}`.
+  - A member who hasn't met the project's MFA requirement answers 403
+    `forbidden`, and a project scheduled for deletion answers 409
+    `scheduled_for_deletion` to a member, both instead of 404.
+- `GET /adaptors/catalogue` answers a catalogue that hasn't loaded yet with 503
+  `not_ready`, still with `Retry-After: 5`, instead of
+  `{"error": "adaptor catalogue unavailable"}`.
+- The collections API (`/collections/*`) answers every error with a problem
+  document. A missing item is still not an error: `GET /collections/:name/:key`
+  answers 204, and `DELETE /collections/:name/:key` answers 200 with
+  `"deleted": 0`.
+  - Every `DELETE` answer carries only `key` and `deleted`. A missing item no
+    longer gets `"error": "Item Not Found"`, and a deleted item and
+    `DELETE /collections/:name` no longer get `"error": null`.
+  - `PUT /collections/:name/:key` with a value Lightning can't store, such as
+    one that is too long or isn't a string, answers 422 `invalid` with an entry
+    at `#/value`, instead of 200 `{"upserted": 0, "error": "Format error"}`. The
+    collections adaptor treats that 200 as a success, so jobs that silently lost
+    format-error writes will now fail. A key too long to store answers 422
+    `invalid` with an entry whose `path` is `key`, since the key is in the path,
+    not the body; beside a bad value, both entries come back.
+  - `PUT /collections/:name/:key` with no `value`, and `POST /collections/:name`
+    with no `items`, answer 422 `invalid` with a `required` entry, instead of
+    `{"error": "Missing required field: <field>"}`.
+  - `POST /collections/:name` with a key repeated in `items` answers 422
+    `invalid` with a `duplicate` entry at the later item's key, instead of
+    `{"upserted": 0, "error": "Duplicate key found"}`. An item that isn't an
+    object or fails validation answers 422 with an entry at that item, instead
+    of 500.
+  - `PUT /collections/:name/:key` and `POST /collections/:name` over a plan
+    limit answer 402 `exceeds_limit`, without the limiter's message, instead of
+    422 `{"upserted": 0, "error": "<message>"}`. A value that is invalid and
+    over the limit answers 422, not 402.
+  - A collection that doesn't exist answers 404 `not_found` instead of
+    `{"error": "Not Found"}`. A caller who isn't a member of its project, a run
+    of another project, and a `project_id` that isn't a UUID answer 404
+    `not_found` too, instead of 401 `{"error": "Unauthorized"}` and 400
+    `{"error": "Bad Request"}`.
+  - A member whose role doesn't allow the action, or who hasn't met the
+    project's MFA requirement, answers 403 `forbidden` instead of 401
+    `{"error": "Unauthorized"}`. A project scheduled for deletion answers 409
+    `scheduled_for_deletion` to a member who may act on it.
+  - A name held by collections in more than one of the caller's projects answers
+    409 `ambiguous_name` instead of `{"error": "... Add ?project_id=..."}`. Only
+    projects the caller is a member of count, and a run counts only its own
+    project, so a name another project also uses no longer answers 409.
+  - `GET /collections/:name` with bad query parameters answers 400
+    `invalid_parameter` with one entry per bad parameter, instead of
+    `{"error": "Bad Request"}`. An unknown parameter's entry has the code
+    `unknown_key`.
+  - `GET /collections/:name` with a negative `limit` answers 400
+    `invalid_parameter` with an `out_of_range` entry, instead of failing with
+    a 500.
+- Webhooks (`/i/*`) answer their errors with a problem document. Every status
+  stays as it was, and so does every success body, including the 200
+  `{"work_order_id": ..., "error": "too_many_runs"}` for an asynchronous trigger
+  whose run was refused after its work order was saved:
+  - An unknown trigger, and wrong credentials, answer 404 `not_found` instead of
+    `{"error": "Webhook not found"}`.
+  - Missing credentials answer 401 `unauthenticated` instead of
+    `{"error": "Unauthorized"}`, with
+    `WWW-Authenticate: ApiKey header="x-api-key"` when the trigger takes an API
+    key. A trigger never challenges Basic, so a browser doesn't prompt for one
+    trigger's login and then send it to other triggers.
+  - A disabled trigger answers 403 `trigger_disabled`, without its `message`.
+  - A body whose content type Lightning doesn't read answers 415
+    `unsupported_media_type` instead of `{"error": "Unsupported Media Type"}`.
+  - A JSON body that doesn't parse answers 400 `malformed`, and a form body that
+    isn't valid UTF-8 answers 400 `bad_request`, instead of
+    `{"error": "Bad Request"}`. A body over the size limit answers 413
+    `content_too_large` instead of `{"error": "Request Entity Too Large"}`.
+    Without an `Accept` header naming JSON, both were the reason phrase as
+    `text/html`.
+  - A database outage answers 503 `service_unavailable` instead of
+    `{"error": "service_unavailable", "message": ..., "retry_after": ...}`. The
+    `Retry-After` header stays.
+  - A limiter refusal answers 429 whatever the reason, with `code`
+    `too_many_requests`, `too_many_runs` or `exceeds_limit` in place of `error`,
+    and without the limiter's `message`.
+  - A work order that can't be saved answers 422 `invalid` with entries, instead
+    of `{"error": "invalid_request", "details": ...}` or
+    `{"error": "<reason>"}`.
+  - A synchronous trigger whose run was refused answers 429 `too_many_runs`, and
+    one left without a run for any other reason answers 500 `internal`, instead
+    of `{"work_order_id": ..., "error": ...}`. A synchronous trigger whose
+    workflow doesn't finish in time answers 504 `timeout` instead of
+    `{"error": "timeout", "message": ...}`. All three keep `work_order_id`.
+- The channel proxy (`/channels/*`) answers the errors it builds itself with a
+  problem document. Every status stays as it was, and whatever the destination
+  answers, error or not, still passes through untouched:
+  - An unknown or disabled channel, and an id that isn't a UUID, answer 404
+    `not_found` instead of `{"error": "Not Found"}`.
+  - Refused client credentials answer 401 `unauthenticated` instead of
+    `{"error": "Unauthorized"}`, with
+    `WWW-Authenticate: ApiKey header="x-api-key"` when the channel takes an API
+    key. A channel never challenges Basic, so a browser doesn't prompt for one
+    channel's login and then send it to other channels.
+  - A failure before proxying answers 500 `internal` instead of
+    `{"error": "Internal Server Error"}`.
+  - A destination credential that can't be used answers 502 `bad_gateway`
+    instead of `{"error": "Bad Gateway"}`.
+
 ### Added
+
+- `GET /api/credentials/:id` reads one credential. Its owner gets the credential
+  with its body. A caller who sees it linked to a project whose credentials they
+  may list gets it with the body hidden. Anyone else gets 404 `not_found`, the
+  same answer as for one that doesn't exist.
+  [#5239](https://github.com/OpenFn/lightning/pull/5239)
 
 ### Changed
 
+- Service-account token requests must now name the scopes they want. A request
+  to `POST /api/oauth/token` without `scope`, or with an empty one, is refused
+  with `invalid_scope` instead of getting every scope.
+  [#5239](https://github.com/OpenFn/lightning/pull/5239)
+- API page links (`self`, `first`, `last`, `next`, `prev`) carry the `page_size`
+  Lightning applied, so a request for more than 100 a page links to pages of
+  100, and no query parameter the list doesn't apply: on `GET /api/projects`
+  only the page and page size, on `GET /api/users` those and `email`. A single
+  run's, job's, work order's or project's `self` link is its own URL, with no
+  query parameter from the request.
+- Saving a job while Lightning is still loading its adaptor catalogue, which
+  happens just after it starts, is refused at once with "adaptor catalogue is
+  not ready yet, try again shortly" instead of waiting up to 90 seconds for the
+  catalogue. This applies wherever a job is saved: the workflow editor, the
+  other workflow pages and `POST /api/provision`.
+
 ### Fixed
+
+- Toggling a project's MFA requirement or support access in its settings shows
+  an error when the change can't be saved, instead of crashing the page.
+- The workflow editor and the settings forms for projects, sandboxes, users,
+  credentials and collections no longer crash when another save wins the race or
+  the record was deleted. The workflow editor and project settings ask you to
+  try again; the other forms close and say the record no longer exists.
 
 ## [2.20.0-pre] - 2026-10-23
 

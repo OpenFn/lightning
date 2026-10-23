@@ -5,8 +5,8 @@ signing in with a key pair instead of a password. Use one when infrastructure
 automation, rather than a person, creates the instance's users, including its
 first superuser.
 
-Each instance has at most one service account. For now it can only create,
-change and find users.
+Each instance has at most one service account. It can create, change and find
+users, and create, change and read projects, collections and credentials.
 
 > #### Still under development {: .warning}
 >
@@ -92,6 +92,7 @@ const { access_token } = await fetch(token_endpoint, {
     client_assertion_type:
       'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
     client_assertion: `${unsigned}.${signature}`,
+    scope: 'users:read users:write',
   }),
 }).then(response => response.json());
 ```
@@ -116,11 +117,28 @@ Lightning refuses a JSON body.
 If the token endpoint answers `invalid_client`, Lightning's logs say why. See
 [Logs](#logs).
 
+## What the token can do
+
+Send the access token as `Authorization: Bearer <token>`. What it may do depends
+on the scopes it carries:
+
+- `users:read` finds users, and `users:write` creates and changes them.
+- `projects:write` reads, creates and changes projects.
+- `collections:write` reads, creates and renames collections.
+- `credentials:write` reads, creates and replaces credentials.
+
+Ask for the scopes you need with the `scope` parameter when you request the
+token. Projects, collections and credentials have no read scopes: their `GET`
+routes need the same `:write` scope as their `PUT` routes.
+
+The service account acts on every project, as if it held every project role,
+owner included, but only as far as its token's scopes reach. It is never a
+member of a project and never shows in a project's members.
+
 ## Manage users
 
-Send the access token as `Authorization: Bearer <token>`. Creating and changing
-users needs the `users:write` scope, and finding them needs `users:read`. A
-token gets both unless you ask for fewer with a `scope` parameter.
+Creating and changing users needs the `users:write` scope, and finding them
+needs `users:read`.
 
 Create a user, here a superuser whose email is already verified. `role` is
 `user` or `superuser`, and defaults to `user`:
@@ -163,8 +181,31 @@ user later:
 Lightning doesn't email the users it creates, so whoever runs the automation has
 to tell them their account exists.
 
-If the email is already taken, Lightning answers 409 with the existing user and
-leaves it alone, so automation can run the same request again safely.
+If a user already has the email, in any case, Lightning answers 409 `taken` and
+leaves that user alone, so automation can run the same request again safely. The
+answer carries the existing user's id in `existing`, and nothing else about
+them:
+
+```json
+{
+  "type": "about:blank",
+  "title": "Conflict",
+  "status": 409,
+  "code": "taken",
+  "detail": "A value that must be unique is already in use. See errors.",
+  "errors": [
+    {
+      "pointer": "#/email",
+      "code": "taken",
+      "detail": "has already been taken"
+    }
+  ],
+  "existing": { "id": "604f0cd2-37fb-4833-a5e1-821555b5b314" }
+}
+```
+
+If another field is wrong as well, Lightning answers 422 `invalid` instead, with
+the email's `taken` entry among the others and no `existing`.
 
 Find a user by email:
 
@@ -174,7 +215,8 @@ curl "https://lightning.example.org/api/users?email=ada@example.com" \
 ```
 
 The list pages 10 users at a time by default, and at most 100 with `page_size`.
-An `email` that isn't a single string answers 422.
+An `email` that isn't a single string, such as `email[]=...`, answers 400
+`invalid_parameter` with an entry whose `parameter` is `email`.
 
 Change a user's role or password:
 
@@ -186,7 +228,142 @@ curl -X PATCH https://lightning.example.org/api/users/$USER_ID \
 ```
 
 A new role or password signs the user out of every browser session. The email
-can't be changed, and the API can't delete or disable a user.
+can't be changed: a `PATCH` ignores it, as it ignores any key it doesn't take.
+The API can't delete or disable a user.
+
+## Manage projects
+
+`GET /api/projects/:id` shows a project. `PUT /api/projects/:id` creates the
+project under that id, or, if a project already has it, replaces its name and
+description. Both need `projects:write`.
+
+To create a project, send its `name` and `description`, its `members` as
+`{email, role}` pairs, and `notify`. Each member must already be a user.
+`notify` is `true` by default, and decides whether Lightning emails the members
+it adds. `members` and `notify` only count when the project is created:
+
+```bash
+curl -X PUT https://lightning.example.org/api/projects/$PROJECT_ID \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "malaria-programme",
+    "description": "Malaria case reporting",
+    "members": [
+      {"email": "ada@example.com", "role": "owner"},
+      {"email": "grace@example.com", "role": "editor"}
+    ],
+    "notify": false
+  }'
+```
+
+Lightning answers 201 with the project and its members when it creates one, and
+200 when it replaces one.
+
+## Manage collections
+
+`GET` and `PUT /api/projects/:project_id/collections/:id` read and write a
+project's collection. They need `collections:write`. `PUT` creates the
+collection under that id, or renames the one that has it and keeps its items:
+
+```bash
+curl -X PUT https://lightning.example.org/api/projects/$PROJECT_ID/collections/$COLLECTION_ID \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "patients"}'
+```
+
+Lightning answers `{"data": {"id", "project_id", "name"}}`, with 201 for a new
+collection and 200 for a rename. The items inside a collection are not part of
+this API.
+
+## Manage credentials
+
+`GET` and `PUT /api/credentials/:id` read and write a credential. They need
+`credentials:write`. `PUT` creates the credential under that id, or replaces the
+name, schema and `main` body of the one that has it.
+
+A `PUT` must name the credential's `owner` by email, and the owner must be an
+existing user:
+
+```bash
+curl -X PUT https://lightning.example.org/api/credentials/$CREDENTIAL_ID \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Acme DHIS2",
+    "schema": "raw",
+    "owner": "ada@example.com",
+    "credential_bodies": [
+      {"name": "main", "body": {"username": "admin", "password": "district"}}
+    ],
+    "project_credentials": [{"project_id": "'"$PROJECT_ID"'"}]
+  }'
+```
+
+- `credential_bodies` must be exactly one body, named `main`, holding an object.
+  Replacing a credential leaves any other body it has alone.
+- `project_credentials` is optional. A `PUT` only adds links, and never removes
+  one the credential already has. Linking a project needs `credentials:write`
+  only. Naming a project that doesn't exist answers 422 `invalid`, with a
+  `not_found` entry at that link, as in `#/project_credentials/0/project_id`.
+  Naming a project the owner isn't a member of answers the same way, with a
+  `no_access` entry.
+- The response never includes the credential's body. It lists every project the
+  credential is linked to, but names a linked project only if the token also
+  holds `projects:write`.
+- A service account can write credentials but never delete one. Listing,
+  creating with `POST` and deleting are for people: a service account's token
+  gets a 401 `invalid_token` from those routes.
+
+## When Lightning refuses
+
+Every refusal is an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem
+document with `type`, `title`, `status`, `code` and `detail`, as in the 409
+example in [Manage users](#manage-users). It is sent as `application/json`, or
+as `application/problem+json` when the request's `Accept` names that. Branch on
+`status` and `code`, not on `detail`.
+
+When the problem lies in particular parts of the request, the document also has
+`errors`, a list of entries. Each entry has a `code` and a `detail`, and says
+where the problem is: a `pointer` into the body, as in `#/members/0/email`, or
+the name of a query `parameter`. Entries never quote a value from the request.
+
+- 400 `malformed`: the body isn't a JSON object.
+- 400 `invalid_parameter`: a query parameter isn't valid. `errors` names it.
+- 400 `invalid_request`, with
+  `WWW-Authenticate: Bearer error="invalid_request"`: the `Authorization` header
+  has no token after `Bearer`, has whitespace inside the token, or was sent
+  twice.
+- 401 `invalid_token`, with `WWW-Authenticate: Bearer error="invalid_token"`:
+  the access token is expired or bad, or isn't one this route accepts.
+- 401 `unauthenticated`, with `WWW-Authenticate: Bearer`: the request sent no
+  `Authorization` header.
+- 402 `exceeds_limit`: creating a collection would go over the instance's limit,
+  or the plan has no seat for a member a project `PUT` adds. For a member,
+  `errors` has an entry at `#/members`.
+- 403 `insufficient_scope`, with
+  `WWW-Authenticate: Bearer error="insufficient_scope"` naming the one scope the
+  request needed, as in `scope="credentials:write"`: the token lacks that scope.
+  Lightning checks this first, so it comes before any 404 or 422, whether the
+  project is missing or the body is wrong.
+- 404 `not_found`: the project, collection, credential or user doesn't exist, or
+  the id in the path isn't a UUID.
+- 409 `scheduled_for_deletion`: the project (on the projects and collections
+  routes) or the credential (on a credential `PUT`) is scheduled for deletion.
+  Lightning refuses changes until the deletion is cancelled or completes.
+- 409 `id_taken`: the id already belongs to a collection in another project, or
+  to a credential with a different owner. Lightning never moves either.
+- 409 `taken`: the value at the entry's pointer must be unique and is already in
+  use. That is a user's email, a collection's name within its project, or a
+  credential's name among its owner's credentials.
+- 415 `unsupported_media_type`: the body isn't sent as JSON.
+- 422 `invalid`: the body doesn't fit. `errors` has an entry for each field that
+  is wrong. On the projects, collections and credentials routes it also has one
+  for each key the route doesn't accept. The users routes ignore keys they don't
+  take.
+- 503 `not_ready`, with `Retry-After`: Lightning can't check a credential's
+  schema yet. Try again after the number of seconds it gives.
 
 ## Change or remove the key
 
@@ -214,6 +391,12 @@ there as "Service account", named by its key's thumbprint. It records:
 - `updated` for each user it changes, with the before and after of the email,
   names, role and confirmation. A new password shows only as `password_changed`.
   A change that changes nothing isn't recorded.
+- `created` for each project it creates, with `collaborator_added` for each
+  member it adds, and `name_updated` or `description_updated` when it changes
+  one.
+- `created` and `updated` for each collection it creates or renames.
+- `created` and `updated` for each credential it writes, and `added_to_project`
+  for each project it links.
 
 ### Logs
 
