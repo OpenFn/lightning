@@ -1,9 +1,8 @@
 defmodule LightningWeb.RunLive.Streaming do
   import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView
-  import Ecto.Query
 
-  alias Lightning.Repo
+  alias Lightning.Invocation
   alias Lightning.Runs
   alias Phoenix.LiveView.AsyncResult
 
@@ -49,12 +48,11 @@ defmodule LightningWeb.RunLive.Streaming do
   end
 
   defp send_log_chunks(run, live_view_pid, chunk_size) do
-    Repo.transaction(fn ->
-      Runs.get_log_lines(run)
-      |> Stream.chunk_every(chunk_size)
-      |> Stream.each(&send(live_view_pid, {:log_line_chunk, &1}))
-      |> Stream.run()
-    end)
+    Runs.each_log_line_chunk(
+      run,
+      chunk_size,
+      &send(live_view_pid, {:log_line_chunk, &1})
+    )
 
     {:ok, %{log_lines: :ok}}
   end
@@ -75,20 +73,13 @@ defmodule LightningWeb.RunLive.Streaming do
     end
   end
 
-  def get_dataclip(step, field) do
-    import Ecto.Query
-
-    from(d in Ecto.assoc(step, field))
-    |> Repo.one()
-  end
-
   def maybe_load_input_dataclip(socket) do
     %{selected_step: selected_step, input_dataclip: dataclip} = socket.assigns
 
     if selected_step &&
          (!dataclip or selected_step.input_dataclip_id != dataclip.id) do
       socket
-      |> assign(input_dataclip: get_dataclip(selected_step, :input_dataclip))
+      |> assign(input_dataclip: Invocation.get_dataclip(selected_step))
     else
       socket
     end
@@ -100,7 +91,7 @@ defmodule LightningWeb.RunLive.Streaming do
     if selected_step &&
          (!dataclip or selected_step.output_dataclip_id != dataclip.id) do
       socket
-      |> assign(output_dataclip: get_dataclip(selected_step, :output_dataclip))
+      |> assign(output_dataclip: Invocation.get_output_dataclip(selected_step))
     else
       socket
     end

@@ -8,8 +8,6 @@ defmodule LightningWeb.ProjectLive.Index do
 
   on_mount {LightningWeb.Hooks, :ensure_admin}
 
-  import Ecto.Query
-
   alias Lightning.Accounts
   alias Lightning.Helpers
   alias Lightning.Policies.Permissions
@@ -41,7 +39,7 @@ defmodule LightningWeb.ProjectLive.Index do
   defp apply_action(socket, :index, _params) do
     assign(socket,
       page_title: "Projects",
-      projects: list_projects_with_owners(),
+      projects: Projects.list_projects_with_users(),
       form_project: nil,
       form_users: [],
       delete_project: nil
@@ -75,7 +73,7 @@ defmodule LightningWeb.ProjectLive.Index do
       {:ok, project} ->
         assign(socket,
           page_title: "Projects",
-          projects: list_projects_with_owners(),
+          projects: Projects.list_projects_with_users(),
           form_project: nil,
           form_users: [],
           delete_project: project
@@ -331,11 +329,6 @@ defmodule LightningWeb.ProjectLive.Index do
     do: 0
 
   defp demotion_first(_row), do: 1
-
-  defp list_projects_with_owners do
-    from(p in Project, preload: [project_users: :user], order_by: p.name)
-    |> Lightning.Repo.all()
-  end
 
   def get_project_owner_name(project) do
     case Enum.find(project.project_users, fn pu -> pu.role == :owner end) do

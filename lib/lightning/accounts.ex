@@ -39,6 +39,24 @@ defmodule Lightning.Accounts do
     count > 0
   end
 
+  @doc """
+  Deletes a user at once, after the checks an admin's confirmation needs:
+  a superuser can't be deleted, the typed email must be the user's own, and
+  a user with activity in projects is refused.
+  """
+  @spec purge_confirmed_user(User.t(), String.t()) ::
+          :ok
+          | {:error, :superuser | :email_mismatch | :has_activity}
+          | {:error, Ecto.Changeset.t()}
+  def purge_confirmed_user(%User{} = user, email) do
+    cond do
+      user.role == :superuser -> {:error, :superuser}
+      email != user.email -> {:error, :email_mismatch}
+      has_activity_in_projects?(user) -> {:error, :has_activity}
+      true -> purge_user(user.id)
+    end
+  end
+
   @spec purge_user(id :: Ecto.UUID.t()) :: :ok | {:error, Ecto.Changeset.t()}
   def purge_user(id) do
     Logger.debug(fn ->

@@ -972,6 +972,57 @@ defmodule Lightning.RunsTest do
     end
   end
 
+  describe "each_log_line_chunk/3" do
+    test "calls the function with the run's log lines in chunks, oldest first" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: insert(:dataclip))
+        |> insert()
+
+      %{runs: [other_run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: insert(:dataclip))
+        |> insert()
+
+      base = DateTime.utc_now()
+
+      for n <- [3, 1, 2, 4, 5] do
+        insert(:log_line,
+          run: run,
+          message: "line #{n}",
+          timestamp: DateTime.add(base, n, :second)
+        )
+      end
+
+      insert(:log_line, run: other_run, message: "not mine")
+
+      test_pid = self()
+
+      assert :ok =
+               Runs.each_log_line_chunk(run, 2, fn lines ->
+                 send(test_pid, {:chunk, Enum.map(lines, & &1.message)})
+               end)
+
+      assert_received {:chunk, ["line 1", "line 2"]}
+      assert_received {:chunk, ["line 3", "line 4"]}
+      assert_received {:chunk, ["line 5"]}
+      refute_received {:chunk, _}
+    end
+
+    test "does not call the function when the run has no log lines" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: insert(:dataclip))
+        |> insert()
+
+      assert :ok =
+               Runs.each_log_line_chunk(run, 2, fn _ -> send(self(), :called) end)
+
+      refute_received :called
+    end
+  end
+
   describe "append_run_log/3" do
     test "adds a log line to a run" do
       dataclip = insert(:dataclip)

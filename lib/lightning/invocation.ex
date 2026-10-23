@@ -40,6 +40,19 @@ defmodule Lightning.Invocation do
   @io_too_large "[too large to summarise]"
   @io_over_budget "[not read, the run's data ran past what can be sent]"
 
+  @workorder_list_preloads [
+    :dataclip,
+    :workflow,
+    runs: [
+      steps: [
+        :job,
+        :input_dataclip,
+        snapshot: [triggers: :webhook_auth_methods]
+      ]
+    ],
+    snapshot: [triggers: :webhook_auth_methods]
+  ]
+
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
 
@@ -261,6 +274,15 @@ defmodule Lightning.Invocation do
   end
 
   def get_dataclip(id), do: Repo.get(Dataclip, id)
+
+  @doc """
+  Returns the dataclip that was the result of a successful step, or `nil`
+  when the step produced none.
+  """
+  @spec get_output_dataclip(Step.t()) :: Dataclip.t() | nil
+  def get_output_dataclip(%Step{} = step) do
+    get_output_dataclip_query(step) |> Repo.one()
+  end
 
   @doc """
   Query for retrieving the dataclip that was the result of a successful step.
@@ -685,22 +707,25 @@ defmodule Lightning.Invocation do
   end
 
   defp workorder_preloads(query) do
-    preload(
-      query,
-      [wo],
-      [
-        :dataclip,
-        :workflow,
-        runs: [
-          steps: [
-            :job,
-            :input_dataclip,
-            snapshot: [triggers: :webhook_auth_methods]
-          ]
-        ],
-        snapshot: [triggers: :webhook_auth_methods]
-      ]
-    )
+    preload(query, [wo], ^@workorder_list_preloads)
+  end
+
+  @doc """
+  Reloads the associations the work order list shows (dataclip, workflow,
+  runs with their steps, and the snapshot), discarding any already loaded.
+
+  Given a run, reloads its work order the same way and returns that.
+  """
+  @spec reload_workorder_for_list(WorkOrder.t() | Run.t()) :: WorkOrder.t()
+  def reload_workorder_for_list(%WorkOrder{} = work_order) do
+    Repo.preload(work_order, @workorder_list_preloads, force: true)
+  end
+
+  def reload_workorder_for_list(%Run{} = run) do
+    %{work_order: work_order} =
+      Repo.preload(run, [work_order: @workorder_list_preloads], force: true)
+
+    work_order
   end
 
   defp filter_by_workorder_id(query, nil), do: query

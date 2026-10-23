@@ -36,6 +36,23 @@ defmodule Lightning.ProjectsTest do
       assert Projects.list_projects() == [project]
     end
 
+    test "list_projects_with_users/0 returns every project by name with its members and their users" do
+      user = insert(:user)
+      later = insert(:project, name: "b-project")
+
+      earlier =
+        insert(:project,
+          name: "a-project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      assert [first, second] = Projects.list_projects_with_users()
+      assert [first.id, second.id] == [earlier.id, later.id]
+      assert [%{role: :owner, user: %{id: user_id}}] = first.project_users
+      assert user_id == user.id
+      assert second.project_users == []
+    end
+
     test "list_project_credentials/1 returns all project_credentials for a project" do
       user = insert(:user)
       project = insert(:project, project_users: [%{user_id: user.id}])

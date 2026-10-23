@@ -971,6 +971,59 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "purge_confirmed_user/2" do
+    test "deletes the user when the email matches and there is no activity" do
+      user = insert(:user)
+
+      assert :ok = Accounts.purge_confirmed_user(user, user.email)
+      refute Repo.get(User, user.id)
+    end
+
+    test "refuses a superuser" do
+      user = insert(:user, role: :superuser)
+
+      assert {:error, :superuser} =
+               Accounts.purge_confirmed_user(user, user.email)
+
+      assert Repo.get(User, user.id)
+    end
+
+    test "refuses an email that is not the user's" do
+      user = insert(:user)
+
+      assert {:error, :email_mismatch} =
+               Accounts.purge_confirmed_user(user, "other@example.com")
+
+      assert Repo.get(User, user.id)
+    end
+
+    test "refuses a user with activity in projects" do
+      user = insert(:user)
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert(:run,
+        created_by: user,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip
+      )
+
+      assert {:error, :has_activity} =
+               Accounts.purge_confirmed_user(user, user.email)
+
+      assert Repo.get(User, user.id)
+    end
+  end
+
   describe "The default Oban function Accounts.perform/1" do
     test "prevents users that are still linked to a run from being deleted" do
       user =

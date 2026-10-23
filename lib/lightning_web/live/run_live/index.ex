@@ -346,25 +346,7 @@ defmodule LightningWeb.RunLive.Index do
   @impl true
   def handle_info(%mod{run: run}, %{assigns: %{live_action: :index}} = socket)
       when mod in [Events.RunCreated, Events.RunUpdated] do
-    %{work_order: work_order} =
-      Lightning.Repo.preload(
-        run,
-        [
-          work_order: [
-            :workflow,
-            :dataclip,
-            runs: [
-              steps: [
-                :job,
-                :input_dataclip,
-                snapshot: [triggers: :webhook_auth_methods]
-              ]
-            ],
-            snapshot: [triggers: :webhook_auth_methods]
-          ]
-        ],
-        force: true
-      )
+    work_order = Invocation.reload_workorder_for_list(run)
 
     {:noreply, socket |> update_page(work_order)}
   end
@@ -398,23 +380,7 @@ defmodule LightningWeb.RunLive.Index do
         %Events.WorkOrderUpdated{work_order: work_order},
         %{assigns: %{live_action: :index}} = socket
       ) do
-    work_order =
-      Lightning.Repo.preload(
-        work_order,
-        [
-          :dataclip,
-          :workflow,
-          runs: [
-            steps: [
-              :job,
-              :input_dataclip,
-              snapshot: [triggers: :webhook_auth_methods]
-            ]
-          ],
-          snapshot: [triggers: :webhook_auth_methods]
-        ],
-        force: true
-      )
+    work_order = Invocation.reload_workorder_for_list(work_order)
 
     {:noreply, socket |> update_page(work_order)}
   end

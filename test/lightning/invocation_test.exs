@@ -86,6 +86,42 @@ defmodule Lightning.InvocationTest do
                dataclip
     end
 
+    test "get_output_dataclip/1 returns the step's output dataclip, or nil" do
+      output = insert(:dataclip, body: nil)
+
+      step = insert(:step, output_dataclip: output)
+
+      assert Invocation.get_output_dataclip(step) |> Repo.preload(:project) ==
+               output
+
+      assert Invocation.get_output_dataclip(insert(:step)) == nil
+    end
+
+    test "reload_workorder_for_list/1 reloads a work order or a run's work order with the list's associations" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      for loaded <- [
+            Invocation.reload_workorder_for_list(
+              Repo.get!(Lightning.WorkOrder, run.work_order_id)
+            ),
+            Invocation.reload_workorder_for_list(
+              Repo.get!(Lightning.Run, run.id)
+            )
+          ] do
+        assert loaded.id == run.work_order_id
+        assert loaded.workflow.id == workflow.id
+        assert loaded.dataclip.id == dataclip.id
+        assert [%{id: run_id, steps: []}] = loaded.runs
+        assert run_id == run.id
+        assert %{triggers: [%{webhook_auth_methods: []}]} = loaded.snapshot
+      end
+    end
+
     test "create_dataclip/1 with valid data creates a dataclip" do
       project = insert(:project)
       valid_attrs = %{body: %{}, project_id: project.id, type: :http_request}

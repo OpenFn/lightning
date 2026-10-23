@@ -258,6 +258,20 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Returns every project ordered by name, with its `project_users` and their
+  `user` preloaded, for pages that show who owns each project.
+  """
+  @spec list_projects_with_users() :: [Project.t()]
+  def list_projects_with_users do
+    Repo.all(
+      from(p in Project,
+        preload: [project_users: :user],
+        order_by: p.name
+      )
+    )
+  end
+
+  @doc """
   Lists all projects that have history retention
   """
   @spec list_projects_having_history_retention() :: [] | [Project.t(), ...]

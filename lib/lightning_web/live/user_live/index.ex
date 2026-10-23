@@ -127,17 +127,17 @@ defmodule LightningWeb.UserLive.Index do
   end
 
   # The dialog can be opened on any id, so the checks the schedule
-  # changeset makes are made here too; the activity check is fresh, as a
-  # run may have been created since the dialog opened.
+  # changeset makes are made again when the account is purged; the activity
+  # check is fresh, as a run may have been created since the dialog opened.
   defp purge(socket, user, email) do
-    cond do
-      user.role == :superuser ->
+    case Accounts.purge_confirmed_user(user, email) do
+      {:error, :superuser} ->
         reply_error(socket, "You can't delete a superuser account.")
 
-      email != user.email ->
+      {:error, :email_mismatch} ->
         reply_error(socket, "This email doesn't match your current email")
 
-      Accounts.has_activity_in_projects?(user) ->
+      {:error, :has_activity} ->
         {:reply, %{},
          socket
          |> put_flash(
@@ -146,8 +146,8 @@ defmodule LightningWeb.UserLive.Index do
          )
          |> push_navigate(to: ~p"/settings/users")}
 
-      true ->
-        purged(socket, Accounts.purge_user(user.id))
+      result ->
+        purged(socket, result)
     end
   end
 

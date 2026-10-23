@@ -4,13 +4,11 @@ defmodule LightningWeb.CollectionLive.Index do
   on_mount {LightningWeb.Hooks, :ensure_admin}
 
   alias Lightning.Collections
-  alias Lightning.Collections.Collection
   alias Lightning.Extensions.Message
   alias Lightning.Helpers
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
   alias Lightning.Projects
-  alias Lightning.Repo
 
   require Logger
 
@@ -87,11 +85,9 @@ defmodule LightningWeb.CollectionLive.Index do
   end
 
   defp fetch_collection(socket, id) do
-    with {:ok, uuid} <- Ecto.UUID.cast(id),
-         %Collection{} = collection <- Repo.get(Collection, uuid) do
-      {:ok, collection}
-    else
-      _ -> reply_error(socket, "Collection not found")
+    case Collections.get_collection_by_id(id) do
+      {:ok, collection} -> {:ok, collection}
+      {:error, :not_found} -> reply_error(socket, "Collection not found")
     end
   end
 

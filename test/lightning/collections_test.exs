@@ -116,6 +116,23 @@ defmodule Lightning.CollectionsTest do
     end
   end
 
+  describe "get_collection_by_id/1" do
+    test "returns the collection with the given id" do
+      %{id: id} = insert(:collection)
+
+      assert {:ok, %Collection{id: ^id}} = Collections.get_collection_by_id(id)
+    end
+
+    test "returns not_found for an unknown id, a non-UUID or a non-string" do
+      assert {:error, :not_found} =
+               Collections.get_collection_by_id(Ecto.UUID.generate())
+
+      assert {:error, :not_found} = Collections.get_collection_by_id("nope")
+      assert {:error, :not_found} = Collections.get_collection_by_id(nil)
+      assert {:error, :not_found} = Collections.get_collection_by_id(%{})
+    end
+  end
+
   describe "create_collection/2" do
     test "creates a new collection" do
       %{id: project_id} = insert(:project)

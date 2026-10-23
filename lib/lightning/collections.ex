@@ -87,6 +87,22 @@ defmodule Lightning.Collections do
   end
 
   @doc """
+  Looks up a collection by its id.
+
+  An id that is not a UUID is the same as one that matches nothing.
+  """
+  @spec get_collection_by_id(term()) ::
+          {:ok, Collection.t()} | {:error, :not_found}
+  def get_collection_by_id(id) do
+    with {:ok, uuid} <- Ecto.UUID.cast(id),
+         %Collection{} = collection <- Repo.get(Collection, uuid) do
+      {:ok, collection}
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @doc """
   Creates a new collection with the given attributes.
 
   ## Parameters

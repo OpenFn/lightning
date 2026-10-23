@@ -571,4 +571,26 @@ defmodule Lightning.Runs do
     |> order_by([{^order, :timestamp}])
     |> Repo.stream()
   end
+
+  @doc """
+  Calls `fun` with each chunk of up to `chunk_size` log lines of the run, in
+  timestamp order. The lines are streamed inside a transaction, so `fun` runs
+  within it.
+  """
+  @spec each_log_line_chunk(
+          Run.t(),
+          pos_integer(),
+          ([LogLine.t()] -> any())
+        ) :: :ok
+  def each_log_line_chunk(run, chunk_size, fun) do
+    {:ok, _} =
+      Repo.transaction(fn ->
+        get_log_lines(run)
+        |> Stream.chunk_every(chunk_size)
+        |> Stream.each(fun)
+        |> Stream.run()
+      end)
+
+    :ok
+  end
 end
