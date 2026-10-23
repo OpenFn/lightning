@@ -265,6 +265,51 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
     end
   end
 
+  describe "unsaved_job_session/1" do
+    test "finds a job-code session by its unsaved job's id" do
+      job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          session_type: "job_code",
+          job_id: nil,
+          meta: %{"unsaved_job" => %{"id" => job_id}}
+        )
+
+      assert AiAssistant.unsaved_job_session(job_id).id == session.id
+    end
+
+    test "finds a job-code session by its saved job" do
+      job = insert(:job)
+      session = insert(:chat_session, session_type: "job_code", job: job)
+
+      assert AiAssistant.unsaved_job_session(job.id).id == session.id
+    end
+
+    test "returns nil when no job-code session names the job" do
+      job_id = Ecto.UUID.generate()
+
+      insert(:chat_session,
+        session_type: "workflow_template",
+        meta: %{"unsaved_job" => %{"id" => job_id}}
+      )
+
+      assert AiAssistant.unsaved_job_session(job_id) == nil
+    end
+
+    test "returns nil when job-code sessions name only other jobs" do
+      insert(:chat_session, session_type: "job_code", job: insert(:job))
+
+      insert(:chat_session,
+        session_type: "job_code",
+        job_id: nil,
+        meta: %{"unsaved_job" => %{"id" => Ecto.UUID.generate()}}
+      )
+
+      assert AiAssistant.unsaved_job_session(Ecto.UUID.generate()) == nil
+    end
+  end
+
   describe "cleanup_unsaved_job_sessions/1" do
     test "cleans up sessions when workflow is saved with matching jobs" do
       user = insert(:user)
