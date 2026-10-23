@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.20.0-pre] - 2026-10-23
+
+### Added
+
 - Slash-command skills (`/design`, `/diagnose`, `/qa`) in the global AI
   assistant, and the assistant's conversation history is now stored as Apollo
   returns it. Needs the matching Apollo release first.
