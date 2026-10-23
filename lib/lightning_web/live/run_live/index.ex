@@ -897,16 +897,20 @@ defmodule LightningWeb.RunLive.Index do
 
   defp on_this_page(_socket, _ids), do: :not_found
 
+  # A new work order belongs at the top of the first page when the newest
+  # come first; anywhere else it only adds to the count. The page keeps its
+  # size, which the page links are counted from.
   defp append_to_page(socket, workorder) do
-    %{page: page, async_page: async_page} = socket.assigns
+    %{page: page, async_page: async_page, filters: filters} = socket.assigns
+
+    entries =
+      if page.page_number == 1 and
+           Map.get(filters, "sort_direction", "desc") == "desc",
+         do: Enum.take([workorder | page.entries], page.page_size),
+         else: page.entries
 
     new_page =
-      %{
-        page
-        | entries: [workorder] ++ page.entries,
-          page_size: page.page_size + 1,
-          total_entries: page.total_entries + 1
-      }
+      %{page | entries: entries, total_entries: page.total_entries + 1}
 
     socket
     |> report_unknown_kills([workorder])
