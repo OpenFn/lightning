@@ -9,7 +9,7 @@ defmodule LightningWeb.DataclipController do
   alias Lightning.Runs
   alias LightningWeb.WorkflowLive.NewManualRun
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback LightningWeb.BrowserFallbackController
 
   @max_age 86_400
 
