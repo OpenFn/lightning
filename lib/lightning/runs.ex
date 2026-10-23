@@ -7,8 +7,10 @@ defmodule Lightning.Runs do
   import Ecto.Query
 
   alias Ecto.Multi
+  alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.LogLine
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Runs.Events
@@ -300,7 +302,7 @@ defmodule Lightning.Runs do
         |> if do
           []
         else
-          [{:step_id, "must be associated with the run"}]
+          [{:step_id, {"must be associated with the run", code: :not_found}}]
         end
       end
     end)
@@ -364,7 +366,7 @@ defmodule Lightning.Runs do
     if step_id in valid_step_ids do
       []
     else
-      [{:step_id, "must be associated with the run"}]
+      [{:step_id, {"must be associated with the run", code: :not_found}}]
     end
   end
 
@@ -542,21 +544,16 @@ defmodule Lightning.Runs do
   defdelegate subscribe(run), to: Events
 
   @doc """
-  Returns a query for runs belonging to a specific project
+  A page of the runs of `project`, or of every project `user` may access,
+  narrowed by `filters` (see `Lightning.Invocation.Query.filter_runs/2`).
   """
-  @spec runs_for_project_query(Lightning.Projects.Project.t()) ::
-          Ecto.Queryable.t()
-  def runs_for_project_query(%Lightning.Projects.Project{} = project) do
-    Lightning.Invocation.Query.runs_for(project)
-  end
-
-  @doc """
-  Returns a query for runs accessible to a user
-  """
-  @spec runs_for_user_query(Lightning.Accounts.User.t()) ::
-          Ecto.Queryable.t()
-  def runs_for_user_query(%Lightning.Accounts.User{} = user) do
-    Lightning.Invocation.Query.runs_for(user)
+  @spec paginate_runs_for(Project.t() | User.t(), map(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_runs_for(project_or_user, filters, page) do
+    project_or_user
+    |> Lightning.Invocation.Query.runs_for()
+    |> Lightning.Invocation.Query.filter_runs(filters)
+    |> Repo.paginate(page)
   end
 
   @spec get_project_id_for_run(Run.t()) :: Ecto.UUID.t() | nil

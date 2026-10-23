@@ -1,16 +1,17 @@
 defmodule LightningWeb.API.RegistrationControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  import LightningWeb.API.ProblemHelpers
   import Mox
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
 
-  test "create", %{conn: conn} do
+  test "create with no extension is 501 not_implemented", %{conn: conn} do
     conn = post(conn, ~p"/api/users/register")
 
-    assert %{"error" => "Not Implemented"} == json_response(conn, 501)
+    assert_problem(conn, 501, :not_implemented, [])
   end
 
   test "create with valid extension", %{conn: conn} do

@@ -316,4 +316,60 @@ defmodule LightningWeb.WorkerChannelTest do
       assert_reply ref, :ok, %{runs: [%{"id" => ^run_id3}]}
     end
   end
+
+  defmodule RefusingRunQueue do
+    def claim(_demand, _worker_name, _queues) do
+      {:error,
+       %Lightning.Run{}
+       |> Ecto.Changeset.change()
+       |> Ecto.Changeset.add_error(:worker_name, "can't be blank")
+       |> Ecto.Changeset.add_error(
+         :worker_name,
+         "should be at most %{count} character(s)",
+         count: 10,
+         validation: :length,
+         kind: :max,
+         type: :string
+       )}
+    end
+  end
+
+  describe "a refused claim" do
+    # The run queue adapter is resolved once and cached in :persistent_term, so
+    # the refusing adapter is swapped in there. Safe only because this module
+    # is async: false.
+    setup do
+      key = {Lightning.Services.AdapterHelper, :run_queue}
+      original = :persistent_term.get(key, nil)
+      :persistent_term.put(key, RefusingRunQueue)
+
+      on_exit(fn ->
+        if original,
+          do: :persistent_term.put(key, original),
+          else: :persistent_term.erase(key)
+      end)
+
+      {:ok, _, socket} =
+        ws_worker_socket()
+        |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue")
+
+      %{socket: socket}
+    end
+
+    test "replies with the changeset's errors as %{field => [message]}", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "claim", %{"demand" => 1, "worker_name" => "my.pod.name"})
+
+      assert_reply ref, :error, errors
+
+      assert errors == %{
+               worker_name: [
+                 "should be at most 10 character(s)",
+                 "This field can't be blank."
+               ]
+             }
+    end
+  end
 end

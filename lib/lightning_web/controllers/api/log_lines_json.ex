@@ -5,7 +5,7 @@ defmodule LightningWeb.API.LogLinesJSON do
 
   @fields ~w(source level message timestamp step_id run_id)a
 
-  def render("index.json", %{page: page, conn: conn}) do
+  def render("index.json", %{page: page, filters: filters, conn: conn}) do
     %{
       data: Enum.map(page.entries, &resource(conn, &1)),
       included: [],
@@ -15,11 +15,7 @@ defmodule LightningWeb.API.LogLinesJSON do
         page_number: page.page_number,
         page_size: page.page_size
       },
-      links:
-        %{
-          self: url_for(conn)
-        }
-        |> Map.merge(pagination_links(conn, page))
+      links: pagination_links(conn, page, filters)
     }
   end
 

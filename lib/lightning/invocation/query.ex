@@ -6,6 +6,7 @@ defmodule Lightning.Invocation.Query do
 
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Project
   alias Lightning.Run
@@ -93,141 +94,57 @@ defmodule Lightning.Invocation.Query do
     )
   end
 
+  @run_filters %{
+    inserted_after: :utc_datetime_usec,
+    inserted_before: :utc_datetime_usec,
+    updated_after: :utc_datetime_usec,
+    updated_before: :utc_datetime_usec,
+    project_id: Ecto.UUID,
+    workflow_id: Ecto.UUID,
+    work_order_id: Ecto.UUID,
+    state: {:array, :string}
+  }
+
   @doc """
-  Validate datetime parameters for filtering
+  The filters `filter_runs/2` takes, each with its type.
   """
-  @spec validate_datetime_params(map(), list(String.t())) ::
-          :ok | {:error, String.t()}
-  def validate_datetime_params(params, keys) do
-    keys
-    |> Enum.find_value(fn key ->
-      case params[key] do
-        nil ->
-          nil
-
-        value ->
-          case parse_datetime(value) do
-            {:ok, _} ->
-              nil
-
-            :error ->
-              {:error, "Invalid datetime format for '#{key}': #{inspect(value)}"}
-          end
-      end
-    end)
-    |> case do
-      nil -> :ok
-      error -> error
-    end
-  end
+  @spec run_filter_types() :: %{atom() => Ecto.Type.t()}
+  def run_filter_types, do: @run_filters
 
   @doc """
-  Filter runs by inserted_at date range
-  """
-  @spec filter_runs_by_date(Ecto.Queryable.t(), map()) :: Ecto.Queryable.t()
-  def filter_runs_by_date(query, params) do
-    query
-    |> filter_by_inserted_after(params["inserted_after"])
-    |> filter_by_inserted_before(params["inserted_before"])
-    |> filter_by_updated_after(params["updated_after"])
-    |> filter_by_updated_before(params["updated_before"])
-  end
-
-  @doc """
-  Filter runs by various criteria
+  Narrows a query of runs by `filters`, keyed and typed as
+  `run_filter_types/0` says.
   """
   @spec filter_runs(Ecto.Queryable.t(), map()) :: Ecto.Queryable.t()
-  def filter_runs(query, params) do
-    query
-    |> filter_runs_by_date(params)
-    |> filter_runs_by_project(params["project_id"])
-    |> filter_runs_by_workflow(params["workflow_id"])
-    |> filter_runs_by_work_order(params["work_order_id"])
-    |> filter_runs_by_state(params["state"])
-  end
+  def filter_runs(query, filters),
+    do: Enum.reduce(filters, query, &where_run/2)
 
-  defp filter_runs_by_project(query, nil), do: query
+  defp where_run({:project_id, id}, query),
+    do: from([workflow: w] in query, where: w.project_id == ^id)
 
-  defp filter_runs_by_project(query, project_id) do
-    from([workflow: w] in query, where: w.project_id == ^project_id)
-  end
+  defp where_run({:workflow_id, id}, query),
+    do: from([workflow: w] in query, where: w.id == ^id)
 
-  defp filter_runs_by_workflow(query, nil), do: query
+  defp where_run({:work_order_id, id}, query),
+    do: from([work_order: wo] in query, where: wo.id == ^id)
 
-  defp filter_runs_by_workflow(query, workflow_id) do
-    from([workflow: w] in query, where: w.id == ^workflow_id)
-  end
+  defp where_run({:state, states}, query),
+    do: from(r in query, where: r.state in ^states)
 
-  defp filter_runs_by_work_order(query, nil), do: query
+  defp where_run(timestamp_filter, query),
+    do: where_timestamps(timestamp_filter, query)
 
-  defp filter_runs_by_work_order(query, work_order_id) do
-    from([work_order: wo] in query, where: wo.id == ^work_order_id)
-  end
+  defp where_timestamps({:inserted_after, at}, query),
+    do: from(q in query, where: q.inserted_at >= ^at)
 
-  @valid_run_states Lightning.Run.states() |> Enum.map(&to_string/1)
+  defp where_timestamps({:inserted_before, at}, query),
+    do: from(q in query, where: q.inserted_at <= ^at)
 
-  defp filter_runs_by_state(query, nil), do: query
+  defp where_timestamps({:updated_after, at}, query),
+    do: from(q in query, where: q.updated_at >= ^at)
 
-  defp filter_runs_by_state(query, state) when is_binary(state) do
-    states =
-      state
-      |> String.split(",", trim: true)
-      |> Enum.map(&String.to_existing_atom/1)
-
-    from(r in query, where: r.state in ^states)
-  end
-
-  @doc """
-  Validates the `state` query parameter against known run states.
-
-  Returns `:ok` or `{:error, message}`.
-  """
-  @spec validate_run_state_param(map()) :: :ok | {:error, String.t()}
-  def validate_run_state_param(%{"state" => state}) when is_binary(state) do
-    invalid =
-      state
-      |> String.split(",", trim: true)
-      |> Enum.reject(&(&1 in @valid_run_states))
-
-    case invalid do
-      [] ->
-        :ok
-
-      bad ->
-        {:error,
-         "Invalid state filter: #{inspect(bad)}. Valid states are: #{Enum.join(@valid_run_states, ", ")}"}
-    end
-  end
-
-  def validate_run_state_param(_params), do: :ok
-
-  defp filter_by_inserted_after(query, nil), do: query
-
-  defp filter_by_inserted_after(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from(r in query, where: r.inserted_at >= ^datetime)
-  end
-
-  defp filter_by_inserted_before(query, nil), do: query
-
-  defp filter_by_inserted_before(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from(r in query, where: r.inserted_at <= ^datetime)
-  end
-
-  defp filter_by_updated_after(query, nil), do: query
-
-  defp filter_by_updated_after(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from(r in query, where: r.updated_at >= ^datetime)
-  end
-
-  defp filter_by_updated_before(query, nil), do: query
-
-  defp filter_by_updated_before(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from(r in query, where: r.updated_at <= ^datetime)
-  end
+  defp where_timestamps({:updated_before, at}, query),
+    do: from(q in query, where: q.updated_at <= ^at)
 
   @doc """
   Steps for a specific user
@@ -373,135 +290,45 @@ defmodule Lightning.Invocation.Query do
     )
   end
 
-  @doc """
-  Filter work orders by date range
-  """
-  @spec filter_work_orders_by_date(Ecto.Queryable.t(), map()) ::
-          Ecto.Queryable.t()
-  def filter_work_orders_by_date(query, params) do
-    query
-    |> filter_wo_by_inserted_after(params["inserted_after"])
-    |> filter_wo_by_inserted_before(params["inserted_before"])
-    |> filter_wo_by_updated_after(params["updated_after"])
-    |> filter_wo_by_updated_before(params["updated_before"])
-  end
+  @work_order_filters %{
+    id: {:array, Ecto.UUID},
+    inserted_after: :utc_datetime_usec,
+    inserted_before: :utc_datetime_usec,
+    updated_after: :utc_datetime_usec,
+    updated_before: :utc_datetime_usec,
+    project_id: Ecto.UUID,
+    workflow_id: Ecto.UUID,
+    state: {:array, :string}
+  }
 
   @doc """
-  Filter work orders by various criteria
+  The filters `filter_work_orders/2` takes, each with its type.
+  """
+  @spec work_order_filter_types() :: %{atom() => Ecto.Type.t()}
+  def work_order_filter_types, do: @work_order_filters
+
+  @doc """
+  Narrows a query of work orders by `filters`, keyed and typed as
+  `work_order_filter_types/0` says.
   """
   @spec filter_work_orders(Ecto.Queryable.t(), map()) :: Ecto.Queryable.t()
-  def filter_work_orders(query, params) do
-    query
-    |> filter_work_orders_by_ids(params["id"])
-    |> filter_work_orders_by_date(params)
-    |> filter_work_orders_by_project(params["project_id"])
-    |> filter_work_orders_by_workflow(params["workflow_id"])
-    |> filter_work_orders_by_state(params["state"])
-  end
+  def filter_work_orders(query, filters),
+    do: Enum.reduce(filters, query, &where_work_order/2)
 
-  defp filter_work_orders_by_ids(query, nil), do: query
+  defp where_work_order({:id, ids}, query),
+    do: from(wo in query, where: wo.id in ^ids)
 
-  defp filter_work_orders_by_ids(query, ids) when is_list(ids) do
-    from(wo in query, where: wo.id in ^ids)
-  end
+  defp where_work_order({:project_id, id}, query),
+    do: from([workflow: w] in query, where: w.project_id == ^id)
 
-  defp filter_work_orders_by_ids(query, id) when is_binary(id) do
-    case String.split(id, ",", trim: true) do
-      [single_id] ->
-        from(wo in query, where: wo.id == ^single_id)
+  defp where_work_order({:workflow_id, id}, query),
+    do: from([workflow: w] in query, where: w.id == ^id)
 
-      ids ->
-        from(wo in query, where: wo.id in ^ids)
-    end
-  end
+  defp where_work_order({:state, states}, query),
+    do: from(wo in query, where: wo.state in ^states)
 
-  defp filter_work_orders_by_project(query, nil), do: query
-
-  defp filter_work_orders_by_project(query, project_id) do
-    from([workflow: w] in query, where: w.project_id == ^project_id)
-  end
-
-  defp filter_work_orders_by_workflow(query, nil), do: query
-
-  defp filter_work_orders_by_workflow(query, workflow_id) do
-    from([workflow: w] in query, where: w.id == ^workflow_id)
-  end
-
-  @valid_states Lightning.WorkOrder.states() |> Enum.map(&to_string/1)
-
-  defp filter_work_orders_by_state(query, nil), do: query
-
-  defp filter_work_orders_by_state(query, state) when is_binary(state) do
-    states =
-      state
-      |> String.split(",", trim: true)
-      |> Enum.map(&String.to_existing_atom/1)
-
-    from(wo in query, where: wo.state in ^states)
-  end
-
-  @doc """
-  Validates the `state` query parameter against known work order states.
-
-  Returns `:ok` or `{:error, message}`.
-  """
-  @spec validate_state_param(map()) :: :ok | {:error, String.t()}
-  def validate_state_param(%{"state" => state}) when is_binary(state) do
-    invalid =
-      state
-      |> String.split(",", trim: true)
-      |> Enum.reject(&(&1 in @valid_states))
-
-    case invalid do
-      [] ->
-        :ok
-
-      bad ->
-        {:error,
-         "Invalid state filter: #{inspect(bad)}. Valid states are: #{Enum.join(@valid_states, ", ")}"}
-    end
-  end
-
-  def validate_state_param(_params), do: :ok
-
-  defp filter_wo_by_inserted_after(query, nil), do: query
-
-  defp filter_wo_by_inserted_after(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from(wo in query, where: wo.inserted_at >= ^datetime)
-  end
-
-  defp filter_wo_by_inserted_before(query, nil), do: query
-
-  defp filter_wo_by_inserted_before(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from(wo in query, where: wo.inserted_at <= ^datetime)
-  end
-
-  defp filter_wo_by_updated_after(query, nil), do: query
-
-  defp filter_wo_by_updated_after(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from(wo in query, where: wo.updated_at >= ^datetime)
-  end
-
-  defp filter_wo_by_updated_before(query, nil), do: query
-
-  defp filter_wo_by_updated_before(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from(wo in query, where: wo.updated_at <= ^datetime)
-  end
-
-  defp parse_datetime(nil), do: :error
-
-  defp parse_datetime(datetime_string) when is_binary(datetime_string) do
-    case DateTime.from_iso8601(datetime_string) do
-      {:ok, datetime, _offset} -> {:ok, datetime}
-      {:error, _} -> :error
-    end
-  end
-
-  defp parse_datetime(_), do: :error
+  defp where_work_order(timestamp_filter, query),
+    do: where_timestamps(timestamp_filter, query)
 
   @doc """
   Log lines for a specific user, filtered by their accessible projects
@@ -510,7 +337,7 @@ defmodule Lightning.Invocation.Query do
   def log_lines_for(%User{} = user) do
     projects = Ecto.assoc(user, :projects) |> select([:id])
 
-    from(log in Lightning.Invocation.LogLine,
+    from(log in LogLine,
       as: :log,
       join: r in assoc(log, :run),
       as: :run,
@@ -524,82 +351,56 @@ defmodule Lightning.Invocation.Query do
     )
   end
 
+  @log_line_filters %{
+    timestamp_after: :utc_datetime_usec,
+    timestamp_before: :utc_datetime_usec,
+    project_id: Ecto.UUID,
+    workflow_id: Ecto.UUID,
+    job_id: Ecto.UUID,
+    work_order_id: Ecto.UUID,
+    run_id: Ecto.UUID,
+    level: :string
+  }
+
   @doc """
-  Filter log lines by various criteria
+  The filters `filter_log_lines/2` takes, each with its type.
+  """
+  @spec log_line_filter_types() :: %{atom() => Ecto.Type.t()}
+  def log_line_filter_types, do: @log_line_filters
+
+  @doc """
+  Narrows a query of log lines by `filters`, keyed and typed as
+  `log_line_filter_types/0` says.
   """
   @spec filter_log_lines(Ecto.Queryable.t(), map()) :: Ecto.Queryable.t()
-  def filter_log_lines(query, params) do
-    query
-    |> filter_log_by_timestamp_after(params["timestamp_after"])
-    |> filter_log_by_timestamp_before(params["timestamp_before"])
-    |> filter_log_by_project(params["project_id"])
-    |> filter_log_by_workflow(params["workflow_id"])
-    |> filter_log_by_job(params["job_id"])
-    |> filter_log_by_work_order(params["work_order_id"])
-    |> filter_log_by_run(params["run_id"])
-    |> filter_log_by_level(params["level"])
-  end
+  def filter_log_lines(query, filters),
+    do: Enum.reduce(filters, query, &where_log_line/2)
 
-  defp filter_log_by_timestamp_after(query, nil), do: query
+  defp where_log_line({:timestamp_after, at}, query),
+    do: from([log: log] in query, where: log.timestamp >= ^at)
 
-  defp filter_log_by_timestamp_after(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from([log: log] in query, where: log.timestamp >= ^datetime)
-  end
+  defp where_log_line({:timestamp_before, at}, query),
+    do: from([log: log] in query, where: log.timestamp <= ^at)
 
-  defp filter_log_by_timestamp_before(query, nil), do: query
+  defp where_log_line({:project_id, id}, query),
+    do: from([workflow: w] in query, where: w.project_id == ^id)
 
-  defp filter_log_by_timestamp_before(query, date_string) do
-    {:ok, datetime} = parse_datetime(date_string)
-    from([log: log] in query, where: log.timestamp <= ^datetime)
-  end
+  defp where_log_line({:workflow_id, id}, query),
+    do: from([work_order: wo] in query, where: wo.workflow_id == ^id)
 
-  defp filter_log_by_project(query, nil), do: query
-
-  defp filter_log_by_project(query, project_id) do
-    from([workflow: w] in query, where: w.project_id == ^project_id)
-  end
-
-  defp filter_log_by_workflow(query, nil), do: query
-
-  defp filter_log_by_workflow(query, workflow_id) do
-    from([work_order: wo] in query, where: wo.workflow_id == ^workflow_id)
-  end
-
-  defp filter_log_by_job(query, nil), do: query
-
-  defp filter_log_by_job(query, job_id) do
+  defp where_log_line({:job_id, id}, query) do
     from([log: log] in query,
       join: s in assoc(log, :step),
-      where: s.job_id == ^job_id
+      where: s.job_id == ^id
     )
   end
 
-  defp filter_log_by_work_order(query, nil), do: query
+  defp where_log_line({:work_order_id, id}, query),
+    do: from([run: r] in query, where: r.work_order_id == ^id)
 
-  defp filter_log_by_work_order(query, work_order_id) do
-    from([run: r] in query, where: r.work_order_id == ^work_order_id)
-  end
+  defp where_log_line({:run_id, id}, query),
+    do: from([log: log] in query, where: log.run_id == ^id)
 
-  defp filter_log_by_run(query, nil), do: query
-
-  defp filter_log_by_run(query, run_id) do
-    from([log: log] in query, where: log.run_id == ^run_id)
-  end
-
-  defp filter_log_by_level(query, nil), do: query
-
-  defp filter_log_by_level(query, level) when is_binary(level) do
-    level_atom = String.to_existing_atom(level)
-
-    if level_atom in [:success, :always, :info, :warn, :error, :debug] do
-      from([log: log] in query, where: log.level == ^level_atom)
-    else
-      query
-    end
-  rescue
-    ArgumentError -> query
-  end
-
-  defp filter_log_by_level(query, _), do: query
+  defp where_log_line({:level, level}, query),
+    do: from([log: log] in query, where: log.level == ^level)
 end

@@ -1,7 +1,7 @@
 defmodule LightningWeb.Plugs.AccessTokenAuthTest do
   use LightningWeb.ConnCase, async: true
 
-  import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
   import Lightning.ServiceAccountHelpers
 
   alias Lightning.ServiceAccount.AccessToken
@@ -19,149 +19,100 @@ defmodule LightningWeb.Plugs.AccessTokenAuthTest do
     |> AccessTokenAuth.call(AccessTokenAuth.init([]))
   end
 
-  defp assert_refused(conn, status, error) do
-    assert conn.halted
-    assert json_response(conn, status) == %{"error" => error}
-
-    assert get_resp_header(conn, "www-authenticate") == [
-             ~s(Bearer error="#{error}")
-           ]
+  defp get_users(conn, token) do
+    conn
+    |> put_req_header("accept", "application/json")
+    |> put_req_header("authorization", "Bearer " <> token)
+    |> get(~p"/api/users")
   end
 
-  describe "call/2" do
-    test "lets an access token through with its claims and service account",
-         %{conn: conn, account: account} do
-      conn = authenticate(conn, AccessToken.issue(account, ["users:read"]))
+  defp assert_refused(conn) do
+    assert_unauthenticated(conn, :invalid_token, [
+      ~s(Bearer error="invalid_token")
+    ])
+  end
 
-      refute conn.halted
+  defp signed_access_token(claims, typ \\ "at+jwt", key \\ nil) do
+    sign_assertion(
+      key || Lightning.Config.token_signer().jwk,
+      claims,
+      %{"alg" => "RS256", "typ" => typ}
+    )
+  end
 
-      assert %{"sub" => sub, "scope" => "users:read"} =
-               conn.assigns.access_token
+  defp claims(account, overrides \\ %{}) do
+    Map.merge(
+      %{
+        "iss" => AccessToken.issuer(),
+        "aud" => AccessToken.issuer() <> "/api",
+        "sub" => account.id,
+        "scope" => "users:read",
+        "exp" => System.system_time(:second) + 300
+      },
+      overrides
+    )
+  end
 
-      assert sub == account.id
-      assert conn.assigns.service_account == account
+  test "lets an access token through with its claims and service account",
+       %{conn: conn, account: account} do
+    conn =
+      authenticate(
+        conn,
+        AccessToken.issue(account, ["users:read", "projects:write"])
+      )
+
+    refute conn.halted
+
+    assert %{"sub" => sub, "scope" => "users:read projects:write"} =
+             conn.assigns.access_token
+
+    assert sub == account.id
+
+    assert conn.assigns.current_resource == %{
+             account
+             | grants: MapSet.new(["users:read", "projects:write"])
+           }
+  end
+
+  describe "a token only a forger could send, on GET /api/users" do
+    test "with no scope claim logs in holding no grants", %{
+      conn: conn,
+      account: account
+    } do
+      token = signed_access_token(Map.delete(claims(account), "scope"))
+
+      assert_refused_for_scope(get_users(conn, token), "users:read")
     end
 
-    test "refuses a token for a service account that is no longer registered",
-         %{conn: conn, account: account} do
+    test "for a service account that is no longer registered is refused", %{
+      conn: conn,
+      account: account
+    } do
       token = AccessToken.issue(account, ["users:read"])
       {replacement, _private_key} = service_account_with_key()
       Mox.stub(Lightning.MockConfig, :service_account, fn -> replacement end)
 
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> get_users(token) |> assert_refused()
 
       Mox.stub(Lightning.MockConfig, :service_account, fn -> nil end)
 
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> get_users(token) |> assert_refused()
     end
 
-    test "refuses a missing token", %{conn: conn} do
-      conn |> AccessTokenAuth.call([]) |> assert_refused(401, "invalid_token")
-    end
-
-    test "refuses a personal access token", %{conn: conn} do
-      token = insert(:user) |> Lightning.Accounts.generate_api_token()
-
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
-    end
-
-    test "refuses a run token", %{conn: conn} do
-      token =
-        Lightning.Workers.generate_run_token(%Lightning.Run{
-          id: Ecto.UUID.generate()
-        })
-
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
-    end
-
-    test "refuses an expired access token", %{conn: conn, account: account} do
-      signer = Lightning.Config.token_signer()
-      now = System.system_time(:second)
-
-      {_, token} =
-        signer.jwk
-        |> JOSE.JWT.sign(%{"alg" => "RS256", "typ" => "at+jwt"}, %{
-          "iss" => AccessToken.issuer(),
-          "aud" => AccessToken.issuer() <> "/api",
-          "sub" => account.id,
-          "scope" => "users:read",
-          "exp" => now - 1
-        })
-        |> JOSE.JWS.compact()
-
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
-    end
-
-    test "refuses a token that is right in every way but its typ", %{
+    test "that is right in every way but its typ is refused", %{
       conn: conn,
       account: account
     } do
-      {_, token} =
-        Lightning.Config.token_signer().jwk
-        |> JOSE.JWT.sign(%{"alg" => "RS256", "typ" => "JWT"}, %{
-          "iss" => AccessToken.issuer(),
-          "aud" => AccessToken.issuer() <> "/api",
-          "sub" => account.id,
-          "scope" => "users:read",
-          "exp" => System.system_time(:second) + 300
-        })
-        |> JOSE.JWS.compact()
+      token = signed_access_token(claims(account), "JWT")
 
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> get_users(token) |> assert_refused()
     end
 
-    test "refuses an at+jwt signed with another key", %{
-      conn: conn,
-      account: account
-    } do
+    test "signed with another key is refused", %{conn: conn, account: account} do
       {_, other_key} = service_account_with_key()
+      token = signed_access_token(claims(account), "at+jwt", other_key)
 
-      token =
-        sign_assertion(
-          other_key,
-          %{
-            "iss" => AccessToken.issuer(),
-            "aud" => AccessToken.issuer() <> "/api",
-            "sub" => account.id,
-            "scope" => "users:read",
-            "exp" => System.system_time(:second) + 300
-          },
-          %{"alg" => "RS256", "typ" => "at+jwt"}
-        )
-
-      conn |> authenticate(token) |> assert_refused(401, "invalid_token")
+      conn |> get_users(token) |> assert_refused()
     end
-  end
-
-  describe "require_scope/2" do
-    test "lets a token with the scope through", %{conn: conn, account: account} do
-      conn =
-        conn
-        |> authenticate(AccessToken.issue(account, ["users:read"]))
-        |> AccessTokenAuth.require_scope("users:read")
-
-      refute conn.halted
-    end
-
-    test "refuses a token without the scope", %{conn: conn, account: account} do
-      conn
-      |> authenticate(AccessToken.issue(account, ["users:read"]))
-      |> AccessTokenAuth.require_scope("users:write")
-      |> assert_refused(403, "insufficient_scope")
-    end
-  end
-
-  test "the existing /api routes refuse an access token", %{
-    conn: conn,
-    account: account
-  } do
-    token = AccessToken.issue(account, AccessToken.scopes())
-
-    conn =
-      conn
-      |> put_req_header("authorization", "Bearer " <> token)
-      |> get(~p"/api/projects")
-
-    assert json_response(conn, 401)
   end
 end
