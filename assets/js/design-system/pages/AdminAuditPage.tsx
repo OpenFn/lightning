@@ -4,7 +4,7 @@ import type { AuditEvent } from '@openfn/ui/types/admin.ts';
 import { designSystemPage } from '../page';
 
 /** What AuditLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   events: AuditEvent[];
   pageNumber: number;
   pageSize: number;

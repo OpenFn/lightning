@@ -9,8 +9,8 @@ import {
   isClaimed,
   keepPrerenderedRoot,
   registerComponent,
-  replaceEqualDeep,
-} from '#/react/lib';
+} from '#/react/lib/preloaded';
+import { replaceEqualDeep } from '#/react/lib/replace-equal-deep';
 
 import { useLiveViewRouter } from './router';
 
@@ -43,7 +43,7 @@ export interface PageActions {
 type Go = (path: string, opts?: { replace?: boolean }) => void;
 
 /** What the `ReactComponent` hook passes to the island. */
-interface IslandProps {
+export interface IslandProps {
   'data-props': string;
   pushEvent: (
     name: string,

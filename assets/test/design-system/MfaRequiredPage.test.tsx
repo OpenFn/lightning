@@ -1,19 +1,16 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { MfaRequiredPage } from '../../js/design-system/pages/MfaRequiredPage';
+import {
+  MfaRequiredPage,
+  type Props,
+} from '../../js/design-system/pages/MfaRequiredPage';
+
+import { renderIsland } from './renderIsland';
 
 describe('MfaRequiredPage', () => {
   test('explains the block and links to the profile', () => {
-    render(
-      <MfaRequiredPage
-        data-props="{}"
-        pushEvent={vi.fn()}
-        handleEvent={vi.fn()}
-        navigate={vi.fn()}
-        redirect={vi.fn()}
-      />
-    );
+    renderIsland<Props>(MfaRequiredPage, {});
 
     expect(
       screen.getByRole('heading', { name: 'MFA Required for Project' })

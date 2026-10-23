@@ -4,7 +4,7 @@ import type { BackupCode } from '@openfn/ui/types/tokens.ts';
 import { designSystemPage } from '../page';
 
 /** What BackupCodesLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   codes: BackupCode[];
   mfaEnabled: boolean;
 }

@@ -1,9 +1,14 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { ChannelRequestShowPage } from '../../js/design-system/pages/ChannelRequestShowPage';
+import {
+  ChannelRequestShowPage,
+  type Props,
+} from '../../js/design-system/pages/ChannelRequestShowPage';
 
-const props = {
+import { renderIsland } from './renderIsland';
+
+const props: Props = {
   project: { id: 'p1', parentId: null, color: null },
   projectLabel: 'Malawi HIV',
   request: {
@@ -35,15 +40,7 @@ const props = {
 
 describe('ChannelRequestShowPage', () => {
   test('draws the page from data-props', () => {
-    render(
-      <ChannelRequestShowPage
-        data-props={JSON.stringify(props)}
-        pushEvent={vi.fn()}
-        handleEvent={vi.fn()}
-        navigate={vi.fn()}
-        redirect={vi.fn()}
-      />
-    );
+    renderIsland<Props>(ChannelRequestShowPage, props);
     expect(screen.getByText(/Channel Request/).textContent).toContain(
       '4f1c9a8e'
     );

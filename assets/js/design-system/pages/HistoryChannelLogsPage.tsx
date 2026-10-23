@@ -5,7 +5,7 @@ import DesignSystemHistoryChannelLogsPage, {
 import { designSystemPage } from '../page';
 
 /** What RunLive.Index puts in `data-props` on the channel logs tab: the page's props as they are. */
-type Props = HistoryChannelLogsPageProps;
+export type Props = HistoryChannelLogsPageProps;
 
 /**
  * The design system's channel logs page, fed by RunLive.Index's

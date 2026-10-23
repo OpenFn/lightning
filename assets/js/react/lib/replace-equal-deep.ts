@@ -21,14 +21,16 @@ export function replaceEqualDeep(a: unknown, b: unknown): unknown {
     const aSize = array ? a.length : Object.keys(a).length;
     const bItems = array ? b : Object.keys(b);
     const bSize = bItems.length;
-    const copy = array ? [] : {};
+    const copy = (array ? [] : {}) as Record<string, unknown>;
+    const prev = a as Record<string, unknown>;
+    const next = b as Record<string, unknown>;
 
     let equalItems = 0;
 
     for (let i = 0; i < bSize; i++) {
       const key = String(array ? i : bItems[i]);
-      copy[key] = replaceEqualDeep(a[key] as unknown, b[key] as unknown);
-      if (copy[key] === a[key]) {
+      copy[key] = replaceEqualDeep(prev[key], next[key]);
+      if (copy[key] === prev[key]) {
         equalItems++;
       }
     }

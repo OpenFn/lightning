@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "$ref": "#/definitions/AuthProvider"
+    }
+  },
+  "required": ["provider"],
+  "additionalProperties": false,
+  "definitions": {
+    "AuthProvider": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": ["string", "null"]
+        },
+        "name": {
+          "type": "string"
+        },
+        "discoveryUrl": {
+          "type": "string"
+        },
+        "clientId": {
+          "type": "string"
+        },
+        "hasClientSecret": {
+          "type": "boolean"
+        },
+        "redirectHost": {
+          "type": "string"
+        },
+        "allowUnverifiedEmail": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "discoveryUrl",
+        "clientId",
+        "hasClientSecret",
+        "redirectHost",
+        "allowUnverifiedEmail"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

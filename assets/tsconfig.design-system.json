@@ -1,0 +1,13 @@
+{
+  "extends": ["@tsconfig/strictest/tsconfig.json", "./tsconfig.base.json"],
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2020", "es2022.intl", "dom", "dom.iterable"],
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"],
+    "jsx": "react-jsx"
+  },
+  "include": ["*.d.ts", "js/design-system/**/*", "test/design-system/**/*"],
+  "exclude": ["node_modules/**"]
+}

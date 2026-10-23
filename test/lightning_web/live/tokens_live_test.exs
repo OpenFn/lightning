@@ -28,7 +28,7 @@ defmodule LightningWeb.TokensLiveTest do
                page_props(token_live, "#sidebar-bridge")
 
       assert html =~ "Personal Access Tokens"
-      assert props(token_live) == %{"tokens" => [], "tokenId" => false}
+      assert props(token_live) == %{"tokens" => [], "tokenId" => nil}
     end
 
     test "Generate new token", %{conn: conn} do
@@ -165,7 +165,7 @@ defmodule LightningWeb.TokensLiveTest do
       {:ok, token_live, _html} =
         live(conn, ~p"/profile/tokens", on_error: :raise)
 
-      assert props(token_live)["tokenId"] == false
+      assert props(token_live)["tokenId"] == nil
 
       push_event(token_live, "delete_token", %{"id" => api_token.id})
 

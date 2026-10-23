@@ -9,7 +9,7 @@ import type {
 import { designSystemPage } from '../page';
 
 /** What ProjectLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   projects: AdminProjectRow[];
   /** Set while the route has the form open. */
   form: AdminProjectForm | null;

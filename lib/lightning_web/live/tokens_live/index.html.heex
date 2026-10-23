@@ -3,7 +3,7 @@
   props={
     %{
       tokens: tokens_json(@tokens),
-      tokenId: @live_action == :delete && @token_id
+      tokenId: if(@live_action == :delete, do: @token_id)
     }
   }
   banner={assigns[:banner]}

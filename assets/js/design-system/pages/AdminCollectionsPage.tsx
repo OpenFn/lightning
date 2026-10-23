@@ -7,7 +7,7 @@ import type {
 import { designSystemPage } from '../page';
 
 /** What CollectionLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   collections: AdminCollectionRow[];
   projectOptions: [label: string, value: string][];
 }

@@ -1,16 +1,15 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { AdminUsersPage } from '../../js/design-system/pages/AdminUsersPage';
+import {
+  AdminUsersPage,
+  type Props,
+} from '../../js/design-system/pages/AdminUsersPage';
 
-const props = {
+import { renderIsland } from './renderIsland';
+
+const props: Props = {
   users: [
     {
       id: 'u1',
@@ -31,20 +30,8 @@ const props = {
   },
 };
 
-const renderPage = (deleteUser = props.deleteUser) => {
-  const pushEvent = vi.fn().mockResolvedValue({});
-  const navigate = vi.fn();
-  render(
-    <AdminUsersPage
-      data-props={JSON.stringify({ ...props, deleteUser })}
-      pushEvent={pushEvent}
-      handleEvent={vi.fn()}
-      navigate={navigate}
-      redirect={vi.fn()}
-    />
-  );
-  return { pushEvent, navigate };
-};
+const renderPage = (deleteUser = props.deleteUser) =>
+  renderIsland<Props>(AdminUsersPage, { ...props, deleteUser });
 
 describe('AdminUsersPage', () => {
   test('deletes with the event the LiveView reads', async () => {

@@ -7,7 +7,7 @@ import type {
 import { designSystemPage } from '../page';
 
 /** What AuthProvidersLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   /** The configured provider, or a blank one on /new. Never the secret. */
   provider: AuthProvider;
 }

@@ -1,0 +1,285 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": ["string", "null"]
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "parentId", "color"],
+      "additionalProperties": false
+    },
+    "projectLabel": {
+      "type": "string"
+    },
+    "runId": {
+      "type": "string"
+    },
+    "loading": {
+      "type": "boolean"
+    },
+    "run": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RunDetail"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "workflow": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RunWorkflow"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/RunStep"
+      }
+    },
+    "selectedStepId": {
+      "type": ["string", "null"]
+    },
+    "inputDataclip": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/StepDataclip"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outputDataclip": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/StepDataclip"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "logLevel": {
+      "$ref": "#/definitions/LogLevel"
+    },
+    "experimentalFeatures": {
+      "type": "boolean"
+    },
+    "canRunWorkflow": {
+      "type": "boolean"
+    },
+    "canEditDataRetention": {
+      "type": "boolean"
+    },
+    "adminContacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "project",
+    "projectLabel",
+    "runId",
+    "loading",
+    "run",
+    "workflow",
+    "steps",
+    "selectedStepId",
+    "inputDataclip",
+    "outputDataclip",
+    "logLevel",
+    "experimentalFeatures",
+    "canRunWorkflow",
+    "canEditDataRetention",
+    "adminContacts"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "RunDetail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workOrderId": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/RunState"
+        },
+        "startedBy": {
+          "type": ["string", "null"]
+        },
+        "insertedAt": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": ["string", "null"]
+        },
+        "finishedAt": {
+          "type": ["string", "null"]
+        },
+        "finalDataclipId": {
+          "type": ["string", "null"]
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "lockVersion": {
+              "type": "number"
+            },
+            "insertedAt": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "lockVersion", "insertedAt"],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "workOrderId",
+        "state",
+        "startedBy",
+        "insertedAt",
+        "startedAt",
+        "finishedAt",
+        "finalDataclipId",
+        "snapshot"
+      ],
+      "additionalProperties": false
+    },
+    "RunState": {
+      "type": "string",
+      "enum": [
+        "available",
+        "claimed",
+        "started",
+        "success",
+        "failed",
+        "crashed",
+        "cancelled",
+        "killed",
+        "exception",
+        "lost"
+      ]
+    },
+    "RunWorkflow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "lockVersion": {
+          "type": "number"
+        }
+      },
+      "required": ["id", "name", "lockVersion"],
+      "additionalProperties": false
+    },
+    "RunStep": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "jobName": {
+          "type": "string"
+        },
+        "exitReason": {
+          "type": ["string", "null"],
+          "enum": [
+            "success",
+            "fail",
+            "crash",
+            "cancel",
+            "kill",
+            "exception",
+            "lost",
+            null
+          ]
+        },
+        "errorType": {
+          "type": ["string", "null"]
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "finishedAt": {
+          "type": ["string", "null"]
+        },
+        "insertedAt": {
+          "type": "string"
+        },
+        "inputDataclipId": {
+          "type": "string"
+        },
+        "outputDataclipId": {
+          "type": ["string", "null"]
+        },
+        "snapshotLockVersion": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "exitReason",
+        "finishedAt",
+        "id",
+        "inputDataclipId",
+        "insertedAt",
+        "jobId",
+        "jobName",
+        "outputDataclipId",
+        "snapshotLockVersion",
+        "startedAt"
+      ],
+      "additionalProperties": false
+    },
+    "StepDataclip": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "wiped": {
+          "type": "boolean"
+        },
+        "body": {}
+      },
+      "required": ["id", "wiped"],
+      "additionalProperties": false
+    },
+    "LogLevel": {
+      "type": "string",
+      "enum": ["debug", "info", "warn", "error"]
+    }
+  }
+}

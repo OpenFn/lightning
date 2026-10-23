@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AuditEvent"
+      }
+    },
+    "pageNumber": {
+      "type": "number"
+    },
+    "pageSize": {
+      "type": "number"
+    },
+    "totalEntries": {
+      "type": "number"
+    }
+  },
+  "required": ["events", "pageNumber", "pageSize", "totalEntries"],
+  "additionalProperties": false,
+  "definitions": {
+    "AuditEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "insertedAt": {
+          "type": "string"
+        },
+        "event": {
+          "type": "string"
+        },
+        "itemType": {
+          "type": "string"
+        },
+        "itemId": {
+          "type": "string"
+        },
+        "actorId": {
+          "type": "string"
+        },
+        "actorLabel": {
+          "type": "string"
+        },
+        "actorIdentifier": {
+          "type": ["string", "null"]
+        },
+        "changes": {
+          "type": "object",
+          "properties": {
+            "before": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/definitions/AuditValue"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "after": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/definitions/AuditValue"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": ["before", "after"],
+          "additionalProperties": false
+        },
+        "credentialBodies": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "insertedAt",
+        "event",
+        "itemType",
+        "itemId",
+        "actorId",
+        "actorLabel",
+        "actorIdentifier",
+        "changes"
+      ],
+      "additionalProperties": false
+    },
+    "AuditValue": {
+      "type": ["string", "number", "boolean", "null"]
+    }
+  }
+}

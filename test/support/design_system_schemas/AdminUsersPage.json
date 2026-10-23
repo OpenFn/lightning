@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "users": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AdminUserRow"
+      }
+    },
+    "deleteUser": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/AdminDeleteUser"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": ["users", "deleteUser"],
+  "additionalProperties": false,
+  "definitions": {
+    "AdminUserRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/UserRole"
+        },
+        "supportUser": {
+          "type": "boolean"
+        },
+        "disabled": {
+          "type": "boolean"
+        },
+        "scheduledDeletion": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "role",
+        "supportUser",
+        "disabled",
+        "scheduledDeletion"
+      ],
+      "additionalProperties": false
+    },
+    "UserRole": {
+      "type": "string",
+      "enum": ["superuser", "user"]
+    },
+    "AdminDeleteUser": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "scheduledDeletion": {
+          "type": ["string", "null"]
+        },
+        "hasActivityInProjects": {
+          "type": "boolean"
+        }
+      },
+      "required": ["id", "email", "scheduledDeletion", "hasActivityInProjects"],
+      "additionalProperties": false
+    }
+  }
+}

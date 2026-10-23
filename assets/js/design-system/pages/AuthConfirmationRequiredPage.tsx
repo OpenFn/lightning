@@ -7,7 +7,7 @@ import DesignSystemAuthConfirmationRequiredPage, {
 import { designSystemPage } from '../page';
 
 /** What UserConfirmationRequiredLive puts in `data-props`. */
-interface Props {
+export interface Props {
   email: string;
 }
 

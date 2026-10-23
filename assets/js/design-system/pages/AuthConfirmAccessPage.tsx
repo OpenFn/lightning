@@ -5,7 +5,7 @@ import DesignSystemAuthConfirmAccessPage, {
 import { designSystemPage } from '../page';
 
 /** What ReAuthenticateLive.New puts in `data-props`. */
-interface Props {
+export interface Props {
   user: { firstName: string; lastName: string; mfaEnabled: boolean };
 }
 

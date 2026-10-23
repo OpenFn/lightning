@@ -4,7 +4,7 @@ import type { AdminDeleteUser, AdminUserRow } from '@openfn/ui/types/admin.ts';
 import { designSystemPage } from '../page';
 
 /** What UserLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   users: AdminUserRow[];
   /** Set while the route has the deletion dialog open. */
   deleteUser: AdminDeleteUser | null;

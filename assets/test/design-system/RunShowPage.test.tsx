@@ -1,11 +1,16 @@
-import { act, render, screen } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { act, screen } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { RunShowPage } from '../../js/design-system/pages/RunShowPage';
+import {
+  RunShowPage,
+  type Props,
+} from '../../js/design-system/pages/RunShowPage';
+
+import { renderIsland } from './renderIsland';
 
 const RUN_ID = '5e9a1c2b-1111-4a4a-8b8b-0123456789ab';
 
-const props = {
+const props: Props = {
   project: { id: 'p1', parentId: null, color: null },
   projectLabel: 'Malawi HIV',
   runId: RUN_ID,
@@ -39,22 +44,7 @@ const props = {
 
 describe('RunShowPage', () => {
   test('draws the run from data-props and shows the log lines the LiveView pushes', () => {
-    const handlers: Record<string, (payload: unknown) => void> = {};
-    const handleEvent = vi.fn(
-      (name: string, callback: (payload: unknown) => void) => {
-        handlers[name] = callback;
-        return () => {};
-      }
-    );
-    render(
-      <RunShowPage
-        data-props={JSON.stringify(props)}
-        pushEvent={vi.fn()}
-        handleEvent={handleEvent}
-        navigate={vi.fn()}
-        redirect={vi.fn()}
-      />
-    );
+    const { handleEvent } = renderIsland<Props>(RunShowPage, props);
     expect(
       document.getElementById(`run-detail-${RUN_ID}`)!.textContent
     ).toContain('Register patients');
@@ -68,6 +58,7 @@ describe('RunShowPage', () => {
       timestamp,
       step_id: null,
     });
+    const handlers = Object.fromEntries(handleEvent.mock.calls);
     const push = handlers[`logs-${RUN_ID}`];
     expect(push).toBeDefined();
     act(() => {

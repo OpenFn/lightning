@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { designSystemPage } from '../page';
 
 /** What WorkflowLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   project: Pick<Project, 'id' | 'parentId' | 'color'>;
   projectLabel: string;
   period: string;

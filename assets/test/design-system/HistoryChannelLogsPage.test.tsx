@@ -1,9 +1,14 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { HistoryChannelLogsPage } from '../../js/design-system/pages/HistoryChannelLogsPage';
+import {
+  HistoryChannelLogsPage,
+  type Props,
+} from '../../js/design-system/pages/HistoryChannelLogsPage';
 
-const props = {
+import { renderIsland } from './renderIsland';
+
+const props: Props = {
   project: { id: 'p1', parentId: null, color: null },
   projectLabel: 'Malawi HIV',
   channelsEnabled: true,
@@ -26,16 +31,7 @@ const props = {
 
 describe('HistoryChannelLogsPage', () => {
   test('draws the page from data-props and patches for a new page', () => {
-    const navigate = vi.fn();
-    render(
-      <HistoryChannelLogsPage
-        data-props={JSON.stringify(props)}
-        pushEvent={vi.fn()}
-        handleEvent={vi.fn()}
-        navigate={navigate}
-        redirect={vi.fn()}
-      />
-    );
+    renderIsland<Props>(HistoryChannelLogsPage, props);
     expect(
       document.getElementById('channel-filter-chip')!.textContent
     ).toContain('Channel is channel-one');

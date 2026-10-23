@@ -47,14 +47,17 @@ defmodule LightningWeb.DashboardLiveTest do
       assert html =~ ~s(id="side-menu")
       assert html =~ "User Profile"
 
+      props = page_props(index_live, "#sidebar-bridge")
+
       assert %{
                "variant" => "profile",
-               "project" => nil,
                "canAccessAdmin" => false,
                "collapsed" => false,
                "theme" => "primary-theme",
                "user" => %{"email" => email, "firstName" => first_name}
-             } = page_props(index_live, "#sidebar-bridge")
+             } = props
+
+      refute Map.has_key?(props, "project")
 
       assert email == user.email
       assert first_name == user.first_name

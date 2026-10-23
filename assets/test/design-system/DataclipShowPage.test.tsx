@@ -1,11 +1,16 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { DataclipShowPage } from '../../js/design-system/pages/DataclipShowPage';
+import {
+  DataclipShowPage,
+  type Props,
+} from '../../js/design-system/pages/DataclipShowPage';
+
+import { renderIsland } from './renderIsland';
 
 const ID = '9a8b7c6d-3333-4a4a-8b8b-0123456789ab';
 
-const props = {
+const props: Props = {
   project: { id: 'p1', parentId: null, color: null },
   projectLabel: 'Malawi HIV',
   dataclip: {
@@ -16,17 +21,6 @@ const props = {
     wipedAt: null,
   },
 };
-
-const renderIsland = (p: object) =>
-  render(
-    <DataclipShowPage
-      data-props={JSON.stringify(p)}
-      pushEvent={vi.fn()}
-      handleEvent={vi.fn(() => () => {})}
-      navigate={vi.fn()}
-      redirect={vi.fn()}
-    />
-  );
 
 describe('DataclipShowPage', () => {
   afterEach(() => {
@@ -43,7 +37,7 @@ describe('DataclipShowPage', () => {
       )
     );
     vi.stubGlobal('fetch', fetchMock);
-    renderIsland(props);
+    renderIsland<Props>(DataclipShowPage, props);
     expect(screen.getByText(ID)).toBeTruthy();
     await waitFor(() => expect(screen.getByText(/"x"/)).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledWith(`/dataclip/body/${ID}`);
@@ -52,7 +46,7 @@ describe('DataclipShowPage', () => {
   test('does not ask for the body of a wiped dataclip', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    renderIsland({
+    renderIsland<Props>(DataclipShowPage, {
       ...props,
       dataclip: { ...props.dataclip, wipedAt: '2026-10-20T00:00:00Z' },
     });

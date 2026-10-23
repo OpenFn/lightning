@@ -1,13 +1,12 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { ChannelsIndexPage } from '../../js/design-system/pages/ChannelsIndexPage';
+import {
+  ChannelsIndexPage,
+  type Props,
+} from '../../js/design-system/pages/ChannelsIndexPage';
+
+import { renderIsland } from './renderIsland';
 
 const channel = {
   id: 'c1',
@@ -20,7 +19,7 @@ const channel = {
   logsHref: '/projects/p1/history/channels?filters[channel_id]=c1',
 };
 
-const props = {
+const props: Props = {
   project: { id: 'p1', parentId: null, color: null },
   projectLabel: 'Malawi HIV',
   channels: [channel],
@@ -30,35 +29,23 @@ const props = {
   canCreateChannel: true,
   canEditChannel: true,
   canDeleteChannel: true,
-  form: null as unknown,
+  form: null,
 };
 
-const form = {
+const form: Props['form'] = {
   channel: null,
   credentialOptions: [{ id: 'pc1', name: 'My API Key' }],
   authMethodOptions: [{ id: 'wam1', name: 'API Key Auth' }],
 };
 
 const renderPage = (
-  overrides: Partial<typeof props> = {},
+  overrides: Partial<Props> = {},
   reply: Record<string, unknown> = {}
-) => {
-  const pushEvent = vi.fn().mockResolvedValue(reply);
-  const navigate = vi.fn();
-  render(
-    <ChannelsIndexPage
-      data-props={JSON.stringify({ ...props, ...overrides })}
-      pushEvent={pushEvent}
-      handleEvent={vi.fn()}
-      navigate={navigate}
-      redirect={vi.fn()}
-    />
-  );
-  return { pushEvent, navigate };
-};
+) =>
+  renderIsland<Props>(ChannelsIndexPage, { ...props, ...overrides }, { reply });
 
 describe('ChannelsIndexPage', () => {
-  test('switches and deletes with the payloads the LiveView reads', () => {
+  test('switches and deletes with the payloads the LiveView reads', async () => {
     const { pushEvent } = renderPage();
     const row = screen.getByText('lab-results').closest('tr')!;
     fireEvent.click(within(row).getByRole('switch'));
@@ -67,9 +54,13 @@ describe('ChannelsIndexPage', () => {
       value_key: 'c1',
     });
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     fireEvent.click(within(row).getByRole('button', { name: 'Delete' }));
-    expect(pushEvent).toHaveBeenCalledWith('delete_channel', { id: 'c1' });
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' })
+    );
+    await waitFor(() =>
+      expect(pushEvent).toHaveBeenCalledWith('delete_channel', { id: 'c1' })
+    );
   });
 
   test('the form routes are patches of this LiveView', () => {

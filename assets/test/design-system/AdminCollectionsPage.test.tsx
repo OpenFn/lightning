@@ -1,15 +1,14 @@
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
+
 import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+  AdminCollectionsPage,
+  type Props,
+} from '../../js/design-system/pages/AdminCollectionsPage';
 
-import { AdminCollectionsPage } from '../../js/design-system/pages/AdminCollectionsPage';
+import { renderIsland } from './renderIsland';
 
-const props = {
+const props: Props = {
   collections: [
     {
       id: 'c1',
@@ -25,23 +24,9 @@ const props = {
   ],
 };
 
-const renderPage = () => {
-  const pushEvent = vi.fn().mockResolvedValue({});
-  render(
-    <AdminCollectionsPage
-      data-props={JSON.stringify(props)}
-      pushEvent={pushEvent}
-      handleEvent={vi.fn()}
-      navigate={vi.fn()}
-      redirect={vi.fn()}
-    />
-  );
-  return { pushEvent };
-};
-
 describe('AdminCollectionsPage', () => {
   test('creates, updates and deletes with the events the LiveView reads', async () => {
-    const { pushEvent } = renderPage();
+    const { pushEvent } = renderIsland<Props>(AdminCollectionsPage, props);
 
     fireEvent.click(
       document.getElementById('open-create-collection-modal-button')!

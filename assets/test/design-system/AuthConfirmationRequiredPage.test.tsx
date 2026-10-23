@@ -1,27 +1,25 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { AuthConfirmationRequiredPage } from '../../js/design-system/pages/AuthConfirmationRequiredPage';
+import {
+  AuthConfirmationRequiredPage,
+  type Props,
+} from '../../js/design-system/pages/AuthConfirmationRequiredPage';
+
+import { renderIsland } from './renderIsland';
 
 describe('AuthConfirmationRequiredPage', () => {
   test('asks with the events the LiveView answers, and shows the answers', async () => {
-    const pushEvent = vi
-      .fn()
+    const { pushEvent } = renderIsland<Props>(AuthConfirmationRequiredPage, {
+      email: 'una@example.org',
+    });
+    pushEvent
       .mockResolvedValueOnce({ status: 'throttled', message: 'Try later.' })
       .mockResolvedValueOnce({
         error: 'Please fix the errors below.',
         fieldErrors: { currentPassword: ['Your passwords do not match.'] },
       })
       .mockResolvedValueOnce({ status: 'requested', email: 'new@example.org' });
-    render(
-      <AuthConfirmationRequiredPage
-        data-props={JSON.stringify({ email: 'una@example.org' })}
-        pushEvent={pushEvent}
-        handleEvent={vi.fn()}
-        navigate={vi.fn()}
-        redirect={vi.fn()}
-      />
-    );
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Resend confirmation email' })

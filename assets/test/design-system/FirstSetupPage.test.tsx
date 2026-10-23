@@ -1,25 +1,27 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { FirstSetupPage } from '../../js/design-system/pages/FirstSetupPage';
+import {
+  FirstSetupPage,
+  type Props,
+} from '../../js/design-system/pages/FirstSetupPage';
+
+import { renderIsland } from './renderIsland';
 
 const fill = (id: string, value: string) =>
   fireEvent.change(document.getElementById(id)!, { target: { value } });
 
 describe('FirstSetupPage', () => {
   test('saves the five fields with one event, and shows the reply on its field', async () => {
-    const pushEvent = vi.fn().mockResolvedValue({
-      error: 'Please fix the errors below.',
-      fieldErrors: { email: ['has already been taken'] },
-    });
-    render(
-      <FirstSetupPage
-        data-props="{}"
-        pushEvent={pushEvent}
-        handleEvent={vi.fn()}
-        navigate={vi.fn()}
-        redirect={vi.fn()}
-      />
+    const { pushEvent } = renderIsland<Props>(
+      FirstSetupPage,
+      {},
+      {
+        reply: {
+          error: 'Please fix the errors below.',
+          fieldErrors: { email: ['has already been taken'] },
+        },
+      }
     );
     fill('first_name', 'Test');
     fill('last_name', 'McTest');

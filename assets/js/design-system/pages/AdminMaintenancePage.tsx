@@ -3,7 +3,7 @@ import DesignSystemAdminMaintenancePage from '@openfn/ui/pages/admin/AdminMainte
 import { designSystemPage } from '../page';
 
 /** MaintenanceLive.Index sends no props: the page is two actions. */
-type Props = Record<string, never>;
+export type Props = Record<string, never>;
 
 /** The design system's maintenance page, fed by MaintenanceLive.Index. */
 export const AdminMaintenancePage = designSystemPage(

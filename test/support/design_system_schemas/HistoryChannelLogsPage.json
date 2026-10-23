@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": ["string", "null"]
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "parentId", "color"],
+      "additionalProperties": false
+    },
+    "projectLabel": {
+      "type": "string"
+    },
+    "channelsEnabled": {
+      "type": "boolean"
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name"],
+        "additionalProperties": false
+      }
+    },
+    "channelId": {
+      "type": ["string", "null"]
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ChannelLogRow"
+      }
+    },
+    "page": {
+      "$ref": "#/definitions/PageInfo"
+    }
+  },
+  "required": [
+    "project",
+    "projectLabel",
+    "channelsEnabled",
+    "channels",
+    "channelId",
+    "rows",
+    "page"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "ChannelLogRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "channelName": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/ChannelRequestState"
+        },
+        "requestPath": {
+          "type": ["string", "null"]
+        },
+        "errorMessage": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": [
+        "id",
+        "requestId",
+        "channelId",
+        "channelName",
+        "startedAt",
+        "state",
+        "requestPath",
+        "errorMessage"
+      ],
+      "additionalProperties": false
+    },
+    "ChannelRequestState": {
+      "type": "string",
+      "enum": ["pending", "success", "failed", "timeout", "error"]
+    },
+    "PageInfo": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "number"
+        },
+        "size": {
+          "type": "number"
+        },
+        "totalEntries": {
+          "type": "number"
+        }
+      },
+      "required": ["number", "size", "totalEntries"],
+      "additionalProperties": false
+    }
+  }
+}

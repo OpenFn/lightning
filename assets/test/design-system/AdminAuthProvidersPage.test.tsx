@@ -1,7 +1,12 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { AdminAuthProvidersPage } from '../../js/design-system/pages/AdminAuthProvidersPage';
+import {
+  AdminAuthProvidersPage,
+  type Props,
+} from '../../js/design-system/pages/AdminAuthProvidersPage';
+
+import { renderIsland } from './renderIsland';
 
 const provider = {
   id: 'ap1',
@@ -24,19 +29,10 @@ const values = {
 
 describe('AdminAuthProvidersPage', () => {
   test('tests, saves and removes with the events the LiveView reads', async () => {
-    const pushEvent = vi
-      .fn()
-      .mockResolvedValueOnce({ error: 'error parsing .well-known' })
-      .mockResolvedValue({});
-    render(
-      <AdminAuthProvidersPage
-        data-props={JSON.stringify({ provider })}
-        pushEvent={pushEvent}
-        handleEvent={vi.fn()}
-        navigate={vi.fn()}
-        redirect={vi.fn()}
-      />
-    );
+    const { pushEvent } = renderIsland<Props>(AdminAuthProvidersPage, {
+      provider,
+    });
+    pushEvent.mockResolvedValueOnce({ error: 'error parsing .well-known' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Test' }));
     await waitFor(() =>

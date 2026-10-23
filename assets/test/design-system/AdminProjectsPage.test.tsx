@@ -1,14 +1,13 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { AdminProjectsPage } from '../../js/design-system/pages/AdminProjectsPage';
+import {
+  AdminProjectsPage,
+  type Props,
+} from '../../js/design-system/pages/AdminProjectsPage';
+
+import { renderIsland } from './renderIsland';
 
 const row = {
   id: 'p1',
@@ -24,26 +23,14 @@ const users = [
   { id: 'u2', firstName: 'Bob', lastName: 'Brown', email: 'bob@example.org' },
 ];
 
-const renderPage = (props: object) => {
-  const pushEvent = vi.fn().mockResolvedValue({});
-  const navigate = vi.fn();
-  render(
-    <AdminProjectsPage
-      data-props={JSON.stringify({
-        projects: [row],
-        form: null,
-        deleteProject: null,
-        gracePeriodDays: 7,
-        ...props,
-      })}
-      pushEvent={pushEvent}
-      handleEvent={vi.fn()}
-      navigate={navigate}
-      redirect={vi.fn()}
-    />
-  );
-  return { pushEvent, navigate };
-};
+const renderPage = (props: Partial<Props>) =>
+  renderIsland<Props>(AdminProjectsPage, {
+    projects: [row],
+    form: null,
+    deleteProject: null,
+    gracePeriodDays: 7,
+    ...props,
+  });
 
 describe('AdminProjectsPage', () => {
   test('saves the open form with the name as typed and a role per user', async () => {

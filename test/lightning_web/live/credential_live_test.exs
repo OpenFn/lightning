@@ -80,8 +80,9 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # The side menu is drawn by React from the layout's bridge; the profile
       # menu's links are tested in assets/test/design-system/shell.test.tsx.
-      assert %{"variant" => "profile", "project" => nil} =
-               page_props(index_live, "#sidebar-bridge")
+      props = page_props(index_live, "#sidebar-bridge")
+      assert %{"variant" => "profile"} = props
+      refute Map.has_key?(props, "project")
     end
 
     test "lists all credentials", %{

@@ -4,13 +4,14 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import {
   mountShell,
+  type Props,
   publishSidebar,
   Shell,
 } from '../../js/design-system/shell';
 
 // What a layout's SidebarBridge publishes (see LayoutComponents.sidebar_bridge).
-const props = {
-  variant: 'profile' as const,
+const props: Props = {
+  variant: 'profile',
   project: undefined,
   user: {
     firstName: 'Amy',
@@ -22,11 +23,11 @@ const props = {
   sysInfo: true,
   adminEmail: 'support@openfn.org',
   releaseLabel: 'v2.19.2',
-  theme: 'primary-theme' as const,
+  theme: 'primary-theme',
   collapsed: false,
 };
 
-const renderShell = (at: string, overrides: Partial<typeof props> = {}) => {
+const renderShell = (at: string, overrides: Partial<Props> = {}) => {
   window.history.replaceState(null, '', at);
   const navigate = vi.fn();
   const toggle = vi.fn();

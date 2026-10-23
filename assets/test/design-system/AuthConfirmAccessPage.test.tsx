@@ -1,23 +1,19 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { AuthConfirmAccessPage } from '../../js/design-system/pages/AuthConfirmAccessPage';
+import {
+  AuthConfirmAccessPage,
+  type Props,
+} from '../../js/design-system/pages/AuthConfirmAccessPage';
 
-const renderPage = (reply: Record<string, unknown> = {}) => {
-  const pushEvent = vi.fn().mockResolvedValue(reply);
-  render(
-    <AuthConfirmAccessPage
-      data-props={JSON.stringify({
-        user: { firstName: 'Amara', lastName: 'Diallo', mfaEnabled: true },
-      })}
-      pushEvent={pushEvent}
-      handleEvent={vi.fn()}
-      navigate={vi.fn()}
-      redirect={vi.fn()}
-    />
+import { renderIsland } from './renderIsland';
+
+const renderPage = (reply: Record<string, unknown> = {}) =>
+  renderIsland<Props>(
+    AuthConfirmAccessPage,
+    { user: { firstName: 'Amara', lastName: 'Diallo', mfaEnabled: true } },
+    { reply }
   );
-  return { pushEvent };
-};
 
 describe('AuthConfirmAccessPage', () => {
   test('confirms with the password or the code, as the HEEx form submitted', async () => {

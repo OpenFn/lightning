@@ -1,10 +1,15 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { ProjectsDashboardPage } from '../../js/design-system/pages/ProjectsDashboardPage';
+import {
+  ProjectsDashboardPage,
+  type Props,
+} from '../../js/design-system/pages/ProjectsDashboardPage';
 
-const project = {
+import { renderIsland } from './renderIsland';
+
+const project: Props['projects'][number] = {
   id: 'p1',
   name: 'Malawi HIV',
   role: 'owner',
@@ -13,19 +18,12 @@ const project = {
   lastUpdatedAt: '2026-10-01T10:00:00Z',
 };
 
-const renderPage = (reply: Record<string, unknown> = {}) => {
-  const pushEvent = vi.fn().mockResolvedValue(reply);
-  render(
-    <ProjectsDashboardPage
-      data-props={JSON.stringify({ firstName: 'Amy', projects: [project] })}
-      pushEvent={pushEvent}
-      handleEvent={vi.fn()}
-      navigate={vi.fn()}
-      redirect={vi.fn()}
-    />
+const renderPage = (reply: Record<string, unknown> = {}) =>
+  renderIsland<Props>(
+    ProjectsDashboardPage,
+    { firstName: 'Amy', projects: [project] },
+    { reply }
   );
-  return { pushEvent };
-};
 
 const createProject = async (name: string) => {
   await userEvent.click(screen.getByRole('button', { name: 'Create project' }));

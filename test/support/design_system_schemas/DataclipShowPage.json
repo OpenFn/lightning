@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": ["string", "null"]
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "parentId", "color"],
+      "additionalProperties": false
+    },
+    "projectLabel": {
+      "type": "string"
+    },
+    "dataclip": {
+      "$ref": "#/definitions/DataclipDetail"
+    }
+  },
+  "required": ["project", "projectLabel", "dataclip"],
+  "additionalProperties": false,
+  "definitions": {
+    "DataclipDetail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/DataclipType"
+        },
+        "insertedAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "wipedAt": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "type", "insertedAt", "updatedAt", "wipedAt"],
+      "additionalProperties": false
+    },
+    "DataclipType": {
+      "type": "string",
+      "enum": ["http_request", "global", "step_result", "saved_input", "kafka"]
+    }
+  }
+}

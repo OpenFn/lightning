@@ -7,7 +7,7 @@ import { fetchDataclipBody } from '../dataclip-body';
 import { designSystemPage } from '../page';
 
 /** What DataclipLive.Show puts in `data-props`: the page's props minus the body. */
-type Props = Omit<DataclipShowPageProps, 'body'>;
+export type Props = Omit<DataclipShowPageProps, 'body'>;
 
 /**
  * The design system's dataclip page, fed by DataclipLive.Show. The island

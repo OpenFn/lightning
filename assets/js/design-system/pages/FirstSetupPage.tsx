@@ -5,7 +5,7 @@ import DesignSystemFirstSetupPage, {
 import { designSystemPage } from '../page';
 
 /** FirstSetupLive.Superuser sends no props: the page is one empty form. */
-type Props = Record<string, never>;
+export type Props = Record<string, never>;
 
 /** The design system's first setup page, fed by FirstSetupLive.Superuser. */
 export const FirstSetupPage = designSystemPage(

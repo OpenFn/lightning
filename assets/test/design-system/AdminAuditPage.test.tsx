@@ -1,8 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { AdminAuditPage } from '../../js/design-system/pages/AdminAuditPage';
+import {
+  AdminAuditPage,
+  type Props,
+} from '../../js/design-system/pages/AdminAuditPage';
+
+import { renderIsland } from './renderIsland';
 
 const event = {
   id: 'audit-1',
@@ -14,27 +19,17 @@ const event = {
   actorIdentifier: 'amy@example.com',
   insertedAt: '2026-10-14T18:36:12Z',
   changes: { before: null, after: null },
-  credentialBodies: null,
 };
 
 describe('AdminAuditPage', () => {
   test('a page link patches the LiveView', async () => {
     window.history.replaceState(null, '', '/settings/audit');
-    const navigate = vi.fn();
-    render(
-      <AdminAuditPage
-        data-props={JSON.stringify({
-          events: [event],
-          pageNumber: 1,
-          pageSize: 10,
-          totalEntries: 25,
-        })}
-        pushEvent={vi.fn()}
-        handleEvent={vi.fn()}
-        navigate={navigate}
-        redirect={vi.fn()}
-      />
-    );
+    const { navigate } = renderIsland<Props>(AdminAuditPage, {
+      events: [event],
+      pageNumber: 1,
+      pageSize: 10,
+      totalEntries: 25,
+    });
 
     expect(screen.getByText('Amy Admin')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('link', { name: '3' }));

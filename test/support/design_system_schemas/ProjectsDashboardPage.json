@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "firstName": {
+      "type": "string"
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ProjectOverview"
+      }
+    }
+  },
+  "required": ["firstName", "projects"],
+  "additionalProperties": false,
+  "definitions": {
+    "ProjectOverview": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProjectRole"
+            },
+            {
+              "type": "string",
+              "const": "support"
+            }
+          ]
+        },
+        "workflowsCount": {
+          "type": "number"
+        },
+        "collaboratorsCount": {
+          "type": "number"
+        },
+        "lastUpdatedAt": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "role",
+        "workflowsCount",
+        "collaboratorsCount",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "ProjectRole": {
+      "type": "string",
+      "enum": ["owner", "admin", "editor", "viewer"]
+    }
+  }
+}

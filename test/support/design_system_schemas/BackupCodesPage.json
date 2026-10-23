@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "codes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/BackupCode"
+      }
+    },
+    "mfaEnabled": {
+      "type": "boolean"
+    }
+  },
+  "required": ["codes", "mfaEnabled"],
+  "additionalProperties": false,
+  "definitions": {
+    "BackupCode": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "usedAt": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["code", "usedAt"],
+      "additionalProperties": false
+    }
+  }
+}

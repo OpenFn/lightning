@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "user": {
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "mfaEnabled": {
+          "type": "boolean"
+        }
+      },
+      "required": ["firstName", "lastName", "mfaEnabled"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["user"],
+  "additionalProperties": false,
+  "definitions": {}
+}

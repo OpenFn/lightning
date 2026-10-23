@@ -8,7 +8,10 @@ import { fetchDataclipBody } from '../dataclip-body';
 import { designSystemPage } from '../page';
 
 /** What RunLive.Show puts in `data-props`: the page's props minus the log and the handlers. */
-type Props = Omit<RunShowPageProps, 'logs' | 'onCancel' | 'onLogLevelChange'>;
+export type Props = Omit<
+  RunShowPageProps,
+  'logs' | 'onCancel' | 'onLogLevelChange'
+>;
 
 /** A log line as the LiveView pushes it (Lightning.Invocation.LogLine). */
 interface PushedLogLine {

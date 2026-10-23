@@ -4,7 +4,7 @@ import type { ProjectOverview } from '@openfn/ui/types/workflows.ts';
 import { designSystemPage } from '../page';
 
 /** What DashboardLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   firstName: string;
   projects: ProjectOverview[];
 }

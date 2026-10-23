@@ -1,0 +1,232 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": ["string", "null"]
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "parentId", "color"],
+      "additionalProperties": false
+    },
+    "projectLabel": {
+      "type": "string"
+    },
+    "period": {
+      "type": "string"
+    },
+    "stats": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/WorkflowRow"
+      }
+    },
+    "metrics": {
+      "$ref": "#/definitions/ProjectMetrics"
+    },
+    "pendingHref": {
+      "type": "string"
+    },
+    "failedHref": {
+      "type": "string"
+    },
+    "searchTerm": {
+      "type": "string"
+    },
+    "sortKey": {
+      "type": "string"
+    },
+    "sortDirection": {
+      "type": "string",
+      "enum": ["asc", "desc"]
+    },
+    "canCreateWorkflow": {
+      "type": "boolean"
+    },
+    "canDeleteWorkflow": {
+      "type": "boolean"
+    },
+    "lifecycle": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "project",
+    "projectLabel",
+    "period",
+    "stats",
+    "metrics",
+    "pendingHref",
+    "failedHref",
+    "searchTerm",
+    "sortKey",
+    "sortDirection",
+    "canCreateWorkflow",
+    "canDeleteWorkflow",
+    "lifecycle"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "WorkflowRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workflow": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "triggerType": {
+              "$ref": "#/definitions/TriggerType"
+            }
+          },
+          "required": ["id", "name", "updatedAt", "enabled", "triggerType"],
+          "additionalProperties": false
+        },
+        "lastWorkOrder": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "$ref": "#/definitions/WorkOrderDisplayState"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": ["state", "updatedAt"],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lastFailedAt": {
+          "type": ["string", "null"]
+        },
+        "workordersCount": {
+          "type": "number"
+        },
+        "failedWorkordersCount": {
+          "type": "number"
+        },
+        "stepCount": {
+          "type": "number"
+        },
+        "stepSuccessRate": {
+          "type": "number"
+        },
+        "historyHref": {
+          "type": "string"
+        },
+        "failedHistoryHref": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string",
+          "enum": ["live", "draft"]
+        },
+        "toggleTooltip": {
+          "type": "string"
+        },
+        "triggerEnabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "failedWorkordersCount",
+        "lastFailedAt",
+        "lastWorkOrder",
+        "stepCount",
+        "stepSuccessRate",
+        "workflow",
+        "workordersCount"
+      ]
+    },
+    "TriggerType": {
+      "type": "string",
+      "enum": ["webhook", "cron", "kafka"]
+    },
+    "WorkOrderDisplayState": {
+      "type": "string",
+      "enum": [
+        "rejected",
+        "pending",
+        "running",
+        "success",
+        "failed",
+        "crashed",
+        "cancelled",
+        "killed",
+        "exception",
+        "lost"
+      ]
+    },
+    "ProjectMetrics": {
+      "type": "object",
+      "properties": {
+        "workOrders": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "number"
+            },
+            "pending": {
+              "type": "number"
+            },
+            "failed": {
+              "type": "number"
+            },
+            "failedPercentage": {
+              "type": "number"
+            }
+          },
+          "required": ["total", "pending", "failed", "failedPercentage"],
+          "additionalProperties": false
+        },
+        "runs": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "number"
+            },
+            "pending": {
+              "type": "number"
+            },
+            "success": {
+              "type": "number"
+            },
+            "successRate": {
+              "type": "number"
+            }
+          },
+          "required": ["total", "pending", "success", "successRate"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["workOrders", "runs"],
+      "additionalProperties": false
+    }
+  }
+}

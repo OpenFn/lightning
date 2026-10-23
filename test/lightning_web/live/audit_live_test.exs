@@ -73,9 +73,10 @@ defmodule LightningWeb.AuditLiveTest do
                "actorId" => actor_id,
                "actorLabel" => label,
                "actorIdentifier" => identifier,
-               "changes" => %{"before" => nil, "after" => after_values},
-               "credentialBodies" => nil
+               "changes" => %{"before" => nil, "after" => after_values}
              } = created
+
+      refute Map.has_key?(created, "credentialBodies")
 
       assert actor_id == user.id
       assert label == "#{user.first_name} #{user.last_name}"
@@ -196,7 +197,7 @@ defmodule LightningWeb.AuditLiveTest do
                "body:production" => "xyz=="
              }
 
-      assert event_for(live, without.item_id)["credentialBodies"] == nil
+      refute Map.has_key?(event_for(live, without.item_id), "credentialBodies")
     end
 
     test "labels a service account by its id", %{conn: conn} do

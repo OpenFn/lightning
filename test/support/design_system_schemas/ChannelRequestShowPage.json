@@ -1,0 +1,264 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": ["string", "null"]
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "parentId", "color"],
+      "additionalProperties": false
+    },
+    "projectLabel": {
+      "type": "string"
+    },
+    "request": {
+      "$ref": "#/definitions/ChannelRequestDetail"
+    },
+    "channel": {
+      "$ref": "#/definitions/ChannelRequestChannel"
+    },
+    "canEditDataRetention": {
+      "type": "boolean"
+    },
+    "adminContacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "project",
+    "projectLabel",
+    "request",
+    "channel",
+    "canEditDataRetention",
+    "adminContacts"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "ChannelRequestDetail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/ChannelRequestState"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "completedAt": {
+          "type": ["string", "null"]
+        },
+        "clientIdentity": {
+          "type": ["string", "null"]
+        },
+        "clientAuth": {
+          "type": "string"
+        },
+        "destinationAuth": {
+          "type": "string"
+        },
+        "isWiped": {
+          "type": "boolean"
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "destinationUrl": {
+              "type": "string"
+            },
+            "lockVersion": {
+              "type": "number"
+            }
+          },
+          "required": ["name", "destinationUrl", "lockVersion"],
+          "additionalProperties": false
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ChannelEvent"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "state",
+        "startedAt",
+        "completedAt",
+        "clientIdentity",
+        "clientAuth",
+        "destinationAuth",
+        "isWiped",
+        "snapshot",
+        "events"
+      ],
+      "additionalProperties": false
+    },
+    "ChannelRequestState": {
+      "type": "string",
+      "enum": ["pending", "success", "failed", "timeout", "error"]
+    },
+    "ChannelEvent": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["destination_response", "error"]
+        },
+        "requestMethod": {
+          "type": ["string", "null"]
+        },
+        "requestPath": {
+          "type": ["string", "null"]
+        },
+        "requestQueryString": {
+          "type": ["string", "null"]
+        },
+        "requestHeaders": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requestBodyPreview": {
+          "type": ["string", "null"]
+        },
+        "requestBodySize": {
+          "type": ["number", "null"]
+        },
+        "requestBodyHash": {
+          "type": ["string", "null"]
+        },
+        "responseStatus": {
+          "type": ["number", "null"]
+        },
+        "responseHeaders": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "responseBodyPreview": {
+          "type": ["string", "null"]
+        },
+        "responseBodySize": {
+          "type": ["number", "null"]
+        },
+        "responseBodyHash": {
+          "type": ["string", "null"]
+        },
+        "latencyUs": {
+          "type": ["number", "null"]
+        },
+        "ttfbUs": {
+          "type": ["number", "null"]
+        },
+        "queueUs": {
+          "type": ["number", "null"]
+        },
+        "connectUs": {
+          "type": ["number", "null"]
+        },
+        "requestSendUs": {
+          "type": ["number", "null"]
+        },
+        "responseDurationUs": {
+          "type": ["number", "null"]
+        },
+        "reusedConnection": {
+          "type": "boolean"
+        },
+        "errorMessage": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": [
+        "type",
+        "requestMethod",
+        "requestPath",
+        "requestQueryString",
+        "requestHeaders",
+        "requestBodyPreview",
+        "requestBodySize",
+        "requestBodyHash",
+        "responseStatus",
+        "responseHeaders",
+        "responseBodyPreview",
+        "responseBodySize",
+        "responseBodyHash",
+        "latencyUs",
+        "ttfbUs",
+        "queueUs",
+        "connectUs",
+        "requestSendUs",
+        "responseDurationUs",
+        "reusedConnection",
+        "errorMessage"
+      ],
+      "additionalProperties": false
+    },
+    "ChannelRequestChannel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "destinationUrl": {
+          "type": "string"
+        },
+        "lockVersion": {
+          "type": "number"
+        }
+      },
+      "required": ["id", "projectId", "name", "destinationUrl", "lockVersion"],
+      "additionalProperties": false
+    }
+  }
+}

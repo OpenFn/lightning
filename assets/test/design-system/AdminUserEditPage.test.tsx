@@ -1,9 +1,14 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { describe, expect, test } from 'vitest';
 
-import { AdminUserEditPage } from '../../js/design-system/pages/AdminUserEditPage';
+import {
+  AdminUserEditPage,
+  type Props,
+} from '../../js/design-system/pages/AdminUserEditPage';
 
-const user = {
+import { renderIsland } from './renderIsland';
+
+const user: Props['user'] = {
   id: 'u1',
   firstName: 'Amara',
   lastName: 'Okafor',
@@ -16,16 +21,7 @@ const user = {
 
 describe('AdminUserEditPage', () => {
   test('saves with the event and the camelCase values the LiveView reads', async () => {
-    const pushEvent = vi.fn().mockResolvedValue({});
-    render(
-      <AdminUserEditPage
-        data-props={JSON.stringify({ user })}
-        pushEvent={pushEvent}
-        handleEvent={vi.fn()}
-        navigate={vi.fn()}
-        redirect={vi.fn()}
-      />
-    );
+    const { pushEvent } = renderIsland<Props>(AdminUserEditPage, { user });
 
     fireEvent.change(screen.getByLabelText('First Name'), {
       target: { value: 'Ama' },

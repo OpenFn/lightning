@@ -9,7 +9,7 @@ import type { Project } from '@openfn/ui/types/projects.ts';
 import { designSystemPage } from '../page';
 
 /** What ChannelLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   project: Pick<Project, 'id' | 'parentId' | 'color'>;
   projectLabel: string;
   channels: ChannelRow[];

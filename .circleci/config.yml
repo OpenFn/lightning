@@ -298,6 +298,13 @@ jobs:
           command: cd assets && sudo -u lightning npm run test-report
       - store_test_results:
           path: test/reports/
+      - run:
+          name: 'Check design-system types and props schemas'
+          command: |
+            cd assets
+            sudo -u lightning npm run ds:check
+            sudo -u lightning npm run ds:schemas
+            git diff --exit-code ../test/support/design_system_schemas
 
 workflows:
   pre-flight checks:

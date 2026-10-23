@@ -1,9 +1,18 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { WorkflowsIndexPage } from '../../js/design-system/pages/WorkflowsIndexPage';
+import {
+  WorkflowsIndexPage,
+  type Props,
+} from '../../js/design-system/pages/WorkflowsIndexPage';
 
-const row = (id: string, name: string, enabled: boolean) => ({
+import { renderIsland } from './renderIsland';
+
+const row = (
+  id: string,
+  name: string,
+  enabled: boolean
+): Props['stats'][number] => ({
   workflow: {
     id,
     name,
@@ -26,7 +35,7 @@ const row = (id: string, name: string, enabled: boolean) => ({
   failedHistoryHref: `/projects/p1/history?filters[workflow_id]=${id}`,
 });
 
-const props = {
+const props: Props = {
   project: { id: 'p1', parentId: null, color: null },
   projectLabel: 'Malawi HIV',
   period: 'last 30 days',
@@ -45,21 +54,13 @@ const props = {
   lifecycle: false,
 };
 
-const renderPage = (overrides: Partial<typeof props> = {}) => {
-  const pushEvent = vi.fn().mockResolvedValue({});
-  const redirect = vi.fn();
-  const element = (next: Partial<typeof props>) => (
-    <WorkflowsIndexPage
-      data-props={JSON.stringify({ ...props, ...next })}
-      pushEvent={pushEvent}
-      handleEvent={vi.fn()}
-      navigate={vi.fn()}
-      redirect={redirect}
-    />
+const renderPage = (overrides: Partial<Props> = {}) => {
+  const { pushEvent, redirect, setProps } = renderIsland<Props>(
+    WorkflowsIndexPage,
+    { ...props, ...overrides }
   );
-  const { rerender } = render(element(overrides));
   // The LiveView's next props, as a patch would bring them.
-  const patch = (next: Partial<typeof props>) => rerender(element(next));
+  const patch = (next: Partial<Props>) => setProps({ ...props, ...next });
   return { pushEvent, redirect, patch };
 };
 

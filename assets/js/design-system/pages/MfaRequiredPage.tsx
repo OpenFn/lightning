@@ -2,6 +2,9 @@ import DesignSystemMfaRequiredPage from '@openfn/ui/pages/projects/MfaRequiredPa
 
 import { designSystemPage } from '../page';
 
+/** ProjectLive.MFARequired sends no props. */
+export type Props = Record<string, never>;
+
 /**
  * The design system's "MFA Required for Project" page, fed by
  * ProjectLive.MFARequired. It shows nothing from the server and has no
@@ -11,5 +14,5 @@ export const MfaRequiredPage = designSystemPage(
   'MfaRequiredPage',
   DesignSystemMfaRequiredPage,
   ['/mfa_required'],
-  () => ({})
+  (_props: Props) => ({})
 );

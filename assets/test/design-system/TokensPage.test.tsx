@@ -1,8 +1,13 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test } from 'vitest';
 
-import { TokensPage } from '../../js/design-system/pages/TokensPage';
+import {
+  TokensPage,
+  type Props,
+} from '../../js/design-system/pages/TokensPage';
+
+import { renderIsland } from './renderIsland';
 
 const token = {
   id: 'abc',
@@ -17,20 +22,7 @@ const renderPage = ({
 }: {
   tokenId?: string | null;
   reply?: Record<string, unknown>;
-}) => {
-  const pushEvent = vi.fn().mockResolvedValue(reply ?? {});
-  const navigate = vi.fn();
-  render(
-    <TokensPage
-      data-props={JSON.stringify({ tokens: [token], tokenId })}
-      pushEvent={pushEvent}
-      handleEvent={vi.fn()}
-      navigate={navigate}
-      redirect={vi.fn()}
-    />
-  );
-  return { pushEvent, navigate };
-};
+}) => renderIsland<Props>(TokensPage, { tokens: [token], tokenId }, { reply });
 
 describe('TokensPage', () => {
   afterEach(() => {
@@ -42,7 +34,7 @@ describe('TokensPage', () => {
     const { pushEvent } = renderPage({ reply: { token: 'secret-123' } });
 
     await userEvent.click(
-      screen.getAllByRole('button', { name: 'Generate New Token' })[0]
+      screen.getAllByRole('button', { name: 'Generate New Token' }).shift()!
     );
 
     expect(pushEvent).toHaveBeenCalledWith('generate_new_token', {});

@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "projects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AdminProjectRow"
+      }
+    },
+    "form": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/AdminProjectForm"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "deleteProject": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/AdminDeleteProject"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "gracePeriodDays": {
+      "type": "number"
+    }
+  },
+  "required": ["projects", "form", "deleteProject", "gracePeriodDays"],
+  "additionalProperties": false,
+  "definitions": {
+    "AdminProjectRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "insertedAt": {
+          "type": "string"
+        },
+        "ownerName": {
+          "type": "string"
+        },
+        "scheduledDeletion": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": [
+        "description",
+        "id",
+        "insertedAt",
+        "name",
+        "ownerName",
+        "scheduledDeletion"
+      ],
+      "additionalProperties": false
+    },
+    "AdminProjectForm": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "members": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "userId": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "$ref": "#/definitions/ProjectRole"
+                      }
+                    },
+                    "required": ["userId", "role"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["id", "name", "members"],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "users": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AdminProjectUser"
+          }
+        }
+      },
+      "required": ["project", "users"],
+      "additionalProperties": false
+    },
+    "ProjectRole": {
+      "type": "string",
+      "enum": ["owner", "admin", "editor", "viewer"]
+    },
+    "AdminProjectUser": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "firstName", "lastName", "email"],
+      "additionalProperties": false
+    },
+    "AdminDeleteProject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { designSystemPage } from '../page';
 
 /** What TokensLive.Index puts in `data-props`. */
-interface Props {
+export interface Props {
   tokens: ApiToken[];
   /** The token whose delete modal is open; otherwise null. */
   tokenId: string | null;

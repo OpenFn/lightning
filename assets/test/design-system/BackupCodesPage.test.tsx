@@ -1,25 +1,20 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { BackupCodesPage } from '../../js/design-system/pages/BackupCodesPage';
+import {
+  BackupCodesPage,
+  type Props,
+} from '../../js/design-system/pages/BackupCodesPage';
 
-const renderPage = (reply: Record<string, unknown> = {}) => {
-  const pushEvent = vi.fn().mockResolvedValue(reply);
-  render(
-    <BackupCodesPage
-      data-props={JSON.stringify({
-        codes: [{ code: 'aaaa1111', usedAt: null }],
-        mfaEnabled: true,
-      })}
-      pushEvent={pushEvent}
-      handleEvent={vi.fn()}
-      navigate={vi.fn()}
-      redirect={vi.fn()}
-    />
+import { renderIsland } from './renderIsland';
+
+const renderPage = (reply: Record<string, unknown> = {}) =>
+  renderIsland<Props>(
+    BackupCodesPage,
+    { codes: [{ code: 'aaaa1111', usedAt: null }], mfaEnabled: true },
+    { reply }
   );
-  return { pushEvent };
-};
 
 describe('BackupCodesPage', () => {
   afterEach(() => {

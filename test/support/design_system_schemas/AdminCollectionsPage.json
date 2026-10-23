@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "collections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AdminCollectionRow"
+      }
+    },
+    "projectOptions": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "items": [
+          {
+            "type": "string",
+            "title": "label"
+          },
+          {
+            "type": "string",
+            "title": "value"
+          }
+        ],
+        "maxItems": 2
+      }
+    }
+  },
+  "required": ["collections", "projectOptions"],
+  "additionalProperties": false,
+  "definitions": {
+    "AdminCollectionRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "byteSizeSum": {
+          "type": "number"
+        },
+        "projectName": {
+          "type": "string"
+        }
+      },
+      "required": ["byteSizeSum", "id", "name", "projectId", "projectName"],
+      "additionalProperties": false
+    }
+  }
+}

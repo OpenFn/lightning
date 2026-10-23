@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "user": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/AdminUserRow"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": ["user"],
+  "additionalProperties": false,
+  "definitions": {
+    "AdminUserRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/UserRole"
+        },
+        "supportUser": {
+          "type": "boolean"
+        },
+        "disabled": {
+          "type": "boolean"
+        },
+        "scheduledDeletion": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "role",
+        "supportUser",
+        "disabled",
+        "scheduledDeletion"
+      ],
+      "additionalProperties": false
+    },
+    "UserRole": {
+      "type": "string",
+      "enum": ["superuser", "user"]
+    }
+  }
+}

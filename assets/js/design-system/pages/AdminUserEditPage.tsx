@@ -4,7 +4,7 @@ import type { AdminUserRow, UserFormValues } from '@openfn/ui/types/admin.ts';
 import { designSystemPage } from '../page';
 
 /** What UserLive.Edit puts in `data-props`. */
-interface Props {
+export interface Props {
   /** The account being edited; null on /settings/users/new. */
   user: AdminUserRow | null;
 }

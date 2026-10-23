@@ -5,7 +5,10 @@ import { RouterProvider } from '@openfn/ui/routing/router.tsx';
 import { StrictMode, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import type { PhoenixHook } from '#/hooks/PhoenixHook';
+import type {
+  GetPhoenixHookInternalThis,
+  PhoenixHook,
+} from '#/hooks/PhoenixHook';
 
 import { useLiveViewRouter } from './router';
 
@@ -16,7 +19,7 @@ import { useLiveViewRouter } from './router';
  * and where we are; the hook publishes them here, and sends the collapse
  * toggle back to that LiveView, which keeps the preference as before.
  */
-type Props = Omit<SidebarProps, 'onToggle'>;
+export type Props = Omit<SidebarProps, 'onToggle'>;
 
 interface Bridge {
   props: Props;
@@ -57,7 +60,9 @@ export const SidebarBridge = {
         },
       });
   },
-} as PhoenixHook<{ publish(): void }>;
+} satisfies ThisType<
+  GetPhoenixHookInternalThis<PhoenixHook<{ publish(): void }>>
+>;
 
 const parseProps = (el: HTMLElement): Props | null => {
   try {

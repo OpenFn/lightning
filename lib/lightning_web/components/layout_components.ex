@@ -214,7 +214,6 @@ defmodule LightningWeb.LayoutComponents do
 
     props = %{
       variant: assigns.variant,
-      project: assigns.project && %{id: assigns.project.id},
       user: %{
         firstName: user.first_name,
         lastName: user.last_name,
@@ -229,6 +228,12 @@ defmodule LightningWeb.LayoutComponents do
       theme: assigns.side_menu_theme,
       collapsed: assigns.sidebar_collapsed == true
     }
+
+    # Optional, not nullable: the profile and admin menus have no project.
+    props =
+      if assigns.project,
+        do: Map.put(props, :project, %{id: assigns.project.id}),
+        else: props
 
     assigns = assign(assigns, :props, Jason.encode!(props))
 
