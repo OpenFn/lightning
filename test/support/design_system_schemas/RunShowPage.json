@@ -218,16 +218,13 @@
           "type": "string"
         },
         "exitReason": {
-          "type": ["string", "null"],
-          "enum": [
-            "success",
-            "fail",
-            "crash",
-            "cancel",
-            "kill",
-            "exception",
-            "lost",
-            null
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StepExitReason"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "errorType": {
@@ -265,6 +262,18 @@
         "startedAt"
       ],
       "additionalProperties": false
+    },
+    "StepExitReason": {
+      "type": "string",
+      "enum": [
+        "success",
+        "fail",
+        "crash",
+        "cancel",
+        "kill",
+        "exception",
+        "lost"
+      ]
     },
     "StepDataclip": {
       "type": "object",

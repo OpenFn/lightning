@@ -11,6 +11,8 @@
       },
       projectLabel: @project_label,
       channelsEnabled: @channels_enabled,
+      workOrdersHref: ~p"/projects/#{@project}/history",
+      channelLogsHref: ~p"/projects/#{@project}/history/channels",
       channels: Enum.map(@channels, &%{id: &1.id, name: &1.name}),
       channelId: @channel_logs.channel_id,
       rows: channel_log_rows(@channel_logs.page),

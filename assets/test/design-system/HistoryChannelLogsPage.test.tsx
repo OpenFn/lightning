@@ -12,6 +12,8 @@ const props: Props = {
   project: { id: 'p1', parentId: null, color: null },
   projectLabel: 'Malawi HIV',
   channelsEnabled: true,
+  workOrdersHref: '/projects/p1/history',
+  channelLogsHref: '/projects/p1/history/channels',
   channels: [{ id: 'c1', name: 'channel-one' }],
   channelId: 'c1',
   rows: [

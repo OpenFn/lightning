@@ -11,6 +11,12 @@
     "channelsEnabled": {
       "type": "boolean"
     },
+    "workOrdersHref": {
+      "type": "string"
+    },
+    "channelLogsHref": {
+      "type": "string"
+    },
     "channels": {
       "type": "array",
       "items": {
@@ -44,6 +50,8 @@
     "project",
     "projectLabel",
     "channelsEnabled",
+    "workOrdersHref",
+    "channelLogsHref",
     "channels",
     "channelId",
     "rows",
