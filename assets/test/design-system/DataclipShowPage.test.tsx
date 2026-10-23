@@ -47,7 +47,21 @@ describe('DataclipShowPage', () => {
     renderIsland<Props>(DataclipShowPage, props);
     expect(screen.getByText(ID)).toBeTruthy();
     await waitFor(() => expect(screen.getByText(/"x"/)).toBeTruthy());
-    expect(fetchMock).toHaveBeenCalledWith(`/dataclip/body/${ID}`);
+    expect(fetchMock).toHaveBeenCalledWith(`/dataclip/body/${ID}`, {
+      signal: expect.any(AbortSignal),
+    });
+  });
+
+  test('stops downloading the body when the page goes away', () => {
+    const fetchMock = vi.fn(
+      (_url: string, _init: RequestInit) => new Promise<Response>(() => {})
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const { unmount } = renderIsland<Props>(DataclipShowPage, props);
+    unmount();
+    expect(fetchMock.mock.calls.every(([, init]) => init.signal?.aborted)).toBe(
+      true
+    );
   });
 
   test('does not ask for the body of a wiped dataclip', () => {

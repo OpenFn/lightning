@@ -4,9 +4,9 @@
  * controller keeps its own authorisation and caching. Pretty-printed when it
  * is JSON; the viewer's own words when it is not there.
  */
-export const fetchDataclipBody = async (id: string) => {
+export const fetchDataclipBody = async (id: string, signal: AbortSignal) => {
   try {
-    const response = await fetch(`/dataclip/body/${id}`);
+    const response = await fetch(`/dataclip/body/${id}`, { signal });
     if (response.status === 404) return 'Dataclip not found';
     if (!response.ok) return 'Failed to load content';
     const text = await response.text();

@@ -29,11 +29,12 @@ export const DataclipShowPage = designSystemPage(
 
     useEffect(() => {
       if (wipedAt !== null) return;
-      let current = true;
-      void fetchDataclipBody(id).then(text => current && setBody({ id, text }));
-      return () => {
-        current = false;
-      };
+      // A body can be megabytes: stop downloading one the page no longer shows.
+      const abort = new AbortController();
+      void fetchDataclipBody(id, abort.signal).then(
+        text => !abort.signal.aborted && setBody({ id, text })
+      );
+      return () => abort.abort();
     }, [id, wipedAt]);
 
     return { ...props, body: body?.id === id ? body.text : undefined };

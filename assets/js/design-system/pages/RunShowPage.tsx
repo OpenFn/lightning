@@ -98,12 +98,17 @@ export const RunShowPage = designSystemPage(
       .map(d => d.id);
     const wantedKey = wanted.join(',');
     useEffect(() => {
+      // Bodies can be megabytes: stop downloading the ones a new step replaced.
+      const abort = new AbortController();
       for (const id of wanted) {
         if (id in bodies) continue;
-        void fetchDataclipBody(id).then(body =>
-          setBodies(current => ({ ...current, [id]: body }))
+        void fetchDataclipBody(id, abort.signal).then(
+          body =>
+            !abort.signal.aborted &&
+            setBodies(current => ({ ...current, [id]: body }))
         );
       }
+      return () => abort.abort();
       // Only new ids matter; `bodies` changing must not refetch.
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [wantedKey]);
