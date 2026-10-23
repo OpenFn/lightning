@@ -22,6 +22,7 @@ import {
   deriveWorkflowChanges,
 } from '../utils/workflowDiff';
 
+import type { OpenStepTarget } from './WorkflowDiffBlocks';
 import {
   StepDiffBlock,
   StructureBlock,
@@ -246,7 +247,7 @@ const SegmentTimeline = ({
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
-  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  onOpenStep?: (step: OpenStepTarget) => void;
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
   /**
    * Per-status change sets (segment index → what that action changed),
@@ -356,7 +357,7 @@ const WorkflowReplyTimeline = ({
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
-  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  onOpenStep?: (step: OpenStepTarget) => void;
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
 }) => {
   // The snapshot path only needs to know how many segments have drained,
@@ -752,7 +753,7 @@ interface MessageListProps {
   /** Id of the viewer, so a collaborator's message is not mistaken for theirs */
   currentUserId?: string;
   /** Opens a step in the IDE from a diff block */
-  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  onOpenStep?: (step: OpenStepTarget) => void;
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
   /**
    * Global replies whose auto-apply failed. They get the code panel and its

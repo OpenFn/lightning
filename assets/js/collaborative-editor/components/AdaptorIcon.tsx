@@ -5,10 +5,11 @@ import { extractAdaptorName, extractPackageName } from '../utils/adaptorUtils';
 
 interface AdaptorIconProps {
   name: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
 }
 
 const sizeClasses = {
+  xs: 'h-3.5 w-3.5',
   sm: 'h-5 w-5',
   md: 'h-8 w-8',
   lg: 'h-12 w-12',

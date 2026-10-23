@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- AI assistant diff blocks show the step with its adaptor logo. Clicking it
+  opens the step and highlights the code the AI added.
 - GitHub sync connections using the v2 format now install `@v2` of the OpenFn
   deploy and pull GitHub Actions, which sync `openfn.yaml` workspaces with
   `openfn project pull/deploy`. Lightning no longer commits a config file for
