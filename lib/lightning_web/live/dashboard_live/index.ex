@@ -50,6 +50,10 @@ defmodule LightningWeb.DashboardLive.Index do
     end
   end
 
+  # Sorting moved to the browser, so a "sort" (or any other) event from an
+  # old or crafted client is ignored instead of crashing the page.
+  def handle_event(_event, _params, socket), do: {:noreply, socket}
+
   # Sorted by name; the page sorts the other way round in the browser.
   defp assign_projects(socket) do
     assign(

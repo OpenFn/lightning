@@ -315,6 +315,16 @@ defmodule LightningWeb.DashboardLiveTest do
       assert Enum.map(projects(view), & &1["name"]) ==
                projects |> Enum.map(& &1.name) |> Enum.sort()
     end
+
+    test "an unknown event is ignored, not a crash", %{conn: conn, user: user} do
+      insert(:project, project_users: [%{user_id: user.id, role: :admin}])
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      render_hook(view, "sort", %{"by" => "no_such_column"})
+
+      assert [_] = projects(view)
+    end
   end
 
   defp assert_project_listed(view, project, user, max_updated_at) do
