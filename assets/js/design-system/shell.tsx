@@ -1,7 +1,4 @@
-import Sidebar, {
-  type SidebarProps,
-} from '@openfn/ui/components/shell/Sidebar.tsx';
-import { RouterProvider } from '@openfn/ui/routing/router.tsx';
+import { RouterProvider, Sidebar, type SidebarProps } from '@openfn/ui';
 import { StrictMode, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 

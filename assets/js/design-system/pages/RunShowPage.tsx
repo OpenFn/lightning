@@ -1,7 +1,9 @@
-import DesignSystemRunShowPage, {
+import {
+  type LogLine,
+  RunShowPage as DesignSystemRunShowPage,
   type RunShowPageProps,
-} from '@openfn/ui/pages/history/RunShowPage.tsx';
-import type { LogLine, StepDataclip } from '@openfn/ui/types/history.ts';
+  type StepDataclip,
+} from '@openfn/ui';
 import { useEffect, useRef, useState } from 'react';
 
 import { fetchDataclipBody } from '../dataclip-body';

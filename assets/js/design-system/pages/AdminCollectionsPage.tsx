@@ -1,8 +1,8 @@
-import DesignSystemAdminCollectionsPage from '@openfn/ui/pages/admin/AdminCollectionsPage.tsx';
-import type {
-  AdminCollectionRow,
-  CollectionFormValues,
-} from '@openfn/ui/types/admin.ts';
+import {
+  type AdminCollectionRow,
+  AdminCollectionsPage as DesignSystemAdminCollectionsPage,
+  type CollectionFormValues,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

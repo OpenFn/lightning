@@ -1,5 +1,7 @@
-import DesignSystemAdminAuditPage from '@openfn/ui/pages/admin/AdminAuditPage.tsx';
-import type { AuditEvent } from '@openfn/ui/types/admin.ts';
+import {
+  AdminAuditPage as DesignSystemAdminAuditPage,
+  type AuditEvent,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

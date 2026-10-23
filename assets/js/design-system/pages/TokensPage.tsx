@@ -1,5 +1,7 @@
-import DesignSystemTokensPage from '@openfn/ui/pages/profile/TokensPage.tsx';
-import type { ApiToken } from '@openfn/ui/types/tokens.ts';
+import {
+  type ApiToken,
+  TokensPage as DesignSystemTokensPage,
+} from '@openfn/ui';
 import { useState } from 'react';
 
 import { designSystemPage } from '../page';

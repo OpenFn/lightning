@@ -1,8 +1,8 @@
-import DesignSystemAdminAuthProvidersPage from '@openfn/ui/pages/admin/AdminAuthProvidersPage.tsx';
-import type {
-  AuthProvider,
-  AuthProviderValues,
-} from '@openfn/ui/types/admin.ts';
+import {
+  AdminAuthProvidersPage as DesignSystemAdminAuthProvidersPage,
+  type AuthProvider,
+  type AuthProviderValues,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

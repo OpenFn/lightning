@@ -1,4 +1,4 @@
-import type { NavigateOptions, Router } from '@openfn/ui/routing/router.tsx';
+import { type NavigateOptions, type Router } from '@openfn/ui';
 import { useMemo, useSyncExternalStore } from 'react';
 
 // LiveView announces its own URL changes (patch, navigate, back and forward)

@@ -1,6 +1,7 @@
-import DesignSystemHistoryChannelLogsPage, {
+import {
+  HistoryChannelLogsPage as DesignSystemHistoryChannelLogsPage,
   type HistoryChannelLogsPageProps,
-} from '@openfn/ui/pages/history/HistoryChannelLogsPage.tsx';
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

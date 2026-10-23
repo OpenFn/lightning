@@ -1,6 +1,7 @@
-import DesignSystemAuthConfirmAccessPage, {
+import {
+  AuthConfirmAccessPage as DesignSystemAuthConfirmAccessPage,
   type ConfirmAccessValues,
-} from '@openfn/ui/pages/auth/AuthConfirmAccessPage.tsx';
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

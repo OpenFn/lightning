@@ -1,10 +1,10 @@
-import DesignSystemChannelsIndexPage from '@openfn/ui/pages/projects/ChannelsIndexPage.tsx';
-import type {
-  ChannelForm,
-  ChannelFormValues,
-  ChannelRow,
-} from '@openfn/ui/types/channels.ts';
-import type { Project } from '@openfn/ui/types/projects.ts';
+import {
+  type ChannelForm,
+  type ChannelFormValues,
+  type ChannelRow,
+  ChannelsIndexPage as DesignSystemChannelsIndexPage,
+  type Project,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

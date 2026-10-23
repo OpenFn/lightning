@@ -1,6 +1,7 @@
-import DesignSystemFirstSetupPage, {
+import {
+  FirstSetupPage as DesignSystemFirstSetupPage,
   type FirstSetupValues,
-} from '@openfn/ui/pages/auth/FirstSetupPage.tsx';
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

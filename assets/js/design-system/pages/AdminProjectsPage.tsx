@@ -1,10 +1,10 @@
-import DesignSystemAdminProjectsPage from '@openfn/ui/pages/admin/AdminProjectsPage.tsx';
-import type {
-  AdminDeleteProject,
-  AdminProjectForm,
-  AdminProjectFormValues,
-  AdminProjectRow,
-} from '@openfn/ui/types/admin.ts';
+import {
+  type AdminDeleteProject,
+  type AdminProjectForm,
+  type AdminProjectFormValues,
+  type AdminProjectRow,
+  AdminProjectsPage as DesignSystemAdminProjectsPage,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

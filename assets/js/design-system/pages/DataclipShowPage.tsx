@@ -1,6 +1,7 @@
-import DesignSystemDataclipShowPage, {
+import {
+  DataclipShowPage as DesignSystemDataclipShowPage,
   type DataclipShowPageProps,
-} from '@openfn/ui/pages/history/DataclipShowPage.tsx';
+} from '@openfn/ui';
 import { useEffect, useState } from 'react';
 
 import { fetchDataclipBody } from '../dataclip-body';

@@ -1,5 +1,7 @@
-import DesignSystemProjectsDashboardPage from '@openfn/ui/pages/projects/ProjectsDashboardPage.tsx';
-import type { ProjectOverview } from '@openfn/ui/types/workflows.ts';
+import {
+  type ProjectOverview,
+  ProjectsDashboardPage as DesignSystemProjectsDashboardPage,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

@@ -1,5 +1,7 @@
-import DesignSystemBackupCodesPage from '@openfn/ui/pages/profile/BackupCodesPage.tsx';
-import type { BackupCode } from '@openfn/ui/types/tokens.ts';
+import {
+  type BackupCode,
+  BackupCodesPage as DesignSystemBackupCodesPage,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

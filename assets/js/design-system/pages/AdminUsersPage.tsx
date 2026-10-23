@@ -1,5 +1,8 @@
-import DesignSystemAdminUsersPage from '@openfn/ui/pages/admin/AdminUsersPage.tsx';
-import type { AdminDeleteUser, AdminUserRow } from '@openfn/ui/types/admin.ts';
+import {
+  type AdminDeleteUser,
+  type AdminUserRow,
+  AdminUsersPage as DesignSystemAdminUsersPage,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

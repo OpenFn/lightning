@@ -1,6 +1,7 @@
-import DesignSystemChannelRequestShowPage, {
+import {
+  ChannelRequestShowPage as DesignSystemChannelRequestShowPage,
   type ChannelRequestShowPageProps,
-} from '@openfn/ui/pages/history/ChannelRequestShowPage.tsx';
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

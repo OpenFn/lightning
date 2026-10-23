@@ -1,5 +1,8 @@
-import DesignSystemAdminUserEditPage from '@openfn/ui/pages/admin/AdminUserEditPage.tsx';
-import type { AdminUserRow, UserFormValues } from '@openfn/ui/types/admin.ts';
+import {
+  AdminUserEditPage as DesignSystemAdminUserEditPage,
+  type AdminUserRow,
+  type UserFormValues,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

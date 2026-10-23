@@ -1,8 +1,9 @@
-import DesignSystemAuthConfirmationRequiredPage, {
+import {
+  AuthConfirmationRequiredPage as DesignSystemAuthConfirmationRequiredPage,
   type ChangeEmailResult,
   type ChangeEmailValues,
   type ResendResult,
-} from '@openfn/ui/pages/auth/AuthConfirmationRequiredPage.tsx';
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

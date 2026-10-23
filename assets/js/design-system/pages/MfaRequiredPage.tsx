@@ -1,4 +1,4 @@
-import DesignSystemMfaRequiredPage from '@openfn/ui/pages/projects/MfaRequiredPage.tsx';
+import { MfaRequiredPage as DesignSystemMfaRequiredPage } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

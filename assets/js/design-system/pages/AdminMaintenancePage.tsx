@@ -1,4 +1,4 @@
-import DesignSystemAdminMaintenancePage from '@openfn/ui/pages/admin/AdminMaintenancePage.tsx';
+import { AdminMaintenancePage as DesignSystemAdminMaintenancePage } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 

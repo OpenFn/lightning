@@ -1,9 +1,9 @@
-import DesignSystemWorkflowsIndexPage from '@openfn/ui/pages/projects/WorkflowsIndexPage.tsx';
-import type { Project } from '@openfn/ui/types/projects.ts';
-import type {
-  ProjectMetrics,
-  WorkflowRow,
-} from '@openfn/ui/types/workflows.ts';
+import {
+  type Project,
+  type ProjectMetrics,
+  type WorkflowRow,
+  WorkflowsIndexPage as DesignSystemWorkflowsIndexPage,
+} from '@openfn/ui';
 import { useEffect, useRef, useState } from 'react';
 
 import { designSystemPage } from '../page';

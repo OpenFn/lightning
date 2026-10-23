@@ -1,6 +1,4 @@
-import { ToastProvider } from '@openfn/ui/components/Toast.tsx';
-import { RouterProvider } from '@openfn/ui/routing/router.tsx';
-import { RequestError } from '@openfn/ui/utils/errors.ts';
+import { RequestError, RouterProvider, ToastProvider } from '@openfn/ui';
 import { StrictMode, useEffect, useMemo, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
