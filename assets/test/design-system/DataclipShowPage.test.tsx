@@ -8,6 +8,13 @@ import {
 
 import { renderIsland } from './renderIsland';
 
+// Monaco doesn't run in jsdom: the design system's plain-text stand-in, and a
+// loader for Lightning's setup in js/monaco to configure.
+vi.mock('@monaco-editor/react', async () => ({
+  ...(await import('../../node_modules/@openfn/ui/src/test/monaco')),
+  loader: { config: () => {} },
+}));
+
 const ID = '9a8b7c6d-3333-4a4a-8b8b-0123456789ab';
 
 const props: Props = {

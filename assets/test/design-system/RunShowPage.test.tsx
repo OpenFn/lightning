@@ -1,5 +1,5 @@
 import { act, screen } from '@testing-library/react';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import {
   RunShowPage,
@@ -7,6 +7,13 @@ import {
 } from '../../js/design-system/pages/RunShowPage';
 
 import { renderIsland } from './renderIsland';
+
+// Monaco doesn't run in jsdom: the design system's plain-text stand-in, and a
+// loader for Lightning's setup in js/monaco to configure.
+vi.mock('@monaco-editor/react', async () => ({
+  ...(await import('../../node_modules/@openfn/ui/src/test/monaco')),
+  loader: { config: () => {} },
+}));
 
 const RUN_ID = '5e9a1c2b-1111-4a4a-8b8b-0123456789ab';
 

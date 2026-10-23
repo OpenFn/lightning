@@ -111,6 +111,8 @@ config :esbuild,
          --format=esm --splitting --bundle
          --alias:react=./node_modules/react
          --alias:react-dom=./node_modules/react-dom
+         --alias:monaco-editor=./node_modules/monaco-editor
+         --alias:@monaco-editor/react=./node_modules/@monaco-editor/react
          --external:path
          --jsx=automatic
          --tsconfig=tsconfig.browser.json

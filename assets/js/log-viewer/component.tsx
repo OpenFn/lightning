@@ -78,20 +78,6 @@ const LogViewer = ({
     }
   }, [highlightedRanges, monaco, editor, formattedLogLines]);
 
-  useEffect(() => {
-    if (monaco) {
-      // Define a language for our logs
-      monaco.languages.register({ id: 'openFnLogs' });
-
-      // Define a simple tokenizer for the language
-      monaco.languages.setMonarchTokensProvider('openFnLogs', {
-        tokenizer: {
-          root: [[/^([A-Z/]{2,4})/, 'logSource']],
-        },
-      });
-    }
-  }, [monaco]);
-
   return (
     <MonacoEditor
       defaultLanguage="openFnLogs"

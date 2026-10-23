@@ -1,4 +1,5 @@
 import Editor, { loader, type Monaco } from '@monaco-editor/react';
+import { setUpMonaco } from '@openfn/ui';
 import type { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor';
 import { useCallback } from 'react';
@@ -38,22 +39,10 @@ if (typeof window !== 'undefined') {
 
 loader.config({ monaco });
 
+// The theme and the openFnLogs language come from the design system, so its
+// editors and Lightning's look the same.
 export function setTheme(monaco: Monaco) {
-  monaco.editor.defineTheme('default', {
-    base: 'vs-dark',
-    inherit: true,
-    rules: [{ token: 'logSource', foreground: '#868686', fontStyle: 'italic' }],
-    colors: {
-      'editor.foreground': '#E2E8F0',
-      'editor.background': '#334155', // slate-700
-      'editor.lineHighlightBackground': '#475569', // slate-600
-      'editor.selectionBackground': '#4f5b66',
-      'editorCursor.foreground': '#c0c5ce',
-      'editorWhitespace.foreground': '#65737e',
-      'editorIndentGuide.background': '#65737F',
-      'editorIndentGuide.activeBackground': '#FBC95A',
-    },
-  });
+  setUpMonaco(monaco);
   monaco.editor.setTheme('default');
 }
 

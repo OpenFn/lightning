@@ -7,6 +7,10 @@ import { useEffect, useState } from 'react';
 import { fetchDataclipBody } from '../dataclip-body';
 import { designSystemPage } from '../page';
 
+// Sets Monaco's workers and loader before the page's viewers mount, so they
+// use Lightning's bundled Monaco and not the CDN.
+import '#/monaco';
+
 /** What DataclipLive.Show puts in `data-props`: the page's props minus the body. */
 export type Props = Omit<DataclipShowPageProps, 'body'>;
 

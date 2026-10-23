@@ -48,8 +48,16 @@ export default defineConfig({
   },
   resolve: {
     // @openfn/ui is linked from a local checkout with its own node_modules;
-    // one React for both, as config/config.exs aliases for esbuild
-    dedupe: ['react', 'react-dom', 'use-sync-external-store'],
+    // one React and one @monaco-editor/react for both, as config/config.exs
+    // aliases for esbuild. Its own copy, inlined below, is CJS and its default
+    // import comes out as the exports object rather than the Editor.
+    // (monaco-editor itself is aliased to the mock.)
+    dedupe: [
+      'react',
+      'react-dom',
+      'use-sync-external-store',
+      '@monaco-editor/react',
+    ],
     alias: {
       // Ensure path aliases are resolved correctly
       '#': path.resolve(__dirname, './js'),
