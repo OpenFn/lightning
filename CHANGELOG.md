@@ -19,9 +19,16 @@ and this project adheres to
 
 - AI assistant diff blocks show the step with its adaptor logo. Clicking it
   opens the step and highlights the code the AI added.
+- GitHub sync connections using the v2 format now install `@v2` of the OpenFn
+  deploy and pull GitHub Actions, which sync `openfn.yaml` workspaces with
+  `openfn project pull/deploy`. Lightning no longer commits a config file for
+  v2, and disconnecting leaves `openfn.yaml` in place. Legacy connections keep
+  using `@v1`.
 
 ### Changed
 
+- Cron schedules now show "UTC" after the time, on the canvas and in the trigger
+  panels [#5247](https://github.com/OpenFn/lightning/issues/5247)
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
@@ -35,6 +42,11 @@ and this project adheres to
 - GitHub sync now prevents two projects in the same project tree (root,
   sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
   pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+
+## [2.19.2] - 2026-10-16
+
+### Fixed
+
 - History retention no longer leaves steps behind when it deletes work orders in
   batches. A workflow purge that still fails now says why.
   [#5242](https://github.com/OpenFn/lightning/pull/5242)
@@ -42,6 +54,8 @@ and this project adheres to
   history retention left behind, which were stopping deleted workflows from
   being purged. It runs on a new `maintenance` Oban queue.
   [#5242](https://github.com/OpenFn/lightning/pull/5242)
+
+## [2.19.1] - 2026-10-16
 
 ## [2.19.1-pre] - 2026-10-09
 
@@ -78,6 +92,8 @@ and this project adheres to
   [#5202](https://github.com/OpenFn/lightning/pull/5202)
 - Index to improve the performance of the dataclip deletion query.
   [#5226](https://github.com/OpenFn/lightning/issues/5226)
+- The Repository and Branch dropdowns on the GitHub sync form now have a text
+  filter. [#5235](https://github.com/OpenFn/lightning/pull/5235)
 
 ### Changed
 
@@ -114,6 +130,12 @@ and this project adheres to
   donuts show the success rate and the failure count in their middle. Triage
   rows show each failure's state and adaptor, and the step bars show each step's
   adaptor. [#5229](https://github.com/OpenFn/lightning/pull/5229)
+- The project settings "Sync to GitHub" tab is now "Sync", and holds the project
+  export and a new CLI section with commands for pulling, deploying and running
+  a project locally. New GitHub connections default to the v2 `openfn.yaml`
+  format, with a switch to use the legacy format, and the connected panel now
+  carries its own title, verification banner and a "Remove integration" button.
+  [#5235](https://github.com/OpenFn/lightning/pull/5235)
 
 ### Removed
 

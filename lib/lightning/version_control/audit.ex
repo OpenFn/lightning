@@ -7,6 +7,7 @@ defmodule Lightning.VersionControl.Audit do
     item: "project",
     events: [
       "repo_connection_created",
+      "repo_connection_updated",
       "repo_connection_removed"
     ]
 
@@ -21,6 +22,7 @@ defmodule Lightning.VersionControl.Audit do
     %{
       branch: branch,
       config_path: config_path,
+      workspace_path: workspace_path,
       project_id: project_id,
       repo: repo
     } = repo_connection
@@ -30,13 +32,12 @@ defmodule Lightning.VersionControl.Audit do
         branch: branch,
         repo: repo
       }
-      |> then(fn connection_properties ->
-        if config_path do
-          Map.put(connection_properties, :config_path, config_path)
-        else
-          connection_properties
-        end
-      end)
+      |> Map.merge(
+        Map.reject(
+          %{config_path: config_path, workspace_path: workspace_path},
+          fn {_key, value} -> is_nil(value) end
+        )
+      )
       |> then(fn connection_properties ->
         if action == :created do
           %{
@@ -53,5 +54,13 @@ defmodule Lightning.VersionControl.Audit do
       end)
 
     event("repo_connection_#{action}", project_id, actor, changes)
+  end
+
+  @doc "A reconnect that moved the connection to another workspace folder"
+  def repo_connection_updated(before, updated, actor) do
+    event("repo_connection_updated", before.project_id, actor, %{
+      before: %{workspace_path: before.workspace_path},
+      after: %{workspace_path: updated.workspace_path}
+    })
   end
 end
