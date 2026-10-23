@@ -12,6 +12,10 @@ const MESSAGE = 'Could not load workflow stats. Refresh to try again.';
 // combination to name and no separate flag to keep in step with these two.
 const EMPTY = { data: null, error: null };
 
+// The server keeps its own copy of the range list and of this default, in
+// `WorkflowHealthController`. Change both together.
+export const DEFAULT_DAYS = '7';
+
 /** Base path for one workflow's health endpoints. */
 export const healthBase = (projectId: string, workflowId: string) =>
   `/api/projects/${projectId}/workflows/${workflowId}/health`;

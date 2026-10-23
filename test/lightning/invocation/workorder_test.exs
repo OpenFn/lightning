@@ -77,7 +77,7 @@ defmodule Lightning.WorkOrderTest do
   describe "failure_states/0" do
     test "is every final state except success and cancelled" do
       # If this fails because a state was added or removed, also update
-      # assets/js/health/types.ts's FAILURE_STATES to match.
+      # the design system's FAILURE_STATES (src/types/workflow-health.ts) to match.
       assert WorkOrder.failure_states() == [
                :rejected,
                :failed,

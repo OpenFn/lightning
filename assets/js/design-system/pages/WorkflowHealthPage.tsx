@@ -1,13 +1,17 @@
 import {
   WorkflowHealthPage as DesignSystemWorkflowHealthPage,
+  type ErrorSignatures,
+  type Outcomes,
+  type RunVolume,
   type WorkflowHealthPageProps,
 } from '@openfn/ui';
 import { useState } from 'react';
 
-import type { RunVolume } from '../../health/charts/VolumeBars';
-import { DEFAULT_DAYS } from '../../health/RangePicker';
-import type { ErrorSignatures, Outcomes } from '../../health/types';
-import { healthBase, useHealthQuery } from '../../health/useHealthQuery';
+import {
+  DEFAULT_DAYS,
+  healthBase,
+  useHealthQuery,
+} from '../../health/useHealthQuery';
 import { designSystemPage } from '../page';
 
 /** What WorkflowLive.Health puts in `data-props`: the page minus the range and the replies. */

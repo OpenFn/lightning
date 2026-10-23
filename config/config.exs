@@ -122,12 +122,10 @@ config :esbuild,
          --external:/fonts/*
          --external:/images/*
          js/app.js
-         js/react/components/DataclipViewer.tsx
          js/react/components/CollectionPreviewViewer.tsx
          js/collaborative-editor/CollaborativeEditor.tsx
          js/picker/Picker.tsx
          js/picker/PickerButton.tsx
-         js/health/WorkflowHealth.tsx
          js/design-system/pages/*.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
