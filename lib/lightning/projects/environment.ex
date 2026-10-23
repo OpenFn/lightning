@@ -46,7 +46,7 @@ defmodule Lightning.Projects.Environment do
   end
 
   # Repo.get raises Ecto.Query.CastError on a malformed binary_id, which turns a
-  # refusal into a 500. Cast first, the same way `Projects.Scope` does.
+  # refusal into a 500. Cast first, the same way `Lightning.Scope` does.
   def fetch(project_id) when is_binary(project_id) do
     case Ecto.UUID.cast(project_id) do
       {:ok, uuid} -> Project |> Repo.get(uuid) |> from_project()

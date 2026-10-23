@@ -6,16 +6,27 @@ defmodule Lightning.Policies.Users do
 
   alias Lightning.Accounts
   alias Lightning.Accounts.User
-  alias Lightning.Credentials.Credential
   alias Lightning.Credentials.OauthClient
+  alias Lightning.Policies.Decision
+  alias Lightning.Scope
 
   @type actions ::
           :access_admin_space
           | :edit_credential
           | :delete_credential
           | :delete_account
+          | :read_users
+          | :write_users
 
-  @spec authorize(actions(), Lightning.Accounts.User.t(), any()) :: boolean
+  @spec authorize(actions(), User.t() | Scope.t(), any()) ::
+          boolean() | {:error, Decision.insufficient_scope()}
+
+  # `operator?` is a fact about the caller alone, so the check made before any
+  # target decides it.
+  def authorize(action, %Scope{} = scope, _subject)
+      when action in [:read_users, :write_users],
+      do: Decision.instance(scope, nil, grant(action), Scope.operator?(scope))
+
   def authorize(:access_admin_space, %User{role: role}, _params) do
     role in [:superuser]
   end
@@ -37,9 +48,11 @@ defmodule Lightning.Policies.Users do
     end
   end
 
-  def authorize(action, %User{} = authenticated_user, %module{} = credential)
-      when module in [Credential, OauthClient] and
-             action in [:edit_credential, :delete_credential] do
-    authenticated_user.id == credential.user_id
+  def authorize(action, %User{} = authenticated_user, %OauthClient{} = client)
+      when action in [:edit_credential, :delete_credential] do
+    authenticated_user.id == client.user_id
   end
+
+  defp grant(:read_users), do: "users:read"
+  defp grant(:write_users), do: "users:write"
 end

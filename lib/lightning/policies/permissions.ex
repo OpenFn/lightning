@@ -87,6 +87,66 @@ defmodule Lightning.Policies.Permissions do
     |> Bodyguard.permit?(action, user, params)
   end
 
+  @doc """
+  Whether the caller described by `scope` may apply `action` to `subject`.
+
+  The one entry point for API callers. Unlike `can/4`, a refusal is
+  `{:error, :forbidden}`, so it renders as 403 rather than 401, and a policy's
+  more specific answer (`{:insufficient_scope, grant}`, `:no_standing`,
+  `:scheduled_for_deletion`) reaches the caller unchanged.
+  """
+  @spec permit(atom(), atom(), Lightning.Scope.t(), term()) ::
+          :ok
+          | {:error,
+             :forbidden
+             | Lightning.Policies.Decision.insufficient_scope()
+             | :no_standing
+             | :scheduled_for_deletion}
+  def permit(policy, action, %Lightning.Scope{} = scope, subject) do
+    case can(policy, action, scope, subject) do
+      {:error, :unauthorized} -> {:error, :forbidden}
+      result -> result
+    end
+  end
+
+  @doc """
+  Whether the caller's grant already refuses `action`, before any target is
+  loaded. A pass here is not permission. The action still has to ask
+  `permit/4` about its target.
+  """
+  @spec permit(atom(), atom(), Lightning.Scope.t()) ::
+          :ok
+          | {:error,
+             :forbidden
+             | Lightning.Policies.Decision.insufficient_scope()
+             | :no_standing
+             | :scheduled_for_deletion}
+  def permit(policy, action, %Lightning.Scope{} = scope),
+    do: permit(policy, action, scope, :before_target)
+
+  @doc """
+  Resolves `actor`'s scope on the subject's project and passes it to `decide`,
+  for a policy handed an actor rather than a `%Scope{}`. Bodyguard's contract
+  is boolean, and channel and LiveView callers match `{:error, :unauthorized}`,
+  so a missing project, no standing and a scheduled project are all `false`.
+  Only callers going through `permit/4` with a `%Scope{}` are told apart.
+  """
+  @spec for_actor(
+          Lightning.Scope.actor(),
+          term(),
+          (Lightning.Scope.t() -> term())
+        ) :: term()
+  def for_actor(actor, subject, decide) do
+    case Lightning.Scope.fetch(actor, subject) do
+      {:ok, scope} -> scope |> decide.() |> as_refusal()
+      {:error, _reason} -> false
+    end
+  end
+
+  defp as_refusal({:error, :no_standing}), do: false
+  defp as_refusal({:error, :scheduled_for_deletion}), do: false
+  defp as_refusal(answer), do: answer
+
   defp resolve_policy_module(policy) when is_atom(policy) do
     if Code.ensure_loaded?(policy) do
       policy
