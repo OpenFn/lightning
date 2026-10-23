@@ -1,7 +1,8 @@
 import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { Position } from '@xyflow/react';
-import cronstrue from 'cronstrue';
 import { memo } from 'react';
+
+import { humanizeCron } from '#/collaborative-editor/components/inspector/trigger/cronSchedule';
 
 import { lockClosedIcon } from '../components/trigger-icons';
 import type { Lightning } from '../types';
@@ -62,17 +63,11 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
         secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
     case 'cron':
-      let sublabel = 'Not configured';
-      try {
-        if (trigger.cron_expression) {
-          sublabel = cronstrue.toString(trigger.cron_expression);
-        }
-      } catch (_error) {
-        sublabel = 'Invalid cron expression';
-      }
       return {
         label: 'Cron trigger',
-        sublabel,
+        sublabel: trigger.cron_expression
+          ? (humanizeCron(trigger.cron_expression) ?? 'Invalid cron expression')
+          : 'Not configured',
         primaryIcon: <ClockIcon />,
         secondaryIcon: null,
       };

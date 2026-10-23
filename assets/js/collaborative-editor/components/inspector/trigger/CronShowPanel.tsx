@@ -18,8 +18,7 @@ interface CronShowPanelProps {
  * Read-only "show / resting" panel for a configured cron trigger.
  *
  * Renders inside {@link InspectorLayout}: the green "Schedule / Cron" badge, a
- * **Frequency** label (with an "All times in UTC" note, since cron schedules
- * always run in UTC) + a read-only box with the humanized schedule, and a
+ * **Frequency** label + a read-only box with the humanized schedule, and a
  * **Cron Input Source** field (the selected step's name, or "Final run state
  * (default)" when unset). The footer holds a single secondary **Edit** action
  * (left) that hands off to the edit wizard.
@@ -63,9 +62,7 @@ export function CronShowPanel({
           <TriggerTypeBadge type="cron" />
         </div>
 
-        <ReadOnlyField label="Frequency" hint="All times in UTC">
-          {frequency}
-        </ReadOnlyField>
+        <ReadOnlyField label="Frequency">{frequency}</ReadOnlyField>
         <ReadOnlyField label="Cron Input Source">{inputSource}</ReadOnlyField>
       </div>
     </InspectorLayout>
