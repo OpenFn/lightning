@@ -6,6 +6,7 @@ defmodule Lightning.ProjectsTest do
   import Lightning.AccountsFixtures
   import Lightning.Factories
   import Lightning.ProjectsFixtures
+  import Lightning.ServiceAccountHelpers
   import Mox
   import Swoosh.TestAssertions
 
@@ -122,8 +123,8 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project_user(project_user.id) == project_user
     end
 
-    test "create_project/1 with valid data creates a project" do
-      %{id: user_id} = insert(:user)
+    test "create_project/3 with valid data creates a project" do
+      %{id: user_id} = user = insert(:user)
 
       valid_attrs = %{
         name: "some-name",
@@ -131,7 +132,7 @@ defmodule Lightning.ProjectsTest do
       }
 
       assert {:ok, %Project{id: project_id} = project} =
-               Projects.create_project(valid_attrs)
+               Projects.create_project(valid_attrs, user)
 
       assert project.name == "some-name"
 
@@ -139,28 +140,34 @@ defmodule Lightning.ProjectsTest do
                project.project_users
     end
 
-    test "create_project/1 expects project to have exactly one owner" do
+    test "create_project/3 expects project to have exactly one owner" do
       user = insert(:user)
 
       # creates successfully if there's one
       assert {:ok, _project} =
-               Projects.create_project(%{
-                 name: "some-name",
-                 project_users: [%{user_id: user.id, role: :owner}]
-               })
+               Projects.create_project(
+                 %{
+                   name: "some-name",
+                   project_users: [%{user_id: user.id, role: :owner}]
+                 },
+                 user
+               )
 
       # errors out if there is none
       for role <- [:admin, :editor, :viewer] do
         assert {:error, %Ecto.Changeset{errors: errors}} =
-                 Projects.create_project(%{
-                   name: "some-name",
-                   project_users: [%{user_id: user.id, role: role}]
-                 })
+                 Projects.create_project(
+                   %{
+                     name: "some-name",
+                     project_users: [%{user_id: user.id, role: role}]
+                   },
+                   user
+                 )
 
         assert [
                  {:owner,
                   {"Every project must have exactly one owner. Please specify one below.",
-                   []}}
+                   [code: :one_owner]}}
                ] ==
                  errors
       end
@@ -169,24 +176,64 @@ defmodule Lightning.ProjectsTest do
       another_user = insert(:user)
 
       assert {:error, %Ecto.Changeset{errors: errors}} =
-               Projects.create_project(%{
-                 name: "some-name",
-                 project_users: [
-                   %{user_id: user.id, role: :owner},
-                   %{user_id: another_user.id, role: :owner}
-                 ]
-               })
+               Projects.create_project(
+                 %{
+                   name: "some-name",
+                   project_users: [
+                     %{user_id: user.id, role: :owner},
+                     %{user_id: another_user.id, role: :owner}
+                   ]
+                 },
+                 user
+               )
 
-      assert [{:owner, {"A project can have only one owner.", []}}] ==
+      assert [
+               {:owner,
+                {"A project can have only one owner.", [code: :one_owner]}}
+             ] ==
                errors
     end
 
-    test "create_project/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} =
-               Projects.create_project(@invalid_attrs)
+    test "update_project_with_users/4 hands ownership over when the promotion is listed before the demotion" do
+      owner = insert(:user)
+      editor = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: editor, role: :editor}
+          ]
+        )
+
+      owner_pu = Enum.find(project.project_users, &(&1.user_id == owner.id))
+      editor_pu = Enum.find(project.project_users, &(&1.user_id == editor.id))
+
+      assert {:ok, _project} =
+               Projects.update_project_with_users(
+                 project,
+                 %{
+                   project_users: [
+                     %{id: editor_pu.id, role: :owner},
+                     %{id: owner_pu.id, role: :editor}
+                   ]
+                 },
+                 owner,
+                 false
+               )
+
+      assert %{role: :editor} = Repo.reload!(owner_pu)
+      assert %{role: :owner} = Repo.reload!(editor_pu)
+    end
+
+    test "create_project/3 with invalid data returns error changeset" do
+      user = insert(:user)
 
       assert {:error, %Ecto.Changeset{}} =
-               Projects.create_project(%{"name" => "Can't have spaces!"})
+               Projects.create_project(@invalid_attrs, user)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.create_project(%{"name" => "Can't have spaces!"}, user)
     end
 
     test "set_notification_pref/3 with a changed value updates the field" do
@@ -3308,34 +3355,154 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "create_project/3 audit and notification" do
+    setup do
+      owner = insert(:user)
+      admin = insert(:user)
+      viewer = insert(:user)
+
+      members = [{owner, :owner}, {admin, :admin}, {viewer, :viewer}]
+
+      %{
+        members: members,
+        attrs: %{
+          name: "audited",
+          description: "made by apply",
+          project_users:
+            Enum.map(members, fn {user, role} ->
+              %{user_id: user.id, role: role}
+            end)
+        }
+      }
+    end
+
+    test "a service account is recorded as creating the project and adding each member",
+         %{attrs: attrs, members: members} do
+      {account, _key} = service_account_with_key()
+
+      assert {:ok, project} = Projects.create_project(attrs, account)
+
+      assert_creation_audited(project, members, account.uuid, :service_account)
+    end
+
+    test "a person is recorded as creating the project and adding each member",
+         %{attrs: attrs, members: members} do
+      user = insert(:user)
+
+      assert {:ok, project} = Projects.create_project(attrs, user)
+
+      assert_creation_audited(project, members, user.id, :user)
+    end
+
+    test "an id another project already holds is an error on id, not a raise",
+         %{attrs: attrs} do
+      taken = insert(:project)
+
+      assert {:error, changeset} =
+               Projects.create_project(
+                 Map.put(attrs, :id, taken.id),
+                 insert(:user)
+               )
+
+      assert {_message, opts} = changeset.errors[:id]
+      assert opts[:constraint] == :unique
+    end
+
+    test "an audit event it cannot record is an error, and leaves no project",
+         %{attrs: attrs} do
+      id = Ecto.UUID.generate()
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Projects.create_project(Map.put(attrs, :id, id), %User{})
+
+      assert changeset.errors[:actor_id]
+      refute Repo.get(Project, id)
+    end
+
+    test "emails each initial member by default, and none with notify: false",
+         %{attrs: attrs} do
+      user = insert(:user)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, quiet} =
+          Projects.create_project(%{attrs | name: "quiet"}, user, notify: false)
+
+        {:ok, loud} = Projects.create_project(attrs, user)
+
+        notified =
+          all_enqueued(worker: Lightning.Accounts.UserNotifier)
+          |> Enum.map(& &1.args["project_user_id"])
+          |> Enum.sort()
+
+        assert notified == loud.project_users |> Enum.map(& &1.id) |> Enum.sort()
+
+        refute Enum.any?(quiet.project_users, &(&1.id in notified))
+      end)
+    end
+
+    defp assert_creation_audited(project, members, actor_id, actor_type) do
+      events =
+        from(a in Audit, where: a.item_id == ^project.id, order_by: a.event)
+        |> Repo.all()
+        |> Enum.map(&{&1.event, &1.actor_id, &1.actor_type, &1.changes})
+
+      added =
+        for {user, role} <- members do
+          {"collaborator_added", actor_id, actor_type,
+           %Audit.Changes{
+             before: nil,
+             after: %{"user_id" => user.id, "role" => to_string(role)}
+           }}
+        end
+
+      created =
+        {"created", actor_id, actor_type,
+         %Audit.Changes{
+           before: nil,
+           after: %{"name" => "audited", "description" => "made by apply"}
+         }}
+
+      assert Enum.sort([created | added]) == Enum.sort(events)
+    end
+  end
+
   describe ".update_project/3" do
     setup do
       %{user: insert(:user)}
     end
 
-    test "update_project/3 with valid data updates the project" do
+    test "update_project/3 with valid data updates the project", %{user: user} do
       project = project_fixture()
       update_attrs = %{name: "some-updated-name"}
 
       assert {:ok, %Project{} = project} =
-               Projects.update_project(project, update_attrs)
+               Projects.update_project(project, update_attrs, user)
 
       assert project.name == "some-updated-name"
     end
 
-    test "update_project/3 updates the MFA requirement" do
+    test "update_project/3 on a project another request deleted is a concurrent edit, not a raise",
+         %{user: user} do
+      project = insert(:project)
+      Repo.delete!(project)
+
+      assert Projects.update_project(project, %{name: "renamed"}, user) ==
+               {:error, :concurrent_edit}
+    end
+
+    test "update_project/3 updates the MFA requirement", %{user: user} do
       project = insert(:project)
 
       refute project.requires_mfa
       update_attrs = %{requires_mfa: true}
 
       assert {:ok, %Project{} = project} =
-               Projects.update_project(project, update_attrs)
+               Projects.update_project(project, update_attrs, user)
 
       assert project.requires_mfa
     end
 
-    test "update_project/3 updates the data retention periods" do
+    test "update_project/3 updates the data retention periods", %{user: user} do
       project =
         insert(:project,
           project_users:
@@ -3356,7 +3523,7 @@ defmodule Lightning.ProjectsTest do
       }
 
       assert {:ok, %Project{} = updated_project} =
-               Projects.update_project(project, update_attrs)
+               Projects.update_project(project, update_attrs, user)
 
       # admins and owners receives an email
       admins =
@@ -3400,7 +3567,7 @@ defmodule Lightning.ProjectsTest do
 
       # no email is sent when there's no change
       assert {:ok, updated_project} =
-               Projects.update_project(updated_project, update_attrs)
+               Projects.update_project(updated_project, update_attrs, user)
 
       for %{user: %{email: email}} <- project.project_users do
         refute_receive {:email,
@@ -3413,10 +3580,14 @@ defmodule Lightning.ProjectsTest do
 
       # no email is sent when there's an error in the changeset
       assert {:error, _changeset} =
-               Projects.update_project(updated_project, %{
-                 history_retention_period: "xyz",
-                 dataclip_retention_period: 7
-               })
+               Projects.update_project(
+                 updated_project,
+                 %{
+                   history_retention_period: "xyz",
+                   dataclip_retention_period: 7
+                 },
+                 user
+               )
 
       for %{user: %{email: email}} <- project.project_users do
         refute_receive {:email,
@@ -3428,7 +3599,8 @@ defmodule Lightning.ProjectsTest do
       end
     end
 
-    test "update_project/3 rejects lowering history below existing dataclip retention" do
+    test "update_project/3 rejects lowering history below existing dataclip retention",
+         %{user: user} do
       project =
         insert(:project,
           history_retention_period: 30,
@@ -3436,23 +3608,29 @@ defmodule Lightning.ProjectsTest do
         )
 
       assert {:error, changeset} =
-               Projects.update_project(project, %{history_retention_period: 7})
+               Projects.update_project(
+                 project,
+                 %{history_retention_period: 7},
+                 user
+               )
 
       assert "dataclip retention period must be less or equal to the history retention period" in errors_on(
                changeset
              ).dataclip_retention_period
     end
 
-    test "update_project/3 with invalid data returns error changeset" do
+    test "update_project/3 with invalid data returns error changeset", %{
+      user: user
+    } do
       project = project_fixture() |> unload_relation(:project_users)
 
       assert {:error, %Ecto.Changeset{}} =
-               Projects.update_project(project, @invalid_attrs)
+               Projects.update_project(project, @invalid_attrs, user)
 
       assert Repo.preload(project, :parent) == Projects.get_project!(project.id)
     end
 
-    test "update_project/2 calls the validate_changeset hook" do
+    test "update_project/3 calls the validate_changeset hook", %{user: user} do
       verify_on_exit!()
 
       project =
@@ -3474,9 +3652,13 @@ defmodule Lightning.ProjectsTest do
       )
 
       assert {:error, changeset} =
-               Projects.update_project(project, %{
-                 name: "new-name"
-               })
+               Projects.update_project(
+                 project,
+                 %{
+                   name: "new-name"
+                 },
+                 user
+               )
 
       assert errors_on(changeset) == %{name: [error_msg]}
     end
@@ -3578,24 +3760,41 @@ defmodule Lightning.ProjectsTest do
              } = Repo.get_by!(Audit, event: "requires_mfa_updated")
     end
 
-    test "does not create events if no user was provided" do
-      project =
-        insert(
-          :project,
-          dataclip_retention_period: 7,
-          history_retention_period: 30,
-          retention_policy: :retain_all
-        )
+    test "records a service account renaming the project" do
+      {%{uuid: account_uuid} = account, _key} = service_account_with_key()
+      %{id: project_id} = project = insert(:project, name: "before")
 
-      update_attrs = %{
-        dataclip_retention_period: 14,
-        history_retention_period: 90,
-        retention_policy: :retain_with_errors
-      }
+      assert {:ok, _} =
+               Projects.update_project(project, %{name: "after"}, account)
 
-      Projects.update_project(project, update_attrs)
+      assert %{
+               item_id: ^project_id,
+               actor_id: ^account_uuid,
+               actor_type: :service_account,
+               changes: %Audit.Changes{
+                 before: %{"name" => "before"},
+                 after: %{"name" => "after"}
+               }
+             } = Repo.get_by!(Audit, event: "name_updated")
+    end
 
-      assert Audit |> Repo.all() |> Enum.empty?()
+    test "records a person changing the description", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} = project = insert(:project, description: "old")
+
+      assert {:ok, _} =
+               Projects.update_project(project, %{description: "new"}, user)
+
+      assert %{
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               actor_type: :user,
+               changes: %Audit.Changes{
+                 before: %{"description" => "old"},
+                 after: %{"description" => "new"}
+               }
+             } = Repo.get_by!(Audit, event: "description_updated")
     end
 
     test "does not create events if the project change fails", %{
@@ -3757,7 +3956,7 @@ defmodule Lightning.ProjectsTest do
       assert Enum.uniq(Enum.map(got, & &1.parent_id)) == [parent.id]
     end
 
-    test "create_sandbox/3 sets parent and creates a normal project (emails off by default)" do
+    test "create_sandbox/3 sets parent and creates a normal project" do
       owner = insert(:user)
 
       parent =
@@ -3768,7 +3967,7 @@ defmodule Lightning.ProjectsTest do
         project_users: [%{user_id: owner.id, role: :owner}]
       }
 
-      assert {:ok, sandbox} = Projects.create_sandbox(parent, attrs)
+      assert {:ok, sandbox} = Projects.create_sandbox(parent, attrs, owner)
       assert sandbox.parent_id == parent.id
       assert sandbox.name == "sandbox-1"
     end
@@ -5024,6 +5223,27 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "paginate_projects_for_user/2" do
+    test "pages the projects the user is a member of, by name" do
+      user = insert(:user)
+
+      insert(:project, name: "b-project", project_users: [%{user_id: user.id}])
+      insert(:project, name: "a-project", project_users: [%{user_id: user.id}])
+      insert(:project, name: "c-project")
+
+      page = Projects.paginate_projects_for_user(user, page: 2, page_size: 1)
+
+      assert %Scrivener.Page{
+               page_number: 2,
+               page_size: 1,
+               total_entries: 2,
+               total_pages: 2
+             } = page
+
+      assert Enum.map(page.entries, & &1.name) == ["b-project"]
+    end
+  end
+
   describe "subscribe/0" do
     test "delivers project lifecycle events to the calling process" do
       assert :ok = Projects.subscribe()
@@ -5069,10 +5289,14 @@ defmodule Lightning.ProjectsTest do
   end
 
   defp change_retention_periods(project) do
-    Projects.update_project(project, %{
-      history_retention_period: 14,
-      dataclip_retention_period: 7
-    })
+    Projects.update_project(
+      project,
+      %{
+        history_retention_period: 14,
+        dataclip_retention_period: 7
+      },
+      insert(:user)
+    )
   end
 
   defp data_retention_email(updated_project) do

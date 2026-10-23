@@ -726,6 +726,9 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:ok, updated_sandbox}` - Successfully updated sandbox
   * `{:error, :unauthorized}` - Actor lacks permission on sandbox
   * `{:error, :not_found}` - Sandbox ID not found (when using string ID)
+  * `{:error, :audit_failed}` - The audit event was refused
+  * `{:error, :concurrent_edit}` - Another request deleted the sandbox while
+    this one ran
   * `{:error, changeset}` - Validation error
 
   ## Example
@@ -739,7 +742,12 @@ defmodule Lightning.Projects.Sandboxes do
   """
   @spec update_sandbox(Project.t() | Ecto.UUID.t(), User.t(), map()) ::
           {:ok, Project.t()}
-          | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+          | {:error,
+             :unauthorized
+             | :not_found
+             | :audit_failed
+             | :concurrent_edit
+             | Ecto.Changeset.t()}
   def update_sandbox(%Project{} = sandbox, %User{} = actor, attrs)
       when is_map(attrs) do
     Permissions.can?(
@@ -1027,7 +1035,11 @@ defmodule Lightning.Projects.Sandboxes do
           sandbox_env
         )
 
-      case create_empty_sandbox(parent_with_data, sandbox_attrs) do
+      case Lightning.Projects.create_sandbox(
+             parent_with_data,
+             sandbox_attrs,
+             actor
+           ) do
         {:ok, sandbox} ->
           sandbox
           |> Repo.preload(:project_users)
@@ -1081,10 +1093,6 @@ defmodule Lightning.Projects.Sandboxes do
       env: env,
       project_users: [owner_membership | additional_memberships]
     })
-  end
-
-  defp create_empty_sandbox(parent, attrs) do
-    Lightning.Projects.create_sandbox(parent, attrs, false)
   end
 
   defp clone_credentials_from_parent(sandbox, parent) do

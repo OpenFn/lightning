@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowChannelTest do
   import Lightning.CollaborationHelpers
   import Lightning.Factories
   import Lightning.ProjectsHelpers
+  import Lightning.RaceHelpers
   import Mox
   import ExUnit.CaptureLog
 
@@ -77,6 +78,25 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, %{workflow: draft_workflow}
       assert draft_workflow.state == :draft
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+
+    test "go_live losing a race to another save replies workflow_moved_on",
+         %{socket: socket, workflow: workflow} do
+      bump_workflow_lock_mid_save(workflow.id, socket.assigns.session_pid)
+
+      ref = push(socket, "go_live", %{})
+
+      assert_reply ref, :error, %{
+        type: "workflow_moved_on",
+        errors: %{base: ["Someone else saved this workflow. Try again."]}
+      }
+
+      assert Process.alive?(socket.channel_pid)
+
+      assert %{state: :draft, lock_version: lock_version} =
+               Lightning.Repo.reload(workflow)
+
+      assert lock_version == workflow.lock_version + 1
     end
 
     test "going live from a version being read is refused when the plan is at its limit",
@@ -2124,7 +2144,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       channel_pid = socket.channel_pid
       monitor_ref = Process.monitor(channel_pid)
 
-      revoke_support_access(project)
+      revoke_support_access(project, insert(:user))
 
       assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
     end
@@ -2143,7 +2163,7 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       log =
         capture_log(fn ->
-          revoke_support_access(project)
+          revoke_support_access(project, insert(:user))
 
           ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
           assert_reply ref, :ok, %{workflow: _}
@@ -2169,7 +2189,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       socket = join_as(support_user, project, workflow)
       assert socket.assigns.project_user
 
-      revoke_support_access(project)
+      revoke_support_access(project, insert(:user))
 
       ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
       assert_reply ref, :ok, %{workflow: _}
@@ -2588,21 +2608,23 @@ defmodule LightningWeb.WorkflowChannelTest do
 
     test "a concurrent save is refused, not a dropped channel", %{
       restore_socket: socket,
-      workflow: workflow,
-      user: user
+      workflow: workflow
     } do
-      Mimic.copy(Lightning.Workflows)
-
-      Mimic.stub(Lightning.Workflows, :restore_version, fn _wf, _rel, _actor ->
-        raise Ecto.StaleEntryError, action: :update, changeset: %Ecto.Changeset{}
-      end)
+      bump_workflow_lock_mid_save(workflow.id, socket.channel_pid)
 
       ref = push(socket, "restore_version", %{"version_number" => 1})
 
-      assert_reply ref, :error, %{type: "workflow_moved_on"}
+      assert_reply ref, :error, %{
+        type: "workflow_moved_on",
+        errors: %{
+          base: ["Someone else saved this workflow. Try again."]
+        }
+      }
+
       assert Process.alive?(socket.channel_pid)
 
-      _ = {workflow, user}
+      assert Lightning.Repo.reload(workflow).lock_version ==
+               workflow.lock_version + 1
     end
 
     test "the check reports nothing to lose when the triggers are unchanged", %{
@@ -3354,6 +3376,33 @@ defmodule LightningWeb.WorkflowChannelTest do
       saved = Lightning.Workflows.get_workflow!(workflow.id)
       assert saved.name == "Updated via Channel"
       assert saved.lock_version == lock_version
+    end
+
+    test "a save losing a race to another save replies workflow_moved_on",
+         %{socket: socket, workflow: workflow} do
+      doc = Lightning.Collaboration.Session.get_doc(socket.assigns.session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated via Channel")
+      end)
+
+      bump_workflow_lock_mid_save(workflow.id, socket.assigns.session_pid)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        type: "workflow_moved_on",
+        errors: %{base: ["Someone else saved this workflow. Try again."]}
+      }
+
+      assert Process.alive?(socket.channel_pid)
+
+      assert %{name: name, lock_version: lock_version} =
+               Lightning.Repo.reload(workflow)
+
+      assert name == workflow.name
+      assert lock_version == workflow.lock_version + 1
     end
 
     test "replies an error and keeps the channel alive when the session process is dead",

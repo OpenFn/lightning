@@ -503,16 +503,16 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Gets a single project with it's members via `project_users`.
+  Gets a single project with its members via `project_users`.
 
   Raises `Ecto.NoResultsError` if the Project does not exist.
 
   ## Examples
 
-      iex> get_project!(123)
-      %Project{}
+      iex> get_project_with_users!(123)
+      %Project{project_users: [%ProjectUser{user: %User{}}]}
 
-      iex> get_project!(456)
+      iex> get_project_with_users!(456)
       ** (Ecto.NoResultsError)
 
   """
@@ -548,21 +548,30 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Creates a project.
+  Creates a project, recording `actor` as having created it and added each of
+  its initial members.
+
+  ## Options
+
+    * `:notify` - email each initial member that they were added (default `true`)
 
   ## Examples
 
-      iex> create_project(%{field: value})
+      iex> create_project(%{field: value}, actor)
       {:ok, %Project{}}
 
-      iex> create_project(%{field: bad_value})
+      iex> create_project(%{field: bad_value}, actor)
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_project(attrs \\ %{}, schedule_email? \\ true) do
+  @spec create_project(map(), Lightning.Actor.t(), keyword()) ::
+          {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+  def create_project(attrs, actor, opts \\ []) do
     Repo.transact(fn ->
-      with {:ok, project} <- ProjectHook.handle_create_project(attrs) do
-        if schedule_email? do
+      with {:ok, project} <- ProjectHook.handle_create_project(attrs),
+           project = Repo.preload(project, :project_users),
+           {:ok, _events} <- record_creation(project, actor) do
+        if Keyword.get(opts, :notify, true) do
           schedule_project_addition_emails(%Project{project_users: []}, project)
         end
 
@@ -574,27 +583,47 @@ defmodule Lightning.Projects do
     end)
   end
 
+  defp record_creation(project, actor) do
+    Multi.new()
+    |> Audit.derive_creation_events(project, actor)
+    |> Repo.transaction()
+    |> case do
+      {:ok, events} -> {:ok, events}
+      {:error, _operation, changeset, _changes_so_far} -> {:error, changeset}
+    end
+  end
+
   @doc """
-  Updates a project.
+  Updates a project, recording an audit event for each audited field it
+  changes in the same transaction.
+
+  A refused audit event is `{:error, :audit_failed}`, not a changeset, so a
+  form never renders it as the caller's mistake.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted the
+  project while this one ran.
 
   ## Examples
 
-      iex> update_project(project, %{field: new_value})
+      iex> update_project(project, %{field: new_value}, actor)
       {:ok, %Project{}}
 
-      iex> update_project(project, %{field: bad_value})
+      iex> update_project(project, %{field: bad_value}, actor)
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_project(%Project{} = project, attrs, user \\ nil) do
+  @spec update_project(Project.t(), map(), Lightning.Actor.t()) ::
+          {:ok, Project.t()}
+          | {:error, Ecto.Changeset.t() | :audit_failed | :concurrent_edit}
+  def update_project(%Project{} = project, attrs, actor) do
     changeset =
       project
       |> Project.changeset(attrs)
       |> ProjectHook.handle_project_validation()
 
     Multi.new()
-    |> Multi.update(:project, changeset)
-    |> maybe_audit_changes(changeset, user)
+    |> Multi.update(:project, changeset, stale_error_field: :id)
+    |> Audit.derive_events(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project}} ->
@@ -606,22 +635,15 @@ defmodule Lightning.Projects do
 
         {:ok, updated_project}
 
+      {:error, :project, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
       {:error, :project, changeset, _changes_so_far} ->
         {:error, changeset}
 
-      # 2024-10-29 Not tested at module-level
-      # due to the difficulty of simulating a failure
-      # without mocking
       {:error, _operation, _changeset, _changes_so_far} ->
-        {:error, :not_related_to_project}
+        {:error, :audit_failed}
     end
-  end
-
-  defp maybe_audit_changes(multi, _changeset, nil), do: multi
-
-  defp maybe_audit_changes(multi, changeset, user) do
-    multi
-    |> Audit.derive_events(changeset, user)
   end
 
   @spec update_project_with_users(Project.t(), map(), User.t(), boolean()) ::
@@ -638,6 +660,7 @@ defmodule Lightning.Projects do
 
     project
     |> membership_multi(changeset, actor)
+    |> Audit.derive_events(changeset, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project, membership_changes: changes}} ->
@@ -1124,18 +1147,7 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  @doc """
-  Builds a query to retrieve projects associated with a user.
-
-  ## Parameters
-    - user: The user struct for which projects are being queried.
-    - opts: Keyword list of options including :include for associations to preload and :order_by for sorting.
-
-  ## Returns
-    - An Ecto queryable struct to fetch projects.
-  """
-  @spec projects_for_user_query(user :: User.t()) :: Ecto.Queryable.t()
-  def projects_for_user_query(%User{id: user_id}) do
+  defp projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where:
@@ -1144,6 +1156,16 @@ defmodule Lightning.Projects do
           is_nil(p.parent_id),
       order_by: p.name
     )
+  end
+
+  @doc """
+  A page of the projects `user` is a member of, by name.
+  """
+  @spec paginate_projects_for_user(User.t(), keyword()) :: Scrivener.Page.t()
+  def paginate_projects_for_user(%User{} = user, page) do
+    user
+    |> projects_for_user_query()
+    |> Repo.paginate(page)
   end
 
   @doc """
@@ -1172,17 +1194,6 @@ defmodule Lightning.Projects do
   def get_projects_for_user(%User{} = user) do
     user
     |> projects_for_user_query()
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns the ids of every project the user holds a membership on, at any
-  depth. Unlike `get_projects_for_user/1` (top-level roots only), this includes
-  sandboxes, so it matches the membership check used by `:access_project`.
-  """
-  @spec member_project_ids(User.t()) :: [Ecto.UUID.t()]
-  def member_project_ids(%User{id: user_id}) do
-    from(pu in ProjectUser, where: pu.user_id == ^user_id, select: pu.project_id)
     |> Repo.all()
   end
 
@@ -2241,10 +2252,10 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Creates a sandbox under the given `parent` by delegating to `create_project/2`.
+  Creates a sandbox under `parent` through `create_project/3`, recording
+  `actor` as having created it.
 
-  This is a convenience wrapper that sets `:parent_id` and preserves the
-  existing behavior around collaborator emails (off by default unless `schedule_email?` is `true`).
+  Emails no collaborators.
 
   ## Notes
 
@@ -2258,10 +2269,12 @@ defmodule Lightning.Projects do
   * `{:ok, %Project{}}` on success
   * `{:error, %Ecto.Changeset{}}` on validation/unique errors
   """
-  @spec create_sandbox(Project.t(), map(), boolean()) ::
+  @spec create_sandbox(Project.t(), map(), Lightning.Actor.t()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
-  def create_sandbox(%Project{id: parent_id}, attrs, schedule_email? \\ false) do
-    attrs |> Map.put(:parent_id, parent_id) |> create_project(schedule_email?)
+  def create_sandbox(%Project{id: parent_id}, attrs, actor) do
+    attrs
+    |> Map.put(:parent_id, parent_id)
+    |> create_project(actor, notify: false)
   end
 
   @doc """
@@ -2494,11 +2507,19 @@ defmodule Lightning.Projects do
   * `{:ok, updated_sandbox}` - Successfully updated
   * `{:error, :unauthorized}` - Actor lacks permission
   * `{:error, :not_found}` - Sandbox not found
+  * `{:error, :audit_failed}` - The audit event was refused
+  * `{:error, :concurrent_edit}` - Another request deleted the sandbox while
+    this one ran
   * `{:error, changeset}` - Validation error
   """
   @spec update_sandbox(Project.t() | Ecto.UUID.t(), User.t(), map()) ::
           {:ok, Project.t()}
-          | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+          | {:error,
+             :unauthorized
+             | :not_found
+             | :audit_failed
+             | :concurrent_edit
+             | Ecto.Changeset.t()}
   defdelegate update_sandbox(sandbox, actor, attrs),
     to: Sandboxes,
     as: :update_sandbox

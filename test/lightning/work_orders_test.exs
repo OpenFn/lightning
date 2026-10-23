@@ -482,7 +482,8 @@ defmodule Lightning.WorkOrdersTest do
 
       assert changeset.errors == [
                {:input_dataclip_id,
-                {"cannot retry run using a wiped dataclip", []}}
+                {"cannot retry run using a wiped dataclip",
+                 [code: :dataclip_wiped]}}
              ]
     end
 
@@ -527,7 +528,8 @@ defmodule Lightning.WorkOrdersTest do
 
       assert changeset.errors == [
                {:input_dataclip_id,
-                {"cannot retry run using a wiped dataclip", []}}
+                {"cannot retry run using a wiped dataclip",
+                 [code: :dataclip_wiped]}}
              ]
     end
 
@@ -3326,6 +3328,62 @@ defmodule Lightning.WorkOrdersTest do
         updated_wo = Repo.get(Lightning.WorkOrder, wo.id)
         assert updated_wo.state == :cancelled
       end
+    end
+  end
+
+  describe "paginate_work_orders_for/3" do
+    setup do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user_id: user.id}])
+      workflow = insert(:simple_workflow, project: project)
+
+      [failed, success] =
+        for state <- [:failed, :success] do
+          insert(:workorder,
+            workflow: workflow,
+            state: state,
+            dataclip: build(:dataclip)
+          )
+        end
+
+      insert(:workorder, state: :failed, dataclip: build(:dataclip))
+
+      %{user: user, project: project, failed: failed, success: success}
+    end
+
+    test "narrows a project's work orders by the filters", %{
+      project: project,
+      failed: failed
+    } do
+      assert %Scrivener.Page{entries: [%{id: id}], total_entries: 1} =
+               WorkOrders.paginate_work_orders_for(
+                 project,
+                 %{state: ["failed"]},
+                 []
+               )
+
+      assert id == failed.id
+    end
+
+    test "pages the work orders of every project a user may access", %{
+      user: user,
+      failed: failed,
+      success: success
+    } do
+      page =
+        WorkOrders.paginate_work_orders_for(user, %{}, page: 2, page_size: 1)
+
+      assert %Scrivener.Page{
+               page_number: 2,
+               page_size: 1,
+               total_entries: 2,
+               total_pages: 2
+             } = page
+
+      assert MapSet.new(
+               WorkOrders.paginate_work_orders_for(user, %{}, []).entries,
+               & &1.id
+             ) == MapSet.new([failed.id, success.id])
     end
   end
 
