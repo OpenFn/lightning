@@ -37,6 +37,7 @@ and this project adheres to
   Cloak advisories that don't affect us
   [#5246](https://github.com/OpenFn/lightning/pull/5246)
 - Bump plug_crypto to 2.2.1 for a security fix
+  [#5259](https://github.com/OpenFn/lightning/pull/5259)
 
 ### Fixed
 
