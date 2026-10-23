@@ -235,6 +235,9 @@ same policy.
   (`workflow_health_controller.ex:41-53`)
 - Drill-down links open History in a new tab (`TriageTable.tsx:158-167`;
   `Donut.tsx:87-91`, `:131-134`; `VolumeBars.tsx:182-191`)
+  - **Changed on purpose in the port:** the ported page opens these links in the
+    same tab. Lucy chose this on 23 Oct 2026 because a new tab is jarring. Don't
+    restore the new tab for parity.
 
 **Deferred side effects**
 
@@ -412,22 +415,22 @@ Feature: Workflow health
     Then the two failures are one row, named "Load to DHIS2"
     # stats.ex:425-430, :468-488, :545-573; stats_test.exs:329-387
 
-  @S14 @passing-old
+  @S14
   Scenario: Triage "View history" starts the drill-down flow
     # Value: the person triaging one error lands on exactly that error's work orders.
     Given the triage row "fail:RuntimeError @ Load" shows 2
     When I click "View history" on that row
     Then the flow "flow-workflow-health-drilldown" has started (its S01)
-    And this page stays open in this tab
+    And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
     # TriageTable.tsx:130-137, :154-196; historyUrl.ts:13-36
 
-  @S15 @passing-old
+  @S15
   Scenario: An outcome or failure state opens the work orders it counts
     # Value: any slice of the donuts can be inspected without rebuilding the filter in History.
     Given "Outcomes" shows "Failed 6"
     When I click "Failed" in the "Outcomes" legend
     Then the flow "flow-workflow-health-drilldown" has started
-    And this page stays open in this tab
+    And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
     # Donut.tsx:87-91, :128-152; OutcomesDonut.tsx:57-76; FailureBreakdownDonut.tsx:66; historyUrl.ts:47-56
     # OutcomesDonut.test.tsx:154-195; FailureBreakdownDonut.test.tsx:133-150
 
@@ -560,15 +563,15 @@ Feature: Workflow health
     And the flow "flow-delete-open-workflow" ends here (its S01, "the health page" row)
     # health.ex:11; hooks.ex:151, :320-335
 
-  @S28 @passing-old
+  @S28
   Scenario: A band of a runs-chart bar opens the runs it counts
     # Value: a spike of failures at one time can be inspected without rebuilding the filter in History.
     Given the "Runs" tab shows a bar with a "Failed" band of 2
     And an earlier bar has a failure too
     When I click the "Failed" band of the bar with 2
-    Then a new tab opens History with the 2 work orders whose runs failed in that bar's slot
+    Then History opens in this tab with the 2 work orders whose runs failed in that bar's slot
     And not the earlier failure, nor the successes in the same bar
-    And this page stays open in this tab
+    # Changed on purpose: Lightning opened a new tab.
     # VolumeBars.tsx:182-190, :249-265; historyUrl.ts:13-36; VolumeBars.test.tsx:170-
 ```
 
@@ -663,7 +666,8 @@ Feature: Workflow health
 ## Proposed flows
 
 - **flow-workflow-health-drilldown** (new): a legend row or wedge in "Outcomes"
-  or "Failure breakdown" opens History in a new tab with `filters[workflow_id]`,
+  or "Failure breakdown" opens History (in a new tab in Lightning today; in the
+  same tab in the port, chosen on purpose) with `filters[workflow_id]`,
   `filters[log]=true`, `filters[date_after]` set to the slice's window start and
   one `filters[<state>]=true` per state the slice counts (all six failure states
   for "Failed"); History lists those work orders (`Donut.tsx:87-91`, `:128-152`;

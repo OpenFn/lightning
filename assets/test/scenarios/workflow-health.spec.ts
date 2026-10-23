@@ -153,11 +153,11 @@ function failures(
 
 const noFailures = (days: string) => `No failures in the last ${days}`;
 
-// The tab a link opened in a new tab lands on
+// Drill-down links open History in this tab
 async function opensHistory(page: Page, click: () => Promise<void>) {
-  const [tab] = await Promise.all([page.waitForEvent('popup'), click()]);
-  await tab.waitForLoadState('domcontentloaded');
-  return tab;
+  await click();
+  await page.waitForURL(/\/history/);
+  return page;
 }
 
 // @S01
@@ -540,8 +540,8 @@ test('@S13', { tag: '@passing-old' }, async ({ page }) => {
 //   Given the triage row "fail:RuntimeError @ Load" shows 2
 //   When I click "View history" on that row
 //   Then the flow "flow-workflow-health-drilldown" has started (its S01)
-//   And this page stays open in this tab
-test('@S14', { tag: '@passing-old' }, async ({ page }) => {
+//   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
+test('@S14', async ({ page }) => {
   const h = givenHealth();
   const loads = failures(h.wf, 'Load', 'RuntimeError', 2);
   const fetches = failures(h.wf, 'Fetch', 'AdaptorError', 1);
@@ -555,7 +555,6 @@ test('@S14', { tag: '@passing-old' }, async ({ page }) => {
 
   // History lists that error's work orders and not the other error's
   await expectHistoryLists(tab, loads, fetches);
-  await expectAt(page, h.path);
 });
 
 // @S15
@@ -563,8 +562,8 @@ test('@S14', { tag: '@passing-old' }, async ({ page }) => {
 //   Given "Outcomes" shows "Failed 6"
 //   When I click "Failed" in the "Outcomes" legend
 //   Then the flow "flow-workflow-health-drilldown" has started
-//   And this page stays open in this tab
-test('@S15', { tag: '@passing-old' }, async ({ page }) => {
+//   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
+test('@S15', async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, n: number) =>
     Array.from({ length: n }, () =>
@@ -580,7 +579,6 @@ test('@S15', { tag: '@passing-old' }, async ({ page }) => {
 
   // History lists the 6 failed, crashed and lost work orders and no success
   await expectHistoryLists(tab, bad, good);
-  await expectAt(page, h.path);
 });
 
 // @S16
@@ -1043,10 +1041,9 @@ test('@S27', { tag: '@passing-old' }, async ({ page }) => {
 //   Given the "Runs" tab shows a bar with a "Failed" band of 2
 //   And an earlier bar has a failure too
 //   When I click the "Failed" band of the bar with 2
-//   Then a new tab opens History with the 2 work orders whose runs failed in that bar's slot
+//   Then History opens in this tab with the 2 work orders whose runs failed in that bar's slot
 //   And not the earlier failure, nor the successes in the same bar
-//   And this page stays open in this tab
-test('@S28', { tag: '@passing-old' }, async ({ page }) => {
+test('@S28', async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, minutesAgo: number) =>
     seedWorkOrder(h.wf, { state, minutesAgo, runs: [{ state }] });
@@ -1065,7 +1062,6 @@ test('@S28', { tag: '@passing-old' }, async ({ page }) => {
   const tab = await opensHistory(page, () => failedBands.last().click());
 
   await expectHistoryLists(tab, recent, others);
-  await expectAt(page, h.path);
 });
 
 // Inherited from shared-authenticated-session, on the health page.
