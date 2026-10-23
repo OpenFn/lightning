@@ -1,6 +1,4 @@
-import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-
-import { ChartTooltip } from './ChartTooltip';
+import { Pie, PieChart, ResponsiveContainer } from 'recharts';
 
 /**
  * A part-to-whole donut with a headline figure in the middle, chosen by the
@@ -66,19 +64,6 @@ export const Donut = ({ slices, emptyMessage, centre }: DonutProps) => {
         <div className="h-full" aria-hidden="true">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart accessibilityLayer={false}>
-              {/* Recharts transitions the panel's transform, so it slides
-                diagonally across the plot as the pointer moves between
-                slices. */}
-              <Tooltip
-                isAnimationActive={false}
-                content={
-                  <ChartTooltip
-                    formatValue={value =>
-                      `${value.toLocaleString()} (${percent(value, total)})`
-                    }
-                  />
-                }
-              />
               {/* `accessibilityLayer` only governs the svg; the pie's own root
                 group is a tab stop by default (`rootTabIndex` 0), and
                 `aria-hidden` on the frame doesn't take it out of the order.
@@ -143,7 +128,6 @@ export const Donut = ({ slices, emptyMessage, centre }: DonutProps) => {
               <span className="font-medium tabular-nums text-gray-900">
                 {value.toLocaleString()}
               </span>{' '}
-              {/* The share is otherwise only in the hover tooltip. */}
               <span className="sr-only">({percent(value, total)})</span>{' '}
               <span className="sr-only">(opens in a new tab)</span>
             </a>
