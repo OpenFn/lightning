@@ -268,7 +268,6 @@ defmodule LightningWeb.Router do
     live_session :settings, on_mount: LightningWeb.InitAssigns do
       live "/settings/users/new", UserLive.Edit, :new
       live "/settings/users/:id", UserLive.Edit, :edit
-      live "/settings/users/:id/delete", UserLive.Index, :delete
 
       live "/settings/projects", ProjectLive.Index, :index
       live "/settings/projects/new", ProjectLive.Index, :new
@@ -352,6 +351,10 @@ defmodule LightningWeb.Router do
       Enum.each(@services_routes, fn {path, module, action, opts} ->
         live(path, module, action, opts)
       end)
+
+      # Beside /settings/users, which the routing extension mounts here, so
+      # opening the dialog from the list is a patch rather than a page load.
+      live "/settings/users/:id/delete", LightningWeb.UserLive.Index, :delete
     end
   end
 

@@ -10,6 +10,7 @@ import {
 } from '#/react/lib/preloaded';
 import { replaceEqualDeep } from '#/react/lib/replace-equal-deep';
 
+import { showToast } from './flash';
 import { useLiveViewRouter } from './router';
 
 /**
@@ -166,7 +167,7 @@ export const designSystemPage = <Props, PageProps extends object>(
 
     return (
       <RouterProvider value={router}>
-        <ToastProvider>
+        <ToastProvider show={showToast}>
           <Page {...pageProps} />
         </ToastProvider>
       </RouterProvider>

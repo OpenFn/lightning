@@ -1,5 +1,5 @@
 import { ToastProvider, useToast } from '@openfn/ui';
-import { StrictMode, useEffect } from 'react';
+import { type ReactNode, StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import type {
@@ -12,15 +12,18 @@ import type {
  * server keeps calling `put_flash`; each layout renders a `FlashBridge`
  * element carrying the text, and the hook hands it to one toaster that
  * app.js mounts outside the LiveView, so a toast survives navigation.
+ * Design-system pages send their own toasts there too, so a page has one
+ * stack.
  */
 type Tone = 'info' | 'error';
-type Show = (message: string, tone: Tone) => void;
+type Show = (message: ReactNode, tone?: Tone) => void;
 
 let show: Show | null = null;
 // Messages that arrive before the toaster has rendered
-const pending: [string, Tone][] = [];
+const pending: [ReactNode, Tone][] = [];
 
-const showFlash: Show = (message, tone) => {
+/** Shows a toast in the layout's toaster; page islands pass it as ToastProvider's `show`. */
+export const showToast: Show = (message, tone = 'info') => {
   if (show) show(message, tone);
   else pending.push([message, tone]);
 };
@@ -72,7 +75,7 @@ export const FlashBridge = {
       }
       if (message === this.seen[key]) continue;
       this.seen[key] = message;
-      showFlash(message, key);
+      showToast(message, key);
       // Cleared once shown, so the same message flashed again shows again
       this.pushEvent('lv:clear-flash', { key });
     }

@@ -131,7 +131,8 @@ export async function S04(
   await expect(box).toBeVisible();
 
   await box.click();
-  await expect(box).toBeHidden();
+  // Short, so the toast closing itself (5 s) can't pass for the click
+  await expect(box).toBeHidden({ timeout: 1000 });
 
   await update();
   await expect(page.getByText(text)).toHaveCount(0);

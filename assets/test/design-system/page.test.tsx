@@ -1,7 +1,10 @@
-import { screen } from '@testing-library/react';
+import { useToast } from '@openfn/ui';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { Toaster } from '../../js/design-system/flash';
 import {
   designSystemPage,
   type PageActions,
@@ -34,6 +37,19 @@ const Island = designSystemPage(
       onGo: () => actions.send('go'),
     };
   }
+);
+
+const Saves = () => {
+  const toast = useToast();
+  useEffect(() => toast('Saved'), [toast]);
+  return null;
+};
+
+const SavesIsland = designSystemPage(
+  'SavesPage',
+  Saves,
+  ['/saves'],
+  () => ({})
 );
 
 const last = () => {
@@ -133,5 +149,23 @@ describe('designSystemPage', () => {
     await userEvent.click(screen.getByRole('button', { name: '1 rows' }));
 
     expect(pushEvent).toHaveBeenCalledWith('go', {});
+  });
+
+  test("the page's toasts go to the layout's toaster", () => {
+    // Alone, the island draws no toast of its own; it waits for the toaster
+    render(
+      <SavesIsland
+        data-props="{}"
+        pushEvent={vi.fn()}
+        handleEvent={vi.fn()}
+        navigate={vi.fn()}
+        redirect={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole('status')).toBeNull();
+
+    render(<Toaster />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Saved');
   });
 });

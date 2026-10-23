@@ -334,6 +334,20 @@ defmodule LightningWeb.UserLiveTest do
       end
     end
 
+    test "opens the deletion dialog from the list without a page load",
+         %{conn: conn} do
+      user = user_fixture()
+      {:ok, view, _html} = live(conn, ~p"/settings/users")
+
+      render_patch(view, ~p"/settings/users/#{user.id}/delete")
+
+      assert page_props(view, @list)["deleteUser"]["id"] == user.id
+
+      render_patch(view, ~p"/settings/users")
+
+      assert page_props(view, @list)["deleteUser"] == nil
+    end
+
     test "allows a superuser to schedule users for deletion in the users list",
          %{conn: conn} do
       user = user_fixture()

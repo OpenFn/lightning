@@ -23,8 +23,6 @@ export const AdminUsersPage = designSystemPage(
     onCancelDeletion: (id: string) => send('cancel_deletion', { id }),
     // The server acts on the account the route opened; the email confirms.
     onDelete: (email: string) => send('delete_user', { email }),
-    // The list is in another live_session: LiveView answers this patch with
-    // a redirect, the full load today's links make.
     onClose: () => navigate('/settings/users'),
   })
 );
