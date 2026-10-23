@@ -2,7 +2,7 @@ import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { Position } from '@xyflow/react';
 import { memo } from 'react';
 
-import { humanizeCron } from '#/collaborative-editor/components/inspector/trigger/cronSchedule';
+import { humanizeCron } from '#/utils/humanizeCron';
 
 import { lockClosedIcon } from '../components/trigger-icons';
 import type { Lightning } from '../types';

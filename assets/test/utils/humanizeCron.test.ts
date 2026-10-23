@@ -1,5 +1,5 @@
 /**
- * cronSchedule utility tests
+ * humanizeCron tests
  *
  * Covers `humanizeCron` — the cron → friendly text helper used by the cron
  * show panel, the builder preview and the diagram node. (Schedule authoring is
@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { humanizeCron } from '../../../../../js/collaborative-editor/components/inspector/trigger/cronSchedule';
+import { humanizeCron } from '../../js/utils/humanizeCron';
 
 describe('humanizeCron', () => {
   test.each<[string, string, string | null]>([
