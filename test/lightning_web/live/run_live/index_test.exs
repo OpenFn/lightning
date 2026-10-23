@@ -140,6 +140,15 @@ defmodule LightningWeb.RunLive.IndexTest do
         ExUnit.CaptureLog.capture_log(fn ->
           {:ok, view, _html} = live_async(conn, history_path(project))
 
+          # The page's step icon is drawn from these two.
+          assert %{"runs" => [%{"steps" => [step]}]} = row(view, unknown_kill)
+
+          assert %{
+                   "exitReason" => "kill",
+                   "errorType" => "SomeFutureWorkerError"
+                 } =
+                   step
+
           # A live update draws the page again with the same step.
           send(view.pid, %WorkOrders.Events.WorkOrderUpdated{
             work_order: unknown_kill
