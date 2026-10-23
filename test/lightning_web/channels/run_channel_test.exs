@@ -955,6 +955,31 @@ defmodule LightningWeb.RunChannelTest do
       assert_reply ref, :ok, %{"username" => "alice"}
     end
 
+    test "resolves when the credential is fetched before the dataclip", %{
+      socket: socket,
+      keychain: keychain
+    } do
+      ref = push(socket, "fetch:credential", %{"id" => keychain.id})
+      assert_reply ref, :ok, %{"username" => "alice"}
+
+      ref = push(socket, "fetch:dataclip", %{})
+      assert_reply ref, :ok, {:binary, _}
+
+      ref = push(socket, "fetch:credential", %{"id" => keychain.id})
+      assert_reply ref, :ok, %{"username" => "alice"}
+    end
+
+    test "fetching the dataclip again keeps the selection made before the wipe",
+         %{socket: socket, keychain: keychain} do
+      for _ <- 1..2 do
+        ref = push(socket, "fetch:dataclip", %{})
+        assert_reply ref, :ok, {:binary, _}
+      end
+
+      ref = push(socket, "fetch:credential", %{"id" => keychain.id})
+      assert_reply ref, :ok, %{"username" => "alice"}
+    end
+
     test "a path Postgres can't parse only fails that keychain's credential", %{
       socket: socket,
       keychain: keychain
@@ -980,6 +1005,20 @@ defmodule LightningWeb.RunChannelTest do
 
       ref = push(socket, "fetch:credential", %{"id" => keychain.id})
       assert_reply ref, :error, _
+    end
+
+    test "errors when a rejoined channel fetches the already-wiped dataclip",
+         %{run: run, keychain: keychain} = context do
+      Lightning.Runs.wipe_dataclips(run)
+
+      %{socket: socket} =
+        merge_setups(context, [:create_socket, :join_run_channel])
+
+      ref = push(socket, "fetch:dataclip", %{})
+      assert_reply ref, :ok, {:binary, _}
+
+      ref = push(socket, "fetch:credential", %{"id" => keychain.id})
+      assert_reply ref, :error, "Could not select a keychain credential: " <> _
     end
   end
 

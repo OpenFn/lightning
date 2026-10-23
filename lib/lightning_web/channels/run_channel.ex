@@ -54,7 +54,7 @@ defmodule LightningWeb.RunChannel do
          project_id: project_id,
          scrubber: webhook_auth_scrubber(run),
          webhook_response: nil,
-         keychain_selectors: if(run.options.save_dataclips, do: nil, else: %{})
+         keychain_selectors: nil
        })}
     else
       {:error, :not_found} ->
@@ -187,7 +187,7 @@ defmodule LightningWeb.RunChannel do
     body = Runs.get_input(run)
 
     socket =
-      if run.options.save_dataclips do
+      if run.options.save_dataclips or socket.assigns.keychain_selectors do
         socket
       else
         selectors = Resolver.keychain_selectors(run)

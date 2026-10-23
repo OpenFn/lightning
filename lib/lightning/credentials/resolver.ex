@@ -63,7 +63,9 @@ defmodule Lightning.Credentials.Resolver do
   @type resolve_error :: {error_reason(), Credential.t() | nil}
 
   @type keychain_selectors :: %{
-          Ecto.UUID.t() => String.t() | nil | :invalid_path
+          Ecto.UUID.t() =>
+            {:ok, external_id :: String.t() | nil}
+            | {:error, :keychain_input_unavailable | :invalid_keychain_path}
         }
 
   @doc """
@@ -160,17 +162,23 @@ defmodule Lightning.Credentials.Resolver do
     from(k in KeychainCredential,
       join: d in Dataclip,
       on: d.id == ^dataclip_id,
-      where: k.id == ^keychain_id,
-      select:
-        fragment(
-          "jsonb_path_query_first(?, ?::jsonpath) #>> '{}'",
-          d.body,
-          k.path
-        )
+      where: k.id == ^keychain_id and is_nil(d.wiped_at),
+      select: %{
+        external_id:
+          fragment(
+            "jsonb_path_query_first(?, ?::jsonpath) #>> '{}'",
+            d.body,
+            k.path
+          )
+      }
     )
     |> Repo.one()
+    |> case do
+      %{external_id: external_id} -> {:ok, external_id}
+      nil -> {:error, :keychain_input_unavailable}
+    end
   rescue
-    Postgrex.Error -> :invalid_path
+    Postgrex.Error -> {:error, :invalid_keychain_path}
   end
 
   defp select_credential(%Credential{} = credential, _run, _selectors),
@@ -185,23 +193,19 @@ defmodule Lightning.Credentials.Resolver do
       )
 
   defp select_credential(%KeychainCredential{} = keychain, run, selectors) do
-    case Map.fetch(selectors, keychain.id) do
-      {:ok, :invalid_path} ->
-        log_resolution_error(:invalid_keychain_path,
-          keychain_id: keychain.id,
-          path: keychain.path
-        )
-
-        {:error, :invalid_keychain_path}
-
+    case Map.fetch!(selectors, keychain.id) do
       {:ok, external_id} ->
         {:ok,
          find_credential_by_external_id(run, external_id) ||
            keychain.default_credential}
 
-      :error ->
-        log_resolution_error(:keychain_input_unavailable)
-        {:error, :keychain_input_unavailable}
+      {:error, reason} = error ->
+        log_resolution_error(reason,
+          keychain_id: keychain.id,
+          path: keychain.path
+        )
+
+        error
     end
   end
 
