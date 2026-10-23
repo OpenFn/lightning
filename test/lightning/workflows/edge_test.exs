@@ -204,7 +204,9 @@ defmodule Lightning.Workflows.EdgeTest do
         })
 
       refute changeset.valid?
-      assert changeset.errors[:source_job_id] == {"is not a valid UUID", []}
+
+      assert changeset.errors[:source_job_id] ==
+               {"is not a valid UUID", [code: :format]}
     end
 
     test "a malformed workflow_id is a changeset error, not an Ecto.ChangeError on save" do
@@ -217,7 +219,9 @@ defmodule Lightning.Workflows.EdgeTest do
         })
 
       refute changeset.valid?
-      assert changeset.errors[:workflow_id] == {"is not a valid UUID", []}
+
+      assert changeset.errors[:workflow_id] ==
+               {"is not a valid UUID", [code: :format]}
     end
 
     test "edges must have a condition" do
@@ -245,7 +249,8 @@ defmodule Lightning.Workflows.EdgeTest do
 
       assert changeset.errors == [
                source_job_id:
-                 {"source_job_id or source_trigger_id must be present", []}
+                 {"source_job_id or source_trigger_id must be present",
+                  [code: :required]}
              ]
     end
 
@@ -275,7 +280,8 @@ defmodule Lightning.Workflows.EdgeTest do
       refute changeset.valid?
 
       assert {:source_job_id,
-              {"source_job_id and source_trigger_id are mutually exclusive", []}} in changeset.errors,
+              {"source_job_id and source_trigger_id are mutually exclusive",
+               [code: :exclusive]}} in changeset.errors,
              "error on the first change in the case both are set"
 
       changeset =
@@ -288,7 +294,8 @@ defmodule Lightning.Workflows.EdgeTest do
 
       assert {
                :source_trigger_id,
-               {"source_job_id and source_trigger_id are mutually exclusive", []}
+               {"source_job_id and source_trigger_id are mutually exclusive",
+                [code: :exclusive]}
              } in changeset.errors
     end
 
@@ -307,7 +314,8 @@ defmodule Lightning.Workflows.EdgeTest do
 
       assert {
                :target_job_id,
-               {"target_job_id must be different from source_job_id", []}
+               {"target_job_id must be different from source_job_id",
+                [code: :cycle]}
              } in changeset.errors
 
       changeset =

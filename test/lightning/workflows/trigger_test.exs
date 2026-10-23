@@ -125,7 +125,9 @@ defmodule Lightning.Workflows.TriggerTest do
         })
 
       refute changeset.valid?
-      assert changeset.errors[:workflow_id] == {"is not a valid UUID", []}
+
+      assert changeset.errors[:workflow_id] ==
+               {"is not a valid UUID", [code: :format]}
     end
 
     test "must raise an error when cron expression is invalid" do
@@ -240,7 +242,7 @@ defmodule Lightning.Workflows.TriggerTest do
       refute changeset.valid?
 
       assert changeset.errors[:cron_cursor_job_id] ==
-               {"is not a valid UUID", []}
+               {"is not a valid UUID", [code: :format]}
     end
 
     test "cron_cursor_job_id pointing at a non-existent job is a changeset error, not a raise" do

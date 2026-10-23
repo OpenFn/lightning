@@ -98,7 +98,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     )
     |> validate_change(field, fn ^field, path ->
       if Path.type(path) == :absolute or ".." in Path.split(path) do
-        [{field, "must stay inside the repository"}]
+        [{field, {"must stay inside the repository", code: :not_allowed}}]
       else
         []
       end
@@ -115,7 +115,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
       if accept do
         []
       else
-        [accept: "please tick the box"]
+        [accept: {"please tick the box", code: :must_accept}]
       end
     end)
     |> validate_sync_direction()
@@ -176,7 +176,7 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     if is_binary(root_project_id) and is_binary(repo) and is_binary(branch) do
       if tree_branch_conflict?(root_project_id, repo, branch, self_id) do
         add_error(changeset, :branch, @tree_branch_error,
-          reason: :tree_branch_conflict
+          code: :tree_branch_conflict
         )
       else
         changeset
@@ -241,7 +241,11 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
       # v2 syncs always use openfn.yaml, so only legacy ones need a path
       if value == :deploy and is_nil(path) and
            not get_field(changeset, :sync_version) do
-        [config_path: "you must specify a path to an existing config file"]
+        [
+          config_path:
+            {"you must specify a path to an existing config file",
+             code: :required}
+        ]
       else
         []
       end

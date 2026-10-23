@@ -38,7 +38,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
                UserTOTP.changeset(user_totp, %{})
 
       assert errors == [
-               {:code, {"invalid code", []}},
+               {:code, {"invalid code", [code: :mismatch]}},
                {:code, {"can't be blank", [validation: :required]}}
              ]
     end
@@ -50,7 +50,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
                UserTOTP.changeset(%UserTOTP{user_id: user_id}, %{code: "123456"})
 
       assert errors == [
-               {:code, {"invalid code", []}},
+               {:code, {"invalid code", [code: :mismatch]}},
                {:secret, {"can't be blank", [validation: :required]}}
              ]
     end
@@ -65,7 +65,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
                UserTOTP.changeset(user_totp, %{code: provided_code})
 
       assert errors == [
-               {:code, {"invalid code", []}},
+               {:code, {"invalid code", [code: :mismatch]}},
                {:code, {"should be a 6 digit number", [validation: :format]}}
              ]
     end
@@ -82,7 +82,7 @@ defmodule Lightning.Accounts.UserTOTPTest do
       assert %Changeset{valid?: false, errors: errors} =
                UserTOTP.changeset(user_totp, %{code: invalid_code})
 
-      assert errors == [code: {"invalid code", []}]
+      assert errors == [code: {"invalid code", [code: :mismatch]}]
     end
   end
 

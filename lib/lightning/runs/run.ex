@@ -242,14 +242,17 @@ defmodule Lightning.Run do
         changeset
         |> add_error(
           :state,
-          "cannot mark run #{to} that has not been claimed by a worker"
+          "cannot mark run #{to} that has not been claimed by a worker",
+          code: :not_allowed
         )
 
       {:claimed, :started} ->
         changeset |> validate_required([:started_at])
 
       {from, to} when from in @final_states and to in @final_states ->
-        add_error(changeset, :state, "already in completed state")
+        add_error(changeset, :state, "already in completed state",
+          code: :not_allowed
+        )
 
       {from, to} when from in [:claimed, :started] and to in @final_states ->
         changeset |> validate_required([:finished_at])
