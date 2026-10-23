@@ -1231,9 +1231,16 @@ defmodule Lightning.Credentials do
     - `{:ok, body}` - The credential body (with fresh tokens if OAuth was refreshed)
     - `{:error, :environment_not_found}` - No body exists for this environment
     - `{:error, oauth_refresh_error()}` - OAuth refresh failed
+    - `{:error, map() | Ecto.Changeset.t()}` - Any other refresh failure (e.g. a
+      timeout), or the refreshed token could not be saved
   """
   @spec resolve_credential_body(Credential.t(), String.t()) ::
-          {:ok, map()} | {:error, :environment_not_found | oauth_refresh_error()}
+          {:ok, map()}
+          | {:error,
+             :environment_not_found
+             | oauth_refresh_error()
+             | map()
+             | Ecto.Changeset.t()}
   def resolve_credential_body(%Credential{} = credential, environment) do
     case get_credential_body(credential.id, environment) do
       nil ->
