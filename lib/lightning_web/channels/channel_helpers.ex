@@ -3,6 +3,8 @@ defmodule LightningWeb.ChannelHelpers do
   Helper functions for channels
   """
 
+  import LightningWeb.CoreComponents, only: [translate_error: 1]
+
   @doc """
   Replies, and reports an error reply to Sentry.
 
@@ -20,9 +22,15 @@ defmodule LightningWeb.ChannelHelpers do
     {:reply, reply, socket}
   end
 
-  defp error_to_map(%Ecto.Changeset{} = error) do
-    LightningWeb.ChangesetJSON.errors(error)
-  end
+  @doc """
+  A changeset's errors as the channels send them, `%{field => [message]}`.
+  ws-worker reads this shape.
+  """
+  @spec changeset_errors(Ecto.Changeset.t()) :: %{atom() => [String.t()]}
+  def changeset_errors(%Ecto.Changeset{} = changeset),
+    do: Ecto.Changeset.traverse_errors(changeset, &translate_error/1)
+
+  defp error_to_map(%Ecto.Changeset{} = error), do: changeset_errors(error)
 
   defp error_to_map(error), do: error
 

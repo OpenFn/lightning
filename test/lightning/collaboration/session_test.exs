@@ -5,6 +5,7 @@ defmodule Lightning.SessionTest do
   import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.CollaborationHelpers
+  import Lightning.RaceHelpers
   import Mox
 
   alias Lightning.Collaboration.DocumentState
@@ -1138,31 +1139,35 @@ defmodule Lightning.SessionTest do
       drain_document(instance, document_name)
     end
 
-    test "handles concurrent saves with optimistic locking", %{
-      session: session,
-      user: user,
-      workflow: workflow,
-      instance: instance,
-      document_name: document_name
-    } do
-      # Another process updates the workflow (simulating concurrent edit)
-      {:ok, _updated} =
-        Lightning.Workflows.save_workflow(
-          Lightning.Workflows.change_workflow(workflow, %{
-            name: "Concurrent Update"
-          }),
-          user
-        )
+    test "a save another request beats replies :concurrent_edit and keeps the session",
+         %{
+           session: session,
+           user: user,
+           workflow: workflow,
+           instance: instance,
+           document_name: document_name
+         } do
+      doc = Session.get_doc(session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
 
-      # Our save should detect the lock_version conflict
-      # Note: This may succeed if Y.Doc has latest changes
-      # The test verifies the system handles it gracefully either way
-      result = Session.save_workflow(session, user)
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Updated Name")
+      end)
 
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
+      bump_workflow_lock_mid_save(workflow.id, session)
+
+      assert {:error, :concurrent_edit} = Session.save_workflow(session, user)
+      assert Process.alive?(session)
+
+      assert %{name: "Original Name", lock_version: lock_version} =
+               Repo.reload(workflow)
+
+      assert lock_version == workflow.lock_version + 1
+
+      assert {:ok, %Workflow{name: "Updated Name", lock_version: retried}} =
+               Session.save_workflow(session, user)
+
+      assert retried == workflow.lock_version + 2
 
       drain_document(instance, document_name)
     end

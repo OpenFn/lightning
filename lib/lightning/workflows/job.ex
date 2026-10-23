@@ -142,7 +142,7 @@ defmodule Lightning.Workflows.Job do
       validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
         if Adaptors.valid_format?(adaptor),
           do: [],
-          else: [adaptor: "adaptor has invalid format"]
+          else: [adaptor: {"adaptor has invalid format", code: :format}]
       end)
 
     if changeset.valid? do
@@ -156,18 +156,27 @@ defmodule Lightning.Workflows.Job do
   # package cannot be persisted on a job. `fetch_adaptor` returns
   # `:not_found` once the catalogue has loaded and genuinely lacks the
   # package, but any other error means the catalogue itself isn't ready
-  # yet, so that case gets its own, retry-able message.
+  # yet, so that case gets its own, retry-able message. It doesn't wait for a
+  # first load, so a save while the catalogue loads is refused at once and the
+  # client retries.
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
       with {:ok, {name, _version}} <- Adaptors.parse_spec(adaptor),
-           {:ok, _package} <- Adaptors.fetch_adaptor(name) do
+           {:ok, _package} <-
+             Adaptors.fetch_adaptor(Adaptors.Config.default_instance(), name,
+               timeout: 0
+             ) do
         []
       else
         {:error, reason} when reason in [:not_found, :invalid_format] ->
-          [adaptor: "is not a recognised adaptor"]
+          [adaptor: {"is not a recognised adaptor", code: :not_found}]
 
         {:error, _reason} ->
-          [adaptor: "adaptor catalogue is not ready yet, try again shortly"]
+          [
+            adaptor:
+              {"adaptor catalogue is not ready yet, try again shortly",
+               code: :not_ready}
+          ]
       end
     end)
   end
@@ -193,7 +202,8 @@ defmodule Lightning.Workflows.Job do
               add_error(
                 changeset,
                 :keychain_credential_id,
-                Scoping.violation_message(:keychain_credential_id)
+                Scoping.violation_message(:keychain_credential_id),
+                code: :credential_not_allowed
               )
 
             _ ->
