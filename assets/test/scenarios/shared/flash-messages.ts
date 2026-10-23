@@ -5,15 +5,29 @@
 // When (by calling `act`) and the Then.
 import { expect, type Locator, type Page } from '@playwright/test';
 
-// The toast the user sees: the box around the alert that reads `text`
+// The toast the user sees reading `text`: announced as an alert, or as a
+// status where a design marks info messages politely
 export const toast = (page: Page, text: string) =>
-  page.getByRole('alert').filter({ hasText: text }).locator('xpath=../..');
+  page
+    .getByRole('alert')
+    .or(page.getByRole('status'))
+    .filter({ hasText: text });
 
-// The hue (0-360) of an element's background, as the screen paints it
+// The box the screen paints behind an element: the element itself or the
+// nearest ancestor with a background. Defined inside each evaluate, which
+// can't reach this module.
+type PaintedBox = (el: Element) => Element;
+
+// The hue (0-360) of the background behind an element, as the screen paints it
 async function hueOf(box: Locator) {
   const [r, g, b] = await box.evaluate(el => {
+    const painted: PaintedBox = e =>
+      getComputedStyle(e).backgroundColor !== 'rgba(0, 0, 0, 0)' ||
+      !e.parentElement
+        ? e
+        : painted(e.parentElement);
     const ctx = document.createElement('canvas').getContext('2d')!;
-    ctx.fillStyle = getComputedStyle(el).backgroundColor;
+    ctx.fillStyle = getComputedStyle(painted(el)).backgroundColor;
     ctx.fillRect(0, 0, 1, 1);
     return [...ctx.getImageData(0, 0, 1, 1).data].map(v => v / 255);
   });
@@ -32,10 +46,20 @@ async function hueOf(box: Locator) {
 const isBlue = (hue: number) => hue >= 190 && hue <= 250;
 const isRed = (hue: number) => hue <= 15 || hue >= 345;
 
-// The icon has no accessible name; its heroicon class is the only thing that
+// Whether the toast's painted box shows the heroicon <name>. The icon is
+// decorative and has no accessible name, so its class is the only thing that
 // says which icon it is.
-const icon = (box: Locator, name: string) =>
-  box.locator(`[class*="hero-${name}"]`).first();
+const showsIcon = (box: Locator, name: string) =>
+  box.evaluate((el, name) => {
+    const painted: PaintedBox = e =>
+      getComputedStyle(e).backgroundColor !== 'rgba(0, 0, 0, 0)' ||
+      !e.parentElement
+        ? e
+        : painted(e.parentElement);
+    return [...painted(el).querySelectorAll(`[class*="hero-${name}"]`)].some(
+      icon => icon.getBoundingClientRect().width > 0
+    );
+  }, name);
 
 // @S01 An info flash appears as a toast and hides itself
 //   When an action on the page puts the info flash "<text>"
@@ -48,8 +72,8 @@ export async function S01(page: Page, text: string, act: () => Promise<void>) {
   const shownAt = Date.now();
 
   expect(isBlue(await hueOf(box)), 'the toast should be blue').toBe(true);
-  await expect(icon(box, 'check-circle')).toBeVisible();
-  await expect(box.getByRole('alert')).toHaveText(text);
+  expect(await showsIcon(box, 'check-circle'), 'a check icon').toBe(true);
+  await expect(box).toHaveText(text);
   await expect(box).toBeHidden({ timeout: 8000 });
   expect(Date.now() - shownAt).toBeGreaterThan(4000);
 }
@@ -64,8 +88,13 @@ export async function S02(page: Page, text: string, act: () => Promise<void>) {
   await expect(box).toBeVisible();
 
   expect(isRed(await hueOf(box)), 'the toast should be red').toBe(true);
-  await expect(icon(box, 'exclamation-circle')).toBeVisible();
-  await expect(box.getByRole('alert')).toHaveText(text);
+  expect(
+    await showsIcon(box, 'exclamation-circle'),
+    'an exclamation icon'
+  ).toBe(true);
+  await expect(page.getByRole('alert').filter({ hasText: text })).toHaveText(
+    text
+  );
 }
 
 // @S03 Pointing at a toast keeps it on screen

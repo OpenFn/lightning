@@ -20,7 +20,8 @@ export const given = {
 };
 
 // The timestamp's text; a cell may also hold other controls, without text
-const timestamp = (cell: Locator) => cell.getByText(/\d/).first();
+const timestamp = (cell: Locator) =>
+  cell.getByText(/\d/).filter({ visible: true });
 
 // @S01 A timestamp is shown in the viewer's time zone
 //   Then the timestamp reads "today at 10:30 AM"

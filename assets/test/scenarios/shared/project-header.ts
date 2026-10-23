@@ -8,6 +8,7 @@ import {
   expectAt,
   experimentalSwitch,
   extraProjectFor,
+  liveViewJoined,
   makeSupportUser,
   open,
   preferencesOf,
@@ -509,7 +510,7 @@ export async function S16(
 
   await page.getByRole('link', { name: 'Turn off in your profile' }).click();
   await expectAt(page, '/profile');
-  await page.locator('.phx-connected').first().waitFor();
+  await liveViewJoined(page);
   await experimentalSwitch(page).click();
   await expect
     .poll(() => preferencesOf(email).experimental_features)

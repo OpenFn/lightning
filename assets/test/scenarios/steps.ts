@@ -89,26 +89,39 @@ export function exec(statement: string) {
 export async function signInAs(page: Page, email: string, password = PASSWORD) {
   if (onDemo) return; // the demo is always signed in as its one user
   await page.goto('/users/log_in');
-  // The login inputs have no accessible name (their labels aren't linked), so
-  // they can only be found by field name.
-  await page.locator('input[name="user[email]"]').fill(forWorker(email));
-  await page.locator('input[name="user[password]"]').fill(password);
+  await field(page, 'Email').fill(forWorker(email));
+  await field(page, 'Password').fill(password);
   await page.getByRole('button', { name: 'Log in' }).click();
   await expect(page).not.toHaveURL(/\/users\/log_in/);
+}
+
+type LiveView = { isConnected(): boolean; isJoinPending(): boolean };
+type LiveSocket = {
+  main?: LiveView;
+  execJS: (el: Element, js: string) => void;
+};
+
+// Waits for the page's LiveView to join, asking LiveView's own client
+export async function liveViewJoined(page: Page) {
+  await page.waitForFunction(() => {
+    const { liveSocket } = window as unknown as { liveSocket?: LiveSocket };
+    const main = liveSocket?.main;
+    return !!main && main.isConnected() && !main.isJoinPending();
+  });
 }
 
 // When I open "<path>" — waits for the LiveView socket to join
 export async function open(page: Page, path: string) {
   if (onDemo) return void (await page.goto(`#${path}`));
   await page.goto(path);
-  await page.locator('.phx-connected').first().waitFor();
+  await liveViewJoined(page);
 }
 
 // When I reload the page
 export async function reload(page: Page) {
   lightningOnly('needs a reload that keeps state: demo tokens live in memory');
   await page.reload();
-  await page.locator('.phx-connected').first().waitFor();
+  await liveViewJoined(page);
 }
 
 // Then I am on "<path>"
@@ -170,11 +183,18 @@ export function setApiTokenTimes(
 }
 
 // When a delete is submitted from the open deletion modal naming token <id>.
-// Sends the page's delete event straight down the LiveView socket, as a
-// tampered client would, so it doesn't depend on how the modal is built.
+// A HEEx modal names the token on its button, so the forgery rewrites that and
+// clicks. A modal without one gets the page's delete event sent straight down
+// the LiveView socket, as a tampered client would.
 export async function confirmDeletionNaming(page: Page, id: string) {
   lightningOnly('needs a server: a forged delete has nothing to reach');
-  await expect(page.getByRole('button', { name: 'Yes' })).toBeVisible();
+  const yes = page.getByRole('button', { name: 'Yes' });
+  await expect(yes).toBeVisible();
+  if (await yes.getAttribute('phx-value-id')) {
+    await yes.evaluate((el, id) => el.setAttribute('phx-value-id', id), id);
+    await yes.click();
+    return;
+  }
   await page.evaluate(id => {
     const { liveSocket } = window as unknown as {
       liveSocket: { execJS(el: Element, encodedJS: string): void };
@@ -263,25 +283,20 @@ export function seedMfaFor(email: string) {
 // typing it into an authenticator app would.
 export async function enrolInMfa(page: Page) {
   await open(page, '/profile');
-  await page.locator('#toggle-mfa-switch').click();
-  await page.getByText('this secret key').click();
-  const secret = (
-    await page.locator('#mfa-secret-modal-content code').innerText()
-  ).trim();
+  await page
+    .getByRole('switch', { name: 'Enable multi-factor authentication' })
+    .click();
+  await clickable(page, 'this secret key').click();
+  const secretModal = modal(page, 'Your two-factor secret');
+  const secret = (await secretModal.getByRole('code').innerText()).trim();
   // Escape is unreliable here: pressed during the open transition, the dialog
   // stays up and blocks the form.
-  await page
-    .locator('#mfa-secret-modal')
-    .getByRole('button', { name: 'Close' })
-    .click();
-  await expect(page.locator('#mfa-secret-modal-container')).toBeHidden();
-  await page
-    .locator('#set_totp_form input[name="user_totp[code]"]')
-    .fill(totpCode(secret));
-  await page
-    .locator('#set_totp_form')
-    .getByRole('button', { name: 'Save' })
-    .click();
+  await secretModal.getByRole('button', { name: 'Close' }).click();
+  await expect(modalTitle(page, 'Your two-factor secret')).toBeHidden();
+  // The page has several "Save" buttons; Enter submits the code's own form.
+  const code = page.getByPlaceholder('XXXXXX');
+  await code.fill(totpCode(secret));
+  await code.press('Enter');
   return secret;
 }
 
@@ -300,7 +315,7 @@ export async function reauthenticateWithPassword(
 ) {
   await expect(page).toHaveURL(/\/auth\/confirm_access/);
   await page
-    .locator('#reauthentication-form input[name="user[password]"]')
+    .locator('#reauthentication-form input[type="password"]')
     .fill(password);
   await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(page).not.toHaveURL(/\/auth\/confirm_access/);
@@ -318,19 +333,49 @@ export function getWithBearer(
   });
 }
 
-// The form control a visible label names. Lightning's form labels carry
-// `for` but the inputs have no id, so the label isn't linked and getByLabel
-// finds nothing; the control is the next one after its label.
+// The form control a visible label names, found by its label. Today's
+// Lightning labels carry `for` but most inputs have no id, so the label isn't
+// linked and getByLabel finds nothing there; for those the control is the next
+// one after its label. Drop that fallback once the labels are linked.
 // `within` narrows the search to a dialog or form when a label repeats.
 export function field(within: Page | Locator, label: string) {
-  return labelled(within, label).locator(
-    'xpath=following::*[self::select or self::textarea or self::input[not(@type="hidden")]][1]'
-  );
+  return within
+    .getByLabel(labelText(label))
+    .or(
+      labelled(within, label).locator(
+        'xpath=following::*[self::select or self::textarea or self::input[not(@type="hidden")]][1]'
+      )
+    );
 }
 
 // The eye at the end of a password field, which shows or hides what was typed
 export const passwordEye = (within: Page | Locator, label: string) =>
   field(within, label).locator('xpath=following-sibling::div[1]/*[1]');
+
+// A label as shown, with or without the required-field asterisk
+const labelText = (label: string) => new RegExp(`^\\s*${label}\\s*\\*?\\s*$`);
+
+// Something the user clicks by its name, whether it's drawn as a button or a
+// link: designs swap one for the other.
+export function clickable(
+  within: Page | Locator,
+  name: string | RegExp,
+  { exact }: { exact?: boolean } = {}
+) {
+  return within
+    .getByRole('button', { name, exact })
+    .or(within.getByRole('link', { name, exact }));
+}
+
+// A modal, found by its title. Ask its title whether it is open, not the
+// dialog: the design system's dialog wrapper is 0x0, so Playwright calls the
+// dialog itself hidden while its content shows (F121).
+export const modal = (page: Page, title: string) =>
+  page.getByRole('dialog', { name: title });
+
+// The open modal's title; hidden once the modal has closed
+export const modalTitle = (page: Page, title: string) =>
+  modal(page, title).getByRole('heading', { name: title });
 
 // The block holding a field's label, control and any error under it
 export function fieldBlock(within: Page | Locator, label: string) {
@@ -338,9 +383,7 @@ export function fieldBlock(within: Page | Locator, label: string) {
 }
 
 const labelled = (within: Page | Locator, label: string) =>
-  within
-    .locator('label')
-    .filter({ hasText: new RegExp(`^\\s*${label}\\s*\\*?\\s*$`) });
+  within.locator('label').filter({ hasText: labelText(label) });
 
 const literal = (v: string | boolean | null) =>
   v === null ? 'null' : `$v$${String(v)}$v$`;
@@ -392,10 +435,16 @@ export async function otherSession(
 export async function disableAccountAsAdmin(browser: Browser, email: string) {
   const admin = await otherSession(browser, 'super@openfn.org');
   await open(admin, `/settings/users/${user(email).id}`);
-  // The "Disabled?" checkbox renders no label text; it sits before its hint.
+  // Labelled by its hint. Today's "Disabled?" checkbox renders no label text
+  // and sits before that hint, unlinked; drop the fallback once it's linked.
+  const hint = 'A disabled user will not be allowed to login.';
   await admin
-    .getByText('A disabled user will not be allowed to login.')
-    .locator('xpath=preceding::input[@type="checkbox"][1]')
+    .getByRole('checkbox', { name: hint })
+    .or(
+      admin
+        .getByText(hint)
+        .locator('xpath=preceding::input[@type="checkbox"][1]')
+    )
     .check();
   await admin.getByRole('button', { name: 'Save' }).click();
   await expect
@@ -552,43 +601,114 @@ export function makeSupportUser(email: string) {
 // When I go back — waits for the LiveView socket to join the page I land on
 export async function goBack(page: Page) {
   await page.goBack();
-  await page.locator('.phx-connected').first().waitFor();
+  await liveViewJoined(page);
 }
 
-// When a "sort" event arrives with column "<column>". A sortable header sends
-// the column it sorts by from its phx-value-by; repoint it and click.
+// When a "sort" event arrives with column "<column>": a crafted LiveView push
+// sent from the <header> column's sort control. Where the table sorts in the
+// browser the server has no sort event, so this checks that an unknown event
+// leaves the page working.
 export async function sortByColumnNamed(
   page: Page,
   header: string,
   column: string
 ) {
-  const link = page
-    .getByRole('columnheader')
-    .getByRole('link', { name: header });
-  await link.evaluate(
-    (el, column) => el.setAttribute('phx-value-by', column),
+  lightningOnly('needs a server: a crafted event has nothing to reach');
+  await clickable(page.getByRole('columnheader'), header).evaluate(
+    (el, by) =>
+      (window as unknown as { liveSocket: LiveSocket }).liveSocket.execJS(
+        el,
+        JSON.stringify([['push', { event: 'sort', value: { by } }]])
+      ),
     column
   );
-  await link.click();
 }
 
-// When I submit <form> with an extra field "<name>" set to "<value>", by
-// clicking its <submit> button. LiveView sends every named input in a form.
-export async function submitWithExtraField(
-  form: Locator,
-  submit: string,
+// Watches what the page's LiveView sends and what the server answers. Call it
+// before the page opens. `crashes()` counts the times the server reported the
+// LiveView crashed; `answered(n)` waits until at least n events have been sent
+// and the server has answered each one, with a reply or a crash.
+export function watchLiveView(page: Page) {
+  const pending = new Set<string>();
+  let sent = 0;
+  let crashes = 0;
+  const frame = (payload: string | Buffer) =>
+    typeof payload === 'string' ? (JSON.parse(payload) as unknown[]) : [];
+  page.on('websocket', ws => {
+    if (!ws.url().includes('/live/websocket')) return;
+    ws.on('framesent', ({ payload }) => {
+      const [, ref, , event] = frame(payload);
+      if (event !== 'event') return;
+      sent++;
+      pending.add(ref as string);
+    });
+    ws.on('framereceived', ({ payload }) => {
+      const [, ref, , event] = frame(payload);
+      if (event === 'phx_reply') pending.delete(ref as string);
+      if (event === 'phx_error') {
+        crashes++;
+        pending.clear();
+      }
+    });
+  });
+  return {
+    events: () => sent,
+    crashes: () => crashes,
+    answered: (n: number) =>
+      expect
+        .poll(() => sent >= n && pending.size === 0, 'server answered')
+        .toBe(true),
+  };
+}
+
+// When I submit a form by clicking <submit>, with an extra field "<name>" set
+// to "<value>" in the request: a crafted request, made by rewriting the
+// LiveView event the click sends, whatever shape the page gives it (form
+// fields, or a value pushed from a component). Call it before the page opens;
+// it returns the submit step.
+export async function submittingExtraField(
+  page: Page,
   name: string,
   value: string
 ) {
-  await form.evaluate(
-    (el, [name, value]) => {
-      const input = document.createElement('input');
-      Object.assign(input, { type: 'hidden', name, value });
-      el.appendChild(input);
-    },
-    [name, value]
-  );
-  await form.getByRole('button', { name: submit }).click();
+  lightningOnly('needs a server: a crafted request has nothing to reach');
+  let armed = false;
+  let added = 0;
+  // [join_ref, ref, topic, "event", { type, event, value }]
+  const withField = (message: string) => {
+    const frame = JSON.parse(message);
+    const payload = frame[3] === 'event' ? frame[4] : undefined;
+    if (payload?.type === 'form' && typeof payload.value === 'string') {
+      // Nest it like the form's own fields: "project[raw_name]" gives
+      // "project[parent_id]"
+      const params = new URLSearchParams(payload.value);
+      const scope = [...params.keys()]
+        .filter(key => !key.startsWith('_'))
+        .map(key => key.match(/^(\w+)\[/)?.[1])
+        .find(Boolean);
+      params.append(scope ? `${scope}[${name}]` : name, value);
+      payload.value = params.toString();
+    } else if (payload?.value && typeof payload.value === 'object') {
+      payload.value[name] = value;
+    } else return message;
+    added++;
+    return JSON.stringify(frame);
+  };
+  await page.routeWebSocket(/\/live\/websocket/, ws => {
+    const server = ws.connectToServer();
+    ws.onMessage(message =>
+      server.send(
+        armed && typeof message === 'string' ? withField(message) : message
+      )
+    );
+  });
+  return async (submit: Locator) => {
+    armed = true;
+    await submit.click();
+    await expect
+      .poll(() => added, `"${name}" was added to the request`)
+      .toBeGreaterThan(0);
+  };
 }
 
 // Given "<email>"'s saved preferences are <prefs>

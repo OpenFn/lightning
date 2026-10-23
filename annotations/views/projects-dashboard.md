@@ -329,13 +329,13 @@ Feature: Projects
     # project_creation_modal.ex:46-48, :64-72; helpers.ex:221-238; project.ex:155-157
     # dashboard_live_test.exs:289-302
 
-  @S12 @passing-old
+  @S12 @pending
   Scenario: A description over 240 characters is refused
-    # Value: people learn the limit while typing instead of losing what they wrote on submit.
+    # Value: people learn the limit before submitting instead of losing what they wrote.
     Given the "Create a new project" modal is open
-    When I enter a name and a 241-character description
+    When I enter a name and a 241-character description and submit
     Then I see an error under "Description"
-    And the "Create project" button is disabled
+    And no project is created
     # project.ex:107; project_creation_modal.ex:26-37, :121-123, :127-131
 
   @S13 @passing-old
