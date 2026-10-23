@@ -17,55 +17,55 @@ defmodule LightningWeb.API.CredentialController do
       GET /api/credentials
       GET /api/credentials?project_id=a1b2c3d4-...
       POST /api/credentials
+      GET /api/credentials/a1b2c3d4-...
+      PUT /api/credentials/a1b2c3d4-...
       DELETE /api/credentials/a1b2c3d4-...
   """
   use LightningWeb, :controller
 
-  alias Lightning.Accounts.User
+  alias Lightning.Accounts
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Projects
+  alias Lightning.Scope
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Request
+  alias LightningWeb.API.Target
+  alias LightningWeb.Plugs.AuthorizeAction
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
 
-  # `require_authenticated_api_resource` lets repo-connection tokens through
-  # this pipeline, and everything here is about credentials, which belong to a
-  # person. Every action would hand a machine token to a function that only
-  # takes a user, which raises rather than refusing. Answer it once here.
-  plug :require_user
+  # Both index routes need the `credentials:write` grant, and that is all this
+  # plug checks.
+  plug AuthorizeAction,
+       {:credentials, :list_credentials}
+       when action == :index
 
-  defp require_user(%{assigns: %{current_resource: %User{}}} = conn, _opts),
-    do: conn
+  plug AuthorizeAction,
+       {:credentials, :edit_credential}
+       when action in [:create, :show, :update]
 
-  defp require_user(conn, _opts) do
-    conn
-    |> put_status(:forbidden)
-    |> put_view(LightningWeb.ErrorView)
-    |> render(:"403")
-    |> halt()
-  end
+  plug AuthorizeAction,
+       {:credentials, :delete_credential}
+       when action == :delete
+
+  @accepted [
+    :id,
+    :name,
+    :owner,
+    :schema,
+    :credential_bodies,
+    :project_credentials
+  ]
 
   @doc """
-  Lists credentials with optional project filtering.
+  Lists credentials, without their bodies.
 
-  This function has two variants:
-  - With `project_id`: Returns all credentials for a specific project (regardless of owner)
-  - Without `project_id`: Returns only credentials owned by the authenticated user
-
-  Credential bodies are excluded from responses for security.
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map containing:
-    - `project_id` - Project UUID (optional, filters to specific project)
-
-  ## Returns
-
-  - `200 OK` with list of credentials (bodies excluded)
-  - `404 Not Found` if project doesn't exist (when project_id provided)
-  - `403 Forbidden` if user lacks project access (when project_id provided)
+  With `project_id`, lists every credential linked to that project, whoever
+  owns it. A project the caller isn't a member of answers 404 `not_found`, as
+  if it didn't exist. Without `project_id`, lists the caller's own credentials.
 
   ## Examples
 
@@ -77,42 +77,38 @@ defmodule LightningWeb.API.CredentialController do
   """
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, %{"project_id" => project_id}) do
-    current_user = conn.assigns.current_resource
-
-    with project when not is_nil(project) <- Projects.get_project(project_id),
-         :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
-             current_user,
-             project
+    with {:ok, project} <-
+           Target.project(
+             conn.assigns.scope,
+             project_id,
+             {:project_users, :list_project_credentials}
            ) do
-      # The requested project is already access-checked above, so always show
-      # it (covers membership at any depth and support-user access).
       credentials =
         project
         |> Credentials.list_credentials()
-        |> scope_to_visible_projects(current_user, [project.id])
+        |> hide_unseen_links(conn.assigns.scope)
 
       render(conn, "index.json", credentials: credentials)
-    else
-      nil ->
-        {:error, :not_found}
-
-      {:error, :unauthorized} ->
-        {:error, :forbidden}
     end
   end
 
   def index(conn, _params) do
     current_user = conn.assigns.current_resource
 
-    credentials =
-      current_user
-      |> Credentials.list_credentials()
-      |> scope_to_visible_projects(current_user)
+    with :ok <-
+           Permissions.permit(
+             :credentials,
+             :list_credentials,
+             conn.assigns.scope,
+             nil
+           ) do
+      credentials =
+        current_user
+        |> Credentials.list_credentials()
+        |> hide_unseen_links(conn.assigns.scope)
 
-    render(conn, "index.json", credentials: credentials)
+      render(conn, "index.json", credentials: credentials)
+    end
   end
 
   @doc """
@@ -133,8 +129,9 @@ defmodule LightningWeb.API.CredentialController do
   ## Returns
 
   - `201 Created` with credential JSON including body
-  - `422 Unprocessable Entity` on validation errors
-  - `403 Forbidden` if user lacks access to specified projects
+  - `400 Bad Request` (`malformed`) when the body isn't a JSON object
+  - `422 Unprocessable Entity` on validation errors, with one entry for each
+    project link the user may not make
 
   ## Examples
 
@@ -155,14 +152,24 @@ defmodule LightningWeb.API.CredentialController do
         ]
       }
   """
-  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def create(conn, params) do
-    current_user = conn.assigns.current_resource
+    scope = conn.assigns.scope
+    owner = scope.actor
 
-    with {:ok, validated_params} <-
-           validate_and_authorize_projects(params, current_user),
+    with :ok <- Request.check_object(conn.body_params),
+         {link_entries, project_ids} =
+           check_links(params, [], {:ok, owner}, scope),
+         :ok <- Errors.refuse(link_entries),
          {:ok, credential} <-
-           Credentials.create_credential(validated_params, current_user) do
+           Credentials.create_credential(
+             Map.merge(params, %{
+               "user_id" => owner.id,
+               "project_credentials" =>
+                 Enum.map(project_ids, &%{"project_id" => &1})
+             }),
+             owner
+           ) do
       conn
       |> put_status(:created)
       |> render("create.json", credential: credential)
@@ -170,10 +177,380 @@ defmodule LightningWeb.API.CredentialController do
   end
 
   @doc """
+  Shows a credential, without its body, to a caller who may edit it or who
+  sees it linked to a project whose credentials it may list. Anyone else hears
+  404 `not_found`, as if it didn't exist.
+
+  Links to projects whose credentials the caller may not list are left out.
+  """
+  @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def show(conn, %{"id" => id}) do
+    with {:ok, id} <- Request.path_id(id),
+         {:ok, credential} <- fetch_credential(id),
+         :ok <-
+           Permissions.permit(
+             :credentials,
+             :see_credential,
+             conn.assigns.scope,
+             credential
+           ) do
+      render_credential(conn, credential)
+    end
+  end
+
+  @doc """
+  Creates the credential under the path's id, or replaces the name, schema and
+  `main` body of the one that has it.
+
+  Links are only ever added. A project the body lists gains a link, and a link
+  the credential already holds stays even if the body leaves it out. The
+  response leaves out links the caller may not see, as `show/2` does.
+
+  The credential under the path's id is checked before the body: one the caller
+  may not edit is `id_taken`, and one being deleted is `scheduled_for_deletion`.
+  A refused body answers one 422 with every error in its keys, its owner and
+  its links (error-format spec §9.6). The credential's own fields and its body
+  are checked by `Lightning.Credentials` when it writes.
+  """
+  @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def update(conn, %{"id" => id}) do
+    scope = conn.assigns.scope
+    body = conn.body_params
+
+    with {:ok, id} <- Request.path_id(id),
+         {:ok, target} <- update_target(id, scope),
+         {:ok, naming} <- owner_naming(body["owner"], scope),
+         {:ok, key_entries} <- Request.check(body, id, @accepted),
+         {:ok, {owner, project_ids}} <-
+           check_put_body(body, key_entries, naming, target, scope) do
+      case target do
+        :new -> create_under_id(conn, id, body, owner, project_ids)
+        credential -> replace(conn, credential, body, owner, project_ids)
+      end
+    end
+  end
+
+  defp update_target(id, scope) do
+    case Credentials.get_credential(id) do
+      nil -> {:ok, :new}
+      credential -> editable(credential, scope)
+    end
+  end
+
+  defp editable(credential, scope) do
+    case Permissions.permit(:credentials, :edit_credential, scope, credential) do
+      :ok ->
+        {:ok, Credentials.preload_links(credential)}
+
+      # The id belongs to a credential the caller can't write, which no body
+      # can change (spec §4).
+      {:error, :forbidden} ->
+        {:error, :id_taken}
+
+      error ->
+        error
+    end
+  end
+
+  # A caller who may name an owner has to name one. Anyone else owns the
+  # credential and may name only themselves. Naming someone else is refused
+  # before any lookup, so the reply never reveals whether an email has an
+  # account.
+  defp owner_naming(owner, scope) do
+    case Permissions.permit(:credentials, :name_credential_owner, scope, nil) do
+      :ok ->
+        {:ok, :anyone}
+
+      {:error, :forbidden} ->
+        if names_someone_else?(owner, scope.actor),
+          do: {:error, :forbidden},
+          else: {:ok, :self}
+
+      error ->
+        error
+    end
+  end
+
+  defp names_someone_else?(email, caller) when is_binary(email),
+    do: String.downcase(email) != String.downcase(caller.email)
+
+  defp names_someone_else?(_owner, _caller), do: false
+
+  defp check_put_body(body, key_entries, naming, target, scope) do
+    owner = resolve_owner(naming, body, scope.actor)
+    held = held_project_ids(target)
+
+    {link_entries, project_ids} = check_links(body, held, owner, scope)
+
+    entries =
+      key_entries ++
+        body_entries(body) ++
+        owner_entries(owner) ++ link_entries ++ link_key_entries(body)
+
+    # Every refused owner has an entry, so it is refused with the rest.
+    with :ok <- Errors.refuse(entries),
+         {:ok, owner} <- owner,
+         do: {:ok, {owner, project_ids}}
+  end
+
+  defp resolve_owner(_naming, %{"owner" => owner}, _caller)
+       when not is_binary(owner) and not is_nil(owner),
+       do: {:error, [Errors.entry([:owner], {"is invalid", code: :type})]}
+
+  defp resolve_owner(:self, _body, caller), do: {:ok, caller}
+
+  defp resolve_owner(:anyone, %{"owner" => email}, _caller)
+       when is_binary(email) do
+    case Accounts.list_users_by_emails([email]) do
+      [owner] ->
+        {:ok, owner}
+
+      _none ->
+        {:error, [Errors.entry([:owner], Errors.not_visible())]}
+    end
+  end
+
+  defp resolve_owner(:anyone, _body, _caller),
+    do: {:error, [Errors.entry([:owner], {"can't be blank", code: :required})]}
+
+  defp owner_entries({:ok, _owner}), do: []
+  defp owner_entries({:error, entries}), do: entries
+
+  @bodies_message "must be one body named main, holding an object"
+
+  defp body_entries(%{
+         "credential_bodies" => [%{"name" => "main", "body" => %{}} = main]
+       })
+       when map_size(main) == 2,
+       do: []
+
+  defp body_entries(_body),
+    do: [Errors.entry([:credential_bodies], {@bodies_message, code: :one_body})]
+
+  # A PUT link holds a project_id and nothing else.
+  defp link_key_entries(%{"project_credentials" => links}) when is_list(links) do
+    for {%{} = link, index} <- Enum.with_index(links),
+        entry <-
+          Request.unknown_keys(link, [:project_credentials, index], [:project_id]),
+        do: entry
+  end
+
+  defp link_key_entries(_body), do: []
+
+  defp held_project_ids(:new), do: []
+
+  defp held_project_ids(%Credential{project_credentials: links}),
+    do: Enum.map(links, & &1.project_id)
+
+  defp check_links(%{"project_credentials" => links}, held, owner, scope)
+       when is_list(links) do
+    shaped =
+      links
+      |> Enum.with_index()
+      |> Enum.map(fn {link, index} -> {index, link_project_id(link, index)} end)
+
+    ids = for {_index, {:ok, id}} <- shaped, id not in held, do: id
+    scopes = Scope.fetch_all(scope, ids)
+    unreachable = owner_unreachable(owner, ids)
+
+    results =
+      Enum.map(shaped, fn
+        {index, {:ok, id}} ->
+          cond do
+            id in held ->
+              :held
+
+            refusal = link_refusal(scopes[id], id in unreachable) ->
+              {:error, link_entry(index, refusal)}
+
+            true ->
+              {:ok, id}
+          end
+
+        {_index, error} ->
+          error
+      end)
+
+    {for({:error, entry} <- results, do: entry),
+     Enum.uniq(for {:ok, id} <- results, do: id)}
+  end
+
+  defp check_links(%{"project_credentials" => _links}, _held, _owner, _scope),
+    do: {[Errors.entry([:project_credentials], {"is invalid", code: :type})], []}
+
+  defp check_links(_body, _held, _owner, _scope), do: {[], []}
+
+  defp link_project_id(%{"project_id" => id}, index) when is_binary(id) do
+    case Request.path_id(id) do
+      {:ok, id} -> {:ok, id}
+      {:error, :not_found} -> {:error, link_entry(index, Errors.not_visible())}
+    end
+  end
+
+  defp link_project_id(%{"project_id" => id}, index) when not is_nil(id),
+    do: {:error, link_entry(index, {"is invalid", code: :type})}
+
+  defp link_project_id(%{}, index),
+    do: {:error, link_entry(index, {"can't be blank", code: :required})}
+
+  defp link_project_id(_link, index),
+    do:
+      {:error,
+       Errors.entry([:project_credentials, index], {"is invalid", code: :type})}
+
+  defp link_entry(index, error),
+    do: Errors.entry([:project_credentials, index, :project_id], error)
+
+  # A link's entry codes follow spec §7 item 3 and plan D13.
+  defp link_refusal(nil, _owner_unreachable?), do: Errors.not_visible()
+
+  defp link_refusal(project_scope, owner_unreachable?) do
+    case ProjectUsers.authorize(
+           :create_project_credential,
+           project_scope,
+           project_scope.project
+         ) do
+      {:error, :no_standing} ->
+        Errors.not_visible()
+
+      true when owner_unreachable? ->
+        {"the credential's owner is not a member of this project",
+         code: :no_access}
+
+      true ->
+        nil
+
+      _refused ->
+        {"you may not link a credential to this project", code: :no_access}
+    end
+  end
+
+  # An owner the body failed to name already has its own entry, so its
+  # membership isn't checked.
+  defp owner_unreachable({:error, _entries}, _project_ids), do: []
+
+  defp owner_unreachable({:ok, owner}, project_ids) do
+    owner.id
+    |> Credentials.projects_without_access(Enum.uniq(project_ids))
+    |> Enum.map(& &1.id)
+  end
+
+  defp create_under_id(conn, id, body, owner, project_ids) do
+    body
+    |> credential_params()
+    |> Map.merge(%{
+      "user_id" => owner.id,
+      "project_credentials" => Enum.map(project_ids, &%{"project_id" => &1})
+    })
+    |> Credentials.create_credential(conn.assigns.current_resource, id: id)
+    |> case do
+      {:ok, credential} ->
+        conn |> put_status(:created) |> render_credential(credential)
+
+      # Someone else created it since the lookup. Rerun the request so the
+      # caller is checked against that credential.
+      {:error, %Ecto.Changeset{} = changeset} ->
+        if Request.id_taken?(changeset),
+          do: update(conn, %{"id" => id}),
+          else: {:error, changeset}
+
+      error ->
+        error
+    end
+  end
+
+  # Lightning never moves a credential to another owner. The links the
+  # credential holds go to `update_credential` with their ids, so its
+  # `cast_assoc` keeps them rather than replacing them.
+  defp replace(conn, credential, body, owner, project_ids) do
+    if credential.user_id == owner.id do
+      links =
+        Enum.map(
+          credential.project_credentials,
+          &%{"id" => &1.id, "project_id" => &1.project_id}
+        ) ++ Enum.map(project_ids, &%{"project_id" => &1})
+
+      params =
+        body |> credential_params() |> Map.put("project_credentials", links)
+
+      with {:ok, credential} <-
+             Credentials.update_credential(
+               credential,
+               params,
+               conn.assigns.current_resource
+             ),
+           do: render_credential(conn, credential)
+    else
+      {:error, :id_taken}
+    end
+  end
+
+  defp credential_params(body) do
+    body
+    |> Map.take(["schema"])
+    |> Map.merge(%{
+      "name" => body["name"],
+      "credential_bodies" => body["credential_bodies"]
+    })
+  end
+
+  defp fetch_credential(id) do
+    case Credentials.get_credential(id) do
+      nil -> {:error, :not_found}
+      credential -> {:ok, Credentials.preload_links(credential)}
+    end
+  end
+
+  defp permitted_ids(scopes, action) do
+    for {id, project_scope} <- scopes,
+        ProjectUsers.permitted?(action, project_scope),
+        into: MapSet.new(),
+        do: id
+  end
+
+  defp render_credential(conn, credential) do
+    [credential] =
+      [Credentials.preload_links_and_projects(credential)]
+      |> hide_unseen_links(conn.assigns.scope)
+
+    render(conn, "create.json", credential: credential)
+  end
+
+  # A credential can be linked to projects the caller has no standing in,
+  # because its owner lost access or because a list holds someone else's
+  # credentials. Those links are left out. Naming a project also needs
+  # `:access_project`, so a service account without `projects:write` sees every
+  # link but no project names.
+  defp hide_unseen_links(credentials, scope) do
+    scopes =
+      Scope.fetch_all(
+        scope,
+        credentials
+        |> Enum.flat_map(& &1.project_credentials)
+        |> Enum.map(& &1.project_id)
+        |> Enum.uniq()
+      )
+
+    shown = permitted_ids(scopes, :list_project_credentials)
+    named = permitted_ids(scopes, :access_project)
+
+    Enum.map(credentials, fn credential ->
+      %{
+        credential
+        | projects: Enum.filter(credential.projects, &(&1.id in named)),
+          project_credentials:
+            Enum.filter(
+              credential.project_credentials,
+              &(&1.project_id in shown)
+            )
+      }
+    end)
+  end
+
+  @doc """
   Deletes a credential owned by the authenticated user.
 
   Permanently removes a credential. Only the credential owner can delete it.
-  Credentials in use by workflows cannot be deleted and will return an error.
 
   ## Parameters
 
@@ -184,148 +561,40 @@ defmodule LightningWeb.API.CredentialController do
   ## Returns
 
   - `204 No Content` on successful deletion
-  - `404 Not Found` if credential doesn't exist or invalid UUID
-  - `403 Forbidden` if user is not the credential owner
+  - `404 Not Found` if the credential doesn't exist, the id isn't a UUID, or
+    the caller can't see it
+  - `403 Forbidden` if the caller can see it but doesn't own it
 
   ## Examples
 
       DELETE /api/credentials/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
-  @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def delete(conn, %{"id" => id}) do
-    current_user = conn.assigns.current_resource
-
-    with :ok <- validate_uuid(id),
-         credential when not is_nil(credential) <-
-           Credentials.get_credential(id),
-         :ok <- validate_credential_ownership(credential, current_user),
-         {:ok, _} <- Credentials.delete_credential(credential, current_user) do
+    with {:ok, id} <- Request.path_id(id),
+         {:ok, credential} <- fetch_credential(id),
+         :ok <- deletable(credential, conn.assigns.scope),
+         {:ok, _deleted} <-
+           Credentials.delete_credential(
+             credential,
+             conn.assigns.current_resource
+           ) do
       send_resp(conn, :no_content, "")
-    else
-      {:error, :invalid_uuid} ->
-        {:error, :not_found}
-
-      nil ->
-        {:error, :not_found}
-
-      {:error, :forbidden} ->
-        {:error, :forbidden}
-
-      error ->
-        error
     end
   end
 
-  defp validate_uuid(id) do
-    case Ecto.UUID.dump(to_string(id)) do
-      {:ok, _bin} -> :ok
-      :error -> {:error, :invalid_uuid}
-    end
-  end
-
-  # A shared credential may be linked to projects in other tenants; rendering
-  # those would leak their id/name/description across the tenant boundary. Prune
-  # each credential's project associations to the caller-visible set here so the
-  # JSON view can render whatever it is handed.
-  #
-  # The visible set is the caller's memberships (any depth), matching the
-  # :access_project check so a caller's own sandbox associations are not
-  # dropped, plus any `extra_project_ids` already access-checked by the caller
-  # (e.g. the requested project on the project-scoped endpoint).
-  defp scope_to_visible_projects(
-         credentials,
-         current_user,
-         extra_project_ids \\ []
-       ) do
-    visible =
-      current_user
-      |> Projects.member_project_ids()
-      |> Enum.concat(extra_project_ids)
-      |> MapSet.new()
-
-    Enum.map(credentials, fn credential ->
-      projects =
-        filter_accessible_projects(
-          credential.projects,
-          visible,
-          fn project -> project.id end
-        )
-
-      project_credentials =
-        filter_accessible_projects(
-          credential.project_credentials,
-          visible,
-          fn project_credential -> project_credential.project_id end
-        )
-
-      %{
-        credential
-        | projects: projects,
-          project_credentials: project_credentials
-      }
-    end)
-  end
-
-  defp filter_accessible_projects(assoc, visible, key_fun) when is_list(assoc) do
-    Enum.filter(assoc, fn record -> MapSet.member?(visible, key_fun.(record)) end)
-  end
-
-  # Leave unloaded associations untouched; the view renders them as [].
-  defp filter_accessible_projects(assoc, _visible, _key_fun), do: assoc
-
-  defp validate_credential_ownership(credential, current_user) do
-    if credential.user_id == current_user.id do
-      :ok
-    else
-      {:error, :forbidden}
-    end
-  end
-
-  defp validate_and_authorize_projects(params, current_user) do
-    # Ensure user_id is set to the current authenticated user
-    params_with_user = Map.put(params, "user_id", current_user.id)
-
-    project_credentials = Map.get(params, "project_credentials", [])
-
-    if Enum.empty?(project_credentials) do
-      {:ok, params_with_user}
-    else
-      case validate_project_access(project_credentials, current_user) do
-        :ok -> {:ok, params_with_user}
-        {:error, _} = error -> error
-      end
-    end
-  end
-
-  defp validate_project_access(project_credentials, current_user) do
-    project_ids =
-      project_credentials
-      |> Enum.map(&Map.get(&1, "project_id"))
-      |> Enum.filter(& &1)
-
-    unauthorized_projects =
-      Enum.filter(project_ids, fn project_id ->
-        case Projects.get_project(project_id) do
-          nil ->
-            true
-
-          project ->
-            case ProjectUsers
-                 |> Permissions.can(
-                   :create_project_credential,
-                   current_user,
-                   project
-                 ) do
-              :ok -> false
-              _ -> true
-            end
-        end
-      end)
-
-    if Enum.empty?(unauthorized_projects) do
-      :ok
-    else
-      {:error, :forbidden}
-    end
+  # Seeing a credential through a link is standing to read it and nothing more
+  # (spec §15 row 49), so a caller who sees it but may not delete it hears 403.
+  defp deletable(credential, scope) do
+    with {:error, :forbidden} <-
+           Permissions.permit(
+             :credentials,
+             :delete_credential,
+             scope,
+             credential
+           ),
+         :ok <-
+           Permissions.permit(:credentials, :see_credential, scope, credential),
+         do: {:error, :forbidden}
   end
 end
