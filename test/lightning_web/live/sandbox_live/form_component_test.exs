@@ -51,12 +51,19 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       {:ok, conn: conn, user: user, parent: parent}
     end
 
-    test "new modal defaults the sandbox name to Dev", %{conn: conn, parent: parent} do
+    test "new modal defaults the sandbox name to Dev", %{
+      conn: conn,
+      parent: parent
+    } do
       {:ok, view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
 
       assert html =~ ~s(name="project[raw_name]" value="Dev")
       refute html =~ "my-sandbox"
-      refute has_element?(view, "#sandbox-form-new button[type=submit][disabled]")
+
+      refute has_element?(
+               view,
+               "#sandbox-form-new button[type=submit][disabled]"
+             )
     end
 
     test "creating sandbox succeeds", %{conn: conn, parent: parent} do

@@ -283,7 +283,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   end
 
   defp initial_params(%{mode: :new}) do
-    %{"raw_name" => @default_new_sandbox_name, "color" => Components.random_color()}
+    %{
+      "raw_name" => @default_new_sandbox_name,
+      "color" => Components.random_color()
+    }
   end
 
   defp form_changeset(%Project{} = base, params, parent_id) do
