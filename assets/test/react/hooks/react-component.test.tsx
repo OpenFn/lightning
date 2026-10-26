@@ -107,4 +107,26 @@ describe.each([
     expect(execNewMounted).not.toHaveBeenCalled();
     expect(registered).not.toHaveBeenCalled();
   });
+
+  test('mounts once under StrictMode while LiveView is busy', () => {
+    const pending: (() => void)[] = [];
+    const { hook, execNewMounted, registered } = setup(
+      'deferred-strict',
+      cb => {
+        pending.push(cb);
+      }
+    );
+
+    render(
+      <StrictMode>
+        <Boundary ref={hook._onBoundary.bind(hook)}>
+          <span />
+        </Boundary>
+      </StrictMode>
+    );
+    pending.forEach(cb => cb());
+
+    expect(execNewMounted).toHaveBeenCalledTimes(1);
+    expect(registered).toHaveBeenCalledTimes(1);
+  });
 });
