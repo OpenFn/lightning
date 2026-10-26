@@ -35,6 +35,8 @@ export interface StepChange {
   type: StepChangeType;
   /** Display name (the new name when the step was also renamed) */
   name: string;
+  /** Adaptor package of the step in the workflow the reply produced */
+  adaptor: string;
   addedLines: number;
   removedLines: number;
   hunks: DiffHunk[];
@@ -106,6 +108,31 @@ const diffBodies = (
   });
 
   return { hunks, added, removed };
+};
+
+/** A run of consecutive added lines, and where it started in the new body */
+export interface AddedRun {
+  line: number;
+  text: string;
+}
+
+export const addedRuns = (hunks: DiffHunk[]): AddedRun[] => {
+  const runs: Array<{ line: number; lines: string[] }> = [];
+  for (const hunk of hunks) {
+    let newLine = hunk.newStart;
+    for (const line of hunk.lines) {
+      if (line.startsWith('+')) {
+        const last = runs[runs.length - 1];
+        if (last && last.line + last.lines.length === newLine) {
+          last.lines.push(line.slice(1));
+        } else {
+          runs.push({ line: newLine, lines: [line.slice(1)] });
+        }
+      }
+      if (!line.startsWith('-')) newLine += 1;
+    }
+  }
+  return runs.map(run => ({ line: run.line, text: run.lines.join('\n') }));
 };
 
 /**
@@ -205,6 +232,7 @@ const deriveStepChanges = (
         updates.set(afterJob, {
           type: 'update',
           name: afterJob.name,
+          adaptor: afterJob.adaptor,
           addedLines,
           removedLines,
           hunks,
@@ -231,6 +259,7 @@ const deriveStepChanges = (
       steps.push({
         type: 'add',
         name: job.name,
+        adaptor: job.adaptor,
         addedLines,
         removedLines: 0,
         hunks,
@@ -245,6 +274,7 @@ const deriveStepChanges = (
     steps.push({
       type: 'remove',
       name: job.name,
+      adaptor: job.adaptor,
       addedLines: 0,
       removedLines,
       hunks,

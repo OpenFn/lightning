@@ -19,15 +19,30 @@ import {
   useContext,
   useEffect,
   useRef,
+  useState,
   type RefObject,
 } from 'react';
+import type * as Y from 'yjs';
 
 import type { MonacoHandle } from '../components/CollaborativeMonaco';
+import type { AddedRun } from '../utils/workflowDiff';
+
+/**
+ * Code to highlight once the editor shows `ytext`. Keyed by the job's text
+ * rather than handed to the editor: opening a step navigates first, so the
+ * editor for that step may not be mounted or bound yet.
+ */
+export interface PendingHighlight {
+  ytext: Y.Text;
+  added: AddedRun[];
+}
 
 export interface MonacoRefContextValue {
   monacoRef: RefObject<MonacoHandle | null> | null;
   registerDiffDismissalCallback: (callback: () => void) => () => void;
   handleDiffDismissed: () => void;
+  pendingHighlight: PendingHighlight | null;
+  setPendingHighlight: (highlight: PendingHighlight | null) => void;
 }
 
 export const MonacoRefContext = createContext<MonacoRefContextValue | null>(
@@ -49,6 +64,8 @@ export function MonacoRefProvider({
 }: MonacoRefProviderProps) {
   // Store callbacks in a ref to avoid re-renders when callbacks change
   const callbacksRef = useRef<Set<() => void>>(new Set());
+  const [pendingHighlight, setPendingHighlight] =
+    useState<PendingHighlight | null>(null);
 
   /**
    * Registers a callback to be invoked when the diff is dismissed.
@@ -69,7 +86,13 @@ export function MonacoRefProvider({
 
   return (
     <MonacoRefContext.Provider
-      value={{ monacoRef, registerDiffDismissalCallback, handleDiffDismissed }}
+      value={{
+        monacoRef,
+        registerDiffDismissalCallback,
+        handleDiffDismissed,
+        pendingHighlight,
+        setPendingHighlight,
+      }}
     >
       {children}
     </MonacoRefContext.Provider>
@@ -84,6 +107,14 @@ export function MonacoRefProvider({
 export function useMonacoRef(): RefObject<MonacoHandle | null> | null {
   const context = useContext(MonacoRefContext);
   return context?.monacoRef ?? null;
+}
+
+export function usePendingHighlight() {
+  const context = useContext(MonacoRefContext);
+  return {
+    pendingHighlight: context?.pendingHighlight ?? null,
+    setPendingHighlight: context?.setPendingHighlight,
+  };
 }
 
 /**

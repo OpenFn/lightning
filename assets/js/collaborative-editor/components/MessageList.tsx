@@ -12,6 +12,8 @@ import type {
   WorkflowSnapshot,
 } from '../types/ai-assistant';
 import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
+import type { AISkill } from '../types/sessionContext';
+import { parseSlashCommand } from '../utils/slashCommand';
 
 import { Tooltip } from '../../components/Tooltip';
 
@@ -22,6 +24,8 @@ import {
   deriveWorkflowChanges,
 } from '../utils/workflowDiff';
 
+import { SkillCommand } from './SkillCommand';
+import type { OpenStepTarget } from './WorkflowDiffBlocks';
 import {
   StepDiffBlock,
   StructureBlock,
@@ -246,7 +250,7 @@ const SegmentTimeline = ({
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
-  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  onOpenStep?: (step: OpenStepTarget) => void;
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
   /**
    * Per-status change sets (segment index → what that action changed),
@@ -356,7 +360,7 @@ const WorkflowReplyTimeline = ({
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
-  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  onOpenStep?: (step: OpenStepTarget) => void;
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
 }) => {
   // The snapshot path only needs to know how many segments have drained,
@@ -729,6 +733,23 @@ const formatUserName = (user: Message['user']): string | null => {
  * - User attribution for collaborative sessions
  */
 
+function UserMessageContent({
+  content,
+  skills,
+}: {
+  content: string;
+  skills: AISkill[];
+}) {
+  const command = parseSlashCommand(content, skills);
+  if (!command) return <>{content}</>;
+
+  return (
+    <>
+      <SkillCommand skill={command.skill} /> {command.rest}
+    </>
+  );
+}
+
 interface MessageListProps {
   messages?: Message[];
   isLoading?: boolean;
@@ -752,7 +773,7 @@ interface MessageListProps {
   /** Id of the viewer, so a collaborator's message is not mistaken for theirs */
   currentUserId?: string;
   /** Opens a step in the IDE from a diff block */
-  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  onOpenStep?: (step: OpenStepTarget) => void;
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
   /**
    * Global replies whose auto-apply failed. They get the code panel and its
@@ -765,6 +786,8 @@ interface MessageListProps {
     yaml: string,
     options?: { restoring?: boolean }
   ) => void;
+  /** Skills whose slash command a user message is shown to start with */
+  skills?: AISkill[];
   /** Reply whose changes are currently undone, so its control offers Redo */
   undoneMessageId?: string | null;
   /** An apply is running: undo must not race the import */
@@ -849,6 +872,7 @@ export function MessageList({
   canOpenStep,
   failedApplyMessageIds,
   currentUserId,
+  skills = [],
   onUndoChanges,
   undoneMessageId,
   isApplyInFlight = false,
@@ -1488,7 +1512,10 @@ export function MessageList({
                           style={{ overflowWrap: 'break-word' }}
                           className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-w-full"
                         >
-                          {message.content}
+                          <UserMessageContent
+                            content={message.content}
+                            skills={skills}
+                          />
                         </div>
                       </div>
 

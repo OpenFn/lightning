@@ -32,11 +32,12 @@
  * ```
  */
 
-import { useContext, useSyncExternalStore } from 'react';
+import { useContext, useMemo, useSyncExternalStore } from 'react';
 
 import { StoreContext } from '../contexts/StoreProvider';
 import type { SessionContextStoreInstance } from '../stores/createSessionContextStore';
 import type {
+  AISkill,
   AppConfig,
   Limits,
   Permissions,
@@ -164,6 +165,27 @@ export const usePermissions = (): Permissions | null => {
   );
 
   return useSyncExternalStore(sessionContextStore.subscribe, selectPermissions);
+};
+
+/** Skills for the current workflow; a new one leaves out those for existing workflows. */
+export const useAISkills = (): AISkill[] => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectSkills = sessionContextStore.withSelector(
+    state => state.aiSkills
+  );
+
+  const skills = useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectSkills
+  );
+  const isNewWorkflow = useIsNewWorkflow();
+
+  return useMemo(
+    () =>
+      isNewWorkflow ? skills.filter(s => s.workflow !== 'existing') : skills,
+    [skills, isNewWorkflow]
+  );
 };
 
 export const useExperimentalFeatures = (): boolean => {

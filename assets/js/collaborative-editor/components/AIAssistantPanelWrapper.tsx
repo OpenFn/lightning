@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const INITIAL_LOADING_STATUSES = [
-  'Thinking about the question...',
+  'Thinking...',
   'Working on it...',
   'Processing your request...',
   'Examining your question...',
@@ -19,6 +19,7 @@ import { randomUUID } from '#/common';
 import { useURLState } from '../../react/lib/use-url-state';
 import {
   useMonacoRef,
+  usePendingHighlight,
   useRegisterDiffDismissalCallback,
 } from '../contexts/MonacoRefContext';
 import {
@@ -54,6 +55,7 @@ import {
   useSession,
 } from '../hooks/useSession';
 import {
+  useAISkills,
   useIsNewWorkflow,
   useLimits,
   useProject,
@@ -68,6 +70,7 @@ import {
   useWorkflowActions,
   useWorkflowReadOnly,
   useWorkflowState,
+  useWorkflowStoreContext,
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { usePinnedView } from '../lib/pinnedView';
@@ -82,6 +85,7 @@ import {
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { AlertDialog } from './AlertDialog';
 import { MessageList } from './MessageList';
+import type { OpenStepTarget } from './WorkflowDiffBlocks';
 
 /**
  * AIAssistantPanelWrapper Component
@@ -185,6 +189,7 @@ export function AIAssistantPanelWrapper({
   const user = useUser();
   const workflow = useWorkflowState(state => state.workflow);
   const limits = useLimits();
+  const skills = useAISkills();
 
   // AI can apply changes if: not readonly OR is a new workflow (being created)
   const canApplyChanges = !isReadOnly || isNewWorkflow;
@@ -208,12 +213,16 @@ export function AIAssistantPanelWrapper({
     [jobs]
   );
 
+  const workflowStore = useWorkflowStoreContext();
+  const { setPendingHighlight } = usePendingHighlight();
   const handleOpenStep = useCallback(
-    ({ jobId, name }: { jobId?: string; name: string }) => {
+    ({ jobId, name, added }: OpenStepTarget) => {
       const match =
         (jobId && jobs.find(job => job.id === jobId)) ??
         jobs.find(job => job.name === name);
       if (!match) return;
+      const ytext = workflowStore.getJobBodyYText(match.id);
+      if (ytext) setPendingHighlight?.({ ytext, added });
       // Clears the sibling selections too: leaving a stale trigger or edge
       // behind still resolves to the job, but leaves a URL that is wrong to
       // share and wrong to go back to.
@@ -224,7 +233,7 @@ export function AIAssistantPanelWrapper({
         edge: null,
       });
     },
-    [jobs, updateSearchParams]
+    [jobs, updateSearchParams, workflowStore, setPendingHighlight]
   );
   const edges = useWorkflowState(state => state.edges);
   const positions = useWorkflowState(state => state.positions);
@@ -802,6 +811,7 @@ export function AIAssistantPanelWrapper({
               connectionState={sessionId ? connectionState : 'connected'}
               aiLimit={limits.ai_assistant ?? null}
               switchToDraft={switchToDraft}
+              skills={skills}
             >
               <MessageList
                 messages={messages}
@@ -862,6 +872,7 @@ export function AIAssistantPanelWrapper({
                 onOpenStep={handleOpenStep}
                 canOpenStep={canOpenStep}
                 currentUserId={user?.id}
+                skills={skills}
                 failedApplyMessageIds={failedApplyMessageIds}
                 onUndoChanges={requestUndoChanges}
                 undoneMessageId={undoneMessageId}

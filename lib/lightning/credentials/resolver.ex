@@ -43,10 +43,12 @@ defmodule Lightning.Credentials.Resolver do
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.ResolvedCredential
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Projects.Environment
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Run
+  alias Lightning.Workflows.Workflow
 
   require Logger
 
@@ -60,23 +62,57 @@ defmodule Lightning.Credentials.Resolver do
 
   @type resolve_error :: {error_reason(), Credential.t() | nil}
 
+  @type keychain_selectors :: %{
+          Ecto.UUID.t() =>
+            {:ok, external_id :: String.t() | nil}
+            | {:error, :keychain_input_unavailable | :invalid_keychain_path}
+        }
+
   @doc """
   Resolves a credential for a run by matching the project's environment,
   or resolves a credential directly for a specific environment.
+
+  For a run, keychain credentials are selected from `keychain_selectors` (see
+  `keychain_selectors/1`). When it is `nil` they are read from the run's
+  stored input.
   """
-  @spec resolve_credential(Run.t(), credential_id :: String.t()) ::
-          {:ok, ResolvedCredential.t() | nil}
-          | {:error, :not_found | resolve_error()}
   @spec resolve_credential(Credential.t(), environment :: String.t()) ::
           {:ok, ResolvedCredential.t()}
           | {:error, resolve_error()}
+  @spec resolve_credential(Run.t(), credential_id :: String.t()) ::
+          {:ok, ResolvedCredential.t() | nil}
+          | {:error, :not_found | resolve_error()}
+  def resolve_credential(%Credential{} = credential, environment) do
+    case Credentials.resolve_credential_body(credential, environment) do
+      {:ok, body} ->
+        {:ok, ResolvedCredential.from(credential, body)}
 
-  def resolve_credential(%Run{} = run, id) do
+      {:error, reason} ->
+        log_resolution_error(reason)
+        {:error, {reason, credential}}
+    end
+  end
+
+  def resolve_credential(%Run{} = run, id),
+    do: resolve_credential(run, id, nil)
+
+  @spec resolve_credential(
+          Run.t(),
+          credential_id :: String.t(),
+          keychain_selectors() | nil
+        ) ::
+          {:ok, ResolvedCredential.t() | nil}
+          | {:error, :not_found | resolve_error()}
+  def resolve_credential(%Run{} = run, id, keychain_selectors) do
     Logger.metadata(run_id: run.id, credential_id: id)
 
     with {:ok, project_env} <- get_project_env(run),
-         credential when not is_nil(credential) <- get_run_credential(run, id) do
-      resolve_credential_with_env(credential, run, project_env)
+         credential when not is_nil(credential) <- get_run_credential(run, id),
+         {:ok, credential} <-
+           select_credential(credential, run, keychain_selectors) do
+      if credential,
+        do: resolve_credential_with_env(credential, run, project_env),
+        else: {:ok, nil}
     else
       nil ->
         {:error, :not_found}
@@ -86,17 +122,90 @@ defmodule Lightning.Credentials.Resolver do
 
       {:error, :project_not_found} ->
         {:error, {:project_not_found, nil}}
+
+      {:error, :keychain_input_unavailable} ->
+        {:error, {:keychain_input_unavailable, nil}}
+
+      {:error, :invalid_keychain_path} ->
+        {:error, {:invalid_keychain_path, nil}}
     end
   end
 
-  def resolve_credential(%Credential{} = credential, environment) do
-    case Credentials.resolve_credential_body(credential, environment) do
-      {:ok, body} ->
-        {:ok, ResolvedCredential.from(credential, body)}
+  @doc """
+  Reads, for each keychain the run's jobs use, the external id its path selects
+  from the run's input.
 
-      {:error, reason} ->
-        log_resolution_error(reason)
-        {:error, {reason, credential}}
+  Projects that don't save dataclips have the input wiped as soon as the worker
+  fetches it, which is before it asks for any credential. Call this before the
+  wipe and pass the result to `resolve_credential/3`.
+  """
+  @spec keychain_selectors(Run.t()) :: keychain_selectors()
+  def keychain_selectors(%Run{} = run) do
+    %{snapshot: %{jobs: jobs}, dataclip_id: dataclip_id} =
+      Repo.preload(run, :snapshot)
+
+    keychain_ids =
+      for %{keychain_credential_id: id} <- jobs, id, uniq: true, do: id
+
+    keychain_selectors(dataclip_id, keychain_ids)
+  end
+
+  defp keychain_selectors(_dataclip_id, []), do: %{}
+
+  defp keychain_selectors(dataclip_id, keychain_ids) do
+    # One query per keychain, so a path Postgres can't parse or evaluate only
+    # breaks the job that uses it, not every keychain in the run.
+    Map.new(keychain_ids, &{&1, select_external_id(dataclip_id, &1)})
+  end
+
+  defp select_external_id(dataclip_id, keychain_id) do
+    from(k in KeychainCredential,
+      join: d in Dataclip,
+      on: d.id == ^dataclip_id,
+      where: k.id == ^keychain_id and is_nil(d.wiped_at),
+      select: %{
+        external_id:
+          fragment(
+            "jsonb_path_query_first(?, ?::jsonpath) #>> '{}'",
+            d.body,
+            k.path
+          )
+      }
+    )
+    |> Repo.one()
+    |> case do
+      %{external_id: external_id} -> {:ok, external_id}
+      nil -> {:error, :keychain_input_unavailable}
+    end
+  rescue
+    Postgrex.Error -> {:error, :invalid_keychain_path}
+  end
+
+  defp select_credential(%Credential{} = credential, _run, _selectors),
+    do: {:ok, credential}
+
+  defp select_credential(%KeychainCredential{} = keychain, run, nil),
+    do:
+      select_credential(
+        keychain,
+        run,
+        keychain_selectors(run.dataclip_id, [keychain.id])
+      )
+
+  defp select_credential(%KeychainCredential{} = keychain, run, selectors) do
+    case Map.fetch!(selectors, keychain.id) do
+      {:ok, external_id} ->
+        {:ok,
+         find_credential_by_external_id(run, external_id) ||
+           keychain.default_credential}
+
+      {:error, reason} = error ->
+        log_resolution_error(reason,
+          keychain_id: keychain.id,
+          path: keychain.path
+        )
+
+        error
     end
   end
 
@@ -115,22 +224,6 @@ defmodule Lightning.Credentials.Resolver do
     end
   end
 
-  defp resolve_credential_with_env(
-         %KeychainCredential{} = keychain,
-         run,
-         project_env
-       ) do
-    credential =
-      find_credential_by_jsonpath(run, keychain.path) ||
-        keychain.default_credential
-
-    if credential do
-      resolve_credential_with_env(credential, run, project_env)
-    else
-      {:ok, nil}
-    end
-  end
-
   @spec get_project_env(Run.t()) :: {:ok, String.t()} | {:error, term()}
   defp get_project_env(%Run{} = run) do
     case Environment.fetch(run) do
@@ -143,23 +236,9 @@ defmodule Lightning.Credentials.Resolver do
     end
   end
 
-  @spec find_credential_by_jsonpath(Run.t(), String.t()) ::
-          Credential.t() | nil
-  defp find_credential_by_jsonpath(
-         %Run{dataclip_id: dataclip_id} = run,
-         jsonpath
-       ) do
-    get_external_id_query =
-      from(d in Lightning.Invocation.Dataclip,
-        where: d.id == ^dataclip_id,
-        select:
-          fragment(
-            "jsonb_path_query_first(?, ?::jsonpath) #>> '{}'",
-            d.body,
-            type(^jsonpath, :string)
-          )
-      )
+  defp find_credential_by_external_id(_run, nil), do: nil
 
+  defp find_credential_by_external_id(run, external_id) do
     from(
       c in Ecto.assoc(run, [
         :work_order,
@@ -168,7 +247,7 @@ defmodule Lightning.Credentials.Resolver do
         :project_credentials,
         :credential
       ]),
-      where: c.external_id == subquery(get_external_id_query)
+      where: c.external_id == ^external_id
     )
     |> Repo.one()
   end
@@ -176,47 +255,54 @@ defmodule Lightning.Credentials.Resolver do
   @spec get_run_credential(Run.t(), String.t()) ::
           Credential.t() | KeychainCredential.t() | nil
   defp get_run_credential(%Run{} = run, id) do
+    # The worker was given the credential ids in the run's snapshot, so that is
+    # what it may ask for, even if the live workflow has changed since.
+    %{snapshot: %{workflow_id: workflow_id, jobs: jobs}} =
+      Repo.preload(run, :snapshot)
+
+    project_credential_ids =
+      for %{project_credential_id: pc_id} <- jobs, pc_id, do: pc_id
+
+    keychain_ids =
+      for %{keychain_credential_id: k_id} <- jobs, k_id, do: k_id
+
+    from(c in Credential,
+      join: pc in assoc(c, :project_credentials),
+      join: w in Workflow,
+      on: w.id == ^workflow_id and pc.project_id == w.project_id,
+      where: c.id == ^id and pc.id in ^project_credential_ids
+    )
+    |> Repo.one() || get_run_keychain(workflow_id, id, keychain_ids)
+  end
+
+  defp get_run_keychain(workflow_id, id, keychain_ids) do
     # The default credential is joined through the project this run belongs to,
     # not off what the stored id implies and not through the keychain's own
-    # project. The
-    # write-time guard can only speak for rows written after it; this speaks
-    # for every row, including any already in the database from before the
-    # guard worked, or written by a path that bypasses the changeset entirely.
+    # project. The write-time guard can only speak for rows written after it;
+    # this speaks for every row, including any already in the database from
+    # before the guard worked, or written by a path that bypasses the changeset
+    # entirely.
     #
     # Anchoring on the run rather than on the keychain matters. A job holding a
     # keychain from another project would otherwise satisfy this check, since
     # that keychain's default really is shared with that other project, and the
     # worker would be handed a credential its own project was never given. It
-    # is the same project the jsonpath branch above resolves against, so the
-    # two halves cannot disagree.
-    from(j in Ecto.assoc(run, [:work_order, :workflow, :jobs]),
-      left_join: w in assoc(j, :workflow),
-      left_join: c in assoc(j, :credential),
-      left_join: k in assoc(j, :keychain_credential),
+    # is the same project keychain selection resolves against, so the two
+    # halves cannot disagree.
+    from(k in KeychainCredential,
+      join: w in Workflow,
+      on: w.id == ^workflow_id,
       left_join: default_cred in assoc(k, :default_credential),
       left_join: default_pc in ProjectCredential,
       on:
         default_pc.credential_id == default_cred.id and
           default_pc.project_id == w.project_id,
-      where: c.id == ^id or k.id == ^id,
-      select: %{
-        credential: c,
-        keychain: k,
-        default_credential: default_cred,
-        default_credential_in_project?: not is_nil(default_pc.id)
-      }
+      where: k.id == ^id and k.id in ^keychain_ids,
+      select: {k, default_cred, not is_nil(default_pc.id)}
     )
     |> Repo.one()
     |> case do
-      %{credential: %Credential{} = credential, keychain: nil} ->
-        credential
-
-      %{
-        credential: nil,
-        keychain: %KeychainCredential{} = keychain,
-        default_credential: default_cred,
-        default_credential_in_project?: in_project?
-      } ->
+      {keychain, default_cred, in_project?} ->
         %{keychain | default_credential: (in_project? && default_cred) || nil}
 
       nil ->
@@ -244,6 +330,20 @@ defmodule Lightning.Credentials.Resolver do
 
   defp log_resolution_error(:temporary_failure, meta),
     do: Logger.info("Could not reach the OAuth provider", meta)
+
+  defp log_resolution_error(:keychain_input_unavailable, meta),
+    do:
+      Logger.warning(
+        "Keychain input was wiped before this channel could read it",
+        meta
+      )
+
+  defp log_resolution_error(:invalid_keychain_path, meta),
+    do:
+      Logger.warning(
+        "Keychain path could not be evaluated against the run's input",
+        meta
+      )
 
   defp log_resolution_error(_reason, _meta), do: :ok
 end

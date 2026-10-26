@@ -485,7 +485,7 @@ describe('CronFieldBuilder - Advanced Section', () => {
 
     // cronstrue humanizes "0 9 * * 1-5".
     expect(
-      screen.getByText('At 09:00 AM, Monday through Friday')
+      screen.getByText('At 09:00 AM UTC, Monday through Friday')
     ).toBeInTheDocument();
   });
 

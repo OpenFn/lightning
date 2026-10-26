@@ -111,7 +111,7 @@ describe('CronShowPanel', () => {
 
     expect(screen.getByText('Schedule / Cron')).toBeInTheDocument();
     expect(screen.getByText('Frequency')).toBeInTheDocument();
-    expect(screen.getByText('At 09:00 AM')).toBeInTheDocument();
+    expect(screen.getByText('At 09:00 AM UTC')).toBeInTheDocument();
   });
 
   describe('edit button gating', () => {

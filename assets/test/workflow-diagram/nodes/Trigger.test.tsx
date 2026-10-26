@@ -2,7 +2,8 @@
  * Trigger Node Component Tests
  *
  * Tests that trigger nodes display correct icons for all trigger types
- * (webhook, cron) and handle edge cases gracefully.
+ * (webhook, cron) and handle edge cases gracefully, and that a cron node's
+ * sublabel shows the humanized schedule.
  */
 
 import { render } from '@testing-library/react';
@@ -15,11 +16,12 @@ import type { Lightning } from '../../../js/workflow-diagram/types';
 /**
  * Helper to render a trigger node within ReactFlow context
  *
- * Note: TriggerNode expects data.trigger to contain the trigger info,
- * which is how from-workflow structures it
+ * Mirrors from-workflow: data holds the trigger's own fields (which
+ * TriggerNode reads) plus a data.trigger summary
  */
 function renderTriggerNode(trigger: Lightning.TriggerNode) {
   const data: any = {
+    ...trigger,
     trigger: {
       type: trigger.type,
       enabled: trigger.enabled,
@@ -125,5 +127,24 @@ describe('Trigger Node - Icon Display', () => {
     // Should have both primary icon and lock icon
     const svgElements = container.querySelectorAll('svg');
     expect(svgElements.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('Trigger Node - Cron Sublabel', () => {
+  test.each([
+    ['0 9 * * 1-5', 'At 09:00 AM UTC, Monday through Friday'],
+    ['invalid cron', 'Invalid cron expression'],
+    ['', 'Not configured'],
+  ])('%j shows "%s"', (cron_expression, expected) => {
+    const { getByText } = renderTriggerNode({
+      id: 'trigger-5',
+      name: 'Cron Trigger',
+      type: 'cron',
+      enabled: true,
+      cron_expression,
+      workflow_id: 'test-workflow',
+    });
+
+    expect(getByText(expected)).toBeInTheDocument();
   });
 });

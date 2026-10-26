@@ -53,7 +53,8 @@ defmodule LightningWeb.RunChannel do
          run: run,
          project_id: project_id,
          scrubber: webhook_auth_scrubber(run),
-         webhook_response: nil
+         webhook_response: nil,
+         keychain_selectors: nil
        })}
     else
       {:error, :not_found} ->
@@ -146,7 +147,7 @@ defmodule LightningWeb.RunChannel do
 
     Logger.metadata(credential_id: id)
 
-    case Resolver.resolve_credential(run, id) do
+    case Resolver.resolve_credential(run, id, socket.assigns.keychain_selectors) do
       {:ok, nil} ->
         reply_and_report(socket, {:ok, nil})
 
@@ -182,10 +183,17 @@ defmodule LightningWeb.RunChannel do
   of those HTTP requests to the worker to use as initial state.
   """
   def handle_in("fetch:dataclip", _payload, socket) do
-    body = Runs.get_input(socket.assigns.run)
+    %{run: run} = socket.assigns
+    body = Runs.get_input(run)
 
-    if !socket.assigns.run.options.save_dataclips,
-      do: Runs.wipe_dataclips(socket.assigns.run)
+    socket =
+      if run.options.save_dataclips or socket.assigns.keychain_selectors do
+        socket
+      else
+        selectors = Resolver.keychain_selectors(run)
+        Runs.wipe_dataclips(run)
+        assign(socket, :keychain_selectors, selectors)
+      end
 
     reply_and_report(socket, {:ok, {:binary, body || "null"}})
   end
@@ -624,6 +632,32 @@ defmodule LightningWeb.RunChannel do
        ) do
     {:reply, {:error, "Could not reach the OAuth provider. Try again later"},
      socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:keychain_input_unavailable, _credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    {:reply,
+     {:error,
+      "Could not select a keychain credential: " <>
+        "the run's input was erased before it could be read"}, socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:invalid_keychain_path, _credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    {:reply,
+     {:error,
+      "Could not select a keychain credential: " <>
+        "its path could not be evaluated against the run's input"}, socket}
   end
 
   # Fallback for unexpected error terms

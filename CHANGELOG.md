@@ -19,6 +19,32 @@ and this project adheres to
 
 ### Changed
 
+- The web app's interactive pages now run on React 19, up from React 18. They
+  look and behave the same.
+  [#5256](https://github.com/OpenFn/lightning/pull/5256)
+
+### Fixed
+
+## [2.20.0-pre] - 2026-10-23
+
+### Added
+
+- Slash-command skills (`/design`, `/diagnose`, `/qa`) in the global AI
+  assistant, and the assistant's conversation history is now stored as Apollo
+  returns it. Needs the matching Apollo release first.
+  [#5236](https://github.com/OpenFn/lightning/pull/5236)
+- AI assistant diff blocks show the step with its adaptor logo. Clicking it
+  opens the step and highlights the code the AI added.
+- GitHub sync connections using the v2 format now install `@v2` of the OpenFn
+  deploy and pull GitHub Actions, which sync `openfn.yaml` workspaces with
+  `openfn project pull/deploy`. Lightning no longer commits a config file for
+  v2, and disconnecting leaves `openfn.yaml` in place. Legacy connections keep
+  using `@v1`.
+
+### Changed
+
+- Cron schedules now show "UTC" after the time, on the canvas and in the trigger
+  panels [#5247](https://github.com/OpenFn/lightning/issues/5247)
 - Update Project and Workflow yaml exports to match the v4 portability spec
   [#4718](https://github.com/OpenFn/lightning/issues/4718)
 - The workflow version hash no longer includes a trigger's `enabled` state
@@ -26,15 +52,18 @@ and this project adheres to
 - Bump decimal to 3.2.0 and cowlib to 2.21.0 for security fixes, and ignore two
   Cloak advisories that don't affect us
   [#5246](https://github.com/OpenFn/lightning/pull/5246)
-- The web app's interactive pages now run on React 19, up from React 18. They
-  look and behave the same.
-  [#5256](https://github.com/OpenFn/lightning/pull/5256)
+- Bump plug_crypto to 2.2.1 for a security fix
+  [#5259](https://github.com/OpenFn/lightning/pull/5259)
 
 ### Fixed
 
 - GitHub sync now prevents two projects in the same project tree (root,
   sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
   pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
+- Keychain credentials do not resolve on projects with zero-persistence enabled
+  [#5091](https://github.com/OpenFn/lightning/issues/5091)
+- Ensure run credentials are loaded from the run's snapshot, not the live
+  workflow
 
 ## [2.19.2] - 2026-10-16
 
@@ -85,6 +114,8 @@ and this project adheres to
   [#5202](https://github.com/OpenFn/lightning/pull/5202)
 - Index to improve the performance of the dataclip deletion query.
   [#5226](https://github.com/OpenFn/lightning/issues/5226)
+- The Repository and Branch dropdowns on the GitHub sync form now have a text
+  filter. [#5235](https://github.com/OpenFn/lightning/pull/5235)
 
 ### Changed
 
@@ -121,6 +152,12 @@ and this project adheres to
   donuts show the success rate and the failure count in their middle. Triage
   rows show each failure's state and adaptor, and the step bars show each step's
   adaptor. [#5229](https://github.com/OpenFn/lightning/pull/5229)
+- The project settings "Sync to GitHub" tab is now "Sync", and holds the project
+  export and a new CLI section with commands for pulling, deploying and running
+  a project locally. New GitHub connections default to the v2 `openfn.yaml`
+  format, with a switch to use the legacy format, and the connected panel now
+  carries its own title, verification banner and a "Remove integration" button.
+  [#5235](https://github.com/OpenFn/lightning/pull/5235)
 
 ### Removed
 

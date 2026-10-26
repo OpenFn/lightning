@@ -3,8 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
+import { useSlashCommand } from '../hooks/useSlashCommand';
+import type { AISkill } from '../types/sessionContext';
 
 import { AIDisclaimerFooter } from './AIDisclaimerFooter';
+import { SkillCommand } from './SkillCommand';
+import { SkillMenu } from './SkillMenu';
 
 interface ChatInputProps {
   onSendMessage?:
@@ -25,6 +29,8 @@ interface ChatInputProps {
   disabledMessage?: string | undefined;
   /** The run both attachments are scoped to, and what gates them */
   selectedRunId?: string | null;
+  /** Skills a leading slash command can invoke */
+  skills?: AISkill[] | undefined;
 }
 
 interface MessageOptions {
@@ -72,10 +78,15 @@ export function ChatInput({
   placeholder = 'Ask me anything...',
   disabledMessage,
   selectedRunId,
+  skills = [],
 }: ChatInputProps) {
-  const [input, setInput] = useState('');
-  const tooLong = input.length > MAX_MESSAGE_LENGTH;
-  const showCount = input.length >= COUNT_FROM;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const slash = useSlashCommand(skills, textareaRef);
+  const { input, skill, content } = slash;
+
+  const tooLong = content.length > MAX_MESSAGE_LENGTH;
+  const showCount = content.length >= COUNT_FROM;
+  const canSend = !!content && !isLoading && !isDisabled && !tooLong;
 
   const [attachLogs, setAttachLogs] = useState(() => {
     if (!storageKey) {
@@ -103,7 +114,6 @@ export function ChatInput({
     }
   });
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isLoadingFromStorageRef = useRef(false);
 
   const attachmentState: Record<AttachmentKey, boolean> = {
@@ -204,7 +214,7 @@ export function ChatInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || isDisabled || tooLong) return;
+    if (!canSend) return;
 
     const options: MessageOptions = {};
     // The run rides along so what we promise to attach and what the backend
@@ -215,11 +225,13 @@ export function ChatInput({
       options.follow_run_id = selectedRunId;
     }
 
-    onSendMessage?.(input.trim(), options);
-    setInput('');
+    onSendMessage?.(content, options);
+    slash.reset();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (slash.handleKeyDown(e)) return;
+
     if (
       e.key === 'Enter' &&
       !e.shiftKey &&
@@ -241,11 +253,12 @@ export function ChatInput({
             side="top"
           >
             <div className="relative">
+              <SkillMenu {...slash.menuProps} />
               <div
                 className={cn(
                   'rounded-xl border-2 transition-all duration-200',
                   'bg-white',
-                  input.trim()
+                  content
                     ? 'border-primary-300'
                     : 'border-gray-200 hover:border-gray-300'
                 )}
@@ -284,29 +297,42 @@ export function ChatInput({
                   </div>
                 )}
 
-                <textarea
-                  ref={textareaRef}
-                  data-testid="chat-input"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={placeholder}
-                  disabled={isLoading || isDisabled}
-                  rows={1}
-                  className={cn(
-                    'block w-full px-4 py-3 bg-transparent resize-none',
-                    'text-[15px] text-gray-900 placeholder:text-gray-400',
-                    'border-0 outline-none focus:outline-none focus:ring-0',
-                    'disabled:text-gray-400 disabled:cursor-not-allowed'
+                <div className="relative overflow-hidden">
+                  {skill && (
+                    <span
+                      ref={slash.commandRef}
+                      className="pointer-events-none absolute left-4 top-3 text-[15px]"
+                    >
+                      <SkillCommand skill={skill} withTooltip={false} />
+                    </span>
                   )}
-                  style={{
-                    height: `${MIN_TEXTAREA_HEIGHT}px`,
-                    minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
-                    maxHeight: `${MAX_TEXTAREA_HEIGHT}px`,
-                    overflow: 'hidden',
-                    overflowY: 'auto',
-                  }}
-                />
+                  <textarea
+                    ref={textareaRef}
+                    data-testid="chat-input"
+                    value={input}
+                    onChange={e => slash.handleChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onScroll={slash.onScroll}
+                    placeholder={skill ? 'Add details (optional)' : placeholder}
+                    disabled={isLoading || isDisabled}
+                    rows={1}
+                    {...slash.comboboxProps}
+                    className={cn(
+                      'block w-full px-4 py-3 bg-transparent resize-none',
+                      'text-[15px] text-gray-900 placeholder:text-gray-400',
+                      'border-0 outline-none focus:outline-none focus:ring-0',
+                      'disabled:text-gray-400 disabled:cursor-not-allowed'
+                    )}
+                    style={{
+                      textIndent: slash.textIndent,
+                      height: `${MIN_TEXTAREA_HEIGHT}px`,
+                      minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
+                      maxHeight: `${MAX_TEXTAREA_HEIGHT}px`,
+                      overflow: 'hidden',
+                      overflowY: 'auto',
+                    }}
+                  />
+                </div>
 
                 <div className="flex items-center justify-between gap-3 px-3 pb-2">
                   <div className="min-w-0">
@@ -320,7 +346,7 @@ export function ChatInput({
                             tooLong ? 'text-red-600' : 'text-gray-400'
                           )}
                         >
-                          {input.length.toLocaleString()} /{' '}
+                          {content.length.toLocaleString()} /{' '}
                           {MAX_MESSAGE_LENGTH.toLocaleString()}
                           {tooLong ? ' — too long to send' : null}
                         </span>
@@ -331,15 +357,13 @@ export function ChatInput({
                   <button
                     type="submit"
                     data-testid="send-message-button"
-                    disabled={
-                      !input.trim() || isLoading || isDisabled || tooLong
-                    }
+                    disabled={!canSend}
                     className={cn(
                       'inline-flex items-center justify-center',
                       'h-7 w-7 rounded-lg',
                       'transition-all duration-200',
                       'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                      input.trim() && !isLoading && !isDisabled && !tooLong
+                      canSend
                         ? 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     )}

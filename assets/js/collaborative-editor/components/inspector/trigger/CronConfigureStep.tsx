@@ -71,9 +71,13 @@ export function CronConfigureStep({
         />
 
         <div className="space-y-2">
-          <h3 className="text-base font-semibold text-slate-900">
-            When should this run?
-          </h3>
+          {/* Cron schedules always run in UTC, whatever the viewer's zone. */}
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="text-base font-semibold text-slate-900">
+              When should this run?
+            </h3>
+            <span className="text-xs text-slate-500">All times in UTC</span>
+          </div>
           <CronFieldBuilder
             value={draft.cron_expression ?? ''}
             onChange={expr => mergeDraft({ cron_expression: expr })}

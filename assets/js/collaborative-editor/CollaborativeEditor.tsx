@@ -36,6 +36,7 @@ import { StoreProvider } from './contexts/StoreProvider';
 import { useActionLock } from './hooks/useActionLock';
 import { useHistoryCommands } from './hooks/useHistory';
 import {
+  useAISkills,
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
@@ -366,6 +367,7 @@ function LandingScreenWrapper({
   const showLandingScreen = useShowLandingScreen();
   const aiLimit = useLimits().ai_assistant;
   const aiLimitReached = aiLimit != null && !aiLimit.allowed;
+  const skills = useAISkills();
   const {
     openYAMLImportModal,
     openTemplateBrowserModal,
@@ -399,6 +401,7 @@ function LandingScreenWrapper({
         isBuildingFromScratch={isBuildingFromScratch}
         onBrowseTemplates={openTemplateBrowserModal}
         onImportYAML={openYAMLImportModal}
+        skills={skills}
       />
       <YAMLImportModal />
       <TemplateBrowserModalWrapper />

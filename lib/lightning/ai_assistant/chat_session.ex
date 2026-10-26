@@ -31,6 +31,7 @@ defmodule Lightning.AiAssistant.ChatSession do
           is_public: boolean(),
           is_deleted: boolean(),
           meta: map() | nil,
+          apollo_history: [map()] | nil,
           message_count: integer() | nil,
           messages: [ChatMessage.t()] | []
         }
@@ -39,6 +40,8 @@ defmodule Lightning.AiAssistant.ChatSession do
     field :title, :string
     field :session_type, :string, default: "job_code"
     field :meta, :map, default: %{}
+    # Apollo curates this; it goes back to Apollo verbatim on the next turn.
+    field :apollo_history, {:array, :map}
     field :is_public, :boolean, default: false
     field :is_deleted, :boolean, default: false
 
@@ -80,7 +83,7 @@ defmodule Lightning.AiAssistant.ChatSession do
   @doc false
   def meta_changeset(chat_session, attrs) do
     chat_session
-    |> cast(attrs, [:meta])
+    |> cast(attrs, [:meta, :apollo_history])
   end
 
   defp validate_session_type_requirements(changeset) do
