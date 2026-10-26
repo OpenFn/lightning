@@ -178,7 +178,7 @@ export const CollaborativeMonaco = forwardRef<
     };
   }, []);
 
-  const highlightRef = useRef<editor.IEditorDecorationsCollection>();
+  const highlightRef = useRef<editor.IEditorDecorationsCollection>(undefined);
   // Monaco keeps a decoration's DOM when its markup is unchanged, so a
   // repeat highlight alternates class names to restart the flash.
   const replayRef = useRef(false);
