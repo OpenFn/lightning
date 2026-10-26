@@ -1,27 +1,16 @@
 import {
-  type ChannelForm,
   type ChannelFormValues,
-  type ChannelRow,
   ChannelsIndexPage as DesignSystemChannelsIndexPage,
-  type CurrentProject,
+  type ChannelsIndexPageProps,
 } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** What ChannelLive.Index puts in `data-props`. */
-export interface Props {
-  project: CurrentProject;
-  projectLabel: string;
-  channels: ChannelRow[];
-  totalChannels: number;
-  totalRequests: number;
-  logsHref: string;
-  canCreateChannel: boolean;
-  canEditChannel: boolean;
-  canDeleteChannel: boolean;
-  /** Set while the route has the form open; the LiveView loads its options then. */
-  form: ChannelForm | null;
-}
+export type Props = Omit<
+  ChannelsIndexPageProps,
+  'onToggle' | 'onDelete' | 'onSave'
+>;
 
 /** The design system's channels page, fed by ChannelLive.Index. */
 export const ChannelsIndexPage = designSystemPage(

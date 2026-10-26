@@ -1,15 +1,12 @@
 import {
-  type BackupCode,
   BackupCodesPage as DesignSystemBackupCodesPage,
+  type BackupCodesPageProps,
 } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** What BackupCodesLive.Index puts in `data-props`. */
-export interface Props {
-  codes: BackupCode[];
-  mfaEnabled: boolean;
-}
+export type Props = Omit<BackupCodesPageProps, 'onRegenerate' | 'onPrint'>;
 
 /** The design system's recovery codes page, fed by BackupCodesLive.Index. */
 export const BackupCodesPage = designSystemPage(

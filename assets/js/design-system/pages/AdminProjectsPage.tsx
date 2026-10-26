@@ -1,22 +1,16 @@
 import {
-  type AdminDeleteProject,
-  type AdminProjectForm,
   type AdminProjectFormValues,
-  type AdminProjectRow,
   AdminProjectsPage as DesignSystemAdminProjectsPage,
+  type AdminProjectsPageProps,
 } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** What ProjectLive.Index puts in `data-props`. */
-export interface Props {
-  projects: AdminProjectRow[];
-  /** Set while the route has the form open. */
-  form: AdminProjectForm | null;
-  /** Set while the route has the deletion dialog open. */
-  deleteProject: AdminDeleteProject | null;
-  gracePeriodDays: number;
-}
+export type Props = Omit<
+  AdminProjectsPageProps,
+  'onSave' | 'onDelete' | 'onCancelDeletion' | 'onClose'
+>;
 
 /** The design system's projects admin page, fed by ProjectLive.Index. */
 export const AdminProjectsPage = designSystemPage(

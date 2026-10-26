@@ -1,15 +1,12 @@
 import {
-  type ProjectOverview,
   ProjectsDashboardPage as DesignSystemProjectsDashboardPage,
+  type ProjectsDashboardPageProps,
 } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** What DashboardLive.Index puts in `data-props`. */
-export interface Props {
-  firstName: string;
-  projects: ProjectOverview[];
-}
+export type Props = Omit<ProjectsDashboardPageProps, 'onCreate'>;
 
 /** The design system's projects dashboard, fed by DashboardLive.Index. */
 export const ProjectsDashboardPage = designSystemPage(

@@ -1,16 +1,13 @@
 import {
   AdminAuthProvidersPage as DesignSystemAdminAuthProvidersPage,
-  type AuthProvider,
   type AuthProviderValues,
+  type AdminAuthProvidersPageProps,
 } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** What AuthProvidersLive.Index puts in `data-props`. */
-export interface Props {
-  /** The configured provider, or a blank one on /new. Never the secret. */
-  provider: AuthProvider;
-}
+export type Props = Pick<AdminAuthProvidersPageProps, 'provider'>;
 
 /** The design system's auth provider page, fed by AuthProvidersLive.Index. */
 export const AdminAuthProvidersPage = designSystemPage(

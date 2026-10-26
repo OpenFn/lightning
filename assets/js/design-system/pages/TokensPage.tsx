@@ -1,17 +1,13 @@
 import {
-  type ApiToken,
   TokensPage as DesignSystemTokensPage,
+  type TokensPageProps,
 } from '@openfn/ui';
 import { useState } from 'react';
 
 import { designSystemPage } from '../page';
 
 /** What TokensLive.Index puts in `data-props`. */
-export interface Props {
-  tokens: ApiToken[];
-  /** The token whose delete modal is open; otherwise null. */
-  tokenId: string | null;
-}
+export type Props = Pick<TokensPageProps, 'tokens' | 'tokenId'>;
 
 /** The design system's personal access tokens page, fed by TokensLive.Index. */
 export const TokensPage = designSystemPage(

@@ -3,14 +3,13 @@ import {
   type ChangeEmailResult,
   type ChangeEmailValues,
   type ResendResult,
+  type AuthConfirmationRequiredPageProps,
 } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** What UserConfirmationRequiredLive puts in `data-props`. */
-export interface Props {
-  email: string;
-}
+export type Props = Pick<AuthConfirmationRequiredPageProps, 'email'>;
 
 /** The design system's confirmation-required page, fed by UserConfirmationRequiredLive. */
 export const AuthConfirmationRequiredPage = designSystemPage(

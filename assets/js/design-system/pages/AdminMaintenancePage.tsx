@@ -1,9 +1,15 @@
-import { AdminMaintenancePage as DesignSystemAdminMaintenancePage } from '@openfn/ui';
+import {
+  AdminMaintenancePage as DesignSystemAdminMaintenancePage,
+  type AdminMaintenancePageProps,
+} from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** MaintenanceLive.Index sends no props: the page is two actions. */
-export type Props = Record<string, never>;
+export type Props = Omit<
+  AdminMaintenancePageProps,
+  'onRefreshAdaptors' | 'onRefreshIcons'
+>;
 
 /** The design system's maintenance page, fed by MaintenanceLive.Index. */
 export const AdminMaintenancePage = designSystemPage(

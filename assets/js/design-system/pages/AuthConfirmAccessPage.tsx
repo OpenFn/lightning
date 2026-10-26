@@ -1,14 +1,13 @@
 import {
   AuthConfirmAccessPage as DesignSystemAuthConfirmAccessPage,
   type ConfirmAccessValues,
+  type AuthConfirmAccessPageProps,
 } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** What ReAuthenticateLive.New puts in `data-props`. */
-export interface Props {
-  user: { firstName: string; lastName: string; mfaEnabled: boolean };
-}
+export type Props = Omit<AuthConfirmAccessPageProps, 'onConfirm'>;
 
 /** The design system's confirm access page, fed by ReAuthenticateLive.New. */
 export const AuthConfirmAccessPage = designSystemPage(

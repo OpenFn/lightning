@@ -1,16 +1,16 @@
 import {
-  type AdminCollectionRow,
   AdminCollectionsPage as DesignSystemAdminCollectionsPage,
   type CollectionFormValues,
+  type AdminCollectionsPageProps,
 } from '@openfn/ui';
 
 import { designSystemPage } from '../page';
 
 /** What CollectionLive.Index puts in `data-props`. */
-export interface Props {
-  collections: AdminCollectionRow[];
-  projectOptions: [label: string, value: string][];
-}
+export type Props = Pick<
+  AdminCollectionsPageProps,
+  'collections' | 'projectOptions'
+>;
 
 /** The design system's collections admin page, fed by CollectionLive.Index. */
 export const AdminCollectionsPage = designSystemPage(
