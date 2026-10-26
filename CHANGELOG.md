@@ -21,8 +21,8 @@ and this project adheres to
 
 ### Fixed
 
-- The create-sandbox dialog now opens with a real default name (`Dev`) instead of
-  a placeholder that disabled submit.
+- The create-sandbox dialog now opens with a real default name (`Dev`) instead
+  of a placeholder that disabled submit.
   [#3832](https://github.com/OpenFn/lightning/issues/3832)
 
 ## [2.20.0-pre] - 2026-10-23
