@@ -111,6 +111,10 @@
   --color-semantic-success: #006840;
 }
 
+/* The design system names its colours for what they are for (text-muted,
+   bg-surface, ...). Imported after the theme above so its info colour wins. */
+@import '@openfn/ui/tokens.css';
+
 @layer base {
   *,
   ::after,
