@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import {
@@ -167,8 +167,12 @@ describe('WorkflowsIndexPage', () => {
       value_key: 'wf-2',
     });
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    fireEvent.click(rowOf('Intake').querySelector('button:last-child')!);
+    fireEvent.click(
+      within(rowOf('Intake')).getByRole('button', { name: 'Delete' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' })
+    );
     expect(pushEvent).toHaveBeenCalledWith('delete_workflow', { id: 'wf-1' });
   });
 

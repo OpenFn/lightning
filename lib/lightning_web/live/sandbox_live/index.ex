@@ -2,9 +2,11 @@ defmodule LightningWeb.SandboxLive.Index do
   use LightningWeb, :live_view
 
   alias Ecto.Changeset
+  alias Lightning.Helpers
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.MergeProjects
+  alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.Sandboxes
   alias Lightning.Repo
@@ -13,75 +15,44 @@ defmodule LightningWeb.SandboxLive.Index do
 
   require Logger
 
-  defmodule MergeWorkflow do
-    defstruct [
-      :id,
-      :name,
-      :is_changed,
-      :is_diverged,
-      :is_new,
-      :is_deleted
-    ]
-  end
-
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :check_limits}
-
-  @empty_changeset_types %{name: :string}
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:active_menu_item, :sandboxes)
+     |> assign(:page_title, "Sandboxes")
      |> assign(
        :limit_new_sandbox,
        ProjectLimiter.limit_new_sandbox(socket.assigns.project.id)
      )
-     |> reset_delete_modal_state()
-     |> reset_merge_modal_state()
-     |> load_workspace_projects()}
+     |> assign(:editing_sandbox, nil)
+     |> assign(:new_sandbox_color, nil)}
   end
 
   @impl true
-  def handle_params(
-        %{"id" => id},
-        _uri,
-        %{assigns: %{project: project, live_action: live_action}} = socket
-      )
-      when live_action == :edit do
-    case Enum.find(socket.assigns.workspace_tree, &(&1.id == id)) do
-      nil ->
-        {:noreply, put_flash(socket, :error, "Sandbox not found")}
-
-      sandbox ->
-        if sandbox.can_edit do
-          {:noreply, assign(socket, :editing_sandbox, sandbox)}
-        else
-          {:noreply,
-           socket
-           |> put_flash(:error, "You are not authorized to edit this sandbox")
-           |> push_navigate(to: ~p"/projects/#{project.id}/sandboxes")}
-        end
-    end
+  def handle_params(params, _uri, socket) do
+    socket
+    |> load_workspace_projects()
+    |> apply_action(socket.assigns.live_action, params)
+    |> noreply()
   end
 
-  def handle_params(
-        _params,
-        _uri,
-        %{
-          assigns: %{
-            limit_new_sandbox: limit_new_sandbox,
-            can_create_sandbox: can_create_sandbox,
-            project: project,
-            live_action: live_action
-          }
-        } = socket
-      )
-      when live_action == :new do
-    case {can_create_sandbox, limit_new_sandbox} do
+  defp apply_action(socket, :index, _params) do
+    assign(socket, editing_sandbox: nil, new_sandbox_color: nil)
+  end
+
+  defp apply_action(socket, :new, _params) do
+    %{project: project, can_create_sandbox: can_create?} = socket.assigns
+
+    case {can_create?, socket.assigns.limit_new_sandbox} do
       {true, :ok} ->
-        load_workspace_projects(socket)
+        assign(socket,
+          editing_sandbox: nil,
+          new_sandbox_color: Components.random_color()
+        )
 
       {false, _} ->
         socket
@@ -96,568 +67,287 @@ defmodule LightningWeb.SandboxLive.Index do
         |> put_flash(:error, text)
         |> push_navigate(to: ~p"/projects/#{project.id}/sandboxes")
     end
-    |> noreply()
   end
 
-  def handle_params(_params, _uri, socket) do
-    {:noreply, load_workspace_projects(socket)}
-  end
+  defp apply_action(socket, :edit, %{"id" => id}) do
+    socket = assign(socket, new_sandbox_color: nil)
 
-  @impl true
-  def handle_event("open-delete-modal", %{"id" => sandbox_id}, socket) do
-    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
+    case find_row(socket, id) do
       nil ->
-        {:noreply, put_flash(socket, :error, "Sandbox not found")}
+        socket
+        |> assign(:editing_sandbox, nil)
+        |> put_flash(:error, "Sandbox not found")
 
-      sandbox ->
-        if sandbox.can_delete do
-          {:noreply,
-           socket
-           |> assign(:confirm_delete_open?, true)
-           |> assign(:confirm_delete_sandbox, sandbox)
-           |> assign(:confirm_delete_descendants, active_descendants(sandbox.id))
-           |> assign(:confirm_delete_input, "")
-           |> assign(:confirm_changeset, confirm_changeset(sandbox))}
-        else
-          {:noreply,
-           socket
-           |> put_flash(:error, "You are not authorized to delete this sandbox")}
-        end
+      %{can_edit: true} = sandbox ->
+        assign(socket, :editing_sandbox, sandbox)
+
+      _sandbox ->
+        socket
+        |> assign(:editing_sandbox, nil)
+        |> put_flash(:error, "You are not authorized to edit this sandbox")
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project.id}/sandboxes"
+        )
     end
   end
 
+  # --- Create and edit ---
+
+  # The open form's Save. Which form is open, and whether this user may save
+  # it, is the route's and the server's to know, not the payload's.
   @impl true
-  def handle_event("confirm-delete-validate", params, socket) do
-    case socket.assigns.confirm_delete_sandbox do
-      nil ->
-        {:noreply, socket}
+  def handle_event("create-sandbox", params, socket) do
+    %{project: parent, current_user: actor} = socket.assigns
 
-      sandbox ->
-        confirm_params = params["confirm"] || %{}
-        changeset = confirm_changeset(sandbox, confirm_params)
-        input_name = String.trim(confirm_params["name"] || "")
+    if socket.assigns.live_action != :new or
+         not socket.assigns.can_create_sandbox do
+      reply_error(
+        socket,
+        "You are not authorized to create sandboxes in this workspace"
+      )
+    else
+      changeset = form_changeset(%Project{}, form_params(params), parent.id)
 
-        {:noreply,
-         socket
-         |> assign(:confirm_changeset, changeset)
-         |> assign(:confirm_delete_input, input_name)}
+      if changeset.valid? do
+        create_sandbox(socket, parent, actor, changeset)
+      else
+        reply_error(socket, changeset)
+      end
     end
   end
 
-  @impl true
-  def handle_event(
-        "confirm-delete",
-        params,
-        %{
-          assigns: %{
-            current_user: current_user,
-            confirm_delete_sandbox: sandbox
-          }
-        } = socket
-      ) do
-    case sandbox do
-      nil ->
-        {:noreply, socket}
+  def handle_event("update-sandbox", params, socket) do
+    id = params["id"]
 
-      sandbox ->
-        confirm_params = params["confirm"] || %{}
-        changeset = confirm_changeset(sandbox, confirm_params)
+    case socket.assigns.editing_sandbox do
+      %{id: ^id, can_edit: true} = sandbox ->
+        changeset =
+          form_changeset(sandbox, form_params(params), sandbox.parent_id)
 
         if changeset.valid? do
-          {:noreply,
-           Sandboxes.schedule_sandbox_deletion(
-             sandbox,
-             current_user
-           )
-           |> handle_sandbox_delete_result(sandbox, socket)}
+          update_sandbox(socket, sandbox, changeset)
         else
-          {:noreply, assign(socket, :confirm_changeset, changeset)}
+          reply_error(socket, changeset)
         end
+
+      _other ->
+        reply_error(socket, "You are not authorized to edit this sandbox")
     end
   end
 
-  @impl true
-  def handle_event("close-delete-modal", _params, socket) do
-    {:noreply, reset_delete_modal_state(socket)}
-  end
+  # --- Delete and restore ---
 
-  @impl true
   def handle_event(
-        "cancel-sandbox-deletion",
-        %{"id" => sandbox_id},
+        "delete-sandbox",
+        params,
         %{assigns: %{current_user: current_user}} = socket
       ) do
-    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
+    case find_row(socket, params["id"]) do
       nil ->
-        {:noreply, put_flash(socket, :error, "Sandbox not found")}
+        reply_error(socket, "Sandbox not found")
 
-      sandbox ->
-        if sandbox.can_cancel_deletion do
-          Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, current_user)
-          |> handle_cancel_deletion_result(sandbox, socket)
-          |> noreply()
+      %{can_delete: true} = sandbox ->
+        if params["nameConfirmation"] == sandbox.name do
+          sandbox
+          |> Sandboxes.schedule_sandbox_deletion(current_user)
+          |> handle_sandbox_delete_result(sandbox, socket)
         else
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "You are not authorized to cancel this sandbox's deletion"
-           )}
+          reply_error(socket, "must match the sandbox name")
         end
+
+      _sandbox ->
+        reply_error(socket, "You are not authorized to delete this sandbox")
     end
   end
 
-  @impl true
-  def handle_event("open-merge-modal", %{"id" => sandbox_id}, socket) do
-    case Enum.find(socket.assigns.workspace_tree, &(&1.id == sandbox_id)) do
+  def handle_event(
+        "cancel-sandbox-deletion",
+        params,
+        %{assigns: %{current_user: current_user}} = socket
+      ) do
+    case find_row(socket, params["id"]) do
       nil ->
-        {:noreply, put_flash(socket, :error, "Sandbox not found")}
+        reply_error(socket, "Sandbox not found")
 
-      sandbox ->
-        if sandbox.can_merge do
-          subtree = Projects.list_descendants(sandbox.id)
-          descendant_ids = MapSet.new(subtree, & &1.id)
+      %{can_cancel_deletion: true} = sandbox ->
+        sandbox
+        |> Sandboxes.cancel_scheduled_sandbox_deletion(current_user)
+        |> handle_cancel_deletion_result(sandbox, socket)
 
-          target_options =
-            get_merge_target_options(socket, sandbox, descendant_ids)
-
-          default_target =
-            Enum.find(target_options, &(&1.value == sandbox.parent_id))
-
-          descendants = Enum.filter(subtree, &is_nil(&1.scheduled_deletion))
-
-          merge_changeset =
-            merge_changeset(%{
-              target_id: default_target && default_target.value
-            })
-
-          target_id = default_target && default_target.value
-
-          target_project =
-            find_target_project(
-              socket.assigns.workspace_projects,
-              target_id,
-              sandbox,
-              descendant_ids
-            )
-
-          {sandbox, target_project} =
-            preload_merge_projects(sandbox, target_project)
-
-          diverged_workflows = get_diverged_workflows(sandbox, target_project)
-
-          sandbox_changed_workflows =
-            get_changed_workflows(sandbox, target_project)
-
-          source_workflows =
-            build_merge_workflow_list(
-              sandbox,
-              diverged_workflows,
-              sandbox_changed_workflows,
-              target_project
-            )
-
-          selected_ids =
-            source_workflows
-            |> Enum.filter(fn wf -> wf.is_changed end)
-            |> MapSet.new(fn wf -> wf.id end)
-
-          merge_credentials = sandbox_only_credentials(sandbox, target_project)
-
-          {:noreply,
-           socket
-           |> assign(:merge_modal_open?, true)
-           |> assign(:merge_source_sandbox, sandbox)
-           |> assign(:merge_target_options, target_options)
-           |> assign(:merge_descendant_ids, descendant_ids)
-           |> assign(:merge_changeset, merge_changeset)
-           |> assign(:merge_descendants, descendants)
-           |> assign(:merge_diverged_workflows, diverged_workflows)
-           |> assign(:merge_source_workflows, source_workflows)
-           |> assign(:merge_selected_workflow_ids, selected_ids)
-           |> assign(:merge_credentials, merge_credentials)
-           |> assign(
-             :merge_selected_credential_ids,
-             all_credential_ids(merge_credentials)
-           )
-           |> assign_merge_collections(sandbox, target_project)}
-        else
-          {:noreply,
-           socket
-           |> put_flash(:error, "You are not authorized to merge this sandbox")}
-        end
-    end
-  end
-
-  @impl true
-  def handle_event("close-merge-modal", _params, socket) do
-    {:noreply, reset_merge_modal_state(socket)}
-  end
-
-  @impl true
-  def handle_event("toggle-workflow", %{"id" => workflow_id}, socket) do
-    in_list? =
-      Enum.any?(socket.assigns.merge_source_workflows, &(&1.id == workflow_id))
-
-    if in_list? do
-      selected = socket.assigns.merge_selected_workflow_ids
-
-      new_selected =
-        if MapSet.member?(selected, workflow_id) do
-          MapSet.delete(selected, workflow_id)
-        else
-          MapSet.put(selected, workflow_id)
-        end
-
-      {:noreply, assign(socket, :merge_selected_workflow_ids, new_selected)}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_event("toggle-all-workflows", _params, socket) do
-    all_ids =
-      MapSet.new(socket.assigns.merge_source_workflows, fn wf -> wf.id end)
-
-    new_selected =
-      if MapSet.equal?(socket.assigns.merge_selected_workflow_ids, all_ids) do
-        MapSet.new()
-      else
-        all_ids
-      end
-
-    {:noreply, assign(socket, :merge_selected_workflow_ids, new_selected)}
-  end
-
-  @impl true
-  def handle_event("toggle-credential", %{"id" => credential_id}, socket) do
-    selected = socket.assigns.merge_selected_credential_ids
-
-    new_selected =
-      if MapSet.member?(selected, credential_id) do
-        MapSet.delete(selected, credential_id)
-      else
-        MapSet.put(selected, credential_id)
-      end
-
-    {:noreply, assign(socket, :merge_selected_credential_ids, new_selected)}
-  end
-
-  @impl true
-  def handle_event("toggle-all-credentials", _params, socket) do
-    all_ids = MapSet.new(socket.assigns.merge_credentials, fn c -> c.id end)
-
-    new_selected =
-      if MapSet.equal?(socket.assigns.merge_selected_credential_ids, all_ids) do
-        MapSet.new()
-      else
-        all_ids
-      end
-
-    {:noreply, assign(socket, :merge_selected_credential_ids, new_selected)}
-  end
-
-  @impl true
-  def handle_event(
-        "select-merge-target",
-        %{"merge" => %{"target_id" => target_id}},
-        socket
-      ) do
-    target_project =
-      find_target_project(
-        socket.assigns.workspace_projects,
-        target_id,
-        socket.assigns.merge_source_sandbox,
-        socket.assigns.merge_descendant_ids
-      )
-
-    merge_changeset =
-      merge_changeset(%{target_id: target_project && target_project.id})
-
-    {sandbox, target_project} =
-      preload_merge_projects(socket.assigns.merge_source_sandbox, target_project)
-
-    diverged_workflows = get_diverged_workflows(sandbox, target_project)
-
-    sandbox_changed_workflows = get_changed_workflows(sandbox, target_project)
-
-    source_workflows =
-      if target_project do
-        build_merge_workflow_list(
-          sandbox,
-          diverged_workflows,
-          sandbox_changed_workflows,
-          target_project
+      _sandbox ->
+        reply_error(
+          socket,
+          "You are not authorized to cancel this sandbox's deletion"
         )
-      else
-        socket.assigns.merge_source_workflows
-      end
-
-    prev_ids =
-      MapSet.new(socket.assigns.merge_source_workflows, fn wf -> wf.id end)
-
-    all_ids = MapSet.new(source_workflows, fn wf -> wf.id end)
-
-    added_changed_ids =
-      source_workflows
-      |> Enum.filter(fn wf ->
-        wf.is_changed and not MapSet.member?(prev_ids, wf.id)
-      end)
-      |> MapSet.new(fn wf -> wf.id end)
-
-    selected_ids =
-      socket.assigns.merge_selected_workflow_ids
-      |> MapSet.intersection(all_ids)
-      |> MapSet.union(added_changed_ids)
-
-    merge_credentials = sandbox_only_credentials(sandbox, target_project)
-
-    # Preserve the user's credential choices across form changes (the checkboxes
-    # live in the same form, so toggling one fires this event). Keep selections
-    # still in the diff, and default any newly-appeared credential to selected.
-    new_credential_ids = all_credential_ids(merge_credentials)
-    previously_shown_ids = MapSet.new(socket.assigns.merge_credentials, & &1.id)
-
-    selected_credential_ids =
-      socket.assigns.merge_selected_credential_ids
-      |> MapSet.intersection(new_credential_ids)
-      |> MapSet.union(
-        MapSet.difference(new_credential_ids, previously_shown_ids)
-      )
-
-    {:noreply,
-     socket
-     |> assign(:merge_changeset, merge_changeset)
-     |> assign(:merge_diverged_workflows, diverged_workflows)
-     |> assign(:merge_source_workflows, source_workflows)
-     |> assign(:merge_selected_workflow_ids, selected_ids)
-     |> assign(:merge_credentials, merge_credentials)
-     |> assign(:merge_selected_credential_ids, selected_credential_ids)
-     |> maybe_assign_merge_collections(sandbox, target_project)}
-  end
-
-  @impl true
-  def handle_event("toggle-collection-to-add", %{"name" => name}, socket) do
-    if name in socket.assigns.merge_collections_to_add do
-      selected = socket.assigns.merge_selected_collection_names
-
-      new_selected =
-        if MapSet.member?(selected, name) do
-          MapSet.delete(selected, name)
-        else
-          MapSet.put(selected, name)
-        end
-
-      {:noreply, assign(socket, :merge_selected_collection_names, new_selected)}
-    else
-      {:noreply, socket}
     end
   end
 
-  @impl true
-  def handle_event("toggle-all-collections-to-add", _params, socket) do
-    all_names = MapSet.new(socket.assigns.merge_collections_to_add)
+  # --- Merge ---
 
-    new_selected =
-      if MapSet.equal?(
-           socket.assigns.merge_selected_collection_names,
-           all_names
-         ) do
-        MapSet.new()
-      else
-        all_names
+  # What merging into a target would do. A null target asks for the
+  # sandbox's parent, when the viewer may merge into it.
+  def handle_event("preview-merge", params, socket) do
+    with {:ok, sandbox} <- fetch_mergeable_source(socket, params["id"]) do
+      targets = merge_targets(socket, subtree_ids(sandbox))
+
+      case params["targetId"] do
+        nil ->
+          target = Enum.find(targets, &(&1.id == sandbox.parent_id))
+          reply_merge_preview(socket, sandbox, targets, target)
+
+        id ->
+          case Enum.find(targets, &(&1.id == id)) do
+            nil -> reply_error(socket, "Target project not found")
+            target -> reply_merge_preview(socket, sandbox, targets, target)
+          end
       end
-
-    {:noreply, assign(socket, :merge_selected_collection_names, new_selected)}
+    end
   end
 
-  @impl true
   def handle_event(
-        "confirm-merge",
-        %{"merge" => %{"target_id" => target_id}},
-        %{
-          assigns: %{
-            merge_source_sandbox: source,
-            current_user: actor,
-            root_project: root_project
-          }
-        } = socket
+        "merge-sandbox",
+        params,
+        %{assigns: %{current_user: actor}} = socket
       ) do
-    cond do
-      is_nil(source) ->
-        socket
-        |> put_flash(:error, "Invalid merge request")
-        |> reset_merge_modal_state()
-        |> noreply()
+    with {:ok, source} <- fetch_mergeable_source(socket, params["id"]),
+         {:ok, target} <- fetch_merge_target(socket, source, params["targetId"]) do
+      if Permissions.can?(:sandboxes, :merge_sandbox, actor, target) do
+        # Keep only the posted ids that this target's preview offers.
+        preview = merge_preview(source, target)
 
-      not source.can_merge ->
-        socket
-        |> put_flash(:error, "You are not authorized to merge this sandbox")
-        |> reset_merge_modal_state()
-        |> noreply()
+        {deleted, carried} = Enum.split_with(preview.workflows, & &1.is_deleted)
 
-      true ->
-        socket.assigns.workspace_projects
-        |> find_target_project(
-          target_id,
-          source,
-          socket.assigns.merge_descendant_ids
-        )
-        |> case do
-          nil ->
-            socket
-            |> put_flash(:error, "Target project not found")
-            |> reset_merge_modal_state()
-            |> noreply()
+        opts = %{
+          selected_workflow_ids: picked(params["workflowIds"], carried, & &1.id),
+          deleted_target_workflow_ids:
+            picked(params["deletedWorkflowIds"], deleted, & &1.id),
+          selected_credential_ids:
+            picked(params["credentialIds"], preview.credentials, & &1.id),
+          skip_collections:
+            picked(
+              params["skippedCollectionNames"],
+              preview.collections_to_add,
+              & &1
+            )
+        }
 
-          target ->
-            if Permissions.can?(
-                 :sandboxes,
-                 :merge_sandbox,
-                 actor,
-                 target
-               ) do
-              selected_ids =
-                resolve_selected_workflow_ids(socket.assigns)
-
-              selected_credential_ids =
-                MapSet.to_list(socket.assigns.merge_selected_credential_ids)
-
-              skip_collections =
-                skipped_collection_names(socket.assigns, target)
-
-              source
-              |> perform_merge(
-                target,
-                actor,
-                selected_ids,
-                selected_credential_ids,
-                skip_collections
-              )
-              |> handle_merge_result(socket, source, target, root_project, actor)
-            else
-              socket
-              |> put_flash(
-                :error,
-                "You are not authorized to merge into this project"
-              )
-              |> reset_merge_modal_state()
-              |> noreply()
-            end
-        end
+        source
+        |> perform_merge(target, actor, opts)
+        |> handle_merge_result(socket, source, target, actor)
+      else
+        reply_error(socket, "You are not authorized to merge into this project")
+      end
     end
   end
 
   @impl true
   def render(assigns) do
     ~H"""
-    <LayoutComponents.page_content>
-      <:banner>
-        <Common.dynamic_component
-          :if={assigns[:banner]}
-          function={@banner.function}
-          args={@banner.attrs}
-        />
-      </:banner>
-      <:header>
-        <LayoutComponents.header current_user={@current_user}>
-          <:breadcrumbs>
-            <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker
-                project={@project}
-                label={@project_label}
-              />
-              <LayoutComponents.breadcrumb>
-                <:label>Sandboxes</:label>
-              </LayoutComponents.breadcrumb>
-            </LayoutComponents.breadcrumbs>
-          </:breadcrumbs>
-        </LayoutComponents.header>
-      </:header>
-
-      <LayoutComponents.centered>
-        <Components.header
-          current_project={@project}
-          enable_create_button={
-            @can_create_sandbox and @limit_new_sandbox == :ok and
-              not @nesting_at_limit
-          }
-          disabled_button_tooltip={
+    <.design_system_page
+      name="SandboxesIndexPage"
+      props={
+        %{
+          project: %{
+            id: @project.id,
+            parentId: @project.parent_id,
+            color: @project.color
+          },
+          projectLabel: @project_label,
+          root: sandbox_row_json(@root_project),
+          rootIsSandbox: Project.sandbox?(@root_project),
+          sandboxes: Enum.map(@sandboxes, &sandbox_row_json/1),
+          newHref: ~p"/projects/#{@project}/sandboxes/new",
+          createBlockedReason:
             create_sandbox_tooltip_message(
               @can_create_sandbox,
               @limit_new_sandbox,
               @nesting_at_limit
+            ),
+          gracePeriodDays: Lightning.Config.purge_deleted_after_days(),
+          form:
+            form_json(
+              @live_action,
+              @project,
+              @editing_sandbox,
+              @new_sandbox_color
             )
-          }
-        />
-
-        <Components.workspace_list
-          root_project={@root_project}
-          current_project={@project}
-          sandboxes={@sandboxes}
-          enable_create_button={
-            @can_create_sandbox and @limit_new_sandbox == :ok and
-              not @nesting_at_limit
-          }
-          disabled_button_tooltip={
-            create_sandbox_tooltip_message(
-              @can_create_sandbox,
-              @limit_new_sandbox,
-              @nesting_at_limit
-            )
-          }
-        />
-
-        <Components.confirm_delete_modal
-          :if={@confirm_delete_sandbox}
-          open?={@confirm_delete_open?}
-          sandbox={@confirm_delete_sandbox}
-          changeset={@confirm_changeset}
-          root_project={@root_project}
-          descendants={@confirm_delete_descendants}
-        />
-
-        <Components.merge_modal
-          :if={@merge_source_sandbox}
-          open?={@merge_modal_open?}
-          sandbox={@merge_source_sandbox}
-          target_options={@merge_target_options}
-          changeset={@merge_changeset}
-          descendants={@merge_descendants}
-          diverged_workflows={@merge_diverged_workflows}
-          source_workflows={@merge_source_workflows}
-          selected_workflow_ids={@merge_selected_workflow_ids}
-          credentials={@merge_credentials}
-          selected_credential_ids={@merge_selected_credential_ids}
-          collections_to_add={@merge_collections_to_add}
-          selected_collection_names={@merge_selected_collection_names}
-        />
-
-        <.live_component
-          :if={@live_action == :new}
-          module={LightningWeb.SandboxLive.FormComponent}
-          id="sandbox-form-component-new"
-          mode={:new}
-          current_user={@current_user}
-          parent={@project}
-          return_to={nil}
-        />
-
-        <.live_component
-          :if={@live_action == :edit and assigns[:editing_sandbox]}
-          module={LightningWeb.SandboxLive.FormComponent}
-          id={"sandbox-form-component-edit-#{@editing_sandbox.id}"}
-          mode={:edit}
-          sandbox={@editing_sandbox}
-          current_user={@current_user}
-          parent={@editing_sandbox.parent}
-          return_to={~p"/projects/#{@project.id}/sandboxes"}
-        />
-      </LayoutComponents.centered>
-    </LayoutComponents.page_content>
+        }
+      }
+      banner={assigns[:banner]}
+      current_user={@current_user}
+    />
     """
   end
+
+  # --- Props ---
+
+  # The shape the design system's SandboxRow type expects.
+  defp sandbox_row_json(sandbox) do
+    %{
+      id: sandbox.id,
+      name: sandbox.name,
+      color: sandbox.color,
+      env: sandbox.env,
+      scheduledDeletion: sandbox.scheduled_deletion,
+      workflowsHref: ~p"/projects/#{sandbox.id}/w",
+      editHref:
+        if(Project.sandbox?(sandbox),
+          do: ~p"/projects/#{sandbox.parent_id}/sandboxes/#{sandbox.id}/edit"
+        ),
+      canEdit: sandbox.can_edit,
+      canDelete: sandbox.can_delete,
+      canMerge: sandbox.can_merge,
+      canCancelDeletion: sandbox.can_cancel_deletion,
+      restoreBlockedReason: sandbox.restore_blocked_message,
+      activeDescendantCount: sandbox.active_descendant_count
+    }
+  end
+
+  # The design system's SandboxForm while the route has the form open.
+  defp form_json(:new, parent, _editing, color) when is_binary(color) do
+    %{
+      mode: "new",
+      parentName: parent.name,
+      parentIsSandbox: Project.sandbox?(parent),
+      initialColor: color
+    }
+  end
+
+  defp form_json(:edit, _parent, %{} = sandbox, _color) do
+    %{
+      mode: "edit",
+      sandboxId: sandbox.id,
+      initial: %{rawName: sandbox.name, color: sandbox.color}
+    }
+  end
+
+  defp form_json(_action, _parent, _editing, _color), do: nil
+
+  defp reply_merge_preview(socket, sandbox, targets, target) do
+    preview = merge_preview(sandbox, target)
+
+    {:reply,
+     %{
+       targets: Enum.map(targets, &%{id: &1.id, name: &1.name}),
+       targetId: target && target.id,
+       workflows: Enum.map(preview.workflows, &merge_workflow_json/1),
+       credentials: preview.credentials,
+       collectionsToAdd: preview.collections_to_add
+     }, socket}
+  end
+
+  defp merge_workflow_json(workflow) do
+    %{
+      id: workflow.id,
+      name: workflow.name,
+      isChanged: workflow.is_changed,
+      isDiverged: workflow.is_diverged,
+      isNew: workflow.is_new,
+      isDeleted: workflow.is_deleted
+    }
+  end
+
+  # --- Workspace ---
 
   defp load_workspace_projects(%{assigns: %{project: project}} = socket) do
     current_user = socket.assigns.current_user
@@ -668,11 +358,14 @@ defmodule LightningWeb.SandboxLive.Index do
     workspace_root =
       project |> Projects.root_of() |> Repo.preload(:project_users)
 
-    descendants =
+    # Every project under the access root, including ones this viewer can't
+    # see, so a card counts all the live sandboxes deleting it takes along.
+    subtree =
       access_root.id
       |> Projects.list_descendants()
       |> Repo.preload([:parent, :project_users])
-      |> Projects.visible_sandboxes(current_user)
+
+    descendants = Projects.visible_sandboxes(subtree, current_user)
 
     can_create_sandbox =
       Permissions.can?(
@@ -693,8 +386,15 @@ defmodule LightningWeb.SandboxLive.Index do
         workspace_root
       )
 
+    descendant_counts = active_descendant_counts(subtree)
+
     decorate =
-      &decorate_for_render(&1, manage_permissions, project, limit_new_sandbox)
+      &decorate_for_render(
+        &1,
+        manage_permissions,
+        limit_new_sandbox,
+        Map.get(descendant_counts, &1.id, 0)
+      )
 
     decorated_root = decorate.(access_root)
     decorated_sandboxes = Enum.map(descendants, decorate)
@@ -708,215 +408,299 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:nesting_at_limit, nesting_at_limit)
   end
 
-  defp active_descendants(sandbox_id) do
-    sandbox_id
-    |> Projects.list_descendants()
+  # For each project, how many live projects sit anywhere beneath it.
+  defp active_descendant_counts(subtree) do
+    parent_of = Map.new(subtree, &{&1.id, &1.parent_id})
+
+    subtree
     |> Enum.filter(&is_nil(&1.scheduled_deletion))
+    |> Enum.flat_map(&ancestor_ids(parent_of, &1.parent_id))
+    |> Enum.frequencies()
   end
+
+  defp ancestor_ids(_parent_of, nil), do: []
+
+  defp ancestor_ids(parent_of, id),
+    do: [id | ancestor_ids(parent_of, Map.get(parent_of, id))]
 
   defp decorate_for_render(
          sandbox,
          manage_permissions,
-         current_project,
-         limit_new_sandbox
+         limit_new_sandbox,
+         active_descendant_count
        ) do
     can_manage? = Map.get(manage_permissions, sandbox.id, false)
     scheduled? = not is_nil(sandbox.scheduled_deletion)
-
-    {restore_blocked_by_limit?, restore_blocked_message} =
-      restore_block_state(scheduled?, limit_new_sandbox)
 
     sandbox
     |> Map.put(:can_edit, can_manage? and not scheduled?)
     |> Map.put(:can_delete, can_manage? and not scheduled?)
     |> Map.put(:can_merge, can_manage? and not scheduled?)
     |> Map.put(:can_cancel_deletion, can_manage? and scheduled?)
-    |> Map.put(:restore_blocked_by_limit?, restore_blocked_by_limit?)
-    |> Map.put(:restore_blocked_message, restore_blocked_message)
-    |> Map.put(:scheduled_for_deletion?, scheduled?)
-    |> Map.put(:is_current, current_project.id == sandbox.id)
+    |> Map.put(
+      :restore_blocked_message,
+      restore_blocked_message(scheduled?, limit_new_sandbox)
+    )
+    |> Map.put(:active_descendant_count, active_descendant_count)
   end
 
-  defp restore_block_state(true, {:error, _reason, %{text: text}}),
-    do: {true, text}
+  defp restore_blocked_message(true, {:error, _reason, %{text: text}}), do: text
+  defp restore_blocked_message(_scheduled?, _limit), do: nil
 
-  defp restore_block_state(_scheduled?, _limit), do: {false, nil}
+  # Ids come from the browser, so they are looked up in the tree this viewer
+  # was shown, never loaded by id.
+  defp find_row(socket, id),
+    do: Enum.find(socket.assigns.workspace_tree, &(&1.id == id))
 
-  defp reset_delete_modal_state(socket) do
-    socket
-    |> assign(:confirm_delete_open?, false)
-    |> assign(:confirm_delete_sandbox, nil)
-    |> assign(:confirm_delete_descendants, [])
-    |> assign(:confirm_delete_input, "")
-    |> assign(:confirm_changeset, empty_confirm_changeset())
-  end
+  defp create_sandbox_tooltip_message(
+         can_create_sandbox,
+         limiter_result,
+         nesting_at_limit
+       ) do
+    case {can_create_sandbox, limiter_result, nesting_at_limit} do
+      {false, _, _} ->
+        "You are not authorized to create sandboxes in this workspace"
 
-  defp reset_merge_modal_state(socket) do
-    socket
-    |> assign(:merge_modal_open?, false)
-    |> assign(:merge_source_sandbox, nil)
-    |> assign(:merge_changeset, merge_changeset())
-    |> assign(:merge_target_options, [])
-    |> assign(:merge_descendant_ids, nil)
-    |> assign(:merge_descendants, [])
-    |> assign(:merge_diverged_workflows, [])
-    |> assign(:merge_source_workflows, [])
-    |> assign(:merge_selected_workflow_ids, MapSet.new())
-    |> assign(:merge_credentials, [])
-    |> assign(:merge_selected_credential_ids, MapSet.new())
-    |> assign_merge_collections(nil, nil)
-  end
+      {_, _, true} ->
+        nesting_limit_message()
 
-  # Previews the collections the merge would create in the target (the
-  # sandbox-only names), all preselected. Unchecking a row skips creating
-  # that collection; picking a new target recomputes the list.
-  defp assign_merge_collections(socket, _sandbox, nil) do
-    socket
-    |> assign(:merge_collections_target_id, nil)
-    |> assign(:merge_collections_to_add, [])
-    |> assign(:merge_selected_collection_names, MapSet.new())
-  end
+      {_, {:error, _, %{text: text}}, _} ->
+        text
 
-  defp assign_merge_collections(socket, sandbox, target_project) do
-    %{to_create: to_create} =
-      Sandboxes.preview_collections(sandbox, target_project)
-
-    socket
-    |> assign(:merge_collections_target_id, target_project.id)
-    |> assign(:merge_collections_to_add, to_create)
-    |> assign(:merge_selected_collection_names, MapSet.new(to_create))
-  end
-
-  # Toggling any checkbox re-submits the merge form, so the change event
-  # fires for every input. Recomputing the preview also resets the row
-  # selections, so only do it when the target changed.
-  defp maybe_assign_merge_collections(socket, sandbox, target_project) do
-    new_target_id = target_project && target_project.id
-
-    if socket.assigns.merge_collections_target_id == new_target_id do
-      socket
-    else
-      assign_merge_collections(socket, sandbox, target_project)
+      _other ->
+        nil
     end
   end
 
-  defp merge_changeset(params \\ %{}) do
-    types = %{target_id: :string}
-
-    {%{}, types}
-    |> Changeset.cast(params, [:target_id])
-    |> Changeset.validate_required([:target_id])
+  defp nesting_limit_message do
+    "Maximum sandbox nesting depth reached (#{Lightning.Config.max_sandbox_nesting_depth()} levels deep)"
   end
 
-  defp confirm_changeset(sandbox, params \\ %{}) do
-    data = %{}
+  # --- Create and edit ---
 
-    {data, @empty_changeset_types}
-    |> Changeset.cast(params, [:name])
-    |> Changeset.validate_required([:name])
-    |> Changeset.validate_change(:name, fn :name, value ->
-      if value == sandbox.name,
-        do: [],
-        else: [name: "must match the sandbox name"]
-    end)
+  # Only the form's two fields reach the changeset.
+  defp form_params(params) do
+    %{"raw_name" => params["rawName"], "color" => params["color"]}
   end
 
-  defp empty_confirm_changeset do
-    Changeset.cast({%{}, @empty_changeset_types}, %{}, [:name])
+  defp form_changeset(base, params, parent_id) do
+    base
+    |> Project.form_changeset(params)
+    |> validate_unique_sandbox_name(parent_id)
+    |> name_errors_on_raw_name()
   end
+
+  # The form has no `name` field, so its errors move onto Name (`raw_name`);
+  # a key the form doesn't have would also show "Please fix the errors below."
+  defp name_errors_on_raw_name(changeset) do
+    changeset = Helpers.copy_error(changeset, :name, :raw_name)
+    %{changeset | errors: Keyword.delete(changeset.errors, :name)}
+  end
+
+  defp validate_unique_sandbox_name(changeset, parent_id) do
+    name = Changeset.get_field(changeset, :name)
+    id = Changeset.get_field(changeset, :id)
+
+    if parent_id && name && Projects.sandbox_name_exists?(parent_id, name, id) do
+      Changeset.add_error(changeset, :name, "Sandbox name already exists")
+    else
+      changeset
+    end
+  end
+
+  defp sandbox_attrs(changeset) do
+    %{
+      name: Changeset.get_field(changeset, :name),
+      color: Changeset.get_field(changeset, :color)
+    }
+  end
+
+  defp create_sandbox(socket, parent, actor, changeset) do
+    attrs = changeset |> sandbox_attrs() |> Map.put(:env, "dev")
+
+    with :ok <- ProjectLimiter.limit_new_sandbox(parent.id),
+         {:ok, sandbox} <- Projects.provision_sandbox(parent, actor, attrs) do
+      socket
+      |> put_flash(:info, "Sandbox created")
+      |> push_navigate(to: ~p"/projects/#{sandbox.id}/w")
+      |> reply_ok()
+    else
+      {:error, :unauthorized} ->
+        reply_error(
+          socket,
+          "You are not authorized to create sandboxes in this workspace"
+        )
+
+      {:error, :nesting_too_deep} ->
+        reply_error(socket, nesting_limit_message())
+
+      {:error, _reason, %{text: text}} ->
+        reply_error(socket, text)
+
+      {:error, %Changeset{} = error} ->
+        # A sibling may have taken the name since the check above.
+        rechecked = form_changeset(%Project{}, changeset.params, parent.id)
+
+        if rechecked.errors[:raw_name],
+          do: reply_error(socket, rechecked),
+          else: creation_failed(socket, parent, error.errors)
+
+      {:error, reason} ->
+        creation_failed(socket, parent, reason)
+    end
+  end
+
+  defp creation_failed(socket, parent, reason) do
+    Logger.error(
+      "Sandbox creation failed for project #{parent.id}: #{inspect(reason)}"
+    )
+
+    reply_error(
+      socket,
+      "Something went wrong while creating the sandbox. Please check the parent project's settings and try again."
+    )
+  end
+
+  defp update_sandbox(socket, sandbox, changeset) do
+    %{current_user: actor, project: project} = socket.assigns
+
+    case Projects.update_sandbox(sandbox, actor, sandbox_attrs(changeset)) do
+      {:ok, _sandbox} ->
+        socket
+        |> put_flash(:info, "Sandbox updated")
+        |> push_patch(to: ~p"/projects/#{project.id}/sandboxes")
+        |> reply_ok()
+
+      {:error, %Changeset{} = error} ->
+        # A sibling may have taken the name since the check above.
+        rechecked =
+          form_changeset(sandbox, changeset.params, sandbox.parent_id)
+
+        if rechecked.errors[:raw_name],
+          do: reply_error(socket, rechecked),
+          else: reply_error(socket, name_errors_on_raw_name(error))
+
+      {:error, :not_found} ->
+        reply_error(socket, "Sandbox not found")
+
+      {:error, :unauthorized} ->
+        reply_error(socket, "You are not authorized to edit this sandbox")
+
+      {:error, reason} ->
+        Logger.error(
+          "Sandbox update failed for project #{sandbox.id}: #{inspect(reason)}"
+        )
+
+        reply_error(
+          socket,
+          "Something went wrong while updating the sandbox. Please try again."
+        )
+    end
+  end
+
+  # --- Delete and restore ---
 
   defp handle_sandbox_delete_result(
          {:ok, _project},
          deleted_sandbox,
          %{assigns: %{project: current_project}} = socket
        ) do
-    should_redirect =
-      current_project.id == deleted_sandbox.id or
-        MapSet.member?(
-          sandbox_descendant_ids(deleted_sandbox),
-          current_project.id
-        )
-
-    socket_to_return =
-      socket
-      |> put_flash(
+    socket =
+      put_flash(
+        socket,
         :info,
         "Sandbox #{deleted_sandbox.name} scheduled for deletion."
       )
-      |> reset_delete_modal_state()
 
-    if should_redirect do
-      push_navigate(socket_to_return,
-        to: ~p"/projects/#{deleted_sandbox.parent_id}/sandboxes"
-      )
+    if current_project.id in subtree_ids(deleted_sandbox) do
+      socket
+      |> push_navigate(to: ~p"/projects/#{deleted_sandbox.parent_id}/sandboxes")
+      |> reply_ok()
     else
-      load_workspace_projects(socket_to_return)
+      socket |> load_workspace_projects() |> reply_ok()
     end
   end
 
-  defp handle_sandbox_delete_result({:error, :unauthorized}, _sandbox, socket) do
-    socket
-    |> put_flash(:error, "You don't have permission to delete this sandbox")
-    |> assign(:confirm_delete_open?, false)
-  end
+  defp handle_sandbox_delete_result({:error, :unauthorized}, _sandbox, socket),
+    do: reply_error(socket, "You don't have permission to delete this sandbox")
 
-  defp handle_sandbox_delete_result({:error, :not_found}, _sandbox, socket) do
-    socket
-    |> put_flash(:error, "Sandbox not found")
-    |> assign(:confirm_delete_open?, false)
-  end
+  defp handle_sandbox_delete_result({:error, :not_found}, _sandbox, socket),
+    do: reply_error(socket, "Sandbox not found")
 
-  defp handle_sandbox_delete_result({:error, reason}, _sandbox, socket) do
-    socket
-    |> put_flash(
-      :error,
-      "Failed to schedule sandbox deletion: #{inspect(reason)}"
+  defp handle_sandbox_delete_result({:error, reason}, sandbox, socket) do
+    Logger.error(
+      "Sandbox deletion failed for project #{sandbox.id}: #{inspect(reason)}"
     )
-    |> assign(:confirm_delete_open?, false)
+
+    reply_error(
+      socket,
+      "Couldn't schedule this sandbox for deletion. Please try again."
+    )
   end
 
   defp handle_cancel_deletion_result({:ok, _sandbox}, sandbox, socket) do
     socket
-    |> put_flash(
-      :info,
-      "Cancelled deletion of sandbox #{sandbox.name}."
-    )
+    |> put_flash(:info, "Cancelled deletion of sandbox #{sandbox.name}.")
     |> load_workspace_projects()
+    |> reply_ok()
   end
 
-  defp handle_cancel_deletion_result({:error, :unauthorized}, _sandbox, socket) do
-    put_flash(
-      socket,
-      :error,
-      "You are not authorized to cancel this sandbox's deletion"
-    )
-  end
+  defp handle_cancel_deletion_result({:error, :unauthorized}, _sandbox, socket),
+    do:
+      reply_error(
+        socket,
+        "You are not authorized to cancel this sandbox's deletion"
+      )
 
-  defp handle_cancel_deletion_result({:error, :not_found}, _sandbox, socket) do
-    put_flash(socket, :error, "Sandbox not found")
-  end
+  defp handle_cancel_deletion_result({:error, :not_found}, _sandbox, socket),
+    do: reply_error(socket, "Sandbox not found")
 
   defp handle_cancel_deletion_result(
          {:error, _reason, %{text: text}},
          _sandbox,
          socket
-       ) do
-    put_flash(socket, :error, text)
+       ),
+       do: reply_error(socket, text)
+
+  # The sandbox and every project under it, including ones the viewer can't see.
+  defp subtree_ids(sandbox),
+    do: MapSet.new([sandbox.id | Projects.descendant_ids([sandbox.id])])
+
+  # --- Merge ---
+
+  defp fetch_mergeable_source(socket, id) do
+    case find_row(socket, id) do
+      nil ->
+        reply_error(socket, "Sandbox not found")
+
+      %{can_merge: true} = sandbox ->
+        {:ok, sandbox}
+
+      _sandbox ->
+        reply_error(socket, "You are not authorized to merge this sandbox")
+    end
   end
 
-  defp get_merge_target_options(socket, source_sandbox, descendant_ids) do
+  defp fetch_merge_target(socket, source, target_id) do
+    descendant_ids = subtree_ids(source)
+
+    case Enum.find(
+           socket.assigns.workspace_projects,
+           &(&1.id == target_id and mergeable_target?(&1, descendant_ids))
+         ) do
+      nil -> reply_error(socket, "Target project not found")
+      target -> {:ok, target}
+    end
+  end
+
+  # Projects the viewer may merge this sandbox into: live, outside its
+  # subtree, and where they are an owner, admin or editor.
+  defp merge_targets(socket, descendant_ids) do
     current_user = socket.assigns.current_user
 
-    socket.assigns.workspace_projects
-    |> Enum.filter(fn project ->
-      mergeable_target?(project, source_sandbox, descendant_ids) and
+    Enum.filter(socket.assigns.workspace_projects, fn project ->
+      mergeable_target?(project, descendant_ids) and
         user_role_on_project(project, current_user) in [:owner, :admin, :editor]
-    end)
-    |> Enum.map(fn project ->
-      %{
-        value: project.id,
-        label: project.name
-      }
     end)
   end
 
@@ -927,36 +711,50 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp find_target_project(_workspace_projects, _target_id, nil, _descendants),
-    do: nil
-
-  defp find_target_project(workspace_projects, target_id, source, descendant_ids) do
-    Enum.find(workspace_projects, fn project ->
-      project.id == target_id and
-        mergeable_target?(project, source, descendant_ids)
-    end)
-  end
-
-  defp mergeable_target?(project, source_sandbox, descendant_ids) do
-    is_nil(project.scheduled_deletion) and project.id != source_sandbox.id and
+  # `descendant_ids` holds the sandbox itself as well as its subtree.
+  defp mergeable_target?(project, descendant_ids) do
+    is_nil(project.scheduled_deletion) and
       not MapSet.member?(descendant_ids, project.id)
   end
 
-  defp sandbox_descendant_ids(sandbox) do
-    MapSet.new(Projects.descendant_ids([sandbox.id]))
+  defp picked(ids, rows, key) when is_list(ids) do
+    offered = MapSet.new(rows, key)
+    ids |> Enum.filter(&MapSet.member?(offered, &1)) |> Enum.uniq()
   end
 
-  defp build_merge_workflow_list(
-         source,
-         _diverged_names,
-         _sandbox_changed_names,
-         nil
-       ) do
+  defp picked(_ids, _rows, _key), do: []
+
+  defp merge_preview(source, nil) do
+    %{
+      workflows: build_merge_workflow_list(source, [], [], nil),
+      credentials: [],
+      collections_to_add: []
+    }
+  end
+
+  defp merge_preview(source, target) do
+    source = Repo.preload(source, :workflows)
+    target = Repo.preload(target, :workflows)
+
+    %{
+      workflows:
+        build_merge_workflow_list(
+          source,
+          MergeProjects.diverged_workflows(source, target),
+          MergeProjects.diverged_workflows(target, source),
+          target
+        ),
+      credentials: sandbox_only_credentials(source, target),
+      collections_to_add: Sandboxes.preview_collections(source, target).to_create
+    }
+  end
+
+  defp build_merge_workflow_list(source, _diverged, _changed, nil) do
     source
     |> Repo.preload(:workflows)
     |> Map.get(:workflows, [])
     |> Enum.map(fn wf ->
-      %MergeWorkflow{
+      %{
         id: wf.id,
         name: wf.name,
         is_changed: true,
@@ -965,7 +763,7 @@ defmodule LightningWeb.SandboxLive.Index do
         is_deleted: false
       }
     end)
-    |> Enum.sort_by(fn wf -> wf.name end)
+    |> Enum.sort_by(& &1.name)
   end
 
   defp build_merge_workflow_list(
@@ -974,28 +772,17 @@ defmodule LightningWeb.SandboxLive.Index do
          sandbox_changed_names,
          target_project
        ) do
-    target_workflows =
-      target_project
-      |> Repo.preload(:workflows)
-      |> Map.get(:workflows, [])
-
-    target_workflow_names = MapSet.new(target_workflows, fn wf -> wf.name end)
-
+    target_workflows = target_project.workflows
+    target_workflow_names = MapSet.new(target_workflows, & &1.name)
     diverged_set = MapSet.new(diverged_names)
     sandbox_changed_set = MapSet.new(sandbox_changed_names)
-
-    source_workflows =
-      source
-      |> Repo.preload(:workflows)
-      |> Map.get(:workflows, [])
-
-    source_workflow_names = MapSet.new(source_workflows, fn wf -> wf.name end)
+    source_workflow_names = MapSet.new(source.workflows, & &1.name)
 
     source_entries =
-      Enum.map(source_workflows, fn wf ->
+      Enum.map(source.workflows, fn wf ->
         is_new = not MapSet.member?(target_workflow_names, wf.name)
 
-        %MergeWorkflow{
+        %{
           id: wf.id,
           name: wf.name,
           is_changed: is_new or MapSet.member?(sandbox_changed_set, wf.name),
@@ -1017,7 +804,7 @@ defmodule LightningWeb.SandboxLive.Index do
           workflow_added_after_fork?(wf, source)
       end)
       |> Enum.map(fn wf ->
-        %MergeWorkflow{
+        %{
           id: wf.id,
           name: wf.name,
           is_changed: false,
@@ -1027,8 +814,7 @@ defmodule LightningWeb.SandboxLive.Index do
         }
       end)
 
-    (source_entries ++ deleted_entries)
-    |> Enum.sort_by(fn wf -> wf.name end)
+    Enum.sort_by(source_entries ++ deleted_entries, & &1.name)
   end
 
   defp workflow_added_after_fork?(%{inserted_at: %DateTime{} = wf_inserted}, %{
@@ -1039,45 +825,11 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp workflow_added_after_fork?(_workflow, _source), do: false
 
-  # Always pass an explicit selection so unchecked target-only workflows are
-  # kept, not deleted. Only workflows deleted in the sandbox reach this list as
-  # target-only, and only the ones the user checks are removed.
-  defp resolve_selected_workflow_ids(assigns) do
-    deleted_ids =
-      assigns.merge_source_workflows
-      |> Enum.filter(fn wf -> wf.is_deleted end)
-      |> MapSet.new(fn wf -> wf.id end)
-
-    selected = assigns.merge_selected_workflow_ids
-
-    selected_source_ids =
-      selected
-      |> Enum.reject(&MapSet.member?(deleted_ids, &1))
-      |> Enum.to_list()
-
-    selected_deleted_ids =
-      selected
-      |> Enum.filter(&MapSet.member?(deleted_ids, &1))
-      |> Enum.to_list()
-
-    {selected_source_ids, selected_deleted_ids}
-  end
-
-  defp preload_merge_projects(source, nil),
-    do: {Repo.preload(source, :workflows), nil}
-
-  defp preload_merge_projects(source, target),
-    do: {Repo.preload(source, :workflows), Repo.preload(target, :workflows)}
-
   # The sandbox's project_credentials whose underlying credential the target
   # does not already have. These would be dropped on merge unless the user
   # chooses to carry them over.
-  defp sandbox_only_credentials(_source, nil), do: []
-
   defp sandbox_only_credentials(source, target) do
-    source =
-      Repo.preload(source, project_credentials: [:credential])
-
+    source = Repo.preload(source, project_credentials: [:credential])
     target = Repo.preload(target, :project_credentials)
 
     target_credential_ids =
@@ -1094,53 +846,8 @@ defmodule LightningWeb.SandboxLive.Index do
   defp credential_display_name(%{name: name}) when is_binary(name), do: name
   defp credential_display_name(_), do: "Untitled credential"
 
-  defp all_credential_ids(merge_credentials) do
-    MapSet.new(merge_credentials, & &1.id)
-  end
-
-  defp get_diverged_workflows(_source, nil), do: []
-
-  defp get_diverged_workflows(source, target_project) do
-    MergeProjects.diverged_workflows(source, target_project)
-  end
-
-  defp get_changed_workflows(_source, nil), do: []
-
-  defp get_changed_workflows(source, target_project) do
-    MergeProjects.diverged_workflows(target_project, source)
-  end
-
-  # Only names the user explicitly unchecked are skipped, and only for the
-  # target they were previewed against. A collection added to the sandbox
-  # after the preview is still created. Skipping is explicit, creating is
-  # the default.
-  defp skipped_collection_names(assigns, target) do
-    if assigns.merge_collections_target_id == target.id do
-      assigns.merge_collections_to_add
-      |> MapSet.new()
-      |> MapSet.difference(assigns.merge_selected_collection_names)
-      |> MapSet.to_list()
-    else
-      []
-    end
-  end
-
-  defp perform_merge(
-         source,
-         target,
-         actor,
-         {selected_workflow_ids, deleted_target_workflow_ids},
-         selected_credential_ids,
-         skip_collections
-       ) do
+  defp perform_merge(source, target, actor, opts) do
     maybe_commit_to_github(target, "pre-merge commit")
-
-    opts = %{
-      selected_workflow_ids: selected_workflow_ids,
-      deleted_target_workflow_ids: deleted_target_workflow_ids,
-      selected_credential_ids: selected_credential_ids,
-      skip_collections: skip_collections
-    }
 
     case Sandboxes.merge(source, target, actor, opts) do
       {:ok, _updated_target} = success ->
@@ -1159,38 +866,17 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp handle_merge_result(
-         {:ok, _updated_target},
-         socket,
-         source,
-         target,
-         _root_project,
-         actor
-       ) do
+  defp handle_merge_result({:ok, _updated_target}, socket, source, target, actor) do
     Lightning.Projects.SandboxPromExPlugin.fire_sandbox_merged_event()
 
-    flash_message = build_merge_success_message(source, target, actor)
-
     socket
-    |> put_flash(:info, flash_message)
-    |> reset_merge_modal_state()
+    |> put_flash(:info, build_merge_success_message(source, target, actor))
     |> push_navigate(to: ~p"/projects/#{target.id}/w")
-    |> noreply()
+    |> reply_ok()
   end
 
-  defp handle_merge_result(
-         {:error, reason},
-         socket,
-         _source,
-         _target,
-         _root,
-         _actor
-       ) do
-    socket
-    |> put_flash(:error, format_merge_error(reason))
-    |> reset_merge_modal_state()
-    |> noreply()
-  end
+  defp handle_merge_result({:error, reason}, socket, _source, _target, _actor),
+    do: reply_error(socket, format_merge_error(reason))
 
   defp build_merge_success_message(source, target, actor) do
     case Sandboxes.schedule_sandbox_deletion(source, actor) do
@@ -1204,29 +890,12 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp create_sandbox_tooltip_message(
-         can_create_sandbox,
-         limiter_result,
-         nesting_at_limit
-       ) do
-    case {can_create_sandbox, limiter_result, nesting_at_limit} do
-      {false, _, _} ->
-        "You are not authorized to create sandboxes in this workspace"
-
-      {_, _, true} ->
-        "Maximum sandbox nesting depth reached (#{Lightning.Config.max_sandbox_nesting_depth()} levels deep)"
-
-      {_, {:error, _, %{text: text}}, _} ->
-        text
-
-      _other ->
-        nil
-    end
-  end
-
   defp format_merge_error(%{text: text}), do: text
 
   defp format_merge_error(_reason) do
     "Couldn't merge this sandbox. Please try again."
   end
+
+  # The kit's send resolves on this; the flash says what happened.
+  defp reply_ok(socket), do: {:reply, %{}, socket}
 end

@@ -855,17 +855,6 @@ export const DownloadText = {
   },
 } as PhoenixHook<{}>;
 
-// Sets the checkbox to indeterminate state if the element has the
-// `indeterminate` class
-export const CheckboxIndeterminate = {
-  mounted() {
-    this.el.indeterminate = this.el.classList.contains('indeterminate');
-  },
-  updated() {
-    this.el.indeterminate = this.el.classList.contains('indeterminate');
-  },
-} as PhoenixHook<{}, {}, HTMLInputElement>;
-
 // assets/js/typewriter_hook.js
 export const TypewriterHook = {
   mounted() {

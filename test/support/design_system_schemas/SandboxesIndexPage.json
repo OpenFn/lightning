@@ -1,0 +1,187 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "project": {
+      "$ref": "#/definitions/CurrentProject"
+    },
+    "projectLabel": {
+      "type": "string"
+    },
+    "root": {
+      "$ref": "#/definitions/SandboxRow"
+    },
+    "rootIsSandbox": {
+      "type": "boolean"
+    },
+    "sandboxes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/SandboxRow"
+      }
+    },
+    "newHref": {
+      "type": "string"
+    },
+    "createBlockedReason": {
+      "type": ["string", "null"]
+    },
+    "gracePeriodDays": {
+      "type": ["number", "null"]
+    },
+    "form": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/SandboxForm"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "project",
+    "projectLabel",
+    "root",
+    "rootIsSandbox",
+    "sandboxes",
+    "newHref",
+    "createBlockedReason",
+    "gracePeriodDays",
+    "form"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "CurrentProject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": ["string", "null"]
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "parentId", "color"],
+      "additionalProperties": false
+    },
+    "SandboxRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": ["string", "null"]
+        },
+        "env": {
+          "type": ["string", "null"]
+        },
+        "scheduledDeletion": {
+          "type": ["string", "null"]
+        },
+        "workflowsHref": {
+          "type": "string"
+        },
+        "editHref": {
+          "type": ["string", "null"]
+        },
+        "canEdit": {
+          "type": "boolean"
+        },
+        "canDelete": {
+          "type": "boolean"
+        },
+        "canMerge": {
+          "type": "boolean"
+        },
+        "canCancelDeletion": {
+          "type": "boolean"
+        },
+        "restoreBlockedReason": {
+          "type": ["string", "null"]
+        },
+        "activeDescendantCount": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "color",
+        "env",
+        "scheduledDeletion",
+        "workflowsHref",
+        "editHref",
+        "canEdit",
+        "canDelete",
+        "canMerge",
+        "canCancelDeletion",
+        "restoreBlockedReason",
+        "activeDescendantCount"
+      ],
+      "additionalProperties": false
+    },
+    "SandboxForm": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "new"
+            },
+            "parentName": {
+              "type": "string"
+            },
+            "parentIsSandbox": {
+              "type": "boolean"
+            },
+            "initialColor": {
+              "type": "string"
+            }
+          },
+          "required": ["mode", "parentName", "parentIsSandbox", "initialColor"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "edit"
+            },
+            "sandboxId": {
+              "type": "string"
+            },
+            "initial": {
+              "$ref": "#/definitions/SandboxValues"
+            }
+          },
+          "required": ["mode", "sandboxId", "initial"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "SandboxValues": {
+      "type": "object",
+      "properties": {
+        "rawName": {
+          "type": "string"
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["rawName", "color"],
+      "additionalProperties": false
+    }
+  }
+}

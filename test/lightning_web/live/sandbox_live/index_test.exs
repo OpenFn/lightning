@@ -1,933 +1,329 @@
 defmodule LightningWeb.SandboxLive.IndexTest do
   use LightningWeb.ConnCase, async: true
-
-  import Phoenix.LiveViewTest
-  import Lightning.Factories
-  import Lightning.GithubHelpers
-  import Ecto.Query
-
-  alias Lightning.Repo
-  alias Lightning.Projects.Project
-
   use Mimic
+  use LightningWeb.SandboxPageHelpers
 
-  setup_all do
-    Mimic.copy(Lightning.Projects)
-    Mimic.copy(Lightning.Projects.Sandboxes)
-    Mimic.copy(Lightning.Projects.MergeProjects)
-    Mimic.copy(Lightning.Projects.Provisioner)
+  import Ecto.Query
+  import Lightning.Factories
+  import Phoenix.LiveViewTest
 
-    Mimic.stub_with(Lightning.Projects, Lightning.Projects)
-    Mimic.stub_with(Lightning.Projects.Sandboxes, Lightning.Projects.Sandboxes)
+  alias Lightning.Projects.Project
+  alias Lightning.Repo
 
-    Mimic.stub_with(
-      Lightning.Projects.MergeProjects,
-      Lightning.Projects.MergeProjects
-    )
+  # The page is drawn by React from data-props. What it renders from them
+  # (badges, the scheduled section, tooltips, the modals' copy and the
+  # disabled buttons) is tested in the design system's own
+  # SandboxesIndexPage.test.tsx (in @openfn/ui), and the events it sends in
+  # assets/test/design-system/SandboxesIndexPage.test.tsx. The merge's
+  # events are tested in merge_test.exs and merge_selection_test.exs.
 
-    Mimic.stub_with(
-      Lightning.Projects.Provisioner,
-      Lightning.Projects.Provisioner
-    )
+  defp send_event(view, event, payload),
+    do: push_page_event(view, @page, event, payload)
 
-    :ok
+  defp names(view), do: Enum.map(props(view)["sandboxes"], & &1["name"])
+
+  defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
+
+  defp stub_sandbox_limit(project_id, text) do
+    Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn
+      %{type: :new_sandbox, amount: 1}, %{project_id: ^project_id} ->
+        {:error, :exceeded_limit, %{text: text}}
+
+      _action, _context ->
+        :ok
+    end)
   end
 
-  describe "Index (user logged in)" do
-    setup :register_and_log_in_user
+  setup :register_and_log_in_user
 
-    setup %{user: user} do
-      parent =
-        insert(:project,
-          name: "parent",
-          env: nil,
-          project_users: [%{user: user, role: :owner}]
-        )
+  setup %{user: user} do
+    parent =
+      insert(:project,
+        name: "parent",
+        env: nil,
+        project_users: [%{user: user, role: :owner}]
+      )
 
-      sb1 =
-        insert(:project,
-          name: "sb-1",
-          color: "#ff0000",
-          env: "staging",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
+    sb1 =
+      insert(:project,
+        name: "sb-1",
+        color: "#ff0000",
+        env: "staging",
+        parent: parent,
+        project_users: [%{user: user, role: :owner}]
+      )
 
-      sb2 =
-        insert(:project,
-          name: "sb-2",
-          color: "#00ff00",
-          env: "dev",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
+    sb2 =
+      insert(:project,
+        name: "sb-2",
+        color: "#00ff00",
+        env: "dev",
+        parent: parent,
+        project_users: [%{user: user, role: :owner}]
+      )
 
-      sb_no_env =
-        insert(:project,
-          name: "sb-no-env",
-          color: "#0000ff",
-          env: nil,
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
+    {:ok, parent: parent, sb1: sb1, sb2: sb2}
+  end
 
-      {:ok, parent: parent, sb1: sb1, sb2: sb2, sb_no_env: sb_no_env}
-    end
-
-    test "lists sandboxes; empty state shows message", %{
+  describe "the list" do
+    test "sends the root and each sandbox as the page's rows", %{
       conn: conn,
       parent: parent,
-      sb1: sb1,
-      sb2: sb2,
-      sb_no_env: sb_no_env
+      sb1: sb1
     } do
       {:ok, view, html} =
         live(conn, ~p"/projects/#{parent.id}/sandboxes", on_error: :raise)
 
       assert html =~ "Sandboxes"
-      assert has_element?(view, "#edit-sandbox-#{sb1.id}")
-      assert has_element?(view, "#edit-sandbox-#{sb2.id}")
 
-      for sandbox <- [sb1, sb2, sb_no_env] do
-        from(pu in Lightning.Projects.ProjectUser,
-          where: pu.project_id == ^sandbox.id
-        )
-        |> Repo.delete_all()
+      assert %{
+               "project" => %{"id" => project_id, "parentId" => nil},
+               "projectLabel" => "parent",
+               "rootIsSandbox" => false,
+               "newHref" => new_href,
+               "createBlockedReason" => nil,
+               "form" => nil
+             } = props(view)
 
-        Repo.delete!(sandbox)
-      end
+      assert project_id == parent.id
+      assert new_href == ~p"/projects/#{parent.id}/sandboxes/new"
+      assert names(view) == ["sb-1", "sb-2"]
 
-      html2 = render_patch(view, ~p"/projects/#{parent.id}/sandboxes")
-      assert html2 =~ "No sandboxes found"
+      root_workflows = ~p"/projects/#{parent.id}/w"
+
+      assert %{
+               "editHref" => nil,
+               "env" => nil,
+               "workflowsHref" => ^root_workflows,
+               "canEdit" => false,
+               "canDelete" => false,
+               "canMerge" => false
+             } = row(view, parent)
+
+      sb1_edit = ~p"/projects/#{parent.id}/sandboxes/#{sb1.id}/edit"
+      sb1_workflows = ~p"/projects/#{sb1.id}/w"
+
+      assert %{
+               "name" => "sb-1",
+               "color" => "#ff0000",
+               "env" => "staging",
+               "scheduledDeletion" => nil,
+               "editHref" => ^sb1_edit,
+               "workflowsHref" => ^sb1_workflows,
+               "canEdit" => true,
+               "canDelete" => true,
+               "canMerge" => true,
+               "canCancelDeletion" => false,
+               "restoreBlockedReason" => nil,
+               "activeDescendantCount" => 0
+             } = row(view, sb1)
     end
 
-    test "root project without environment shows 'main' badge", %{
+    test "reloads the list on a patch back to it", %{
       conn: conn,
-      parent: parent
+      parent: parent,
+      sb1: sb1,
+      sb2: sb2
     } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      badge = element(view, "#env-badge-#{parent.id}")
+      for sandbox <- [sb1, sb2] do
+        Repo.delete_all(Ecto.assoc(sandbox, :project_users))
+        Repo.delete!(sandbox)
+      end
 
-      assert render(badge) =~ "main"
+      render_patch(view, ~p"/projects/#{parent.id}/sandboxes")
+      assert names(view) == []
     end
 
-    test "root project with environment shows env badge with actual environment",
-         %{
-           conn: conn,
-           user: user
-         } do
-      parent_with_env =
+    test "a sandbox's page names it as the current project and its root's env",
+         %{conn: conn, user: user, sb1: sb1} do
+      root =
         insert(:project,
-          name: "parent-with-env",
+          name: "with-env",
           env: "production",
           project_users: [%{user: user, role: :owner}]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{parent_with_env.id}/sandboxes")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      assert %{"env" => "production"} = row(view, root)
 
-      badge = element(view, "#env-badge-#{parent_with_env.id}")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{sb1.id}/sandboxes")
 
-      assert render(badge) =~ "production"
-      refute render(badge) =~ "main"
+      assert %{"project" => %{"id" => id, "parentId" => parent_id}} =
+               props(view)
+
+      assert {id, parent_id} == {sb1.id, sb1.parent_id}
     end
 
-    test "sandbox with environment shows env badge, sandbox without env shows no badge",
-         %{
-           conn: conn,
-           parent: parent,
-           sb1: sb1,
-           sb_no_env: sb_no_env
-         } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      badge = element(view, "#env-badge-#{sb1.id}")
-
-      assert render(badge) =~ "staging"
-
-      refute element(view, "#env-badge-#{sb_no_env.id}") |> has_element?()
-    end
-
-    test "current sandbox shows active badge", %{
-      conn: conn,
-      parent: parent,
-      sb1: _sb1
-    } do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      env_badge = element(view, "#env-badge-#{parent.id}")
-      active_badge = element(view, "#active-badge-#{parent.id}")
-
-      assert render(env_badge) =~ "main"
-      assert render(active_badge) =~ "active"
-    end
-
-    test "create sandbox button is disabled when the project is at the nesting cap",
-         %{conn: conn, user: user} do
-      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 1 end)
-
-      root =
-        insert(:project,
-          name: "deep-root",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      sandbox_at_cap =
-        insert(:project,
-          name: "deep-sb-1",
-          parent: root,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{sandbox_at_cap.id}/sandboxes")
-
-      assert has_element?(view, "button#create-sandbox-button:disabled")
-      assert render(view) =~ "Maximum sandbox nesting depth reached"
-    end
-
-    test "create sandbox button stays enabled when the project is below the nesting cap",
-         %{conn: conn, user: user} do
-      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 5 end)
-
-      root =
-        insert(:project,
-          name: "shallow-root",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      assert has_element?(view, "button#create-sandbox-button")
-      refute has_element?(view, "button#create-sandbox-button:disabled")
-      refute render(view) =~ "Maximum sandbox nesting depth reached"
-    end
-
-    test "create sandbox button is disabled when the limiter returns error", %{
-      conn: conn,
-      parent: %{id: parent_id} = parent,
-      test: test
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert has_element?(view, "button#create-sandbox-button")
-      refute has_element?(view, "button#create-sandbox-button:disabled")
-
-      error_message = "error-#{test}"
-
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn
-          %{type: :new_sandbox, amount: 1}, %{project_id: ^parent_id} ->
-            {:error, :exceeded_limit, %{text: error_message}}
-
-          _action, _context ->
-            :ok
-        end
-      )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-      assert has_element?(view, "button#create-sandbox-button:disabled")
-
-      assert view |> render() =~ error_message
-    end
-
-    test "visiting /new redirects back to index incase the limiter returns error",
-         %{
-           conn: conn,
-           parent: %{id: parent_id} = parent,
-           test: test
-         } do
-      error_message = "error-#{test}"
-
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn
-          %{type: :new_sandbox, amount: 1}, %{project_id: ^parent_id} ->
-            {:error, :exceeded_limit, %{text: error_message}}
-
-          _action, _context ->
-            :ok
-        end
-      )
-
-      assert {:error, {:live_redirect, redirect}} =
-               live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
-
-      assert redirect[:to] == ~p"/projects/#{parent.id}/sandboxes"
-      assert redirect[:flash]["error"] == error_message
-    end
-
-    test "delete modal shows redirect warning when deleting current project", %{
+    test "counts the live sandboxes under each one, the hidden ones too", %{
       conn: conn,
       parent: parent,
       sb1: sb1,
-      user: _user
+      user: user
     } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{sb1.id}/sandboxes")
+      child =
+        insert(:project,
+          name: "child",
+          parent: sb1,
+          project_users: [%{user: user, role: :owner}]
+        )
 
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
+      # Not a member, so not listed, but deleting sb-1 still takes it.
+      insert(:project, name: "hidden-grandchild", parent: child)
 
-      html = render(view)
+      insert(:project,
+        name: "scheduled-child",
+        parent: sb1,
+        scheduled_deletion: now(),
+        project_users: [%{user: user, role: :owner}]
+      )
 
-      assert html =~ "You are currently viewing this project"
-      assert html =~ "you&#39;ll be redirected to"
-      assert html =~ "#{parent.name}"
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert row(view, sb1)["activeDescendantCount"] == 2
+      assert row(view, child)["activeDescendantCount"] == 1
+      assert row(view, parent)["activeDescendantCount"] == 4
+      refute "hidden-grandchild" in names(view)
     end
 
-    test "delete modal without redirect warning when not deleting current project",
-         %{
-           conn: conn,
-           parent: parent,
-           sb1: sb1
-         } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
-
-      html = render(view)
-
-      refute html =~ "You are currently viewing this project"
-      refute html =~ "After deletion, you'll be redirected to"
-    end
-
-    test "navigates to new sandbox modal from header button", %{
+    test "sends the grace period, or null when none is set", %{
       conn: conn,
       parent: parent
     } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> 1 end)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      assert props(view)["gracePeriodDays"] == 1
 
-      view |> element("#create-sandbox-button") |> render_click()
-
-      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
-      assert has_element?(view, "#sandbox-form-new")
-      assert render(view) =~ "Create a new sandbox"
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> nil end)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      assert props(view)["gracePeriodDays"] == nil
     end
 
-    test "navigates to edit modal via card action", %{
+    test "renders the usage limiter's banner above the page", %{
       conn: conn,
-      parent: parent,
-      sb1: sb1
+      parent: parent
     } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :check_limits,
+        &Lightning.Extensions.StubUsageLimiter.check_limits/1
+      )
 
-      view |> element("#edit-sandbox-#{sb1.id} button") |> render_click()
+      {:ok, view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/#{sb1.id}/edit")
-      assert has_element?(view, "#sandbox-form-#{sb1.id}")
-      assert render(view) =~ "Edit sandbox"
+      assert html =~ "Some banner text"
+      assert has_element?(view, @page)
     end
+  end
 
-    test "delete modal open/validate/close UX", %{
+  describe "visibility" do
+    test "a root editor sees only the sandboxes they are a member of", %{
       conn: conn,
-      parent: parent,
-      sb1: sb1
+      user: user
     } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
-      assert has_element?(view, "#confirm-delete-sandbox")
-
-      view
-      |> form("#confirm-delete-sandbox form", confirm: %{"name" => "wrong"})
-      |> render_change()
-
-      refute view
-             |> element(
-               "#confirm-delete-sandbox button[type=\"submit\"]:not([disabled])"
-             )
-             |> has_element?()
-
-      view
-      |> element("#confirm-delete-sandbox [aria-label='Close']")
-      |> render_click()
-
-      refute has_element?(view, "#confirm-delete-sandbox")
-    end
-
-    test "delete modal shows singular descendant copy when the sandbox has one child",
-         %{conn: conn, parent: parent, sb1: sb1, user: user} do
-      _only_child =
+      parent =
         insert(:project,
-          name: "only-child",
-          parent: sb1,
-          project_users: [%{user: user, role: :owner}]
+          name: "editor-root",
+          project_users: [%{user: user, role: :editor}]
         )
 
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      insert(:project,
+        name: "visible-sandbox",
+        parent: parent,
+        project_users: [%{user: user, role: :viewer}]
+      )
 
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
+      insert(:project, name: "hidden-sandbox", parent: parent)
 
-      html = render(view)
-      assert html =~ "Its child sandbox will also be deleted."
-      refute html =~ "child sandboxes will also be deleted"
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      assert names(view) == ["visible-sandbox"]
     end
 
-    test "delete modal shows plural descendant copy with count when the sandbox has multiple children",
-         %{conn: conn, parent: parent, sb1: sb1, user: user} do
-      for n <- 1..3 do
+    test "a root owner sees only the sandboxes they have a row on", %{
+      conn: conn,
+      parent: parent
+    } do
+      insert(:project, name: "without-pu", parent: parent)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      assert names(view) == ["sb-1", "sb-2"]
+    end
+
+    test "a sandbox-only member's tree starts at their access root", %{
+      conn: conn,
+      user: user
+    } do
+      hidden_root = insert(:project, name: "hidden-workspace")
+
+      access_root =
         insert(:project,
-          name: "child-#{n}",
-          parent: sb1,
-          project_users: [%{user: user, role: :owner}]
+          name: "user-access-root",
+          parent: hidden_root,
+          project_users: [%{user: user, role: :admin}]
         )
+
+      insert(:project,
+        name: "visible-leaf",
+        parent: access_root,
+        project_users: [%{user: user, role: :admin}]
+      )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{access_root.id}/sandboxes")
+
+      refute html =~ hidden_root.name
+
+      assert %{
+               "root" => %{"name" => "user-access-root"},
+               "rootIsSandbox" => true
+             } =
+               props(view)
+
+      assert names(view) == ["visible-leaf"]
+    end
+
+    test "every action refuses a sandbox the viewer can't see", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "editor-root",
+          project_users: [%{user: user, role: :editor}]
+        )
+
+      hidden =
+        insert(:project,
+          name: "hidden-sandbox",
+          parent: parent,
+          scheduled_deletion: now()
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      for {event, payload} <- [
+            {"delete-sandbox", %{"nameConfirmation" => hidden.name}},
+            {"cancel-sandbox-deletion", %{}},
+            {"preview-merge", %{"targetId" => nil}},
+            {"merge-sandbox", %{"targetId" => parent.id}}
+          ] do
+        send_event(view, event, Map.put(payload, "id", hidden.id))
+        assert_reply(view, %{error: "Sandbox not found"})
       end
 
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
-
-      html = render(view)
-      assert html =~ "Its 3 child sandboxes will also be deleted."
-      refute html =~ "Its child sandbox will also be deleted."
-    end
-
-    test "delete modal descendant count excludes children already scheduled for deletion",
-         %{conn: conn, parent: parent, sb1: sb1, user: user} do
-      _active_child =
-        insert(:project,
-          name: "active-child",
-          parent: sb1,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      _scheduled_child =
-        insert(:project,
-          name: "scheduled-child",
-          parent: sb1,
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
-
-      html = render(view)
-      assert html =~ "Its child sandbox will also be deleted."
-      refute html =~ "child sandboxes will also be deleted"
-    end
-
-    test "confirm-delete result paths: ok, unauthorized, not_found, generic error",
-         %{conn: conn, parent: parent, sb1: sb1, sb2: sb2, user: user} do
-      {:ok, view, _} =
-        live(conn, ~p"/projects/#{parent.id}/sandboxes", on_error: :raise)
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn %Project{id: id}, user_arg ->
-          assert id == sb1.id
-          assert user_arg.id == user.id
-          {:ok, %Project{}}
-        end
-      )
-
-      parent_id = parent.id
-
-      Mimic.stub(Lightning.Projects, :list_descendants, fn
-        ^parent_id -> [sb2]
-        _ -> []
-      end)
-
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
-
-      html =
-        view
-        |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb1.name})
-        |> render_submit()
-
-      assert html =~ "Sandbox #{sb1.name} scheduled for deletion."
-
-      assert has_element?(view, "#edit-sandbox-#{sb2.id}")
-
-      target_id = sb2.id
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn %Project{id: ^target_id}, user_arg ->
-          assert user_arg.id == user.id
-          {:error, :unauthorized}
-        end
-      )
-
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view |> element("#delete-sandbox-#{target_id} button") |> render_click()
-
-      html =
-        view
-        |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb2.name})
-        |> render_submit()
-
-      assert html =~ "You don&#39;t have permission to delete this sandbox"
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn %Project{id: ^target_id}, user_arg ->
-          assert user_arg.id == user.id
-          {:error, :not_found}
-        end
-      )
-
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view |> element("#delete-sandbox-#{target_id} button") |> render_click()
-
-      html =
-        view
-        |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb2.name})
-        |> render_submit()
-
-      assert html =~ "Sandbox not found"
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn %Project{id: ^target_id}, user_arg ->
-          assert user_arg.id == user.id
-          {:error, :boom}
-        end
-      )
-
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view |> element("#delete-sandbox-#{target_id} button") |> render_click()
-
-      html =
-        view
-        |> form("#confirm-delete-sandbox form", confirm: %{"name" => sb2.name})
-        |> render_submit()
-
-      assert html =~ "Failed to schedule sandbox deletion: "
-    end
-
-    test "open-delete-modal with unknown id shows flash", %{
-      conn: conn,
-      parent: parent
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      bad_id = Ecto.UUID.generate()
-      html = render_click(view, "open-delete-modal", %{"id" => bad_id})
-
-      assert html =~ "Sandbox not found"
-      refute has_element?(view, "#confirm-delete-sandbox")
-    end
-
-    test "confirm-delete-validate with empty params keeps modal open", %{
-      conn: conn,
-      parent: parent,
-      sb1: sb1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
-      assert has_element?(view, "#confirm-delete-sandbox")
-
-      _html_before = render(view)
-
-      _html_after =
-        view |> element("#confirm-delete-sandbox form") |> render_change(%{})
-
-      assert has_element?(view, "#confirm-delete-sandbox")
-    end
-
-    test "confirm-delete with empty params keeps modal open", %{
-      conn: conn,
-      parent: parent,
-      sb1: sb1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
-      assert has_element?(view, "#confirm-delete-sandbox")
-
-      _html =
-        view |> element("#confirm-delete-sandbox form") |> render_submit(%{})
-
-      assert has_element?(view, "#confirm-delete-sandbox")
-    end
-
-    test "close-delete-modal resets assigns", %{
-      conn: conn,
-      parent: parent,
-      sb1: sb1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
-      assert has_element?(view, "#confirm-delete-sandbox")
-
-      view
-      |> element("#confirm-delete-sandbox [aria-label='Close']")
-      |> render_click()
-
-      refute has_element?(view, "#confirm-delete-sandbox")
-
-      view |> element("#delete-sandbox-#{sb1.id} button") |> render_click()
-      assert has_element?(view, "#confirm-delete-sandbox")
-
-      view
-      |> form("#confirm-delete-sandbox form", confirm: %{"name" => "nope"})
-      |> render_change()
-
-      refute view
-             |> element(
-               ~s/#confirm-delete-sandbox button[type="submit"]:not([disabled])/
-             )
-             |> has_element?()
-    end
-
-    test "delete modal mentions the configured grace period when no purge window is set",
-         %{conn: conn, parent: parent, sb1: sb1} do
-      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> nil end)
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html =
-        view
-        |> element("#delete-sandbox-#{sb1.id} button")
-        |> render_click()
-
-      assert html =~ "the configured grace period"
-    end
-
-    test "delete modal uses singular '1 day' when grace period is one day",
-         %{conn: conn, parent: parent, sb1: sb1} do
-      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> 1 end)
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html =
-        view
-        |> element("#delete-sandbox-#{sb1.id} button")
-        |> render_click()
-
-      assert html =~ "retained for 1 day "
-      refute html =~ "retained for 1 days"
-    end
-
-    test "confirm-delete-validate ignores event when no sandbox selected" do
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{
-          confirm_delete_sandbox: nil,
-          confirm_changeset: :sentinel,
-          confirm_delete_input: ""
-        }
-      }
-
-      {:noreply, socket} =
-        LightningWeb.SandboxLive.Index.handle_event(
-          "confirm-delete-validate",
-          %{"confirm" => %{}},
-          socket
-        )
-
-      assert socket.assigns.confirm_changeset == :sentinel
-      assert socket.assigns.confirm_delete_input == ""
-    end
-
-    test "confirm-delete ignores event when no sandbox selected" do
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{
-          project: %Lightning.Projects.Project{id: Ecto.UUID.generate()},
-          current_user: %Lightning.Accounts.User{id: Ecto.UUID.generate()},
-          confirm_delete_sandbox: nil,
-          confirm_changeset: :sentinel
-        }
-      }
-
-      {:noreply, sock2} =
-        LightningWeb.SandboxLive.Index.handle_event(
-          "confirm-delete",
-          %{"confirm" => %{}},
-          socket
-        )
-
-      assert sock2.assigns == socket.assigns
-    end
-  end
-
-  describe "Authorization scenarios for action buttons" do
-    setup :register_and_log_in_user
-
-    setup %{user: owner_user} do
-      viewer_user = insert(:user)
-
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [
-            %{user: owner_user, role: :owner},
-            %{user: viewer_user, role: :viewer}
-          ]
-        )
-
-      sandbox =
-        insert(:project,
-          name: "test-sandbox",
-          parent: parent,
-          project_users: [
-            %{user: owner_user, role: :owner},
-            %{user: viewer_user, role: :viewer}
-          ]
-        )
-
-      {:ok,
-       owner_user: owner_user,
-       viewer_user: viewer_user,
-       parent: parent,
-       sandbox: sandbox}
-    end
-
-    test "edit button disabled state for unauthorized user", %{
-      conn: conn,
-      viewer_user: viewer_user,
-      parent: parent,
-      sandbox: _sandbox
-    } do
-      conn = log_in_user(conn, viewer_user)
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert html =~ ~s(cursor-not-allowed)
-      assert html =~ ~s(text-slate-300)
-      assert html =~ "You are not authorized to edit this sandbox"
-    end
-
-    test "edit button enabled state for authorized user", %{
-      conn: conn,
-      owner_user: owner_user,
-      parent: parent,
-      sandbox: _sandbox
-    } do
-      conn = log_in_user(conn, owner_user)
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert html =~ ~s(hover:bg-slate-100)
-      assert html =~ ~s(text-slate-700)
-      assert html =~ "Edit this sandbox"
-    end
-
-    test "delete button disabled state for unauthorized user", %{
-      conn: conn,
-      viewer_user: viewer_user,
-      parent: parent,
-      sandbox: _sandbox
-    } do
-      conn = log_in_user(conn, viewer_user)
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert html =~ "You are not authorized to delete this sandbox"
-      assert html =~ ~s(cursor-not-allowed)
-    end
-
-    test "delete button enabled state for authorized user", %{
-      conn: conn,
-      owner_user: owner_user,
-      parent: parent,
-      sandbox: _sandbox
-    } do
-      conn = log_in_user(conn, owner_user)
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert html =~ "Delete this sandbox"
-      assert html =~ ~s(hover:bg-slate-100)
-    end
-  end
-
-  describe "Handle params authorization coverage" do
-    setup :register_and_log_in_user
-
-    setup %{user: owner_user} do
-      viewer_user = insert(:user)
-
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [
-            %{user: owner_user, role: :owner},
-            %{user: viewer_user, role: :viewer}
-          ]
-        )
-
-      sandbox =
-        insert(:project,
-          name: "test-sandbox",
-          parent: parent,
-          project_users: [
-            %{user: owner_user, role: :owner},
-            %{user: viewer_user, role: :viewer}
-          ]
-        )
-
-      {:ok,
-       owner_user: owner_user,
-       viewer_user: viewer_user,
-       parent: parent,
-       sandbox: sandbox}
-    end
-
-    test "edit route unauthorized redirects with flash", %{
-      conn: conn,
-      viewer_user: viewer_user,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      conn = log_in_user(conn, viewer_user)
-
-      result =
-        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sandbox.id}/edit")
-
-      assert {:error, {:live_redirect, %{to: redirect_path, flash: flash}}} =
-               result
-
-      assert redirect_path == "/projects/#{parent.id}/sandboxes"
-      assert flash["error"] == "You are not authorized to edit this sandbox"
-    end
-
-    test "new route unauthorized redirects with flash", %{
-      conn: conn,
-      viewer_user: viewer_user,
-      parent: parent
-    } do
-      conn = log_in_user(conn, viewer_user)
-
-      result = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
-
-      assert {:error, {:live_redirect, %{to: redirect_path, flash: flash}}} =
-               result
-
-      assert redirect_path == "/projects/#{parent.id}/sandboxes"
-
-      assert flash["error"] ==
-               "You are not authorized to create sandboxes in this workspace"
-    end
-
-    test "edit route with non-existent sandbox shows error", %{
-      conn: conn,
-      parent: parent
-    } do
-      fake_id = Ecto.UUID.generate()
+      assert Repo.reload!(hidden).scheduled_deletion
 
       {:ok, _view, html} =
-        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{fake_id}/edit")
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{hidden.id}/edit")
 
       assert html =~ "Sandbox not found"
     end
-  end
 
-  describe "Sandbox visibility" do
-    setup :register_and_log_in_user
-
-    test "root editor only sees sandboxes they are a project user on", %{
+    test "every action refuses the workspace root itself", %{
       conn: conn,
       user: user
     } do
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user: user, role: :editor}]
-        )
-
-      visible_sandbox =
-        insert(:project,
-          name: "visible-sandbox",
-          parent: parent,
-          project_users: [%{user: user, role: :viewer}]
-        )
-
-      hidden_sandbox =
-        insert(:project,
-          name: "hidden-sandbox",
-          parent: parent,
-          project_users: []
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert has_element?(view, "#edit-sandbox-#{visible_sandbox.id}")
-      refute has_element?(view, "#edit-sandbox-#{hidden_sandbox.id}")
-    end
-
-    test "root owner only sees sandboxes they have a direct row on", %{
-      conn: conn,
-      user: user
-    } do
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      sandbox_with_pu =
-        insert(:project,
-          name: "with-pu",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      sandbox_without_pu =
-        insert(:project,
-          name: "without-pu",
-          parent: parent,
-          project_users: []
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert has_element?(view, "#edit-sandbox-#{sandbox_with_pu.id}")
-      refute has_element?(view, "#edit-sandbox-#{sandbox_without_pu.id}")
-    end
-
-    test "handlers reject a hidden sandbox id dispatched via a crafted event",
-         %{conn: conn, user: user} do
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user: user, role: :editor}]
-        )
-
-      hidden_sandbox =
-        insert(:project,
-          name: "hidden-sandbox",
-          parent: parent,
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
-          project_users: []
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      for event <- ~w(open-delete-modal cancel-sandbox-deletion open-merge-modal) do
-        html = render_hook(view, event, %{"id" => hidden_sandbox.id})
-        assert html =~ "Sandbox not found"
-      end
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-      refute assigns.confirm_delete_open?
-      refute assigns.merge_modal_open?
-
-      {:ok, _edit_view, edit_html} =
-        live(
-          conn,
-          ~p"/projects/#{parent.id}/sandboxes/#{hidden_sandbox.id}/edit"
-        )
-
-      assert edit_html =~ "Sandbox not found"
-    end
-
-    test "handlers reject the workspace root's own id dispatched via a crafted event",
-         %{conn: conn, user: user} do
-      # The root sits in the same `workspace_tree` the handlers look ids up in,
-      # so it is found. What used to happen next is that a root admin resolved
-      # as admin "on the sandbox" via the cascade and every action went through.
       root =
         insert(:project,
           name: "workspace-root",
@@ -942,3980 +338,783 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{root.id}/sandboxes")
 
-      assert render_hook(view, "open-delete-modal", %{"id" => root.id}) =~
-               "You are not authorized to delete this sandbox"
+      send_event(view, "delete-sandbox", %{
+        "id" => root.id,
+        "nameConfirmation" => root.name
+      })
 
-      assert render_hook(view, "open-merge-modal", %{"id" => root.id}) =~
-               "You are not authorized to merge this sandbox"
+      assert_reply(view, %{
+        error: "You are not authorized to delete this sandbox"
+      })
 
-      assigns = :sys.get_state(view.pid).socket.assigns
-      refute assigns.confirm_delete_open?
-      refute assigns.merge_modal_open?
+      assert %{error: "You are not authorized to merge this sandbox"} =
+               preview(view, root)
 
-      assert Lightning.Repo.get!(Lightning.Projects.Project, root.id)
-      assert is_nil(Lightning.Repo.reload!(root).scheduled_deletion)
-      assert Lightning.Repo.reload!(trigger).enabled
+      merge(view, root, root.id)
 
-      # Unlike a hidden sandbox, the root is genuinely in the tree, so the edit
-      # route refuses it on authorisation rather than reporting it missing.
+      assert_reply(view, %{error: "You are not authorized to merge this sandbox"})
+
+      root = Repo.reload!(root)
+      assert is_nil(root.scheduled_deletion)
+      assert Repo.reload!(trigger).enabled
+
       assert {:error, {:live_redirect, %{flash: %{"error" => edit_error}}}} =
                live(conn, ~p"/projects/#{root.id}/sandboxes/#{root.id}/edit")
 
-      assert edit_error =~ "You are not authorized to edit this sandbox"
-    end
-
-    test "sandbox-only member sees their access root, not the absolute workspace root",
-         %{conn: conn, user: user} do
-      hidden_root =
-        insert(:project,
-          name: "hidden-workspace",
-          project_users: []
-        )
-
-      access_root =
-        insert(:project,
-          name: "user-access-root",
-          parent: hidden_root,
-          project_users: [%{user: user, role: :admin}]
-        )
-
-      visible_leaf =
-        insert(:project,
-          name: "visible-leaf",
-          parent: access_root,
-          project_users: [%{user: user, role: :admin}]
-        )
-
-      {:ok, _view, html} = live(conn, ~p"/projects/#{access_root.id}/sandboxes")
-
-      refute html =~ hidden_root.name
-      assert html =~ access_root.name
-      assert html =~ visible_leaf.name
+      assert edit_error == "You are not authorized to edit this sandbox"
     end
   end
 
-  describe "Delete sandbox with descendant checking" do
-    setup :register_and_log_in_user
+  describe "who may create" do
+    test "a viewer is told why they can't, and can't reach the form", %{
+      conn: conn,
+      parent: parent
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: parent, user: viewer, role: :viewer)
+      conn = log_in_user(conn, viewer)
 
-    setup %{user: user} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert props(view)["createBlockedReason"] ==
+               "You are not authorized to create sandboxes in this workspace"
+
+      assert {:error, {:live_redirect, %{to: to, flash: flash}}} =
+               live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      assert to == ~p"/projects/#{parent.id}/sandboxes"
+
+      assert flash["error"] ==
+               "You are not authorized to create sandboxes in this workspace"
+    end
+
+    test "an editor can create, and reaches the form", %{
+      conn: conn,
+      parent: parent
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: parent, user: editor, role: :editor)
+      conn = log_in_user(conn, editor)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      assert props(view)["createBlockedReason"] == nil
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+      assert %{"mode" => "new"} = props(view)["form"]
+    end
+
+    test "the nesting cap blocks creating, below it nothing does", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 1 end)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{sb1.id}/sandboxes")
+
+      assert props(view)["createBlockedReason"] =~
+               "Maximum sandbox nesting depth reached"
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      assert props(view)["createBlockedReason"] == nil
+    end
+
+    test "the plan's limit blocks creating and sends /new back to the list", %{
+      conn: conn,
+      parent: parent,
+      test: test
+    } do
+      stub_sandbox_limit(parent.id, "error-#{test}")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      assert props(view)["createBlockedReason"] == "error-#{test}"
+
+      assert {:error, {:live_redirect, redirect}} =
+               live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      assert redirect[:to] == ~p"/projects/#{parent.id}/sandboxes"
+      assert redirect[:flash]["error"] == "error-#{test}"
+    end
+  end
+
+  describe "create" do
+    defp create_sandbox(view, raw_name, color \\ "#E33D63"),
+      do:
+        send_event(view, "create-sandbox", %{
+          "rawName" => raw_name,
+          "color" => color
+        })
+
+    test "/new opens the form with a palette colour under this project", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      render_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      assert %{
+               "mode" => "new",
+               "parentName" => "parent",
+               "parentIsSandbox" => false,
+               "initialColor" => color
+             } = props(view)["form"]
+
+      assert color in LightningWeb.SandboxLive.Components.color_palette_hex_colors()
+
+      render_patch(view, ~p"/projects/#{parent.id}/sandboxes")
+      assert props(view)["form"] == nil
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{sb1.id}/sandboxes/new")
+
+      assert %{"parentName" => "sb-1", "parentIsSandbox" => true} =
+               props(view)["form"]
+    end
+
+    test "creates the sandbox, copying the parent's users and support access",
+         %{conn: conn, user: user} do
+      owner = insert(:user)
+      editor = insert(:user)
+
       parent =
         insert(:project,
-          name: "parent",
-          project_users: [%{user: user, role: :owner}]
+          name: "parent-proj",
+          allow_support_access: true,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: user, role: :admin},
+            %{user: editor, role: :editor}
+          ]
         )
 
-      child_sandbox =
-        insert(:project,
-          name: "child-sandbox",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
 
-      grandchild_sandbox =
-        insert(:project,
-          name: "grandchild-sandbox",
-          parent: child_sandbox,
-          project_users: [%{user: user, role: :owner}]
-        )
+      create_sandbox(view, "My Test Sandbox", "#5AA1F0")
+      {to, flash} = assert_redirect(view)
 
-      {:ok,
-       parent: parent,
-       child_sandbox: child_sandbox,
-       grandchild_sandbox: grandchild_sandbox}
+      sandbox =
+        Project
+        |> Repo.get_by!(parent_id: parent.id, name: "my-test-sandbox")
+        |> Repo.preload(:project_users)
+
+      assert to == ~p"/projects/#{sandbox.id}/w"
+      assert flash["info"] == "Sandbox created"
+      assert {sandbox.color, sandbox.env} == {"#5AA1F0", "dev"}
+      assert sandbox.allow_support_access
+
+      # The creator owns it; the parent's owner comes in as an admin.
+      assert sandbox.project_users
+             |> Enum.map(&{&1.user_id, &1.role})
+             |> Enum.sort() ==
+               Enum.sort([
+                 {user.id, :owner},
+                 {owner.id, :admin},
+                 {editor.id, :editor}
+               ])
     end
 
-    test "deleting sandbox redirects when current project is descendant", %{
-      conn: conn,
-      parent: parent,
-      child_sandbox: child_sandbox,
-      grandchild_sandbox: grandchild_sandbox,
-      user: user
-    } do
-      {:ok, view, _} =
-        live(conn, ~p"/projects/#{grandchild_sandbox.id}/sandboxes")
+    test "a sibling's name or a blank name is refused on the field, and nothing is created",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
 
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn sandbox, user_arg ->
-          assert sandbox.id == child_sandbox.id
-          assert user_arg.id == user.id
-          {:ok, %Project{}}
-        end
-      )
+      create_sandbox(view, "SB 1")
 
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+      assert_reply(view, %{
+        error: "Please fix the errors below.",
+        fieldErrors: field_errors
+      })
 
-      view
-      |> element("#delete-sandbox-#{child_sandbox.id} button")
-      |> render_click()
+      assert field_errors == %{"rawName" => ["Sandbox name already exists"]}
 
-      view
-      |> form("#confirm-delete-sandbox form",
-        confirm: %{"name" => child_sandbox.name}
-      )
-      |> render_submit()
+      create_sandbox(view, "")
 
-      assert_redirect(view, ~p"/projects/#{parent.id}/sandboxes")
+      assert_reply(view, %{
+        fieldErrors: %{"rawName" => ["This field can't be blank."]}
+      })
+
+      assert Repo.aggregate(
+               from(p in Project, where: p.parent_id == ^parent.id),
+               :count
+             ) == 2
     end
 
-    test "deleting a sandbox from three levels down does not crash", %{
-      conn: conn,
-      parent: parent,
-      grandchild_sandbox: grandchild_sandbox,
-      user: user
-    } do
-      great_grandchild =
-        insert(:project,
-          name: "great-grandchild",
-          parent: grandchild_sandbox,
-          project_users: [%{user: user, role: :owner}]
-        )
+    test "a name taken between the check and the insert is refused on the field",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
 
-      sibling =
-        insert(:project,
-          name: "sibling",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} =
-        live(conn, ~p"/projects/#{great_grandchild.id}/sandboxes")
-
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#delete-sandbox-#{sibling.id} button")
-      |> render_click()
-
-      html =
-        view
-        |> form("#confirm-delete-sandbox form",
-          confirm: %{"name" => sibling.name}
-        )
-        |> render_submit()
-
-      assert html =~ "scheduled for deletion"
-    end
-
-    test "deleting sandbox does not redirect when current project is not descendant",
-         %{
-           conn: conn,
-           parent: parent,
-           child_sandbox: child_sandbox,
-           user: _user
-         } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn sandbox, _user_arg ->
-          assert sandbox.id == child_sandbox.id
-          {:ok, %Project{}}
-        end
-      )
-
-      parent_id = parent.id
-
-      Mimic.stub(Lightning.Projects, :list_descendants, fn
-        ^parent_id -> []
-        _ -> []
+      Mimic.expect(Lightning.Projects, :provision_sandbox, fn _parent,
+                                                              _user,
+                                                              _attrs ->
+        {:error,
+         %Project{}
+         |> Ecto.Changeset.change()
+         |> Ecto.Changeset.add_error(:name, "has already been taken")}
       end)
 
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+      # Free when the form is checked, taken by the time it's checked again.
+      Lightning.Projects
+      |> Mimic.expect(:sandbox_name_exists?, fn _parent_id, _name, _id ->
+        false
+      end)
+      |> Mimic.expect(:sandbox_name_exists?, fn _parent_id, _name, _id ->
+        true
+      end)
 
-      view
-      |> element("#delete-sandbox-#{child_sandbox.id} button")
-      |> render_click()
+      allow_mocks(view)
 
-      html =
-        view
-        |> form("#confirm-delete-sandbox form",
-          confirm: %{"name" => child_sandbox.name}
-        )
-        |> render_submit()
+      create_sandbox(view, "Test Sandbox")
 
-      assert html =~ "Sandboxes"
-      assert html =~ parent.name
-      assert render(view) =~ "Sandboxes"
+      assert_reply(view, %{fieldErrors: field_errors})
+      assert field_errors == %{"rawName" => ["Sandbox name already exists"]}
+    end
+
+    test "the plan's limit at save, or any other failure, is replied and the form stays open",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      stub_sandbox_limit(parent.id, "limit-reached")
+
+      create_sandbox(view, "sb-limited")
+      assert_reply(view, %{error: "limit-reached"})
+      assert %{"mode" => "new"} = props(view)["form"]
+
+      Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _, _ ->
+        :ok
+      end)
+
+      Mimic.expect(Lightning.Projects, :provision_sandbox, fn _parent,
+                                                              _user,
+                                                              _attrs ->
+        {:error,
+         %Project{}
+         |> Ecto.Changeset.change()
+         |> Ecto.Changeset.add_error(:history_retention_period, "is invalid")}
+      end)
+
+      allow_mocks(view)
+
+      create_sandbox(view, "sb-broken")
+
+      assert_reply(view, %{
+        error:
+          "Something went wrong while creating the sandbox. Please check the parent project's settings and try again."
+      })
+
+      assert %{"mode" => "new"} = props(view)["form"]
+      refute Repo.get_by(Project, name: "sb-limited")
+    end
+
+    test "the nesting cap refuses the save, and nothing is created", %{
+      conn: conn,
+      sb1: sb1
+    } do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 1 end)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{sb1.id}/sandboxes/new")
+
+      create_sandbox(view, "too-deep")
+
+      assert_reply(view, %{
+        error: "Maximum sandbox nesting depth reached (1 levels deep)"
+      })
+
+      refute Repo.exists?(from(p in Project, where: p.parent_id == ^sb1.id))
+    end
+
+    test "is refused when the context refuses it", %{
+      conn: conn,
+      parent: parent
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
+
+      Mimic.expect(Lightning.Projects, :provision_sandbox, fn _parent,
+                                                              _user,
+                                                              _attrs ->
+        {:error, :unauthorized}
+      end)
+
+      allow_mocks(view)
+
+      create_sandbox(view, "refused")
+
+      assert_reply(view, %{
+        error: "You are not authorized to create sandboxes in this workspace"
+      })
+    end
+
+    test "is refused off the /new route",
+         %{conn: conn, parent: parent} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      create_sandbox(view, "not-from-the-form")
+
+      assert_reply(view, %{
+        error: "You are not authorized to create sandboxes in this workspace"
+      })
+
+      viewer = insert(:user)
+      insert(:project_user, project: parent, user: viewer, role: :viewer)
+
+      {:ok, view, _html} =
+        live(log_in_user(conn, viewer), ~p"/projects/#{parent.id}/sandboxes")
+
+      create_sandbox(view, "from-a-viewer")
+
+      assert_reply(view, %{
+        error: "You are not authorized to create sandboxes in this workspace"
+      })
+
+      refute Repo.get_by(Project, name: "not-from-the-form")
+      refute Repo.get_by(Project, name: "from-a-viewer")
     end
   end
 
-  describe "Scheduled-for-deletion sandboxes" do
-    setup :register_and_log_in_user
+  describe "edit" do
+    defp update_sandbox(view, sandbox, raw_name, color \\ "#ff0000"),
+      do:
+        send_event(view, "update-sandbox", %{
+          "id" => sandbox.id,
+          "rawName" => raw_name,
+          "color" => color
+        })
 
-    setup %{user: user} do
-      parent =
+    test "the edit route opens the form with the stored values", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb1.id}/edit")
+
+      sandbox_id = sb1.id
+
+      assert %{
+               "mode" => "edit",
+               "sandboxId" => ^sandbox_id,
+               "initial" => %{"rawName" => "sb-1", "color" => "#ff0000"}
+             } = props(view)["form"]
+    end
+
+    test "saves the name and colour and goes back to the list", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb1.id}/edit")
+
+      assert update_sandbox(view, sb1, "Renamed SB", "#00ff00") =~
+               "Sandbox updated"
+
+      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert %{name: "renamed-sb", color: "#00ff00"} = Repo.reload!(sb1)
+      assert props(view)["form"] == nil
+    end
+
+    test "keeps its own name, and refuses a sibling's or a blank one on the field",
+         %{conn: conn, parent: parent, sb1: sb1} do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb1.id}/edit")
+
+      update_sandbox(view, sb1, "SB 2")
+
+      assert_reply(view, %{fieldErrors: field_errors})
+      assert field_errors == %{"rawName" => ["Sandbox name already exists"]}
+
+      update_sandbox(view, sb1, "")
+
+      assert_reply(view, %{
+        fieldErrors: %{"rawName" => ["This field can't be blank."]}
+      })
+
+      assert Repo.reload!(sb1).name == "sb-1"
+
+      assert update_sandbox(view, sb1, "sb-1") =~ "Sandbox updated"
+    end
+
+    test "a viewer can't open the form, and is refused when they send the save",
+         %{conn: conn, parent: parent, sb1: sb1} do
+      viewer = insert(:user)
+      insert(:project_user, project: parent, user: viewer, role: :viewer)
+      insert(:project_user, project: sb1, user: viewer, role: :viewer)
+      conn = log_in_user(conn, viewer)
+
+      assert {:error, {:live_redirect, %{to: to, flash: flash}}} =
+               live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb1.id}/edit")
+
+      assert to == ~p"/projects/#{parent.id}/sandboxes"
+      assert flash["error"] == "You are not authorized to edit this sandbox"
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      assert %{"canEdit" => false} = row(view, sb1)
+
+      update_sandbox(view, sb1, "taken-over")
+      assert_reply(view, %{error: "You are not authorized to edit this sandbox"})
+      assert Repo.reload!(sb1).name == "sb-1"
+    end
+
+    test "only the sandbox whose form is open can be saved", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1,
+      sb2: sb2
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb1.id}/edit")
+
+      update_sandbox(view, sb2, "not-the-open-form")
+      assert_reply(view, %{error: "You are not authorized to edit this sandbox"})
+      assert Repo.reload!(sb2).name == "sb-2"
+    end
+
+    test "replies with what the context refused", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb1.id}/edit")
+
+      allow_mocks(view)
+
+      for {result, message} <- [
+            {{:error, :unauthorized},
+             "You are not authorized to edit this sandbox"},
+            {{:error, :not_found}, "Sandbox not found"},
+            {{:error, :not_related_to_project},
+             "Something went wrong while updating the sandbox. Please try again."}
+          ] do
+        Mimic.expect(Lightning.Projects, :update_sandbox, fn _sandbox,
+                                                             _actor,
+                                                             _attrs ->
+          result
+        end)
+
+        update_sandbox(view, sb1, "renamed")
+        assert_reply(view, %{error: ^message})
+      end
+
+      # A name taken after the form's check lands on the field, not on `name`.
+      Mimic.expect(Lightning.Projects, :update_sandbox, fn _sandbox,
+                                                           _actor,
+                                                           _attrs ->
+        {:error,
+         %Project{}
+         |> Ecto.Changeset.change()
+         |> Ecto.Changeset.add_error(:name, "has already been taken")}
+      end)
+
+      # Free when the form is checked, taken by the time it's checked again.
+      Lightning.Projects
+      |> Mimic.expect(:sandbox_name_exists?, fn _parent_id, _name, _id ->
+        false
+      end)
+      |> Mimic.expect(:sandbox_name_exists?, fn _parent_id, _name, _id ->
+        true
+      end)
+
+      update_sandbox(view, sb1, "renamed")
+      assert_reply(view, %{fieldErrors: field_errors})
+      assert field_errors == %{"rawName" => ["Sandbox name already exists"]}
+
+      assert Repo.reload!(sb1).name == "sb-1"
+    end
+
+    test "a missing sandbox's edit route says so", %{conn: conn, parent: parent} do
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{parent.id}/sandboxes/#{Ecto.UUID.generate()}/edit"
+        )
+
+      assert html =~ "Sandbox not found"
+      assert props(view)["form"] == nil
+    end
+  end
+
+  describe "delete" do
+    defp delete_sandbox(view, sandbox, typed),
+      do:
+        send_event(view, "delete-sandbox", %{
+          "id" => sandbox.id,
+          "nameConfirmation" => typed
+        })
+
+    test "schedules the sandbox and its subtree, and refreshes the list", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1,
+      user: user
+    } do
+      child =
         insert(:project,
-          name: "parent",
+          name: "child",
+          parent: sb1,
           project_users: [%{user: user, role: :owner}]
         )
 
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert delete_sandbox(view, sb1, "sb-1") =~
+               "Sandbox sb-1 scheduled for deletion."
+
+      assert_reply(view, %{})
+
+      assert Repo.reload!(sb1).scheduled_deletion
+      assert Repo.reload!(child).scheduled_deletion
+
+      assert %{
+               "scheduledDeletion" => at,
+               "canCancelDeletion" => true,
+               "canDelete" => false
+             } =
+               row(view, sb1)
+
+      assert at
+    end
+
+    test "moves the viewer to the parent's list when they are inside it", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1,
+      user: user
+    } do
+      grandchild =
+        insert(:project,
+          name: "grandchild",
+          parent: sb1,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{grandchild.id}/sandboxes")
+
+      delete_sandbox(view, sb1, "sb-1")
+      flash = assert_redirect(view, ~p"/projects/#{parent.id}/sandboxes")
+      assert flash["info"] == "Sandbox sb-1 scheduled for deletion."
+    end
+
+    test "deleting a sibling from three levels down stays put", %{
+      conn: conn,
+      sb1: sb1,
+      sb2: sb2,
+      user: user
+    } do
+      deep =
+        insert(:project,
+          name: "deep",
+          parent:
+            insert(:project,
+              name: "mid",
+              parent: sb1,
+              project_users: [%{user: user, role: :owner}]
+            ),
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{deep.id}/sandboxes")
+
+      assert delete_sandbox(view, sb2, "sb-2") =~ "scheduled for deletion"
+      assert Repo.reload!(sb2).scheduled_deletion
+    end
+
+    test "refuses a name that doesn't match, and nothing is scheduled", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      delete_sandbox(view, sb1, "wrong")
+      assert_reply(view, %{error: "must match the sandbox name"})
+
+      send_event(view, "delete-sandbox", %{"id" => sb1.id})
+      assert_reply(view, %{error: "must match the sandbox name"})
+
+      refute Repo.reload!(sb1).scheduled_deletion
+    end
+
+    test "replies with what the context refused", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      allow_mocks(view)
+
+      for {result, message} <- [
+            {{:error, :unauthorized},
+             "You don't have permission to delete this sandbox"},
+            {{:error, :not_found}, "Sandbox not found"},
+            {{:error, :boom},
+             "Couldn't schedule this sandbox for deletion. Please try again."}
+          ] do
+        Mimic.expect(Lightning.Projects.Sandboxes, :schedule_sandbox_deletion, fn
+          %Project{id: id}, _actor when id == sb1.id -> result
+        end)
+
+        delete_sandbox(view, sb1, "sb-1")
+        assert_reply(view, %{error: ^message})
+      end
+    end
+
+    test "a viewer is refused when they send it, and nothing is scheduled", %{
+      conn: conn,
+      parent: parent,
+      sb1: sb1
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: parent, user: viewer, role: :viewer)
+      insert(:project_user, project: sb1, user: viewer, role: :viewer)
+
+      {:ok, view, _html} =
+        live(log_in_user(conn, viewer), ~p"/projects/#{parent.id}/sandboxes")
+
+      assert %{"canDelete" => false} = row(view, sb1)
+
+      delete_sandbox(view, sb1, "sb-1")
+
+      assert_reply(view, %{
+        error: "You are not authorized to delete this sandbox"
+      })
+
+      refute Repo.reload!(sb1).scheduled_deletion
+    end
+  end
+
+  describe "restore" do
+    setup %{parent: parent, user: user} do
       scheduled =
         insert(:project,
           name: "scheduled",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}],
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
-        )
-
-      {:ok, parent: parent, scheduled: scheduled}
-    end
-
-    test "lists scheduled sandboxes under a separate section with the cancel action",
-         %{conn: conn, parent: parent, scheduled: scheduled} do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert has_element?(
-               view,
-               "#scheduled-for-deletion-section",
-               "Scheduled for deletion"
-             )
-
-      assert has_element?(
-               view,
-               ~s(#scheduled-for-deletion-section #sandbox-card-#{scheduled.id}[aria-disabled="true"])
-             )
-
-      assert has_element?(
-               view,
-               "#cancel-deletion-sandbox-#{scheduled.id} button",
-               "Restore"
-             )
-
-      refute has_element?(view, "#delete-sandbox-#{scheduled.id}")
-      refute has_element?(view, "#edit-sandbox-#{scheduled.id}")
-      refute has_element?(view, "#branch-rewire-sandbox-#{scheduled.id}")
-    end
-
-    test "shows the env badge on a scheduled sandbox card", %{
-      conn: conn,
-      user: user
-    } do
-      parent =
-        insert(:project,
-          name: "p-env",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      scheduled =
-        insert(:project,
-          name: "scheduled-with-env",
           env: "production",
           parent: parent,
           project_users: [%{user: user, role: :owner}],
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+          scheduled_deletion: now()
         )
 
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert has_element?(view, "#env-badge-#{scheduled.id}", "production")
+      {:ok, scheduled: scheduled}
     end
 
-    test "shows the active badge when the current project gets scheduled mid-session",
-         %{conn: conn, user: user} do
-      grandparent =
-        insert(:project,
-          name: "gp-active",
-          project_users: [%{user: user, role: :owner}]
-        )
+    defp restore_sandbox(view, sandbox),
+      do: send_event(view, "cancel-sandbox-deletion", %{"id" => sandbox.id})
 
-      current =
-        insert(:project,
-          name: "current-mid-session",
-          parent: grandparent,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      sibling =
-        insert(:project,
-          name: "sibling",
-          parent: grandparent,
-          project_users: [%{user: user, role: :owner}],
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{current.id}/sandboxes")
-
-      Repo.update!(
-        Ecto.Changeset.change(current,
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
-        )
-      )
-
-      view
-      |> element("#cancel-deletion-sandbox-#{sibling.id} button")
-      |> render_click()
-
-      assert has_element?(view, "#active-badge-#{current.id}", "active")
-    end
-
-    test "cancelling deletion clears scheduled_deletion and refreshes the list",
-         %{conn: conn, parent: parent, scheduled: scheduled} do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#cancel-deletion-sandbox-#{scheduled.id} button")
-      |> render_click()
-
-      assert render(view) =~ "Cancelled deletion of sandbox #{scheduled.name}"
-      assert Repo.get!(Project, scheduled.id).scheduled_deletion == nil
-      refute has_element?(view, "#scheduled-for-deletion-section")
-      assert has_element?(view, "#delete-sandbox-#{scheduled.id}")
-    end
-
-    test "cancelling fails gracefully when actor lacks permission", %{
+    test "a scheduled sandbox offers only Restore", %{
       conn: conn,
       parent: parent,
       scheduled: scheduled
     } do
-      other_user = insert(:user)
-      conn = log_in_user(conn, other_user)
-
-      _ =
-        Lightning.Projects.add_project_users(
-          parent,
-          [%{user_id: other_user.id, role: :viewer}],
-          other_user
-        )
-
-      _ =
-        Lightning.Projects.add_project_users(
-          scheduled,
-          [%{user_id: other_user.id, role: :viewer}],
-          other_user
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert has_element?(
-               view,
-               ~s(#sandbox-card-#{scheduled.id}[aria-disabled="true"])
-             )
-
-      refute has_element?(
-               view,
-               "#cancel-deletion-sandbox-#{scheduled.id} button:not([disabled])"
-             )
-    end
-
-    test "cancel-sandbox-deletion with an unknown id flashes a not-found error",
-         %{conn: conn, parent: parent} do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html =
-        render_click(view, "cancel-sandbox-deletion", %{
-          "id" => Ecto.UUID.generate()
-        })
-
-      assert html =~ "Sandbox not found"
-    end
-
-    test "flashes an unauthorized error when the context refuses the cancel",
-         %{conn: conn, parent: parent, scheduled: scheduled} do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :cancel_scheduled_sandbox_deletion,
-        fn _sandbox, _actor -> {:error, :unauthorized} end
-      )
-
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      html =
-        view
-        |> element("#cancel-deletion-sandbox-#{scheduled.id} button")
-        |> render_click()
-
-      assert html =~
-               "You are not authorized to cancel this sandbox&#39;s deletion"
-    end
-
-    test "flashes a not-found error when the sandbox vanished before the cancel",
-         %{conn: conn, parent: parent, scheduled: scheduled} do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :cancel_scheduled_sandbox_deletion,
-        fn _sandbox, _actor -> {:error, :not_found} end
-      )
-
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      html =
-        view
-        |> element("#cancel-deletion-sandbox-#{scheduled.id} button")
-        |> render_click()
-
-      assert html =~ "Sandbox not found"
-    end
-
-    test "Restore button is disabled with the limiter's tooltip when at limit",
-         %{conn: conn, parent: parent, scheduled: scheduled} do
-      message = %Lightning.Extensions.Message{text: "stub-blocked-message"}
-
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn %{type: :new_sandbox}, _ctx ->
-          {:error, :too_many_sandboxes, message}
-        end
-      )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert has_element?(
-               view,
-               "#cancel-deletion-sandbox-#{scheduled.id} button[disabled]"
-             )
-
-      assert render(view) =~ "stub-blocked-message"
-    end
-
-    test "Restore flashes the limiter's message when the backend rejects",
-         %{conn: conn, parent: parent, scheduled: scheduled} do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      message = %Lightning.Extensions.Message{text: "stub-blocked-message"}
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :cancel_scheduled_sandbox_deletion,
-        fn _sandbox, _actor ->
-          {:error, :too_many_sandboxes, message}
-        end
-      )
-
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      html =
-        render_click(view, "cancel-sandbox-deletion", %{"id" => scheduled.id})
-
-      assert html =~ "stub-blocked-message"
-    end
-
-    test "tooltip shows the day count when scheduled more than a day out", %{
-      conn: conn,
-      user: user
-    } do
-      parent =
-        insert(:project,
-          name: "p-multi-day",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      _scheduled =
-        insert(:project,
-          name: "later",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}],
-          scheduled_deletion:
-            DateTime.utc_now()
-            |> DateTime.add(5, :day)
-            |> DateTime.truncate(:second)
-        )
-
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert html =~ ~r/\(in \d+ days\)/
-    end
-
-    test "tooltip shows '1 day' when scheduled just over one day out", %{
-      conn: conn,
-      user: user
-    } do
-      parent =
-        insert(:project,
-          name: "p-1day",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      _scheduled =
-        insert(:project,
-          name: "soon",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}],
-          scheduled_deletion:
-            DateTime.utc_now()
-            |> DateTime.add(1, :day)
-            |> DateTime.add(2, :minute)
-            |> DateTime.truncate(:second)
-        )
-
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert html =~ "(in 1 day)"
-    end
-
-    test "tooltip shows '(today)' when scheduled within the same day", %{
-      conn: conn,
-      user: user
-    } do
-      parent =
-        insert(:project,
-          name: "p-today",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      _scheduled =
-        insert(:project,
-          name: "now",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}],
-          scheduled_deletion:
-            DateTime.utc_now()
-            |> DateTime.add(2, :hour)
-            |> DateTime.truncate(:second)
-        )
-
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert html =~ "(today)"
-    end
-
-    test "tooltip omits the relative suffix when scheduled in the past", %{
-      conn: conn,
-      user: user
-    } do
-      parent =
-        insert(:project,
-          name: "p-past",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      scheduled =
-        insert(:project,
-          name: "overdue",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}],
-          scheduled_deletion:
-            DateTime.utc_now()
-            |> DateTime.add(-2, :day)
-            |> DateTime.truncate(:second)
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      assert has_element?(
-               view,
-               ~s(#sandbox-card-#{scheduled.id}[aria-disabled="true"])
-             )
-
-      refute render(view) =~ "(in"
-    end
-  end
-
-  describe "Merge modal functionality" do
-    setup :register_and_log_in_user
-
-    setup %{user: user} do
-      # Create a hierarchy:
-      # root
-      # ├── child1
-      # │   ├── grandchild1
-      # │   └── grandchild2
-      # ├── child2
-      # └── child3
-
-      root =
-        insert(:project,
-          name: "root",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      child1 =
-        insert(:project,
-          name: "child1",
-          parent: root,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      child2 =
-        insert(:project,
-          name: "child2",
-          parent: root,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      child3 =
-        insert(:project,
-          name: "child3",
-          parent: root,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      grandchild1 =
-        insert(:project,
-          name: "grandchild1",
-          parent: child1,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      grandchild2 =
-        insert(:project,
-          name: "grandchild2",
-          parent: child1,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok,
-       root: root,
-       child1: child1,
-       child2: child2,
-       child3: child3,
-       grandchild1: grandchild1,
-       grandchild2: grandchild2}
-    end
-
-    test "merge button opens modal", %{conn: conn, root: root, child1: child1} do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      assert has_element?(view, "#merge-sandbox-modal")
-      assert render(view) =~ "Merge"
-      assert render(view) =~ child1.name
-    end
-
-    test "merge modal shows all valid targets excluding descendants", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      dropdown_html =
-        view
-        |> element("#merge-target-select")
-        |> render()
-
-      assert dropdown_html =~ root.name
-      assert dropdown_html =~ "child2"
-      assert dropdown_html =~ "child3"
-
-      refute dropdown_html =~ "child1"
-      refute dropdown_html =~ "grandchild1"
-      refute dropdown_html =~ "grandchild2"
-    end
-
-    test "merge modal defaults to parent as target", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      hidden_input =
-        view
-        |> element("input[type=hidden][name='merge[target_id]']")
-        |> render()
-
-      assert hidden_input =~ root.id
-    end
-
-    test "merge modal shows no descendants warning for leaf sandbox", %{
-      conn: conn,
-      root: root,
-      child2: child2
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child2.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      refute html =~ "Child sandboxes will be closed"
-      refute html =~ "will also be closed"
-    end
-
-    test "merge modal shows single descendant warning", %{
-      conn: conn,
-      root: root,
-      grandchild1: grandchild1,
-      user: user
-    } do
-      great_grandchild =
-        insert(:project,
-          name: "great-grandchild",
-          parent: grandchild1,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{grandchild1.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~ great_grandchild.name
-      assert html =~ "will also be deleted"
-    end
-
-    test "merge modal shows multiple descendants warning with full list", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~ "child sandboxes will also be deleted"
-      assert html =~ child1.name
-    end
-
-    test "merge modal descendant count excludes children already scheduled for deletion",
-         %{conn: conn, root: root, child1: child1, grandchild1: grandchild1} do
-      Repo.update_all(
-        from(p in Project, where: p.id == ^grandchild1.id),
-        set: [
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
-        ]
-      )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      html = render(view)
-      assert html =~ "Its child sandbox will also be deleted."
-      refute html =~ "Its 2 child sandboxes will also be deleted."
-    end
-
-    test "merge modal shows correct dropdown options", %{
-      conn: conn,
-      root: root,
-      child1: child1,
-      child2: child2,
-      child3: child3
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      assert view
-             |> element("input[type=hidden][name='merge[target_id]']")
-             |> render() =~ root.id
-
-      dropdown = view |> element("#merge-target-select") |> render()
-
-      assert dropdown =~ root.name
-      assert dropdown =~ child2.name
-      assert dropdown =~ child3.name
-      refute dropdown =~ child1.name
-      refute dropdown =~ "grandchild"
-    end
-
-    test "close merge modal resets state", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      assert has_element?(view, "#merge-sandbox-modal")
-
-      view
-      |> element("#merge-sandbox-modal [aria-label='Close']")
-      |> render_click()
-
-      refute has_element?(view, "#merge-sandbox-modal")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      hidden_input =
-        view
-        |> element("input[type=hidden][name='merge[target_id]']")
-        |> render()
-
-      assert hidden_input =~ root.id
-    end
-
-    test "merge modal shows error for non-existent sandbox", %{
-      conn: conn,
-      root: root
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      fake_id = Ecto.UUID.generate()
-      html = render_click(view, "open-merge-modal", %{"id" => fake_id})
-
-      assert html =~ "Sandbox not found"
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "merge button works for sandbox with no siblings", %{
-      conn: conn,
-      root: root,
-      grandchild1: grandchild1,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{grandchild1.id} button")
-      |> render_click()
-
-      assert has_element?(view, "#merge-sandbox-modal")
-
-      hidden_input =
-        view
-        |> element("input[type=hidden][name='merge[target_id]']")
-        |> render()
-
-      assert hidden_input =~ child1.id
-    end
-
-    test "confirm merge executes successfully", %{
-      conn: conn,
-      root: root,
-      child1: child1,
-      user: user
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      Mimic.expect(
-        Lightning.Projects.MergeProjects,
-        :merge_project,
-        fn source, target, _opts ->
-          assert source.id == child1.id
-          assert target.id == root.id
-          %{"workflows" => []}
-        end
-      )
-
-      Mimic.expect(
-        Lightning.Projects.Provisioner,
-        :import_document,
-        fn target, actor, yaml, opts ->
-          assert target.id == root.id
-          assert actor.id == user.id
-          assert yaml == %{"workflows" => []}
-          assert opts[:allow_stale] == true
-          {:ok, target}
-        end
-      )
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn source, actor ->
-          assert source.id == child1.id
-          assert actor.id == user.id
-          {:ok, source}
-        end
-      )
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      assert_redirect(view, ~p"/projects/#{root.id}/w")
-    end
-
-    test "merge shows error on merge failure", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      Mimic.expect(
-        Lightning.Projects.MergeProjects,
-        :merge_project,
-        fn _source, _target, _opts ->
-          %{"workflows" => []}
-        end
-      )
-
-      Mimic.expect(
-        Lightning.Projects.Provisioner,
-        :import_document,
-        fn _target, _actor, _yaml, _opts ->
-          {:error, :import_failed}
-        end
-      )
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      html = render(view)
-
-      assert html =~ "merge this sandbox"
-
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "descendants are calculated correctly for deep nesting", %{
-      conn: conn,
-      root: root,
-      child1: child1,
-      grandchild1: grandchild1,
-      user: user
-    } do
-      _great_grandchild1 =
-        insert(:project,
-          name: "great-grandchild1",
-          parent: grandchild1,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~ "child sandboxes will also be deleted"
-    end
-
-    test "sibling can be selected as merge target", %{
-      conn: conn,
-      root: root,
-      child1: child1,
-      child3: child3
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~ child3.name
-    end
-
-    test "grandparent can be selected as merge target", %{
-      conn: conn,
-      root: root,
-      grandchild1: grandchild1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{grandchild1.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~ root.name
-    end
-
-    test "cannot merge into own child", %{
-      conn: conn,
-      root: root,
-      child1: child1,
-      grandchild1: grandchild1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      dropdown_html =
-        view
-        |> element("#merge-target-select")
-        |> render()
-
-      refute dropdown_html =~ grandchild1.name
-    end
-
-    test "select-merge-target updates changeset", %{
-      conn: conn,
-      root: root,
-      child1: child1,
-      child2: child2
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      # Change target selection
-      render_click(view, "select-merge-target", %{
-        "merge" => %{"target_id" => child2.id}
-      })
-
-      # Verify changeset updated
-      assigns = :sys.get_state(view.pid).socket.assigns
-      assert assigns.merge_changeset.changes.target_id == child2.id
-    end
-
-    test "shows error when target project not found during merge", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      # Submit with non-existent target_id
-      fake_target_id = Ecto.UUID.generate()
-
-      html =
-        render_click(view, "confirm-merge", %{
-          "merge" => %{"target_id" => fake_target_id}
-        })
-
-      assert html =~ "Target project not found"
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "shows partial success when merge succeeds but schedule fails", %{
-      conn: conn,
-      root: root,
-      child1: child1,
-      user: _user
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
-                                                                        _target,
-                                                                        _opts ->
-        %{"workflows" => []}
-      end)
-
-      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
-                                                                        _actor,
-                                                                        _yaml,
-                                                                        _opts ->
-        {:ok, root}
-      end)
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn _source, _actor ->
-          {:error, :unauthorized}
-        end
-      )
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      {:ok, _view, html} =
-        view
-        |> form("#merge-sandbox-modal form")
-        |> render_submit()
-        |> follow_redirect(conn)
-
-      assert html =~
-               "Successfully merged child1 into root, but could not schedule the sandbox for deletion."
-    end
-
-    test "shows a generic message when a merge fails validation", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
-                                                                        _target,
-                                                                        _opts ->
-        %{"workflows" => []}
-      end)
-
-      # A validation failure with no recognised cause.
-      changeset = %Ecto.Changeset{
-        errors: [name: {"is invalid", []}],
-        valid?: false
-      }
-
-      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
-                                                                        _actor,
-                                                                        _yaml,
-                                                                        _opts ->
-        {:error, changeset}
-      end)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      html = render(view)
-      assert html =~ "merge this sandbox"
-      # No schema field paths or raw changeset internals leak to the user.
-      refute html =~ "name: is invalid"
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "shows a generic message for a nested workflow error, without leaking it",
-         %{
-           conn: conn,
-           root: root,
-           child1: child1
-         } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
-                                                                        _target,
-                                                                        _opts ->
-        %{"workflows" => []}
-      end)
-
-      # A name collision surfaces as an error on a nested workflow's :name.
-      nested_changeset =
-        %Lightning.Workflows.Workflow{name: "Patient Sync"}
-        |> Ecto.Changeset.change()
-        |> Ecto.Changeset.add_error(
-          :name,
-          "A workflow with this name already exists (possibly pending deletion) in this project."
-        )
-
-      changeset =
-        %Lightning.Projects.Project{workflows: []}
-        |> Ecto.Changeset.change()
-        |> Ecto.Changeset.put_assoc(:workflows, [nested_changeset])
-
-      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
-                                                                        _actor,
-                                                                        _yaml,
-                                                                        _opts ->
-        {:error, changeset}
-      end)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      html = render(view)
-      assert html =~ "merge this sandbox"
-      # The workflow name and the raw error must not leak to the user.
-      refute html =~ "Patient Sync"
-      refute html =~ "already exists"
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "formats text error correctly", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
-                                                                        _target,
-                                                                        _opts ->
-        %{"workflows" => []}
-      end)
-
-      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
-                                                                        _actor,
-                                                                        _yaml,
-                                                                        _opts ->
-        {:error, %{text: "Custom import error message"}}
-      end)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      html = render(view)
-      assert html =~ "Custom import error message"
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "shows a generic message for an unexpected failure, without leaking internals",
-         %{
-           conn: conn,
-           root: root,
-           child1: child1
-         } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _source,
-                                                                        _target,
-                                                                        _opts ->
-        %{"workflows" => []}
-      end)
-
-      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _target,
-                                                                        _actor,
-                                                                        _yaml,
-                                                                        _opts ->
-        {:error, {:unexpected, "something went wrong"}}
-      end)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      html = render(view)
-      assert html =~ "merge this sandbox"
-      # The raw reason must not leak to the user.
-      refute html =~ "unexpected"
-      refute html =~ "something went wrong"
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "descendant_of? handles nil parent correctly", %{
-      conn: conn,
-      root: root,
-      child1: child1
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-      descendant_ids = Enum.map(assigns.merge_descendants, & &1.id)
-      refute root.id in descendant_ids
-    end
-
-    test "merge modal lists descendants the current viewer cannot otherwise see",
-         %{conn: conn, user: user, root: root, child1: child1} do
-      hidden_grandchild =
-        insert(:project,
-          name: "hidden-grandchild",
-          parent: child1,
-          project_users: []
-        )
-
-      visible_grandchild =
-        insert(:project,
-          name: "visible-grandchild",
-          parent: child1,
-          project_users: [%{user: user, role: :viewer}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      descendant_ids =
-        :sys.get_state(view.pid).socket.assigns.merge_descendants
-        |> Enum.map(& &1.id)
-
-      assert visible_grandchild.id in descendant_ids
-      assert hidden_grandchild.id in descendant_ids
-    end
-  end
-
-  describe "collection sync on merge" do
-    setup :register_and_log_in_user
-
-    setup %{user: user} do
-      root =
-        insert(:project,
-          name: "root",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      sandbox =
-        insert(:project,
-          name: "sandbox",
-          parent: root,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, root: root, sandbox: sandbox}
-    end
-
-    defp mock_provisioner_ok(target) do
-      Mimic.expect(Lightning.Projects.MergeProjects, :merge_project, fn _src,
-                                                                        _tgt,
-                                                                        _opts ->
-        %{"workflows" => []}
-      end)
-
-      Mimic.expect(Lightning.Projects.Provisioner, :import_document, fn _tgt,
-                                                                        _actor,
-                                                                        _yaml,
-                                                                        _opts ->
-        {:ok, target}
-      end)
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn source, _actor ->
-          {:ok, source}
-        end
-      )
-    end
-
-    test "new collections in sandbox are created in parent on merge", %{
-      conn: conn,
-      root: root,
-      sandbox: sandbox
-    } do
-      insert(:collection, project: sandbox, name: "new-col")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-      mock_provisioner_ok(root)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view |> form("#merge-sandbox-modal form") |> render_submit()
-
-      parent_names =
-        Lightning.Collections.list_project_collections(root)
-        |> Enum.map(& &1.name)
-
-      assert "new-col" in parent_names
-    end
-
-    test "collections missing from the sandbox are always kept in the parent",
-         %{
-           conn: conn,
-           root: root,
-           sandbox: sandbox
-         } do
-      # Parent has a collection, sandbox does not
-      insert(:collection, project: root, name: "parent-only")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-      mock_provisioner_ok(root)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view |> form("#merge-sandbox-modal form") |> render_submit()
-
-      parent_names =
-        Lightning.Collections.list_project_collections(root)
-        |> Enum.map(& &1.name)
-
-      assert "parent-only" in parent_names
-    end
-
-    test "unchecking a collection to add leaves it out of the merge", %{
-      conn: conn,
-      root: root,
-      sandbox: sandbox
-    } do
-      insert(:collection, project: sandbox, name: "col-a")
-      insert(:collection, project: sandbox, name: "col-b")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-      mock_provisioner_ok(root)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assert view |> element("#merge-collections-to-add") |> render() =~
-               "2 of 2 selected"
-
-      view
-      |> element("#merge-collections-to-add li[phx-value-name='col-b']")
-      |> render_click()
-
-      view |> form("#merge-sandbox-modal form") |> render_submit()
-
-      parent_names =
-        Lightning.Collections.list_project_collections(root)
-        |> Enum.map(& &1.name)
-
-      assert "col-a" in parent_names
-      refute "col-b" in parent_names
-    end
-
-    test "collection selections survive other checkbox toggles in the same form",
-         %{
-           conn: conn,
-           root: root,
-           sandbox: sandbox
-         } do
-      insert(:collection, project: sandbox, name: "col-a")
-      insert(:collection, project: sandbox, name: "col-b")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-      mock_provisioner_ok(root)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view
-      |> element("#merge-collections-to-add li[phx-value-name='col-b']")
-      |> render_click()
-
-      # Toggling any other checkbox in the merge form fires its change event
-      # with an unchanged target; the selection must survive that.
-      view |> form("#merge-sandbox-modal form") |> render_change()
-
-      assert view |> element("#merge-collections-to-add") |> render() =~
-               "1 of 2 selected"
-
-      view |> form("#merge-sandbox-modal form") |> render_submit()
-
-      parent_names =
-        Lightning.Collections.list_project_collections(root)
-        |> Enum.map(& &1.name)
-
-      assert "col-a" in parent_names
-      refute "col-b" in parent_names
-    end
-
-    test "a collection created in the sandbox after the modal opens is still created on merge",
-         %{
-           conn: conn,
-           root: root,
-           sandbox: sandbox
-         } do
-      insert(:collection, project: sandbox, name: "col-a")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-      mock_provisioner_ok(root)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      # Someone adds a collection to the sandbox while the modal is open.
-      # The sandbox is deleted after the merge, so missing this collection
-      # would lose it for good; the merge must still create it.
-      insert(:collection, project: sandbox, name: "added-later")
-
-      view |> form("#merge-sandbox-modal form") |> render_submit()
-
-      parent_names =
-        Lightning.Collections.list_project_collections(root)
-        |> Enum.map(& &1.name)
-
-      assert "col-a" in parent_names
-      assert "added-later" in parent_names
-    end
-
-    test "changing the target recomputes the preview and resets the selections",
-         %{
-           conn: conn,
-           root: root,
-           sandbox: sandbox,
-           user: user
-         } do
-      insert(:collection, project: sandbox, name: "col-a")
-      insert(:collection, project: sandbox, name: "col-b")
-
-      # The root already has col-a, so only col-b is new for it; the sibling
-      # target has neither.
-      insert(:collection, project: root, name: "col-a")
-
-      other =
-        insert(:project,
-          name: "other-target",
-          parent: root,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view
-      |> element("#merge-collections-to-add li[phx-value-name='col-b']")
-      |> render_click()
-
-      assert view |> element("#merge-collections-to-add") |> render() =~
-               "0 of 1 selected"
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_change(%{"merge" => %{"target_id" => other.id}})
-
-      panel_html = view |> element("#merge-collections-to-add") |> render()
-
-      assert panel_html =~ "col-a"
-      assert panel_html =~ "col-b"
-      assert panel_html =~ "2 of 2 selected"
-    end
-
-    test "collection selections are ignored when the submitted target differs from the previewed one",
-         %{
-           conn: conn,
-           root: root,
-           sandbox: sandbox,
-           user: user
-         } do
-      insert(:collection, project: sandbox, name: "col-a")
-      insert(:collection, project: sandbox, name: "col-b")
-
-      other =
-        insert(:project,
-          name: "other-target",
-          parent: root,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      insert(:collection, project: other, name: "other-only")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-      mock_provisioner_ok(root)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      # Deselect a creation while the preview is for the default target
-      # (root)...
-      view
-      |> element("#merge-collections-to-add li[phx-value-name='col-b']")
-      |> render_click()
-
-      # ...then submit a crafted event pointing at a different target. The
-      # stale selection is dropped: the merge falls back to creating all
-      # source-only collections and, as always, deletes nothing.
-      render_submit(view, "confirm-merge", %{
-        "merge" => %{"target_id" => other.id}
-      })
-
-      other_names =
-        Lightning.Collections.list_project_collections(other)
-        |> Enum.map(& &1.name)
-
-      assert "other-only" in other_names
-      assert "col-a" in other_names
-      assert "col-b" in other_names
-    end
-
-    test "merge modal lists collections to add and never mentions target-only ones",
-         %{
-           conn: conn,
-           root: root,
-           sandbox: sandbox
-         } do
-      insert(:collection, project: sandbox, name: "sandbox-only-col")
-
-      insert(:collection,
-        project: root,
-        name: "parent-only-col",
-        items: [%{key: "k1", value: "v1"}, %{key: "k2", value: "v2"}]
-      )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      to_add_html = view |> element("#merge-collections-to-add") |> render()
-
-      assert to_add_html =~ "Collections to add"
-      assert to_add_html =~ "sandbox-only-col"
-      assert to_add_html =~ "1 of 1 selected"
-      assert has_element?(view, "#merge-select-all-collections-to-add")
-
-      # Target-only collections are not part of a merge, so the modal says
-      # nothing about them.
-      modal_html = view |> element("#merge-sandbox-modal") |> render()
-      refute modal_html =~ "parent-only-col"
-      refute has_element?(view, "#merge-collections-to-delete")
-      refute has_element?(view, "#merge-collections-target-only")
-    end
-
-    test "merge modal hides the collection panels when there is nothing to show",
-         %{
-           conn: conn,
-           root: root,
-           sandbox: sandbox
-         } do
-      insert(:collection, project: root, name: "shared")
-      insert(:collection, project: sandbox, name: "shared")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      refute has_element?(view, "#merge-collections-to-add")
-      refute has_element?(view, "#merge-collections-to-delete")
-      refute has_element?(view, "#merge-collections-target-only")
-    end
-
-    test "an editor merge keeps the target's own collections too",
-         %{
-           conn: conn,
-           root: root,
-           sandbox: sandbox
-         } do
-      editor = insert(:user)
-      insert(:project_user, project: root, user: editor, role: :editor)
-      insert(:project_user, project: sandbox, user: editor, role: :admin)
-
-      insert(:collection, project: root, name: "parent-only")
-
-      conn = log_in_user(conn, editor)
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-      mock_provisioner_ok(root)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      modal_html = view |> element("#merge-sandbox-modal") |> render()
-      refute modal_html =~ "parent-only"
-
-      view |> form("#merge-sandbox-modal form") |> render_submit()
-
-      parent_names =
-        Lightning.Collections.list_project_collections(root)
-        |> Enum.map(& &1.name)
-
-      assert "parent-only" in parent_names
-    end
-
-    test "collections present in both are unchanged after merge", %{
-      conn: conn,
-      root: root,
-      sandbox: sandbox
-    } do
-      insert(:collection, project: root, name: "shared")
-      insert(:collection, project: sandbox, name: "shared")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-      mock_provisioner_ok(root)
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view |> form("#merge-sandbox-modal form") |> render_submit()
-
-      parent_collections = Lightning.Collections.list_project_collections(root)
-      assert length(parent_collections) == 1
-      assert hd(parent_collections).name == "shared"
-    end
-
-    test "merge failure shows a flash error and closes the modal", %{
-      conn: conn,
-      root: root,
-      sandbox: sandbox
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      Mimic.expect(Lightning.Projects.Sandboxes, :merge, fn _src,
-                                                            _tgt,
-                                                            _actor,
-                                                            _opts ->
-        {:error, :merge_failed}
-      end)
-
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view |> form("#merge-sandbox-modal form") |> render_submit()
-
-      html = render(view)
-      assert html =~ "merge this sandbox"
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-  end
-
-  describe "Merge modal authorization" do
-    setup :register_and_log_in_user
-
-    setup %{user: owner_user} do
-      viewer_user = insert(:user)
-
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [
-            %{user: owner_user, role: :owner},
-            %{user: viewer_user, role: :viewer}
-          ]
-        )
-
-      sandbox =
-        insert(:project,
-          name: "test-sandbox",
-          parent: parent,
-          project_users: [
-            %{user: owner_user, role: :owner},
-            %{user: viewer_user, role: :viewer}
-          ]
-        )
-
-      {:ok,
-       owner_user: owner_user,
-       viewer_user: viewer_user,
-       parent: parent,
-       sandbox: sandbox}
-    end
-
-    test "owner can see and use merge button", %{
-      conn: conn,
-      owner_user: owner_user,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      conn = log_in_user(conn, owner_user)
       {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      button_html =
-        view
-        |> element("#branch-rewire-sandbox-#{sandbox.id}")
-        |> render()
-
-      refute button_html =~ "cursor-not-allowed"
-      refute button_html =~ "text-slate-300"
-      assert button_html =~ "Merge this sandbox"
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assert has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "viewer sees disabled merge button", %{
-      conn: conn,
-      viewer_user: viewer_user,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      conn = log_in_user(conn, viewer_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      button_html =
-        view
-        |> element("#branch-rewire-sandbox-#{sandbox.id}")
-        |> render()
-
-      assert button_html =~ "cursor-not-allowed"
-      assert button_html =~ "text-slate-300"
-      assert button_html =~ "You are not authorized to merge this sandbox"
-    end
-
-    test "viewer cannot open merge modal", %{
-      conn: conn,
-      viewer_user: viewer_user,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      conn = log_in_user(conn, viewer_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html = render_click(view, "open-merge-modal", %{"id" => sandbox.id})
-
-      assert html =~ "You are not authorized to merge this sandbox"
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "viewer cannot confirm merge without opening modal", %{
-      conn: conn,
-      viewer_user: viewer_user,
-      parent: parent,
-      sandbox: _sandbox
-    } do
-      conn = log_in_user(conn, viewer_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html =
-        render_click(view, "confirm-merge", %{
-          "merge" => %{"target_id" => parent.id}
-        })
-
-      assert html =~ "Invalid merge request"
-      refute has_element?(view, "#merge-sandbox-modal")
-    end
-
-    test "can_merge permission is set correctly based on user role", %{
-      conn: conn,
-      owner_user: owner_user,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      conn = log_in_user(conn, owner_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      sandboxes = :sys.get_state(view.pid).socket.assigns.sandboxes
-      test_sandbox = Enum.find(sandboxes, &(&1.id == sandbox.id))
-
-      assert test_sandbox.can_merge == true
-    end
-
-    test "merge authorization follows update permissions from Sandboxes policy",
-         %{
-           conn: conn,
-           viewer_user: viewer_user,
-           parent: parent,
-           sandbox: sandbox
-         } do
-      conn = log_in_user(conn, viewer_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      sandboxes = :sys.get_state(view.pid).socket.assigns.sandboxes
-      test_sandbox = Enum.find(sandboxes, &(&1.id == sandbox.id))
-
-      assert test_sandbox.can_merge == false
-      assert test_sandbox.can_edit == false
-    end
-
-    test "merge succeeds for owner", %{
-      conn: conn,
-      owner_user: owner_user,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      conn = log_in_user(conn, owner_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      Mimic.expect(
-        Lightning.Projects.MergeProjects,
-        :merge_project,
-        fn _source, _target, _opts -> %{"workflows" => []} end
-      )
-
-      Mimic.expect(
-        Lightning.Projects.Provisioner,
-        :import_document,
-        fn _target, _actor, _yaml, _opts -> {:ok, parent} end
-      )
-
-      Mimic.expect(
-        Lightning.Projects.Sandboxes,
-        :schedule_sandbox_deletion,
-        fn _source, _actor -> {:ok, sandbox} end
-      )
-
-      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
-      Mimic.allow(Lightning.Projects, self(), view.pid)
-      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      assert_redirect(view, ~p"/projects/#{parent.id}/w")
-    end
-
-    test "viewer cannot bypass authorization", %{
-      conn: conn,
-      viewer_user: viewer_user,
-      parent: parent,
-      sandbox: _sandbox
-    } do
-      conn = log_in_user(conn, viewer_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html =
-        render_click(view, "confirm-merge", %{
-          "merge" => %{"target_id" => parent.id}
-        })
-
-      assert html =~ "Invalid merge request"
-    end
-
-    test "merges sandbox successfully when parent workflow was modified with new nodes/edges",
-         %{
-           conn: conn,
-           owner_user: owner_user,
-           parent: parent
-         } do
-      # This test simulates Joe's scenario:
-      # 1. Create a sandbox from parent
-      # 2. Add a new node/edge to parent (after sandbox creation)
-      # 3. Merge sandbox back to parent
-      # Expected: Merge succeeds and parent's new edges are deleted (overwrite behavior)
-
-      # Create initial parent workflow with job1
-      parent_workflow =
-        insert(:workflow, project: parent, name: "Main Workflow")
-
-      job1 =
-        insert(:job,
-          workflow: parent_workflow,
-          name: "Initial Job",
-          body: "job1()"
-        )
-
-      trigger = insert(:trigger, workflow: parent_workflow, type: :webhook)
-
-      insert(:edge,
-        workflow: parent_workflow,
-        source_trigger: trigger,
-        target_job: job1
-      )
-
-      with_version(parent_workflow)
-
-      # Create sandbox from parent (at this point, parent only has job1)
-      sandbox =
-        insert(:project,
-          name: "Sandbox",
-          parent: parent,
-          project_users: [%{user: owner_user, role: :owner}]
-        )
-
-      sandbox_workflow =
-        insert(:workflow,
-          project: sandbox,
-          name: "Main Workflow",
-          lock_version: parent_workflow.lock_version
-        )
-
-      with_version(sandbox_workflow)
-
-      sandbox_job1 =
-        insert(:job,
-          workflow: sandbox_workflow,
-          name: "Initial Job",
-          body: "job1_modified()"
-        )
-
-      sandbox_trigger =
-        insert(:trigger, workflow: sandbox_workflow, type: :webhook)
-
-      insert(:edge,
-        workflow: sandbox_workflow,
-        source_trigger: sandbox_trigger,
-        target_job: sandbox_job1
-      )
-
-      # NOW: Parent gets modified with a new job2 and edge (simulating concurrent work)
-      job2 =
-        insert(:job,
-          workflow: parent_workflow,
-          name: "New Job Added After Sandbox",
-          body: "job2()"
-        )
-
-      new_edge =
-        insert(:edge,
-          workflow: parent_workflow,
-          source_job: job1,
-          target_job: job2
-        )
-
-      # Update parent workflow to increment lock_version (simulating the modification)
-      parent_workflow =
-        parent_workflow
-        |> Ecto.Changeset.change()
-        |> Ecto.Changeset.optimistic_lock(:lock_version)
-        |> Repo.update!()
-
-      initial_parent_lock_version = parent_workflow.lock_version
-
-      # Now perform the merge from sandbox to parent
-      conn = log_in_user(conn, owner_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      # Open the merge modal
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      # Submit the merge
-      view
-      |> form("#merge-sandbox-modal form", %{
-        "merge" => %{"target_id" => parent.id}
-      })
-      |> render_submit()
-
-      # Verify redirect to parent project
-      assert_redirect(view, ~p"/projects/#{parent.id}/w")
-
-      # Verify the merge succeeded with allow_stale
-      updated_parent_workflow =
-        Repo.reload(parent_workflow) |> Repo.preload([:edges, :jobs])
-
-      # The workflow lock_version should have incremented (merge was applied)
-      assert updated_parent_workflow.lock_version > initial_parent_lock_version
-
-      # The new edge added to parent should be DELETED (overwrite behavior)
-      edge_ids = Enum.map(updated_parent_workflow.edges, & &1.id)
-
-      refute new_edge.id in edge_ids,
-             "Parent's new edge should be deleted during merge"
-
-      # Only the trigger->job1 edge should remain
-      assert length(updated_parent_workflow.edges) == 1
-
-      # job2 should also be deleted (not in sandbox)
-      job_ids = Enum.map(updated_parent_workflow.jobs, & &1.id)
-
-      refute job2.id in job_ids,
-             "Parent's new job should be deleted during merge"
-
-      # job1 should have the sandbox's modified body
-      remaining_job =
-        Enum.find(updated_parent_workflow.jobs, &(&1.name == "Initial Job"))
-
-      assert remaining_job.body == "job1_modified()"
-    end
-
-    test "editor on root and editor on sandbox cannot use the merge button (merge requires admin/owner on the source)",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox
-         } do
-      editor_user = insert(:user)
-      insert(:project_user, user: editor_user, project: parent, role: :editor)
-
-      insert(:project_user,
-        user: editor_user,
-        project: sandbox,
-        role: :editor
-      )
-
-      conn = log_in_user(conn, editor_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      sandboxes = :sys.get_state(view.pid).socket.assigns.sandboxes
-      test_sandbox = Enum.find(sandboxes, &(&1.id == sandbox.id))
-
-      assert test_sandbox.can_merge == false
-      assert test_sandbox.can_edit == false
-      assert test_sandbox.can_delete == false
-    end
-
-    test "editor on root can create sandboxes", %{
-      conn: conn,
-      parent: parent
-    } do
-      editor_user = insert(:user)
-      insert(:project_user, user: editor_user, project: parent, role: :editor)
-
-      conn = log_in_user(conn, editor_user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      can_create = :sys.get_state(view.pid).socket.assigns.can_create_sandbox
-      assert can_create == true
-    end
-
-    test "server-side merge auth rejects unauthorized user", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      # An admin on the source sandbox who is only a viewer on a specific
-      # target should be blocked at server-side enforcement when they try
-      # to merge into that target.
-      actor = insert(:user)
-      insert(:project_user, user: actor, project: parent, role: :editor)
-
-      insert(:project_user,
-        user: actor,
-        project: sandbox,
-        role: :admin
-      )
-
-      # Create a target project where this user is only a viewer
-      target =
-        insert(:project,
-          name: "restricted-target",
-          parent: parent,
-          project_users: [
-            %{user: actor, role: :viewer}
-          ]
-        )
-
-      conn = log_in_user(conn, actor)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      # Open merge modal
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      # Try to merge into the restricted target via direct event
-      html =
-        render_click(view, "confirm-merge", %{
-          "merge" => %{"target_id" => target.id}
-        })
-
-      assert html =~ "You are not authorized to merge into this project"
-    end
-
-    test "merge target options filter out projects where user lacks editor+ role",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox
-         } do
-      actor = insert(:user)
-      insert(:project_user, user: actor, project: parent, role: :editor)
-
-      insert(:project_user,
-        user: actor,
-        project: sandbox,
-        role: :admin
-      )
-
-      # Create another sandbox where user is only a viewer
-      viewer_sandbox =
-        insert(:project,
-          name: "viewer-only-sandbox",
-          parent: parent,
-          project_users: [
-            %{user: actor, role: :viewer}
-          ]
-        )
-
-      # Create a sandbox where the actor has no membership at all
-      no_membership_sandbox =
-        insert(:project,
-          name: "no-membership-sandbox",
-          parent: parent,
-          project_users: []
-        )
-
-      conn = log_in_user(conn, actor)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      # Open merge modal
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-      target_ids = Enum.map(assigns.merge_target_options, & &1.value)
-
-      # Parent should be in targets (user is editor)
-      assert parent.id in target_ids
-
-      # Viewer-only sandbox should NOT be in targets
-      refute viewer_sandbox.id in target_ids
-
-      # No-membership sandbox should NOT be in targets
-      refute no_membership_sandbox.id in target_ids
-    end
-
-    test "merge target options exclude sandboxes scheduled for deletion", %{
-      conn: conn,
-      user: user,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      sibling =
-        insert(:project,
-          name: "sibling-active",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      scheduled_sibling =
-        insert(:project,
-          name: "sibling-scheduled",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}],
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      target_ids =
-        :sys.get_state(view.pid).socket.assigns.merge_target_options
-        |> Enum.map(& &1.value)
-
-      assert parent.id in target_ids
-      assert sibling.id in target_ids
-      refute scheduled_sibling.id in target_ids
-    end
-
-    test "checks for divergence when opening merge modal with default target",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox
-         } do
-      parent_workflow =
-        insert(:workflow, project: parent, name: "Test Workflow")
-
-      insert(:workflow_version,
-        workflow: parent_workflow,
-        hash: "parent_hash",
-        source: "app"
-      )
-
-      sandbox_workflow =
-        insert(:workflow, project: sandbox, name: "Test Workflow")
-
-      insert(:workflow_version,
-        workflow: sandbox_workflow,
-        hash: "sandbox_hash",
-        source: "app"
-      )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      # Open the merge modal
-      html =
-        view
-        |> render_click("open-merge-modal", %{"id" => sandbox.id})
-
-      assert html =~ "Diverged"
-      assert html =~ "Test Workflow"
-    end
-  end
-
-  describe "Edge cases for divergence and nil handling" do
-    test "handles nil target_id in select-merge-target", %{conn: conn} do
-      owner = insert(:user)
-
-      root =
-        insert(:project, project_users: [%{user: owner, role: :owner}])
-
-      child1 =
-        insert(:project,
-          parent: root,
-          project_users: [%{user: owner, role: :owner}]
-        )
-
-      conn = log_in_user(conn, owner)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      render_click(view, "select-merge-target", %{
-        "merge" => %{"target_id" => ""}
-      })
-
-      # Should not crash - the diverged_workflows will be empty for nil target
-      assigns = :sys.get_state(view.pid).socket.assigns
-      assert assigns.merge_diverged_workflows == []
-    end
-
-    test "displays MAIN when selected target not found in options", %{conn: conn} do
-      owner = insert(:user)
-
-      root =
-        insert(:project, project_users: [%{user: owner, role: :owner}])
-
-      child1 =
-        insert(:project,
-          parent: root,
-          project_users: [%{user: owner, role: :owner}]
-        )
-
-      _child2 =
-        insert(:project,
-          parent: root,
-          project_users: [%{user: owner, role: :owner}]
-        )
-
-      conn = log_in_user(conn, owner)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{child1.id} button")
-      |> render_click()
-
-      invalid_id = Ecto.UUID.generate()
-
-      render_click(view, "select-merge-target", %{
-        "merge" => %{"target_id" => invalid_id}
-      })
-
-      # The modal should still render without crashing
-      # and the label should fall back to "MAIN"
-      html = render(view)
-      assert html =~ "MAIN"
-    end
-
-    test "has_environment? handles project without env field", %{conn: conn} do
-      owner = insert(:user)
-
-      root =
-        insert(:project,
-          project_users: [%{user: owner, role: :owner}],
-          env: ""
-        )
-
-      conn = log_in_user(conn, owner)
-
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{root.id}/sandboxes")
-
-      # With empty string env, it should show "main" badge
-      assert html =~ "main"
-
-      assert has_element?(view, "#env-badge-#{root.id}")
-    end
-  end
-
-  describe "Creating sandbox" do
-    setup :register_and_log_in_user
-
-    test "copies allow_support_access field from parent project", %{
-      conn: conn,
-      user: user
-    } do
-      # Create parent with allow_support_access enabled
-      parent =
-        insert(:project,
-          name: "parent-with-support",
-          allow_support_access: true,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view |> element("#create-sandbox-button") |> render_click()
-      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
-
-      view
-      |> element("#sandbox-form-new")
-      |> render_change(%{
-        "project" => %{"raw_name" => "test-sandbox", "color" => "#E33D63"}
-      })
-
-      view
-      |> element("#sandbox-form-new")
-      |> render_submit(%{
-        "project" => %{"raw_name" => "test-sandbox", "color" => "#E33D63"}
-      })
-
-      # Get the created sandbox from database
-      sandbox =
-        Repo.get_by!(Project, parent_id: parent.id, name: "test-sandbox")
-
-      # Verify allow_support_access was copied from parent
-      assert sandbox.allow_support_access == true
-
-      # Also test with allow_support_access disabled
-      parent_no_support =
-        insert(:project,
-          name: "parent-no-support",
-          allow_support_access: false,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view2, _html} =
-        live(conn, ~p"/projects/#{parent_no_support.id}/sandboxes")
-
-      view2 |> element("#create-sandbox-button") |> render_click()
-      assert_patch(view2, ~p"/projects/#{parent_no_support.id}/sandboxes/new")
-
-      view2
-      |> element("#sandbox-form-new")
-      |> render_change(%{
-        "project" => %{"raw_name" => "test-sandbox-2", "color" => "#5AA1F0"}
-      })
-
-      view2
-      |> element("#sandbox-form-new")
-      |> render_submit(%{
-        "project" => %{"raw_name" => "test-sandbox-2", "color" => "#5AA1F0"}
-      })
-
-      # Get the second sandbox from database
-      sandbox2 =
-        Repo.get_by!(Project,
-          parent_id: parent_no_support.id,
-          name: "test-sandbox-2"
-        )
-
-      # Verify allow_support_access remains false
-      assert sandbox2.allow_support_access == false
-    end
-
-    test "copies all parent users when current user is owner", %{
-      conn: conn,
-      user: user
-    } do
-      # Create parent with multiple users
-      parent =
-        insert(:project,
-          name: "parent-proj",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      editor_user = insert(:user)
-      viewer_user = insert(:user)
-
-      insert(:project_user,
-        project: parent,
-        user: editor_user,
-        role: :editor
-      )
-
-      insert(:project_user,
-        project: parent,
-        user: viewer_user,
-        role: :viewer
-      )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view |> element("#create-sandbox-button") |> render_click()
-      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
-
-      view
-      |> element("#sandbox-form-new")
-      |> render_change(%{
-        "project" => %{"raw_name" => "my-test-sandbox", "color" => "#E33D63"}
-      })
-
-      view
-      |> element("#sandbox-form-new")
-      |> render_submit(%{
-        "project" => %{"raw_name" => "my-test-sandbox", "color" => "#E33D63"}
-      })
-
-      # Get the created sandbox from database
-      sandbox =
-        Repo.get_by!(Project, parent_id: parent.id, name: "my-test-sandbox")
-        |> Repo.preload(:project_users)
-
-      # Verify all 3 users are present
-      assert length(sandbox.project_users) == 3
-
-      # Verify current user is owner
-      assert Enum.any?(sandbox.project_users, fn pu ->
-               pu.user_id == user.id and pu.role == :owner
-             end)
-
-      # Verify editor was copied
-      assert Enum.any?(sandbox.project_users, fn pu ->
-               pu.user_id == editor_user.id and pu.role == :editor
-             end)
-
-      # Verify viewer was copied
-      assert Enum.any?(sandbox.project_users, fn pu ->
-               pu.user_id == viewer_user.id and pu.role == :viewer
-             end)
-    end
-
-    test "converts parent owner to admin when current user is admin", %{
-      conn: conn,
-      user: current_user
-    } do
-      # Create parent with a different owner
-      owner_user = insert(:user)
-
-      parent =
-        insert(:project,
-          name: "parent-proj-2",
-          project_users: [%{user: owner_user, role: :owner}]
-        )
-
-      # Add current user as admin
-      insert(:project_user,
-        project: parent,
-        user: current_user,
-        role: :admin
-      )
-
-      # Add an editor
-      editor_user = insert(:user)
-
-      insert(:project_user,
-        project: parent,
-        user: editor_user,
-        role: :editor
-      )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      # Click create sandbox button
-      view |> element("#create-sandbox-button") |> render_click()
-      assert_patch(view, ~p"/projects/#{parent.id}/sandboxes/new")
-
-      # Validate the form first (triggers phx-change)
-      view
-      |> element("#sandbox-form-new")
-      |> render_change(%{
-        "project" => %{"raw_name" => "admin-test-sandbox", "color" => "#5AA1F0"}
-      })
-
-      # Submit the form
-      view
-      |> element("#sandbox-form-new")
-      |> render_submit(%{
-        "project" => %{"raw_name" => "admin-test-sandbox", "color" => "#5AA1F0"}
-      })
-
-      # Get the created sandbox from database
-      sandbox =
-        Repo.get_by!(Project, parent_id: parent.id, name: "admin-test-sandbox")
-        |> Repo.preload(:project_users)
-
-      # Verify all 3 users are present
-      assert length(sandbox.project_users) == 3
-
-      # Verify current user is owner
-      assert Enum.any?(sandbox.project_users, fn pu ->
-               pu.user_id == current_user.id and pu.role == :owner
-             end)
-
-      # Verify parent owner was converted to admin
-      assert Enum.any?(sandbox.project_users, fn pu ->
-               pu.user_id == owner_user.id and pu.role == :admin
-             end)
-
-      # Verify editor was copied
-      assert Enum.any?(sandbox.project_users, fn pu ->
-               pu.user_id == editor_user.id and pu.role == :editor
-             end)
-    end
-  end
-
-  describe "merge modal with divergence" do
-    setup :register_and_log_in_user
-
-    setup %{user: user} do
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      sandbox =
-        insert(:project,
-          name: "test-sandbox",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, parent: parent, sandbox: sandbox}
-    end
-
-    test "displays list of diverged workflow names when has_diverged is true", %{
-      conn: conn,
-      sandbox: sandbox,
-      parent: parent
-    } do
-      # Setup: Create diverged workflows
-      target_wf1 =
-        insert(:workflow, project: parent, name: "Payment Processing")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          target_wf1,
-          "aaa111111111",
-          "app"
-        )
-
-      target_wf2 = insert(:workflow, project: parent, name: "Data Sync")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          target_wf2,
-          "bbb222222222",
-          "app"
-        )
-
-      sandbox_wf1 =
-        insert(:workflow, project: sandbox, name: "Payment Processing")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_wf1,
-          "aaa999999999",
-          "app"
-        )
-
-      sandbox_wf2 = insert(:workflow, project: sandbox, name: "Data Sync")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_wf2,
-          "bbb888888888",
-          "app"
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent}/sandboxes")
-
-      # Open merge modal
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      # Assert per-row divergence indicators are present
-      assert html =~ "Diverged"
-
-      # Assert workflow names are listed in the workflow list
-      assert html =~ "Payment Processing"
-      assert html =~ "Data Sync"
-    end
-
-    test "does not show divergence alert when workflows match", %{
-      conn: conn,
-      sandbox: sandbox,
-      parent: parent
-    } do
-      # Setup: Create matching workflows
-      target_wf = insert(:workflow, project: parent, name: "Matching Workflow")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          target_wf,
-          "aabbccddee00",
-          "app"
-        )
-
-      sandbox_wf =
-        insert(:workflow, project: sandbox, name: "Matching Workflow")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_wf,
-          "aabbccddee00",
-          "app"
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      refute html =~ "Target project has diverged"
-
-      # Matching Workflow appears in the workflow list (not as a diverged workflow)
-      refute html =~ "Diverged"
-    end
-
-    test "updates diverged workflow list when changing merge target", %{
-      conn: conn,
-      sandbox: sandbox,
-      parent: parent,
-      user: user
-    } do
-      # Create another sandbox (sibling) as alternative merge target
-      sibling_sandbox =
-        insert(:project,
-          name: "sibling-sandbox",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      # Setup: Different diverged workflows for each target
-      parent_wf = insert(:workflow, project: parent, name: "Parent Workflow")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          parent_wf,
-          "aabbcc123456",
-          "app"
-        )
-
-      sibling_wf =
-        insert(:workflow, project: sibling_sandbox, name: "Sibling Workflow")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sibling_wf,
-          "ddeeff654321",
-          "app"
-        )
-
-      sandbox_parent_wf =
-        insert(:workflow, project: sandbox, name: "Parent Workflow")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_parent_wf,
-          "112233445566",
-          "app"
-        )
-
-      sandbox_sibling_wf =
-        insert(:workflow, project: sandbox, name: "Sibling Workflow")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_sibling_wf,
-          "665544332211",
-          "app"
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent}/sandboxes")
-
-      # Open merge modal (defaults to parent target)
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      html = render(view)
-      # Both workflows in source appear in the list
-      assert html =~ "Parent Workflow"
-      assert html =~ "Sibling Workflow"
-      # Parent Workflow is diverged (different hash in parent), Sibling is new
-      assert html =~ "Diverged"
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      parent_wf_data =
-        Enum.find(
-          assigns.merge_source_workflows,
-          &(&1.name == "Parent Workflow")
-        )
-
-      sibling_wf_data =
-        Enum.find(
-          assigns.merge_source_workflows,
-          &(&1.name == "Sibling Workflow")
-        )
-
-      assert parent_wf_data.is_diverged
-      assert sibling_wf_data.is_new
-
-      # Change target to sibling_sandbox
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_change(%{merge: %{target_id: sibling_sandbox.id}})
-
-      assigns2 = :sys.get_state(view.pid).socket.assigns
-
-      parent_wf_data2 =
-        Enum.find(
-          assigns2.merge_source_workflows,
-          &(&1.name == "Parent Workflow")
-        )
-
-      sibling_wf_data2 =
-        Enum.find(
-          assigns2.merge_source_workflows,
-          &(&1.name == "Sibling Workflow")
-        )
-
-      assert parent_wf_data2.is_new
-      assert sibling_wf_data2.is_diverged
-    end
-  end
-
-  describe "workflow selection in merge modal" do
-    setup :register_and_log_in_user
-
-    setup %{user: user} do
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      sandbox =
-        insert(:project,
-          name: "test-sandbox",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, parent: parent, sandbox: sandbox}
-    end
-
-    test "opening merge modal populates source workflows with correct metadata",
-         %{conn: conn, parent: parent, sandbox: sandbox} do
-      # Target (parent) has "Alpha" workflow
-      parent_wf = insert(:workflow, project: parent, name: "Alpha")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          parent_wf,
-          "aaaaaa000000",
-          "app"
-        )
-
-      # Sandbox has "Alpha" (diverged) and "Beta" (new in target)
-      sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_alpha,
-          "bbbbbb111111",
-          "app"
-        )
-
-      _sandbox_beta = insert(:workflow, project: sandbox, name: "Beta")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      assert length(assigns.merge_source_workflows) == 2
-      assert MapSet.size(assigns.merge_selected_workflow_ids) == 2
-
-      alpha_data =
-        Enum.find(assigns.merge_source_workflows, &(&1.name == "Alpha"))
-
-      beta_data = Enum.find(assigns.merge_source_workflows, &(&1.name == "Beta"))
-
-      assert %{is_diverged: true, is_new: false, is_changed: true} = alpha_data
-      assert %{is_diverged: false, is_new: true, is_changed: true} = beta_data
-
-      # Changed workflows selected by default and IDs match
-      assert MapSet.member?(assigns.merge_selected_workflow_ids, alpha_data.id)
-      assert MapSet.member?(assigns.merge_selected_workflow_ids, beta_data.id)
-    end
-
-    test "unchanged workflows are not pre-selected by default",
-         %{conn: conn, parent: parent, sandbox: sandbox} do
-      shared_hash = "cccccc222222"
-
-      parent_wf = insert(:workflow, project: parent, name: "Unchanged")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(parent_wf, shared_hash, "app")
-
-      sandbox_wf = insert(:workflow, project: sandbox, name: "Unchanged")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(sandbox_wf, shared_hash, "app")
-
-      changed_sandbox_wf = insert(:workflow, project: sandbox, name: "Changed")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          changed_sandbox_wf,
-          "dddddd333333",
-          "app"
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      unchanged_data =
-        Enum.find(assigns.merge_source_workflows, &(&1.name == "Unchanged"))
-
-      changed_data =
-        Enum.find(assigns.merge_source_workflows, &(&1.name == "Changed"))
-
-      assert %{is_changed: false} = unchanged_data
-      assert %{is_changed: true} = changed_data
-
-      refute MapSet.member?(
-               assigns.merge_selected_workflow_ids,
-               unchanged_data.id
-             )
-
-      assert MapSet.member?(assigns.merge_selected_workflow_ids, changed_data.id)
-    end
-
-    test "target-only workflows appear in list unchecked by default",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox
-         } do
-      # Gamma existed before the fork, so it is in the project but not the sandbox.
-      _parent_alpha = insert(:workflow, project: parent, name: "Alpha")
-
-      _parent_gamma =
-        insert(:workflow,
-          project: parent,
-          name: "Gamma",
-          inserted_at: DateTime.add(sandbox.inserted_at, -3600, :second)
-        )
-
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html =
-        view
-        |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-        |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      gamma_data =
-        Enum.find(assigns.merge_source_workflows, &(&1.name == "Gamma"))
 
       assert %{
-               is_deleted: true,
-               is_new: false,
-               is_diverged: false,
-               is_changed: false
-             } = gamma_data
+               "env" => "production",
+               "scheduledDeletion" => at,
+               "canEdit" => false,
+               "canDelete" => false,
+               "canMerge" => false,
+               "canCancelDeletion" => true,
+               "restoreBlockedReason" => nil
+             } = row(view, scheduled)
 
-      refute MapSet.member?(assigns.merge_selected_workflow_ids, gamma_data.id)
-
-      assert html =~ "Deleted in sandbox"
+      assert at
     end
 
-    test "target-only workflow added after the fork is hidden from the merge list",
-         %{conn: conn, parent: parent, sandbox: sandbox} do
-      _parent_alpha = insert(:workflow, project: parent, name: "Alpha")
-
-      _parent_added =
-        insert(:workflow,
-          project: parent,
-          name: "Added Later",
-          inserted_at: DateTime.add(sandbox.inserted_at, 3600, :second)
-        )
-
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html =
-        view
-        |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-        |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      # A workflow added to the project after the fork is not part of this
-      # sandbox's merge, so it does not appear in the list at all.
-      refute Enum.any?(
-               assigns.merge_source_workflows,
-               &(&1.name == "Added Later")
-             )
-
-      refute html =~ "Added Later"
-    end
-
-    test "opens the merge modal in a workspace deeper than two levels", %{
+    test "clears the schedule and refreshes the list", %{
       conn: conn,
       parent: parent,
-      sandbox: sandbox,
-      user: user
+      scheduled: scheduled
     } do
-      a =
-        insert(:project,
-          name: "a",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      b =
-        insert(:project,
-          name: "b",
-          parent: a,
-          project_users: [%{user: user, role: :owner}]
-        )
+      assert restore_sandbox(view, scheduled) =~
+               "Cancelled deletion of sandbox scheduled."
 
-      _c =
-        insert(:project,
-          name: "c",
-          parent: b,
-          project_users: [%{user: user, role: :owner}]
-        )
+      assert_reply(view, %{})
 
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+      assert Repo.reload!(scheduled).scheduled_deletion == nil
 
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html =
-        view
-        |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-        |> render_click()
-
-      assert html =~ "Merge"
+      assert %{"scheduledDeletion" => nil, "canDelete" => true} =
+               row(view, scheduled)
     end
 
-    test "drops a rejected target from the form rather than leaving it selected",
-         %{conn: conn, parent: parent, sandbox: sandbox, user: user} do
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      child =
-        insert(:project,
-          name: "child-of-sandbox",
-          parent: sandbox,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      render_click(view, "select-merge-target", %{
-        "merge" => %{"target_id" => child.id}
-      })
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      refute assigns.merge_changeset.changes[:target_id] == child.id
-    end
-
-    test "does not preview a merge into a target the confirm path would refuse",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox,
-           user: user
-         } do
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      child =
-        insert(:project,
-          name: "child-of-sandbox",
-          parent: sandbox,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      insert(:workflow, project: child, name: "Only In Child")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      render_click(view, "select-merge-target", %{
-        "merge" => %{"target_id" => child.id}
-      })
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      refute Enum.any?(
-               assigns.merge_source_workflows,
-               &(&1.name == "Only In Child")
-             )
-    end
-
-    test "refuses a target the merge screen never offered", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox,
-      user: user
-    } do
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      retiring =
-        insert(:project,
-          name: "retiring",
-          parent: parent,
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      refute Enum.any?(assigns.merge_target_options, &(&1.value == retiring.id))
-
-      html =
-        render_click(view, "confirm-merge", %{
-          "merge" => %{"target_id" => retiring.id}
-        })
-
-      assert html =~ "Target project not found"
-      assert Lightning.Repo.all(Lightning.Workflows.Workflow) |> length() == 1
-    end
-
-    test "refuses the sandbox itself as a merge target", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      html =
-        render_click(view, "confirm-merge", %{
-          "merge" => %{"target_id" => sandbox.id}
-        })
-
-      assert html =~ "Target project not found"
-    end
-
-    test "explicitly checking a target-only workflow deletes it on merge",
-         %{conn: conn, parent: parent, sandbox: sandbox} do
-      parent_alpha = insert(:workflow, project: parent, name: "Alpha")
-
-      parent_gamma =
-        insert(:workflow,
-          project: parent,
-          name: "Gamma",
-          inserted_at: DateTime.add(sandbox.inserted_at, -3600, :second)
-        )
-
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      render_click(view, "toggle-workflow", %{"id" => parent_gamma.id})
-
-      render_click(view, "confirm-merge", %{
-        "merge" => %{"target_id" => parent.id}
-      })
-
-      assert Lightning.Repo.reload(parent_gamma).deleted_at
-      refute Lightning.Repo.reload(parent_alpha).deleted_at
-    end
-
-    test "target-only workflow is kept when left unchecked on merge",
-         %{conn: conn, parent: parent, sandbox: sandbox} do
-      parent_alpha = insert(:workflow, project: parent, name: "Alpha")
-
-      parent_added =
-        insert(:workflow,
-          project: parent,
-          name: "Added Later",
-          inserted_at: DateTime.add(sandbox.inserted_at, 3600, :second)
-        )
-
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      render_click(view, "confirm-merge", %{
-        "merge" => %{"target_id" => parent.id}
-      })
-
-      refute Lightning.Repo.reload(parent_added).deleted_at
-      refute Lightning.Repo.reload(parent_alpha).deleted_at
-    end
-
-    test "target-only workflow added after the fork cannot be deleted even if toggled",
-         %{conn: conn, parent: parent, sandbox: sandbox} do
-      parent_alpha = insert(:workflow, project: parent, name: "Alpha")
-
-      parent_added =
-        insert(:workflow,
-          project: parent,
-          name: "Added Later",
-          inserted_at: DateTime.add(sandbox.inserted_at, 3600, :second)
-        )
-
-      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      # The workflow is not in the merge list, so a forced toggle event for it
-      # is ignored and it can never be selected for deletion.
-      render_click(view, "toggle-workflow", %{"id" => parent_added.id})
-
-      refute MapSet.member?(
-               :sys.get_state(view.pid).socket.assigns.merge_selected_workflow_ids,
-               parent_added.id
-             )
-
-      render_click(view, "confirm-merge", %{
-        "merge" => %{"target_id" => parent.id}
-      })
-
-      refute Lightning.Repo.reload(parent_added).deleted_at
-      refute Lightning.Repo.reload(parent_alpha).deleted_at
-    end
-
-    test "workflow selection UI shows per-row status badges", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      parent_wf = insert(:workflow, project: parent, name: "Diverged Flow")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          parent_wf,
-          "aaaaaa000001",
-          "app"
-        )
-
-      sandbox_wf = insert(:workflow, project: sandbox, name: "Diverged Flow")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_wf,
-          "bbbbbb111112",
-          "app"
-        )
-
-      _new_wf = insert(:workflow, project: sandbox, name: "New Flow")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      html =
-        view
-        |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-        |> render_click()
-
-      assert html =~ "Diverged"
-      assert html =~ "Changed"
-      assert html =~ "New"
-      assert html =~ "Diverged Flow"
-      assert html =~ "New Flow"
-    end
-
-    test "toggle-workflow event deselects and reselects a workflow", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      wf = insert(:workflow, project: sandbox, name: "My Workflow")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-      assert MapSet.member?(assigns.merge_selected_workflow_ids, wf.id)
-
-      render_click(view, "toggle-workflow", %{"id" => wf.id})
-
-      assigns2 = :sys.get_state(view.pid).socket.assigns
-      refute MapSet.member?(assigns2.merge_selected_workflow_ids, wf.id)
-
-      render_click(view, "toggle-workflow", %{"id" => wf.id})
-
-      assigns3 = :sys.get_state(view.pid).socket.assigns
-      assert MapSet.member?(assigns3.merge_selected_workflow_ids, wf.id)
-    end
-
-    test "toggle-all-workflows deselects all when all selected, then selects all",
-         %{conn: conn, parent: parent, sandbox: sandbox} do
-      _wf1 = insert(:workflow, project: sandbox, name: "Flow A")
-      _wf2 = insert(:workflow, project: sandbox, name: "Flow B")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-      assert MapSet.size(assigns.merge_selected_workflow_ids) == 2
-
-      render_click(view, "toggle-all-workflows", %{})
-
-      assigns2 = :sys.get_state(view.pid).socket.assigns
-      assert MapSet.size(assigns2.merge_selected_workflow_ids) == 0
-
-      render_click(view, "toggle-all-workflows", %{})
-
-      assigns3 = :sys.get_state(view.pid).socket.assigns
-      assert MapSet.size(assigns3.merge_selected_workflow_ids) == 2
-    end
-
-    test "select-all checkbox reflects :all, :none, and :partial states", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      wf1 = insert(:workflow, project: sandbox, name: "Flow A")
-      _wf2 = insert(:workflow, project: sandbox, name: "Flow B")
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      # Both workflows start pre-selected (both are :new → :is_changed). :all.
-      html = render(view)
-
-      assert html =~
-               ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
-
-      refute html =~
-               ~r/id="merge-select-all-workflows"[^>]*indeterminate[^>]*>/
-
-      # Deselect all. :none.
-      render_click(view, "toggle-all-workflows", %{})
-      html = render(view)
-
-      refute html =~ ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
-      refute html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
-
-      # Select just one workflow. :partial.
-      render_click(view, "toggle-workflow", %{"id" => wf1.id})
-      html = render(view)
-
-      refute html =~ ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
-      assert html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
-    end
-
-    test "select-all checkbox is disabled when there are no workflows", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      html = render(view)
-
-      assert html =~ ~r/id="merge-select-all-workflows"[^>]*disabled/
-      refute html =~ ~r/id="merge-select-all-workflows"[^>]*checked[^>]*>/
-      refute html =~ ~r/id="merge-select-all-workflows"[^>]*indeterminate/
-    end
-
-    test "changing merge target recomputes workflow divergence and new status",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox,
-           user: user
-         } do
-      sibling =
-        insert(:project,
-          name: "sibling",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      # "Shared" exists in parent (diverged from sandbox)
-      parent_shared = insert(:workflow, project: parent, name: "Shared")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          parent_shared,
-          "aaaaaa000010",
-          "app"
-        )
-
-      # "Shared" exists in sandbox with different hash
-      sandbox_shared = insert(:workflow, project: sandbox, name: "Shared")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_shared,
-          "bbbbbb111120",
-          "app"
-        )
-
-      # "Only In Sibling" exists in sibling (diverged from sandbox)
-      sibling_wf = insert(:workflow, project: sibling, name: "Only In Sibling")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sibling_wf,
-          "cccccc222220",
-          "app"
-        )
-
-      sandbox_sibling_wf =
-        insert(:workflow, project: sandbox, name: "Only In Sibling")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_sibling_wf,
-          "dddddd333330",
-          "app"
-        )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      shared_wf =
-        Enum.find(assigns.merge_source_workflows, &(&1.name == "Shared"))
-
-      sibling_wf_in_list =
-        Enum.find(
-          assigns.merge_source_workflows,
-          &(&1.name == "Only In Sibling")
-        )
-
-      assert shared_wf.is_diverged
-      assert sibling_wf_in_list.is_new
-
-      # Change target to sibling — now "Only In Sibling" is diverged, "Shared" is new
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_change(%{merge: %{target_id: sibling.id}})
-
-      assigns2 = :sys.get_state(view.pid).socket.assigns
-
-      shared_wf2 =
-        Enum.find(assigns2.merge_source_workflows, &(&1.name == "Shared"))
-
-      sibling_wf2 =
-        Enum.find(
-          assigns2.merge_source_workflows,
-          &(&1.name == "Only In Sibling")
-        )
-
-      assert shared_wf2.is_new
-      assert sibling_wf2.is_diverged
-    end
-  end
-
-  describe "credential selection in merge modal" do
-    setup :register_and_log_in_user
-
-    # Provisions a real sandbox from the parent, then adds a credential that
-    # lives only in the sandbox and wires the sandbox's job to it. The merge of
-    # this sandbox into the parent would drop that credential unless the user
-    # keeps it selected in the modal.
-    setup %{user: user} do
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      wf = insert(:workflow, project: parent, name: "Alpha")
-      trigger = insert(:trigger, workflow: wf, type: :webhook)
-
-      job =
-        insert(:job,
-          workflow: wf,
-          name: "A1",
-          adaptor: "@openfn/language-common@latest",
-          body: "console.log('A1');"
-        )
-
-      insert(:edge,
-        workflow: wf,
-        source_trigger_id: trigger.id,
-        target_job_id: job.id,
-        condition_type: :always,
-        enabled: true
-      )
-
-      {:ok, sandbox} =
-        Lightning.Projects.Sandboxes.provision(parent, user, %{name: "sb"})
-
-      credential =
-        insert(:credential,
-          name: "sandbox-only-cred",
-          body: %{"token" => "x"},
-          user: user
-        )
-
-      sandbox_pc =
-        insert(:project_credential, project: sandbox, credential: credential)
-
-      sandbox_job =
-        from(j in Lightning.Workflows.Job,
-          join: w in assoc(j, :workflow),
-          where: w.project_id == ^sandbox.id and j.name == "A1"
-        )
-        |> Repo.one!()
-
-      sandbox_job
-      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
-      |> Repo.update!()
-
-      {:ok,
-       parent: parent,
-       sandbox: sandbox,
-       credential: credential,
-       sandbox_pc: sandbox_pc}
-    end
-
-    test "modal lists sandbox-only credentials checked by default", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox,
-      sandbox_pc: sandbox_pc
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      assert [%{id: listed_id, name: "sandbox-only-cred"}] =
-               assigns.merge_credentials
-
-      assert listed_id == sandbox_pc.id
-
-      assert MapSet.equal?(
-               assigns.merge_selected_credential_ids,
-               MapSet.new([sandbox_pc.id])
-             )
-
-      html = render(view)
-      assert html =~ "Credentials to add"
-      assert html =~ "sandbox-only-cred"
-    end
-
-    test "select-all toggles every credential", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox,
-      sandbox_pc: sandbox_pc
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      # Default is all selected; the select-all clears them, then re-selects.
-      view |> element("#merge-select-all-credentials") |> render_click()
-      assigns = :sys.get_state(view.pid).socket.assigns
-      assert MapSet.size(assigns.merge_selected_credential_ids) == 0
-
-      view |> element("#merge-select-all-credentials") |> render_click()
-      assigns = :sys.get_state(view.pid).socket.assigns
-      assert MapSet.member?(assigns.merge_selected_credential_ids, sandbox_pc.id)
-    end
-
-    test "a deselected credential survives a form change", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox,
-      sandbox_pc: sandbox_pc
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view
-      |> element("li[phx-value-id='#{sandbox_pc.id}']")
-      |> render_click()
-
-      # The checkboxes share the merge form, so any form change re-runs
-      # select-merge-target; it must not wipe the user's deselection.
-      view
-      |> form("#merge-sandbox-modal form", merge: %{target_id: parent.id})
-      |> render_change()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-      refute MapSet.member?(assigns.merge_selected_credential_ids, sandbox_pc.id)
-    end
-
-    test "deselecting a credential and merging does not attach it", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox,
-      sandbox_pc: sandbox_pc,
-      credential: credential
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view
-      |> element("li[phx-value-id='#{sandbox_pc.id}']")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-      assert MapSet.size(assigns.merge_selected_credential_ids) == 0
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      assert_redirect(view, ~p"/projects/#{parent.id}/w")
-
-      refute Repo.exists?(
-               from(pc in Lightning.Projects.ProjectCredential,
-                 where:
-                   pc.project_id == ^parent.id and
-                     pc.credential_id == ^credential.id
-               )
-             )
-    end
-
-    test "keeping a credential selected and merging attaches it", %{
-      conn: conn,
-      parent: parent,
-      sandbox: sandbox,
-      credential: credential
-    } do
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      assert_redirect(view, ~p"/projects/#{parent.id}/w")
-
-      assert Repo.exists?(
-               from(pc in Lightning.Projects.ProjectCredential,
-                 where:
-                   pc.project_id == ^parent.id and
-                     pc.credential_id == ^credential.id
-               )
-             )
-    end
-  end
-
-  describe "GitHub sync integration during merge" do
-    setup do
-      Mox.verify_on_exit!()
-    end
-
-    setup :register_and_log_in_user
-
-    setup %{user: user} do
-      parent =
-        insert(:project,
-          name: "parent",
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      # Create workflows and snapshots for the parent project
-      workflow = insert(:simple_workflow, project: parent)
-      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
-
-      sandbox =
-        insert(:project,
-          name: "test-sandbox",
-          parent: parent,
-          project_users: [%{user: user, role: :owner}]
-        )
-
-      {:ok,
-       parent: parent, sandbox: sandbox, workflow: workflow, snapshot: snapshot}
-    end
-
-    test "commits to GitHub before and after merge when project has GitHub sync",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox,
-           snapshot: snapshot
-         } do
-      # Set up GitHub sync for the parent project
-      repo_connection =
-        insert(:project_repo_connection,
-          project: parent,
-          repo: "someaccount/somerepo",
-          branch: "main",
-          github_installation_id: "1234"
-        )
+    test "the plan's limit blocks Restore, and the context's refusal is replied",
+         %{conn: conn, parent: parent, scheduled: scheduled} do
+      message = %Lightning.Extensions.Message{text: "stub-blocked-message"}
+
+      Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn
+        %{type: :new_sandbox}, _ctx -> {:error, :too_many_sandboxes, message}
+        _action, _ctx -> :ok
+      end)
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
-      # Expect GitHub API calls for the pre-merge commit
-      expect_create_installation_token(repo_connection.github_installation_id)
-      expect_get_repo(repo_connection.repo)
+      assert row(view, scheduled)["restoreBlockedReason"] ==
+               "stub-blocked-message"
 
-      expect_create_workflow_dispatch_with_request_body(
-        repo_connection.repo,
-        "openfn-pull.yml",
-        %{
-          ref: "main",
-          inputs: %{
-            projectId: parent.id,
-            apiSecretName: api_secret_name(parent),
-            branch: repo_connection.branch,
-            pathToConfig: path_to_config(repo_connection),
-            commitMessage: "pre-merge commit",
-            snapshots: "#{snapshot.id}"
-          }
-        }
-      )
-
-      # Expect GitHub API calls for the post-merge commit
-      expect_create_installation_token(repo_connection.github_installation_id)
-      expect_get_repo(repo_connection.repo)
-
-      expect_create_workflow_dispatch_with_request_body(
-        repo_connection.repo,
-        "openfn-pull.yml",
-        %{
-          ref: "main",
-          inputs: %{
-            projectId: parent.id,
-            apiSecretName: api_secret_name(parent),
-            branch: repo_connection.branch,
-            pathToConfig: path_to_config(repo_connection),
-            commitMessage: "Merged sandbox #{sandbox.name}",
-            snapshots: "#{snapshot.id}"
-          }
-        }
-      )
-
-      # Open merge modal and submit
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+      restore_sandbox(view, scheduled)
+      assert_reply(view, %{error: "stub-blocked-message"})
+      assert Repo.reload!(scheduled).scheduled_deletion
     end
 
-    test "commits to GitHub using YAML config when sync_version is true",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox,
-           snapshot: snapshot
-         } do
-      repo_connection =
-        insert(:project_repo_connection,
-          project: parent,
-          repo: "someaccount/somerepo",
-          branch: "main",
-          github_installation_id: "1234",
-          sync_version: true
+    test "replies with what the context refused", %{
+      conn: conn,
+      parent: parent,
+      scheduled: scheduled
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+      allow_mocks(view)
+
+      for {result, message} <- [
+            {{:error, :unauthorized},
+             "You are not authorized to cancel this sandbox's deletion"},
+            {{:error, :not_found}, "Sandbox not found"}
+          ] do
+        Mimic.expect(
+          Lightning.Projects.Sandboxes,
+          :cancel_scheduled_sandbox_deletion,
+          fn _sandbox, _actor -> result end
         )
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+        restore_sandbox(view, scheduled)
+        assert_reply(view, %{error: ^message})
+      end
 
-      expect_create_installation_token(repo_connection.github_installation_id)
-      expect_get_repo(repo_connection.repo)
+      send_event(view, "cancel-sandbox-deletion", %{"id" => Ecto.UUID.generate()})
 
-      expect_create_workflow_dispatch_with_request_body(
-        repo_connection.repo,
-        "openfn-pull.yml",
-        %{
-          ref: "main",
-          inputs: %{
-            projectId: parent.id,
-            apiSecretName: api_secret_name(parent),
-            branch: repo_connection.branch,
-            pathToConfig: path_to_config(repo_connection),
-            commitMessage: "pre-merge commit",
-            snapshots: "#{snapshot.id}"
-          }
-        }
-      )
-
-      expect_create_installation_token(repo_connection.github_installation_id)
-      expect_get_repo(repo_connection.repo)
-
-      expect_create_workflow_dispatch_with_request_body(
-        repo_connection.repo,
-        "openfn-pull.yml",
-        %{
-          ref: "main",
-          inputs: %{
-            projectId: parent.id,
-            apiSecretName: api_secret_name(parent),
-            branch: repo_connection.branch,
-            pathToConfig: path_to_config(repo_connection),
-            commitMessage: "Merged sandbox #{sandbox.name}",
-            snapshots: "#{snapshot.id}"
-          }
-        }
-      )
-
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
-
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
-
-      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+      assert_reply(view, %{error: "Sandbox not found"})
     end
 
-    test "does not commit to GitHub when project has no GitHub sync configured",
-         %{
-           conn: conn,
-           parent: parent,
-           sandbox: sandbox
-         } do
-      # No repo_connection created = no GitHub sync
-      # Without a repo_connection, get_repo_connection_for_project returns nil
-      # and initiate_sync is never called, so no GitHub API calls happen
-      {:ok, view, _html} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+    test "a viewer is refused when they send it, and the schedule stays", %{
+      conn: conn,
+      parent: parent,
+      scheduled: scheduled
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: parent, user: viewer, role: :viewer)
+      insert(:project_user, project: scheduled, user: viewer, role: :viewer)
 
-      # Open merge modal and submit
-      view
-      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
-      |> render_click()
+      {:ok, view, _html} =
+        live(log_in_user(conn, viewer), ~p"/projects/#{parent.id}/sandboxes")
 
-      view
-      |> form("#merge-sandbox-modal form")
-      |> render_submit()
+      assert %{"canCancelDeletion" => false} = row(view, scheduled)
 
-      assert_redirect(view, ~p"/projects/#{parent.id}/w")
+      restore_sandbox(view, scheduled)
+
+      assert_reply(view, %{
+        error: "You are not authorized to cancel this sandbox's deletion"
+      })
+
+      assert Repo.reload!(scheduled).scheduled_deletion
     end
 
-    defp api_secret_name(%{id: project_id}) do
-      project_id
-      |> String.replace("-", "_")
-      |> then(&"OPENFN_#{&1}_API_KEY")
-    end
+    test "restoring reloads the list and shows the current project's new schedule",
+         %{conn: conn, sb1: sb1, scheduled: scheduled} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{sb1.id}/sandboxes")
 
-    defp path_to_config(repo_connection) do
-      Lightning.VersionControl.ProjectRepoConnection.config_path(repo_connection)
-      |> Path.relative_to(".")
+      Repo.update!(Ecto.Changeset.change(sb1, scheduled_deletion: now()))
+      restore_sandbox(view, scheduled)
+
+      assert row(view, sb1)["scheduledDeletion"]
     end
   end
 end
