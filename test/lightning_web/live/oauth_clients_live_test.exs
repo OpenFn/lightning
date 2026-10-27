@@ -3,6 +3,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import LightningWeb.CredentialPageHelpers
 
   import Ecto.Query
 
@@ -211,22 +212,24 @@ defmodule LightningWeb.OauthClientsLiveTest do
       conn: conn,
       project: project
     } do
-      [~p"/credentials", ~p"/projects/#{project}/settings#credentials"]
-      |> Enum.each(fn url ->
-        {:ok, view, _html} = live(conn, url, on_error: :raise)
+      # On /credentials the dialog is the design system's and sends nothing
+      # until it saves.
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
 
-        refute has_element?(view, "#new-oauth-client-modal")
+      refute has_element?(view, "#new-oauth-client-modal")
 
-        view |> element("#new-oauth-client-option-menu-item") |> render_click()
+      view |> element("#new-oauth-client-option-menu-item") |> render_click()
 
-        assert has_element?(view, "#new-oauth-client-modal")
+      assert has_element?(view, "#new-oauth-client-modal")
 
-        view
-        |> element("#new-oauth-client-modal button", "Cancel")
-        |> render_click()
+      view
+      |> element("#new-oauth-client-modal button", "Cancel")
+      |> render_click()
 
-        refute has_element?(view, "#new-oauth-client-modal")
-      end)
+      refute has_element?(view, "#new-oauth-client-modal")
     end
 
     test "can create a new oauth client", %{
@@ -235,68 +238,120 @@ defmodule LightningWeb.OauthClientsLiveTest do
       valid_client_attrs: valid_attrs,
       invalid_client_attrs: invalid_attrs
     } do
-      _urls =
-        [~p"/credentials", ~p"/projects/#{project}/settings#credentials"]
-        |> Enum.each(fn url ->
-          {:ok, view, _html} = live(conn, url, on_error: :raise)
+      view = open(conn)
 
-          view |> element("#new-oauth-client-option-menu-item") |> render_click()
+      send_event(
+        view,
+        "create_oauth_client",
+        client_values(%{
+          "name" => "",
+          "authorizationEndpoint" => invalid_attrs.authorization_endpoint,
+          "tokenEndpoint" => invalid_attrs.token_endpoint
+        })
+      )
 
-          html =
-            view
-            |> form("#oauth-client-form-new", oauth_client: invalid_attrs)
-            |> render_change()
+      assert_reply(view, %{
+        fieldErrors: %{
+          "name" => [blank],
+          "authorizationEndpoint" => [url_error],
+          "tokenEndpoint" => [_]
+        }
+      })
 
-          assert html =~ "This field can&#39;t be blank."
-          assert html =~ "must be either a http or https URL"
+      assert blank =~ "This field can't be blank."
+      assert url_error =~ "must be either a http or https URL"
+      assert Lightning.Repo.all(OauthClient) == []
 
-          {view, added_mandatory_scopes, added_optional_scopes} =
-            perforom_scopes_management_tests(view)
+      # The scope chips are the design system's; the page sends each list.
+      mandatory_scopes = ["scope_1", "scope_2", "scope_3", "will_be_modified"]
+      optional_scopes = ["scope_6", "scope_7", "scope_8"]
 
-          {:ok, _view, html} =
-            view
-            |> form("#oauth-client-form-new", oauth_client: valid_attrs)
-            |> render_submit()
-            |> follow_redirect(conn, url)
+      assert send_event(
+               view,
+               "create_oauth_client",
+               client_values(%{
+                 "name" => valid_attrs.name,
+                 "authorizationEndpoint" => valid_attrs.authorization_endpoint,
+                 "tokenEndpoint" => valid_attrs.token_endpoint,
+                 "userinfoEndpoint" => valid_attrs.userinfo_endpoint,
+                 "revocationEndpoint" => valid_attrs.revocation_endpoint,
+                 "clientId" => valid_attrs.client_id,
+                 "clientSecret" => valid_attrs.client_secret,
+                 "scopesDocUrl" => valid_attrs.scopes_doc_url,
+                 "mandatoryScopes" => mandatory_scopes,
+                 "optionalScopes" => optional_scopes
+               })
+             ) =~ "Oauth client created successfully"
 
-          assert html =~ valid_attrs.name
-          assert html =~ "Oauth client created successfully"
+      assert valid_attrs.name in Enum.map(
+               props(view)["oauthClients"],
+               & &1["name"]
+             )
 
-          saved_clients_names =
-            Lightning.Repo.all(OauthClient)
-            |> Enum.map(fn client -> client.name end)
+      client = Lightning.Repo.get_by!(OauthClient, name: valid_attrs.name)
+      assert String.split(client.mandatory_scopes, ",") == mandatory_scopes
+      assert String.split(client.optional_scopes, ",") == optional_scopes
 
-          assert valid_attrs.name in saved_clients_names
+      # Project settings still draws its own form.
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
 
-          assert Lightning.Repo.all(OauthClient)
-                 |> Enum.map(fn client ->
-                   MapSet.subset?(
-                     MapSet.new(String.split(client.mandatory_scopes, ",")),
-                     MapSet.new(added_mandatory_scopes)
-                   ) and
-                     MapSet.subset?(
-                       MapSet.new(String.split(client.optional_scopes, ",")),
-                       MapSet.new(added_optional_scopes)
-                     )
-                 end)
-                 |> Enum.all?()
-        end)
+      view |> element("#new-oauth-client-option-menu-item") |> render_click()
+
+      html =
+        view
+        |> form("#oauth-client-form-new", oauth_client: invalid_attrs)
+        |> render_change()
+
+      assert html =~ "This field can&#39;t be blank."
+      assert html =~ "must be either a http or https URL"
+
+      {view, added_mandatory_scopes, added_optional_scopes} =
+        perforom_scopes_management_tests(view)
+
+      valid_attrs = %{valid_attrs | name: valid_attrs.name <> " 2"}
+
+      {:ok, _view, html} =
+        view
+        |> form("#oauth-client-form-new", oauth_client: valid_attrs)
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/projects/#{project}/settings#credentials")
+
+      assert html =~ valid_attrs.name
+      assert html =~ "Oauth client created successfully"
+
+      client = Lightning.Repo.get_by!(OauthClient, name: valid_attrs.name)
+
+      assert MapSet.subset?(
+               MapSet.new(String.split(client.mandatory_scopes, ",")),
+               MapSet.new(added_mandatory_scopes)
+             )
+
+      assert MapSet.subset?(
+               MapSet.new(String.split(client.optional_scopes, ",")),
+               MapSet.new(added_optional_scopes)
+             )
     end
 
     test "a non-superuser cannot create a global client via crafted params", %{
       conn: conn,
       valid_client_attrs: valid_attrs
     } do
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      view |> element("#new-oauth-client-option-menu-item") |> render_click()
+      # The superuser-only checkbox is hidden for this user, so send the flag
+      # anyway to simulate a crafted submission.
+      refute props(view)["canCreateGlobalOauthClient"]
 
-      # The superuser-only checkbox is hidden for this user, so inject the flag
-      # directly to simulate a crafted submission.
-      view
-      |> form("#oauth-client-form-new", oauth_client: valid_attrs)
-      |> render_submit(%{"oauth_client" => %{"global" => "true"}})
-      |> follow_redirect(conn, ~p"/credentials")
+      send_event(
+        view,
+        "create_oauth_client",
+        client_values(%{"name" => valid_attrs.name, "global" => true})
+      )
+
+      assert_reply(view, %{})
 
       client = Lightning.Repo.get_by!(OauthClient, name: valid_attrs.name)
       refute client.global

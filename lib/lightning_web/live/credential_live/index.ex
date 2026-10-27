@@ -1,37 +1,39 @@
 defmodule LightningWeb.CredentialLive.Index do
   @moduledoc """
-  LiveView for listing and managing credentials
+  The user's Credentials page: their own credentials and OAuth clients,
+  drawn by the design system's CredentialsIndexPage. Its events are the
+  credential index's, answered by `CredentialIndex`.
   """
   use LightningWeb, :live_view
+
+  alias LightningWeb.CredentialLive.CredentialIndex
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
-     assign(
-       socket,
+     socket
+     |> assign(
        active_menu_item: :credentials,
-       page_title: "Credentials"
-     )}
+       page_title: "Credentials",
+       project: nil
+     )
+     |> CredentialIndex.assign_index()}
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-  end
+  def handle_event(event, params, socket),
+    do: CredentialIndex.handle_event(event, params, socket)
 
-  defp apply_action(socket, :index, _params) do
-    socket
-    |> assign(credential: nil)
-  end
-
-  @doc """
-  A generic handler for forwarding updates from PubSub
-  """
   @impl true
-  def handle_info({:forward, mod, opts}, socket) do
-    send_update(mod, opts)
-    {:noreply, socket}
-  end
+  def handle_info({:forward, CredentialIndex, _answer} = message, socket),
+    do: CredentialIndex.handle_info(message, socket)
+
+  # The test mailer reports each email it sends to the sending process.
+  def handle_info({:email, _email}, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_async(name, result, socket),
+    do: CredentialIndex.handle_async(name, result, socket)
 end

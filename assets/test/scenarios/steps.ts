@@ -3650,3 +3650,281 @@ export const snapshotTakenAt = (snapshotId: string) =>
     `select to_char(inserted_at, 'YYYY-MM-DD "at" HH24:MI:SS') as at
      from workflow_snapshots where id = '${snapshotId}'`
   )[0].at;
+
+// ---------------------------------------------------------------------------
+// Credentials (annotations/views/credentials-index.md)
+// ---------------------------------------------------------------------------
+
+export type CredentialSeed = {
+  name: string;
+  /** "raw" unless said, or an adaptor's name ("dhis2") or "oauth" */
+  schema?: string;
+  /** environment name => its values; one "main" body with a password if not given */
+  bodies?: Record<string, Record<string, unknown>>;
+  /** ids of the projects it is shared with */
+  projects?: string[];
+  /** the OAuth client it signs in through, by id */
+  oauthClient?: string;
+  /** scheduled for deletion, as the owner would schedule it */
+  scheduled?: boolean;
+  transferStatus?: 'pending' | 'completed';
+};
+
+// Given "<by>" owns this credential, created through Lightning — returns its
+// id and a function that removes it again
+export function seedCredential(by: string, seed: CredentialSeed) {
+  const bodies = Object.entries(seed.bodies ?? { main: { password: 'old' } });
+  const id = lastLine(
+    onNode(
+      [
+        `by = ${exUser(by)}`,
+        `{:ok, c} = Lightning.Credentials.create_credential(%{name: ${ex(seed.name)}, schema: ${ex(seed.schema ?? 'raw')}, user_id: by.id,
+           oauth_client_id: ${seed.oauthClient ? ex(seed.oauthClient) : 'nil'},
+           credential_bodies: [${bodies.map(([n, b]) => `%{name: ${ex(n)}, body: ${exJson(b)}}`).join(', ')}],
+           project_credentials: [${(seed.projects ?? []).map(p => `%{project_id: ${ex(p)}}`).join(', ')}]}, by)`,
+        seed.scheduled
+          ? `{:ok, c} = Lightning.Credentials.schedule_credential_deletion(c, by)`
+          : '',
+        seed.transferStatus
+          ? `c = c |> Ecto.Changeset.change(%{transfer_status: :${seed.transferStatus}}) |> Lightning.Repo.update!()`
+          : '',
+        `c.id`,
+      ].join('\n')
+    )
+  ).replace(/"/g, '');
+  return { id, remove: () => removeCredential(id) };
+}
+
+// Removes credential <id> with its bodies, shares and audit rows, if it is
+// still there
+export const removeCredential = (id: string) =>
+  exec(`update jobs set project_credential_id = null where project_credential_id in
+          (select id from project_credentials where credential_id = '${id}');
+        delete from project_credentials where credential_id = '${id}';
+        delete from credential_bodies where credential_id = '${id}';
+        delete from audit_events where item_id = '${id}';
+        delete from credentials where id = '${id}'`);
+
+export type StoredCredential = {
+  id: string;
+  scheduled_deletion: string | null;
+  transfer_status: string | null;
+  projects: string[];
+};
+
+// The credentials called "<name>" that "<owner>" owns, with the names of the
+// projects they are shared with
+export const credentialsNamed = (owner: string, name: string) =>
+  sql<StoredCredential>(
+    `select c.id, c.scheduled_deletion, c.transfer_status,
+            coalesce(array_agg(p.name order by p.name) filter (where p.id is not null), '{}') as projects
+     from credentials c
+     left join project_credentials pc on pc.credential_id = c.id
+     left join projects p on p.id = pc.project_id
+     where c.user_id = '${user(owner).id}' and c.name = ${literal(name)}
+     group by c.id`
+  );
+
+// The one credential called "<name>" that "<owner>" owns
+export function credentialNamed(owner: string, name: string) {
+  const found = credentialsNamed(owner, name);
+  expect(found, `one credential "${name}"`).toHaveLength(1);
+  return found[0];
+}
+
+// Removes the credentials called <names> that "<owner>" owns, such as ones a
+// test created through the page
+export function removeCredentialsNamed(owner: string, names: string[]) {
+  for (const name of names)
+    for (const { id } of credentialsNamed(owner, name)) removeCredential(id);
+}
+
+// The stored values of credential <id>, by environment (they are encrypted,
+// so read through Lightning)
+export function credentialBodiesOf(
+  id: string
+): Record<string, Record<string, unknown>> {
+  const out = lastLine(
+    onNode(`import Ecto.Query
+      Lightning.Repo.all(from b in Lightning.Credentials.CredentialBody, where: b.credential_id == ^${ex(id)})
+      |> Map.new(&{&1.name, &1.body}) |> Jason.encode!()`)
+  );
+  return JSON.parse(JSON.parse(out) as string) as Record<
+    string,
+    Record<string, unknown>
+  >;
+}
+
+// Given the job of workflow "<workflow>" in project <projectId> uses
+// credential "<name>" of "<owner>"
+export function useCredentialInJobs(
+  projectId: string,
+  workflow: string,
+  owner: string,
+  name: string
+) {
+  exec(`update jobs set project_credential_id = (
+          select pc.id from project_credentials pc join credentials c on c.id = pc.credential_id
+          where pc.project_id = '${projectId}' and c.name = ${literal(name)}
+            and c.user_id = '${user(owner).id}')
+        where workflow_id in (select id from workflows
+          where project_id = '${projectId}' and name = ${literal(workflow)})`);
+}
+
+// The names of the credentials the jobs of workflow "<workflow>" in project
+// <projectId> use (null for a job with none)
+export const credentialsOfJobs = (projectId: string, workflow: string) =>
+  sql<{ credential: string | null }>(
+    `select c.name as credential from jobs j
+     join workflows w on w.id = j.workflow_id
+     left join project_credentials pc on pc.id = j.project_credential_id
+     left join credentials c on c.id = pc.credential_id
+     where w.project_id = '${projectId}' and w.name = ${literal(workflow)}`
+  ).map(r => r.credential);
+
+// Given run step <stepId> (seedRun's) used credential <id>, so the
+// credential has activity
+export const markCredentialUsed = (id: string, stepId: string) =>
+  exec(`update steps set credential_id = '${id}' where id = '${stepId}'`);
+
+export type OauthClientSeed = {
+  name: string;
+  global?: boolean;
+  /** ids of the projects it is shared with */
+  projects?: string[];
+  mandatoryScopes?: string;
+  optionalScopes?: string;
+  /** the provider's endpoints live at this base URL; a stand-in on 127.0.0.1 if not given */
+  base?: string;
+};
+
+// Given "<by>" owns this OAuth client, created through Lightning — returns
+// its id and a function that removes it again
+export function seedOauthClient(by: string, seed: OauthClientSeed) {
+  const base = seed.base ?? 'http://127.0.0.1:1';
+  const id = lastLine(
+    onNode(`by = ${exUser(by)}
+      {:ok, c} = Lightning.OauthClients.create_client(%{name: ${ex(seed.name)}, user_id: by.id,
+        client_id: "scenario-client", client_secret: "scenario-secret",
+        authorization_endpoint: ${ex(`${base}/authorize`)}, token_endpoint: ${ex(`${base}/token`)},
+        userinfo_endpoint: ${ex(`${base}/userinfo`)},
+        mandatory_scopes: ${ex(seed.mandatoryScopes ?? 'read')}, optional_scopes: ${ex(seed.optionalScopes ?? '')},
+        global: ${!!seed.global},
+        project_oauth_clients: [${(seed.projects ?? []).map(p => `%{project_id: ${ex(p)}}`).join(', ')}]}, by, allow_global: true)
+      c.id`)
+  ).replace(/"/g, '');
+  return { id, remove: () => removeOauthClient(id) };
+}
+
+// Removes OAuth client <id> with its shares and audit rows, if it is still there
+export const removeOauthClient = (id: string) =>
+  exec(`update credentials set oauth_client_id = null where oauth_client_id = '${id}';
+        delete from project_oauth_clients where oauth_client_id = '${id}';
+        delete from audit_events where item_id = '${id}';
+        delete from oauth_clients where id = '${id}'`);
+
+export type StoredOauthClient = {
+  id: string;
+  global: boolean;
+  mandatory_scopes: string | null;
+  projects: string[];
+};
+
+// The OAuth clients called "<name>" that "<owner>" owns
+export const oauthClientsNamed = (owner: string, name: string) =>
+  sql<StoredOauthClient>(
+    `select o.id, o.global, o.mandatory_scopes,
+            coalesce(array_agg(p.name order by p.name) filter (where p.id is not null), '{}') as projects
+     from oauth_clients o
+     left join project_oauth_clients po on po.oauth_client_id = o.id
+     left join projects p on p.id = po.project_id
+     where o.user_id = '${user(owner).id}' and o.name = ${literal(name)}
+     group by o.id`
+  );
+
+export type StandInOauth = {
+  /** the base URL of its endpoints, for seedOauthClient */
+  base: string;
+  /** how the token endpoint answers a refresh from now on */
+  refreshes: (answer: 'ok' | 'invalid_grant') => void;
+  /** every request the provider got */
+  requests: URL[];
+  close: () => Promise<void>;
+};
+
+// Given a stand-in OAuth provider on this machine. Its token endpoint hands
+// out tokens with the scopes asked for (or refuses refreshes with
+// "invalid_grant"), and its userinfo endpoint names "Scenario Person".
+export async function standInOauth(): Promise<StandInOauth> {
+  const requests: URL[] = [];
+  let refresh: 'ok' | 'invalid_grant' = 'ok';
+  const server = createServer((req, res) => {
+    const url = new URL(req.url ?? '/', base);
+    requests.push(url);
+    const json = (status: number, body: object) => {
+      res.statusCode = status;
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify(body));
+    };
+    if (url.pathname === '/userinfo')
+      return json(200, {
+        name: 'Scenario Person',
+        email: 'person@example.org',
+      });
+    if (url.pathname !== '/token') return res.end('signed in');
+    let form = '';
+    req.on('data', chunk => (form += chunk));
+    req.on('end', () => {
+      const params = new URLSearchParams(form);
+      if (params.get('grant_type') === 'refresh_token' && refresh !== 'ok')
+        return json(400, { error: refresh });
+      json(200, {
+        access_token: `access-${randomUUID()}`,
+        refresh_token: 'refresh-scenario',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: params.get('scope') ?? 'read',
+      });
+    });
+  });
+  // Named "localhost": Lightning's dev config lets OAuth requests reach that
+  // host only, not 127.0.0.1
+  const base = await new Promise<string>(resolve =>
+    server.listen(0, '127.0.0.1', () =>
+      resolve(`http://localhost:${(server.address() as AddressInfo).port}`)
+    )
+  );
+  return {
+    base,
+    refreshes: answer => void (refresh = answer),
+    requests,
+    close: () => new Promise(resolve => server.close(() => resolve())),
+  };
+}
+
+// The stored values of an OAuth credential signed in with <scope>, whose
+// access token expires <inSeconds> from now (negative: already expired)
+export const oauthBody = (scope: string, inSeconds: number) => ({
+  access_token: 'access-seeded',
+  refresh_token: 'refresh-scenario',
+  token_type: 'Bearer',
+  scope,
+  expires_at: Math.floor(Date.now() / 1000) + inSeconds,
+});
+
+// Given the adaptor catalogue can't answer: the active source has never
+// loaded and its scheduler can't be reached. Instance-wide (@serial).
+// Returns a function that puts it back.
+export function catalogueUnavailable() {
+  const reachable = schedulerUnreachable();
+  const was = lastLine(onNode(`:persistent_term.get(${ADAPTORS_META}).source`));
+  onNode(
+    `:persistent_term.put(${ADAPTORS_META}, %{:persistent_term.get(${ADAPTORS_META}) | source: :scenario_outage})`
+  );
+  return () => {
+    onNode(
+      `:persistent_term.put(${ADAPTORS_META}, %{:persistent_term.get(${ADAPTORS_META}) | source: ${was}})`
+    );
+    reachable();
+  };
+}

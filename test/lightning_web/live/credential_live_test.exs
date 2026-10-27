@@ -3,6 +3,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
+  import LightningWeb.CredentialPageHelpers
 
   import Lightning.AdaptorTestHelpers
   import Lightning.Factories
@@ -16,7 +17,6 @@ defmodule LightningWeb.CredentialLiveTest do
 
   @create_attrs %{
     name: "some credential",
-    body: Jason.encode!(%{"a" => 1}),
     external_id: "test-external-id"
   }
 
@@ -50,26 +50,6 @@ defmodule LightningWeb.CredentialLiveTest do
     :ok
   end
 
-  defp get_decoded_state(url) when is_nil(url) do
-    [
-      "test",
-      LightningWeb.CredentialLive.GenericOauthComponent,
-      "#generic-oauth-component-new"
-    ]
-  end
-
-  defp get_decoded_state(url) do
-    %{query: query} = URI.parse(url)
-
-    URI.decode_query(query)
-    |> Map.get("state")
-    |> LightningWeb.OauthCredentialHelper.decode_state()
-  end
-
-  defp submit_disabled(live, id \\ "button") do
-    has_element?(live, "#{id}[type=submit][disabled]")
-  end
-
   describe "Index" do
     setup [:create_credential, :create_project_credential]
 
@@ -89,14 +69,11 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       credential: credential
     } do
-      {:ok, _index_live, html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      assert html =~ "Credentials"
-      assert html =~ "Projects with access"
-      assert html =~ "Type"
-
-      assert html =~
-               credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
+      # The table, its headings and its actions are the design system's;
+      # the page draws them from these rows.
+      rows = props(view)["credentials"]
 
       [[], project_names] =
         Credentials.list_credentials(%User{id: credential.user_id})
@@ -105,12 +82,15 @@ defmodule LightningWeb.CredentialLiveTest do
           Enum.map(c.projects, fn p -> p.name end)
         end)
 
-      assert html =~ project_names |> Enum.join(", ")
+      assert project_names in Enum.map(rows, fn row ->
+               Enum.map(row["projects"], & &1["name"])
+             end)
 
-      assert html =~ "Edit"
-      assert html =~ "Environment"
-      assert html =~ credential.schema
-      assert html =~ credential.name
+      assert %{"schema" => schema, "canEdit" => true} =
+               Enum.find(rows, &(&1["id"] == credential.id))
+
+      assert schema == credential.schema
+      assert length(rows) == 2
     end
 
     test "ensure support user only sees credentials they own on /credentials", %{
@@ -125,29 +105,14 @@ defmodule LightningWeb.CredentialLiveTest do
           project: build(:project, allow_support_access: true)
         )
 
-      {:ok, _index_live, html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      assert html =~ "Credentials"
-      assert html =~ "Projects with access"
-      assert html =~ "Type"
+      names = Enum.map(props(view)["credentials"], & &1["name"])
 
-      assert html =~
-               credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
-
-      [[], project_names] =
-        Credentials.list_credentials(%User{id: credential.user_id})
-        |> Enum.sort_by(&(&1.project_credentials |> length))
-        |> Enum.map(fn c ->
-          Enum.map(c.projects, fn p -> p.name end)
-        end)
-
-      assert html =~ project_names |> Enum.join(", ")
-
-      assert html =~ "Edit"
-      assert html =~ "Environment"
-      assert html =~ credential.schema
-      assert html =~ credential.name
-      refute html =~ support_credential.name
+      assert credential.name in names
+      assert length(names) == 2
+      refute support_credential.name in names
+      refute render(view) =~ support_credential.name
     end
 
     test "can schedule for deletion a credential that is not associated to any activity",
@@ -155,75 +120,30 @@ defmodule LightningWeb.CredentialLiveTest do
            conn: conn,
            credential: credential
          } do
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      # modal doesn't exist
-      refute has_element?(index_live, "#credential-#{credential.id}")
+      # The delete dialog is the design system's; it warns about runs from
+      # this flag.
+      assert %{"hasActivityInProjects" => false, "scheduledDeletion" => nil} =
+               Enum.find(
+                 props(view)["credentials"],
+                 &(&1["id"] == credential.id)
+               )
 
-      # delete now button doesn't exist
-      refute has_element?(
-               index_live,
-               "#credential-actions-#{credential.id}-delete-now"
-             )
+      assert send_event(view, "delete_credential", %{
+               "id" => credential.id,
+               "now" => false
+             }) =~ "Credential scheduled for deletion"
 
-      # cancel delete button doesn't exists
-      refute has_element?(
-               index_live,
-               "#credential-actions-#{credential.id}-cancel-deletion"
-             )
+      assert Repo.reload!(credential).scheduled_deletion
 
-      html =
-        open_delete_credential_modal(index_live, credential.id)
+      assert %{"scheduledDeletion" => scheduled} =
+               Enum.find(
+                 props(view)["credentials"],
+                 &(&1["id"] == credential.id)
+               )
 
-      # modal now exists
-      assert has_element?(
-               index_live,
-               "#delete-credential-#{credential.id}-modal"
-             )
-
-      assert html =~ "Delete credential"
-
-      assert html =~
-               "Deleting this credential will immediately remove it from all jobs"
-
-      refute html =~ "credential has been used in workflow runs"
-
-      assert index_live
-             |> element(
-               "#delete-credential-#{credential.id}-modal button",
-               "Delete credential"
-             )
-             |> has_element?()
-
-      {:ok, view, _html} =
-        index_live
-        |> element(
-          "#delete-credential-#{credential.id}-modal button",
-          "Delete credential"
-        )
-        |> render_click()
-        |> follow_redirect(conn, ~p"/credentials")
-
-      # delete button doesn't exist
-      refute has_element?(
-               view,
-               "#credential-actions-#{credential.id}-delete"
-             )
-
-      # delete now button  exists
-      assert has_element?(
-               view,
-               "#credential-actions-#{credential.id}-delete-now"
-             )
-
-      # cancel delete button  exists
-      assert has_element?(
-               view,
-               "#credential-actions-#{credential.id}-cancel-deletion"
-             )
-
-      # modal doesn't exist. It was closed on redirect
-      refute has_element?(view, "#delete-credential-#{credential.id}-modal")
+      assert scheduled
     end
 
     test "rejects deleting another user's credential via a tampered id", %{
@@ -233,24 +153,14 @@ defmodule LightningWeb.CredentialLiveTest do
       # a credential owned by a different user
       other = insert(:credential, user: insert(:user), name: "someone-elses")
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      # open the delete modal for the current user's own credential
-      open_delete_credential_modal(index_live, credential.id)
-
-      # confirm deletion, but with a foreign credential's id (tampered phx-value-id)
-      {:ok, _index_live, html} =
-        index_live
-        |> element(
-          "#delete-credential-#{credential.id}-modal button",
-          "Delete credential"
-        )
-        |> render_click(%{"id" => other.id})
-        |> follow_redirect(conn)
+      send_event(view, "delete_credential", %{"id" => other.id, "now" => false})
 
       # the request is rejected, and nothing is scheduled for deletion: not the
-      # foreign credential, and not the one the modal was opened for
-      assert html =~ "You can&#39;t perform this action"
+      # foreign credential, and not the viewer's own
+      assert_reply(view, %{error: error})
+      assert error == refused()
       assert Lightning.Repo.reload!(other).scheduled_deletion == nil
       assert Lightning.Repo.reload!(credential).scheduled_deletion == nil
     end
@@ -262,41 +172,21 @@ defmodule LightningWeb.CredentialLiveTest do
          } do
       insert(:step, credential: credential)
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      html = open_delete_credential_modal(index_live, credential.id)
+      # The dialog's "used in workflow runs" warning comes from this flag.
+      assert %{"hasActivityInProjects" => true} =
+               Enum.find(
+                 props(view)["credentials"],
+                 &(&1["id"] == credential.id)
+               )
 
-      assert html =~ "Delete credential"
+      assert send_event(view, "delete_credential", %{
+               "id" => credential.id,
+               "now" => false
+             }) =~ "Credential scheduled for deletion"
 
-      assert html =~ "Deleting this credential will immediately"
-      assert html =~ "*This credential has been used in workflow runs"
-
-      {:ok, view, _html} =
-        index_live
-        |> element(
-          "#delete-credential-#{credential.id}-modal button",
-          "Delete credential"
-        )
-        |> render_click()
-        |> follow_redirect(conn, ~p"/credentials")
-
-      # delete button doesn't exist
-      refute has_element?(
-               view,
-               "#credential-actions-#{credential.id}-delete"
-             )
-
-      # delete now button  exists
-      assert has_element?(
-               view,
-               "#credential-actions-#{credential.id}-delete-now"
-             )
-
-      # cancel delete button  exists
-      assert has_element?(
-               view,
-               "#credential-actions-#{credential.id}-cancel-deletion"
-             )
+      assert Repo.reload!(credential).scheduled_deletion
     end
 
     test "cancel a scheduled for deletion credential", %{
@@ -311,24 +201,11 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert credential.scheduled_deletion
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      assert has_element?(
-               index_live,
-               "#credential-actions-#{credential.id}-cancel-deletion",
-               "Cancel deletion"
-             )
-
-      index_live
-      |> element(
-        "#credential-actions-#{credential.id}-cancel-deletion",
-        "Cancel deletion"
-      )
-      |> render_click()
-
-      flash = assert_redirected(index_live, ~p"/credentials")
-
-      assert flash["info"] == "Credential deletion canceled"
+      assert send_event(view, "cancel_credential_deletion", %{
+               "id" => credential.id
+             }) =~ "Credential deletion canceled"
 
       refute Lightning.Repo.reload(credential).scheduled_deletion
     end
@@ -341,35 +218,20 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, credential} =
         Credentials.schedule_credential_deletion(credential, user)
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      html =
-        index_live
-        |> element("#credential-actions-#{credential.id}-delete-now")
-        |> render_click()
+      assert %{"hasActivityInProjects" => false} =
+               Enum.find(
+                 props(view)["credentials"],
+                 &(&1["id"] == credential.id)
+               )
 
-      assert html =~
-               "Deleting this credential will immediately remove it from all jobs"
+      assert send_event(view, "delete_credential", %{
+               "id" => credential.id,
+               "now" => true
+             }) =~ "Credential deleted successfully"
 
-      refute html =~ "credential has been used in workflow runs"
-
-      assert index_live
-             |> element(
-               "#delete-credential-#{credential.id}-modal button",
-               "Delete credential"
-             )
-             |> has_element?()
-
-      index_live
-      |> element(
-        "#delete-credential-#{credential.id}-modal button",
-        "Delete credential"
-      )
-      |> render_click()
-
-      flash = assert_redirected(index_live, ~p"/credentials")
-
-      assert flash["info"] == "Credential deleted successfully"
+      refute Repo.get(Credential, credential.id)
     end
 
     test "cannot delete credential that has activity in projects", %{
@@ -382,31 +244,26 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, credential} =
         Credentials.schedule_credential_deletion(credential, user)
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      html =
-        index_live
-        |> element("#credential-actions-#{credential.id}-delete-now")
-        |> render_click()
+      # The dialog only offers "Ok, understood" for a credential with this
+      # flag; sending the event anyway is refused.
+      assert %{"hasActivityInProjects" => true} =
+               Enum.find(
+                 props(view)["credentials"],
+                 &(&1["id"] == credential.id)
+               )
 
-      assert html =~ "This credential has been used in workflow runs"
-      assert html =~ "will be made unavailable for future use immediately"
+      send_event(view, "delete_credential", %{
+        "id" => credential.id,
+        "now" => true
+      })
 
-      assert has_element?(
-               index_live,
-               "#delete-credential-#{credential.id}-modal button",
-               "Ok, understood"
-             )
+      assert_reply(view, %{
+        error: "Cannot delete a credential that has activities in projects"
+      })
 
-      # forcing the event results in error
-      index_live
-      |> with_target("#delete-credential-#{credential.id}")
-      |> render_click("delete", %{id: credential.id})
-
-      assert_patched(index_live, ~p"/credentials")
-
-      assert render(index_live) =~
-               "Cannot delete a credential that has activities in projects"
+      assert Repo.get(Credential, credential.id)
     end
 
     test "non credential owner cannot delete credentials in project settings page",
@@ -466,23 +323,20 @@ defmodule LightningWeb.CredentialLiveTest do
           scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
         )
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      refute has_element?(
-               index_live,
-               "#credential-actions-#{other_credential.id}-cancel-deletion"
+      refute Enum.any?(
+               props(view)["credentials"],
+               &(&1["id"] == other_credential.id)
              )
 
       # send the event anyway
-      index_live
-      |> with_target("#credentials-index-component")
-      |> render_click("cancel_credential_deletion", %{id: other_credential.id})
+      send_event(view, "cancel_credential_deletion", %{
+        "id" => other_credential.id
+      })
 
-      assert_patched(index_live, ~p"/credentials")
-
-      assert render(index_live) =~
-               "You are not authorized to perform this action"
-
+      assert_reply(view, %{error: error})
+      assert error == refused()
       assert Lightning.Repo.reload(other_credential).scheduled_deletion
     end
 
@@ -636,70 +490,52 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       project2 = insert(:project, project_users: [%{user: user, role: :admin}])
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(index_live)
+      # The type picker and the project chips are the design system's; the
+      # page offers Raw JSON and the projects the viewer may share with.
+      assert MapSet.new(props(view)["projects"], & &1["id"]) ==
+               MapSet.new([project1.id, project2.id])
 
-      index_live |> select_credential_type("raw")
-      index_live |> click_continue()
+      send_event(view, "create_credential", raw_values(%{"name" => ""}))
+      assert_reply(view, %{fieldErrors: %{"name" => [_]}})
 
-      assert index_live
-             |> has_element?(
-               "#credential-form-new textarea[name='credential[body]']"
-             )
+      # An apostrophe is a legal name character.
+      assert send_event(
+               view,
+               "create_credential",
+               raw_values(%{"formId" => "form-2", "name" => "MailChimp'24"})
+             ) =~ "Credential created successfully"
 
-      # Select first project
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => project1.id})
+      send_event(
+        view,
+        "create_credential",
+        raw_values(%{"name" => "bad\u{0000}name"})
+      )
 
-      # Verify project is added
-      assert index_live
-             |> has_element?(
-               "#remove-project-credential-button-new-#{project1.id}"
-             )
+      assert_reply(view, %{fieldErrors: %{"name" => [message]}})
+      assert message =~ "credential name can't contain control characters"
 
-      assert index_live
-             |> form("#credential-form-new", credential: %{name: ""})
-             |> render_change() =~ "can&#39;t be blank"
+      html =
+        send_event(
+          view,
+          "create_credential",
+          raw_values(%{
+            "name" => @create_attrs.name,
+            "externalId" => @create_attrs.external_id,
+            "projectIds" => [project1.id, project2.id]
+          })
+        )
 
-      # The rendered HTML escapes the apostrophe, so the refute has to match the
-      # escaped form or it can never fail.
-      refute index_live
-             |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
-             |> render_change() =~ "credential name can&#39;t contain"
+      assert html =~ "Credential created successfully"
 
-      assert index_live
-             |> form("#credential-form-new",
-               credential: %{name: "bad\u{0000}name"}
-             )
-             |> render_change() =~
-               "credential name can&#39;t contain control characters"
+      assert %{"projects" => projects, "externalId" => "test-external-id"} =
+               Enum.find(
+                 props(view)["credentials"],
+                 &(&1["name"] == @create_attrs.name)
+               )
 
-      # Select second project
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => project2.id})
-
-      # Verify second project is added
-      assert index_live
-             |> has_element?(
-               "#remove-project-credential-button-new-#{project2.id}"
-             )
-
-      {:ok, _index_live, html} =
-        index_live
-        |> form("#credential-form-new", credential: @create_attrs)
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/credentials")
-
-      {path, flash} = assert_redirect(index_live)
-
-      assert flash == %{"info" => "Credential created successfully"}
-      assert path == "/credentials"
-
-      assert html =~ project1.name
-      assert html =~ @create_attrs.name
+      assert project1.name in Enum.map(projects, & &1["name"])
 
       credential =
         Repo.get_by(Credential, name: @create_attrs.name)
@@ -712,41 +548,39 @@ defmodule LightningWeb.CredentialLiveTest do
     end
 
     test "validates raw credential body and shows errors after interaction", %{
-      conn: conn
+      conn: conn,
+      user: user
     } do
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(view)
-      select_credential_type(view, "raw")
-      click_continue(view)
+      # The form checks the body as it's typed (the design system's); the
+      # server checks it again on save.
+      for body <- ["", "not valid json"] do
+        env = %{
+          "name" => "main",
+          "previousName" => nil,
+          "body" => body,
+          "signInId" => nil
+        }
 
-      # Touch the body field by clearing it
-      view
-      |> form("#credential-form-new", credential: %{body: ""})
-      |> render_change()
+        send_event(
+          view,
+          "create_credential",
+          raw_values(%{"name" => "Test Cred", "environments" => [env]})
+        )
 
-      # Now body error should show (use specific error message for body)
-      assert render(view) =~ "This field can&#39;t be blank"
+        assert_reply(view, %{
+          fieldErrors: %{"environments.main" => ["Invalid JSON format"]}
+        })
+      end
 
-      # Save button should be disabled
-      assert submit_disabled(view, "#save-credential-button-new")
+      assert Credentials.list_credentials(user) == []
 
-      # Enter invalid JSON
-      view
-      |> form("#credential-form-new", credential: %{body: "not valid json"})
-      |> render_change()
-
-      assert render(view) =~ "Invalid JSON format"
-
-      # Enter valid JSON and name
-      view
-      |> form("#credential-form-new",
-        credential: %{name: "Test Cred", body: ~s({"key": "value"})}
-      )
-      |> render_change()
-
-      refute render(view) =~ "Invalid JSON format"
-      refute render(view) =~ "This field can&#39;t be blank"
+      assert send_event(
+               view,
+               "create_credential",
+               raw_values(%{"name" => "Test Cred"})
+             ) =~ "Credential created successfully"
     end
 
     test "allows a support user to define and save a new raw credential", %{
@@ -765,56 +599,41 @@ defmodule LightningWeb.CredentialLiveTest do
           project_users: [%{user: build(:user), role: :admin}]
         )
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(index_live)
+      assert MapSet.new(props(view)["projects"], & &1["id"]) ==
+               MapSet.new([project1.id, project2.id])
 
-      index_live |> select_credential_type("raw")
-      index_live |> click_continue()
+      send_event(view, "create_credential", raw_values(%{"name" => ""}))
+      assert_reply(view, %{fieldErrors: %{"name" => [_]}})
 
-      assert index_live
-             |> has_element?(
-               "#credential-form-new textarea[name='credential[body]']"
-             )
+      # An apostrophe is a legal name character.
+      assert send_event(
+               view,
+               "create_credential",
+               raw_values(%{"formId" => "form-2", "name" => "MailChimp'24"})
+             ) =~ "Credential created successfully"
 
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => project1.id})
+      send_event(
+        view,
+        "create_credential",
+        raw_values(%{"name" => "bad\u{0000}name"})
+      )
 
-      assert index_live
-             |> form("#credential-form-new", credential: %{name: ""})
-             |> render_change() =~ "can&#39;t be blank"
+      assert_reply(view, %{fieldErrors: %{"name" => [message]}})
+      assert message =~ "credential name can't contain control characters"
 
-      # The rendered HTML escapes the apostrophe, so the refute has to match the
-      # escaped form or it can never fail.
-      refute index_live
-             |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
-             |> render_change() =~ "credential name can&#39;t contain"
+      html =
+        send_event(
+          view,
+          "create_credential",
+          raw_values(%{
+            "name" => @create_attrs.name,
+            "projectIds" => [project1.id, project2.id]
+          })
+        )
 
-      assert index_live
-             |> form("#credential-form-new",
-               credential: %{name: "bad\u{0000}name"}
-             )
-             |> render_change() =~
-               "credential name can&#39;t contain control characters"
-
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => project2.id})
-
-      {:ok, _index_live, html} =
-        index_live
-        |> form("#credential-form-new", credential: @create_attrs)
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/credentials")
-
-      {path, flash} = assert_redirect(index_live)
-
-      assert flash == %{"info" => "Credential created successfully"}
-      assert path == "/credentials"
-
-      assert html =~ project1.name
-      assert html =~ @create_attrs.name
+      assert html =~ "Credential created successfully"
 
       credential =
         Repo.get_by(Credential, name: @create_attrs.name)
@@ -827,149 +646,138 @@ defmodule LightningWeb.CredentialLiveTest do
     end
 
     test "allows the user to define and save a new dhis2 credential", %{
-      conn: conn
+      conn: conn,
+      user: user
     } do
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(index_live)
+      assert Enum.any?(props(view)["credentialTypes"], &(&1["key"] == "dhis2"))
 
-      # Pick a type
-      index_live |> select_credential_type("@openfn/language-dhis2")
-      index_live |> click_continue()
+      # The form draws these fields in this order.
+      send_event(view, "load_credential_schema", %{"key" => "dhis2"})
+      assert_reply(view, %{fields: fields})
 
-      refute index_live |> has_element?("#credential-type-picker")
+      assert Enum.map(fields, & &1.key) ==
+               ~w(username password hostUrl apiVersion)
 
-      assert index_live |> fill_credential(%{body: %{username: ""}}) =~
-               "can&#39;t be blank"
+      assert %{required: true} = Enum.find(fields, &(&1.key == "username"))
 
-      assert index_live |> submit_disabled()
+      dhis2 = fn body ->
+        raw_values(%{
+          "name" => "My Credential",
+          "schema" => "dhis2",
+          "environments" => [
+            %{
+              "name" => "main",
+              "previousName" => nil,
+              "body" => Jason.encode!(body),
+              "signInId" => nil
+            }
+          ]
+        })
+      end
 
-      assert index_live
-             |> click_save() =~ "can&#39;t be blank"
+      send_event(
+        view,
+        "create_credential",
+        dhis2.(%{"password" => "bar", "hostUrl" => "http://localhost"})
+      )
 
-      refute_redirected(index_live, ~p"/credentials")
+      # The form names a blank required field before sending; the server
+      # refuses the body anyway.
+      assert_reply(view, %{fieldErrors: %{"environments.main" => [_ | _]}})
 
-      # Check that the fields are rendered in the same order as expected
-      inputs_in_position =
-        index_live
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.attribute("input", "name")
+      send_event(
+        view,
+        "create_credential",
+        dhis2.(%{"username" => "foo", "password" => "bar", "hostUrl" => "baz"})
+      )
 
-      # The new structure includes environment name instead of production field
-      assert inputs_in_position == ~w(
-           credential[name]
-           credential[external_id]
-           value
-           credential[body][username]
-           credential[body][password]
-           credential[body][hostUrl]
-           credential[body][apiVersion]
-         )
+      assert_reply(view, %{fieldErrors: %{"environments.main" => [uri | _]}})
+      assert uri =~ "expected to be a URI"
+      assert Credentials.list_credentials(user) == []
 
-      assert index_live
-             |> fill_credential(%{
-               name: "My Credential",
-               body: %{username: "foo", password: "bar", hostUrl: "baz"}
-             }) =~
-               "expected to be a URI"
+      assert send_event(
+               view,
+               "create_credential",
+               dhis2.(%{
+                 "username" => "foo",
+                 "password" => "bar",
+                 "hostUrl" => "http://localhost"
+               })
+             ) =~ "Credential created successfully"
 
-      assert index_live
-             |> form("#credential-form-new",
-               credential: %{body: %{hostUrl: "http://localhost"}}
-             )
-             |> render_change()
-
-      refute index_live |> submit_disabled("save-credential-button-new")
-
-      {:ok, _index_live, _html} =
-        index_live
-        |> click_save()
-        |> follow_redirect(conn, ~p"/credentials")
-
-      {_path, flash} = assert_redirect(index_live)
-      assert flash == %{"info" => "Credential created successfully"}
+      assert [%{schema: "@openfn/language-dhis2"}] =
+               Credentials.list_credentials(user)
     end
 
     test "allows the user to define and save a new postgresql credential", %{
-      conn: conn
+      conn: conn,
+      user: user
     } do
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(index_live)
+      send_event(view, "load_credential_schema", %{"key" => "postgresql"})
+      assert_reply(view, %{fields: fields})
 
-      index_live |> select_credential_type("@openfn/language-postgresql")
-      index_live |> click_continue()
+      assert Enum.map(fields, & &1.key) ==
+               ~w(host port database user password ssl allowSelfSignedCert)
 
-      refute index_live |> has_element?("#credential-type-picker")
-
-      assert index_live |> fill_credential(%{body: %{user: ""}}) =~
-               "can&#39;t be blank"
-
-      assert index_live |> submit_disabled()
-
-      assert index_live
-             |> click_save() =~ "can&#39;t be blank"
-
-      refute_redirected(index_live, ~p"/credentials")
-
-      # Check that the fields are rendered in the expected order
-      inputs_in_position =
-        index_live
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.attribute("input", "name")
-
-      assert inputs_in_position == [
-               "credential[name]",
-               "credential[external_id]",
-               "value",
-               "credential[body][host]",
-               "credential[body][port]",
-               "credential[body][database]",
-               "credential[body][user]",
-               "credential[body][password]",
-               "credential[body][ssl]",
-               "credential[body][ssl]",
-               "credential[body][allowSelfSignedCert]",
-               "credential[body][allowSelfSignedCert]"
-             ]
-
-      body = %{
-        user: "user1",
-        password: "pass1",
-        host: "not a URI",
-        database: "test_db",
-        port: "5000",
-        ssl: "true",
-        allowSelfSignedCert: "false"
-      }
+      assert %{
+               "port" => %{kind: "integer"},
+               "ssl" => %{kind: "boolean"},
+               "allowSelfSignedCert" => %{kind: "boolean"}
+             } = Map.new(fields, &{&1.key, &1})
 
       credential_name = "Cast Postgres Credential"
 
-      assert index_live
-             |> fill_credential(%{
-               name: credential_name,
-               body: body
-             }) =~
-               "expected to be a URI"
+      # The server casts the body to the adaptor's types.
+      postgresql = fn body ->
+        raw_values(%{
+          "name" => credential_name,
+          "schema" => "postgresql",
+          "environments" => [
+            %{
+              "name" => "main",
+              "previousName" => nil,
+              "body" => Jason.encode!(body),
+              "signInId" => nil
+            }
+          ]
+        })
+      end
 
-      assert index_live
-             |> form("#credential-form-new",
-               credential: %{
-                 body: %{host: "http://localhost"}
-               }
-             )
-             |> render_change()
+      body = %{
+        "user" => "user1",
+        "password" => "pass1",
+        "host" => "not a URI",
+        "database" => "test_db",
+        "port" => "5000",
+        "ssl" => "true",
+        "allowSelfSignedCert" => "false"
+      }
 
-      refute index_live |> submit_disabled("save-credential-button-new")
+      send_event(
+        view,
+        "create_credential",
+        postgresql.(Map.delete(body, "user"))
+      )
 
-      {:ok, _index_live, html} =
-        index_live
-        |> click_save()
-        |> follow_redirect(conn, ~p"/credentials")
+      # The form names a blank required field before sending; the server
+      # refuses the body anyway.
+      assert_reply(view, %{fieldErrors: %{"environments.main" => [_ | _]}})
+
+      send_event(view, "create_credential", postgresql.(body))
+
+      assert_reply(view, %{fieldErrors: %{"environments.main" => [uri | _]}})
+      assert uri =~ "expected to be a URI"
+      assert Credentials.list_credentials(user) == []
+
+      assert send_event(
+               view,
+               "create_credential",
+               postgresql.(%{body | "host" => "http://localhost"})
+             ) =~ "Credential created successfully"
 
       credential =
         Lightning.Repo.get_by(Lightning.Credentials.Credential,
@@ -984,58 +792,58 @@ defmodule LightningWeb.CredentialLiveTest do
                "ssl" => true,
                "allowSelfSignedCert" => false
              } = main_body.body
-
-      assert html =~ "Credential created successfully"
     end
 
     test "allows the user to define and save a new http credential", %{
-      conn: conn
+      conn: conn,
+      user: user
     } do
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(index_live)
+      send_event(view, "load_credential_schema", %{"key" => "http"})
+      assert_reply(view, %{fields: fields})
 
-      index_live |> select_credential_type("@openfn/language-http")
-      index_live |> click_continue()
+      fields = Map.new(fields, &{&1.key, &1})
+      assert %{required: false} = fields["baseUrl"]
+      assert %{kind: "object"} = fields["tls"]
 
-      assert index_live
-             |> fill_credential(%{body: %{username: ""}}) =~ "can&#39;t be blank"
+      http = fn body ->
+        raw_values(%{
+          "name" => "My Credential with TLS",
+          "schema" => "http",
+          "environments" => [
+            %{
+              "name" => "main",
+              "previousName" => nil,
+              "body" => Jason.encode!(body),
+              "signInId" => nil
+            }
+          ]
+        })
+      end
 
-      assert index_live |> submit_disabled()
+      send_event(
+        view,
+        "create_credential",
+        http.(%{"username" => "foo", "password" => "bar", "baseUrl" => "baz"})
+      )
 
-      assert index_live
-             |> click_save() =~ "can&#39;t be blank"
+      assert_reply(view, %{fieldErrors: %{"environments.main" => [uri | _]}})
+      assert uri =~ "expected to be a URI"
+      assert Credentials.list_credentials(user) == []
 
-      refute_redirected(index_live, ~p"/credentials")
-
-      assert index_live
-             |> fill_credential(%{
-               name: "My Credential with TLS",
-               body: %{username: "foo", password: "bar", baseUrl: "baz"}
-             }) =~ "expected to be a URI"
-
-      assert index_live
-             |> fill_credential(%{
-               body: %{baseUrl: "http://localhost", tls: "{\"a\":1}"}
-             })
-
-      refute index_live |> submit_disabled("save-credential-button-new")
-
-      assert index_live
-             |> fill_credential(%{body: %{baseUrl: ""}})
-
-      refute index_live |> submit_disabled("save-credential-button-new")
-
-      {:ok, _index_live, _html} =
-        index_live
-        |> click_save()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
-
-      {_path, flash} = assert_redirect(index_live)
-      assert flash == %{"info" => "Credential created successfully"}
+      # An empty baseUrl is allowed: it isn't required.
+      assert send_event(
+               view,
+               "create_credential",
+               http.(%{
+                 "access_token" => "",
+                 "username" => "foo",
+                 "password" => "bar",
+                 "baseUrl" => "",
+                 "tls" => %{"a" => 1}
+               })
+             ) =~ "Credential created successfully"
 
       credential =
         Repo.get_by(Lightning.Credentials.Credential,
@@ -1056,91 +864,87 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "allows the user to define and save a credential with email (godata)",
          %{
-           conn: conn
+           conn: conn,
+           user: user
          } do
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(view)
+      godata = fn body ->
+        raw_values(%{
+          "name" => "Godata Credential",
+          "schema" => "godata",
+          "environments" => [
+            %{
+              "name" => "main",
+              "previousName" => nil,
+              "body" => Jason.encode!(body),
+              "signInId" => nil
+            }
+          ]
+        })
+      end
 
-      select_credential_type(view, "@openfn/language-godata")
-      click_continue(view)
+      send_event(
+        view,
+        "create_credential",
+        godata.(%{"apiUrl" => "http://url", "password" => "baz1234"})
+      )
 
-      assert fill_credential(view, %{body: %{email: ""}}) =~ "can&#39;t be blank"
+      # The form names a blank required field before sending; the server
+      # refuses the body anyway.
+      assert_reply(view, %{fieldErrors: %{"environments.main" => [_ | _]}})
 
-      assert submit_disabled(view, "#save-credential-button-new")
+      send_event(
+        view,
+        "create_credential",
+        godata.(%{
+          "apiUrl" => "http://url",
+          "password" => "baz1234",
+          "email" => "incomplete-email"
+        })
+      )
 
-      assert click_save(view) =~ "can&#39;t be blank"
+      assert_reply(view, %{fieldErrors: %{"environments.main" => [email | _]}})
+      assert email =~ "expected to be an email"
+      assert Credentials.list_credentials(user) == []
 
-      refute_redirected(view, ~p"/credentials")
-
-      # Fill with invalid email format
-      assert fill_credential(view, %{
-               name: "Godata Credential",
-               body: %{
-                 apiUrl: "http://url",
-                 password: "baz1234",
-                 email: "incomplete-email"
-               }
-             }) =~ "expected to be an email"
-
-      # Button might not be disabled for format errors, just check the error message appears
-      # assert submit_disabled(view, "#save-credential-button-new")
-
-      # Fill with valid email
-      refute fill_credential(view, %{
-               name: "Godata Credential",
-               body: %{
-                 apiUrl: "http://url",
-                 password: "baz1234",
-                 email: "good@email.com"
-               }
-             }) =~ "expected to be an email"
-
-      refute submit_disabled(view, "#save-credential-button-new")
-
-      {:ok, _view, _html} =
-        view
-        |> click_save()
-        |> follow_redirect(conn, ~p"/credentials")
-
-      {_path, flash} = assert_redirect(view)
-      assert flash == %{"info" => "Credential created successfully"}
+      assert send_event(
+               view,
+               "create_credential",
+               godata.(%{
+                 "apiUrl" => "http://url",
+                 "password" => "baz1234",
+                 "email" => "good@email.com"
+               })
+             ) =~ "Credential created successfully"
     end
 
-    test "renders the unrecognized-type warning under affected fields", %{
+    test "marks the fields whose type is unrecognized", %{
       conn: conn
     } do
       Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
       Mox.stub(Lightning.MockSentry, :capture_message, fn _msg, _opts -> :ok end)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(view)
-      select_credential_type(view, "@openfn/language-unknownish")
-      click_continue(view)
+      # The form draws the warning under a field that has one.
+      send_event(view, "load_credential_schema", %{"key" => "unknownish"})
+      assert_reply(view, %{fields: fields})
 
-      refute view |> has_element?("#credential-type-picker")
-
-      html = view |> element("#credential-form-new") |> render()
-
-      assert html =~ "unrecognized type"
-      assert html =~ "<code>badThing</code>"
-      assert html =~ "we&#39;ll store it as text"
+      fields = Map.new(fields, &{&1.key, &1})
+      assert fields["port"].unrecognizedType =~ "badThing"
+      refute fields["host"].unrecognizedType
     end
 
-    test "does not render an unrecognized-type warning for known types", %{
+    test "marks no field of a known type as unrecognized", %{
       conn: conn
     } do
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(view)
-      select_credential_type(view, "@openfn/language-dhis2")
-      click_continue(view)
+      send_event(view, "load_credential_schema", %{"key" => "dhis2"})
+      assert_reply(view, %{fields: fields})
 
-      html = view |> element("#credential-form-new") |> render()
-
-      refute html =~ "unrecognized type"
-      refute html =~ "we&#39;ll store it as text"
+      assert Enum.all?(fields, &is_nil(&1.unrecognizedType))
     end
   end
 
@@ -1148,31 +952,48 @@ defmodule LightningWeb.CredentialLiveTest do
     setup [:create_credential]
 
     test "updates a credential", %{conn: conn, credential: credential} do
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(index_live, credential.id)
+      send_event(
+        view,
+        "update_credential",
+        raw_values(%{"id" => credential.id, "name" => @invalid_attrs.name})
+      )
 
-      assert index_live
-             |> fill_credential(
-               @invalid_attrs,
-               "#credential-form-#{credential.id}"
-             ) =~
-               "credential name can&#39;t contain control characters"
+      assert_reply(view, %{
+        fieldErrors: %{
+          "name" => ["credential name can't contain control characters"]
+        }
+      })
 
-      refute_redirected(index_live, ~p"/credentials")
+      assert send_event(
+               view,
+               "update_credential",
+               raw_values(%{
+                 "id" => credential.id,
+                 "name" => @update_attrs.name,
+                 "externalId" => @update_attrs.external_id,
+                 "environments" => [
+                   %{
+                     "name" => "main",
+                     "previousName" => nil,
+                     "body" => @update_attrs.body,
+                     "signInId" => nil
+                   }
+                 ]
+               })
+             ) =~ "Credential updated successfully"
 
-      {:ok, _index_live, html} =
-        index_live
-        |> click_save(
-          %{credential: @update_attrs},
-          "#credential-form-#{credential.id}"
-        )
-        |> follow_redirect(conn, ~p"/credentials")
+      assert %{name: "some updated name", external_id: "updated-external-id"} =
+               Repo.reload!(credential)
 
-      {_path, flash} = assert_redirect(index_live)
-      assert flash == %{"info" => "Credential updated successfully"}
+      assert bodies(credential) == %{"main" => %{"a" => "new_secret"}}
 
-      assert html =~ "some updated name"
+      assert [%{"name" => "some updated name"}] =
+               Enum.filter(
+                 props(view)["credentials"],
+                 &(&1["id"] == credential.id)
+               )
     end
 
     test "displays external_id in credentials table", %{
@@ -1180,17 +1001,18 @@ defmodule LightningWeb.CredentialLiveTest do
       user: user,
       credential: credential
     } do
-      # Update credential with external_id
-      Credentials.update_credential(
-        credential,
-        %{external_id: "display-test-id"},
-        user
-      )
+      {:ok, _} =
+        Credentials.update_credential(
+          credential,
+          %{external_id: "display-test-id"},
+          user
+        )
 
-      {:ok, _index_live, html} = live(conn, ~p"/credentials")
-
-      # Verify external_id is displayed in the table
-      assert html =~ "display-test-id"
+      assert %{"externalId" => "display-test-id"} =
+               Enum.find(
+                 props(open(conn))["credentials"],
+                 &(&1["id"] == credential.id)
+               )
     end
 
     test "Edit adds new project with access", %{
@@ -1201,11 +1023,10 @@ defmodule LightningWeb.CredentialLiveTest do
         insert(:project, project_users: [build(:project_user, user: user)])
 
       credential =
-        insert(:credential,
-          name: "my-credential",
-          schema: "http",
-          body: %{"username" => "test", "password" => "test"},
-          user: user
+        credential_with_body(
+          user,
+          %{name: "my-credential", schema: "http"},
+          %{"username" => "test", "password" => "test"}
         )
 
       audit_events_query =
@@ -1216,23 +1037,33 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert Lightning.Repo.all(audit_events_query) == []
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(view, credential.id)
+      send_event(
+        view,
+        "update_credential",
+        raw_values(%{
+          "id" => credential.id,
+          "name" => "my-credential",
+          "schema" => "http",
+          "projectIds" => [project.id],
+          "environments" => [
+            %{
+              "name" => "main",
+              "previousName" => "main",
+              "body" => ~s({"username": "test", "password": "test"}),
+              "signInId" => nil
+            }
+          ]
+        })
+      )
 
-      view
-      |> element("#project-credentials-list-#{credential.id}")
-      |> render_change(%{"project_id" => project.id})
+      assert_reply(view, %{})
 
-      # Verify project is added
-      assert view
-             |> has_element?(
-               "#remove-project-credential-button-#{credential.id}-#{project.id}"
-             )
+      assert [%{id: project_id}] =
+               Repo.preload(credential, :projects, force: true).projects
 
-      view |> form("#credential-form-#{credential.id}") |> render_submit()
-
-      assert_redirected(view, ~p"/credentials")
+      assert project_id == project.id
 
       audit_events = Lightning.Repo.all(audit_events_query)
 
@@ -1275,9 +1106,24 @@ defmodule LightningWeb.CredentialLiveTest do
           project: project
         )
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      refute has_element?(view, "#credential-actions-#{credential.id}-edit")
+      refute Enum.any?(props(view)["credentials"], &(&1["id"] == credential.id))
+
+      send_event(
+        view,
+        "update_credential",
+        raw_values(%{
+          "id" => credential.id,
+          "schema" => "http",
+          "projectIds" => [project.id, insert(:project).id]
+        })
+      )
+
+      assert_reply(view, %{error: _})
+
+      assert [_only_one] =
+               Repo.preload(credential, :projects, force: true).projects
     end
 
     test "removes project with access", %{
@@ -1288,11 +1134,10 @@ defmodule LightningWeb.CredentialLiveTest do
         insert(:project, project_users: [build(:project_user, user: user)])
 
       credential =
-        insert(:credential,
-          name: "my-credential",
-          schema: "http",
-          body: %{"username" => "test", "password" => "test"},
-          user: user
+        credential_with_body(
+          user,
+          %{name: "my-credential", schema: "http"},
+          %{"username" => "test", "password" => "test"}
         )
 
       insert(:project_credential, project: project, credential: credential)
@@ -1305,17 +1150,30 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert Lightning.Repo.all(audit_events_query) == []
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(view, credential.id)
+      send_event(
+        view,
+        "update_credential",
+        raw_values(%{
+          "id" => credential.id,
+          "name" => "my-credential",
+          "schema" => "http",
+          "projectIds" => [],
+          "environments" => [
+            %{
+              "name" => "main",
+              "previousName" => "main",
+              "body" => ~s({"username": "test", "password": "test"}),
+              "signInId" => nil
+            }
+          ]
+        })
+      )
 
-      view
-      |> delete_credential_button(project.id)
-      |> render_click()
+      assert_reply(view, %{})
 
-      view |> form("#credential-form-#{credential.id}") |> render_submit()
-
-      assert_redirected(view, ~p"/credentials")
+      assert Repo.preload(credential, :projects, force: true).projects == []
 
       audit_events = Lightning.Repo.all(audit_events_query)
 
@@ -1332,17 +1190,16 @@ defmodule LightningWeb.CredentialLiveTest do
                end)
     end
 
-    test "shows confirmation dialog if the credential is being used in a workflow",
+    test "tells the page which workflows use the credential in each project",
          %{
            conn: conn,
            user: user
          } do
       credential =
-        insert(:credential,
-          name: "my-credential",
-          schema: "http",
-          body: %{"username" => "test", "password" => "test"},
-          user: user
+        credential_with_body(
+          user,
+          %{name: "my-credential", schema: "http"},
+          %{"username" => "test", "password" => "test"}
         )
 
       project =
@@ -1373,7 +1230,7 @@ defmodule LightningWeb.CredentialLiveTest do
         end)
         |> with_snapshot()
 
-      workflow_without_credential =
+      _workflow_without_credential =
         insert(:simple_workflow, project: project) |> with_snapshot()
 
       another_project =
@@ -1384,24 +1241,25 @@ defmodule LightningWeb.CredentialLiveTest do
         credential: credential
       )
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(view, credential.id)
+      # The page warns before revoking a project from the workflows it's
+      # given here; the dialog itself is the design system's.
+      assert [%{"projects" => projects}] =
+               Enum.filter(
+                 props(view)["credentials"],
+                 &(&1["id"] == credential.id)
+               )
 
-      button_html = delete_credential_button(view, project.id) |> render()
+      workflows_using = Map.new(projects, &{&1["id"], &1["workflowsUsing"]})
 
-      assert button_html =~
-               "data-confirm=\"Warning: This credential is in use by the following workflows:"
+      assert Enum.sort(workflows_using[project.id]) ==
+               Enum.sort([
+                 workflow_with_credential_1.name,
+                 workflow_with_credential_2.name
+               ])
 
-      assert button_html =~
-               ". If you revoke access to the &quot;#{project.name}&quot; project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"
-
-      assert button_html =~ workflow_with_credential_1.name
-      assert button_html =~ workflow_with_credential_2.name
-      refute button_html =~ workflow_without_credential.name
-
-      refute delete_credential_button(view, another_project.id) |> render() =~
-               "data-confirm"
+      assert workflows_using[another_project.id] == []
     end
 
     test "users can add and remove existing project credentials successfully", %{
@@ -1412,58 +1270,50 @@ defmodule LightningWeb.CredentialLiveTest do
         insert(:project, project_users: [build(:project_user, user: user)])
 
       credential =
-        insert(:credential,
-          name: "my-credential",
-          schema: "http",
-          body: %{"username" => "test", "password" => "test"},
-          user: user
+        credential_with_body(
+          user,
+          %{name: "my-credential", schema: "http"},
+          %{"username" => "test", "password" => "test"}
         )
 
       insert(:project_credential, project: project, credential: credential)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(view, credential.id)
+      save = fn project_ids ->
+        send_event(
+          view,
+          "update_credential",
+          raw_values(%{
+            "id" => credential.id,
+            "name" => "my-credential",
+            "schema" => "http",
+            "projectIds" => project_ids,
+            "environments" => [
+              %{
+                "name" => "main",
+                "previousName" => "main",
+                "body" => ~s({"username": "test", "password": "test"}),
+                "signInId" => nil
+              }
+            ]
+          })
+        )
 
-      # Try adding an existing project credential
-      view
-      |> element("#project-credentials-list-#{credential.id}")
-      |> render_change(%{"project_id" => project.id})
+        assert_reply(view, %{})
 
-      html = view |> render()
+        credential
+        |> Repo.preload(:projects, force: true)
+        |> Map.fetch!(:projects)
+        |> Enum.map(& &1.id)
+      end
 
-      assert html =~ project.name,
-             "adding an existing project doesn't break anything"
+      # Adding a project it already has doesn't break anything
+      assert save.([project.id, project.id]) == [project.id]
 
-      # Verify the project is added to the credential's projects list
-      assert view
-             |> has_element?(
-               "#remove-project-credential-button-#{credential.id}-#{project.id}"
-             ),
-             "project should be added to credential's projects list"
-
-      # Let's remove the project and add it back again
-      view
-      |> delete_credential_button(project.id)
-      |> render_click()
-
-      refute view |> delete_credential_button(project.id) |> has_element?(),
-             "project is removed from list"
-
-      # now let's add it back
-      view
-      |> element("#project-credentials-list-#{credential.id}")
-      |> render_change(%{"project_id" => project.id})
-
-      assert view
-             |> has_element?(
-               "#remove-project-credential-button-#{credential.id}-#{project.id}"
-             ),
-             "project should be added back to credential's projects list"
-
-      view |> form("#credential-form-#{credential.id}") |> render_submit()
-
-      assert_redirected(view, ~p"/credentials")
+      # Remove it, then add it back
+      assert save.([]) == []
+      assert save.([project.id]) == [project.id]
     end
   end
 
@@ -1523,30 +1373,14 @@ defmodule LightningWeb.CredentialLiveTest do
         end
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(view, credential.id)
+      send_event(view, "load_credential_secrets", %{"id" => credential.id})
 
-      # Wait for the refresh attempt to complete
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-#{credential.id}-main"
-          )
-
-        :error === assigns[:oauth_progress]
-      end)
-
-      html = view |> element("#credential-form-#{credential.id}") |> render()
-
-      assert html =~ "session has expired"
-
-      assert view
-             |> element(
-               "#credential-form-#{credential.id} button",
-               "Sign In Again"
-             )
-             |> has_element?()
+      # The page asks the user to sign in again.
+      assert_reply(view, %{
+        environments: [%{name: "main", oauth: %{status: "reauthorize"}}]
+      })
     end
 
     test "renders reauthorize prompt when refresh token is revoked",
@@ -1590,30 +1424,16 @@ defmodule LightningWeb.CredentialLiveTest do
         end
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(view, credential.id)
+      send_event(view, "load_credential_secrets", %{"id" => credential.id})
 
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-#{credential.id}-main"
-          )
+      assert_reply(view, %{
+        environments: [%{name: "main", oauth: %{status: "reauthorize"}}]
+      })
 
-        :error === assigns[:oauth_progress]
-      end)
-
-      html = view |> element("#credential-form-#{credential.id}") |> render()
-
-      assert html =~ "revoked"
-      refute html =~ "An error occurred during authentication"
-
-      assert view
-             |> element(
-               "#credential-form-#{credential.id} button",
-               "Reauthorize"
-             )
-             |> has_element?()
+      # The stored token is left as it was.
+      assert bodies(credential) == %{"main" => expired_token}
     end
 
     test "a failed refresh with a 5xx keeps the transient provider-error message",
@@ -1646,24 +1466,14 @@ defmodule LightningWeb.CredentialLiveTest do
         end
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(view, credential.id)
+      send_event(view, "load_credential_secrets", %{"id" => credential.id})
 
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-#{credential.id}-main"
-          )
-
-        :error === assigns[:oauth_progress]
-      end)
-
-      html = view |> element("#credential-form-#{credential.id}") |> render()
-
-      assert html =~ "technical difficulties"
-      refute html =~ "revoked"
-      refute html =~ "An error occurred during authentication"
+      # The provider couldn't be reached: not a reason to sign in again.
+      assert_reply(view, %{
+        environments: [%{name: "main", oauth: %{status: "unavailable"}}]
+      })
     end
 
     test "a code-exchange failure is not treated as a refresh reauthorization",
@@ -1693,44 +1503,14 @@ defmodule LightningWeb.CredentialLiveTest do
         end
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
+      sign_in(view, oauth_client, %{"scopes" => []})
 
-      open_create_credential_modal(view)
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
-      view |> fill_credential(%{name: "My Generic OAuth Credential"})
+      assert [%{"signInId" => "s1", "error" => error, "userInfo" => nil}] =
+               props(view)["oauthSignIns"]
 
-      {_, component_assigns} =
-        Lightning.LiveViewHelpers.get_component_assigns_by(view,
-          id: "generic-oauth-component-new-main"
-        )
-
-      [subscription_id, mod, _component_id, _env] =
-        get_decoded_state(component_assigns[:authorize_url])
-
-      view |> element("#authorize-button") |> render_click()
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(
-        subscription_id,
-        mod,
-        id: "generic-oauth-component-new-main",
-        code: "authcode123",
-        current_tab: "main"
-      )
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
-
-        :error === assigns[:oauth_progress]
-      end)
-
-      html = view |> render()
-
-      assert html =~ "An error occurred during authentication"
-      refute html =~ "Refresh Token Revoked"
+      assert is_binary(error)
+      refute error =~ "revoked"
     end
   end
 
@@ -1789,68 +1569,26 @@ defmodule LightningWeb.CredentialLiveTest do
           optional_scopes: ""
         )
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      open_create_credential_modal(view)
-
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
-
-      refute view |> has_element?("#credential-type-picker")
-
-      view
-      |> fill_credential(%{
-        name: "My Generic OAuth Credential"
-      })
-
-      # Get the authorize URL from the component's assigns
-      {_, component_assigns} =
-        Lightning.LiveViewHelpers.get_component_assigns_by(view,
-          id: "generic-oauth-component-new-main"
-        )
-
-      authorize_url = component_assigns[:authorize_url]
-
-      [subscription_id, mod, _component_id, _env] =
-        get_decoded_state(authorize_url)
-
-      assert view.id == subscription_id
-      assert view |> element("#generic-oauth-component-new-main")
-
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
-      refute view
-             |> has_element?("#authorize-button")
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: "generic-oauth-component-new-main",
-        code: "authcode123",
-        current_tab: "main"
-      )
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
-
-        :error === assigns[:oauth_progress]
-      end)
+      view = open(conn)
+      sign_in(view, oauth_client, %{"scopes" => []})
 
       # Should show error state but not user info
-      refute view |> has_element?("h3", "Test User")
+      assert [%{"signInId" => "s1", "error" => error, "userInfo" => nil}] =
+               props(view)["oauthSignIns"]
 
-      # Error message should be displayed
-      assert view |> render() =~
-               "Account Already Connected"
+      assert error =~ "already connected"
 
       # Credential should not be created even if form is submitted
-      credential =
-        Lightning.Credentials.list_credentials(user) |> List.first()
+      send_event(
+        view,
+        "create_credential",
+        oauth_values(oauth_client, "s1", %{
+          "name" => "My Generic OAuth Credential"
+        })
+      )
 
-      refute credential
+      assert_reply(view, %{fieldErrors: %{"environments.main" => [_]}})
+      assert Lightning.Credentials.list_credentials(user) == []
     end
   end
 
@@ -1858,56 +1596,16 @@ defmodule LightningWeb.CredentialLiveTest do
     test "error when fetching authorization code", %{conn: conn, user: user} do
       oauth_client = insert(:oauth_client, user: user)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      view = open(conn)
 
-      open_create_credential_modal(view)
-
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
-
-      refute view |> has_element?("#credential-type-picker")
-
-      view
-      |> fill_credential(%{
-        name: "My Generic OAuth Credential"
+      sign_in(view, oauth_client, %{}, %{
+        error: "failed fetching authorization code"
       })
 
-      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        env, _opts
-        when env.method == :post and
-               env.url == oauth_client.revocation_endpoint ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: Jason.encode!(%{})
-           }}
-      end)
+      assert [%{"signInId" => "s1", "error" => error, "userInfo" => nil}] =
+               props(view)["oauthSignIns"]
 
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
-      refute view
-             |> has_element?("#authorize-button")
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(
-        view.id,
-        LightningWeb.CredentialLive.GenericOauthComponent,
-        id: "generic-oauth-component-new-main",
-        error: "failed fetching authorization code",
-        current_tab: "main"
-      )
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
-
-        :error === assigns[:oauth_progress]
-      end)
-
-      assert view |> has_element?("p", "The authentication process with")
+      assert error =~ "The authentication process with"
     end
 
     test "error when fetching token", %{conn: conn, user: user} do
@@ -1943,49 +1641,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       oauth_client = insert(:oauth_client, user: user)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      view = open(conn)
+      sign_in(view, oauth_client)
 
-      open_create_credential_modal(view)
+      assert [%{"signInId" => "s1", "error" => error, "userInfo" => nil}] =
+               props(view)["oauthSignIns"]
 
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
-
-      refute view |> has_element?("#credential-type-picker")
-
-      view
-      |> fill_credential(%{
-        name: "My Generic OAuth Credential"
-      })
-
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
-      refute view
-             |> has_element?("#authorize-button")
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(
-        view.id,
-        LightningWeb.CredentialLive.GenericOauthComponent,
-        id: "generic-oauth-component-new-main",
-        code: "authcode123",
-        current_tab: "main"
-      )
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
-
-        :error === assigns[:oauth_progress]
-      end)
-
-      assert view
-             |> has_element?(
-               "p",
-               "Your authorization with"
-             )
+      assert error =~ "Your authorization with"
     end
 
     test "error when fetching userinfo", %{conn: conn, user: user} do
@@ -2030,88 +1692,33 @@ defmodule LightningWeb.CredentialLiveTest do
           optional_scopes: ""
         )
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      view = open(conn)
+      sign_in(view, oauth_client)
 
-      open_create_credential_modal(view)
+      # Signed in, only without the account's name.
+      assert [%{"signInId" => "s1", "error" => nil, "userInfo" => nil}] =
+               props(view)["oauthSignIns"]
 
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
-
-      refute view |> has_element?("#credential-type-picker")
-
-      view
-      |> fill_credential(%{
-        name: "My Generic OAuth Credential"
-      })
-
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
-      refute view
-             |> has_element?("#authorize-button")
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(
-        view.id,
-        LightningWeb.CredentialLive.GenericOauthComponent,
-        id: "generic-oauth-component-new-main",
-        code: "authcode123",
-        current_tab: "main"
+      send_event(
+        view,
+        "create_credential",
+        oauth_values(oauth_client, "s1", %{
+          "name" => "My Generic OAuth Credential"
+        })
       )
 
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
+      assert_reply(view, %{})
 
-        :complete === assigns[:oauth_progress]
-      end)
+      assert [credential] = Lightning.Credentials.list_credentials(user)
 
-      assert view |> render() =~
-               "Successfully authenticated with"
-
-      assert has_element?(view, "button", "reauthenticate with")
+      assert %{"main" => %{"access_token" => "ya29.a0AVvZ"}} =
+               bodies(credential)
     end
   end
 
   describe "generic oauth credential offline_access handling" do
-    setup do
-      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
-                                                                       _opts ->
-        case env.url do
-          "http://example.com/oauth2/revoke" ->
-            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
-
-          "http://example.com/oauth2/token" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "access_token" => "test_token",
-                   "refresh_token" => "refresh_token",
-                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
-                   "token_type" => "Bearer",
-                   "scope" => env.opts[:test_scope] || "read write"
-                 })
-             }}
-
-          "http://example.com/oauth2/userinfo" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "name" => "Test User",
-                   "picture" => "image.png"
-                 })
-             }}
-        end
-      end)
-
-      :ok
-    end
+    # The scope boxes and the sign-in window are the design system's; the
+    # server checks what the provider granted against what was asked for.
 
     test "ignores offline_access in selected scopes when validating", %{
       conn: conn,
@@ -2124,82 +1731,23 @@ defmodule LightningWeb.CredentialLiveTest do
           optional_scopes: "offline_access"
         )
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      stub_provider(oauth_client, {200, %{token() | "scope" => "read write"}})
+      view = open(conn)
 
-      open_create_credential_modal(view)
+      sign_in(view, oauth_client, %{
+        "scopes" => ["read", "write", "offline_access"]
+      })
 
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
+      assert [%{"error" => nil, "userInfo" => %{"name" => "Ada"}}] =
+               props(view)["oauthSignIns"]
 
-      view
-      |> element("#scope_selection_new_main_offline_access")
-      |> render_change(%{"_target" => ["offline_access"]})
+      assert send_event(
+               view,
+               "create_credential",
+               oauth_values(oauth_client, "s1", %{"name" => "Test Credential"})
+             ) =~ "Credential created successfully"
 
-      view
-      |> fill_credential(%{name: "Test Credential"})
-
-      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn env,
-                                                                            _opts ->
-        case env.url do
-          "http://example.com/oauth2/token" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "access_token" => "test_token",
-                   "refresh_token" => "refresh_token",
-                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
-                   "token_type" => "Bearer",
-                   "scope" => "read write"
-                 })
-             }}
-
-          "http://example.com/oauth2/userinfo" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "name" => "Test User",
-                   "picture" => "image.png"
-                 })
-             }}
-
-          _ ->
-            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
-        end
-      end)
-
-      view |> element("#authorize-button") |> render_click()
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(
-        view.id,
-        LightningWeb.CredentialLive.GenericOauthComponent,
-        id: "generic-oauth-component-new-main",
-        code: "auth_code",
-        current_tab: "main"
-      )
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
-
-        :complete === assigns[:oauth_progress]
-      end)
-
-      assert view |> has_element?("h3", "Test User")
-      refute view |> submit_disabled("save-credential-button-new")
-
-      {:ok, _view, _html} =
-        view
-        |> form("#credential-form-new")
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/credentials")
-
-      assert_redirect(view, ~p"/credentials")
+      assert [%{name: "Test Credential"}] = Credentials.list_credentials(user)
     end
 
     test "validates other missing scopes while ignoring offline_access", %{
@@ -2213,75 +1761,40 @@ defmodule LightningWeb.CredentialLiveTest do
           optional_scopes: "admin,offline_access"
         )
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      stub_provider(oauth_client, {200, %{token() | "scope" => "read"}})
+      view = open(conn)
 
-      open_create_credential_modal(view)
+      sign_in(view, oauth_client, %{
+        "scopes" => ["read", "write", "admin", "offline_access"]
+      })
 
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
+      assert [%{"error" => error, "userInfo" => nil}] =
+               props(view)["oauthSignIns"]
 
-      view
-      |> element("#scope_selection_new_main_admin")
-      |> render_change(%{"_target" => ["admin"]})
+      # The missing scopes are named, offline_access isn't among them
+      assert error =~ "write"
+      refute error =~ "offline_access"
 
-      view
-      |> element("#scope_selection_new_main_offline_access")
-      |> render_change(%{"_target" => ["offline_access"]})
-
-      view
-      |> fill_credential(%{name: "Test Credential"})
-
-      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
-                                                                         _opts ->
-        case env.url do
-          "http://example.com/oauth2/token" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "access_token" => "test_token",
-                   "refresh_token" => "refresh_token",
-                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
-                   "token_type" => "Bearer",
-                   "scope" => "read"
-                 })
-             }}
-
-          _ ->
-            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
-        end
-      end)
-
-      view |> element("#authorize-button") |> render_click()
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(
-        view.id,
-        LightningWeb.CredentialLive.GenericOauthComponent,
-        id: "generic-oauth-component-new-main",
-        code: "auth_code",
-        current_tab: "main"
+      send_event(
+        view,
+        "create_credential",
+        oauth_values(oauth_client, "s1", %{"name" => "Test Credential"})
       )
 
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
+      assert_reply(view, %{fieldErrors: %{"environments.main" => [_]}})
+      assert Credentials.list_credentials(user) == []
 
-        :error === assigns[:oauth_progress]
-      end)
+      # The user may sign in again
+      send_event(view, "authorize_oauth", %{
+        "formId" => "form-1",
+        "signInId" => "s2",
+        "credentialId" => nil,
+        "oauthClientId" => oauth_client.id,
+        "scopes" => ["read", "write"],
+        "environment" => "main"
+      })
 
-      html = render(view)
-
-      assert html =~ "Missing permissions:"
-      # Only mandatory scopes are reported in error messages
-      assert html =~ "&#39;write&#39;"
-      # offline_access should be ignored in validation
-      refute html =~ "&#39;offline_access&#39;"
-
-      # Button is enabled to allow reauthorization
-      refute view |> submit_disabled("#save-credential-button-new")
+      assert_reply(view, %{authorizeUrl: _})
     end
 
     test "handles offline_access with different casing", %{
@@ -2295,76 +1808,16 @@ defmodule LightningWeb.CredentialLiveTest do
           optional_scopes: "OFFLINE_ACCESS"
         )
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      stub_provider(oauth_client, {200, %{token() | "scope" => "read"}})
+      view = open(conn)
 
-      open_create_credential_modal(view)
+      assert [%{"optionalScopes" => optional}] = props(view)["oauthClients"]
+      assert "offline_access" in Enum.map(optional, &String.downcase/1)
 
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
+      sign_in(view, oauth_client, %{"scopes" => ["read" | optional]})
 
-      assert view |> has_element?("#scope_selection_new_main_offline_access")
-
-      view
-      |> element("#scope_selection_new_main_offline_access")
-      |> render_change(%{"_target" => ["offline_access"]})
-
-      view
-      |> fill_credential(%{name: "Test Credential"})
-
-      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn env,
-                                                                            _opts ->
-        case env.url do
-          "http://example.com/oauth2/token" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "access_token" => "test_token",
-                   "refresh_token" => "refresh_token",
-                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
-                   "token_type" => "Bearer",
-                   "scope" => "read"
-                 })
-             }}
-
-          "http://example.com/oauth2/userinfo" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "name" => "Test User",
-                   "picture" => "image.png"
-                 })
-             }}
-
-          _ ->
-            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
-        end
-      end)
-
-      view |> element("#authorize-button") |> render_click()
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(
-        view.id,
-        LightningWeb.CredentialLive.GenericOauthComponent,
-        id: "generic-oauth-component-new-main",
-        code: "auth_code",
-        current_tab: "main"
-      )
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
-
-        :complete === assigns[:oauth_progress]
-      end)
-
-      assert view |> has_element?("h3", "Test User")
-      refute view |> submit_disabled("save-credential-button-new")
+      assert [%{"error" => nil, "userInfo" => %{"name" => "Ada"}}] =
+               props(view)["oauthSignIns"]
     end
 
     test "handles case where offline_access is in granted scopes", %{
@@ -2378,80 +1831,26 @@ defmodule LightningWeb.CredentialLiveTest do
           optional_scopes: "offline_access"
         )
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
-
-      open_create_credential_modal(view)
-
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
-
-      view
-      |> element("#scope_selection_new_main_offline_access")
-      |> render_change(%{"_target" => ["offline_access"]})
-
-      view
-      |> fill_credential(%{name: "Test Credential"})
-
-      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{url: "http://example.com/oauth2/revoke"}, _opts ->
-          {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
-      end)
-
-      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn env,
-                                                                            _opts ->
-        case env.url do
-          "http://example.com/oauth2/token" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "access_token" => "test_token",
-                   "refresh_token" => "refresh_token",
-                   "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
-                   "token_type" => "Bearer",
-                   "scope" => "read write offline_access"
-                 })
-             }}
-
-          "http://example.com/oauth2/userinfo" ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body:
-                 Jason.encode!(%{
-                   "name" => "Test User",
-                   "picture" => "image.png"
-                 })
-             }}
-        end
-      end)
-
-      view |> element("#authorize-button") |> render_click()
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(
-        view.id,
-        LightningWeb.CredentialLive.GenericOauthComponent,
-        id: "generic-oauth-component-new-main",
-        code: "auth_code",
-        current_tab: "main"
+      stub_provider(
+        oauth_client,
+        {200, %{token() | "scope" => "read write offline_access"}}
       )
 
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
+      view = open(conn)
 
-        :complete === assigns[:oauth_progress]
-      end)
+      sign_in(view, oauth_client, %{
+        "scopes" => ["read", "write", "offline_access"]
+      })
 
-      assert view |> has_element?("h3", "Test User")
-      refute view |> submit_disabled("save-credential-button-new")
+      assert [%{"error" => nil, "userInfo" => %{"name" => "Ada"}}] =
+               props(view)["oauthSignIns"]
     end
   end
 
   describe "transfer credential modal" do
+    # The modal and its submit button are the design system's; the server
+    # validates the receiver when the page sends the transfer.
+
     setup %{conn: conn} do
       owner = insert(:user)
       project = build(:project) |> with_project_user(owner, :owner) |> insert()
@@ -2463,78 +1862,107 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       conn = log_in_user(conn, owner)
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      view = open(conn)
 
-      open_transfer_credential_modal(view, credential.id)
+      transfer = fn email ->
+        send_event(view, "transfer_credential", %{
+          "id" => credential.id,
+          "receiverEmail" => email
+        })
+      end
 
       %{
         owner: owner,
         project: project,
         credential: credential,
-        view: view
+        view: view,
+        transfer: transfer
       }
     end
 
-    test "validates required email", %{view: view, credential: credential} do
-      view
-      |> element("#transfer-credential-#{credential.id}-modal-form")
-      |> render_change(%{"receiver" => %{"email" => ""}}) =~ "can't be blank"
+    test "validates required email", %{
+      view: view,
+      credential: credential,
+      transfer: transfer
+    } do
+      transfer.("")
+
+      assert_reply(view, %{
+        fieldErrors: %{"receiverEmail" => ["This field can't be blank."]}
+      })
+
+      refute Repo.reload(credential).transfer_status
     end
 
-    test "validates email format", %{view: view, credential: credential} do
-      view
-      |> element("#transfer-credential-#{credential.id}-modal-form")
-      |> render_change(%{"receiver" => %{"email" => "invalid-email"}}) =~
-        "must have the @ sign and no spaces"
+    test "validates email format", %{
+      view: view,
+      credential: credential,
+      transfer: transfer
+    } do
+      transfer.("invalid-email")
+
+      assert_reply(view, %{
+        fieldErrors: %{"receiverEmail" => ["Email address not valid."]}
+      })
+
+      refute Repo.reload(credential).transfer_status
     end
 
-    test "validates receiver exists", %{view: view, credential: credential} do
-      view
-      |> element("#transfer-credential-#{credential.id}-modal-form")
-      |> render_change(%{"receiver" => %{"email" => "nonexistent@example.com"}}) =~
-        "User does not exist"
+    test "validates receiver exists", %{
+      view: view,
+      credential: credential,
+      transfer: transfer
+    } do
+      transfer.("nonexistent@example.com")
+
+      assert_reply(view, %{
+        fieldErrors: %{"receiverEmail" => ["User does not exist"]}
+      })
+
+      refute Repo.reload(credential).transfer_status
     end
 
     test "validates cannot transfer to self", %{
       view: view,
       owner: owner,
-      credential: credential
+      credential: credential,
+      transfer: transfer
     } do
-      view
-      |> element("#transfer-credential-#{credential.id}-modal-form")
-      |> render_change(%{"receiver" => %{"email" => owner.email}}) =~
-        "You cannot transfer a credential to yourself"
+      transfer.(owner.email)
+
+      assert_reply(view, %{
+        fieldErrors: %{
+          "receiverEmail" => ["You cannot transfer a credential to yourself"]
+        }
+      })
+
+      refute Repo.reload(credential).transfer_status
     end
 
     test "validates receiver has project access", %{
       view: view,
-      credential: credential
+      credential: credential,
+      transfer: transfer
     } do
       receiver = insert(:user)
+      transfer.(receiver.email)
 
-      view
-      |> element("#transfer-credential-#{credential.id}-modal-form")
-      |> render_change(%{"receiver" => %{"email" => receiver.email}}) =~
-        "User doesn't have access to these projects"
+      assert_reply(view, %{fieldErrors: %{"receiverEmail" => [message]}})
+      assert message =~ "User doesn't have access to these projects"
+
+      refute Repo.reload(credential).transfer_status
     end
 
     test "initiates transfer for valid receiver", %{
-      conn: conn,
       view: view,
       project: project,
-      credential: credential
+      credential: credential,
+      transfer: transfer
     } do
       receiver = insert(:user)
       insert(:project_user, project: project, user: receiver)
 
-      assert {:ok, _view, html} =
-               view
-               |> element("#transfer-credential-#{credential.id}-modal-form")
-               |> render_submit(%{"receiver" => %{"email" => receiver.email}})
-               |> follow_redirect(conn, ~p"/credentials")
-
-      assert html =~
-               "Credential transfer initiated"
+      assert transfer.(receiver.email) =~ "Credential transfer initiated"
 
       assert_email_sent(
         to: Swoosh.Email.Recipient.format(credential.user),
@@ -2542,130 +1970,13 @@ defmodule LightningWeb.CredentialLiveTest do
       )
 
       assert Repo.reload(credential).transfer_status == :pending
-    end
-
-    test "closes modal", %{view: view, credential: credential} do
-      assert has_element?(view, "#transfer-credential-#{credential.id}-modal")
-
-      view
-      |> element("#transfer-credential-#{credential.id}-modal-cancel-button")
-      |> render_click()
-
-      refute has_element?(view, "#transfer-credential-#{credential.id}-modal")
-    end
-
-    test "enables submit when form valid", %{
-      view: view,
-      project: project,
-      credential: credential
-    } do
-      receiver = insert(:user)
-      insert(:project_user, project: project, user: receiver)
-
-      view
-      |> element("#transfer-credential-#{credential.id}-modal-form")
-      |> render_change(%{
-        "receiver" => %{"email" => receiver.email}
-      })
-
-      refute view
-             |> submit_disabled(
-               "#transfer-credential-#{credential.id}-modal-submit-button"
-             )
-    end
-
-    test "invalid email format stops validation chain", %{
-      view: view,
-      credential: credential
-    } do
-      html =
-        view
-        |> element(
-          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
-        )
-        |> render_blur(%{"value" => "not-an-email"})
-
-      assert html =~ "Email address not valid"
-      refute html =~ "user does not exist"
-      refute html =~ "You cannot transfer a credential to yourself"
-      refute html =~ "User doesn&#39;t have access to these projects"
-    end
-
-    test "self transfer validation with valid email format", %{
-      view: view,
-      owner: owner,
-      credential: credential
-    } do
-      html =
-        view
-        |> element(
-          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
-        )
-        |> render_blur(%{"value" => owner.email})
-
-      refute html =~ "Email address not valid"
-      refute html =~ "user does not exist"
-      assert html =~ "You cannot transfer a credential to yourself"
-    end
-
-    test "non-existent user validation with valid email format", %{
-      view: view,
-      credential: credential
-    } do
-      html =
-        view
-        |> element(
-          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
-        )
-        |> render_blur(%{"value" => "nonexistent@example.com"})
-
-      refute html =~ "Email address not valid"
-      assert html =~ "User does not exist"
-      refute html =~ "You cannot transfer a credential to yourself"
-    end
-
-    test "project access validation with valid user", %{
-      view: view,
-      credential: credential
-    } do
-      receiver = insert(:user)
-
-      html =
-        view
-        |> element(
-          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
-        )
-        |> render_blur(%{"value" => receiver.email})
-
-      refute html =~ "Email address not valid"
-      refute html =~ "user does not exist"
-      refute html =~ "You cannot transfer a credential to yourself"
-      assert html =~ "User doesn&#39;t have access to these projects"
-    end
-
-    test "successful validation with valid user and project access", %{
-      view: view,
-      project: project,
-      credential: credential
-    } do
-      receiver = insert(:user)
-      insert(:project_user, project: project, user: receiver)
-
-      html =
-        view
-        |> element(
-          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
-        )
-        |> render_blur(%{"value" => receiver.email})
-
-      refute html =~ "Email address not valid"
-      refute html =~ "user does not exist"
-      refute html =~ "You cannot transfer a credential to yourself"
-      refute html =~ "User doesn&#39;t have access to these projects"
+      assert [%{"transferStatus" => "pending"}] = props(view)["credentials"]
     end
   end
 
   describe "revoke credential transfer modal" do
+    # The modal is the design system's, drawn from the row's transfer status.
+
     setup %{conn: conn} do
       owner = insert(:user)
       project = build(:project) |> with_project_user(owner, :owner) |> insert()
@@ -2678,9 +1989,7 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       conn = log_in_user(conn, owner)
-      {:ok, view, _html} = live(conn, ~p"/credentials")
-
-      open_transfer_credential_modal(view, credential.id)
+      view = open(conn)
 
       %{
         owner: owner,
@@ -2690,88 +1999,44 @@ defmodule LightningWeb.CredentialLiveTest do
       }
     end
 
-    test "shows revoke UI when transfer is pending", %{view: view} do
-      html = render(view)
-      assert html =~ "Revoke Credential Transfer"
-      assert html =~ "A transfer of this credential is pending"
-      assert html =~ "Revoking this transfer will cancel the pending request"
-    end
-
     test "revokes transfer successfully", %{
-      conn: conn,
       view: view,
       credential: credential
     } do
-      assert {:ok, _view, html} =
-               view
-               |> element(
-                 "#transfer-credential-#{credential.id}-modal-revoke-button"
-               )
-               |> render_click()
-               |> follow_redirect(conn, ~p"/credentials")
-
-      assert html =~ "Transfer revoked successfully"
+      assert send_event(view, "revoke_credential_transfer", %{
+               "id" => credential.id
+             }) =~ "Transfer revoked successfully"
 
       updated_credential =
         Repo.get(Lightning.Credentials.Credential, credential.id)
 
       assert is_nil(updated_credential.transfer_status)
-    end
-
-    test "closes modal after canceling revoke", %{
-      view: view,
-      credential: credential
-    } do
-      assert has_element?(view, "#transfer-credential-#{credential.id}-modal")
-
-      view
-      |> element("#transfer-credential-#{credential.id}-modal-cancel-button")
-      |> render_click()
-
-      refute has_element?(view, "#transfer-credential-#{credential.id}-modal")
+      assert [%{"transferStatus" => nil}] = props(view)["credentials"]
     end
 
     test "handles revoke failure gracefully", %{
-      conn: conn,
       view: view,
       credential: credential
     } do
       # Force a failure by deleting the credential first
       Repo.delete!(credential)
 
-      {:ok, _view, html} =
-        view
-        |> element("#transfer-credential-#{credential.id}-modal-revoke-button")
-        |> render_click()
-        |> follow_redirect(conn, ~p"/credentials")
+      send_event(view, "revoke_credential_transfer", %{"id" => credential.id})
 
-      assert html =~ "Could not revoke transfer"
+      assert_reply(view, %{error: error})
+      assert error == refused()
     end
   end
 
   describe "credential type picker modal" do
-    test "displays credential type modal with icons", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+    # The picker and each type's icon are the design system's, drawn from
+    # the types the server offers.
 
-      html = open_create_credential_modal(view)
-
-      html_tree = Floki.parse_document!(html)
+    test "offers the adaptors with a credential schema as types", %{conn: conn} do
+      keys = Enum.map(props(open(conn))["credentialTypes"], & &1["key"])
 
       for adaptor <- ["postgresql", "dhis2", "http"] do
-        full_name = "@openfn/language-#{adaptor}"
-
-        adaptor_label =
-          Floki.find(
-            html_tree,
-            "label[for='credential-schema-picker_selected_#{full_name}']"
-          )
-
-        adaptor_icon = Floki.find(adaptor_label, "object")
-        assert length(adaptor_icon) > 0
-        img_src = adaptor_icon |> Floki.attribute("data") |> List.first()
-
-        assert img_src =~
-                 "/adaptors/icons/#{URI.encode(full_name, &URI.char_unreserved?/1)}/square-"
+        assert adaptor in keys
       end
     end
 
@@ -2784,20 +2049,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       Lightning.AdaptorTestHelpers.prime_packages_cache()
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      keys = Enum.map(props(open(conn))["credentialTypes"], & &1["key"])
 
-      html = open_create_credential_modal(view)
-      html_tree = Floki.parse_document!(html)
-
-      assert Floki.find(
-               html_tree,
-               "label[for='credential-schema-picker_selected_@openfn/language-http']"
-             ) != []
-
-      assert Floki.find(
-               html_tree,
-               "label[for='credential-schema-picker_selected_deprecated-adaptor']"
-             ) == []
+      assert "http" in keys
+      refute "deprecated-adaptor" in keys
     end
 
     test "omits an adaptor with no configuration schema", %{conn: conn} do
@@ -2805,20 +2060,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       Lightning.AdaptorTestHelpers.prime_packages_cache()
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      keys = Enum.map(props(open(conn))["credentialTypes"], & &1["key"])
 
-      html = open_create_credential_modal(view)
-      html_tree = Floki.parse_document!(html)
-
-      assert Floki.find(
-               html_tree,
-               "label[for='credential-schema-picker_selected_@openfn/language-http']"
-             ) != []
-
-      assert Floki.find(
-               html_tree,
-               "label[for='credential-schema-picker_selected_@openfn/language-no-schema']"
-             ) == []
+      assert "http" in keys
+      refute "no-schema" in keys
     end
   end
 
@@ -2869,7 +2114,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       user: user
     } do
-      [project_1, project_2, project_3] =
+      [project_1, _project_2, project_3] =
         insert_list(3, :project, project_users: [%{user: user, role: :owner}])
 
       oauth_client =
@@ -2879,97 +2124,28 @@ defmodule LightningWeb.CredentialLiveTest do
           optional_scopes: ""
         )
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
+      sign_in(view, oauth_client)
 
-      open_create_credential_modal(view)
+      assert [%{"signInId" => "s1", "userInfo" => %{"name" => "Test User"}}] =
+               props(view)["oauthSignIns"]
 
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
-
-      refute view |> has_element?("#credential-type-picker")
-
-      view
-      |> fill_credential(%{
-        name: "My Generic OAuth Credential"
-      })
-
-      # Get the authorize URL from the component's assigns
-      {_, component_assigns} =
-        Lightning.LiveViewHelpers.get_component_assigns_by(view,
-          id: "generic-oauth-component-new-main"
-        )
-
-      authorize_url = component_assigns[:authorize_url]
-
-      [subscription_id, mod, _component_id, _env] =
-        get_decoded_state(authorize_url)
-
-      assert view.id == subscription_id
-      assert view |> element("#generic-oauth-component-new-main")
-
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
-      refute view
-             |> has_element?("#authorize-button")
-
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: "generic-oauth-component-new-main",
-        code: "authcode123",
-        current_tab: "main"
-      )
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-new-main"
-          )
-
-        :complete === assigns[:oauth_progress]
-      end)
-
-      assert view |> has_element?("h3", "Test User")
-
-      [project_1, project_2, project_3]
-      |> Enum.each(fn project ->
-        view
-        |> element("#project-credentials-list-new")
-        |> render_change(%{"project_id" => project.id})
-      end)
-
-      view
-      |> element("#remove-project-credential-button-new-#{project_2.id}")
-      |> render_click()
-
-      refute view |> submit_disabled("save-credential-button-new")
-
-      {:ok, _index_live, _html} =
-        view
-        |> form("#credential-form-new")
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
-
-      {_path, flash} = assert_redirect(view)
-      assert flash == %{"info" => "Credential created successfully"}
+      assert send_event(
+               view,
+               "create_credential",
+               oauth_values(oauth_client, "s1", %{
+                 "name" => "My Generic OAuth Credential",
+                 "projectIds" => [project_1.id, project_3.id]
+               })
+             ) =~ "Credential created successfully"
 
       credential =
         Lightning.Credentials.list_credentials(user)
         |> List.first()
-        |> Repo.preload(:credential_bodies)
+        |> Repo.preload([:credential_bodies, :project_credentials])
 
-      assert credential.project_credentials
-             |> Enum.all?(fn pc ->
-               pc.project_id in Enum.map([project_1, project_3], fn project ->
-                 project.id
-               end)
-             end)
-
-      refute credential.project_credentials
-             |> Enum.find(fn pc -> pc.project_id == project_2.id end)
+      assert MapSet.new(credential.project_credentials, & &1.project_id) ==
+               MapSet.new([project_1.id, project_3.id])
 
       # Get the main environment body
       main_body = Enum.find(credential.credential_bodies, &(&1.name == "main"))
@@ -3018,38 +2194,25 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         })
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(view, credential.id)
-
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(view,
-            id: "generic-oauth-component-#{credential.id}-main"
-          )
-
-        assigns[:oauth_progress] in [:complete, :idle]
-      end)
-
-      view
-      |> form("#credential-form-#{credential.id}",
-        credential: %{name: "My Generic OAuth Credential"}
-      )
-      |> render_change()
-
-      view
-      |> element(
-        "#remove-project-credential-button-#{credential.id}-#{project_1.id}"
-      )
-      |> render_click()
-
-      refute view |> submit_disabled("save-credential-button-#{credential.id}")
-
-      view
-      |> form("#credential-form-#{credential.id}")
-      |> render_submit()
-
-      assert_redirected(view, ~p"/credentials")
+      assert send_event(
+               view,
+               "update_credential",
+               oauth_values(oauth_client, nil, %{
+                 "id" => credential.id,
+                 "name" => "My Generic OAuth Credential",
+                 "projectIds" => [project_2.id, project_3.id],
+                 "environments" => [
+                   %{
+                     "name" => "main",
+                     "previousName" => "main",
+                     "body" => "",
+                     "signInId" => nil
+                   }
+                 ]
+               })
+             ) =~ "Credential updated successfully"
 
       credential =
         credential
@@ -3058,52 +2221,47 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert credential.name == "My Generic OAuth Credential"
 
-      assert Enum.all?(credential.project_credentials, fn pc ->
-               pc.project_id in [project_2.id, project_3.id]
-             end)
+      assert MapSet.new(credential.project_credentials, & &1.project_id) ==
+               MapSet.new([project_2.id, project_3.id])
 
-      refute Enum.find(credential.project_credentials, fn pc ->
-               pc.project_id == project_1.id
-             end)
+      # Without a new sign-in, the stored token is kept.
+      assert %{"main" => %{"access_token" => "test_access_token"}} =
+               bodies(credential)
     end
 
-    test "reauthenticate banner is not rendered the first time we pick permissions",
+    test "a new credential starts its first sign-in with the client's scopes",
          %{
            conn: conn,
            user: user
          } do
       oauth_client = insert(:oauth_client, user: user)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(view)
+      # Whether to ask for a new sign-in is the design system's: a new
+      # credential has no stored scopes to compare with, so the page gets the
+      # client's scopes and starts the first sign-in with those ticked.
+      assert [
+               %{
+                 "mandatoryScopes" => ["scope_1", "scope_2"],
+                 "optionalScopes" => optional
+               }
+             ] = props(view)["oauthClients"]
 
-      view |> select_credential_type(oauth_client.id)
-      view |> click_continue()
+      send_event(view, "authorize_oauth", %{
+        "formId" => "form-1",
+        "signInId" => "s1",
+        "credentialId" => nil,
+        "oauthClientId" => oauth_client.id,
+        "scopes" => optional,
+        "environment" => "main"
+      })
 
-      assert view
-             |> has_element?("#scope_selection_new_main")
-
-      refute view |> has_element?("#scope-change-action")
-
-      assert view
-             |> has_element?("#authorize-button")
-
-      oauth_client.optional_scopes
-      |> String.split(",")
-      |> Enum.each(fn scope ->
-        view
-        |> element("#scope_selection_new_main_#{scope}")
-        |> render_change(%{"_target" => [scope]})
-      end)
-
-      refute view |> has_element?("#scope-change-action")
-
-      assert view
-             |> has_element?("#authorize-button")
+      assert_reply(view, %{authorizeUrl: url})
+      assert String.starts_with?(url, oauth_client.authorization_endpoint)
     end
 
-    test "reauthenticate banner rendered when scopes are changed",
+    test "the edit form gets the stored token's scopes to compare a new pick with",
          %{
            conn: conn,
            user: user
@@ -3130,21 +2288,32 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         })
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(index_live, credential.id)
+      # The page compares the ticked scopes with the stored token's, and
+      # asks for a new sign-in when they differ; that part is the design
+      # system's.
+      send_event(view, "load_credential_secrets", %{"id" => credential.id})
 
-      refute index_live |> has_element?("#scope-change-action")
+      assert_reply(view, %{
+        environments: [
+          %{name: "main", oauth: %{scopes: ["scope_1", "scope_2"]}}
+        ]
+      })
 
-      oauth_client.optional_scopes
-      |> String.split(",")
-      |> Enum.each(fn scope ->
-        index_live
-        |> element("#scope_selection_#{credential.id}_main_#{scope}")
-        |> render_change(%{"_target" => [scope]})
-      end)
+      send_event(view, "authorize_oauth", %{
+        "formId" => "form-1",
+        "signInId" => "s1",
+        "credentialId" => credential.id,
+        "oauthClientId" => oauth_client.id,
+        "scopes" => String.split(oauth_client.optional_scopes, ","),
+        "environment" => "main"
+      })
 
-      assert index_live |> has_element?("#authorize-button")
+      assert_reply(view, %{authorizeUrl: url})
+
+      assert %{"scope" => "scope_1 scope_2 scope_3 scope_4"} =
+               url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
     end
 
     test "correctly renders a valid existing token", %{
@@ -3173,20 +2342,19 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         })
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(edit_live, credential.id)
+      send_event(view, "load_credential_secrets", %{"id" => credential.id})
 
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(edit_live,
-            id: "generic-oauth-component-#{credential.id}-main"
-          )
-
-        :complete === assigns[:oauth_progress]
-      end)
-
-      assert edit_live |> has_element?("h3", "Test User")
+      assert_reply(view, %{
+        environments: [
+          %{
+            name: "main",
+            body: "",
+            oauth: %{status: "ready", userInfo: %{name: "Test User"}}
+          }
+        ]
+      })
     end
 
     test "renewing an expired but valid token", %{
@@ -3220,25 +2388,22 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         })
 
-      {:ok, edit_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_edit_credential_modal(edit_live, credential.id)
+      send_event(view, "load_credential_secrets", %{"id" => credential.id})
 
-      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
-        {_, assigns} =
-          Lightning.LiveViewHelpers.get_component_assigns_by(edit_live,
-            id: "generic-oauth-component-#{credential.id}-main"
-          )
+      assert_reply(view, %{
+        environments: [
+          %{oauth: %{status: "ready", userInfo: %{name: "Test User"}}}
+        ]
+      })
 
-        :complete === assigns[:oauth_progress]
-      end)
-
-      edit_live |> render()
-
-      assert edit_live |> has_element?("h3", "Test User")
+      # Opening it refreshes the token and saves it, as a run would.
+      assert %{"main" => %{"access_token" => "ya29.a0AVvZ"}} =
+               bodies(credential)
     end
 
-    test "when oauth client is deleted, oauth credentials associated to it will render a warning banner",
+    test "when oauth client is deleted, its credentials have no client and need signing in again",
          %{user: user, conn: conn} do
       oauth_client = insert(:oauth_client, user: user)
 
@@ -3259,105 +2424,81 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         })
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
-      html = open_edit_credential_modal(view, credential.id)
+      view = open(conn)
 
-      assert html =~ credential.name
-      refute view |> has_element?("h3", "OAuth client not found")
+      assert [%{"name" => "My OAuth Credential", "oauthClient" => %{"id" => id}}] =
+               props(view)["credentials"]
 
-      refute view
-             |> has_element?(
-               "span[phx-hook='Tooltip', aria-label='OAuth client not found']"
-             )
+      assert id == oauth_client.id
 
       # Now lets delete the oauth client
       Repo.delete!(oauth_client)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
-      html = open_edit_credential_modal(view, credential.id)
+      view = open(conn)
 
-      assert html =~ credential.name
-      assert view |> has_element?("h3", "OAuth client not found")
+      # The page warns about an OAuth credential without its client.
+      assert [
+               %{
+                 "name" => "My OAuth Credential",
+                 "schema" => "oauth",
+                 "oauthClient" => nil
+               }
+             ] = props(view)["credentials"]
 
-      assert view
-             |> has_element?("span##{credential.id}-client-not-found-tooltip")
+      send_event(view, "load_credential_secrets", %{"id" => credential.id})
+
+      assert_reply(view, %{
+        environments: [%{oauth: %{status: "reauthorize", userInfo: nil}}]
+      })
     end
 
-    test "generic oauth credential will render a scope pick list", %{
-      user: user,
-      conn: conn
-    } do
+    test "offers the client's optional scopes and asks only for the ones picked",
+         %{
+           user: user,
+           conn: conn
+         } do
       oauth_client = insert(:oauth_client, user: user)
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
-      open_create_credential_modal(index_live)
-      index_live |> select_credential_type(oauth_client.id)
-      index_live |> click_continue()
+      view = open(conn)
 
-      assert index_live
-             |> has_element?("#scope_selection_new_main")
+      # The pick list itself is the design system's; it lists these.
+      assert [%{"optionalScopes" => scopes_to_choose}] =
+               props(view)["oauthClients"]
+
+      assert scopes_to_choose == String.split(oauth_client.optional_scopes, ",")
 
       not_chosen_scopes =
         ~W(wave_api api custom_permissions id profile email address)
 
-      scopes_to_choose = oauth_client.optional_scopes |> String.split(",")
+      scopes_in_url = fn sign_in_id, scopes ->
+        send_event(view, "authorize_oauth", %{
+          "formId" => "form-1",
+          "signInId" => sign_in_id,
+          "credentialId" => nil,
+          "oauthClientId" => oauth_client.id,
+          "scopes" => scopes,
+          "environment" => "main"
+        })
 
-      scopes_to_choose
-      |> Enum.each(fn scope ->
-        index_live
-        |> element("#scope_selection_new_main_#{scope}")
-        |> render_change(%{"_target" => [scope]})
-      end)
+        assert_reply(view, %{authorizeUrl: url})
 
-      # Get the authorize URL from the component's assigns
-      {_, component_assigns} =
-        Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
-          id: "generic-oauth-component-new-main"
-        )
-
-      authorize_url = component_assigns[:authorize_url]
-      %{query: query} = URI.parse(authorize_url)
-
-      scopes_in_url =
-        query
+        url
+        |> URI.parse()
+        |> Map.fetch!(:query)
         |> URI.decode_query()
-        |> Map.get("scope")
+        |> Map.fetch!("scope")
+        |> String.split(" ")
+      end
 
-      assert scopes_in_url
-             |> String.contains?(
-               scopes_to_choose
-               |> Enum.reverse()
-               |> Enum.join(" ")
-             )
+      scopes = scopes_in_url.("s1", scopes_to_choose)
 
-      refute scopes_in_url
-             |> String.contains?(
-               not_chosen_scopes
-               |> Enum.reverse()
-               |> Enum.join(" ")
-             )
+      assert Enum.all?(scopes_to_choose, &(&1 in scopes))
+      refute Enum.any?(not_chosen_scopes, &(&1 in scopes))
 
-      # Unselecting one of the already selected scopes will remove it from the authorization url
-      scope_to_unselect = scopes_to_choose |> Enum.at(0)
+      # Unselecting one of the already selected scopes leaves it out of the
+      # authorization url
+      [scope_to_unselect | rest] = scopes_to_choose
 
-      index_live
-      |> element("#scope_selection_new_main_#{scope_to_unselect}")
-      |> render_change(%{"_target" => [scope_to_unselect]})
-
-      # Get the updated authorize URL after scope change
-      {_, component_assigns} =
-        Lightning.LiveViewHelpers.get_component_assigns_by(index_live,
-          id: "generic-oauth-component-new-main"
-        )
-
-      authorize_url = component_assigns[:authorize_url]
-      %{query: query} = URI.parse(authorize_url)
-
-      scopes_in_url =
-        query
-        |> URI.decode_query()
-        |> Map.get("scope")
-
-      refute scopes_in_url |> String.contains?(scope_to_unselect)
+      refute scope_to_unselect in scopes_in_url.("s2", rest)
     end
   end
 
@@ -3384,29 +2525,25 @@ defmodule LightningWeb.CredentialLiveTest do
           env: "dev"
         })
 
-      # Create credential via LiveView
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      # Create the credential, shared with the parent project
+      view = open(conn)
 
-      open_create_credential_modal(index_live)
-      index_live |> select_credential_type("raw")
-      index_live |> click_continue()
-
-      # Select parent project
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => parent.id})
-
-      # Submit the credential form
-      {:ok, _index_live, _html} =
-        index_live
-        |> form("#credential-form-new",
-          credential: %{
-            name: "Test Propagation Credential",
-            body: Jason.encode!(%{"key" => "value"})
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/credentials")
+      assert send_event(
+               view,
+               "create_credential",
+               raw_values(%{
+                 "name" => "Test Propagation Credential",
+                 "projectIds" => [parent.id],
+                 "environments" => [
+                   %{
+                     "name" => "main",
+                     "previousName" => nil,
+                     "body" => Jason.encode!(%{"key" => "value"}),
+                     "signInId" => nil
+                   }
+                 ]
+               })
+             ) =~ "Credential created successfully"
 
       # Verify credential was created
       credential =
@@ -3474,20 +2611,31 @@ defmodule LightningWeb.CredentialLiveTest do
           env: "dev"
         })
 
-      # Open edit modal and add the parent project
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
-      open_edit_credential_modal(view, credential.id)
+      # Save the credential with the parent project added
+      view = open(conn)
 
-      view
-      |> element("#project-credentials-list-#{credential.id}")
-      |> render_change(%{"project_id" => parent.id})
-
-      # Submit the form
-      view
-      |> form("#credential-form-#{credential.id}")
-      |> render_submit()
-
-      assert_redirected(view, ~p"/credentials")
+      assert send_event(
+               view,
+               "update_credential",
+               raw_values(%{
+                 "id" => credential.id,
+                 "name" => "Update Test Credential",
+                 "schema" => "http",
+                 "projectIds" => [parent.id],
+                 "environments" => [
+                   %{
+                     "name" => "main",
+                     "previousName" => "main",
+                     "body" =>
+                       Jason.encode!(%{
+                         "username" => "test",
+                         "password" => "test"
+                       }),
+                     "signInId" => nil
+                   }
+                 ]
+               })
+             ) =~ "Credential updated successfully"
 
       # Verify credential was propagated to all descendants
       parent_has_credential =
@@ -3547,26 +2695,16 @@ defmodule LightningWeb.CredentialLiveTest do
         })
 
       # Create credential with parent project
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(index_live)
-      index_live |> select_credential_type("raw")
-      index_live |> click_continue()
-
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => parent.id})
-
-      {:ok, _index_live, _html} =
-        index_live
-        |> form("#credential-form-new",
-          credential: %{
-            name: "Branching Test Credential",
-            body: Jason.encode!(%{"key" => "value"})
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/credentials")
+      send_event(
+        view,
+        "create_credential",
+        raw_values(%{
+          "name" => "Branching Test Credential",
+          "projectIds" => [parent.id]
+        })
+      )
 
       credential =
         Repo.get_by(Credential, name: "Branching Test Credential")
@@ -3623,27 +2761,17 @@ defmodule LightningWeb.CredentialLiveTest do
           env: "local"
         })
 
-      # Create credential via LiveView
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      # Create credential, shared with the parent project
+      view = open(conn)
 
-      open_create_credential_modal(index_live)
-      index_live |> select_credential_type("raw")
-      index_live |> click_continue()
-
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => parent.id})
-
-      {:ok, _index_live, _html} =
-        index_live
-        |> form("#credential-form-new",
-          credential: %{
-            name: "Deep Hierarchy Credential",
-            body: Jason.encode!(%{"key" => "value"})
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/credentials")
+      send_event(
+        view,
+        "create_credential",
+        raw_values(%{
+          "name" => "Deep Hierarchy Credential",
+          "projectIds" => [parent.id]
+        })
+      )
 
       credential =
         Repo.get_by(Credential, name: "Deep Hierarchy Credential")
@@ -3689,47 +2817,25 @@ defmodule LightningWeb.CredentialLiveTest do
           env: "staging"
         })
 
+      view = open(conn)
+
       # Create first credential
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
-
-      open_create_credential_modal(index_live)
-      index_live |> select_credential_type("raw")
-      index_live |> click_continue()
-
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => parent.id})
-
-      {:ok, index_live, _html} =
-        index_live
-        |> form("#credential-form-new",
-          credential: %{
-            name: "First Credential",
-            body: Jason.encode!(%{"key" => "value1"})
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/credentials")
+      send_event(
+        view,
+        "create_credential",
+        raw_values(%{"name" => "First Credential", "projectIds" => [parent.id]})
+      )
 
       # Create second credential
-      open_create_credential_modal(index_live)
-      index_live |> select_credential_type("raw")
-      index_live |> click_continue()
-
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => parent.id})
-
-      {:ok, _index_live, _html} =
-        index_live
-        |> form("#credential-form-new",
-          credential: %{
-            name: "Second Credential",
-            body: Jason.encode!(%{"key" => "value2"})
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/credentials")
+      send_event(
+        view,
+        "create_credential",
+        raw_values(%{
+          "formId" => "form-2",
+          "name" => "Second Credential",
+          "projectIds" => [parent.id]
+        })
+      )
 
       # Verify both credentials are in parent and sandbox
       cred1 = Repo.get_by(Credential, name: "First Credential")
@@ -3782,40 +2888,41 @@ defmodule LightningWeb.CredentialLiveTest do
         })
 
       # Create credential and associate with parent twice
-      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(index_live)
-      index_live |> select_credential_type("raw")
-      index_live |> click_continue()
-
-      index_live
-      |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => parent.id})
-
-      {:ok, index_live, _html} =
-        index_live
-        |> form("#credential-form-new",
-          credential: %{
-            name: "Idempotent Test Credential",
-            body: Jason.encode!(%{"key" => "value"})
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/credentials")
+      send_event(
+        view,
+        "create_credential",
+        raw_values(%{
+          "name" => "Idempotent Test Credential",
+          "projectIds" => [parent.id]
+        })
+      )
 
       credential =
         Repo.get_by(Credential, name: "Idempotent Test Credential")
 
-      # Try to add the same project again via edit
-      open_edit_credential_modal(index_live, credential.id)
+      # Save it again with the projects it lists, adding the parent again
+      [%{"projects" => projects}] = props(view)["credentials"]
+      project_ids = Enum.map(projects, & &1["id"]) ++ [parent.id]
 
-      index_live
-      |> element("#project-credentials-list-#{credential.id}")
-      |> render_change(%{"project_id" => parent.id})
-
-      index_live
-      |> form("#credential-form-#{credential.id}")
-      |> render_submit()
+      assert send_event(
+               view,
+               "update_credential",
+               raw_values(%{
+                 "id" => credential.id,
+                 "name" => "Idempotent Test Credential",
+                 "projectIds" => project_ids,
+                 "environments" => [
+                   %{
+                     "name" => "main",
+                     "previousName" => "main",
+                     "body" => ~s({"a": 1}),
+                     "signInId" => nil
+                   }
+                 ]
+               })
+             ) =~ "Credential updated successfully"
 
       # Verify no duplicate associations
       sandbox_credential_count =
@@ -3833,77 +2940,58 @@ defmodule LightningWeb.CredentialLiveTest do
   end
 
   describe "credential environment tabs" do
-    test "each environment tab maintains independent form values", %{
-      conn: conn
+    test "saves each environment's values separately", %{
+      conn: conn,
+      user: user
     } do
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      open_create_credential_modal(view)
-      select_credential_type(view, "@openfn/language-dhis2")
-      click_continue(view)
-
-      # Fill in values for the main environment
-      view
-      |> form("#credential-form-new",
-        credential: %{
-          name: "Multi-env credential",
-          body: %{
-            username: "main_user",
-            password: "main_pass",
-            hostUrl: "http://main.example.com"
-          }
+      # Switching tabs is the design system's; each environment it sends is
+      # saved with its own values.
+      env = fn name, values ->
+        %{
+          "name" => name,
+          "previousName" => nil,
+          "body" => Jason.encode!(values),
+          "signInId" => nil
         }
-      )
-      |> render_change()
+      end
 
-      # Verify main tab has the values
-      html = render(view)
-      assert html =~ "main_user"
+      assert send_event(
+               view,
+               "create_credential",
+               raw_values(%{
+                 "name" => "Multi-env credential",
+                 "schema" => "dhis2",
+                 "environments" => [
+                   env.("main", %{
+                     username: "main_user",
+                     password: "main_pass",
+                     hostUrl: "http://main.example.com"
+                   }),
+                   env.("untitled", %{
+                     username: "staging_user",
+                     password: "staging_pass",
+                     hostUrl: "http://staging.example.com"
+                   })
+                 ]
+               })
+             ) =~ "Credential created successfully"
 
-      # Add a new environment
-      view
-      |> element("#add-environment-button")
-      |> render_click()
+      assert [credential] = Credentials.list_credentials(user)
 
-      # The new tab should be selected and have empty values
-      html = render(view)
-      refute html =~ ~s(value="main_user")
-
-      # Fill in different values for the new environment
-      view
-      |> form("#credential-form-new",
-        credential: %{
-          body: %{
-            username: "staging_user",
-            password: "staging_pass",
-            hostUrl: "http://staging.example.com"
-          }
-        }
-      )
-      |> render_change()
-
-      html = render(view)
-      assert html =~ "staging_user"
-
-      # Switch back to main tab
-      view
-      |> element("button", "main")
-      |> render_click()
-
-      # Main tab should still have its original values
-      html = render(view)
-      assert html =~ ~s(value="main_user")
-      refute html =~ ~s(value="staging_user")
-
-      # Switch to the untitled tab again
-      view
-      |> element("button", "untitled")
-      |> render_click()
-
-      # Untitled tab should have staging values
-      html = render(view)
-      assert html =~ ~s(value="staging_user")
-      refute html =~ ~s(value="main_user")
+      assert %{
+               "main" => %{
+                 "username" => "main_user",
+                 "password" => "main_pass",
+                 "hostUrl" => "http://main.example.com"
+               },
+               "untitled" => %{
+                 "username" => "staging_user",
+                 "password" => "staging_pass",
+                 "hostUrl" => "http://staging.example.com"
+               }
+             } = bodies(credential)
     end
   end
 
@@ -3921,30 +3009,19 @@ defmodule LightningWeb.CredentialLiveTest do
       :ok
     end
 
-    test "the credential type picker offers a retry", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+    test "offers no adaptor types until the catalogue answers, then offers them on the next load",
+         %{conn: conn} do
+      view = open(conn)
 
-      html = open_create_credential_modal(view)
-
-      assert html =~ "Couldn&#39;t load adaptors. Please try again."
-
-      assert has_element?(
-               view,
-               "#credential-type-adaptors-error button",
-               "Retry"
-             )
-
-      assert html =~ "Raw JSON"
+      # Only Raw JSON and the OAuth clients are offered.
+      assert props(view)["credentialTypes"] == []
 
       seed_credential_schema("http")
 
-      html =
-        view
-        |> element("#credential-type-adaptors-error button", "Retry")
-        |> render_click()
-
-      refute html =~ "Couldn&#39;t load adaptors. Please try again."
-      assert html =~ "credential-schema-picker_selected_@openfn/language-http"
+      assert Enum.any?(
+               props(open(conn))["credentialTypes"],
+               &(&1["key"] == "http")
+             )
     end
 
     test "the credential form offers a retry instead of crashing", %{
@@ -3954,27 +3031,19 @@ defmodule LightningWeb.CredentialLiveTest do
       credential =
         insert(:credential, user: user, schema: "@openfn/language-http")
 
-      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+      view = open(conn)
 
-      html = open_edit_credential_modal(view, credential.id)
+      send_event(view, "load_credential_secrets", %{"id" => credential.id})
+      assert_reply(view, %{environments: [%{name: "main"}]})
 
-      assert html =~ "Couldn&#39;t load adaptors. Please try again."
-
-      assert has_element?(
-               view,
-               "#credential-schema-unavailable button",
-               "Retry"
-             )
+      send_event(view, "load_credential_schema", %{"key" => "http"})
+      assert_reply(view, %{error: "Couldn't load adaptors. Please try again."})
 
       seed_credential_schema("http")
 
-      html =
-        view
-        |> element("#credential-schema-unavailable button", "Retry")
-        |> render_click()
-
-      refute html =~ "Couldn&#39;t load adaptors. Please try again."
-      assert html =~ "baseUrl"
+      send_event(view, "load_credential_schema", %{"key" => "http"})
+      assert_reply(view, %{fields: fields})
+      assert Enum.any?(fields, &(&1.key == "baseUrl"))
     end
   end
 end

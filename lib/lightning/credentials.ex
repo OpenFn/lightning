@@ -659,6 +659,13 @@ defmodule Lightning.Credentials do
           "adaptor catalogue is not ready yet, try again shortly"
         )
 
+      {:error, %Ecto.Changeset{} = typed} ->
+        # Name each field the adaptor's schema refused, so the form can say
+        # which value is wrong.
+        Enum.reduce(typed.errors, changeset, fn {field, {message, opts}}, acc ->
+          Ecto.Changeset.add_error(acc, :body, "#{field} #{message}", opts)
+        end)
+
       {:error, _reason} ->
         Ecto.Changeset.add_error(changeset, :body, "Invalid body types")
     end
