@@ -32,7 +32,7 @@ import {
 
 describe('useAIAssistant Hooks', () => {
   let mockStore: ReturnType<typeof createAIAssistantStore>;
-  let wrapper: ({ children }: { children: ReactNode }) => JSX.Element;
+  let wrapper: ({ children }: { children: ReactNode }) => React.JSX.Element;
 
   beforeEach(() => {
     // Create fresh store for each test to avoid state pollution

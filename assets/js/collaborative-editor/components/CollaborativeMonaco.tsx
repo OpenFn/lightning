@@ -62,9 +62,9 @@ export const CollaborativeMonaco = forwardRef<
   }: CollaborativeMonacoProps,
   ref
 ) {
-  const editorRef = useRef<editor.IStandaloneCodeEditor>();
-  const monacoRef = useRef<Monaco>();
-  const bindingRef = useRef<MonacoBinding>();
+  const editorRef = useRef<editor.IStandaloneCodeEditor>(undefined);
+  const monacoRef = useRef<Monaco>(undefined);
+  const bindingRef = useRef<MonacoBinding>(undefined);
   const [editorReady, setEditorReady] = useState(false);
 
   // Type definitions state
@@ -81,7 +81,7 @@ export const CollaborativeMonaco = forwardRef<
   const diffContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Overflow widgets container ref
-  const overflowNodeRef = useRef<HTMLDivElement>();
+  const overflowNodeRef = useRef<HTMLDivElement>(undefined);
 
   // Base editor options shared between main and diff editors
   const baseEditorOptions: editor.IStandaloneEditorConstructionOptions =
@@ -178,7 +178,7 @@ export const CollaborativeMonaco = forwardRef<
     };
   }, []);
 
-  const highlightRef = useRef<editor.IEditorDecorationsCollection>();
+  const highlightRef = useRef<editor.IEditorDecorationsCollection>(undefined);
   // Monaco keeps a decoration's DOM when its markup is unchanged, so a
   // repeat highlight alternates class names to restart the flash.
   const replayRef = useRef(false);

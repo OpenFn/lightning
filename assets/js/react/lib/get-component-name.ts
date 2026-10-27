@@ -106,13 +106,14 @@ export const getComponentName = <const Props = object>(
         return lazyComponent.displayName ?? '';
       }
       case isContextConsumer(type): {
-        return getContextName(type) + '.Consumer';
-      }
-      case isContextProvider(type): {
         const { _context } = type as typeof type & {
           _context: React.ExoticComponent<unknown>;
         };
-        return getContextName(_context) + '.Provider';
+        return getContextName(_context) + '.Consumer';
+      }
+      case isContextProvider(type): {
+        // In React 19 a context is its own provider
+        return getContextName(type) + '.Provider';
       }
       default: {
         return '';

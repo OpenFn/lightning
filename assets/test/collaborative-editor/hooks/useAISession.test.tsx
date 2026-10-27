@@ -39,7 +39,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIChannelRegistry', () => ({
 
 describe('useAISession', () => {
   let mockStore: ReturnType<typeof createAIAssistantStore>;
-  let wrapper: ({ children }: { children: ReactNode }) => JSX.Element;
+  let wrapper: ({ children }: { children: ReactNode }) => React.JSX.Element;
   let onSessionIdChange: MockInstance<any[], any>;
 
   beforeEach(() => {

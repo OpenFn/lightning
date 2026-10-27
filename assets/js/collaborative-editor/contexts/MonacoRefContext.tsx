@@ -38,7 +38,7 @@ export interface PendingHighlight {
 }
 
 export interface MonacoRefContextValue {
-  monacoRef: RefObject<MonacoHandle> | null;
+  monacoRef: RefObject<MonacoHandle | null> | null;
   registerDiffDismissalCallback: (callback: () => void) => () => void;
   handleDiffDismissed: () => void;
   pendingHighlight: PendingHighlight | null;
@@ -51,7 +51,7 @@ export const MonacoRefContext = createContext<MonacoRefContextValue | null>(
 
 interface MonacoRefProviderProps {
   children: React.ReactNode;
-  monacoRef: RefObject<MonacoHandle>;
+  monacoRef: RefObject<MonacoHandle | null>;
 }
 
 /**
@@ -104,7 +104,7 @@ export function MonacoRefProvider({
  *
  * @returns Monaco editor ref or null if outside provider
  */
-export function useMonacoRef(): RefObject<MonacoHandle> | null {
+export function useMonacoRef(): RefObject<MonacoHandle | null> | null {
   const context = useContext(MonacoRefContext);
   return context?.monacoRef ?? null;
 }
