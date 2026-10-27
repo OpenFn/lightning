@@ -23,7 +23,7 @@
     "@heroicons/react": "^2.1.1",
     "@monaco-editor/react": "^4.7.0",
     "@openfn/describe-package": "^0.1.3",
-    "@openfn/ui": "file:../../openfn-ia-demo-overnight",
+    "@openfn/ui": "github:OpenFn/openfn-3-poc#7f2c34d95eab44710a87dbf395b051ce0f212343",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/react": "^10.10.0",
     "@tailwindcss/container-queries": "^0.1.1",
