@@ -1,4 +1,5 @@
 import {
+  type DataclipBody,
   type LogLine,
   RunShowPage as DesignSystemRunShowPage,
   type RunShowPageProps,
@@ -63,7 +64,7 @@ export const RunShowPage = designSystemPage(
     const [logs, setLogs] = useState<LogLine[]>([]);
     const entries = useRef<Entry[]>([]);
     const seen = useRef(new Set<string>());
-    const [bodies, setBodies] = useState<Record<string, string>>({});
+    const [bodies, setBodies] = useState<Record<string, DataclipBody>>({});
 
     useEffect(() => {
       const unsubscribe = subscribe<{ logs: PushedLogLine[] }>(
@@ -113,10 +114,10 @@ export const RunShowPage = designSystemPage(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [wantedKey]);
 
-    const withBody = (dataclip: StepDataclip | null) =>
-      dataclip && dataclip.id in bodies
-        ? { ...dataclip, body: bodies[dataclip.id] }
-        : dataclip;
+    const withBody = (dataclip: StepDataclip | null) => {
+      const body = dataclip && bodies[dataclip.id];
+      return dataclip && body ? { ...dataclip, body } : dataclip;
+    };
 
     return {
       ...props,

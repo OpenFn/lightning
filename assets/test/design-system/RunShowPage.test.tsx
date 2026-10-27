@@ -1,5 +1,5 @@
-import { act, screen } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { act, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import {
   RunShowPage,
@@ -50,6 +50,11 @@ const props: Props = {
 };
 
 describe('RunShowPage', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.location.hash = '';
+  });
+
   test('draws the run from data-props and shows the log lines the LiveView pushes', () => {
     const { handleEvent } = renderIsland<Props>(RunShowPage, props);
     expect(
@@ -80,5 +85,38 @@ describe('RunShowPage', () => {
     const text = document.body.textContent!;
     expect(text.indexOf('first')).toBeLessThan(text.indexOf('second'));
     expect(text.match(/second/g)).toHaveLength(1);
+  });
+
+  test('shows why a step input could not be loaded, with nothing to copy', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('', { status: 500 })))
+    );
+    window.location.hash = '#input';
+    renderIsland<Props>(RunShowPage, {
+      ...props,
+      steps: [
+        {
+          id: 'step-a',
+          jobId: 'job-a',
+          jobName: 'Map to FHIR',
+          exitReason: 'success',
+          startedAt: '2026-10-14T09:30:01Z',
+          finishedAt: '2026-10-14T09:30:02Z',
+          insertedAt: '2026-10-14T09:30:01Z',
+          inputDataclipId: 'dc-in',
+          outputDataclipId: null,
+          snapshotLockVersion: 1,
+        },
+      ],
+      selectedStepId: 'step-a',
+      inputDataclip: { id: 'dc-in', wiped: false },
+    });
+    await waitFor(() =>
+      expect(screen.getByText('Failed to load content')).toBeTruthy()
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Copy to clipboard' })
+    ).toBeNull();
   });
 });

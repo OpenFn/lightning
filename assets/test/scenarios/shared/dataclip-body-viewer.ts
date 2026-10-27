@@ -26,6 +26,14 @@ export async function viewerText(page: Page) {
 const flatText = async (page: Page) =>
   (await viewerText(page)).replace(/\n/g, '');
 
+// Where a body that could not be loaded says so: inside the viewer today,
+// and as a plain message in the design system, which draws no viewer for it.
+const loadMessage = (page: Page, message: string) =>
+  viewer(page)
+    .filter({ hasText: message })
+    .or(page.getByText(message, { exact: true }))
+    .first();
+
 export const copyButton = (page: Page) =>
   page.getByRole('button', { name: 'Copy to clipboard' });
 
@@ -179,8 +187,8 @@ export async function S05(
   try {
     await open();
     await expect
-      .soft(viewer(page))
-      .toContainText('Failed to load content', { timeout: 15000 });
+      .soft(loadMessage(page, 'Failed to load content'))
+      .toBeVisible({ timeout: 15000 });
     await expect.soft(copyButton(page)).toHaveCount(0);
   } finally {
     await page.unroute(url);
@@ -211,8 +219,8 @@ export async function S06(
     try {
       await open();
       await expect
-        .soft(viewer(page), message)
-        .toContainText(message, { timeout: 15000 });
+        .soft(loadMessage(page, message), message)
+        .toBeVisible({ timeout: 15000 });
     } finally {
       await page.unroute(url);
     }

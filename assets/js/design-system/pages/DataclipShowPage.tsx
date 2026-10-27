@@ -1,5 +1,6 @@
 import {
   DataclipShowPage as DesignSystemDataclipShowPage,
+  type DataclipBody,
   type DataclipShowPageProps,
 } from '@openfn/ui';
 import { useEffect, useState } from 'react';
@@ -25,18 +26,18 @@ export const DataclipShowPage = designSystemPage(
   ['/projects/:project_id/dataclips/:id/show'],
   (props: Props) => {
     const { id, wipedAt } = props.dataclip;
-    const [body, setBody] = useState<{ id: string; text: string }>();
+    const [loaded, setLoaded] = useState<{ id: string; body: DataclipBody }>();
 
     useEffect(() => {
       if (wipedAt !== null) return;
       // A body can be megabytes: stop downloading one the page no longer shows.
       const abort = new AbortController();
       void fetchDataclipBody(id, abort.signal).then(
-        text => !abort.signal.aborted && setBody({ id, text })
+        body => !abort.signal.aborted && setLoaded({ id, body })
       );
       return () => abort.abort();
     }, [id, wipedAt]);
 
-    return { ...props, body: body?.id === id ? body.text : undefined };
+    return { ...props, body: loaded?.id === id ? loaded.body : undefined };
   }
 );

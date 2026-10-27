@@ -284,10 +284,36 @@
         "wiped": {
           "type": "boolean"
         },
-        "body": {}
+        "body": {
+          "$ref": "#/definitions/DataclipBody"
+        }
       },
       "required": ["id", "wiped"],
       "additionalProperties": false
+    },
+    "DataclipBody": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": ["text"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "string"
+            }
+          },
+          "required": ["error"],
+          "additionalProperties": false
+        }
+      ]
     },
     "LogLevel": {
       "type": "string",

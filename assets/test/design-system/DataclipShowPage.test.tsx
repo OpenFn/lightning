@@ -52,6 +52,20 @@ describe('DataclipShowPage', () => {
     });
   });
 
+  test('shows why the body could not be loaded, with nothing to copy', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('', { status: 404 })))
+    );
+    renderIsland<Props>(DataclipShowPage, props);
+    await waitFor(() =>
+      expect(screen.getByText('Dataclip not found')).toBeTruthy()
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Copy to clipboard' })
+    ).toBeNull();
+  });
+
   test('stops downloading the body when the page goes away', () => {
     const fetchMock = vi.fn(
       (_url: string, _init: RequestInit) => new Promise<Response>(() => {})
