@@ -30,6 +30,12 @@ defmodule LightningWeb.Components.GithubComponents do
     """
   end
 
+  @doc "GitHub's page for linking an account to this instance's GitHub app."
+  def authorize_url do
+    "https://github.com/login/oauth/authorize?" <>
+      Plug.Conn.Query.encode(build_query_params())
+  end
+
   defp build_query_params do
     config = Application.fetch_env!(:lightning, :github_app)
     client_id = Keyword.fetch!(config, :client_id)

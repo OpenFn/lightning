@@ -2990,7 +2990,7 @@ export type Upstream = Record<
 
 const STAND_IN = 'Lightning.Adaptors.ScenarioStrategy';
 const ADAPTORS_META = '{Lightning.Adaptors.Supervisor, Lightning.Adaptors}';
-const lastLine = (out: string) => out.trim().split('\n').pop()!;
+export const lastLine = (out: string) => out.trim().split('\n').pop()!;
 
 // Given the adaptor registry is a stand-in on the node that publishes only
 // <upstream>, so no refresh reaches npm or touches the instance's real
@@ -3928,3 +3928,127 @@ export function catalogueUnavailable() {
     reachable();
   };
 }
+
+// ---------------------------------------------------------------------------
+// GitHub access (annotations/views/profile-github.md)
+// ---------------------------------------------------------------------------
+
+export type StandInGithub = {
+  /** the GitHub app's client id the instance is configured with */
+  clientId: string;
+  /** how GitHub answers a request to revoke the app's grant from now on */
+  revokeAnswers: (status: number) => void;
+  /** every request Lightning sent to GitHub, oldest first */
+  requests: () => { method: string; url: string; body: string }[];
+  restore: () => void;
+};
+
+// Given the instance has a GitHub app, and GitHub is a stand-in on the node
+// that refreshes any token (handing out "access-refreshed") and revokes
+// grants with 204. Instance-wide (@serial). restore() puts back the app
+// config and the HTTP adapter it found.
+export function standInGithub(): StandInGithub {
+  const clientId = 'scenario-github-client';
+  onNode(`
+    :persistent_term.put({Lightning.ScenarioGithub, :was},
+      {Application.get_env(:lightning, :github_app), Application.get_env(:tesla, Lightning.VersionControl.GithubClient)})
+    defmodule Lightning.ScenarioGithub do
+      @behaviour Tesla.Adapter
+
+      def call(env, _opts) do
+        body = if is_binary(env.body), do: env.body, else: inspect(env.body)
+        Agent.update(__MODULE__, &(&1 ++ [%{method: to_string(env.method), url: env.url, body: body}]))
+
+        cond do
+          String.contains?(env.url, "/login/oauth/access_token") ->
+            {:ok, %{env | status: 200, headers: [{"content-type", "application/json"}],
+              body: Jason.encode!(%{access_token: "access-refreshed", expires_in: 28_800,
+                refresh_token: "refresh-refreshed", refresh_token_expires_in: 15_724_800,
+                token_type: "bearer", scope: ""})}}
+
+          String.ends_with?(env.url, "/grant") ->
+            {:ok, %{env | status: :persistent_term.get({__MODULE__, :revoke}, 204), headers: [], body: ""}}
+
+          true ->
+            {:ok, %{env | status: 404, headers: [], body: ""}}
+        end
+      end
+    end
+    if pid = Process.whereis(Lightning.ScenarioGithub), do: Agent.stop(pid)
+    Agent.start(fn -> [] end, name: Lightning.ScenarioGithub)
+    :persistent_term.put({Lightning.ScenarioGithub, :revoke}, 204)
+    Application.put_env(:lightning, :github_app,
+      cert: "scenario-cert", app_id: "1", app_name: "scenario-app",
+      client_id: ${JSON.stringify(clientId)}, client_secret: "scenario-secret")
+    Application.put_env(:tesla, Lightning.VersionControl.GithubClient, adapter: Lightning.ScenarioGithub)
+  `);
+  return {
+    clientId,
+    revokeAnswers: status =>
+      onNode(
+        `:persistent_term.put({Lightning.ScenarioGithub, :revoke}, ${status})`
+      ),
+    requests: () =>
+      JSON.parse(
+        JSON.parse(
+          lastLine(
+            onNode(
+              `Agent.get(Lightning.ScenarioGithub, & &1) |> Jason.encode!()`
+            )
+          )
+        )
+      ),
+    restore: () =>
+      onNode(`
+        {app, tesla} = :persistent_term.get({Lightning.ScenarioGithub, :was})
+        if app, do: Application.put_env(:lightning, :github_app, app), else: Application.delete_env(:lightning, :github_app)
+        if tesla, do: Application.put_env(:tesla, Lightning.VersionControl.GithubClient, tesla), else: Application.delete_env(:tesla, Lightning.VersionControl.GithubClient)
+        Agent.stop(Lightning.ScenarioGithub)
+      `),
+  };
+}
+
+export type GithubToken =
+  /** an access token that never expires */
+  | 'lasting'
+  /** an access token that expires, still fresh, with a fresh refresh token */
+  | 'fresh'
+  /** the access token has expired; the refresh token has not */
+  | 'access-expired'
+  /** the refresh token has expired too */
+  | 'lapsed';
+
+// Given user <userId> has linked GitHub with a token like <kind>
+export function githubTokenFor(userId: string, kind: GithubToken) {
+  const at = (hours: number) =>
+    new Date(Date.now() + hours * 3_600_000).toISOString();
+  const token =
+    kind === 'lasting'
+      ? { access_token: 'access-seeded', token_type: 'bearer', scope: '' }
+      : {
+          access_token: 'access-seeded',
+          refresh_token: 'refresh-seeded',
+          token_type: 'bearer',
+          scope: '',
+          expires_at: at(kind === 'fresh' ? 8 : -1),
+          refresh_token_expires_at: at(kind === 'lapsed' ? -1 : 24 * 30),
+        };
+  onNode(`
+    Lightning.Accounts.get_user!(${JSON.stringify(userId)})
+    |> Ecto.Changeset.change(github_oauth_token: ${JSON.stringify(JSON.stringify(token))} |> Jason.decode!())
+    |> Lightning.Repo.update!()
+    :ok
+  `);
+}
+
+// The GitHub token stored on user <userId>, or null
+export const githubTokenOf = (userId: string): Record<string, string> | null =>
+  JSON.parse(
+    JSON.parse(
+      lastLine(
+        onNode(
+          `Lightning.Accounts.get_user!(${JSON.stringify(userId)}).github_oauth_token |> Jason.encode!()`
+        )
+      )
+    )
+  );

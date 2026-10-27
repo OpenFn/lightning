@@ -4,143 +4,169 @@ defmodule LightningWeb.ProfileLiveTest do
   import Lightning.AccountsFixtures
   import Lightning.Factories
   import Lightning.GDPRHelpers
+  import LightningWeb.DesignSystemHelpers
   import Mox
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
+  alias Lightning.Accounts
+  alias LightningWeb.ProfileLive.Edit
+  alias Swoosh.Email.Recipient
+
   setup :verify_on_exit!
 
+  @page "#profile-page"
+
   @update_password_attrs %{
-    current_password: valid_user_password(),
-    password: "password1234",
-    password_confirmation: "password1234"
+    "currentPassword" => valid_user_password(),
+    "password" => "password1234",
+    "passwordConfirmation" => "password1234"
   }
 
-  @invalid_empty_password_attrs %{
-    current_password: "",
-    password: "",
-    password_confirmation: ""
-  }
+  defp props(view), do: page_props(view, @page)
 
-  @invalid_schedule_deletion_attrs %{
-    scheduled_deletion_email: "invalid@email.com"
-  }
+  defp send_event(view, event, payload \\ %{}),
+    do: push_page_event(view, @page, event, payload)
 
-  @invalid_too_short_password_attrs %{
-    current_password: "",
-    password: "abc",
-    password_confirmation: ""
-  }
-
-  @invalid_dont_match_password_attrs %{
-    current_password: "",
-    password: "password1234",
-    password_confirmation: "password4567"
-  }
-
-  @invalid_email_update_attrs %{
-    email: ""
-  }
-
-  @update_email_attrs %{
-    email: "new@example.com"
-  }
+  defp basic_info(attrs) do
+    Map.merge(
+      %{
+        "firstName" => "Kylian",
+        "lastName" => "Mbappe",
+        "contactPreference" => "critical"
+      },
+      attrs
+    )
+  end
 
   describe "Edit user profile" do
     setup :register_and_log_in_user
 
-    test "load edit page", %{conn: conn} do
-      {:ok, _profile_live, html} =
+    test "load edit page", %{conn: conn, user: user} do
+      {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      assert html =~ "Change email"
-      assert html =~ "Change password"
+      assert %{
+               "user" => %{"id" => id, "email" => email},
+               "mfa" => %{"enabled" => false},
+               "github" => %{"status" => "none"},
+               "experimentalFeatures" => false,
+               "deletion" => %{
+                 "href" => href,
+                 "hasActivityInProjects" => false,
+                 "blocked" => false
+               },
+               "deleting" => false
+             } = props(view)
+
+      assert id == user.id
+      assert email == user.email
+      assert href == ~p"/profile/#{user.id}/delete"
     end
 
     test "update basic information", %{conn: conn, user: user} do
-      {:ok, profile_live, _html} =
-        live(conn, ~p"/profile", on_error: :raise)
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
 
-      assert profile_live
-             |> has_element?("h2", "#{user.first_name} #{user.last_name}")
+      send_event(view, "save_basic_info", basic_info(%{"firstName" => ""}))
 
-      assert profile_live
-             |> form("#basic-info-form", user: %{first_name: ""})
-             |> render_change() =~ "This field can&#39;t be blank"
+      assert_reply(view, %{
+        fieldErrors: %{"firstName" => ["This field can't be blank."]}
+      })
 
-      assert profile_live
-             |> form("#basic-info-form", user: %{last_name: ""})
-             |> render_change() =~ "This field can&#39;t be blank"
+      send_event(view, "save_basic_info", basic_info(%{"lastName" => ""}))
 
-      assert profile_live
-             |> form("#basic-info-form",
-               user: %{
-                 first_name: "Kylian",
-                 last_name: "",
-                 contact_preference: "critical"
-               }
-             )
-             |> render_submit() =~ "This field can&#39;t be blank"
+      assert_reply(view, %{
+        fieldErrors: %{"lastName" => ["This field can't be blank."]}
+      })
 
-      assert profile_live
-             |> form("#basic-info-form",
-               user: %{first_name: "Kylian\u0007", last_name: "Mbappe"}
-             )
-             |> render_submit() =~ "can&#39;t contain control characters"
+      send_event(
+        view,
+        "save_basic_info",
+        basic_info(%{"firstName" => "Kylian\u0007"})
+      )
 
-      {:ok, profile_live, html} =
-        profile_live
-        |> form("#basic-info-form",
-          user: %{
-            first_name: "Kylian",
-            last_name: "Mbappe",
-            contact_preference: "critical"
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/profile")
+      assert_reply(view, %{fieldErrors: %{"firstName" => [message]}})
+      assert message =~ "can't contain control characters"
 
-      assert html =~ "User information updated successfully"
+      assert Repo.reload(user).first_name == user.first_name
 
-      refute profile_live
-             |> has_element?("h2", "#{user.first_name} #{user.last_name}")
+      assert send_event(view, "save_basic_info", basic_info(%{})) =~
+               "User information updated successfully"
 
-      assert profile_live
-             |> has_element?("h2", "Kylian Mbappe")
+      assert %{
+               first_name: "Kylian",
+               last_name: "Mbappe",
+               contact_preference: :critical
+             } = Repo.reload(user)
+
+      assert %{"firstName" => "Kylian", "lastName" => "Mbappe"} =
+               props(view)["user"]
     end
 
-    test "save password", %{conn: conn} do
-      {:ok, profile_live, _html} =
+    test "a field left out of the save keeps its value", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      send_event(view, "save_basic_info", %{
+        "firstName" => "Kylian",
+        "lastName" => "Mbappe"
+      })
+
+      assert Repo.reload(user).contact_preference == user.contact_preference
+      assert props(view)["user"]["contactPreference"]
+    end
+
+    test "save password", %{conn: conn, user: user} do
+      {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      assert profile_live
-             |> form("#password-form", user: @invalid_empty_password_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+      send_event(view, "change_password", %{
+        "currentPassword" => valid_user_password(),
+        "password" => "",
+        "passwordConfirmation" => ""
+      })
 
-      assert profile_live
-             |> form("#password-form", user: @invalid_dont_match_password_attrs)
-             |> render_change() =~ "Your passwords do not match"
+      assert_reply(view, %{
+        fieldErrors: %{"password" => ["This field can't be blank."]}
+      })
 
-      assert profile_live
-             |> form("#password-form", user: @invalid_too_short_password_attrs)
-             |> render_change() =~ "Password minimum length is 12 characters"
+      send_event(view, "change_password", %{
+        @update_password_attrs
+        | "passwordConfirmation" => "password4567"
+      })
 
-      assert profile_live
-             |> form("#password-form", user: @invalid_empty_password_attrs)
-             |> render_submit() =~ "can&#39;t be blank"
+      assert_reply(view, %{
+        fieldErrors: %{
+          "passwordConfirmation" => ["Your passwords do not match."]
+        }
+      })
 
-      assert profile_live
-             |> form("#password-form", user: @invalid_dont_match_password_attrs)
-             |> render_submit() =~ "Your passwords do not match"
+      send_event(view, "change_password", %{
+        "currentPassword" => valid_user_password(),
+        "password" => "abc",
+        "passwordConfirmation" => "abc"
+      })
 
-      assert profile_live
-             |> form("#password-form", user: @invalid_too_short_password_attrs)
-             |> render_submit() =~ "Password minimum length is 12 characters"
+      assert_reply(view, %{fieldErrors: %{"password" => [message]}})
+      assert message =~ "Password minimum length is 12 characters"
+
+      send_event(view, "change_password", %{
+        @update_password_attrs
+        | "currentPassword" => "not the password"
+      })
+
+      assert_reply(view, %{fieldErrors: %{"currentPassword" => ["is not valid"]}})
+
+      assert Accounts.get_user_by_email_and_password(
+               user.email,
+               valid_user_password()
+             )
 
       {:ok, conn} =
-        profile_live
-        |> form("#password-form", user: @update_password_attrs)
-        |> render_submit()
+        view
+        |> send_event("change_password", @update_password_attrs)
         |> follow_redirect(conn)
 
       assert "/projects" = redirected_path = redirected_to(conn, 302)
@@ -150,189 +176,211 @@ defmodule LightningWeb.ProfileLiveTest do
         |> html_response(200)
 
       assert html =~ "Password changed successfully."
-      assert html =~ "Projects"
+      assert Accounts.get_user_by_email_and_password(user.email, "password1234")
     end
 
-    test "validate password confirmation", %{conn: conn} do
-      {:ok, profile_live, _html} =
+    test "a wrong current password refuses the email change", %{conn: conn} do
+      {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      assert profile_live
-             |> form("#email-form",
-               user: %{
-                 email: "new_email_123@openfn.org",
-                 current_password: "invalid"
-               }
-             )
-             |> render_submit() =~ "Your passwords do not match."
+      send_event(view, "change_email", %{
+        "email" => "new_email_123@openfn.org",
+        "currentPassword" => "invalid"
+      })
+
+      assert_reply(view, %{fieldErrors: %{"currentPassword" => [_]}})
+      refute_email_sent()
     end
 
     test "validate email", %{conn: conn, user: user} do
-      {:ok, profile_live, _html} =
+      {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      assert profile_live
-             |> form("#email-form", user: %{email: user.email})
-             |> render_change() =~ "Please change your email"
+      send_event(view, "change_email", %{
+        "email" => user.email,
+        "currentPassword" => valid_user_password()
+      })
+
+      assert_reply(view, %{
+        fieldErrors: %{"email" => ["Please change your email" | _]}
+      })
     end
 
-    test "a user can change their email address", %{conn: conn} do
-      {:ok, profile_live, _html} =
+    test "a user can change their email address", %{conn: conn, user: user} do
+      {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      assert profile_live
-             |> form("#email-form", user: @invalid_email_update_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+      send_event(view, "change_email", %{
+        "email" => "",
+        "currentPassword" => valid_user_password()
+      })
 
-      assert profile_live
-             |> form("#email-form", user: %{email: "oops email"})
-             |> render_change() =~ "Email address not valid."
+      assert_reply(view, %{
+        fieldErrors: %{"email" => ["This field can't be blank."]}
+      })
 
-      assert profile_live
-             |> form("#email-form", user: @update_email_attrs)
-             |> render_submit() =~ "Sending confirmation email..."
+      send_event(view, "change_email", %{
+        "email" => "oops email",
+        "currentPassword" => valid_user_password()
+      })
+
+      assert_reply(view, %{
+        fieldErrors: %{"email" => ["Email address not valid."]}
+      })
+
+      refute_email_sent()
+
+      assert send_event(view, "change_email", %{
+               "email" => "new@example.com",
+               "currentPassword" => valid_user_password()
+             }) =~ "You will receive an email with instructions shortly."
+
+      assert_email_sent(to: Recipient.format(user))
+
+      assert_email_sent(fn email ->
+        assert [{_, "new@example.com"}] = email.to
+      end)
     end
 
     test "allows a user to schedule their own account for deletion", %{
       conn: conn,
       user: user
     } do
-      {:ok, profile_live, html} =
+      {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      assert html =~ "Delete my account"
+      %{"deletion" => %{"href" => href}, "deleting" => false} = props(view)
+      assert href == Routes.profile_edit_path(conn, :delete, user)
 
-      {:ok, new_live, html} =
-        profile_live
-        |> element("a", "Delete my account")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.profile_edit_path(conn, :delete, user)
-        )
+      {:ok, view, _html} = live(conn, href, on_error: :raise)
+      assert props(view)["deleting"]
 
-      assert html =~
-               "Your account and credential data will be deleted"
+      send_event(view, "delete_account", %{"email" => "invalid@email.com"})
 
-      assert new_live
-             |> form("#scheduled_deletion_form",
-               user: @invalid_schedule_deletion_attrs
-             )
-             |> render_change() =~
-               "This email doesn&#39;t match your current email"
+      assert_reply(view, %{error: "This email doesn't match your current email"})
+      refute Repo.reload(user).scheduled_deletion
 
-      new_live
-      |> form("#scheduled_deletion_form",
-        user: %{
-          scheduled_deletion_email: user.email
-        }
-      )
-      |> render_submit()
-      |> follow_redirect(conn, Routes.user_session_path(conn, :delete))
+      send_event(view, "delete_account", %{"email" => user.email})
+
+      flash =
+        assert_redirect(view, Routes.user_session_path(conn, :delete))
+
+      assert flash["info"] == "User scheduled for deletion"
+      assert Repo.reload(user).scheduled_deletion
 
       assert_email_sent(
         subject: "Your account has been scheduled for deletion",
-        to: Swoosh.Email.Recipient.format(user)
+        to: Recipient.format(user)
       )
     end
 
     test "users can't schedule deletion for other users", %{
       conn: conn,
-      user: _user
+      user: user
     } do
       another_user = user_fixture()
 
-      {:ok, _profile_live, html} =
-        live(conn, ~p"/profile/#{another_user.id}/delete", on_error: :raise)
+      assert {:error, {:live_redirect, %{to: "/profile", flash: flash}}} =
+               live(conn, ~p"/profile/#{another_user.id}/delete")
+
+      assert flash["error"] == "You can't perform this action"
+
+      {:ok, _view, html} =
+        live(conn, ~p"/profile/#{another_user.id}/delete")
         |> follow_redirect(conn)
 
       assert html =~ "You can&#39;t perform this action"
+
+      assert {:error, {:live_redirect, %{to: "/profile"}}} =
+               live(conn, ~p"/profile/not-an-id/delete")
+
+      refute Repo.reload(another_user).scheduled_deletion
+      refute Repo.reload(user).scheduled_deletion
     end
 
-    test "user cancels deletion", %{
+    test "an instance's own deletion modal replaces Lightning's", %{
       conn: conn,
       user: user
     } do
-      {:ok, profile_live, html} =
-        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          __changed__: %{},
+          current_user: user,
+          deleting: true,
+          hosted_delete_modal: __MODULE__.HostedDeletionModal
+        }
+      }
 
-      assert html =~ "Delete my account"
+      assert {:reply, %{error: "You can't perform this action"}, _socket} =
+               Edit.handle_event(
+                 "delete_account",
+                 %{"email" => user.email},
+                 socket
+               )
 
-      {:ok, new_live, html} =
-        profile_live
-        |> element("a", "Delete my account")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.profile_edit_path(conn, :delete, user)
+      refute Repo.reload(user).scheduled_deletion
+
+      {:ok, view, html} =
+        live_isolated(conn, __MODULE__.ProfileTemplate,
+          session: %{"user" => user, "modal" => __MODULE__.HostedDeletionModal}
         )
 
-      assert html =~
-               "Your account and credential data will be deleted"
+      assert html =~ "hosted deletion modal"
+      refute props(view)["deleting"]
+    end
 
-      {:ok, _new_live, html} =
-        new_live
-        |> element("button", "Cancel")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.profile_edit_path(conn, :edit)
-        )
+    test "deletion is refused unless the deletion modal is open", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
 
-      assert html =~ "User Profile"
+      send_event(view, "delete_account", %{"email" => user.email})
+
+      assert_reply(view, %{error: "You can't perform this action"})
+      refute Repo.reload(user).scheduled_deletion
     end
   end
 
   describe "MFA Component for a user without MFA enabled" do
     setup :register_and_log_in_user
 
-    test "on clicking the toggle button a QR code is generated", %{conn: conn} do
-      {:ok, view, html} =
+    setup do
+      Application.put_env(:lightning, :totp_client, LightningTest.TOTP)
+    end
+
+    test "starting setup replies with the QR code and the secret, only there",
+         %{conn: conn} do
+      {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      refute html =~
-               "You have configured an authentication app to get two-factor authentication codes"
+      send_event(view, "start_mfa_setup")
 
-      refute html =~ "Scan the QR code"
+      secret = Base.encode32(LightningTest.TOTP.secret(), padding: false)
 
-      # show QR code
-      qr_html = view |> element("#toggle-mfa-switch") |> render_click()
-      assert qr_html =~ "Scan the QR code"
+      assert_reply(view, %{
+        secret: ^secret,
+        qrCodeSrc: "data:image/svg+xml;base64," <> svg
+      })
 
-      # QR code SVG should not contain XML declaration (not valid HTML5)
-      refute qr_html =~ "<?xml"
-
-      # hide QR code
-      view |> element("#toggle-mfa-switch") |> render_click()
-
-      refute render(view) =~ "Scan the QR code"
+      assert svg |> Base.decode64!() =~ "<svg"
+      refute render(view) =~ secret
     end
 
     test "user can successfully add MFA to their account", %{
       conn: conn,
       user: user
     } do
-      Application.put_env(:lightning, :totp_client, LightningTest.TOTP)
-
       {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      refute view |> form("#set_totp_form") |> has_element?()
+      send_event(view, "start_mfa_setup")
 
-      assert view |> element("#toggle-mfa-switch") |> render_click() =~
-               "Scan the QR code"
-
-      assert view |> form("#set_totp_form") |> has_element?()
-
-      secret = LightningTest.TOTP.secret()
-      valid_code = NimbleTOTP.verification_code(secret)
-
-      view
-      |> form("#set_totp_form", user_totp: %{code: valid_code})
-      |> render_submit()
+      valid_code = NimbleTOTP.verification_code(LightningTest.TOTP.secret())
+      send_event(view, "confirm_mfa", %{"code" => valid_code})
 
       user_token =
-        Repo.get_by!(Lightning.Accounts.UserToken,
+        Repo.get_by!(Accounts.UserToken,
           user_id: user.id,
           context: "sudo_session"
         )
@@ -346,6 +394,27 @@ defmodule LightningWeb.ProfileLiveTest do
         )
 
       assert flash["info"] == "MFA Setup"
+      assert Repo.reload(user).mfa_enabled
+    end
+
+    test "a wrong code is refused on the code field", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+      send_event(view, "start_mfa_setup")
+
+      send_event(view, "confirm_mfa", %{"code" => "000000"})
+
+      assert_reply(view, %{fieldErrors: %{"code" => [_]}})
+      refute Repo.reload(user).mfa_enabled
+    end
+
+    test "a code is refused before setup starts", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      code = NimbleTOTP.verification_code(LightningTest.TOTP.secret())
+      send_event(view, "confirm_mfa", %{"code" => code})
+
+      assert_reply(view, %{error: "Invalid request"})
+      refute Accounts.get_user_totp(user)
     end
   end
 
@@ -361,35 +430,16 @@ defmodule LightningWeb.ProfileLiveTest do
       %{user: user, conn: log_in_user(conn, user)}
     end
 
-    test "the user sees an option to setup another device", %{
-      conn: conn
-    } do
-      {:ok, view, html} =
-        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
-
-      assert html =~
-               "You have configured an authentication app to get two-factor authentication codes"
-
-      assert view |> element("a#setup_another_totp_device") |> has_element?()
-      refute html =~ "Scan the QR code"
-
-      # show QR code
-      html = view |> element("a#setup_another_totp_device") |> render_click()
-      assert html =~ "Scan the QR code"
-      refute view |> element("a#setup_another_totp_device") |> has_element?()
-    end
-
-    test "user can disable MFA from their account", %{conn: conn} do
+    test "user can disable MFA from their account", %{conn: conn, user: user} do
       {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      result = view |> element("#disable_mfa_button") |> render_click()
+      assert props(view)["mfa"]["enabled"]
 
-      {:ok, view, html} = follow_redirect(result, conn)
-      assert html =~ "MFA Disabled"
+      assert send_event(view, "disable_mfa") =~ "MFA Disabled"
 
-      refute render(view) =~
-               "You have configured an authentication app to get two-factor authentication codes"
+      refute props(view)["mfa"]["enabled"]
+      refute Accounts.get_user_totp(user)
     end
 
     test "user can successfully setup another device", %{conn: conn} do
@@ -398,22 +448,12 @@ defmodule LightningWeb.ProfileLiveTest do
       {:ok, view, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
-      refute view |> form("#set_totp_form") |> has_element?()
+      send_event(view, "start_mfa_setup")
 
-      assert view |> element("a#setup_another_totp_device") |> render_click() =~
-               "Scan the QR code"
+      valid_code = NimbleTOTP.verification_code(LightningTest.TOTP.secret())
 
-      assert view |> form("#set_totp_form") |> has_element?()
-
-      secret = LightningTest.TOTP.secret()
-      valid_code = NimbleTOTP.verification_code(secret)
-
-      view
-      |> form("#set_totp_form", user_totp: %{code: valid_code})
-      |> render_submit()
-
-      flash = assert_redirected(view, Routes.profile_edit_path(conn, :edit))
-      assert flash["info"] == "MFA Setup"
+      assert send_event(view, "confirm_mfa", %{"code" => valid_code}) =~
+               "MFA Setup"
     end
   end
 
@@ -432,8 +472,7 @@ defmodule LightningWeb.ProfileLiveTest do
       end)
 
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
-      assert has_element?(view, "#connect-github-link")
-      refute has_element?(view, "#disconnect-github-button")
+      assert props(view)["github"]["status"] == "none"
 
       # mock redirect from github
       get(conn, ~p"/oauth/github/callback?code=123456")
@@ -444,8 +483,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
 
-      refute has_element?(view, "#connect-github-link")
-      assert has_element?(view, "#disconnect-github-button")
+      assert props(view)["github"]["status"] == "connected"
     end
 
     test "users get updated after failing to connect to github", %{
@@ -459,8 +497,7 @@ defmodule LightningWeb.ProfileLiveTest do
       end)
 
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
-      assert has_element?(view, "#connect-github-link")
-      refute has_element?(view, "#disconnect-github-button")
+      assert props(view)["github"]["status"] == "none"
 
       # mock redirect from github
       get(conn, ~p"/oauth/github/callback?code=123456")
@@ -470,9 +507,9 @@ defmodule LightningWeb.ProfileLiveTest do
       assert render(view) =~
                "Oops! GitHub account failed to link. Please try again"
 
-      # button to connect is still available
-      assert has_element?(view, "#connect-github-link")
-      refute has_element?(view, "#disconnect-github-button")
+      # the user can still connect
+      assert %{"status" => "none", "connectHref" => href} = props(view)["github"]
+      assert href =~ "https://github.com/login/oauth/authorize?"
     end
 
     test "users see option to reconnect if the refresh token has expired", %{
@@ -480,39 +517,30 @@ defmodule LightningWeb.ProfileLiveTest do
       user: user
     } do
       # active refresh token
-      expired_token = %{
+      set_github_token(user, %{
         "access_token" => "access-token",
         "refresh_token" => "refresh-token",
         "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
         "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(20)
-      }
-
-      user
-      |> Ecto.Changeset.change(%{github_oauth_token: expired_token})
-      |> Repo.update!()
+      })
 
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
-      refute has_element?(view, "#connect-github-link")
-      assert has_element?(view, "#disconnect-github-button")
+      assert props(view)["github"]["status"] == "connected"
 
       # expired refresh token
-      expired_token = %{
+      set_github_token(user, %{
         "access_token" => "access-token",
         "refresh_token" => "refresh-token",
         "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
         "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(-20)
-      }
-
-      user
-      |> Ecto.Changeset.change(%{github_oauth_token: expired_token})
-      |> Repo.update!()
+      })
 
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
-      connect_button = element(view, "#connect-github-link")
-      assert has_element?(connect_button)
-      assert render(connect_button) =~ "Reconnect your GitHub Account"
-      assert render(connect_button) =~ "Your token has expired"
-      refute has_element?(view, "#disconnect-github-button")
+
+      assert %{"status" => "expired", "connectHref" => href} =
+               props(view)["github"]
+
+      assert href =~ "https://github.com/login/oauth/authorize?"
     end
 
     test "users can disconnect their github accounts using non-expiry access tokens",
@@ -520,41 +548,11 @@ defmodule LightningWeb.ProfileLiveTest do
            conn: conn,
            user: user
          } do
-      expected_token = %{"access_token" => "1234567"}
+      set_github_token(user, %{"access_token" => "1234567"})
 
-      user =
-        user
-        |> Ecto.Changeset.change(%{github_oauth_token: expected_token})
-        |> Repo.update!()
+      expect_grant_deleted({:ok, %Tesla.Env{status: 204}})
 
-      app_config = Application.fetch_env!(:lightning, :github_app)
-
-      url_to_hit =
-        "https://api.github.com/applications/#{app_config[:client_id]}/grant"
-
-      Mox.expect(Lightning.Tesla.Mock, :call, fn
-        %{url: ^url_to_hit}, _opts ->
-          {:ok, %Tesla.Env{status: 204}}
-      end)
-
-      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
-      refute has_element?(view, "#connect-github-link")
-      assert has_element?(view, "#disconnect-github-button")
-
-      result =
-        view
-        |> element("#disconnect_github_modal_confirm_button")
-        |> render_click()
-
-      {:ok, view, html} = follow_redirect(result, conn, ~p"/profile")
-
-      assert html =~ "GitHub connection removed successfully"
-
-      assert has_element?(view, "#connect-github-link")
-      refute has_element?(view, "#disconnect-github-button")
-
-      updated_user = Repo.reload(user)
-      assert is_nil(updated_user.github_oauth_token)
+      assert_disconnects(conn, user)
     end
 
     test "users can disconnect their github accounts using expiry access tokens",
@@ -562,25 +560,15 @@ defmodule LightningWeb.ProfileLiveTest do
            conn: conn,
            user: user
          } do
-      Mox.verify_on_exit!()
       # expired access token
-      expected_token = %{
+      set_github_token(user, %{
         "access_token" => "access-token",
         "refresh_token" => "refresh-token",
         "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
         "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(1000)
-      }
+      })
 
-      user =
-        user
-        |> Ecto.Changeset.change(%{github_oauth_token: expected_token})
-        |> Repo.update!()
-
-      app_config = Application.fetch_env!(:lightning, :github_app)
-
-      url_to_delete =
-        "https://api.github.com/applications/#{app_config[:client_id]}/grant"
-
+      url_to_delete = grant_url()
       url_to_refresh_token = "https://github.com/login/oauth/access_token"
 
       Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
@@ -591,24 +579,7 @@ defmodule LightningWeb.ProfileLiveTest do
           {:ok, %Tesla.Env{status: 204}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
-      refute has_element?(view, "#connect-github-link")
-      assert has_element?(view, "#disconnect-github-button")
-
-      result =
-        view
-        |> element("#disconnect_github_modal_confirm_button")
-        |> render_click()
-
-      {:ok, view, html} = follow_redirect(result, conn, ~p"/profile")
-
-      assert html =~ "GitHub connection removed successfully"
-
-      assert has_element?(view, "#connect-github-link")
-      refute has_element?(view, "#disconnect-github-button")
-
-      updated_user = Repo.reload(user)
-      assert is_nil(updated_user.github_oauth_token)
+      assert_disconnects(conn, user)
     end
 
     test "users can disconnect their github accounts successfully even when the api returns error",
@@ -616,41 +587,41 @@ defmodule LightningWeb.ProfileLiveTest do
            conn: conn,
            user: user
          } do
-      expected_token = %{"access_token" => "1234567"}
+      set_github_token(user, %{"access_token" => "1234567"})
 
-      user =
-        user
-        |> Ecto.Changeset.change(%{github_oauth_token: expected_token})
-        |> Repo.update!()
+      expect_grant_deleted({:ok, %Tesla.Env{status: 403}})
 
-      app_config = Application.fetch_env!(:lightning, :github_app)
+      assert_disconnects(conn, user)
+    end
 
-      url_to_hit =
-        "https://api.github.com/applications/#{app_config[:client_id]}/grant"
+    defp set_github_token(user, token) do
+      user
+      |> Ecto.Changeset.change(%{github_oauth_token: token})
+      |> Repo.update!()
+    end
 
-      Mox.expect(Lightning.Tesla.Mock, :call, fn
-        %{url: ^url_to_hit}, _opts ->
-          {:ok, %Tesla.Env{status: 403}}
+    defp grant_url do
+      client_id = Application.fetch_env!(:lightning, :github_app)[:client_id]
+      "https://api.github.com/applications/#{client_id}/grant"
+    end
+
+    defp expect_grant_deleted(response) do
+      url = grant_url()
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: ^url}, _opts ->
+        response
       end)
+    end
 
+    defp assert_disconnects(conn, user) do
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
-      refute has_element?(view, "#connect-github-link")
-      assert has_element?(view, "#disconnect-github-button")
+      assert props(view)["github"]["status"] == "connected"
 
-      result =
-        view
-        |> element("#disconnect_github_modal_confirm_button")
-        |> render_click()
+      assert send_event(view, "disconnect_github") =~
+               "GitHub connection removed successfully"
 
-      {:ok, view, html} = follow_redirect(result, conn, ~p"/profile")
-
-      assert html =~ "GitHub connection removed successfully"
-
-      assert has_element?(view, "#connect-github-link")
-      refute has_element?(view, "#disconnect-github-button")
-
-      updated_user = Repo.reload(user)
-      assert is_nil(updated_user.github_oauth_token)
+      assert props(view)["github"]["status"] == "none"
+      assert is_nil(Repo.reload(user).github_oauth_token)
     end
   end
 
@@ -660,54 +631,12 @@ defmodule LightningWeb.ProfileLiveTest do
     test "renders experimental features section with default disabled state", %{
       conn: conn
     } do
-      {:ok, _view, html} = live(conn, ~p"/profile", on_error: :raise)
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
 
-      assert html =~ "Experimental Features"
-      assert html =~ "Enable access to new features and improvements"
+      assert props(view)["experimentalFeatures"] == false
     end
 
     test "renders experimental features section with enabled state", %{
-      conn: conn,
-      user: user
-    } do
-      user_with_prefs =
-        user
-        |> Ecto.Changeset.change(%{
-          preferences: %{"experimental_features" => true}
-        })
-        |> Repo.update!()
-
-      {:ok, _view, html} =
-        conn
-        |> log_in_user(user_with_prefs)
-        |> live(~p"/profile", on_error: :raise)
-
-      assert html =~ "Experimental Features"
-    end
-
-    test "toggles experimental features on via form change", %{
-      conn: conn,
-      user: user
-    } do
-      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
-
-      # Find the form within the experimental features component
-      view
-      |> form("[phx-change=\"update_preferences\"]",
-        preferences: %{"experimental_features" => "true"}
-      )
-      |> render_change()
-
-      # Check if the preference was actually updated
-      updated_user = Repo.reload(user)
-      assert updated_user.preferences["experimental_features"] == true
-
-      # Since flash messages in components may not be visible in test render,
-      # we'll test that the functionality works by checking the database update
-      # The flash message functionality is working if the update succeeds
-    end
-
-    test "toggles experimental features off via form change", %{
       conn: conn,
       user: user
     } do
@@ -723,14 +652,38 @@ defmodule LightningWeb.ProfileLiveTest do
         |> log_in_user(user_with_prefs)
         |> live(~p"/profile", on_error: :raise)
 
-      view
-      |> form("[phx-change=\"update_preferences\"]",
-        preferences: %{"experimental_features" => "false"}
-      )
-      |> render_change()
+      assert props(view)["experimentalFeatures"] == true
+    end
 
-      updated_user = Repo.reload(user_with_prefs)
-      assert updated_user.preferences["experimental_features"] == false
+    test "toggles experimental features on", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
+
+      assert send_event(view, "set_experimental_features", %{"on" => true}) =~
+               "Experimental features updated successfully"
+
+      assert Repo.reload(user).preferences["experimental_features"] == true
+      assert props(view)["experimentalFeatures"] == true
+    end
+
+    test "toggles experimental features off", %{conn: conn, user: user} do
+      user_with_prefs =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Repo.update!()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user_with_prefs)
+        |> live(~p"/profile", on_error: :raise)
+
+      send_event(view, "set_experimental_features", %{"on" => false})
+
+      assert Repo.reload(user_with_prefs).preferences["experimental_features"] ==
+               false
+
+      assert props(view)["experimentalFeatures"] == false
     end
 
     test "preserves existing preferences when toggling experimental features", %{
@@ -752,46 +705,24 @@ defmodule LightningWeb.ProfileLiveTest do
         |> log_in_user(user_with_prefs)
         |> live(~p"/profile", on_error: :raise)
 
-      view
-      |> form("[phx-change=\"update_preferences\"]",
-        preferences: %{"experimental_features" => "true"}
-      )
-      |> render_change()
+      send_event(view, "set_experimental_features", %{"on" => true})
 
-      updated_user = Repo.reload(user_with_prefs)
-      assert updated_user.preferences["existing_pref"] == "value"
-      assert updated_user.preferences["experimental_features"] == true
+      assert Repo.reload(user_with_prefs).preferences == %{
+               "existing_pref" => "value",
+               "experimental_features" => true
+             }
     end
 
-    test "handles missing experimental_features parameter", %{
-      conn: conn,
-      user: user
-    } do
+    test "refuses a missing or non-boolean value", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
 
-      view
-      |> form("[phx-change=\"update_preferences\"]", preferences: %{})
-      |> render_change()
+      send_event(view, "set_experimental_features", %{})
+      assert_reply(view, %{error: "Invalid request"})
 
-      # Should default to false when parameter is missing
-      updated_user = Repo.reload(user)
-      assert updated_user.preferences["experimental_features"] == false
-    end
+      send_event(view, "set_experimental_features", %{"on" => "yes"})
+      assert_reply(view, %{error: "Invalid request"})
 
-    test "works correctly when user has default empty preferences", %{
-      conn: conn,
-      user: user
-    } do
-      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
-
-      view
-      |> form("[phx-change=\"update_preferences\"]",
-        preferences: %{"experimental_features" => "true"}
-      )
-      |> render_change()
-
-      updated_user = Repo.reload(user)
-      assert updated_user.preferences["experimental_features"] == true
+      assert Repo.reload(user).preferences == %{}
     end
   end
 
@@ -825,5 +756,31 @@ defmodule LightningWeb.ProfileLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials")
       refute has_element?(view, "#gdpr-banner")
     end
+  end
+
+  # The profile template with the delete route open on a configured modal.
+  defmodule ProfileTemplate do
+    use Phoenix.LiveView
+
+    def mount(_params, %{"user" => user, "modal" => modal}, socket) do
+      {:ok,
+       assign(socket,
+         current_user: user,
+         deleting: true,
+         hosted_delete_modal: modal,
+         github_connect_href: nil,
+         github_status: "none",
+         deletion: %{href: "", hasActivityInProjects: false, blocked: false},
+         gdpr_preferences: nil
+       )}
+    end
+
+    def render(assigns), do: Edit.render(assigns)
+  end
+
+  defmodule HostedDeletionModal do
+    use Phoenix.LiveComponent
+
+    def render(assigns), do: ~H"<div>hosted deletion modal</div>"
   end
 end

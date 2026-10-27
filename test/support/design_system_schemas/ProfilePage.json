@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "user": {
+      "$ref": "#/definitions/ProfileDetail"
+    },
+    "mfa": {
+      "$ref": "#/definitions/MfaSettings"
+    },
+    "github": {
+      "$ref": "#/definitions/GithubAccessSettings"
+    },
+    "experimentalFeatures": {
+      "type": "boolean"
+    },
+    "deletion": {
+      "$ref": "#/definitions/AccountDeletionSettings"
+    },
+    "deleting": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "user",
+    "mfa",
+    "github",
+    "experimentalFeatures",
+    "deletion",
+    "deleting"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "ProfileDetail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "contactPreference": {
+          "$ref": "#/definitions/ContactPreference"
+        },
+        "insertedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "contactPreference",
+        "insertedAt"
+      ],
+      "additionalProperties": false
+    },
+    "ContactPreference": {
+      "type": "string",
+      "enum": ["critical", "any"]
+    },
+    "MfaSettings": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "backupCodesHref": {
+          "type": "string"
+        }
+      },
+      "required": ["enabled", "backupCodesHref"],
+      "additionalProperties": false
+    },
+    "GithubAccessSettings": {
+      "type": "object",
+      "properties": {
+        "connectHref": {
+          "type": ["string", "null"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["connected", "expired", "none"]
+        }
+      },
+      "required": ["connectHref", "status"],
+      "additionalProperties": false
+    },
+    "AccountDeletionSettings": {
+      "type": "object",
+      "properties": {
+        "href": {
+          "type": "string"
+        },
+        "hasActivityInProjects": {
+          "type": "boolean"
+        },
+        "blocked": {
+          "type": "boolean"
+        }
+      },
+      "required": ["href", "hasActivityInProjects", "blocked"],
+      "additionalProperties": false
+    }
+  }
+}

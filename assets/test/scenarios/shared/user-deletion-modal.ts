@@ -125,7 +125,7 @@ export async function S04(
   browser: Browser,
   account: Account,
   open: Open,
-  next: string
+  next: string | RegExp
 ) {
   const elsewhere = await otherSession(browser, account.email);
   const sessions = () =>

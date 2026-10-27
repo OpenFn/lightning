@@ -86,7 +86,7 @@ async function clickIfYouCan(button: Locator) {
 //   And I see "Email: amara@example.org"
 //   And I see "Created:" followed by my sign-up date
 //   And I see the cards "Change basic information", "Change email", "Change password" and "Delete account"
-test('@S01', { tag: '@passing-old' }, async ({ page }) => {
+test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const { first_name, last_name } = me();
   const [{ inserted_at }] = sql<{ inserted_at: string }>(
     `select to_char(inserted_at, 'YYYY-MM-DD HH24:MI:SS') as inserted_at
@@ -124,7 +124,7 @@ test('@S01', { tag: '@passing-old' }, async ({ page }) => {
 //   Then I see "User information updated successfully"
 //   And I see the heading "Kylian Mbappe"
 //   And "Contact preference" shows "Anytime"
-test('@S02', { tag: '@passing-old' }, async ({ page }) => {
+test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   await signedIn(page);
 
   await field(page, 'First name').fill('Kylian');
@@ -158,6 +158,7 @@ test('@S02', { tag: '@passing-old' }, async ({ page }) => {
 //   And my name is unchanged
 // Fails on Lightning: once the bell is typed the name is invalid and Save is
 // disabled, so it can't be clicked. The error shows and the name is unchanged.
+// Fails on the port: the design system words the blank name "can't be blank".
 test('@S03', { tag: '@pending' }, async ({ page }) => {
   const before = me();
   await signedIn(page);
@@ -187,34 +188,45 @@ test('@S03', { tag: '@pending' }, async ({ page }) => {
 //   And the flow "flow-change-email-confirm" has started for "amara@new.example.org"
 // Fails on Lightning: the form's LiveComponent puts the message without a
 // redirect, and LiveView passes no such flash to the page. The flow starts.
-test('@S04', { tag: ['@pending', '@serial'] }, async ({ page, request }) => {
-  const NEW = 'amara@new.example.org';
-  const sentBefore = (await mailbox(request)).length;
-  await signedIn(page);
+// Passes on the port.
+test(
+  '@S04',
+  { tag: ['@passing-new', '@serial'] },
+  async ({ page, request }) => {
+    const NEW = 'amara@new.example.org';
+    const sentBefore = (await mailbox(request)).length;
+    await signedIn(page);
 
-  await requestEmailChange(page, NEW, PASSWORD);
+    await requestEmailChange(page, NEW, PASSWORD);
 
-  await expect
-    .soft(
-      page.getByText('You will receive an email with instructions shortly.')
-    )
-    .toBeVisible();
-  expect(me().email).toBe(ME);
-  await expect(
-    page.getByText(`Email: ${user(ME).email}`, { exact: true })
-  ).toBeVisible();
-  // flow-change-email-confirm has started: a pending change for the new
-  // address, a warning to the old one and instructions to the new one
-  expect(pendingEmailChanges()).toEqual([{ sent_to: NEW }]);
-  const after = await mailbox(request);
-  const sent = after.slice(0, after.length - sentBefore);
-  expect(sent).toEqual(
-    expect.arrayContaining([
-      { to: [ME], subject: 'Your OpenFn email was changed' },
-      { to: [NEW], subject: 'Please confirm your new email' },
-    ])
-  );
-});
+    await expect
+      .soft(
+        page.getByText('You will receive an email with instructions shortly.')
+      )
+      .toBeVisible();
+    expect(me().email).toBe(ME);
+    await expect(
+      page.getByText(`Email: ${user(ME).email}`, { exact: true })
+    ).toBeVisible();
+    // flow-change-email-confirm has started: a pending change for the new
+    // address, a warning to the old one and instructions to the new one
+    expect(pendingEmailChanges()).toEqual([{ sent_to: NEW }]);
+    const after = await mailbox(request);
+    const sent = after.slice(0, after.length - sentBefore);
+    expect(sent).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          to: [ME],
+          subject: 'Your OpenFn email was changed',
+        }),
+        expect.objectContaining({
+          to: [NEW],
+          subject: 'Please confirm your new email',
+        }),
+      ])
+    );
+  }
+);
 
 // @S05
 // Scenario: An email change with the wrong password is refused
@@ -226,22 +238,26 @@ test('@S04', { tag: ['@pending', '@serial'] }, async ({ page, request }) => {
 //   And no email is sent
 // Fails on Lightning: the password is checked when the field loses focus,
 // which disables "Update email", so it can't be clicked. The field shows
-// "Your passwords do not match." and nothing is sent.
-test('@S05', { tag: ['@pending', '@serial'] }, async ({ page, request }) => {
-  const sentBefore = (await mailbox(request)).length;
-  await signedIn(page);
+// "Your passwords do not match." and nothing is sent. Passes on the port.
+test(
+  '@S05',
+  { tag: ['@passing-new', '@serial'] },
+  async ({ page, request }) => {
+    const sentBefore = (await mailbox(request)).length;
+    await signedIn(page);
 
-  await requestEmailChange(page, 'attacker@example.org', 'not-my-password');
+    await requestEmailChange(page, 'attacker@example.org', 'not-my-password');
 
-  await expect(
-    fieldBlock(page, 'Enter password to confirm').getByRole('paragraph')
-  ).not.toHaveCount(0);
-  await expect(
-    page.getByText('You will receive an email with instructions shortly.')
-  ).toHaveCount(0);
-  expect(pendingEmailChanges()).toEqual([]);
-  expect((await mailbox(request)).length).toBe(sentBefore);
-});
+    await expect(
+      fieldBlock(page, 'Enter password to confirm').getByRole('paragraph')
+    ).not.toHaveCount(0);
+    await expect(
+      page.getByText('You will receive an email with instructions shortly.')
+    ).toHaveCount(0);
+    expect(pendingEmailChanges()).toEqual([]);
+    expect((await mailbox(request)).length).toBe(sentBefore);
+  }
+);
 
 // @S06
 // Scenario: An address that can't receive mail is refused before anything is sent
@@ -249,6 +265,8 @@ test('@S05', { tag: ['@pending', '@serial'] }, async ({ page, request }) => {
 //   When I set "New email address" to "oops email" and leave the field
 //   Then I see "Email address not valid."
 //   And "Update email" is disabled
+// Differs on the port: the design system words it "must be a valid email
+// address" and leaves "Update email" on. Nothing is sent.
 test(
   '@S06',
   { tag: ['@passing-old', '@serial'] },
@@ -278,7 +296,8 @@ test(
 //   When I request an email change with my correct password
 //   Then I see "Failed to request email update"
 // Fails on Lightning: same as @S04, the error flash never reaches the page.
-test('@S07', { tag: ['@pending', '@serial'] }, async ({ page }) => {
+// Passes on the port.
+test('@S07', { tag: ['@passing-new', '@serial'] }, async ({ page }) => {
   await signedIn(page);
   const restoreMailer = mailerFailing();
   try {
@@ -304,7 +323,8 @@ test('@S07', { tag: ['@pending', '@serial'] }, async ({ page }) => {
 //   And the flow "flow-account-revocation-teardown" has started for my account
 // Fails on Lightning: the change closes this browser's socket before the
 // redirect arrives, so the page stays on /profile for about ten seconds, then
-// reloads to /users/log_in with no message. The rest holds.
+// reloads to /users/log_in with no message. The rest holds. The same on the
+// port.
 test('@S08', { tag: '@pending' }, async ({ page, browser }) => {
   const NEW = 'a much longer phrase';
   const elsewhere = await otherSession(browser, ME);
@@ -339,24 +359,28 @@ test('@S08', { tag: '@pending' }, async ({ page, browser }) => {
 //   Then I see "is not valid" under "Current password"
 //   And my password is unchanged
 //   And my other sessions are still signed in
-test('@S09', { tag: '@passing-old' }, async ({ page, browser }) => {
-  const before = me().hashed_password;
-  const elsewhere = await otherSession(browser, ME);
-  await signedIn(page);
+test(
+  '@S09',
+  { tag: ['@passing-old', '@passing-new'] },
+  async ({ page, browser }) => {
+    const before = me().hashed_password;
+    const elsewhere = await otherSession(browser, ME);
+    await signedIn(page);
 
-  await field(page, 'New password').fill('a much longer phrase');
-  await field(page, 'Confirm new password').fill('a much longer phrase');
-  await field(page, 'Current password').fill('not-my-password');
-  await page.getByRole('button', { name: 'Update password' }).click();
+    await field(page, 'New password').fill('a much longer phrase');
+    await field(page, 'Confirm new password').fill('a much longer phrase');
+    await field(page, 'Current password').fill('not-my-password');
+    await page.getByRole('button', { name: 'Update password' }).click();
 
-  await expect(
-    fieldBlock(page, 'Current password').getByText('is not valid')
-  ).toBeVisible();
-  expect(me().hashed_password).toBe(before);
-  await open(elsewhere, PAGE);
-  await expectAt(elsewhere, PAGE);
-  await elsewhere.context().close();
-});
+    await expect(
+      fieldBlock(page, 'Current password').getByText('is not valid')
+    ).toBeVisible();
+    expect(me().hashed_password).toBe(before);
+    await open(elsewhere, PAGE);
+    await expectAt(elsewhere, PAGE);
+    await elsewhere.context().close();
+  }
+);
 
 // @S10
 // Scenario: A new password must be long enough and typed the same twice
@@ -366,6 +390,8 @@ test('@S09', { tag: '@passing-old' }, async ({ page, browser }) => {
 //   When I set "New password" to "password1234" and "Confirm new password" to "password4567"
 //   Then I see "Your passwords do not match."
 //   And "Update password" is disabled
+// Differs on the port: the design system words them "should be at least 12
+// character(s)" and "does not match password", and leaves "Update password" on.
 test('@S10', { tag: '@passing-old' }, async ({ page }) => {
   await signedIn(page);
 
@@ -389,7 +415,7 @@ test('@S10', { tag: '@passing-old' }, async ({ page }) => {
 //   Given I am signed in
 //   When I click "Delete my account"
 //   Then I am on "/profile/<my user id>/delete"
-test('@S11', { tag: '@passing-old' }, async ({ page }) => {
+test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   await signedIn(page);
 
   await page.getByRole('link', { name: 'Delete my account' }).click();
@@ -416,7 +442,7 @@ test('@S12', { tag: '@pending' }, () => {
 test.describe('shared-authenticated-session', () => {
   test(
     'shared-authenticated-session@S01 on profile-account',
-    { tag: '@passing-old' },
+    { tag: ['@passing-old', '@passing-new'] },
     async ({ page }) => {
       await authenticatedSession.S01(page, PAGE, ME);
     }
@@ -424,7 +450,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S02 on profile-account',
-    { tag: '@passing-old' },
+    { tag: ['@passing-old', '@passing-new'] },
     async ({ page, browser }) => {
       await authenticatedSession.S02(page, browser, PAGE, ME);
     }
@@ -432,7 +458,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S03 on profile-account',
-    { tag: '@passing-old' },
+    { tag: ['@passing-old', '@passing-new'] },
     async ({ page }) => {
       await authenticatedSession.S03(page, PAGE, ME);
     }
@@ -440,7 +466,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S07 on profile-account',
-    { tag: '@passing-old' },
+    { tag: ['@passing-old', '@passing-new'] },
     async ({ page, browser }) => {
       await authenticatedSession.S07(page, browser, PAGE, '/credentials', ME);
     }
@@ -471,7 +497,7 @@ test.describe('shared-project-header', () => {
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
     test(
       `shared-project-header@${id} on profile-account`,
-      { tag: tagFor(id, ['S11', 'S12', 'S13', 'S18', 'S17']) },
+      { tag: tagFor(id, ['S11', 'S12', 'S13', 'S18', 'S17'], true) },
       async ({ page }) => {
         await projectHeader[id](page, PAGE, ME);
       }
@@ -479,7 +505,7 @@ test.describe('shared-project-header', () => {
 
   test(
     'shared-project-header@S17 on profile-account',
-    { tag: '@passing-old' },
+    { tag: ['@passing-old', '@passing-new'] },
     async ({ page }) => {
       await projectHeader.S17(page, PAGE);
     }
@@ -515,7 +541,7 @@ test.describe('shared-local-datetime', () => {
     test.use({ timezoneId: localDatetime.given.S01.timezoneId });
     test(
       'shared-local-datetime@S01 on profile-account',
-      { tag: '@passing-old' },
+      { tag: ['@passing-old', '@passing-new'] },
       async ({ page }) => {
         await localDatetime.S01(
           page,
@@ -528,7 +554,7 @@ test.describe('shared-local-datetime', () => {
   for (const id of ['S04', 'S05'] as const)
     test(
       `shared-local-datetime@${id} on profile-account`,
-      { tag: tagFor(id, ['S01', 'S04', 'S05']) },
+      { tag: tagFor(id, ['S01', 'S04', 'S05'], true) },
       async ({ page }) => {
         await localDatetime[id](
           page,
@@ -549,14 +575,15 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S01 on profile-account',
-    { tag: '@passing-old' },
+    { tag: ['@passing-old', '@passing-new'] },
     async ({ page }) => {
       await signedIn(page);
       await flashMessages.S01(page, SAVED, saveName(page));
     }
   );
 
-  // Fails on this page: its only error flash never renders (see @S07).
+  // Fails on this page: its only error flash never renders (see @S07). On
+  // the port the message is a red alert in the email form, not a toast.
   test(
     'shared-flash-messages@S02 on profile-account',
     { tag: ['@pending', '@serial'] },
@@ -575,7 +602,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S03 on profile-account',
-    { tag: '@passing-old' },
+    { tag: ['@passing-old', '@passing-new'] },
     async ({ page }) => {
       await signedIn(page);
       await flashMessages.S03(page, SAVED, saveName(page));
@@ -584,7 +611,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S04 on profile-account',
-    { tag: '@passing-old' },
+    { tag: ['@passing-old', '@passing-new'] },
     async ({ page }) => {
       await signedIn(page);
       await flashMessages.S04(page, SAVED, saveName(page), async () => {
@@ -597,7 +624,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S05 on profile-account',
-    { tag: '@passing-old' },
+    { tag: ['@passing-old', '@passing-new'] },
     async ({ page }) => {
       await signedIn(page);
       await flashMessages.S05(page, SAVED, saveName(page), PAGE);
