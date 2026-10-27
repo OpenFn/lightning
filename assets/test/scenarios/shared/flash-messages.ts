@@ -5,6 +5,8 @@
 // When (by calling `act`) and the Then.
 import { expect, type Locator, type Page } from '@playwright/test';
 
+import { liveViewJoined } from '../steps';
+
 // The toast the user sees reading `text`: announced as an alert, or as a
 // status where a design marks info messages politely
 export const toast = (page: Page, text: string) =>
@@ -184,6 +186,25 @@ export async function S06(
 
   await main.getByRole('button', { name: 'Back' }).click();
   await expect.poll(() => page.url()).toBe(before);
+}
+
+// @S07 Admin pages show a toast that stays until clicked
+//   Given I am a superuser on an admin page
+//   When an action on the page puts the info flash "<text>"
+//   Then I see the toast "<text>"
+//   When I click the toast
+//   Then it is gone
+export async function S07(page: Page, text: string, act: () => Promise<void>) {
+  await act();
+  const box = toast(page, text);
+  await expect(box).toBeVisible();
+  // A toast that arrives with a redirect shows before the new page answers
+  // clicks; a click in that gap is lost
+  await liveViewJoined(page);
+
+  await box.click();
+  // Short, so a toast closing itself can't pass for the click
+  await expect(box).toBeHidden({ timeout: 1000 });
 }
 
 // @S08 Sign-in and account forms show the flash inside the form

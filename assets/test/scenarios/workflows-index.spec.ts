@@ -20,7 +20,7 @@ import {
   changeRoleOnNode,
   clearWorkflowSearch,
   createWorkflowOnNode,
-  confirmNextPrompt,
+  clickAndConfirm,
   createWorkflowButton,
   daysAgo,
   deleteWorkflowOnNode,
@@ -175,7 +175,7 @@ const NOT_AUTHORIZED = 'You are not authorized to perform this action.';
 //   And the "Intake" row shows its latest work order state and time
 //   And the "Intake" row shows 4 work orders with its step count and success rate
 //   And the "Intake" row shows 1 work order in a failed state with the time of the latest failure
-test('@S01', { tag: '@passing-old' }, async ({ page }) => {
+test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows('Malawi HIV', { [ME]: 'viewer' });
   for (const minutes of [300, 200, 100]) succeeded(h.intake, minutes);
   failed(h.intake, 10);
@@ -200,7 +200,7 @@ test('@S01', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open the workflows page
 //   Then the "Weekly report" row shows "Nothing last 30 days"
 //   And its work order and failed counts show 0 and "N/A"
-test('@S02', { tag: '@passing-old' }, async ({ page }) => {
+test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   // A work order from before the window does not count as activity
   longAgo(h.weekly);
@@ -224,7 +224,7 @@ test('@S02', { tag: '@passing-old' }, async ({ page }) => {
 //   And the "Runs" card shows 10 and "6 pending"
 //   And the "Successful Runs" card shows 2 and "50.0%"
 //   And the "Work Orders in failed state" card shows 2 and "20.0%"
-test('@S03', { tag: '@passing-old' }, async ({ page }) => {
+test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   // Across two workflows, so the totals are sums
   for (const wf of [h.intake, h.sync]) {
@@ -251,7 +251,7 @@ test('@S03', { tag: '@passing-old' }, async ({ page }) => {
 //   Then I see "Sync DHIS2"
 //   And I do not see "Intake"
 //   And the URL query has "q=sync"
-test('@S04', { tag: '@passing-old' }, async ({ page }) => {
+test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   await openWorkflows(page, h);
 
@@ -267,7 +267,7 @@ test('@S04', { tag: '@passing-old' }, async ({ page }) => {
 //   When I search for "nonexistent"
 //   Then I see 'No workflows found matching "nonexistent". Try a different search term or create a new one.'
 //   And "create a new one" links to "/projects/<project_id>/w/new"
-test('@S05', { tag: '@passing-old' }, async ({ page }) => {
+test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   await openWorkflows(page, h);
 
@@ -290,7 +290,7 @@ test('@S05', { tag: '@passing-old' }, async ({ page }) => {
 //   When I click the clear search button
 //   Then I see all three workflows
 //   And the URL is "/projects/<project_id>/w?sort=name&dir=asc"
-test('@S06', { tag: '@passing-old' }, async ({ page }) => {
+test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   // "sync" stands in for "api": it narrows this project's list to one row
   await signInAs(page, ME);
@@ -313,7 +313,7 @@ test('@S06', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open its workflows page
 //   Then I see "No workflows found. Create one to start automating."
 //   And "Create one" links to the new workflow page
-test('@S07', { tag: '@passing-old' }, async ({ page }) => {
+test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const project = given('Empty', { [ME]: 'viewer' });
 
   await signInAs(page, ME);
@@ -342,7 +342,7 @@ test('@S07', { tag: '@passing-old' }, async ({ page }) => {
 //     | Work Orders                   | workorders_count          |
 //     | Work Orders in a failed state | failed_workorders_count   |
 //     | Enabled                       | enabled                   |
-test('@S08', { tag: '@passing-old' }, async ({ page }) => {
+test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   // "Intake": 3 work orders, 1 failed, the latest 50 minutes ago.
   // "Sync DHIS2": 2 work orders, both failed, the latest a day ago.
   // "Weekly report": no work orders, and its trigger is off.
@@ -424,7 +424,7 @@ test('@S08', { tag: '@passing-old' }, async ({ page }) => {
 // Scenario: Search and sort combine and survive in the URL
 //   When I open "/projects/<project_id>/w?q=api&sort=name&dir=desc"
 //   Then I see only workflows matching "api", in reverse name order
-test('@S09', { tag: '@passing-old' }, async ({ page }) => {
+test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const { project } = givenNamed(['Api import', 'Intake', 'Weekly api sync']);
 
   await signInAs(page, ME);
@@ -439,7 +439,7 @@ test('@S09', { tag: '@passing-old' }, async ({ page }) => {
 // Scenario: Unknown sort parameters fall back to the default
 //   When I open "/projects/<project_id>/w?sort=bogus&dir=bogus"
 //   Then the page loads sorted by name ascending
-test('@S10', { tag: '@passing-old' }, async ({ page }) => {
+test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   // Created in the opposite order, so only sorting by name puts them right
   const { project } = givenNamed(['Weekly report', 'Sync DHIS2', 'Intake']);
 
@@ -463,37 +463,41 @@ test('@S10', { tag: '@passing-old' }, async ({ page }) => {
 //   And an audit event "enabled" is recorded
 //   And the flow "flow-toggle-workflow-open-editor" has started for "Intake"
 // The flow is checked by its own flow test.
-test('@S11', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
-  const h = givenWorkflows(
-    'Malawi HIV',
-    { [ME]: 'editor' },
-    {
-      intake: { triggers: 'off' },
-    }
-  );
-  await openWorkflows(page, h);
-  const row = workflowRow(page, 'Intake');
-  const toggle = workflowSwitch(row);
-  const state = workflowSwitchInput(row);
-  await expect(state).not.toBeChecked();
+test(
+  '@S11',
+  { tag: ['@passing-old', '@passing-new', '@serial'] },
+  async ({ page }) => {
+    const h = givenWorkflows(
+      'Malawi HIV',
+      { [ME]: 'editor' },
+      {
+        intake: { triggers: 'off' },
+      }
+    );
+    await openWorkflows(page, h);
+    const row = workflowRow(page, 'Intake');
+    const toggle = workflowSwitch(row);
+    const state = workflowSwitchInput(row);
+    await expect(state).not.toBeChecked();
 
-  await toggle.click();
+    await toggle.click();
 
-  await expect(flashMessages.toast(page, 'Workflow updated')).toBeVisible();
-  await expect(state).toBeChecked();
-  await expectTooltip(
-    page,
-    toggle,
-    'This workflow is active (webhook trigger enabled)'
-  );
-  expect(workflowStored(h.intake.id)).toMatchObject({
-    state: 'live',
-    triggers: [true],
-  });
-  await expect
-    .poll(() => auditEventsOf(h.intake.id).map(e => e.event))
-    .toContain('enabled');
-});
+    await expect(flashMessages.toast(page, 'Workflow updated')).toBeVisible();
+    await expect(state).toBeChecked();
+    await expectTooltip(
+      page,
+      toggle,
+      'This workflow is active (webhook trigger enabled)'
+    );
+    expect(workflowStored(h.intake.id)).toMatchObject({
+      state: 'live',
+      triggers: [true],
+    });
+    await expect
+      .poll(() => auditEventsOf(h.intake.id).map(e => e.event))
+      .toContain('enabled');
+  }
+);
 
 // @S12
 // Scenario: Editor switches a workflow off
@@ -504,31 +508,35 @@ test('@S11', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   And "Intake" is a draft with its trigger disabled
 //   And the "Intake" switch is off with tooltip "This workflow is inactive (manual runs only)"
 //   And an audit event "disabled" is recorded
-test('@S12', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
-  const h = givenWorkflows();
-  await openWorkflows(page, h);
-  const row = workflowRow(page, 'Intake');
-  const toggle = workflowSwitch(row);
-  const state = workflowSwitchInput(row);
-  await expect(state).toBeChecked();
+test(
+  '@S12',
+  { tag: ['@passing-old', '@passing-new', '@serial'] },
+  async ({ page }) => {
+    const h = givenWorkflows();
+    await openWorkflows(page, h);
+    const row = workflowRow(page, 'Intake');
+    const toggle = workflowSwitch(row);
+    const state = workflowSwitchInput(row);
+    await expect(state).toBeChecked();
 
-  await toggle.click();
+    await toggle.click();
 
-  await expect(flashMessages.toast(page, 'Workflow updated')).toBeVisible();
-  await expect(state).not.toBeChecked();
-  await expectTooltip(
-    page,
-    toggle,
-    'This workflow is inactive (manual runs only)'
-  );
-  expect(workflowStored(h.intake.id)).toMatchObject({
-    state: 'draft',
-    triggers: [false],
-  });
-  await expect
-    .poll(() => auditEventsOf(h.intake.id).map(e => e.event))
-    .toContain('disabled');
-});
+    await expect(flashMessages.toast(page, 'Workflow updated')).toBeVisible();
+    await expect(state).not.toBeChecked();
+    await expectTooltip(
+      page,
+      toggle,
+      'This workflow is inactive (manual runs only)'
+    );
+    expect(workflowStored(h.intake.id)).toMatchObject({
+      state: 'draft',
+      triggers: [false],
+    });
+    await expect
+      .poll(() => auditEventsOf(h.intake.id).map(e => e.event))
+      .toContain('disabled');
+  }
+);
 
 // @S13 @variant:activation-limited
 // Scenario: The plan limit can refuse switching a workflow on
@@ -538,20 +546,24 @@ test('@S12', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   When I click the "Intake" switch
 //   Then I see "No more workflows"
 //   And "Intake" still has its trigger disabled
-test('@S13', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
-  const h = givenWorkflows(
-    'Malawi HIV',
-    { [ME]: 'editor' },
-    { intake: { triggers: 'off' } }
-  );
-  cleanups.push(withRefusingLimiter('No more workflows'));
-  await openWorkflows(page, h);
+test(
+  '@S13',
+  { tag: ['@passing-old', '@passing-new', '@serial'] },
+  async ({ page }) => {
+    const h = givenWorkflows(
+      'Malawi HIV',
+      { [ME]: 'editor' },
+      { intake: { triggers: 'off' } }
+    );
+    cleanups.push(withRefusingLimiter('No more workflows'));
+    await openWorkflows(page, h);
 
-  await flip(page, 'Intake');
+    await flip(page, 'Intake');
 
-  await expect(flashMessages.toast(page, 'No more workflows')).toBeVisible();
-  expect(workflowStored(h.intake.id).triggers).toEqual([false]);
-});
+    await expect(flashMessages.toast(page, 'No more workflows')).toBeVisible();
+    expect(workflowStored(h.intake.id).triggers).toEqual([false]);
+  }
+);
 
 // @S14 @variant:activation-limited
 // Scenario: Re-confirming an already enabled workflow is not counted against the limit
@@ -562,20 +574,24 @@ test('@S13', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   And the usage limiter was not consulted
 // A refusing limiter would have answered "No more workflows", so "Workflow
 // updated" shows it was not asked.
-test('@S14', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
-  const h = givenWorkflows();
-  cleanups.push(withRefusingLimiter('No more workflows'));
-  await openWorkflows(page, h);
+test(
+  '@S14',
+  { tag: ['@passing-old', '@passing-new', '@serial'] },
+  async ({ page }) => {
+    const h = givenWorkflows();
+    cleanups.push(withRefusingLimiter('No more workflows'));
+    await openWorkflows(page, h);
 
-  await sendEventFrom(page, 'Name', 'toggle_workflow_state', {
-    workflow_state: 'true',
-    value_key: h.sync.id,
-  });
+    await sendEventFrom(page, 'Name', 'toggle_workflow_state', {
+      workflow_state: 'true',
+      value_key: h.sync.id,
+    });
 
-  await expect(flashMessages.toast(page, 'Workflow updated')).toBeVisible();
-  await expect(flashMessages.toast(page, 'No more workflows')).toHaveCount(0);
-  expect(workflowStored(h.sync.id).triggers).toEqual([true]);
-});
+    await expect(flashMessages.toast(page, 'Workflow updated')).toBeVisible();
+    await expect(flashMessages.toast(page, 'No more workflows')).toHaveCount(0);
+    expect(workflowStored(h.sync.id).triggers).toEqual([true]);
+  }
+);
 
 // @S15
 // Scenario: Viewer cannot switch a workflow
@@ -584,7 +600,7 @@ test('@S14', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   When I click the "Intake" switch
 //   Then I see "You are not authorized to perform this action."
 //   And "Intake" still has its trigger disabled
-test('@S15', { tag: '@passing-old' }, async ({ page }) => {
+test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows(
     'Malawi HIV',
     { [ME]: 'viewer' },
@@ -627,7 +643,7 @@ test('@S15', { tag: '@passing-old' }, async ({ page }) => {
 //     | event                 |
 //     | toggle_workflow_state |
 //     | delete_workflow       |
-test('@S16', { tag: '@passing-old' }, async ({ page }) => {
+test('@S16', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   const kenya = given('Kenya TB', { [OTHER]: 'owner' });
   const foreign = seedDashboardWorkflow(kenya.id, 'Foreign');
@@ -668,37 +684,43 @@ test('@S16', { tag: '@passing-old' }, async ({ page }) => {
 //   And an audit event "marked_for_deletion" is recorded with me as actor
 //   And the flow "flow-delete-open-workflow" has started for "Weekly report"
 // The flow is checked by its own flow test.
-test('@S17', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
-  const h = givenWorkflows();
-  await openWorkflows(page, h);
+test(
+  '@S17',
+  { tag: ['@passing-old', '@passing-new', '@serial'] },
+  async ({ page }) => {
+    const h = givenWorkflows();
+    await openWorkflows(page, h);
 
-  const asked = confirmNextPrompt(page);
-  await workflowRow(page, 'Weekly report')
-    .getByText('Delete', { exact: true })
-    .click();
-  expect(await asked).toBe("Are you sure you'd like to delete this workflow?");
+    const asked = await clickAndConfirm(
+      page,
+      workflowRow(page, 'Weekly report').getByText('Delete', { exact: true }),
+      'Delete workflow'
+    );
+    expect(asked).toContain("Are you sure you'd like to delete this workflow?");
 
-  await expect(
-    flashMessages.toast(page, 'Workflow successfully deleted.')
-  ).toBeVisible();
-  await expect(workflowRow(page, 'Weekly report')).toHaveCount(0);
-  const stored = workflowStored(h.weekly.id);
-  expect(stored.deleted_at).not.toBeNull();
-  expect(stored.triggers).toEqual([false]);
-  await expect
-    .poll(
-      () =>
-        auditEventsOf(h.weekly.id).find(e => e.event === 'marked_for_deletion')
-          ?.actor_id
-    )
-    .toBe(user(ME).id);
-});
+    await expect(
+      flashMessages.toast(page, 'Workflow successfully deleted.')
+    ).toBeVisible();
+    await expect(workflowRow(page, 'Weekly report')).toHaveCount(0);
+    const stored = workflowStored(h.weekly.id);
+    expect(stored.deleted_at).not.toBeNull();
+    expect(stored.triggers).toEqual([false]);
+    await expect
+      .poll(
+        () =>
+          auditEventsOf(h.weekly.id).find(
+            e => e.event === 'marked_for_deletion'
+          )?.actor_id
+      )
+      .toBe(user(ME).id);
+  }
+);
 
 // @S18
 // Scenario: A deleted workflow's name can be reused
 //   Given I deleted "Weekly report"
 //   Then no active workflow in the project holds the name "Weekly report"
-test('@S18', { tag: '@passing-old' }, () => {
+test('@S18', { tag: ['@passing-old', '@passing-new'] }, () => {
   const h = givenWorkflows();
   deleteWorkflowOnNode(h.weekly.id, ME);
 
@@ -720,7 +742,7 @@ test('@S18', { tag: '@passing-old' }, () => {
 //   Then I see no "Delete" action on any row
 //   When "delete_workflow" is sent for "Intake"
 //   Then I see "You are not authorized to perform this action."
-test('@S19', { tag: '@passing-old' }, async ({ page }) => {
+test('@S19', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows('Malawi HIV', { [ME]: 'viewer' });
   await openWorkflows(page, h);
 
@@ -741,7 +763,7 @@ test('@S19', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open the workflows page
 //   Then the "Create new workflow" button is disabled
 //   And it has the tooltip "You are not authorized to perform this action."
-test('@S20', { tag: '@passing-old' }, async ({ page }) => {
+test('@S20', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows('Malawi HIV', { [ME]: 'viewer' });
   await openWorkflows(page, h);
 
@@ -757,7 +779,7 @@ test('@S20', { tag: '@passing-old' }, async ({ page }) => {
 //   Given I am an editor on project "Malawi HIV"
 //   When I click "Create new workflow"
 //   Then I am on "/projects/<project_id>/w/new"
-test('@S21', { tag: '@passing-old' }, async ({ page }) => {
+test('@S21', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   await openWorkflows(page, h);
   await expect(createWorkflowButton(page)).toBeEnabled();
@@ -771,7 +793,7 @@ test('@S21', { tag: '@passing-old' }, async ({ page }) => {
 // Scenario: Clicking a workflow name opens it in the editor
 //   When I click "Intake"
 //   Then I am on "/projects/<project_id>/w/<intake_id>"
-test('@S22', { tag: '@passing-old' }, async ({ page }) => {
+test('@S22', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   await openWorkflows(page, h);
 
@@ -785,7 +807,7 @@ test('@S22', { tag: '@passing-old' }, async ({ page }) => {
 // @S23
 // Scenario: Each row links to the workflow's health page
 //   Then the "Intake" row has a "Health" link to "/projects/<project_id>/w/<intake_id>/health"
-test('@S23', { tag: '@passing-old' }, async ({ page }) => {
+test('@S23', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   await openWorkflows(page, h);
   const health = workflowRow(page, 'Intake').getByRole('link', {
@@ -811,7 +833,7 @@ test('@S23', { tag: '@passing-old' }, async ({ page }) => {
 //   And the flow "flow-dashboard-history-drilldown" starts from each link
 // Each link is followed and History's list is read; the flow is checked by its
 // own flow test.
-test('@S24', { tag: '@passing-old' }, async ({ page }) => {
+test('@S24', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   const fine = [300, 200, 100].map(minutes => succeeded(h.intake, minutes));
   const broken = failed(h.intake, 10);
@@ -879,7 +901,7 @@ test('@S24', { tag: '@passing-old' }, async ({ page }) => {
 // Scenario: A workflow with no count has no history link
 //   Given "Weekly report" has had no work orders in the last 30 days
 //   Then the "Weekly report" row has no history link
-test('@S25', { tag: '@passing-old' }, async ({ page }) => {
+test('@S25', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   longAgo(h.weekly);
   // Intake has some, so a link is possible on this page at all
@@ -902,7 +924,7 @@ test('@S25', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open the workflows page
 //   Then the "Intake" name is greyed out with the tooltip "Intake (disabled)"
 //   And the "Intake" switch is off with tooltip "This workflow is inactive (manual runs only)"
-test('@S26', { tag: '@passing-old' }, async ({ page }) => {
+test('@S26', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows(
     'Malawi HIV',
     { [ME]: 'editor' },
@@ -939,7 +961,7 @@ test('@S26', { tag: '@passing-old' }, async ({ page }) => {
 //   Then the state column is headed "State"
 //   And the "Intake" row shows "Live"
 //   And no row has an on/off switch
-test('@S27', { tag: '@passing-old' }, async ({ page }) => {
+test('@S27', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   setPreferences(ME, { experimental_features: true });
 
@@ -959,7 +981,7 @@ test('@S27', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open the workflows page of sandbox "dev"
 //   Then the state column is headed "Turn on"
 //   And each row has an on/off switch
-test('@S28', { tag: '@passing-old' }, async ({ page }) => {
+test('@S28', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const parent = given('Malawi HIV', { [ME]: 'editor' });
   const dev = given('dev', { [ME]: 'owner' });
   exec(`update projects set parent_id = '${parent.id}' where id = '${dev.id}'`);
@@ -982,7 +1004,7 @@ test('@S28', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open the workflows page
 //   Then the state column is headed "Enabled"
 //   And each row has an on/off switch
-test('@S29', { tag: '@passing-old' }, async ({ page }) => {
+test('@S29', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
   const h = givenWorkflows();
   setPreferences(ME, { experimental_features: false });
 
@@ -998,7 +1020,7 @@ test('@S29', { tag: '@passing-old' }, async ({ page }) => {
 test.describe('shared-authenticated-session', () => {
   test(
     'shared-authenticated-session@S01 on workflows-index',
-    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S07']) },
+    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S07'], true) },
     async ({ page }) => {
       await authenticatedSession.S01(page, givenWorkflows().path, ME);
     }
@@ -1006,7 +1028,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S02 on workflows-index',
-    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S07']) },
+    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S07'], true) },
     async ({ page, browser }) => {
       await authenticatedSession.S02(page, browser, givenWorkflows().path, ME);
     }
@@ -1014,7 +1036,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S03 on workflows-index',
-    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S07']) },
+    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S07'], true) },
     async ({ page }) => {
       await authenticatedSession.S03(page, givenWorkflows().path, ME);
     }
@@ -1022,7 +1044,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S07 on workflows-index',
-    { tag: tagFor('S07', ['S01', 'S02', 'S03', 'S07']) },
+    { tag: tagFor('S07', ['S01', 'S02', 'S03', 'S07'], true) },
     async ({ page, browser }) => {
       const h = givenWorkflows();
       await authenticatedSession.S07(
@@ -1047,7 +1069,7 @@ test.describe('shared-authenticated-session', () => {
   ])
     test(
       `shared-authenticated-session@${id} on workflows-index`,
-      { tag: tagFor(id, ['S01', 'S02', 'S03', 'S07']) },
+      { tag: tagFor(id, ['S01', 'S02', 'S03', 'S07'], true) },
       () => {
         test.skip(
           true,
@@ -1062,18 +1084,11 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S01 on workflows-index',
     {
-      tag: tagFor('S01', [
+      tag: tagFor(
         'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-      ]),
+        ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'],
+        true
+      ),
     },
     async ({ page }) => {
       await projectScope.S01(page, givenWorkflows().path);
@@ -1083,18 +1098,11 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S02 on workflows-index',
     {
-      tag: tagFor('S02', [
-        'S01',
+      tag: tagFor(
         'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-      ]),
+        ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows();
@@ -1105,18 +1113,11 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S03 on workflows-index',
     {
-      tag: tagFor('S03', [
-        'S01',
-        'S02',
+      tag: tagFor(
         'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-      ]),
+        ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows('Malawi HIV', { [OTHER]: 'owner' });
@@ -1127,18 +1128,11 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S04 on workflows-index',
     {
-      tag: tagFor('S04', [
-        'S01',
-        'S02',
-        'S03',
+      tag: tagFor(
         'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-      ]),
+        ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows('Malawi HIV', { [OTHER]: 'owner' });
@@ -1152,18 +1146,11 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S05 on workflows-index',
     {
-      tag: tagFor('S05', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
+      tag: tagFor(
         'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-      ]),
+        ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows();
@@ -1180,20 +1167,24 @@ test.describe('shared-project-scope', () => {
     'shared-project-scope@S06 on workflows-index',
     {
       tag: [
-        tagFor('S06', [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
+        tagFor(
           'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-        ]),
+          [
+            'S01',
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+          ],
+          true
+        ),
         '@serial',
-      ],
+      ].flat(),
     },
     async ({ page }) => {
       const h = givenWorkflows('Malawi HIV', { [OTHER]: 'owner' });
@@ -1208,18 +1199,11 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S07 on workflows-index',
     {
-      tag: tagFor('S07', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
+      tag: tagFor(
         'S07',
-        'S08',
-        'S09',
-        'S10',
-      ]),
+        ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows('Malawi HIV', {
@@ -1235,18 +1219,11 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S08 on workflows-index',
     {
-      tag: tagFor('S08', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
+      tag: tagFor(
         'S08',
-        'S09',
-        'S10',
-      ]),
+        ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows('Malawi HIV', {
@@ -1267,20 +1244,24 @@ test.describe('shared-project-scope', () => {
     'shared-project-scope@S09 on workflows-index',
     {
       tag: [
-        tagFor('S09', [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
+        tagFor(
           'S09',
-          'S10',
-        ]),
+          [
+            'S01',
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+          ],
+          true
+        ),
         '@serial',
-      ],
+      ].flat(),
     },
     async ({ page }) => {
       const h = givenWorkflows('Malawi HIV', { [OTHER]: 'owner' });
@@ -1297,18 +1278,11 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S10 on workflows-index',
     {
-      tag: tagFor('S10', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
+      tag: tagFor(
         'S10',
-      ]),
+        ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows('Malawi HIV', {
@@ -1332,7 +1306,7 @@ test.describe('shared-project-scope', () => {
 test.describe('shared-usage-limits-banner', () => {
   test(
     'shared-usage-limits-banner@S01 on workflows-index',
-    { tag: tagFor('S01', ['S02']) },
+    { tag: tagFor('S01', ['S02'], true) },
     () => {
       test.skip(
         true,
@@ -1343,7 +1317,7 @@ test.describe('shared-usage-limits-banner', () => {
 
   test(
     'shared-usage-limits-banner@S02 on workflows-index',
-    { tag: tagFor('S02', ['S02']) },
+    { tag: tagFor('S02', ['S02'], true) },
     async ({ page }) => {
       const h = givenWorkflows();
       await usageLimitsBanner.S02(page, h.path, ME, workflowsHeading(page));
@@ -1364,24 +1338,28 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S02 on workflows-index',
     {
-      tag: tagFor('S02', [
+      tag: tagFor(
         'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
+        [
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows(HOST);
@@ -1392,24 +1370,28 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S03 on workflows-index',
     {
-      tag: tagFor('S03', [
-        'S02',
+      tag: tagFor(
         'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
+        [
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const parent = given(HOST, { [ME]: 'editor' });
@@ -1427,24 +1409,28 @@ test.describe('shared-project-header', () => {
     test(
       `shared-project-header@${id} on workflows-index`,
       {
-        tag: tagFor(id, [
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ]),
+        tag: tagFor(
+          id,
+          [
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+            'S11',
+            'S12',
+            'S13',
+            'S15',
+            'S16',
+            'S17',
+            'S18',
+          ],
+          true
+        ),
       },
       async ({ page }) => {
         const h = givenWorkflows(HOST);
@@ -1457,26 +1443,30 @@ test.describe('shared-project-header', () => {
     'shared-project-header@S07 on workflows-index',
     {
       tag: [
-        tagFor('S07', [
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
+        tagFor(
           'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ]),
+          [
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+            'S11',
+            'S12',
+            'S13',
+            'S15',
+            'S16',
+            'S17',
+            'S18',
+          ],
+          true
+        ),
         '@serial',
-      ],
+      ].flat(),
     },
     async ({ page }) => {
       const h = givenWorkflows(HOST);
@@ -1489,66 +1479,9 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S09 on workflows-index',
     {
-      tag: tagFor('S09', [
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
+      tag: tagFor(
         'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
-    },
-    async ({ page }) => {
-      await projectHeader.S09(page, ME);
-    }
-  );
-
-  // The Examples row "the projects list or my profile | the workflows page":
-  // this page is the workflows page, and the picker lands on the other
-  // project's
-  test(
-    'shared-project-header@S10 on workflows-index',
-    {
-      tag: tagFor('S10', [
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
-    },
-    async ({ page }) => {
-      const h = givenWorkflows(HOST);
-      await projectHeader.S10(page, h.path, ME, '/w');
-    }
-  );
-
-  for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on workflows-index`,
-      {
-        tag: tagFor(id, [
+        [
           'S02',
           'S03',
           'S04',
@@ -1565,7 +1498,76 @@ test.describe('shared-project-header', () => {
           'S16',
           'S17',
           'S18',
-        ]),
+        ],
+        true
+      ),
+    },
+    async ({ page }) => {
+      await projectHeader.S09(page, ME);
+    }
+  );
+
+  // The Examples row "the projects list or my profile | the workflows page":
+  // this page is the workflows page, and the picker lands on the other
+  // project's
+  test(
+    'shared-project-header@S10 on workflows-index',
+    {
+      tag: tagFor(
+        'S10',
+        [
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
+    },
+    async ({ page }) => {
+      const h = givenWorkflows(HOST);
+      await projectHeader.S10(page, h.path, ME, '/w');
+    }
+  );
+
+  for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
+    test(
+      `shared-project-header@${id} on workflows-index`,
+      {
+        tag: tagFor(
+          id,
+          [
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+            'S11',
+            'S12',
+            'S13',
+            'S15',
+            'S16',
+            'S17',
+            'S18',
+          ],
+          true
+        ),
       },
       async ({ page }) => {
         const h = givenWorkflows(HOST);
@@ -1576,24 +1578,28 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S14 on workflows-index',
     {
-      tag: tagFor('S14', [
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
+      tag: tagFor(
+        'S14',
+        [
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     () => {
       test.skip(
@@ -1607,24 +1613,28 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S15 on workflows-index',
     {
-      tag: tagFor('S15', [
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
+      tag: tagFor(
         'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
+        [
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows(HOST);
@@ -1636,24 +1646,28 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S16 on workflows-index',
     {
-      tag: tagFor('S16', [
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
+      tag: tagFor(
         'S16',
-        'S17',
-        'S18',
-      ]),
+        [
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows(HOST);
@@ -1664,24 +1678,28 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S17 on workflows-index',
     {
-      tag: tagFor('S17', [
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
+      tag: tagFor(
         'S17',
-        'S18',
-      ]),
+        [
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenWorkflows(HOST, {
@@ -1714,7 +1732,7 @@ test.describe('shared-local-datetime', () => {
     test.use({ timezoneId: localDatetime.given.S01.timezoneId });
     test(
       'shared-local-datetime@S01 on workflows-index',
-      { tag: tagFor('S01', ['S01', 'S02', 'S04', 'S05', 'S06']) },
+      { tag: tagFor('S01', ['S01', 'S02', 'S04', 'S05', 'S06'], true) },
       async ({ page }) => {
         await localDatetime.S01(
           page,
@@ -1727,7 +1745,7 @@ test.describe('shared-local-datetime', () => {
   for (const id of ['S02', 'S04', 'S05', 'S06'] as const)
     test(
       `shared-local-datetime@${id} on workflows-index`,
-      { tag: tagFor(id, ['S01', 'S02', 'S04', 'S05', 'S06']) },
+      { tag: tagFor(id, ['S01', 'S02', 'S04', 'S05', 'S06'], true) },
       async ({ page }) => {
         await localDatetime[id](
           page,
@@ -1763,7 +1781,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S01 on workflows-index',
-    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const { switchOn } = await givenSwitchable(page, 'editor');
       await flashMessages.S01(page, INFO, switchOn);
@@ -1772,7 +1790,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S02 on workflows-index',
-    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const { switchOn } = await givenSwitchable(page, 'viewer');
       await flashMessages.S02(page, NOT_AUTHORIZED, switchOn);
@@ -1781,7 +1799,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S03 on workflows-index',
-    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const { switchOn } = await givenSwitchable(page, 'editor');
       await flashMessages.S03(page, INFO, switchOn);
@@ -1790,7 +1808,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S04 on workflows-index',
-    { tag: tagFor('S04', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S04', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const { switchOn } = await givenSwitchable(page, 'editor');
       await flashMessages.S04(page, INFO, switchOn, async () => {
@@ -1808,7 +1826,7 @@ test.describe('shared-flash-messages', () => {
   // it: the workflow list I land on shows the info flash "Workflow deleted."
   test(
     'shared-flash-messages@S05 on workflows-index',
-    { tag: tagFor('S05', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S05', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const h = givenWorkflows();
       await signInAs(page, ME);
@@ -1828,7 +1846,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S06 on workflows-index',
-    { tag: tagFor('S06', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S06', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const h = givenWorkflows();
       const notMine = givenWorkflows('Kenya TB', { [OTHER]: 'owner' });

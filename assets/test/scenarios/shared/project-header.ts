@@ -94,8 +94,12 @@ async function pickWithKeyboard(page: Page, path: string, email: string) {
   await signInAs(page, email);
   await open(page, path);
 
-  await page.keyboard.press('ControlOrMeta+p');
-  await expect(picker(page)).toBeFocused();
+  // The shortcut is live once the page has attached its key handler; a press
+  // before that does nothing, so press again until the picker has focus
+  await expect(async () => {
+    await page.keyboard.press('ControlOrMeta+p');
+    await expect(picker(page)).toBeFocused({ timeout: 1_000 });
+  }).toPass();
 
   await page.keyboard.press('ArrowDown');
   const highlighted = await highlightedOption(page);
@@ -458,6 +462,16 @@ export async function S03(
   }
 }
 
+// The account menu's way back to the profile. The design-system menu draws it
+// as a menu item, the HEEx menu as a plain link.
+function turnOffInProfile(page: Page) {
+  const menu = page.getByRole('menu');
+  const name = 'Turn off in your profile';
+  return menu
+    .getByRole('menuitem', { name })
+    .or(menu.getByRole('link', { name }));
+}
+
 // The experimental-mode indicators S16 looks for: the side menu's
 // "Experimental" (and "Channels" on a project page) and, in the account menu,
 // "Experimental features on" with its link back to the profile. Opens the
@@ -477,14 +491,19 @@ export async function experimentalIndicators(
   const exp = expect.configure({ timeout: shown ? 5000 : 2000 });
   const count = shown ? 1 : 0;
   await exp(menu.getByText('Experimental', { exact: true })).toHaveCount(count);
+  // The side menu, not the breadcrumbs, which link to Channels on a channel
+  // page
+  const sideMenu = menu.filter({
+    has: page.getByRole('link', { name: 'Sandboxes' }),
+  });
   if (channels)
-    await exp(menu.getByRole('link', { name: 'Channels' })).toHaveCount(count);
+    await exp(sideMenu.getByRole('link', { name: 'Channels' })).toHaveCount(
+      count
+    );
   await exp(accountMenu.getByText('Experimental features on')).toHaveCount(
     count
   );
-  await exp(
-    page.getByRole('link', { name: 'Turn off in your profile' })
-  ).toHaveCount(count);
+  await exp(turnOffInProfile(page)).toHaveCount(count);
 }
 
 // @S16 Experimental features add Channels and say so
@@ -508,7 +527,7 @@ export async function S16(
   await open(page, path);
   await indicators(true);
 
-  await page.getByRole('link', { name: 'Turn off in your profile' }).click();
+  await turnOffInProfile(page).click();
   await expectAt(page, '/profile');
   await liveViewJoined(page);
   await experimentalSwitch(page).click();
@@ -548,7 +567,7 @@ export async function S01(
   await expect
     .poll(async () =>
       (await trail.getByRole('listitem').allInnerTexts())
-        .map(text => text.trim())
+        .map(text => text.replace(/\s+/g, ' ').trim())
         .slice(-crumbs.length)
     )
     .toEqual(crumbs.map(crumb => crumb.name));

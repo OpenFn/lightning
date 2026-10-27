@@ -64,6 +64,41 @@ export async function S03(page: Page, path: string, email: string) {
   await expectAt(page, '/users/two-factor');
 }
 
+const CONFIRM_REQUIRED = '/users/confirm-required';
+
+// @S04 An unconfirmed account past the deadline is sent to confirm
+//   Given my account was created 50 hours ago and my email is unconfirmed
+//   When I visit "<path>"
+//   Then I am on "/users/confirm-required"
+//   And I see "Your account is blocked pending email confirmation"
+// The host makes <email> locked out and requires verification. The page
+// body and the flash it arrives with may both say it.
+export async function S04(page: Page, path: string, email: string) {
+  await signInAs(page, email);
+
+  await page.goto(path);
+
+  await expectAt(page, CONFIRM_REQUIRED);
+  await expect(
+    page.getByText('Your account is blocked pending email confirmation').first()
+  ).toBeVisible();
+}
+
+// @S05 A locked-out account can still reach its confirmation page
+//   Given my account was created 50 hours ago and my email is unconfirmed
+//   When I visit "/users/confirm-required"
+//   Then I see "blocked pending email confirmation"
+export async function S05(page: Page, email: string) {
+  await signInAs(page, email);
+
+  await page.goto(CONFIRM_REQUIRED);
+
+  await expectAt(page, CONFIRM_REQUIRED);
+  await expect(
+    page.getByText('blocked pending email confirmation').first()
+  ).toBeVisible();
+}
+
 // The sidebar is collapsed when its menu labels are folded away (`menuLabel`
 // is an item the host page's menu has). It also expands while hovered, so the
 // pointer is moved off it first.

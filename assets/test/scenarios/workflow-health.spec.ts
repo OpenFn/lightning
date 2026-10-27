@@ -15,6 +15,7 @@ import {
   type Route,
 } from '@playwright/test';
 
+import { card, meta } from './pages/workflow-health';
 import * as authenticatedSession from './shared/authenticated-session';
 import * as flashMessages from './shared/flash-messages';
 import * as projectHeader from './shared/project-header';
@@ -53,6 +54,9 @@ import {
   type SeededWorkflow,
 } from './steps';
 
+const PASSING = { tag: ['@passing-old', '@passing-new'] };
+// History opens in this tab on the port; Lightning opens a new one
+const NEW_ONLY = { tag: '@passing-new' };
 const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 
@@ -102,14 +106,6 @@ async function openHealth(page: Page, h: Pick<Health, 'path'>) {
 
 const heading = (page: Page, name: string) =>
   page.getByRole('heading', { name, exact: true });
-
-// The card a heading titles: the heading sits in a row inside the card
-const card = (page: Page, title: string) =>
-  heading(page, title).locator('xpath=../..');
-
-// The line of small print on the right of a card's title
-const meta = (page: Page, title: string) =>
-  heading(page, title).locator('xpath=../span');
 
 const triage = (page: Page) =>
   page
@@ -170,7 +166,7 @@ async function opensHistory(page: Page, click: () => Promise<void>) {
 //   And "Last 7 days" is selected
 //   And the "Work orders" tab is selected, showing "Outcomes", "Failure breakdown" and "Steps with failures"
 //   And I see "Triage - grouped by failure type"
-test('@S01', { tag: '@passing-old' }, async ({ page }) => {
+test('@S01', PASSING, async ({ page }) => {
   const h = givenHealth();
   await signInAs(page, ME);
   await open(page, `/projects/${h.project.id}/w`);
@@ -208,7 +204,7 @@ test('@S01', { tag: '@passing-old' }, async ({ page }) => {
 //   Given I am on the health page of "Daily sync"
 //   When I click "Daily sync" in the breadcrumbs
 //   Then I am in the editor for "Daily sync"
-test('@S02', { tag: '@passing-old' }, async ({ page }) => {
+test('@S02', PASSING, async ({ page }) => {
   const h = givenHealth();
   await openHealth(page, h);
 
@@ -232,7 +228,7 @@ test('@S02', { tag: '@passing-old' }, async ({ page }) => {
 //   Examples:
 //     | workflow "Kenya sync" belongs to project "Kenya TB"   |
 //     | workflow "Old intake" in "Malawi HIV" has been deleted |
-test('@S03', { tag: '@passing-old' }, async ({ page }) => {
+test('@S03', PASSING, async ({ page }) => {
   const h = givenHealth();
   const kenya = given('Kenya TB', { [ME]: 'viewer' });
   const kenyaSync = seedWorkflow(kenya.id, 'Kenya sync');
@@ -261,7 +257,7 @@ test('@S03', { tag: '@passing-old' }, async ({ page }) => {
 //   Then the "Outcomes" card meta reads "13 work orders"
 //   And the legend reads "Success 9", "Failed 2", "Cancelled 2"
 //   And the middle of the ring reads "81.8%" and "success"
-test('@S04', { tag: '@passing-old' }, async ({ page }) => {
+test('@S04', PASSING, async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 9);
   seedWorkOrders(h.wf, 'failed', 1);
@@ -287,7 +283,7 @@ test('@S04', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open its health page
 //   Then "Outcomes" shows "Success 1" and "Failed 0"
 //   And the triage table shows "No failures in the last 7 days"
-test('@S05', { tag: '@passing-old' }, async ({ page }) => {
+test('@S05', PASSING, async ({ page }) => {
   const h = givenHealth();
   seedWorkOrder(h.wf, {
     state: 'success',
@@ -314,7 +310,7 @@ test('@S05', { tag: '@passing-old' }, async ({ page }) => {
 //   Given in the last 7 days "Daily sync" had 2,500 successful and 1 failed work order
 //   When I open its health page
 //   Then the middle of the ring reads "<100%"
-test('@S06', { tag: '@passing-old' }, async ({ page }) => {
+test('@S06', PASSING, async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 2500);
   seedWorkOrders(h.wf, 'failed', 1);
@@ -334,7 +330,7 @@ test('@S06', { tag: '@passing-old' }, async ({ page }) => {
 //   Then "Failure breakdown" lists "failed 3", "lost 1" and "rejected 2" and no other state
 //   And the middle of its ring reads "6" and "failures"
 //   And the "Failed" wedge of "Outcomes" also reads 6
-test('@S07', { tag: '@passing-old' }, async ({ page }) => {
+test('@S07', PASSING, async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'failed', 3);
   seedWorkOrders(h.wf, 'lost', 1);
@@ -361,7 +357,7 @@ test('@S07', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open its health page
 //   Then "Steps with failures" lists "Load 5", then "Fetch 2", then "No failing step 1"
 //   And each named step shows its adaptor below it
-test('@S08', { tag: '@passing-old' }, async ({ page }) => {
+test('@S08', PASSING, async ({ page }) => {
   const h = givenHealth();
   failures(h.wf, 'Load', 'RuntimeError', 3);
   failures(h.wf, 'Load', 'AdaptorError', 2);
@@ -396,7 +392,7 @@ test('@S08', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open its health page
 //   Then the first triage row reads "4", "Failed", "fail:RuntimeError @ Load" and "Job code hit a value it didn't expect, often a missing input field."
 //   And the second row reads "1", "crash:CompileError" with no step and "Job code couldn't be compiled, so no step ever ran."
-test('@S09', { tag: '@passing-old' }, async ({ page }) => {
+test('@S09', PASSING, async ({ page }) => {
   const h = givenHealth();
   failures(h.wf, 'Load', 'RuntimeError', 4);
   seedWorkOrder(h.wf, {
@@ -435,7 +431,7 @@ test('@S09', { tag: '@passing-old' }, async ({ page }) => {
 //   Given in the last 7 days 2 webhook requests to "Daily sync" were rejected over the run limit
 //   When I open its health page
 //   Then a triage row reads "2", "rejected:RunLimitExceeded" and "The project was over its run limit, so no run was created for this request."
-test('@S10', { tag: '@passing-old' }, async ({ page }) => {
+test('@S10', PASSING, async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'rejected', 2);
 
@@ -452,7 +448,7 @@ test('@S10', { tag: '@passing-old' }, async ({ page }) => {
 //   Given a "Daily sync" work order failed with "FirstAttempt" at "Fetch", then its retry failed with "Retry" at "Load"
 //   When I open its health page
 //   Then the triage table has one row, "fail:Retry @ Load", with count 1
-test('@S11', { tag: '@passing-old' }, async ({ page }) => {
+test('@S11', PASSING, async ({ page }) => {
   const h = givenHealth();
   seedWorkOrder(h.wf, {
     state: 'failed',
@@ -477,7 +473,7 @@ test('@S11', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open its health page
 //   Then the triage table has a row for "Fetch" and a row for "Load", each with count 1
 //   And "Outcomes" counts the work order once
-test('@S12', { tag: '@passing-old' }, async ({ page }) => {
+test('@S12', PASSING, async ({ page }) => {
   const h = givenHealth();
   seedWorkOrder(h.wf, {
     state: 'failed',
@@ -513,7 +509,7 @@ test('@S12', { tag: '@passing-old' }, async ({ page }) => {
 //   Then the triage row names the step "Load"
 //   When "Load to DHIS2" then fails with the same error
 //   Then the two failures are one row, named "Load to DHIS2"
-test('@S13', { tag: '@passing-old' }, async ({ page }) => {
+test('@S13', PASSING, async ({ page }) => {
   const h = givenHealth();
   failures(h.wf, 'Load', 'RuntimeError', 1, 120);
   h.wf.rename('Load', 'Load to DHIS2');
@@ -541,7 +537,7 @@ test('@S13', { tag: '@passing-old' }, async ({ page }) => {
 //   When I click "View history" on that row
 //   Then the flow "flow-workflow-health-drilldown" has started (its S01)
 //   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
-test('@S14', async ({ page }) => {
+test('@S14', NEW_ONLY, async ({ page }) => {
   const h = givenHealth();
   const loads = failures(h.wf, 'Load', 'RuntimeError', 2);
   const fetches = failures(h.wf, 'Fetch', 'AdaptorError', 1);
@@ -563,7 +559,7 @@ test('@S14', async ({ page }) => {
 //   When I click "Failed" in the "Outcomes" legend
 //   Then the flow "flow-workflow-health-drilldown" has started
 //   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
-test('@S15', async ({ page }) => {
+test('@S15', NEW_ONLY, async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, n: number) =>
     Array.from({ length: n }, () =>
@@ -589,7 +585,7 @@ test('@S15', async ({ page }) => {
 //   Then I see "Runs over time" with the meta "2-hour buckets · Africa/Nairobi"
 //   And the failed run is in the bar starting 14:00
 //   And hovering that bar shows "<today>, 14:00 – 16:00"
-test('@S16', { tag: '@passing-old' }, async ({ browser }) => {
+test('@S16', PASSING, async ({ browser }) => {
   const h = givenHealth();
   // The latest 11:30 UTC that has passed, so it is always inside 24 hours
   const now = new Date();
@@ -649,7 +645,7 @@ test('@S16', { tag: '@passing-old' }, async ({ browser }) => {
 //   Given my browser reports its timezone as "Etc/Unknown"
 //   When I open the "Runs" tab of the health page
 //   Then the meta ends "Etc/UTC"
-test('@S17', { tag: '@passing-old' }, async ({ page }) => {
+test('@S17', PASSING, async ({ page }) => {
   const h = givenHealth();
   await browserReportsTimezone(page, 'Etc/Unknown');
   await openHealth(page, h);
@@ -665,7 +661,7 @@ test('@S17', { tag: '@passing-old' }, async ({ page }) => {
 //   When I choose "Last 30 days"
 //   Then every panel shows a loading placeholder until its new numbers arrive
 //   And no panel shows numbers or an empty message for the 7-day window
-test('@S18', { tag: '@passing-old' }, async ({ page }) => {
+test('@S18', PASSING, async ({ page }) => {
   const h = givenHealth();
   // 3 successes and a failure in the last 7 days; 2 more successes 20 days ago
   seedWorkOrders(h.wf, 'success', 3);
@@ -718,7 +714,7 @@ test('@S18', { tag: '@passing-old' }, async ({ page }) => {
 //   Then "Last 30 days" is disabled
 //   And hovering it shows "Only 14 days of history are kept for this project."
 //   And "Last 24 hours" and "Last 7 days" are enabled
-test('@S19', { tag: '@passing-old' }, async ({ page }) => {
+test('@S19', PASSING, async ({ page }) => {
   const h = givenHealth();
   exec(
     `update projects set history_retention_period = 14 where id = '${h.project.id}'`
@@ -739,7 +735,7 @@ test('@S19', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open its health page with "Last 24 hours"
 //   Then "Outcomes" reads "No finished work orders in the last 24 hours"
 //   And "Failure breakdown", "Steps with failures" and the triage table read "No failures in the last 24 hours"
-test('@S20', { tag: '@passing-old' }, async ({ page }) => {
+test('@S20', PASSING, async ({ page }) => {
   const h = givenHealth();
   // Work from three days ago, so the 7-day window has numbers and 24 hours has none
   seedWorkOrders(h.wf, 'success', 2, 3 * 24 * 60);
@@ -769,7 +765,7 @@ test('@S20', { tag: '@passing-old' }, async ({ page }) => {
 //   When a work order of "Daily sync" settles as failed
 //   Then within a few minutes "Outcomes" counts it without a reload
 //   And when I switch to another browser tab and back, the page asks for fresh numbers at once
-test('@S21', { tag: '@passing-old' }, async ({ page }) => {
+test('@S21', PASSING, async ({ page }) => {
   test.setTimeout(150_000);
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 1);
@@ -795,7 +791,7 @@ test('@S21', { tag: '@passing-old' }, async ({ page }) => {
 //   Then "Steps with failures" and the triage table show "Could not load workflow stats. Refresh to try again."
 //   And "Outcomes" and "Failure breakdown" show their numbers
 //   And no server error text is shown
-test('@S22', { tag: '@passing-old' }, async ({ page }) => {
+test('@S22', PASSING, async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 2);
   seedWorkOrders(h.wf, 'failed', 1);
@@ -822,7 +818,7 @@ test('@S22', { tag: '@passing-old' }, async ({ page }) => {
 //   When one automatic refresh fails
 //   Then the previous numbers stay and no error is shown
 //   And the next successful refresh replaces them
-test('@S23', { tag: '@passing-old' }, async ({ page }) => {
+test('@S23', PASSING, async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 2);
   await openHealth(page, h);
@@ -870,7 +866,7 @@ test('@S23', { tag: '@passing-old' }, async ({ page }) => {
 //     | the request names "Daily sync" under project "Kenya TB", which I am not on  | 404 |
 test(
   '@S24',
-  { tag: ['@passing-old', '@serial'] },
+  { tag: ['@passing-old', '@passing-new', '@serial'] },
   async ({ page, request }) => {
     removeMfaOf(ME);
     const asked = async (
@@ -977,7 +973,7 @@ test(
 //   And if I was signed out, the flow "flow-login-return-to" starts for that URL
 test(
   '@S25',
-  { tag: ['@passing-old', '@serial'] },
+  { tag: ['@passing-old', '@passing-new', '@serial'] },
   async ({ page, request }) => {
     const h = givenHealth();
     sendFailureAlertOnNode(h.project.id, h.wf, ME);
@@ -1004,7 +1000,7 @@ test(
 //   And the flow "flow-digest-email" ends on this page (its S06)
 test(
   '@S26',
-  { tag: ['@passing-old', '@serial'] },
+  { tag: ['@passing-old', '@passing-new', '@serial'] },
   async ({ page, request }) => {
     const h = givenHealth();
     sendDigestOnNode(h.project.id, h.wf, ME);
@@ -1024,7 +1020,7 @@ test(
 //   When an editor deletes "Daily sync" in another session
 //   Then shared-project-scope S12 applies to this page
 //   And the flow "flow-delete-open-workflow" ends here (its S01, "the health page" row)
-test('@S27', { tag: '@passing-old' }, async ({ page }) => {
+test('@S27', PASSING, async ({ page }) => {
   const h = givenHealth();
 
   await projectScope.S12(
@@ -1043,7 +1039,7 @@ test('@S27', { tag: '@passing-old' }, async ({ page }) => {
 //   When I click the "Failed" band of the bar with 2
 //   Then History opens in this tab with the 2 work orders whose runs failed in that bar's slot
 //   And not the earlier failure, nor the successes in the same bar
-test('@S28', async ({ page }) => {
+test('@S28', NEW_ONLY, async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, minutesAgo: number) =>
     seedWorkOrder(h.wf, { state, minutesAgo, runs: [{ state }] });
@@ -1068,7 +1064,7 @@ test('@S28', async ({ page }) => {
 test.describe('shared-authenticated-session', () => {
   test(
     'shared-authenticated-session@S01 on workflow-health',
-    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S07']) },
+    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S07'], true) },
     async ({ page }) => {
       await authenticatedSession.S01(page, givenHealth().path, ME);
     }
@@ -1076,7 +1072,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S02 on workflow-health',
-    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S07']) },
+    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S07'], true) },
     async ({ page, browser }) => {
       await authenticatedSession.S02(page, browser, givenHealth().path, ME);
     }
@@ -1084,7 +1080,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S03 on workflow-health',
-    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S07']) },
+    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S07'], true) },
     async ({ page }) => {
       await authenticatedSession.S03(page, givenHealth().path, ME);
     }
@@ -1092,7 +1088,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S07 on workflow-health',
-    { tag: tagFor('S07', ['S01', 'S02', 'S03', 'S07']) },
+    { tag: tagFor('S07', ['S01', 'S02', 'S03', 'S07'], true) },
     async ({ page, browser }) => {
       const h = givenHealth();
       await authenticatedSession.S07(
@@ -1117,7 +1113,7 @@ test.describe('shared-authenticated-session', () => {
   ])
     test(
       `shared-authenticated-session@${id} on workflow-health`,
-      { tag: tagFor(id, ['S01', 'S02', 'S03', 'S07']) },
+      { tag: tagFor(id, ['S01', 'S02', 'S03', 'S07'], true) },
       () => {
         test.skip(
           true,
@@ -1132,20 +1128,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S01 on workflow-health',
     {
-      tag: tagFor('S01', [
+      tag: tagFor(
         'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       await projectScope.S01(page, givenHealth().path);
@@ -1155,20 +1155,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S02 on workflow-health',
     {
-      tag: tagFor('S02', [
-        'S01',
+      tag: tagFor(
         'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth();
@@ -1184,20 +1188,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S03 on workflow-health',
     {
-      tag: tagFor('S03', [
-        'S01',
-        'S02',
+      tag: tagFor(
         'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
@@ -1208,20 +1216,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S04 on workflow-health',
     {
-      tag: tagFor('S04', [
-        'S01',
-        'S02',
-        'S03',
+      tag: tagFor(
         'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
@@ -1235,20 +1247,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S05 on workflow-health',
     {
-      tag: tagFor('S05', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
+      tag: tagFor(
         'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth();
@@ -1264,22 +1280,26 @@ test.describe('shared-project-scope', () => {
     'shared-project-scope@S06 on workflow-health',
     {
       tag: [
-        tagFor('S06', [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
+        tagFor(
           'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ]),
+          [
+            'S01',
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+            'S11',
+            'S12',
+          ],
+          true
+        ),
         '@serial',
-      ],
+      ].flat(),
     },
     async ({ page }) => {
       const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
@@ -1299,20 +1319,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S07 on workflow-health',
     {
-      tag: tagFor('S07', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
+      tag: tagFor(
         'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth('Malawi HIV', { [ME]: 'editor', [OTHER]: 'owner' });
@@ -1325,20 +1349,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S08 on workflow-health',
     {
-      tag: tagFor('S08', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
+      tag: tagFor(
         'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth('Malawi HIV', { [ME]: 'admin', [OTHER]: 'owner' });
@@ -1356,22 +1384,26 @@ test.describe('shared-project-scope', () => {
     'shared-project-scope@S09 on workflow-health',
     {
       tag: [
-        tagFor('S09', [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
+        tagFor(
           'S09',
-          'S10',
-          'S11',
-          'S12',
-        ]),
+          [
+            'S01',
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+            'S11',
+            'S12',
+          ],
+          true
+        ),
         '@serial',
-      ],
+      ].flat(),
     },
     async ({ page }) => {
       const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
@@ -1388,20 +1420,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S10 on workflow-health',
     {
-      tag: tagFor('S10', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
+      tag: tagFor(
         'S10',
-        'S11',
-        'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth('Malawi HIV', { [ME]: 'editor', [OTHER]: 'owner' });
@@ -1415,20 +1451,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S11 on workflow-health',
     {
-      tag: tagFor('S11', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
+      tag: tagFor(
         'S11',
-        'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const parent = given('Malawi HIV', { [ME]: 'editor' });
@@ -1453,20 +1493,24 @@ test.describe('shared-project-scope', () => {
   test(
     'shared-project-scope@S12 on workflow-health',
     {
-      tag: tagFor('S12', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
+      tag: tagFor(
         'S12',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth();
@@ -1492,25 +1536,29 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S01 on workflow-health',
     {
-      tag: tagFor('S01', [
+      tag: tagFor(
         'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth(HOST);
@@ -1528,25 +1576,29 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S02 on workflow-health',
     {
-      tag: tagFor('S02', [
-        'S01',
+      tag: tagFor(
         'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth(HOST);
@@ -1557,25 +1609,29 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S03 on workflow-health',
     {
-      tag: tagFor('S03', [
-        'S01',
-        'S02',
+      tag: tagFor(
         'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const parent = given(HOST, { [ME]: 'editor' });
@@ -1594,25 +1650,29 @@ test.describe('shared-project-header', () => {
     test(
       `shared-project-header@${id} on workflow-health`,
       {
-        tag: tagFor(id, [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ]),
+        tag: tagFor(
+          id,
+          [
+            'S01',
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+            'S11',
+            'S12',
+            'S13',
+            'S15',
+            'S16',
+            'S17',
+            'S18',
+          ],
+          true
+        ),
       },
       async ({ page }) => {
         const h = givenHealth(HOST);
@@ -1625,27 +1685,31 @@ test.describe('shared-project-header', () => {
     'shared-project-header@S07 on workflow-health',
     {
       tag: [
-        tagFor('S07', [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
+        tagFor(
           'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ]),
+          [
+            'S01',
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+            'S11',
+            'S12',
+            'S13',
+            'S15',
+            'S16',
+            'S17',
+            'S18',
+          ],
+          true
+        ),
         '@serial',
-      ],
+      ].flat(),
     },
     async ({ page }) => {
       const h = givenHealth(HOST);
@@ -1658,67 +1722,9 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S09 on workflow-health',
     {
-      tag: tagFor('S09', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
+      tag: tagFor(
         'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
-    },
-    async ({ page }) => {
-      await projectHeader.S09(page, ME);
-    }
-  );
-
-  // The Examples row "a workflow's editor | the workflows page": like the
-  // editor, this page belongs to one workflow of the project
-  test(
-    'shared-project-header@S10 on workflow-health',
-    {
-      tag: tagFor('S10', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
-    },
-    async ({ page }) => {
-      const h = givenHealth(HOST);
-      await projectHeader.S10(page, h.path, ME, '/w');
-    }
-  );
-
-  for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on workflow-health`,
-      {
-        tag: tagFor(id, [
+        [
           'S01',
           'S02',
           'S03',
@@ -1736,7 +1742,77 @@ test.describe('shared-project-header', () => {
           'S16',
           'S17',
           'S18',
-        ]),
+        ],
+        true
+      ),
+    },
+    async ({ page }) => {
+      await projectHeader.S09(page, ME);
+    }
+  );
+
+  // The Examples row "a workflow's editor | the workflows page": like the
+  // editor, this page belongs to one workflow of the project
+  test(
+    'shared-project-header@S10 on workflow-health',
+    {
+      tag: tagFor(
+        'S10',
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
+    },
+    async ({ page }) => {
+      const h = givenHealth(HOST);
+      await projectHeader.S10(page, h.path, ME, '/w');
+    }
+  );
+
+  for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
+    test(
+      `shared-project-header@${id} on workflow-health`,
+      {
+        tag: tagFor(
+          id,
+          [
+            'S01',
+            'S02',
+            'S03',
+            'S04',
+            'S05',
+            'S06',
+            'S07',
+            'S08',
+            'S09',
+            'S10',
+            'S11',
+            'S12',
+            'S13',
+            'S15',
+            'S16',
+            'S17',
+            'S18',
+          ],
+          true
+        ),
       },
       async ({ page }) => {
         const h = givenHealth(HOST);
@@ -1747,25 +1823,29 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S14 on workflow-health',
     {
-      tag: tagFor('S14', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
+      tag: tagFor(
+        'S14',
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     () => {
       test.skip(
@@ -1779,25 +1859,29 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S15 on workflow-health',
     {
-      tag: tagFor('S15', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
+      tag: tagFor(
         'S15',
-        'S16',
-        'S17',
-        'S18',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth(HOST);
@@ -1809,25 +1893,29 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S16 on workflow-health',
     {
-      tag: tagFor('S16', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
+      tag: tagFor(
         'S16',
-        'S17',
-        'S18',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth(HOST);
@@ -1839,25 +1927,29 @@ test.describe('shared-project-header', () => {
   test(
     'shared-project-header@S17 on workflow-health',
     {
-      tag: tagFor('S17', [
-        'S01',
-        'S02',
-        'S03',
-        'S04',
-        'S05',
-        'S06',
-        'S07',
-        'S08',
-        'S09',
-        'S10',
-        'S11',
-        'S12',
-        'S13',
-        'S15',
-        'S16',
+      tag: tagFor(
         'S17',
-        'S18',
-      ]),
+        [
+          'S01',
+          'S02',
+          'S03',
+          'S04',
+          'S05',
+          'S06',
+          'S07',
+          'S08',
+          'S09',
+          'S10',
+          'S11',
+          'S12',
+          'S13',
+          'S15',
+          'S16',
+          'S17',
+          'S18',
+        ],
+        true
+      ),
     },
     async ({ page }) => {
       const h = givenHealth(HOST, {
@@ -1887,7 +1979,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S01 on workflow-health',
-    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const { deleteIt } = await withDeletion(page);
       await flashMessages.S01(page, FLASH, deleteIt);
@@ -1897,7 +1989,7 @@ test.describe('shared-flash-messages', () => {
   // The error flash this page can end up showing: "Workflow not found"
   test(
     'shared-flash-messages@S02 on workflow-health',
-    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const h = givenHealth();
       const other = givenHealth('Kenya TB', { [ME]: 'viewer' });
@@ -1910,7 +2002,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S03 on workflow-health',
-    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const { deleteIt } = await withDeletion(page);
       await flashMessages.S03(page, FLASH, deleteIt);
@@ -1919,7 +2011,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S04 on workflow-health',
-    { tag: tagFor('S04', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S04', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const { deleteIt } = await withDeletion(page);
       await flashMessages.S04(page, FLASH, deleteIt, async () => {
@@ -1934,7 +2026,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S05 on workflow-health',
-    { tag: tagFor('S05', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S05', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const { h, deleteIt } = await withDeletion(page);
       await flashMessages.S05(
@@ -1948,7 +2040,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S06 on workflow-health',
-    { tag: tagFor('S06', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06']) },
+    { tag: tagFor('S06', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
     async ({ page }) => {
       const h = givenHealth();
       const notMine = givenHealth('Kenya TB', { [OTHER]: 'owner' });

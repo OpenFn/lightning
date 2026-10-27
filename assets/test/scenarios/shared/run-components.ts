@@ -5,7 +5,7 @@
 // a LiveView page.
 import { expect, type Locator, type Page } from '@playwright/test';
 
-import { carriedMarker, expectAt, runStateOf } from '../steps';
+import { carriedMarker, expectAt, pointAt, runStateOf } from '../steps';
 
 const flash = (page: Page, text: string | RegExp) =>
   page
@@ -15,14 +15,15 @@ const flash = (page: Page, text: string | RegExp) =>
 
 // What an outcome icon looks like: its colour, and its markup, which differs
 // from one icon to the next. The icon is the leftmost element in the row that
-// holds no text.
+// holds no text; of the ones wrapped around it (a link), the innermost.
 async function iconOf(row: Locator) {
   return row.evaluate(el => {
     const empty = Array.from(el.querySelectorAll('*')).filter(
       n => !(n.textContent ?? '').trim() && n.getBoundingClientRect().width > 0
     );
     const left = Math.min(...empty.map(n => n.getBoundingClientRect().left));
-    const icon = empty.find(n => n.getBoundingClientRect().left === left)!;
+    const tied = empty.filter(n => n.getBoundingClientRect().left === left);
+    const icon = tied.find(n => !tied.some(m => m !== n && n.contains(m)))!;
     // Painted on a canvas to read it as RGB: Tailwind v4 colours are oklch
     const ctx = document.createElement('canvas').getContext('2d')!;
     ctx.fillStyle = getComputedStyle(icon).color;
@@ -128,11 +129,30 @@ export async function S05(_page: Page, step: Locator, run: Locator) {
 //   Then the steps reused from "R1" are faded with a paperclip whose tooltip says it "was originally executed in a previous run"
 //   And the step that ran in "R2" has no paperclip
 export async function S06(page: Page, carried: Locator, ran: Locator) {
-  // Faded means less opaque than the step that ran, not a particular value
+  // Faded means its text is drawn less opaque than the step that ran's, not
+  // a particular value: the lowest opacity any of a row's text gets, through
+  // every element from the text up to the row
   await expect(ran).toHaveCSS('opacity', '1');
-  const opacityOf = (row: Locator) =>
-    row.evaluate(el => Number(getComputedStyle(el).opacity));
-  expect(await opacityOf(carried)).toBeLessThan(1);
+  const fadeOf = (row: Locator) =>
+    row.evaluate(root => {
+      const texts = [root, ...root.querySelectorAll('*')].filter(el =>
+        [...el.childNodes].some(
+          n => n.nodeType === Node.TEXT_NODE && n.textContent!.trim()
+        )
+      );
+      const drawn = texts.map(el => {
+        let opacity = 1;
+        for (
+          let n: Element | null = el;
+          n && n !== root.parentElement;
+          n = n.parentElement
+        )
+          opacity *= Number(getComputedStyle(n).opacity);
+        return opacity;
+      });
+      return Math.min(...drawn);
+    });
+  expect(await fadeOf(carried)).toBeLessThan(await fadeOf(ran));
   await expect(carriedMarker(carried)).toHaveCount(1);
   await carriedMarker(carried).hover();
   await expect(page.getByRole('tooltip')).toContainText(
@@ -209,7 +229,7 @@ export async function S09(
 
   await expect(flash(page, 'Run cancelled.')).toBeVisible();
   expect(runStateOf(runId)).toBe('cancelled');
-  await expect(runBlock).toContainText('cancelled');
+  await expect(runBlock).toContainText(/cancelled/i);
   await expect(cancel).toHaveCount(0);
 }
 
@@ -273,7 +293,7 @@ export async function S13(
   editor: { page: Page; icon: Locator },
   projectId: string
 ) {
-  await admin.icon.hover();
+  await pointAt(admin.icon);
   const adminTip = admin.page.getByRole('tooltip');
   await expect(adminTip).toContainText(
     'This work order cannot be rerun since no input data has been stored'
@@ -282,7 +302,7 @@ export async function S13(
     adminTip.getByRole('link', { name: 'Go to data storage settings' })
   ).toHaveAttribute('href', `/projects/${projectId}/settings#data-storage`);
 
-  await editor.icon.hover();
+  await pointAt(editor.icon);
   const editorTip = editor.page.getByRole('tooltip');
   await expect(editorTip).toContainText(
     'For more information, contact one of your project admins.'
@@ -299,13 +319,14 @@ export async function S13(
 // `runCount` reads how many runs the work order has; a working icon would add
 // one within a moment of the click.
 export async function S14(page: Page, icon: Locator, runCount: () => number) {
-  await icon.hover();
+  await pointAt(icon);
   await expect(page.getByRole('tooltip')).toContainText(
     'This step has been deleted and cannot be retried'
   );
 
   const before = runCount();
-  await icon.click();
+  // Clicked where it is, even if it ignores the pointer (a disabled button)
+  await icon.click({ force: true });
   await page.waitForTimeout(1500);
 
   expect(runCount()).toBe(before);
