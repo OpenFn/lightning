@@ -55,14 +55,6 @@ import {
 } from '../../../js/collaborative-editor/components/CollaborativeMonaco';
 import { MonacoRefProvider } from '../../../js/collaborative-editor/contexts/MonacoRefContext';
 
-// Extend window type for test refs
-declare global {
-  interface Window {
-    testMonacoRef?: React.RefObject<MonacoHandle>;
-    testRef?: React.RefObject<MonacoHandle>;
-  }
-}
-
 // Mock y-monaco
 vi.mock('y-monaco', () => ({
   MonacoBinding: vi.fn(() => ({

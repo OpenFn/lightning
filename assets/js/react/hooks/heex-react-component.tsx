@@ -279,7 +279,7 @@ export const HeexReactComponent = {
 
     this._root = ReactDOMClient.createRoot(this._containerEl, {
       identifierPrefix: this._getKey(),
-      // TODO: [error handling](https://18.react.dev/reference/react-dom/client/createRoot#displaying-a-dialog-for-recoverable-errors)?
+      // TODO: [error handling](https://react.dev/reference/react-dom/client/createRoot)?
       onRecoverableError: (error, errorInfo) => {
         console.error(
           'Recoverable error',

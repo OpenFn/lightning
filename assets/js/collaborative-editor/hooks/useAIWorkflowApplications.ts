@@ -130,7 +130,7 @@ export function useAIWorkflowApplications({
   setPreviewingMessageId: (id: string | null) => void;
   previewingMessageId: string | null;
   setApplyingMessageId: (id: string | null) => void;
-  appliedMessageIdsRef: React.MutableRefObject<Set<string>>;
+  appliedMessageIdsRef: RefObject<Set<string>>;
   /**
    * Pending streaming apply record from AIAssistantStore: the YAML already
    * imported to the canvas during streaming (see StreamingApplyState).
