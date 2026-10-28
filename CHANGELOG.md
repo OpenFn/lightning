@@ -31,13 +31,12 @@ and this project adheres to
     body ignored. A request with no body is let through whatever its type.
   - A path that matches no route answers 404 `not_found` before authentication.
   - An `Accept` header that doesn't allow JSON answers 406 `not_acceptable` with
-    a problem document as `application/json`. A body that doesn't arrive in time
-    answers 408 `request_timeout`, and a query string over 1,000,000 bytes 414
-    `uri_too_long`. Every other request Lightning refuses answers by its own
-    status, so only a failure inside Lightning answers 500 `internal`, with a
-    problem document whose content type follows `Accept` like the rest. That
-    includes a failure in a plug before the router, such as the session or CORS,
-    which used to answer an HTML page to `Accept: */*`.
+    a problem document as `application/json`. A query string over 1,000,000
+    bytes answers 414 `uri_too_long`. Every other request Lightning refuses
+    answers by its own status, so only a failure inside Lightning answers 500
+    `internal`, with a problem document whose content type follows `Accept` like
+    the rest. That includes a failure in a plug before the router, such as the
+    session or CORS, which used to answer an HTML page to `Accept: */*`.
   - An id that isn't a UUID answers 404 `not_found` instead of 400 on
     `GET /api/jobs/:id`, `/api/runs/:id`, `/api/work_orders/:id` and
     `/api/provision/:id`, their `/api/projects/:project_id/...` forms, the
