@@ -181,33 +181,30 @@ user later:
 Lightning doesn't email the users it creates, so whoever runs the automation has
 to tell them their account exists.
 
-If a user already has the email, in any case, Lightning answers 409 `taken` and
-leaves that user alone, so automation can run the same request again safely. The
-answer carries the existing user's id in `existing`, and nothing else about
-them:
+If a user already has the email, in any case, Lightning answers 422 `invalid`
+with a `taken` entry at `#/email` and leaves that user alone, so automation can
+run the same request again safely. The answer says nothing about that user:
 
 ```json
 {
   "type": "about:blank",
-  "title": "Conflict",
-  "status": 409,
-  "code": "taken",
-  "detail": "A value that must be unique is already in use. See errors.",
+  "title": "Unprocessable Content",
+  "status": 422,
+  "code": "invalid",
+  "detail": "The request is not valid. See errors.",
   "errors": [
     {
       "pointer": "#/email",
       "code": "taken",
       "detail": "has already been taken"
     }
-  ],
-  "existing": { "id": "604f0cd2-37fb-4833-a5e1-821555b5b314" }
+  ]
 }
 ```
 
-If another field is wrong as well, Lightning answers 422 `invalid` instead, with
-the email's `taken` entry among the others and no `existing`.
+If another field is wrong as well, its entry sits beside the email's.
 
-Find a user by email:
+To get the existing user's id, find them by email:
 
 ```bash
 curl "https://lightning.example.org/api/users?email=ada@example.com" \
@@ -354,14 +351,13 @@ the name of a query `parameter`. Entries never quote a value from the request.
   Lightning refuses changes until the deletion is cancelled or completes.
 - 409 `id_taken`: the id already belongs to a collection in another project, or
   to a credential with a different owner. Lightning never moves either.
-- 409 `taken`: the value at the entry's pointer must be unique and is already in
-  use. That is a user's email, a collection's name within its project, or a
-  credential's name among its owner's credentials.
 - 415 `unsupported_media_type`: the body isn't sent as JSON.
 - 422 `invalid`: the body doesn't fit. `errors` has an entry for each field that
-  is wrong. On the projects, collections and credentials routes it also has one
-  for each key the route doesn't accept. The users routes ignore keys they don't
-  take.
+  is wrong. A `taken` entry means the value must be unique and is already in
+  use: a user's email, a collection's name within its project, or a credential's
+  name among its owner's credentials. On the projects, collections and
+  credentials routes it also has one for each key the route doesn't accept. The
+  users routes ignore keys they don't take.
 - 503 `not_ready`, with `Retry-After`: Lightning can't check a credential's
   schema yet. Try again after the number of seconds it gives.
 

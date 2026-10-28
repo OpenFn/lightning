@@ -255,7 +255,7 @@ defmodule LightningWeb.API.CollectionControllerTest do
   describe "PUT refuses a name or id already held" do
     setup :service_account
 
-    test "answers 409 taken at the name when another collection in the project has it",
+    test "answers 422 invalid with a taken entry at the name when another collection in the project has it",
          %{conn: conn, project: project} do
       insert(:collection, project: project, name: "patients")
       other = insert(:collection, project: project, name: "visits")
@@ -266,13 +266,13 @@ defmodule LightningWeb.API.CollectionControllerTest do
       ]
 
       created = put_collection(conn, project.id, id, %{"name" => "patients"})
-      assert_problem(created, 409, :taken, taken)
+      assert_problem(created, 422, :invalid, taken)
       refute Repo.get(Collection, id)
 
       renamed =
         put_collection(conn, project.id, other.id, %{"name" => "patients"})
 
-      assert_problem(renamed, 409, :taken, taken)
+      assert_problem(renamed, 422, :invalid, taken)
       assert Repo.reload!(other).name == "visits"
     end
 

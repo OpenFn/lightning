@@ -79,13 +79,17 @@ and this project adheres to
   - On the projects, workflows, jobs, runs, work orders and log lines routes,
     the 403 comes whether or not what the token names exists, instead of 404
     or 500.
+- A value in the body that must be unique and is already in use, such as a
+  user's email or a collection's name, is a `taken` entry in a 422 `invalid`
+  answer, like any other problem with the body. No route answers 409 `taken`.
+  409 is only about the state of the record the URL names, as in `id_taken`,
+  `scheduled_for_deletion` or `concurrent_edit`.
 - `/api/users` answers every error with a problem document, whose `errors` list
   has one entry per field, each with a `pointer`, a `code` and a `detail`:
-  - `POST /api/users` with an email already taken answers 409 with
-    `"code": "taken"`, an entry at `#/email` and the existing user's id in
-    `existing.id`, instead of the existing user as `{"data": {...}}`. When
-    another field is also wrong it answers 422 `invalid`, with the email as one
-    of the entries, instead of 409.
+  - `POST /api/users` with an email already taken answers 422 `invalid` with a
+    `taken` entry at `#/email`, instead of the existing user as
+    `{"data": {...}}`. The answer says nothing about that user. Find them with
+    `GET /api/users?email=`.
   - `POST /api/users` and `PATCH /api/users/:id` answer a field error with 422
     `invalid` instead of `{"errors": {"<field>": ["<message>"]}}`.
   - `POST /api/users` and `PATCH /api/users/:id` with a body that isn't a JSON
@@ -147,8 +151,8 @@ and this project adheres to
   - `POST /api/credentials` with a body that isn't a JSON object, such as an
     array, answers 400 `malformed` instead of 422.
   - `POST /api/credentials` with a name the user already holds, or an external
-    ID already in use, answers 409 `taken` with an entry at `#/name` or
-    `#/external_id`, instead of 422.
+    ID already in use, answers 422 `invalid` with a `taken` entry at `#/name` or
+    `#/external_id`.
   - `POST /api/credentials` with a typed body while the adaptor catalogue is
     still loading answers 503 `not_ready` with `Retry-After: 5`, instead of 422.
   - `DELETE /api/credentials/:id` for a credential that doesn't exist, or an id
@@ -175,11 +179,10 @@ and this project adheres to
     instead of an error quoting the name. A channel's credential errors point at
     `#/channels/<i>/destination_credential_id`, the key the document sends.
   - Two jobs with one name in a workflow, or any other value that must be
-    unique, answers 409 `taken` with an entry at the clashing field, instead
-    of 422.
+    unique, answers 422 `invalid` with a `taken` entry at the clashing field.
   - A project credential, collection or channel `id` that another project
-    already uses answers 409 `taken` with an entry at that item's `id`, as in
-    `#/collections/1/id`, instead of failing with a 500.
+    already uses answers 422 `invalid` with a `taken` entry at that item's `id`,
+    as in `#/collections/1/id`, instead of failing with a 500.
   - A project `id` naming a project the caller has no standing on (not a member,
     or for a repo connection any project but its own) answers 404 `not_found`,
     the same answer as for one that doesn't exist, instead of 403
@@ -257,8 +260,7 @@ and this project adheres to
     request carries gets an entry at that edge's key, where the reference used
     to be dropped.
   - A job, trigger or edge id already in use, or any other value that must be
-    unique, answers 409 `taken` with an entry at the clashing field, instead
-    of 422.
+    unique, answers 422 `invalid` with a `taken` entry at the clashing field.
   - The plan limit on active workflows answers 402 `exceeds_limit`, instead of
     422 with the limiter's message at `project_id`, and only once the body is
     valid, so an invalid body gets its 422 first. Only a request that enables a

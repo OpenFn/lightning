@@ -332,7 +332,7 @@ defmodule LightningWeb.API.Workflows.CreatingTest do
       ])
     end
 
-    test "returns 409 when there is a duplicated id", %{
+    test "returns 422 with a taken entry when there is a duplicated id", %{
       conn: conn,
       project: project
     } do
@@ -354,7 +354,7 @@ defmodule LightningWeb.API.Workflows.CreatingTest do
           Jason.encode!(workflow)
         )
 
-      assert_problem(conn, 409, :taken, [
+      assert_problem(conn, 422, :invalid, [
         %{
           "pointer" => "#/edges/0/id",
           "code" => "taken",

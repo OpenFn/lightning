@@ -16,6 +16,7 @@ Tests for these files follow `.claude/rules/api-tests.md`. Policies and `Lightni
 
 - Every error on `/api/*` (except the OAuth token endpoint), `/collections/*` and `/adaptors/catalogue` is an RFC 9457 problem document built by `LightningWeb.API.Problem`; `LightningWeb.API.ProblemPaths` lists those paths. Answer an error by returning it to `FallbackController`, or with `Problem.new/2` and `Problem.respond/2` in a controller without the fallback. `Lightning.Credo.Check.ApiErrorsAsProblems` refuses an error status set with `put_status`, `send_resp` or `resp`.
 - Entries built in web go out as `Errors.refuse(entries)`; the fallback passes a `%Problem{}` straight through. When a schema field isn't the key the client sent, call `Errors.problem(changeset, renames)` so each pointer uses the client's key.
+- An entry says where the problem is, its `code` and its `detail`, and never anything about another record, such as the id of the user who holds a taken email. A refusal must not tell a token more than its grants allow; a client that needs the other record reads it with a token that may.
 
 ## Order and statuses
 
@@ -49,7 +50,7 @@ Tests for these files follow `.claude/rules/api-tests.md`. Policies and `Lightni
 
 - Five steps:
   1. Choose the pipeline; for people and the service account, `person_or_service_account_api`.
-  2. Give the action a token grant and a rule in a policy (see `policies.md`). A new resource API brings its own write grant, added to `Lightning.ServiceAccount.AccessToken`'s list; a write grant also covers reads of that resource.
+  2. Give the action a token grant and a rule in a policy (see `policies.md`). A new resource API brings its own write grant, added to `Lightning.ServiceAccount.AccessToken`'s list; a write grant also covers reads of that resource, unless the resource has its own read grant, as users have `users:read`.
   3. Add `plug AuthorizeAction, {policy, action}` per action.
   4. Use `Target.project/3` or `Target.in_project/4` on `conn.assigns.scope`; delete hand-written not-found branches.
   5. Leave every status to `FallbackController`.

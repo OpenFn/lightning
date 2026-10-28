@@ -278,7 +278,7 @@ defmodule LightningWeb.API.ErrorsTest do
                }
     end
 
-    test "answers 409 taken when every error is taken, whether a unique constraint or an application check found it" do
+    test "answers 422 invalid with a taken entry when the only error is taken, whether a unique constraint or an application check found it" do
       seed_ready_catalogue()
       ensure_adaptor(@adaptor)
       job = insert(:job, name: "taken", adaptor: @adaptor)
@@ -307,7 +307,7 @@ defmodule LightningWeb.API.ErrorsTest do
             {check, entry_at("#/email", :taken, "has already been taken")}
           ] do
         assert Errors.problem(changeset) ==
-                 %Problem{status: 409, code: :taken, errors: [entry]}
+                 %Problem{status: 422, code: :invalid, errors: [entry]}
       end
     end
   end

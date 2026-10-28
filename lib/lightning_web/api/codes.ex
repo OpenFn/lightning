@@ -25,7 +25,6 @@ defmodule LightningWeb.API.Codes do
     scheduled_for_deletion:
       {409, "This is scheduled for deletion. Cancel the deletion first."},
     id_taken: {409, "The id is already in use."},
-    taken: {409, "A value that must be unique is already in use. See errors."},
     being_edited: {409, "This workflow is open in the editor."},
     concurrent_edit:
       {409,

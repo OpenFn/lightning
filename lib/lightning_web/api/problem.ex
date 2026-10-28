@@ -29,7 +29,7 @@ defmodule LightningWeb.API.Problem do
 
     * `:errors` - the entries, from `LightningWeb.API.Errors`.
     * `:extensions` - members the spec names for this answer, such as
-      `existing` or `work_order_id`.
+      `work_order_id`.
     * `:headers` - response headers that belong to the answer.
     * `:retry_after` - seconds, sent as `retry-after`; `nil` sends none.
     * `:status` - one of `LightningWeb.API.Codes.statuses/1` for `code`

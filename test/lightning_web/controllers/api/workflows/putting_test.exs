@@ -264,10 +264,11 @@ defmodule LightningWeb.API.Workflows.PuttingTest do
       ])
     end
 
-    test "returns 409 when one id belongs to another workflow", %{
-      conn: conn,
-      project: project
-    } do
+    test "returns 422 with a taken entry when one id belongs to another workflow",
+         %{
+           conn: conn,
+           project: project
+         } do
       %{triggers: [trigger]} =
         workflow =
         insert(:simple_workflow, name: "work1.0", project: project)
@@ -309,7 +310,7 @@ defmodule LightningWeb.API.Workflows.PuttingTest do
           Jason.encode!(complete_update_external_id)
         )
 
-      assert_problem(conn, 409, :taken, [
+      assert_problem(conn, 422, :invalid, [
         %{
           "pointer" => "#/jobs/0/id",
           "code" => "taken",

@@ -5,10 +5,9 @@ defmodule LightningWeb.API.UserController do
   `POST /api/users` takes a flat object of `email`, `password`, `first_name`,
   `last_name`, `role` (`user` or `superuser`) and `confirmed`, and refuses any
   other key with a 422 `unknown_key` entry at that key, alongside every other
-  error in the body. It answers 201 with the new user. When the email is
-  already taken in any case and nothing else is wrong, it answers 409 `taken`
-  with the existing user's id in `existing`, and nothing else of that user
-  (error-format spec §9.9).
+  error in the body. It answers 201 with the new user. An email already taken
+  in any case is a `taken` entry at `#/email`, which names nothing about the
+  user who holds it.
 
   `PATCH /api/users/:id` takes any of `first_name`, `last_name`, `role`,
   `password` and `confirmed`, with the same rules as a create, and refuses any
@@ -24,12 +23,10 @@ defmodule LightningWeb.API.UserController do
   """
   use LightningWeb, :controller
 
-  alias Ecto.Changeset
   alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
-  alias LightningWeb.API.Problem
   alias LightningWeb.API.Request
   alias LightningWeb.Plugs.AuthorizeAction
 
@@ -89,21 +86,17 @@ defmodule LightningWeb.API.UserController do
          :ok <-
            refuse_unknown_keys(body, @create_fields, fn ->
              Accounts.change_user(%User{}, attrs)
-           end) do
-      case Accounts.create_user(attrs, conn.assigns.current_resource) do
-        {:ok, user} ->
-          conn
-          |> put_status(:created)
-          |> render("show.json", user: user, conn: conn)
-
-        {:error, changeset} ->
-          {:error, creation_problem(changeset)}
-      end
+           end),
+         {:ok, user} <-
+           Accounts.create_user(attrs, conn.assigns.current_resource) do
+      conn
+      |> put_status(:created)
+      |> render("show.json", user: user, conn: conn)
     end
   end
 
   # An unknown key refuses the body together with every error its changeset
-  # holds, so a taken email beside one is a 422 and never the 409.
+  # holds.
   defp refuse_unknown_keys(body, accepted, build_changeset) do
     case Request.unknown_keys(body, [], accepted) do
       [] ->
@@ -111,21 +104,6 @@ defmodule LightningWeb.API.UserController do
 
       unknown ->
         Errors.refuse(unknown ++ Errors.from_changeset(build_changeset.()))
-    end
-  end
-
-  # A create's only unique field is the email, so a `taken` problem means a
-  # user holds it, unless that user was deleted since.
-  defp creation_problem(changeset) do
-    case Errors.problem(changeset) do
-      %Problem{code: :taken} = problem ->
-        case Accounts.get_user_by_email(Changeset.get_field(changeset, :email)) do
-          %User{id: id} -> %{problem | extensions: %{existing: %{id: id}}}
-          nil -> problem
-        end
-
-      problem ->
-        problem
     end
   end
 

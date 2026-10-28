@@ -237,7 +237,7 @@ defmodule LightningWeb.API.ProvisioningInvalidDocumentsTest do
              "a refused document deleted a job"
     end
 
-    test "two jobs with one name answer 409 taken, with one entry", %{
+    test "two jobs with one name answer 422 invalid, with one taken entry", %{
       conn: conn,
       project: project
     } do
@@ -250,7 +250,7 @@ defmodule LightningWeb.API.ProvisioningInvalidDocumentsTest do
 
       conn
       |> post(~p"/api/provision", body)
-      |> assert_problem(409, :taken, [
+      |> assert_problem(422, :invalid, [
         %{
           "pointer" => "#/workflows/0/jobs/1/name",
           "code" => "taken",
@@ -259,7 +259,7 @@ defmodule LightningWeb.API.ProvisioningInvalidDocumentsTest do
       ])
     end
 
-    test "a project credential, collection or channel id another project uses answers 409 taken at its position",
+    test "a project credential, collection or channel id another project uses answers 422 invalid with a taken entry at its position",
          %{conn: conn, project: project, user: user} do
       insert(:credential, user: user, name: "mine")
       %{body: body} = valid_payload(project.id)
@@ -288,7 +288,7 @@ defmodule LightningWeb.API.ProvisioningInvalidDocumentsTest do
 
         conn
         |> post(~p"/api/provision", body)
-        |> assert_problem(409, :taken, [
+        |> assert_problem(422, :invalid, [
           %{
             "pointer" => "#/#{key}/1/id",
             "code" => "taken",

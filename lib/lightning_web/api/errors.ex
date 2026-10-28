@@ -86,11 +86,11 @@ defmodule LightningWeb.API.Errors do
        failed, not the request (spec §6.2);
     2. any error coded `not_ready`: 503 `not_ready`, with no entries;
     3. every error `exceeds_limit`: 402 `exceeds_limit`;
-    4. every error `taken`: 409 `taken`;
-    5. otherwise 422 `invalid`, without any `exceeds_limit` entries.
+    4. otherwise 422 `invalid`, without any `exceeds_limit` entries.
 
-  A unique constraint and an application-level check both answer 409, since
-  they report the same clash and which one caught it is a race.
+  A value in the body that must be unique and is already in use is a `taken`
+  entry in the 422 like any other problem with the body. 409 is only for the
+  state of the record the URL names.
   """
   @spec problem(Changeset.t(), %{atom() => atom()}, path: [atom()]) ::
           Problem.t()
@@ -114,9 +114,6 @@ defmodule LightningWeb.API.Errors do
 
       Enum.all?(codes, &(&1 == :exceeds_limit)) ->
         Problem.new(:exceeds_limit, errors: entries)
-
-      Enum.all?(codes, &(&1 == :taken)) ->
-        Problem.new(:taken, errors: entries)
 
       true ->
         Problem.new(:invalid,

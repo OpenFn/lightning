@@ -90,9 +90,7 @@ defmodule LightningWeb.API.UsersCreatingTest do
       refute Accounts.get_user_by_email("colourful@example.com")
     end
 
-    test "more than one error is a 422 with every entry, never a 409", %{
-      conn: conn
-    } do
+    test "more than one error is a 422 with every entry", %{conn: conn} do
       insert(:user, email: "taken@example.com")
 
       unknown = fn key ->
@@ -152,26 +150,22 @@ defmodule LightningWeb.API.UsersCreatingTest do
                }
              ]}
           ] do
-        body =
-          conn
-          |> post(~p"/api/users", body)
-          |> assert_problem(422, :invalid, entries)
-
-        refute Map.has_key?(body, "existing")
+        conn
+        |> post(~p"/api/users", body)
+        |> assert_problem(422, :invalid, entries)
       end
 
       refute Accounts.get_user_by_email("nopass@example.com")
     end
 
-    test "answers 409 taken with only the existing user's id when the email is taken in any case",
+    test "answers 422 with a taken entry that names nothing about the holder when the email is taken in any case",
          %{conn: conn} do
-      existing =
-        insert(:user,
-          email: "taken@example.com",
-          first_name: "Tak",
-          last_name: "En",
-          role: :superuser
-        )
+      insert(:user,
+        email: "taken@example.com",
+        first_name: "Tak",
+        last_name: "En",
+        role: :superuser
+      )
 
       conn =
         post(conn, ~p"/api/users", %{
@@ -183,52 +177,16 @@ defmodule LightningWeb.API.UsersCreatingTest do
         })
 
       body =
-        assert_problem(conn, 409, :taken, [
+        assert_problem(conn, 422, :invalid, [
           %{
             "pointer" => "#/email",
             "code" => "taken",
             "detail" => "has already been taken"
           }
         ])
-
-      assert body["existing"] == %{"id" => existing.id}
 
       assert body |> Map.keys() |> Enum.sort() ==
-               ~w(code detail errors existing status title type)
-    end
-
-    test "answers 409 taken without existing when the holder is gone by the time it is looked up",
-         %{conn: conn} do
-      attrs = %{
-        "email" => "taken@example.com",
-        "password" => password(),
-        "first_name" => "Other",
-        "last_name" => "Person"
-      }
-
-      holder = insert(:user, email: "taken@example.com")
-
-      {:error, refused} =
-        Lightning.Extensions.AccountHook.handle_create_user(attrs)
-
-      Lightning.Repo.delete!(holder)
-
-      Mox.expect(Lightning.Extensions.MockAccountHook, :handle_create_user, fn
-        ^attrs -> {:error, refused}
-      end)
-
-      body =
-        conn
-        |> post(~p"/api/users", attrs)
-        |> assert_problem(409, :taken, [
-          %{
-            "pointer" => "#/email",
-            "code" => "taken",
-            "detail" => "has already been taken"
-          }
-        ])
-
-      refute Map.has_key?(body, "existing")
+               ~w(code detail errors status title type)
     end
 
     test "answers 422 with an entry at each field that breaks a rule", %{

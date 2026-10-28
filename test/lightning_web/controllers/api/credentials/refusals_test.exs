@@ -185,7 +185,7 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
   end
 
   describe "a name already held" do
-    test "answers 409 taken for a name the caller already holds, on POST and PUT",
+    test "answers 422 invalid with a taken entry for a name the caller already holds, on POST and PUT",
          %{conn: conn} do
       user = insert(:user)
       held = insert(:credential, user: user, name: "Taken")
@@ -203,17 +203,17 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
 
       conn
       |> post(~p"/api/credentials", credential_body(%{"name" => "Taken"}))
-      |> assert_problem(409, :taken, taken)
+      |> assert_problem(422, :invalid, taken)
 
       conn
       |> put_credential(new_id, credential_body(%{"name" => "Taken"}))
-      |> assert_problem(409, :taken, taken)
+      |> assert_problem(422, :invalid, taken)
 
       refute Repo.get(Credential, new_id)
 
       conn
       |> put_credential(renamed.id, credential_body(%{"name" => held.name}))
-      |> assert_problem(409, :taken, taken)
+      |> assert_problem(422, :invalid, taken)
 
       assert Repo.reload!(renamed).name == "Mine"
     end
