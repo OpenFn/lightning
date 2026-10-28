@@ -173,7 +173,8 @@
           {Credo.Check.Readability.SeparateAliasRequire, []},
           {Credo.Check.Readability.StrictModuleLayout, []},
           # Lightning's own, from credo/checks/
-          {Lightning.Credo.Check.ChangesetErrorCode, []}
+          {Lightning.Credo.Check.ChangesetErrorCode, []},
+          {Lightning.Credo.Check.ApiControllerNoRepo, []}
         ],
         disabled: [
           #
