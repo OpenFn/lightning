@@ -25,8 +25,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
     setup :register_and_log_in_superuser
 
     test "renders the Refresh Adaptor Registry card", %{conn: conn} do
-      {:ok, _live, html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
+      html = conn |> open_page() |> render()
 
       assert html =~ "Maintenance"
       assert html =~ "Refresh Adaptor Registry"
@@ -35,8 +34,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
     end
 
     test "clicking Run flashes that the refresh was queued", %{conn: conn} do
-      {:ok, live, _html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
+      live = open_page(conn)
 
       live
       |> element("#refresh-adaptors-button")
@@ -50,10 +48,9 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
     end
 
     test "renders the Refresh Adaptor Icons card", %{conn: conn} do
-      {:ok, live, html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
+      live = open_page(conn)
 
-      assert html =~ "Refresh Adaptor Icons"
+      assert render(live) =~ "Refresh Adaptor Icons"
       assert has_element?(live, "#refresh-icons-button")
     end
 
@@ -87,8 +84,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
         {:error, :boom}
       end)
 
-      {:ok, live, _html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
+      live = open_page(conn)
 
       live
       |> element("#refresh-icons-button")
