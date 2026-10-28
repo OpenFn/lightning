@@ -126,17 +126,16 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
       %{instance_id: instance_id} =
         Lightning.Factories.insert(:usage_tracking_daily_report_configuration)
 
-      hashed_id = Lightning.UsageTracking.ReportData.hash_uuid(instance_id)
+      hashed_id = Base.encode16(:crypto.hash(:sha256, instance_id))
 
-      {:ok, live, _html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
+      live = open_page(conn)
 
       assert has_element?(live, "#usage-metrics-status", "Enabled")
       refute has_element?(live, "#usage-metrics-disabled-callout")
 
       assert has_element?(
                live,
-               "#usage-metrics-hosts li",
+               "#usage-metrics-host",
                "https://impact.example.com"
              )
 
@@ -172,7 +171,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
       assert has_element?(
                live,
                "#usage-metrics-identity-mode",
-               "Only the hashed UUID is sent"
+               "Only the hashed UUID (SHA-256) is sent"
              )
     end
 
@@ -183,8 +182,7 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
 
       Lightning.Factories.insert(:usage_tracking_daily_report_configuration)
 
-      {:ok, live, _html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
+      live = open_page(conn)
 
       assert has_element?(
                live,
@@ -193,32 +191,13 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
              )
     end
 
-    test "lists every tracker host", %{conn: conn} do
-      stub(Lightning.MockConfig, :usage_tracking_host, fn ->
-        ["https://one.example.com", "https://two.example.com"]
-      end)
-
-      {:ok, live, _html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
-
-      assert has_element?(
-               live,
-               "#usage-metrics-hosts li",
-               "https://one.example.com"
-             )
-
-      assert has_element?(
-               live,
-               "#usage-metrics-hosts li",
-               "https://two.example.com"
-             )
-    end
-
     test "urges the operator to turn tracking on when disabled", %{conn: conn} do
       stub(Lightning.MockConfig, :usage_tracking_enabled?, fn -> false end)
 
-      {:ok, live, html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
+      Lightning.Factories.insert(:usage_tracking_daily_report_configuration)
+
+      live = open_page(conn)
+      html = render(live)
 
       assert has_element?(live, "#usage-metrics-status", "Disabled")
 
@@ -229,14 +208,85 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
              )
 
       assert html =~ "Would report to"
+
+      assert has_element?(
+               live,
+               "#usage-metrics-identity-mode",
+               "Nothing is sent while usage metrics are disabled"
+             )
+
+      refute has_element?(
+               live,
+               "#usage-metrics-identity-mode",
+               "Only the hashed UUID"
+             )
     end
 
     test "explains when no instance ID exists yet", %{conn: conn} do
-      {:ok, live, _html} =
-        live(conn, ~p"/settings/maintenance", on_error: :raise)
+      live = open_page(conn)
 
-      assert has_element?(live, "#usage-metrics-no-instance-id")
+      assert has_element?(
+               live,
+               "#usage-metrics-no-instance-id",
+               "generated the first time"
+             )
+
       refute has_element?(live, "#usage-metrics-instance-id")
     end
+
+    test "says when no reports have been sent", %{conn: conn} do
+      live = open_page(conn)
+
+      assert has_element?(
+               live,
+               "#usage-metrics-latest-report",
+               "No reports have been sent yet."
+             )
+    end
+
+    test "shows the outcome of the most recent report", %{conn: conn} do
+      Lightning.Factories.insert(:usage_tracking_report,
+        report_date: ~D[2026-10-26],
+        submission_status: :success,
+        submitted_at: ~U[2026-10-27 00:05:00.000000Z]
+      )
+
+      Lightning.Factories.insert(:usage_tracking_report,
+        report_date: ~D[2026-10-27],
+        submitted: false,
+        submitted_at: nil,
+        submission_status: :failure
+      )
+
+      live = open_page(conn)
+
+      assert has_element?(
+               live,
+               "#usage-metrics-latest-report",
+               "Report for 2026-10-27 failed to send."
+             )
+    end
+
+    test "shows when the most recent report was sent", %{conn: conn} do
+      Lightning.Factories.insert(:usage_tracking_report,
+        report_date: ~D[2026-10-26],
+        submission_status: :success,
+        submitted_at: ~U[2026-10-27 00:05:00.000000Z]
+      )
+
+      live = open_page(conn)
+
+      assert has_element?(
+               live,
+               "#usage-metrics-latest-report",
+               "Report for 2026-10-26 sent at 2026-10-27 00:05 UTC."
+             )
+    end
+  end
+
+  defp open_page(conn) do
+    {:ok, live, _html} = live(conn, ~p"/settings/maintenance", on_error: :raise)
+    render_async(live)
+    live
   end
 end

@@ -156,8 +156,27 @@ defmodule Lightning.UsageTracking do
     Oban.insert(Lightning.Oban, ReportWorker.new(%{date: date}))
   end
 
-  def instance_id do
-    Repo.one(from c in DailyReportConfiguration, select: c.instance_id)
+  @doc """
+  Returns the instance UUID and the SHA-256 hash that reports carry in its
+  place, or `nil` if no instance ID has been generated yet.
+  """
+  def instance_identity do
+    case Repo.one(from c in DailyReportConfiguration, select: c.instance_id) do
+      nil ->
+        nil
+
+      instance_id ->
+        %{instance_id: instance_id, hashed_id: hash_uuid(instance_id)}
+    end
+  end
+
+  def hash_uuid(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
+
+  @doc """
+  Returns the report for the most recent report date, or `nil` if none exist.
+  """
+  def latest_report do
+    Repo.one(from r in Report, order_by: [desc: r.report_date], limit: 1)
   end
 
   def find_enabled_daily_report_config do

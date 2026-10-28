@@ -36,7 +36,7 @@ defmodule Lightning.UsageTracking.ReportData do
   defp instrument_identity(identity, false = _cleartext_enabled) do
     %{
       cleartext_uuid: nil,
-      hashed_uuid: identity |> hash_uuid()
+      hashed_uuid: UsageTracking.hash_uuid(identity)
     }
   end
 
@@ -45,8 +45,6 @@ defmodule Lightning.UsageTracking.ReportData do
     |> instrument_identity(false)
     |> Map.merge(%{cleartext_uuid: identity})
   end
-
-  def hash_uuid(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
 
   defp operating_system_name do
     {_os_family, os_name} = :os.type()

@@ -12,18 +12,16 @@ defmodule LightningWeb.MaintenanceLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
   alias Lightning.UsageTracking
-  alias Lightning.UsageTracking.ReportData
-  alias LightningWeb.ChannelRequestLive
 
   @impl true
   def mount(_params, _session, socket) do
     if superuser?(socket) do
       {:ok,
-       assign(socket,
-         active_menu_item: :maintenance,
-         page_title: "Maintenance",
-         usage_tracking: usage_tracking_status()
-       ), layout: {LightningWeb.Layouts, :settings}}
+       socket
+       |> assign(active_menu_item: :maintenance, page_title: "Maintenance")
+       |> assign_async(:usage_tracking, fn ->
+         {:ok, %{usage_tracking: usage_tracking_status()}}
+       end), layout: {LightningWeb.Layouts, :settings}}
     else
       {:ok,
        socket
@@ -93,16 +91,46 @@ defmodule LightningWeb.MaintenanceLive.Index do
   end
 
   defp usage_tracking_status do
-    instance_id = UsageTracking.instance_id()
-
     %{
       enabled: Lightning.Config.usage_tracking_enabled?(),
       cleartext: Lightning.Config.usage_tracking_cleartext_uuids_enabled?(),
-      hosts: List.wrap(Lightning.Config.usage_tracking_host()),
-      instance_id: instance_id,
-      hashed_id: instance_id && ReportData.hash_uuid(instance_id)
+      host: Lightning.Config.usage_tracking_host(),
+      identity: UsageTracking.instance_identity(),
+      latest_report: UsageTracking.latest_report()
     }
   end
+
+  defp latest_report_summary(nil), do: "No reports have been sent yet."
+
+  defp latest_report_summary(%{submission_status: :failure} = report),
+    do: "Report for #{report.report_date} failed to send."
+
+  defp latest_report_summary(%{submitted: true} = report) do
+    "Report for #{report.report_date} sent at " <>
+      Calendar.strftime(report.submitted_at, "%Y-%m-%d %H:%M UTC") <> "."
+  end
+
+  defp latest_report_summary(report),
+    do: "Report for #{report.report_date} is waiting to be sent."
+
+  attr :id, :string, default: nil
+  attr :tone, :string, default: "gray", values: ["gray", "red"]
+  attr :class, :string, default: nil
+  attr :value, :string, required: true
+
+  # phx-no-format keeps the value flush against the tags; any whitespace
+  # inside them would show as padding on the shaded background.
+  defp inline_code(assigns) do
+    ~H"""
+    <code id={@id} class={[inline_code_classes(@tone), @class]} phx-no-format>{@value}</code>
+    """
+  end
+
+  defp inline_code_classes("gray"),
+    do: "rounded bg-secondary-100 px-1.5 py-0.5 font-mono text-xs"
+
+  defp inline_code_classes("red"),
+    do: "rounded bg-red-100 px-1 font-mono"
 
   defp superuser?(socket) do
     Permissions.can?(
