@@ -1,25 +1,27 @@
 defmodule Lightning.Policies.Decision do
   @moduledoc """
-  The order a policy decides in, so each policy supplies only its grant and
-  its rule.
+  The order every `%Scope{}` policy decides in, so each policy supplies only its
+  token grant and its rule. `project/4` decides actions on a project and
+  `instance/4` actions with no project.
 
-  The order is what keeps refusals from leaking: a caller without the grant
-  hears `{:error, {:insufficient_scope, grant}}` before anything about the
-  target, and only a caller the rule allows learns
-  `{:error, :scheduled_for_deletion}`. A caller the rule refuses who has no
-  standing on the project hears `{:error, :no_standing}`, before the MFA check,
-  so it learns nothing about a project it has no standing on, not even that
-  it exists.
+  The order keeps refusals from leaking. A caller without the grant hears
+  `{:error, {:insufficient_scope, grant}}` before anything about the target. A
+  caller the rule refuses who has no standing on the project hears
+  `{:error, :no_standing}`, before the MFA check, so it learns nothing about the
+  project, not even that it exists. Only a caller every other check allows
+  learns `{:error, :scheduled_for_deletion}`.
 
   `allowed?` is computed before the call, so it reads only facts already on the
-  scope and subject. A rule that needs to know about a project its subject links
-  to loads that project's scope through `Lightning.Scope`, outside
-  `allowed?` and only after the answer it builds on. `:see_credential` does this
-  for a credential's linked projects, and the sandbox rules for a sandbox's root
-  project.
+  scope and subject. A rule that needs another project's facts loads that
+  project's scope through `Lightning.Scope`, outside `allowed?` and only after
+  `Decision` has answered for the subject's own project. `:see_credential` does
+  this for a credential's linked projects, and the sandbox rules for a
+  sandbox's root project.
 
   A `:before_target` subject asks only about the grant, so `true` for it is not
-  permission; only `Lightning.Policies.Permissions.permit/3` passes it.
+  permission. Only `Lightning.Policies.Permissions.permit/3` passes it, so that
+  `LightningWeb.Plugs.AuthorizeAction` can refuse a missing grant before
+  anything is loaded.
   """
   alias Lightning.Scope
 

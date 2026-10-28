@@ -1,7 +1,11 @@
 defmodule LightningWeb.API.Problem do
   @moduledoc """
-  An RFC 9457 problem document (error-format spec §2), and the one function
-  that sends one.
+  An RFC 9457 problem document, and the one function that sends one.
+
+  Every problem response is built with `new/2` from a response code in
+  `LightningWeb.API.Codes` and sent with `respond/2` or `halt/2`, whoever
+  answers: `LightningWeb.API.FallbackController`, a plug, a webhook, or
+  `LightningWeb.Endpoint` after an exception.
   """
   alias LightningWeb.API.Codes
   alias LightningWeb.API.Errors

@@ -1,11 +1,17 @@
 defmodule LightningWeb.API.Errors do
   @moduledoc """
-  Turns a refused changeset into error entries and a problem
-  (error-format spec §3, §4 and §7).
+  Turns an invalid changeset into error entries and a problem.
 
-  Every error in the tree becomes one entry, placed by the request's keys and
-  positions. An error whose code can't be worked out raises: there is no
-  fallback code (spec §6.3).
+  A context function reports invalid data as a changeset.
+  `LightningWeb.API.FallbackController` hands it to `problem/3`, which makes one
+  entry per error and picks the response code from the entries. Each entry
+  points at the part of the request it is about, such as a body key, a position
+  in a list, or a path segment, using the request's key names rather than the
+  schema's. Web code that checks the request itself builds entries with
+  `entry/2` and returns them through `refuse/1`.
+
+  An entry's code comes from the error's `code:` option, or from Ecto's own
+  options. An error with neither raises. There is no fallback code.
   """
   alias Ecto.Changeset
   alias LightningWeb.API.Problem

@@ -1,15 +1,16 @@
 defmodule LightningWeb.API.Target do
   @moduledoc """
-  Resolves the target an API action works on in a project, and asks the policy
-  whether the caller may act on it, in the order of error-format spec §4.
+  Resolves the project an API action works on, and the record inside it, then
+  asks the policy whether the caller may act on it. It takes the
+  `Lightning.Scope` that `LightningWeb.Plugs.AuthorizeAction` assigned, and
+  every refusal it returns is one `LightningWeb.API.FallbackController`
+  answers.
 
-  The policy is asked only after the target is looked up, so a missing project
-  or target is 404 (row 3) even to a member the policy would refuse 403 (row 4).
-  A caller with no standing hears the policy's `:no_standing`, also
-  404. The token's grant (row 2) has to be refused before any lookup, so an
-  action using this module checks it first with
-  `LightningWeb.Plugs.AuthorizeAction`. Every refusal is one
-  `LightningWeb.API.FallbackController` answers.
+  The policy is asked only after the lookup, so a missing project or record is
+  404 even to a member the policy would refuse with 403. A caller with no
+  standing on the project hears `:no_standing` from `Lightning.Scope` or the
+  policy, which is also 404. The token grant has to be refused before any
+  lookup, which is why `AuthorizeAction` checks it first.
   """
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project

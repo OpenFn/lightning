@@ -1,12 +1,14 @@
 defmodule LightningWeb.API.FallbackController do
   @moduledoc """
-  Answers an API action's error result with a problem document
-  (error-format spec §8).
+  Answers an API action's error result with a problem document. A controller
+  that sets it as `action_fallback` returns refusals from its `with` and never
+  picks a status itself. `LightningWeb.Plugs.AuthorizeAction` answers its
+  refusals here too.
 
-  Each result has its own clause, and there is deliberately no catch-all: a
-  result with no clause raises, so it is logged as a 500 and gets a clause.
+  Each result has its own clause, and there is deliberately no catch-all. A
+  result with no clause raises, so it shows up as a 500 and gets a clause.
   `{:error, :unauthorized}` from `Permissions.can/4` has no clause either,
-  because a refused permission is a 403 or a 404, never a 401 (plan D9).
+  because a refused permission is never a 401.
   """
   alias Lightning.Extensions.Message
   alias LightningWeb.API.Codes

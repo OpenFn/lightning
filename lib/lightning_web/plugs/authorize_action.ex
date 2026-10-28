@@ -5,11 +5,12 @@ defmodule LightningWeb.Plugs.AuthorizeAction do
 
       plug AuthorizeAction, {:project_users, :access_project} when action == :show
 
-  It asks `Lightning.Policies.Permissions.permit/3` before any project is
-  loaded. A refusal is answered by `LightningWeb.API.FallbackController`. A pass
-  assigns the caller's scope as `:scope` for the action to reuse, and the action
-  still asks `permit/4` about its target. An action with no target asks
-  nothing more.
+  It runs after the pipeline has authenticated the caller. It builds the
+  caller's `Lightning.Scope` and asks `Lightning.Policies.Permissions.permit/3`,
+  which checks only the token grant. A refusal is answered by
+  `LightningWeb.API.FallbackController`. A pass assigns the scope as `:scope`
+  for the action to reuse. Passing is not permission: an action with a target
+  still asks about it through `LightningWeb.API.Target`.
   """
   alias Lightning.Policies.Permissions
   alias Lightning.Scope

@@ -1,54 +1,51 @@
 defmodule Lightning.Scope do
   @moduledoc """
   The facts about whoever is calling, and their standing in a project right now.
+  Policies decide from these facts. A Scope neither authenticates the caller nor
+  decides what it may do.
 
   `new/1` gives the facts about the caller alone: the `grants` its token
-  carries (`:all` for a person), its `instance_role`, MFA status, and whether
-  it can own a credential (only a person can). `fetch/2` adds the facts about
-  one project, including whether it is scheduled for deletion, and refuses a
-  project that does not exist. `fetch_all/2` does the same for several projects
-  in one query. Whether that standing is enough for an action is the policy's
-  judgement — see `Lightning.Policies.ProjectUsers.permitted?/2`.
+  carries (`:all` for a person), its `instance_role`, MFA status, and whether it
+  can own a credential (only a person can). `fetch/2` adds one project's facts,
+  including whether it is scheduled for deletion, and `fetch_all/2` does the
+  same for several projects in one query. On the API,
+  `LightningWeb.Plugs.AuthorizeAction` builds the first and
+  `LightningWeb.API.Target` the second.
 
       {:ok, %Scope{role: :editor}}
       {:ok, %Scope{role: nil}}                      no membership row
-      {:ok, %Scope{scheduled_for_deletion?: true}}  winding down
+      {:ok, %Scope{scheduled_for_deletion?: true}}  scheduled for deletion
       {:error, :no_such_project}                    no such project
       {:error, :no_standing}                        a repo connection naming
                                                     another project
 
-  So `{:ok, _}` is not itself an authorisation result — a non-member of a live
-  project gets `role: nil`, which support access can still make meaningful.
+  So `{:ok, _}` is not permission. A non-member of a live project gets
+  `role: nil`, which support access can still make meaningful. Whether the
+  facts are enough for an action is the policy's judgement, through
+  `Lightning.Policies.Decision`.
 
-  Two support fields, deliberately. `support_user?` is the raw account flag.
-  `support?` additionally requires the project's `allow_support_access`.
-  Anything granting access to a customer's project wants `support?`.
-
-  A `%ProjectRepoConnection{}` has no membership row, so its standing *is*
-  which project it belongs to; `fetch/2` checks that, and its `role` is always
-  `nil`. Ownership is checked before anything else is read, so a connection
-  learns nothing about a project that is not its own, and hears the
-  `:no_standing` a refused user without a membership row hears from a policy.
+  The one refusal `fetch/2` makes itself is for a `%ProjectRepoConnection{}`.
+  It has no membership row, so its standing is which project it belongs to, and
+  its `role` is always `nil`. Ownership is checked before anything else is read,
+  so a connection learns nothing about a project that is not its own, and hears
+  the same `:no_standing` a policy gives a user with no membership row.
 
   A `%ServiceAccount{}` has no membership row either and is not tied to one
-  project; its `role` is always `nil`. Its `instance_role` is `:operator`, which
-  `holds_role?/2` treats as holding every project role.
+  project, so its `role` is always `nil`. Its `instance_role` is `:operator`,
+  which `holds_role?/2` treats as holding every project role.
+
+  Two support fields, deliberately. `support_user?` is the account flag.
+  `support?` also requires the project's `allow_support_access`. Anything
+  granting access to a customer's project wants `support?`.
 
   Scheduling deletion removes no membership rows and revokes no token, so
   during the purge window only the policies' check of `scheduled_for_deletion?`
-  keeps members out.
-
-  ## When not to reach for it
-
-  `Sandboxes` `:cancel_scheduled_deletion` reads its subject's role directly,
-  since its subject is scheduled by definition.
-
-  Every other project-scoped decision resolves here; no policy module reads
-  `Project.scheduled_deletion` directly.
-
-  Likewise, no policy module reads `requires_mfa`/`mfa_enabled` directly. That
-  rule is written once, privately, below; `mfa_satisfied?` is the only way to
-  reach it.
+  keeps members out. Policies read `scheduled_for_deletion?` and
+  `mfa_satisfied?` here, never `Project.scheduled_deletion`, `requires_mfa` or
+  `mfa_enabled`. The MFA rule is written once, privately, in this module. The
+  exception is `Lightning.Policies.Sandboxes` `:cancel_scheduled_deletion`,
+  which reads its subject's role directly, since its subject is scheduled by
+  definition.
   """
   import Ecto.Query
 

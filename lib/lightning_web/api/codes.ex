@@ -1,8 +1,9 @@
 defmodule LightningWeb.API.Codes do
   @moduledoc """
   The API's codes: each response code with its status and fixed detail, and
-  every code an error entry may carry. Both lists are the API's contract, so
-  renaming or removing a code is a breaking change (error-format spec §6.4).
+  every code an error entry may carry. Both lists are the API's contract.
+  Adding a code is compatible. Renaming or removing one, or moving it to another
+  status, is a breaking change.
   """
 
   @response %{
