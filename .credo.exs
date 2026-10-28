@@ -174,7 +174,8 @@
           {Credo.Check.Readability.StrictModuleLayout, []},
           # Lightning's own, from credo/checks/
           {Lightning.Credo.Check.ChangesetErrorCode, []},
-          {Lightning.Credo.Check.ApiControllerNoRepo, []}
+          {Lightning.Credo.Check.ApiControllerNoRepo, []},
+          {Lightning.Credo.Check.ApiErrorsAsProblems, []}
         ],
         disabled: [
           #
