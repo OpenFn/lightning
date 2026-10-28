@@ -11,6 +11,7 @@ import YAMLToWorkflow from '../yaml/YAMLToWorkflow';
 
 import CredentialSelector from './CredentialSelector';
 import FileDropzone from './FileDropzone';
+import { HashPanel } from './HashPanel';
 import {
   SaveViaCtrlS,
   InspectorSaveViaCtrlS,
@@ -30,6 +31,7 @@ export {
   YAMLToWorkflow,
   TemplateToWorkflow,
   TabbedContainer,
+  HashPanel,
   SaveViaCtrlS,
   InspectorSaveViaCtrlS,
   OpenSyncModalViaCtrlShiftS,

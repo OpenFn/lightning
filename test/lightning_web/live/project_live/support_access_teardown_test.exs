@@ -6,6 +6,7 @@ defmodule LightningWeb.ProjectLive.SupportAccessTeardownTest do
 
   import Lightning.Factories
   import Lightning.ProjectsHelpers
+  import LightningWeb.ProjectSettingsPageHelpers
   import Phoenix.LiveViewTest
 
   # The broadcast lands in the victim's mailbox synchronously, but the teardown
@@ -45,7 +46,7 @@ defmodule LightningWeb.ProjectLive.SupportAccessTeardownTest do
 
       {:ok, victim, _html} = live(conn, path, on_error: :raise)
 
-      assert render(victim) =~ "Project settings"
+      assert props(victim)["project"]["id"] == project.id
 
       monitor_ref = Process.monitor(victim.pid)
 
@@ -99,7 +100,7 @@ defmodule LightningWeb.ProjectLive.SupportAccessTeardownTest do
 
       # `render/1` is a call into the LiveView, so it cannot answer until the
       # event broadcast above has been handled.
-      assert render(view) =~ "Project settings"
+      assert props(view)["project"]["id"] == project.id
     end
 
     test "leaves an ordinary member mounted", %{
@@ -114,7 +115,7 @@ defmodule LightningWeb.ProjectLive.SupportAccessTeardownTest do
 
       revoke_support_access(project, owner)
 
-      assert render(view) =~ "Project settings"
+      assert props(view)["project"]["id"] == project.id
     end
   end
 
@@ -136,9 +137,9 @@ defmodule LightningWeb.ProjectLive.SupportAccessTeardownTest do
 
       monitor_ref = Process.monitor(victim.pid)
 
-      assert owner_view
-             |> element("#toggle-support-access")
-             |> render_click() =~ "Revoked access to support users"
+      send_event(owner_view, "set_support_access", %{"on" => false})
+
+      assert render(owner_view) =~ "Revoked access to support users"
 
       assert_receive {:DOWN, ^monitor_ref, :process, _pid, _reason},
                      @teardown_timeout

@@ -73,7 +73,8 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
     end
   end
 
-  defp generate_flash_message(existing, new) do
+  @doc false
+  def generate_flash_message(existing, new) do
     case {length(existing), length(new)} do
       {_, 0} ->
         "Collaborator#{if length(existing) == 1, do: "", else: "s"} added successfully"

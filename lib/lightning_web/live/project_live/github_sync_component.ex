@@ -213,7 +213,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
-  defp error_message(error) do
+  @doc false
+  def error_message(error) do
     case error do
       %{text: error_msg} ->
         error_msg

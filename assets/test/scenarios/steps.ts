@@ -489,10 +489,12 @@ export async function mailbox(request: APIRequestContext): Promise<Mail[]> {
 }
 
 // Evaluates Elixir on the running Lightning node and returns the inspected
-// result. The node shares ~/.erlang.cookie with this machine.
+// result. The node shares ~/.erlang.cookie with this machine. The code goes in
+// as an Elixir string literal, so its own `#{` is escaped to reach the node.
 export function onNode(expr: string) {
   lightningOnly('needs a server: the Lightning node');
   const node = process.env.LIGHTNING_NODE || 'lightning_e2e@127.0.0.1';
+  const literal = JSON.stringify(expr).replace(/#\{/g, '\\#{');
   return execFileSync(
     'elixir',
     [
@@ -500,7 +502,7 @@ export function onNode(expr: string) {
       `scenario-${process.pid}@127.0.0.1`,
       '-e',
       `true = Node.connect(:"${node}")
-       IO.write(inspect(:erpc.call(:"${node}", Code, :eval_string, [${JSON.stringify(expr)}]) |> elem(0)))`,
+       IO.write(inspect(:erpc.call(:"${node}", Code, :eval_string, [${literal}]) |> elem(0), limit: :infinity, printable_limit: :infinity))`,
     ],
     { encoding: 'utf8' }
   );
@@ -678,6 +680,7 @@ export async function sortByColumnNamed(
 // and the server has answered each one, with a reply or a crash.
 export function watchLiveView(page: Page) {
   const pending = new Set<string>();
+  const replies: unknown[] = [];
   let sent = 0;
   let crashes = 0;
   const frame = (payload: string | Buffer) =>
@@ -691,8 +694,9 @@ export function watchLiveView(page: Page) {
       pending.add(ref as string);
     });
     ws.on('framereceived', ({ payload }) => {
-      const [, ref, , event] = frame(payload);
-      if (event === 'phx_reply') pending.delete(ref as string);
+      const [, ref, , event, body] = frame(payload);
+      if (event === 'phx_reply' && pending.delete(ref as string))
+        replies.push((body as { response?: unknown } | undefined)?.response);
       if (event === 'phx_error') {
         crashes++;
         pending.clear();
@@ -702,6 +706,8 @@ export function watchLiveView(page: Page) {
   return {
     events: () => sent,
     crashes: () => crashes,
+    // What the server answered each event, in order
+    replies: () => replies,
     answered: (n: number) =>
       expect
         .poll(() => sent >= n && pending.size === 0, 'server answered')
@@ -1105,16 +1111,20 @@ export function removeMemberOnNode(
   ]);
 }
 
-// When an owner changes "<email>"'s role on project <projectId> to <role>
+// When an owner changes "<email>"'s role on project <projectId> to <role>.
+// `quietly` leaves out the announcement that remounts open pages, as when
+// the change lands between a page's last render and its next request.
 export function changeRoleOnNode(
   projectId: string,
   memberEmail: string,
-  role: string
+  role: string,
+  { quietly = false } = {}
 ) {
   const { id } = user(memberEmail);
   exec(
     `update project_users set role = '${role}' where project_id = '${projectId}' and user_id = '${id}'`
   );
+  if (quietly) return;
   onNodeOk([
     `Lightning.Projects.Events.project_user_role_changed("${projectId}", "${id}")`,
   ]);
@@ -2214,8 +2224,13 @@ export const queryOf = (page: Page) =>
 export async function expectTooltip(page: Page, target: Locator, text: string) {
   // A click hides the tooltip, and hovering where the pointer already is fires
   // no new mouseenter, so move away first.
+  // A disabled button that ignores the pointer leaves the tooltip to its
+  // wrapper (see hoverDisabled).
   await page.mouse.move(0, 0);
-  await target.hover();
+  const ignoresPointer = await target.evaluate(
+    el => getComputedStyle(el).pointerEvents === 'none'
+  );
+  await (ignoresPointer ? target.locator('xpath=..') : target).hover();
   await expect(
     page.getByRole('tooltip').filter({ hasText: text })
   ).toBeVisible();
@@ -2306,7 +2321,8 @@ export type WorkspaceSeed = {
   sandboxes?: WorkspaceSeed[];
 };
 
-const ex = (v: unknown) => JSON.stringify(v);
+// An Elixir literal for <v>: JSON's, but null is nil
+const ex = (v: unknown) => (v == null ? 'nil' : JSON.stringify(v));
 const exUser = (email: string) =>
   `Lightning.Repo.get!(Lightning.Accounts.User, ${ex(user(email).id)})`;
 
@@ -2470,16 +2486,29 @@ export function withSandboxNestingDepth(depth: number) {
 
 // Given the usage limiter refuses <action> (:new_sandbox, :new_collection)
 // with <text> — returns a function that puts the previous limiter back
-export function withLimiterRefusing(action: string, text: string) {
+// With `banner`, the refusal comes as a component that shows <text>, the way
+// a plan-limit banner does.
+export function withLimiterRefusing(
+  action: string,
+  text: string,
+  { banner = false, over }: { banner?: boolean; over?: number } = {}
+) {
   const key = '{Lightning.Services.AdapterHelper, :usage_limiter}';
   const was = onNode(`:persistent_term.get(${key}, nil)`).trim();
+  const message = banner
+    ? `%Lightning.Extensions.Message{text: ${ex(text)}, attrs: %{text: ${ex(text)}}, function: &__MODULE__.banner/1}`
+    : `%Lightning.Extensions.Message{text: ${ex(text)}}`;
   onNode(`
     defmodule Lightning.Extensions.ScenarioActionLimiter do
       @behaviour Lightning.Extensions.UsageLimiting
+      use Phoenix.Component
       alias Lightning.Extensions.UsageLimiter
 
-      def limit_action(%{type: type}, _context) when type == :${action},
-        do: {:error, :too_many, %Lightning.Extensions.Message{text: ${ex(text)}}}
+      def banner(assigns), do: ~H"<p>{@text}</p>"
+
+      def limit_action(%{type: :${action}, amount: amount}, _context)
+          when ${over === undefined ? 'true' : `amount > ${over}`},
+          do: {:error, :too_many, ${message}}
 
       def limit_action(action, context), do: UsageLimiter.limit_action(action, context)
       defdelegate check_limits(context), to: UsageLimiter
@@ -2688,19 +2717,84 @@ export const scheduledDeletionOf = (projectId: string) =>
 export const channelsPath = (projectId: string) =>
   `/projects/${projectId}/channels`;
 
-// Given project <projectId> has webhook auth method <name> (an API key),
-// made by "<by>" — returns its id
+// Given project <projectId> has webhook auth method <name> (an API key, or
+// basic auth with `basic`), made by "<by>" and attached to the webhook
+// trigger of a new workflow for each name in `triggers` — returns its id
 export function addWebhookAuthMethodOnNode(
   projectId: string,
   name: string,
-  by: string
+  by: string,
+  {
+    basic,
+    triggers = [],
+  }: {
+    basic?: { username: string; password: string };
+    triggers?: string[];
+  } = {}
 ) {
+  const type = basic
+    ? `auth_type: :basic, username: ${ex(basic.username)}, password: ${ex(basic.password)}`
+    : 'auth_type: :api';
   const out = onNode(
-    `{:ok, w} = Lightning.WebhookAuthMethods.create_auth_method(%{name: ${ex(name)}, auth_type: :api, project_id: ${ex(projectId)}}, actor: ${exUser(by)})
-     w.id`
+    [
+      `actor = ${exUser(by)}`,
+      `{:ok, w} = Lightning.WebhookAuthMethods.create_auth_method(%{name: ${ex(name)}, ${type}, project_id: ${ex(projectId)}}, actor: actor)`,
+      ...triggers.map(
+        t =>
+          `{:ok, wf} = Lightning.Workflows.save_workflow(%{name: ${ex(t)}, project_id: ${ex(projectId)},
+             jobs: [%{id: Ecto.UUID.generate(), name: "Step", body: "fn(s => s)", adaptor: "@openfn/language-common@latest"}],
+             triggers: [%{type: :webhook, enabled: true}]}, actor)
+           {:ok, _} = Lightning.WebhookAuthMethods.update_trigger_auth_methods(hd(wf.triggers), [w], actor: actor)`
+      ),
+      `w.id`,
+    ].join('\n')
   );
-  return JSON.parse(out.trim().split('\n').pop()!) as string;
+  return JSON.parse(lastLine(out)) as string;
 }
+
+// Webhook auth method <name> of project <projectId> as Lightning stores it
+// (secrets decrypted), or undefined
+export function storedAuthMethod(projectId: string, name: string) {
+  const out = onNode(
+    `import Ecto.Query
+     Lightning.Repo.one(from w in Lightning.Workflows.WebhookAuthMethod,
+       where: w.project_id == ^${ex(projectId)} and w.name == ^${ex(name)},
+       select: map(w, [:id, :auth_type, :username, :password, :api_key, :scheduled_deletion]))
+     |> Jason.encode!()`
+  );
+  return (JSON.parse(JSON.parse(lastLine(out))) ?? undefined) as
+    | {
+        id: string;
+        auth_type: 'api' | 'basic';
+        username: string | null;
+        password: string | null;
+        api_key: string | null;
+        scheduled_deletion: string | null;
+      }
+    | undefined;
+}
+
+// The webhook trigger id of workflow <workflow> in project <projectId>
+export const webhookTriggerOf = (projectId: string, workflow: string) =>
+  sql<{ id: string }>(
+    `select t.id from triggers t join workflows w on w.id = t.workflow_id
+     where w.project_id = '${projectId}' and w.name = ${literal(workflow)}
+       and t.type = 'webhook'`
+  )[0].id;
+
+// The names of the triggers' workflows and the channels auth method <id> is
+// still attached to
+export const attachmentsOf = (id: string) =>
+  sql<{ name: string }>(
+    `select w.name from trigger_webhook_auth_methods twam
+       join triggers t on t.id = twam.trigger_id
+       join workflows w on w.id = t.workflow_id
+     where twam.webhook_auth_method_id = '${id}'
+     union all
+     select c.name from channel_auth_methods cam
+       join channels c on c.id = cam.channel_id
+     where cam.webhook_auth_method_id = '${id}'`
+  ).map(r => r.name);
 
 // A channel in a project. `clients` are webhook auth method names and
 // `credential` a credential name, both already in the project. `requests`
@@ -2790,24 +2884,32 @@ export const projectCredentialId = (projectId: string, name: string) =>
 // Collections (annotations/views/admin-collections.md)
 // ---------------------------------------------------------------------------
 
-export type CollectionSeed = { records?: number; bytes?: number };
+export type CollectionSeed = {
+  records?: number;
+  bytes?: number;
+  // these records instead, as [key, value]
+  items?: [string, string][];
+};
 
-// Given project <projectId> has a collection <name> with <records> records,
-// using <bytes> bytes of storage — returns its id. Removing the project
-// removes the collection and its records.
+// Given project <projectId> has a collection <name> with <records> records
+// (or <items>), using <bytes> bytes of storage — returns its id. Removing the
+// project removes the collection and its records.
 export function seedCollection(
   projectId: string,
   name: string,
-  { records = 0, bytes }: CollectionSeed = {}
+  { records = 0, bytes, items: given }: CollectionSeed = {}
 ) {
   const id = randomUUID();
-  const items = Array.from(
-    { length: records },
-    (_, i) => `%{"key" => "key-${i + 1}", "value" => "value-${i + 1}"}`
-  );
+  const items = (
+    given ??
+    Array.from({ length: records }, (_, i): [string, string] => [
+      `key-${i + 1}`,
+      `value-${i + 1}`,
+    ])
+  ).map(([k, v]) => `%{"key" => ${ex(k)}, "value" => ${ex(v)}}`);
   onNodeOk([
     `c = Lightning.Repo.insert!(%Lightning.Collections.Collection{id: "${id}", name: ${ex(name)}, project_id: "${projectId}"})`,
-    ...(records
+    ...(items.length
       ? [`{:ok, _} = Lightning.Collections.put_all(c, [${items.join(', ')}])`]
       : []),
   ]);
@@ -2838,6 +2940,16 @@ export const recordsOfCollection = (id: string) =>
     `select count(*)::int as n from collection_items where collection_id = '${id}'`
   )[0].n;
 
+// The names of project <projectId>'s collections, sorted
+export const collectionNamesIn = (projectId: string) =>
+  sql<{ name: string }>(
+    `select name from collections where project_id = '${projectId}' order by name`
+  ).map(c => c.name);
+
+// When collection <id> is deleted elsewhere (its records go with it)
+export const removeCollection = (id: string) =>
+  exec(`delete from collections where id = '${id}'`);
+
 // Given project <projectId> is at its plan's collection limit: creating a
 // collection there is refused with <text>; other projects are unaffected.
 // Returns a function that puts the previous collection hook back.
@@ -2860,6 +2972,73 @@ export function withCollectionLimit(projectId: string, text: string) {
       defdelegate handle_delete_items(collection, size), to: CollectionHook
     end
     :persistent_term.put(${key}, Lightning.Extensions.ScenarioCollectionLimit)
+  `);
+  return () =>
+    onNode(
+      was === 'nil'
+        ? `:persistent_term.erase(${key})`
+        : `:persistent_term.put(${key}, ${was})`
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Data storage (annotations/views/project-settings-data-storage.md)
+// ---------------------------------------------------------------------------
+
+export type Retention = {
+  retention_policy: 'retain_all' | 'erase_all';
+  history_retention_period: number | null;
+  dataclip_retention_period: number | null;
+};
+
+// Project <projectId>'s data storage settings, with its name and MFA
+// requirement
+export const retentionOf = (projectId: string) =>
+  sql<Retention & { name: string; requires_mfa: boolean }>(
+    `select retention_policy, history_retention_period,
+       dataclip_retention_period, name, requires_mfa
+     from projects where id = '${projectId}'`
+  )[0];
+
+// Given project <projectId> has these data storage settings
+export function setRetention(projectId: string, settings: Partial<Retention>) {
+  const sets = Object.entries(settings).map(
+    ([k, v]) => `${k} = ${typeof v === 'string' ? literal(v) : (v ?? 'null')}`
+  );
+  exec(`update projects set ${sets.join(', ')} where id = '${projectId}'`);
+}
+
+// Given the plan of project <projectId> offers only retention <periods>, and
+// explains it with <message> — returns a function that puts the previous
+// limiter back. Other projects keep every period.
+export function withRetentionPeriods(
+  projectId: string,
+  periods: number[],
+  message?: string
+) {
+  const key = '{Lightning.Services.AdapterHelper, :usage_limiter}';
+  const was = onNode(`:persistent_term.get(${key}, nil)`).split('\n').pop();
+  const text =
+    message === undefined
+      ? 'nil'
+      : `%Lightning.Extensions.Message{text: ${ex(message)}}`;
+  onNode(`
+    defmodule Lightning.Extensions.ScenarioRetentionLimiter do
+      @behaviour Lightning.Extensions.UsageLimiting
+      alias Lightning.Extensions.UsageLimiter
+
+      def get_data_retention_periods(%{project_id: ${ex(projectId)}}), do: ${ex(periods)}
+      def get_data_retention_periods(context), do: UsageLimiter.get_data_retention_periods(context)
+
+      def get_data_retention_message(%{project_id: ${ex(projectId)}}), do: ${text}
+      def get_data_retention_message(context), do: UsageLimiter.get_data_retention_message(context)
+
+      defdelegate limit_action(action, context), to: UsageLimiter
+      defdelegate check_limits(context), to: UsageLimiter
+      defdelegate increment_ai_usage(session, usage), to: UsageLimiter
+      defdelegate get_run_options(context), to: UsageLimiter
+    end
+    :persistent_term.put(${key}, Lightning.Extensions.ScenarioRetentionLimiter)
   `);
   return () =>
     onNode(
@@ -3938,17 +4117,50 @@ export type StandInGithub = {
   clientId: string;
   /** how GitHub answers a request to revoke the app's grant from now on */
   revokeAnswers: (status: number) => void;
+  /** what GitHub holds from now on (installations, repos, files) */
+  holds: (world: GithubWorld) => void;
+  /** the instance has no GitHub app from now on */
+  removeApp: () => void;
   /** every request Lightning sent to GitHub, oldest first */
   requests: () => { method: string; url: string; body: string }[];
   restore: () => void;
 };
 
+/** An installation of the instance's GitHub app */
+export type GithubInstallation = {
+  id: number;
+  login: string;
+  type?: 'User' | 'Organization';
+  /** its repositories by full name, each with its branches; the first
+   * branch is the default */
+  repos: Record<string, string[]>;
+  /** false when my GitHub account can't see it */
+  mine?: boolean;
+};
+
+export type GithubWorld = {
+  installations?: GithubInstallation[];
+  /** paths that no branch of any repo has */
+  missing?: string[];
+  /** no repo has any secret */
+  noSecrets?: boolean;
+  /** answers that replace the stand-in's own: the first whose method
+   * matches and whose URL path contains `path` */
+  answers?: { method: string; path: string; status: number; body?: unknown }[];
+};
+
 // Given the instance has a GitHub app, and GitHub is a stand-in on the node
-// that refreshes any token (handing out "access-refreshed") and revokes
-// grants with 204. Instance-wide (@serial). restore() puts back the app
-// config and the HTTP adapter it found.
-export function standInGithub(): StandInGithub {
+// that refreshes any token (handing out "access-refreshed"), revokes grants
+// with 204, and holds <world>: it answers for those installations, repos and
+// branches, has every file and secret unless told otherwise, and accepts
+// every write and workflow dispatch. Instance-wide (@serial). restore() puts
+// back the app config and the HTTP adapter it found.
+export function standInGithub(world: GithubWorld = {}): StandInGithub {
   const clientId = 'scenario-github-client';
+  const holds = (w: GithubWorld) =>
+    onNode(
+      `:persistent_term.put({Lightning.ScenarioGithub, :world}, Jason.decode!(${ex(JSON.stringify({ installations: [], missing: [], answers: [], ...w }))}))`
+    );
   onNode(`
     :persistent_term.put({Lightning.ScenarioGithub, :was},
       {Application.get_env(:lightning, :github_app), Application.get_env(:tesla, Lightning.VersionControl.GithubClient)})
@@ -3958,35 +4170,102 @@ export function standInGithub(): StandInGithub {
       def call(env, _opts) do
         body = if is_binary(env.body), do: env.body, else: inspect(env.body)
         Agent.update(__MODULE__, &(&1 ++ [%{method: to_string(env.method), url: env.url, body: body}]))
+        method = to_string(env.method)
+        path = URI.parse(env.url).path
+        world = :persistent_term.get({__MODULE__, :world})
 
-        cond do
-          String.contains?(env.url, "/login/oauth/access_token") ->
-            {:ok, %{env | status: 200, headers: [{"content-type", "application/json"}],
-              body: Jason.encode!(%{access_token: "access-refreshed", expires_in: 28_800,
-                refresh_token: "refresh-refreshed", refresh_token_expires_in: 15_724_800,
-                token_type: "bearer", scope: ""})}}
+        {status, resp} =
+          case Enum.find(world["answers"], &(&1["method"] == method and String.contains?(path, &1["path"]))) do
+            nil -> answer(method, String.split(path, "/", trim: true), env, world)
+            given -> {given["status"], given["body"]}
+          end
 
-          String.ends_with?(env.url, "/grant") ->
-            {:ok, %{env | status: :persistent_term.get({__MODULE__, :revoke}, 204), headers: [], body: ""}}
+        {:ok, %{env | status: status,
+          headers: if(resp == nil, do: [], else: [{"content-type", "application/json"}]),
+          body: if(resp == nil, do: "", else: Jason.encode!(resp))}}
+      end
 
-          true ->
-            {:ok, %{env | status: 404, headers: [], body: ""}}
+      defp answer(method, path, env, world) do
+        installs = world["installations"]
+        repo = fn owner, name -> Enum.find_value(installs, &(&1["repos"]["#{owner}/#{name}"])) end
+        not_found = {404, %{message: "Not Found"}}
+
+        case {method, path} do
+          {"post", ["login", "oauth", "access_token"]} ->
+            {200, %{access_token: "access-refreshed", expires_in: 28_800,
+              refresh_token: "refresh-refreshed", refresh_token_expires_in: 15_724_800,
+              token_type: "bearer", scope: ""}}
+
+          {"delete", ["applications", _, "grant"]} ->
+            {:persistent_term.get({__MODULE__, :revoke}, 204), nil}
+
+          {"post", ["app", "installations", id, "access_tokens"]} ->
+            if Enum.any?(installs, &(to_string(&1["id"]) == id)),
+              do: {201, %{token: "installation-" <> id}}, else: not_found
+
+          {"get", ["user", "installations"]} ->
+            mine = for i <- installs, i["mine"] != false,
+              do: %{id: i["id"], account: %{type: i["type"] || "User", login: i["login"]}}
+            {200, %{total_count: length(mine), installations: mine}}
+
+          {"get", ["installation", "repositories"]} ->
+            auth = Enum.find_value(env.headers, "", fn {k, v} -> String.downcase(k) == "authorization" && v end)
+            i = Enum.find(installs, %{"repos" => %{}}, &(auth == "Bearer installation-#{&1["id"]}"))
+            repos = for {name, [default | _]} <- i["repos"], do: %{full_name: name, default_branch: default}
+            {200, %{total_count: length(repos), repositories: repos}}
+
+          {"get", ["repos", owner, name, "branches"]} ->
+            if branches = repo.(owner, name), do: {200, Enum.map(branches, &%{name: &1})}, else: not_found
+
+          {"get", ["repos", owner, name]} ->
+            if branches = repo.(owner, name),
+              do: {200, %{full_name: "#{owner}/#{name}", default_branch: hd(branches)}}, else: not_found
+
+          {"get", ["repos", _, _, "contents" | file]} ->
+            if Enum.join(file, "/") in world["missing"], do: not_found, else: {200, %{sha: "file-sha"}}
+
+          {"delete", ["repos", _, _, "contents" | _]} -> {200, %{}}
+
+          {"get", ["repos", _, _, "actions", "secrets", "public-key"]} ->
+            {200, %{key: Base.encode64(:crypto.strong_rand_bytes(32)), key_id: "key-1"}}
+
+          {"get", ["repos", _, _, "actions", "secrets", name]} ->
+            if world["noSecrets"], do: not_found, else: {200, %{name: name}}
+
+          {"put", ["repos", _, _, "actions", "secrets", _]} -> {201, nil}
+          {"delete", ["repos", _, _, "actions", "secrets", _]} -> {204, nil}
+          {"post", ["repos", _, _, "git", "blobs"]} -> {201, %{sha: "blob-sha"}}
+          {"get", ["repos", _, _, "commits" | _]} -> {200, %{sha: "base-sha", commit: %{tree: %{sha: "tree-sha"}}}}
+          {"post", ["repos", _, _, "git", "trees"]} -> {201, %{sha: "new-tree-sha"}}
+          {"post", ["repos", _, _, "git", "commits"]} -> {201, %{sha: "new-commit-sha"}}
+          {"post", ["repos", _, _, "git", "refs" | _]} -> {200, %{ref: "updated"}}
+          {"post", ["repos", _, _, "actions", "workflows", _, "dispatches"]} -> {204, nil}
+          _ -> not_found
         end
       end
     end
     if pid = Process.whereis(Lightning.ScenarioGithub), do: Agent.stop(pid)
     Agent.start(fn -> [] end, name: Lightning.ScenarioGithub)
     :persistent_term.put({Lightning.ScenarioGithub, :revoke}, 204)
+    # The app signs its installation tokens, so it needs a real key
+    key = :public_key.generate_key({:rsa, 2048, 65537})
     Application.put_env(:lightning, :github_app,
-      cert: "scenario-cert", app_id: "1", app_name: "scenario-app",
+      cert: :public_key.pem_encode([:public_key.pem_entry_encode(:RSAPrivateKey, key)]),
+      app_id: "1", app_name: "scenario-app",
       client_id: ${JSON.stringify(clientId)}, client_secret: "scenario-secret")
     Application.put_env(:tesla, Lightning.VersionControl.GithubClient, adapter: Lightning.ScenarioGithub)
   `);
+  holds(world);
   return {
     clientId,
     revokeAnswers: status =>
       onNode(
         `:persistent_term.put({Lightning.ScenarioGithub, :revoke}, ${status})`
+      ),
+    holds,
+    removeApp: () =>
+      onNode(
+        `Application.put_env(:lightning, :github_app, cert: nil, app_id: nil, client_id: nil, client_secret: nil)`
       ),
     requests: () =>
       JSON.parse(
@@ -4051,4 +4330,141 @@ export const githubTokenOf = (userId: string): Record<string, string> | null =>
         )
       )
     )
+  );
+
+export type RepoConnection = {
+  repo: string;
+  branch: string;
+  installation: string;
+  configPath?: string;
+};
+
+// Given project <projectId> is connected to GitHub <repo> branch <branch>
+// through installation <installation>. Goes when the project does.
+export function connectRepoOnNode(projectId: string, c: RepoConnection) {
+  onNodeOk([
+    `alias Lightning.VersionControl.ProjectRepoConnection`,
+    `%ProjectRepoConnection{} |> ProjectRepoConnection.create_changeset(%{project_id: ${ex(projectId)}, repo: ${ex(c.repo)}, branch: ${ex(c.branch)}, github_installation_id: ${ex(c.installation)}, config_path: ${ex(c.configPath ?? null)}, accept: true, sync_direction: :pull}) |> Lightning.Repo.insert!()`,
+  ]);
+}
+
+// Project <projectId>'s GitHub connection, if it has one
+export const repoConnectionOf = (projectId: string) =>
+  sql<{ repo: string; branch: string; installation: string }>(
+    `select repo, branch, github_installation_id as installation
+     from project_repo_connections where project_id = '${projectId}'`
+  )[0];
+
+// ---------------------------------------------------------------------------
+// Project members and history exports (annotations/views/project-settings-*)
+// ---------------------------------------------------------------------------
+
+export type Membership = {
+  id: string;
+  role: string;
+  failure_alert: boolean;
+  digest: string;
+};
+
+// <userId>'s membership of project <projectId>, if any
+export const membershipOf = (projectId: string, userId: string) =>
+  sql<Membership>(
+    `select id, role, failure_alert, digest from project_users
+     where project_id = '${projectId}' and user_id = '${userId}'`
+  )[0];
+
+// Given <userId> is a <role> on project <projectId> — returns the
+// membership's id and a function that removes it again, if it is still there
+export function addMember(
+  projectId: string,
+  userId: string,
+  role: Role,
+  { failureAlert = false, digest = 'weekly' } = {}
+) {
+  const id = randomUUID();
+  exec(
+    `insert into project_users (id, project_id, user_id, role, failure_alert, digest, inserted_at, updated_at)
+     values ('${id}', '${projectId}', '${userId}', '${role}', ${failureAlert}, '${digest}', now(), now())`
+  );
+  return {
+    id,
+    remove: () => exec(`delete from project_users where id = '${id}'`),
+  };
+}
+
+export type ExportStatus = 'enqueued' | 'in_progress' | 'completed' | 'failed';
+
+// Given <userId> requested a history export of project <projectId> that is
+// now <status>. A completed one has a zip stored where the download reads it.
+export function seedExport(
+  projectId: string,
+  userId: string,
+  status: ExportStatus
+) {
+  const [{ id }] = sql<{ id: string }>(`select gen_random_uuid() as id`);
+  const path = status === 'completed' ? `exports/${projectId}/${id}.zip` : null;
+  exec(`insert into project_files (id, path, size, status, type, created_by_id, project_id, inserted_at, updated_at)
+        values ('${id}', ${path ? `'${path}'` : 'null'}, ${path ? 4 : 'null'}, '${status}', 'export',
+                '${userId}', '${projectId}', now(), now())`);
+  if (path)
+    onNodeOk([
+      `tmp = Path.join(System.tmp_dir!(), "${id}.zip")`,
+      `File.write!(tmp, "PK\\x05\\x06")`,
+      `{:ok, _} = Lightning.Storage.store(tmp, "${path}")`,
+    ]);
+  return {
+    id,
+    filename: path ? `${id}.zip` : null,
+    remove: () => {
+      if (path) onNode(`Lightning.Storage.delete("${path}")`);
+      exec(`delete from project_files where id = '${id}'`);
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Keychains (annotations/views/project-settings-credentials.md)
+// ---------------------------------------------------------------------------
+
+export type KeychainSeed = {
+  name: string;
+  path?: string;
+  /** the id of its default credential */
+  defaultCredential?: string;
+};
+
+// Given project <projectId> has this keychain, made by "<by>" — returns its
+// id. Removing the project removes it.
+export function seedKeychain(
+  projectId: string,
+  seed: KeychainSeed,
+  by: string
+) {
+  const id = randomUUID();
+  exec(
+    `insert into keychain_credentials (id, name, path, created_by_id, default_credential_id, project_id, inserted_at, updated_at)
+     values ('${id}', ${literal(seed.name)}, ${literal(seed.path ?? '$.org_id')},
+             '${user(by).id}', ${seed.defaultCredential ? `'${seed.defaultCredential}'` : 'null'},
+             '${projectId}', now(), now())`
+  );
+  return id;
+}
+
+export type StoredKeychain = {
+  id: string;
+  name: string;
+  path: string;
+  default_credential: string | null;
+  created_by: string;
+};
+
+// The keychains of project <projectId>, by name, with their default
+// credential's name and their creator's email
+export const keychainsOf = (projectId: string) =>
+  sql<StoredKeychain>(
+    `select k.id, k.name, k.path, c.name as default_credential, u.email as created_by
+     from keychain_credentials k
+     left join credentials c on c.id = k.default_credential_id
+     join users u on u.id = k.created_by_id
+     where k.project_id = '${projectId}' order by k.name`
   );

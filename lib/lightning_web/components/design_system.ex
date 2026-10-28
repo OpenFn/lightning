@@ -80,7 +80,11 @@ defmodule LightningWeb.Components.DesignSystem do
      }, socket}
   end
 
-  defp field_errors(changeset) do
+  @doc """
+  A changeset's errors through `errors.po`, flattened and keyed as
+  `reply_error/2` sends them.
+  """
+  def field_errors(changeset) do
     changeset
     |> LightningWeb.CoreComponents.translate_errors()
     |> flatten([])

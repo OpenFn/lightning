@@ -198,7 +198,8 @@ defmodule LightningWeb.CredentialLive.CredentialIndex do
   def handle_event("create_credential", params, socket) do
     %{current_user: user} = socket.assigns
 
-    with {:ok, schema} <- resolve_schema(params["schema"]),
+    with :ok <- may_create(socket),
+         {:ok, schema} <- resolve_schema(params["schema"]),
          {:ok, client} <- oauth_client_for(socket, schema, params),
          sign_ins = sign_ins_for(socket, params, nil, client),
          {:ok, bodies} <- environment_bodies(params, schema, %{}, sign_ins) do
@@ -423,11 +424,19 @@ defmodule LightningWeb.CredentialLive.CredentialIndex do
   def handle_event("create_oauth_client", params, socket) do
     user = socket.assigns.current_user
 
-    params
-    |> oauth_client_attrs(%OauthClient{}, socket)
-    |> Map.put("user_id", user.id)
-    |> OauthClients.create_client(user, allow_global: user.role == :superuser)
-    |> saved(socket, "Oauth client created successfully", params)
+    case may_create(socket) do
+      :ok ->
+        params
+        |> oauth_client_attrs(%OauthClient{}, socket)
+        |> Map.put("user_id", user.id)
+        |> OauthClients.create_client(user,
+          allow_global: user.role == :superuser
+        )
+        |> saved(socket, "Oauth client created successfully", params)
+
+      {:error, message} ->
+        reply_error(socket, message)
+    end
   end
 
   def handle_event("update_oauth_client", %{"id" => id} = params, socket) do
@@ -675,6 +684,21 @@ defmodule LightningWeb.CredentialLive.CredentialIndex do
   end
 
   # --- Lookups: only what the index shows, and only the owner may change it ---
+
+  # Anyone may add to their own list; adding from a project's settings asks
+  # the project, as its "Add new" menu did.
+  defp may_create(%{assigns: %{project: nil}}), do: :ok
+
+  defp may_create(%{assigns: %{project: project, current_user: user}}) do
+    if Permissions.can?(
+         :project_users,
+         :create_project_credential,
+         user,
+         project
+       ),
+       do: :ok,
+       else: {:error, @not_authorized}
+  end
 
   defp with_credential(socket, id, fun) do
     case editable_credential(socket, id) do

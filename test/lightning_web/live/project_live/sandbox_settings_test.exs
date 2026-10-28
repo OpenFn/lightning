@@ -4,9 +4,14 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import LightningWeb.ProjectSettingsPageHelpers
 
   alias Lightning.Projects
   alias Lightning.Projects.Sandboxes
+
+  # The page is drawn by React from data-props: a sandbox's banners,
+  # headings and disabled controls come from `parent`, and are tested in
+  # the design system's ProjectSettingsPage.test.tsx.
 
   setup :stub_usage_limiter_ok
   setup :register_and_log_in_user
@@ -36,33 +41,18 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
   describe "non-sandbox project (parent project)" do
     setup [:setup_parent_and_sandbox]
 
-    test "does not show any sandbox banners", %{conn: conn, parent: parent} do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/settings")
-
-      refute html =~ "sandbox-banner-"
+    test "is drawn as a project, with no parent", %{conn: conn, parent: parent} do
+      assert %{"parent" => nil, "project" => %{"parentId" => nil}} =
+               conn |> open(parent) |> props()
     end
 
-    test "shows 'Project Identity' header on project tab", %{
-      conn: conn,
-      parent: parent
-    } do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/settings")
-      assert html =~ "Project Identity"
-      refute html =~ "Sandbox Identity"
+    test "its owner may delete it", %{conn: conn, parent: parent} do
+      assert %{"setup" => %{"canDeleteProject" => true}} =
+               conn |> open(parent) |> props()
     end
 
-    test "shows the danger zone delete button", %{conn: conn, parent: parent} do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/settings")
-      assert html =~ "The danger zone"
-      assert html =~ "Delete project"
-    end
-
-    test "an admin cannot hard-delete the project through the sandbox confirm event",
+    test "an admin cannot delete the project, whole or scheduled",
          %{conn: conn, user: user} do
-      # The page renders the soft-delete modal here, not the sandbox one, so
-      # this event is only reachable by crafting it. It used to land on the
-      # sandbox policy, which admits admins, and hard-delete the workspace
-      # outright - the capability `:delete_project` reserves for owners.
       root =
         insert(:project,
           name: "root-project",
@@ -70,212 +60,113 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
         )
 
       workflow = insert(:workflow, project: root)
+      view = open(conn, root)
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{root.id}/settings")
+      # The name matches, so only the role can refuse it.
+      send_event(view, "delete_project", %{
+        "nameConfirmation" => root.name
+      })
 
-      # The name has to match, or the typo guard refuses it before the
-      # authorisation question is ever asked.
-      render_hook(view, "confirm-delete", %{"confirm" => %{"name" => root.name}})
-
-      # Assert the refusal itself, not just that the project survived. The
-      # handler also leaves it intact when the typed name does not match, so
-      # without this the test passes whether or not authorisation ever ran.
-      assert {_path, %{"error" => error}} = assert_redirect(view)
-      assert error =~ "permission to delete this sandbox"
+      assert_refused(view)
 
       assert Lightning.Repo.reload(root)
       assert Lightning.Repo.reload(workflow)
       assert is_nil(Lightning.Repo.reload!(root).scheduled_deletion)
-    end
-
-    test "shows webhook auth methods table on webhook_security tab", %{
-      conn: conn,
-      parent: parent
-    } do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{parent.id}/settings")
-      refute html =~ "Webhook authentication is managed in the parent project"
     end
   end
 
   describe "sandbox project" do
     setup [:setup_parent_and_sandbox]
 
-    test "shows Editable banner on credentials and collections tabs", %{
+    test "is drawn as a sandbox of its parent", %{
       conn: conn,
-      sandbox: sandbox
+      sandbox: sandbox,
+      parent: parent
     } do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
+      parent_id = parent.id
+      settings_href = "/projects/#{parent.id}/settings"
 
-      assert html =~ ~s(id="sandbox-banner-credentials")
-      assert html =~ ~s(id="sandbox-banner-collections")
-
-      assert html =~
-               "Changes you make here will sync to the parent project on merge."
-    end
-
-    test "shows Local banner on project, collaboration, vcs, data-storage, history-exports tabs",
-         %{conn: conn, sandbox: sandbox} do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
-
-      for tab <- ~w(project collaboration vcs data-storage history-exports) do
-        assert html =~ ~s(id="sandbox-banner-#{tab}")
-      end
-
-      assert html =~
-               "Changes you make here only apply to this sandbox and do not sync"
-    end
-
-    test "shows Inherited banner on security tab", %{
-      conn: conn,
-      sandbox: sandbox
-    } do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
-
-      assert html =~ ~s(id="sandbox-banner-security")
-      assert html =~ "These settings are inherited from the parent project"
-    end
-
-    test "shows 'Sandbox Identity' header instead of 'Project Identity'", %{
-      conn: conn,
-      sandbox: sandbox
-    } do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
-
-      assert html =~ "Sandbox Identity"
-      assert html =~ "Sandbox setup"
-      assert html =~ "Identifies this sandbox within its parent:"
-      assert html =~ "parent-project"
-    end
-
-    test "shows the danger zone delete button", %{conn: conn, sandbox: sandbox} do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
-
-      assert html =~ "The danger zone"
-      assert html =~ "Delete sandbox"
-      refute html =~ "Delete project"
+      assert %{
+               "project" => %{"parentId" => ^parent_id},
+               "parent" => %{
+                 "name" => "parent-project",
+                 "settingsHref" => ^settings_href
+               },
+               "setup" => %{"canDeleteProject" => true}
+             } = conn |> open(sandbox) |> props()
     end
 
     test "delete sandbox flow calls delete_sandbox and redirects to root project",
          %{conn: conn, sandbox: sandbox, parent: parent} do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{sandbox.id}/settings/delete")
+      view = open(conn, sandbox, "settings/delete")
 
-      view
-      |> form("#confirm-delete-sandbox form",
-        confirm: %{name: sandbox.name}
-      )
-      |> render_submit()
+      send_event(view, "delete_project", %{
+        "nameConfirmation" => sandbox.name
+      })
 
       flash = assert_redirected(view, ~p"/projects/#{parent.id}/w")
       assert flash["info"] =~ "and all its associated descendants deleted"
       assert is_nil(Lightning.Projects.get_project(sandbox.id))
     end
 
-    test "confirm-delete-validate marks the form invalid for a wrong name",
+    test "a wrong name does not delete and replies the error",
          %{conn: conn, sandbox: sandbox} do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{sandbox.id}/settings/delete")
+      view = open(conn, sandbox, "settings/delete")
 
-      html =
-        view
-        |> form("#confirm-delete-sandbox form", confirm: %{name: "wrong"})
-        |> render_change()
+      send_event(view, "delete_project", %{
+        "nameConfirmation" => "wrong"
+      })
 
-      assert html =~ "does not match the sandbox name"
-      # Sandbox was not deleted
+      assert_reply(view, %{error: "does not match the sandbox name"})
       assert Lightning.Projects.get_project(sandbox.id)
     end
 
-    test "submitting the confirm form with a wrong name does not delete and re-renders errors",
+    test "the delete modal opens only at its own address",
          %{conn: conn, sandbox: sandbox} do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{sandbox.id}/settings/delete")
+      assert %{"deleting" => true} =
+               conn |> open(sandbox, "settings/delete") |> props()
 
-      html =
-        view
-        |> form("#confirm-delete-sandbox form", confirm: %{name: "wrong"})
-        |> render_submit()
-
-      assert html =~ "does not match the sandbox name"
-      assert Lightning.Projects.get_project(sandbox.id)
+      assert %{"deleting" => false} =
+               conn |> open(sandbox) |> props()
     end
 
-    test "close button navigates back to the settings index",
+    test "unauthorized sandbox delete replies an error and keeps the sandbox",
          %{conn: conn, sandbox: sandbox} do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{sandbox.id}/settings/delete")
+      view = open(conn, sandbox, "settings/delete")
 
-      view
-      |> element("#confirm-delete-sandbox button[aria-label='Close']")
-      |> render_click()
-
-      assert_redirected(view, ~p"/projects/#{sandbox.id}/settings")
-    end
-
-    test "unauthorized sandbox delete surfaces an error and returns to settings",
-         %{conn: conn, sandbox: sandbox} do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{sandbox.id}/settings/delete")
-
-      # Simulate an authorization mismatch by stubbing the sandbox delete call
-      # to return :unauthorized while the settings page's own can_delete_project
-      # gate allowed us through.
+      # The context refuses although the page's own role check let it through.
       Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn _, _ ->
         {:error, :unauthorized}
       end)
 
-      view
-      |> form("#confirm-delete-sandbox form",
-        confirm: %{name: sandbox.name}
-      )
-      |> render_submit()
+      send_event(view, "delete_project", %{
+        "nameConfirmation" => sandbox.name
+      })
 
-      flash = assert_redirected(view, ~p"/projects/#{sandbox.id}/settings")
-      assert flash["error"] =~ "permission to delete this sandbox"
+      assert_reply(view, %{
+        error: "You don't have permission to delete this sandbox"
+      })
+
       assert Lightning.Projects.get_project(sandbox.id)
     end
 
-    test "unexpected sandbox delete error surfaces a generic error",
+    test "unexpected sandbox delete error replies a generic error",
          %{conn: conn, sandbox: sandbox} do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{sandbox.id}/settings/delete")
+      view = open(conn, sandbox, "settings/delete")
 
       Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn _, _ ->
         {:error, :boom}
       end)
 
-      view
-      |> form("#confirm-delete-sandbox form",
-        confirm: %{name: sandbox.name}
-      )
-      |> render_submit()
+      send_event(view, "delete_project", %{
+        "nameConfirmation" => sandbox.name
+      })
 
-      flash = assert_redirected(view, ~p"/projects/#{sandbox.id}/settings")
-      assert flash["error"] =~ "Could not delete sandbox"
+      assert_reply(view, %{
+        error: "Could not delete sandbox. Please try again later."
+      })
+
       assert Lightning.Projects.get_project(sandbox.id)
-    end
-
-    test "shows webhook security explanatory message instead of auth methods",
-         %{conn: conn, sandbox: sandbox} do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
-
-      assert html =~ "Webhook authentication is managed in the parent project"
-    end
-
-    test "MFA toggle is disabled in sandbox", %{conn: conn, sandbox: sandbox} do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
-      html = render(view)
-
-      assert html =~ ~s(id="toggle-mfa-switch")
-      assert html =~ ~s(disabled)
-      assert html =~ "cursor-not-allowed"
-    end
-
-    test "does not show the role permissions message on webhook_security or security tabs",
-         %{conn: conn, sandbox: sandbox} do
-      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/settings")
-
-      refute html =~ "Role based permissions: You cannot modify"
     end
   end
 

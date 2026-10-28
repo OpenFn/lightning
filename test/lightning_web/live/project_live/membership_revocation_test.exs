@@ -7,6 +7,7 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
   import Ecto.Changeset, only: [change: 2]
   import Lightning.Factories
   import Lightning.ProjectsHelpers
+  import LightningWeb.ProjectSettingsPageHelpers
   import Phoenix.LiveViewTest
 
   alias Lightning.Projects
@@ -16,8 +17,6 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
   # The broadcast lands in the victim's mailbox synchronously, but the teardown
   # is asynchronous relative to the test process.
   @teardown_timeout 2_000
-
-  @refusal "You are not authorized to perform this action"
 
   setup %{conn: conn} do
     admin = insert(:user, first_name: "Ada", last_name: "Admin")
@@ -111,8 +110,7 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
 
       remove_collaborator(owner, project, other_project_user)
 
-      assert render(view) =~ "Project settings"
-      assert has_element?(view, "#show_collaborators_modal_button")
+      assert props(view)["collaboration"]["canAddProjectUser"]
     end
 
     test "rejects a removal from an admin demoted after mount", %{
@@ -131,9 +129,11 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
       |> change(role: :editor)
       |> Repo.update!()
 
-      assert view
-             |> element("#remove_#{other_project_user.id}_modal_confirm_button")
-             |> render_click() =~ @refusal
+      send_event(view, "remove_collaborator", %{
+        "id" => other_project_user.id
+      })
+
+      assert_refused(view)
 
       assert Repo.get(ProjectUser, other_project_user.id)
     end
@@ -149,8 +149,10 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
       {:ok, victim, _html} =
         live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
-      refute has_element?(victim, "#show_collaborators_modal_button[disabled]")
-      refute has_element?(victim, "#project-identity-submit-btn[disabled]")
+      assert %{
+               "collaboration" => %{"canAddProjectUser" => true},
+               "setup" => %{"canEditProject" => true}
+             } = props(victim)
 
       monitor_ref = Process.monitor(victim.pid)
 
@@ -159,17 +161,13 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
       assert_receive {:DOWN, ^monitor_ref, :process, _pid, _reason},
                      @teardown_timeout
 
-      {:ok, remounted, html} =
+      {:ok, remounted, _html} =
         live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
-      assert html =~ "Project settings"
-
-      assert has_element?(
-               remounted,
-               "#show_collaborators_modal_button[disabled]"
-             )
-
-      assert has_element?(remounted, "#project-identity-submit-btn[disabled]")
+      assert %{
+               "collaboration" => %{"canAddProjectUser" => false},
+               "setup" => %{"canEditProject" => false}
+             } = props(remounted)
     end
   end
 
@@ -227,29 +225,13 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
       |> change(role: :viewer)
       |> Repo.update!()
 
-      view |> element("#show_collaborators_modal_button") |> render_click()
-
       newcomer = insert(:user)
 
-      result =
-        view
-        |> form("#add_collaborators_modal_form",
-          project: %{
-            "collaborators" => %{
-              "0" => %{"email" => newcomer.email, "role" => "editor"}
-            }
-          }
-        )
-        |> render_submit()
+      send_event(view, "add_collaborators", %{
+        "collaborators" => [%{"email" => newcomer.email, "role" => "editor"}]
+      })
 
-      assert {:ok, _remounted, html} =
-               follow_redirect(
-                 result,
-                 conn,
-                 ~p"/projects/#{project}/settings#collaboration"
-               )
-
-      assert html =~ @refusal
+      assert_refused(view)
 
       assert project
              |> Repo.preload(:project_users, force: true)
@@ -275,34 +257,35 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
     end
 
     test "refuses a rename", %{project: project, view: view} do
-      assert view
-             |> form("#project-settings-form",
-               project: %{"raw_name" => "renamed-by-a-viewer"}
-             )
-             |> render_submit() =~ @refusal
+      send_event(view, "save_identity", %{
+        "rawName" => "renamed-by-a-viewer"
+      })
+
+      assert_refused(view)
 
       assert Repo.reload!(project).name == project.name
     end
 
     test "refuses a support-access toggle", %{project: project, view: view} do
-      assert view |> element("#toggle-support-access") |> render_click() =~
-               @refusal
+      send_event(view, "set_support_access", %{"on" => true})
+      assert_refused(view)
 
       refute Repo.reload!(project).allow_support_access
     end
 
     test "refuses an MFA toggle", %{project: project, view: view} do
-      assert view |> element("#toggle-mfa-switch") |> render_click() =~ @refusal
+      send_event(view, "set_requires_mfa", %{"on" => true})
+      assert_refused(view)
 
       refute Repo.reload!(project).requires_mfa
     end
 
     test "refuses a retention-policy change", %{project: project, view: view} do
-      assert view
-             |> form("#retention-settings-form",
-               project: %{"retention_policy" => "erase_all"}
-             )
-             |> render_submit() =~ @refusal
+      send_event(view, "save_data_storage", %{
+        "retentionPolicy" => "erase_all"
+      })
+
+      assert_refused(view)
 
       assert Repo.reload!(project).retention_policy == project.retention_policy
     end
@@ -333,10 +316,11 @@ defmodule LightningWeb.ProjectLive.MembershipRevocationTest do
 
     Mox.allow(LightningMock, self(), owner_view.pid)
 
-    assert {:error, {:live_redirect, %{to: _}}} =
-             owner_view
-             |> element("#remove_#{project_user.id}_modal_confirm_button")
-             |> render_click()
+    send_event(owner_view, "remove_collaborator", %{
+      "id" => project_user.id
+    })
+
+    assert_ok(owner_view)
 
     refute Repo.get(ProjectUser, project_user.id)
   end

@@ -1,0 +1,905 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "project": {
+      "$ref": "#/definitions/CurrentProject"
+    },
+    "projectLabel": {
+      "type": "string"
+    },
+    "parent": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ParentProjectRef"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "deleting": {
+      "type": "boolean"
+    },
+    "setup": {
+      "$ref": "#/definitions/SetupSettings"
+    },
+    "credentials": {
+      "$ref": "#/definitions/CredentialsSettings"
+    },
+    "collections": {
+      "$ref": "#/definitions/CollectionsSettings"
+    },
+    "webhookSecurity": {
+      "$ref": "#/definitions/WebhookSecuritySettings"
+    },
+    "collaboration": {
+      "$ref": "#/definitions/CollaborationSettings"
+    },
+    "security": {
+      "$ref": "#/definitions/SecuritySettings"
+    },
+    "githubSync": {
+      "$ref": "#/definitions/GithubSyncSettings"
+    },
+    "dataStorage": {
+      "$ref": "#/definitions/DataStorageSettings"
+    },
+    "historyExports": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/HistoryExportRow"
+      }
+    }
+  },
+  "required": [
+    "project",
+    "projectLabel",
+    "parent",
+    "deleting",
+    "setup",
+    "credentials",
+    "collections",
+    "webhookSecurity",
+    "collaboration",
+    "security",
+    "githubSync",
+    "dataStorage",
+    "historyExports"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "CurrentProject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": ["string", "null"]
+        },
+        "color": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "parentId", "color"],
+      "additionalProperties": false
+    },
+    "ParentProjectRef": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "settingsHref": {
+          "type": "string"
+        }
+      },
+      "required": ["name", "settingsHref"],
+      "additionalProperties": false
+    },
+    "SetupSettings": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "env": {
+          "type": "string"
+        },
+        "concurrency": {
+          "type": ["number", "null"]
+        },
+        "exportHref": {
+          "type": "string"
+        },
+        "deleteHref": {
+          "type": "string"
+        },
+        "gracePeriodDays": {
+          "type": "number"
+        },
+        "scheduledDeletion": {
+          "type": ["string", "null"]
+        },
+        "sandboxDeletion": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "rootName": {
+                  "type": "string"
+                },
+                "descendantCount": {
+                  "type": "number"
+                }
+              },
+              "required": ["rootName", "descendantCount"],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "canEditProject": {
+          "type": "boolean"
+        },
+        "canDeleteProject": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "env",
+        "concurrency",
+        "exportHref",
+        "deleteHref",
+        "gracePeriodDays",
+        "scheduledDeletion",
+        "sandboxDeletion",
+        "canEditProject",
+        "canDeleteProject"
+      ],
+      "additionalProperties": false
+    },
+    "CredentialsSettings": {
+      "type": "object",
+      "properties": {
+        "credentials": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CredentialRow"
+          }
+        },
+        "oauthClients": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OauthClientRow"
+          }
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CredentialProjectRef"
+          }
+        },
+        "credentialTypes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CredentialTypeOption"
+          }
+        },
+        "oauthSignIns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OauthSignInResult"
+          }
+        },
+        "canCreateGlobalOauthClient": {
+          "type": "boolean"
+        },
+        "keychainCredentials": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/KeychainCredentialRow"
+          }
+        },
+        "canCreateProjectCredential": {
+          "type": "boolean"
+        },
+        "canCreateKeychainCredential": {
+          "type": "boolean"
+        },
+        "canEditKeychainCredential": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "canCreateGlobalOauthClient",
+        "canCreateKeychainCredential",
+        "canCreateProjectCredential",
+        "canEditKeychainCredential",
+        "credentialTypes",
+        "credentials",
+        "keychainCredentials",
+        "oauthClients",
+        "oauthSignIns",
+        "projects"
+      ],
+      "additionalProperties": false
+    },
+    "CredentialRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "schema": {
+          "type": "string"
+        },
+        "oauthClient": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CredentialOauthClient"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ownerEmail": {
+          "type": "string"
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CredentialProjectAccess"
+          }
+        },
+        "externalId": {
+          "type": ["string", "null"]
+        },
+        "environments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "transferStatus": {
+          "$ref": "#/definitions/TransferStatus"
+        },
+        "scheduledDeletion": {
+          "type": ["string", "null"]
+        },
+        "hasActivityInProjects": {
+          "type": "boolean"
+        },
+        "canEdit": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "schema",
+        "oauthClient",
+        "ownerEmail",
+        "projects",
+        "externalId",
+        "environments",
+        "transferStatus",
+        "scheduledDeletion",
+        "hasActivityInProjects",
+        "canEdit"
+      ],
+      "additionalProperties": false
+    },
+    "CredentialOauthClient": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "mandatoryScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "optionalScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scopesDocUrl": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "mandatoryScopes",
+        "optionalScopes",
+        "scopesDocUrl"
+      ],
+      "additionalProperties": false
+    },
+    "CredentialProjectAccess": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "workflowsUsing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["id", "name", "workflowsUsing"],
+      "additionalProperties": false
+    },
+    "TransferStatus": {
+      "type": ["string", "null"],
+      "enum": ["pending", "completed", null]
+    },
+    "OauthClientRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ownerEmail": {
+          "type": "string"
+        },
+        "global": {
+          "type": "boolean"
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CredentialProjectRef"
+          }
+        },
+        "authorizationEndpoint": {
+          "type": "string"
+        },
+        "tokenEndpoint": {
+          "type": "string"
+        },
+        "revocationEndpoint": {
+          "type": "string"
+        },
+        "introspectionEndpoint": {
+          "type": "string"
+        },
+        "userinfoEndpoint": {
+          "type": "string"
+        },
+        "mandatoryScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "optionalScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scopesDocUrl": {
+          "type": "string"
+        },
+        "canEdit": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "ownerEmail",
+        "global",
+        "projects",
+        "authorizationEndpoint",
+        "tokenEndpoint",
+        "revocationEndpoint",
+        "introspectionEndpoint",
+        "userinfoEndpoint",
+        "mandatoryScopes",
+        "optionalScopes",
+        "scopesDocUrl",
+        "canEdit"
+      ],
+      "additionalProperties": false
+    },
+    "CredentialProjectRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name"],
+      "additionalProperties": false
+    },
+    "CredentialTypeOption": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["key", "name"],
+      "additionalProperties": false
+    },
+    "OauthSignInResult": {
+      "type": "object",
+      "properties": {
+        "signInId": {
+          "type": "string"
+        },
+        "error": {
+          "type": ["string", "null"]
+        },
+        "userInfo": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/OauthUserInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["signInId", "error", "userInfo"],
+      "additionalProperties": false
+    },
+    "OauthUserInfo": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": ["string", "null"]
+        },
+        "email": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["name", "email"],
+      "additionalProperties": false
+    },
+    "KeychainCredentialRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "defaultCredential": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CredentialRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ownerEmail": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "path", "defaultCredential", "ownerEmail"],
+      "additionalProperties": false
+    },
+    "CredentialRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name"],
+      "additionalProperties": false
+    },
+    "CollectionsSettings": {
+      "type": "object",
+      "properties": {
+        "collections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CollectionRow"
+          }
+        },
+        "canManage": {
+          "type": "boolean"
+        }
+      },
+      "required": ["collections", "canManage"],
+      "additionalProperties": false
+    },
+    "CollectionRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "byteSizeSum": {
+          "type": "number"
+        },
+        "downloadHref": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "byteSizeSum", "downloadHref"],
+      "additionalProperties": false
+    },
+    "WebhookSecuritySettings": {
+      "type": "object",
+      "properties": {
+        "authMethods": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WebhookAuthMethodRow"
+          }
+        },
+        "canWrite": {
+          "type": "boolean"
+        }
+      },
+      "required": ["authMethods", "canWrite"],
+      "additionalProperties": false
+    },
+    "WebhookAuthMethodRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "authType": {
+          "$ref": "#/definitions/WebhookAuthType"
+        },
+        "username": {
+          "type": ["string", "null"]
+        },
+        "maskedSecret": {
+          "type": "string"
+        },
+        "triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WebhookUsageRef"
+          }
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WebhookUsageRef"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "authType",
+        "username",
+        "maskedSecret",
+        "triggers",
+        "channels"
+      ],
+      "additionalProperties": false
+    },
+    "WebhookAuthType": {
+      "type": "string",
+      "enum": ["basic", "api"]
+    },
+    "WebhookUsageRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "href": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "href"],
+      "additionalProperties": false
+    },
+    "CollaborationSettings": {
+      "type": "object",
+      "properties": {
+        "collaborators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CollaboratorRow"
+          }
+        },
+        "supportAccess": {
+          "type": "boolean"
+        },
+        "canEditProject": {
+          "type": "boolean"
+        },
+        "canAddProjectUser": {
+          "type": "boolean"
+        },
+        "addBlockedReason": {
+          "type": ["string", "null"]
+        },
+        "canReceiveFailureAlerts": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "collaborators",
+        "supportAccess",
+        "canEditProject",
+        "canAddProjectUser",
+        "addBlockedReason",
+        "canReceiveFailureAlerts"
+      ],
+      "additionalProperties": false
+    },
+    "CollaboratorRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/ProjectRole"
+        },
+        "failureAlert": {
+          "type": "boolean"
+        },
+        "digest": {
+          "$ref": "#/definitions/Digest"
+        },
+        "isCurrentUser": {
+          "type": "boolean"
+        },
+        "removeBlockedReason": {
+          "type": ["string", "null"]
+        },
+        "ownedCredentialNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "role",
+        "failureAlert",
+        "digest",
+        "isCurrentUser",
+        "removeBlockedReason",
+        "ownedCredentialNames"
+      ],
+      "additionalProperties": false
+    },
+    "ProjectRole": {
+      "type": "string",
+      "enum": ["owner", "admin", "editor", "viewer"]
+    },
+    "Digest": {
+      "type": "string",
+      "enum": ["never", "daily", "weekly", "monthly"]
+    },
+    "SecuritySettings": {
+      "type": "object",
+      "properties": {
+        "requiresMfa": {
+          "type": "boolean"
+        },
+        "canEditProject": {
+          "type": "boolean"
+        },
+        "canRequireMfa": {
+          "type": "boolean"
+        }
+      },
+      "required": ["requiresMfa", "canEditProject", "canRequireMfa"],
+      "additionalProperties": false
+    },
+    "GithubSyncSettings": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "connection": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GithubRepoConnection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "userConnected": {
+          "type": "boolean"
+        },
+        "connectAccountHref": {
+          "type": "string"
+        },
+        "canInstall": {
+          "type": "boolean"
+        },
+        "canInitiateSync": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled",
+        "connection",
+        "userConnected",
+        "connectAccountHref",
+        "canInstall",
+        "canInitiateSync"
+      ],
+      "additionalProperties": false
+    },
+    "GithubRepoConnection": {
+      "type": "object",
+      "properties": {
+        "repo": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "githubInstallationId": {
+          "type": "string"
+        },
+        "configPath": {
+          "type": "string"
+        },
+        "syncVersion": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "repo",
+        "branch",
+        "githubInstallationId",
+        "configPath",
+        "syncVersion"
+      ],
+      "additionalProperties": false
+    },
+    "DataStorageSettings": {
+      "type": "object",
+      "properties": {
+        "historyRetentionPeriod": {
+          "type": ["number", "null"]
+        },
+        "dataclipRetentionPeriod": {
+          "type": ["number", "null"]
+        },
+        "retentionPolicy": {
+          "$ref": "#/definitions/RetentionPolicy"
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "limitMessage": {
+          "type": ["string", "null"]
+        },
+        "canEdit": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "canEdit",
+        "dataclipRetentionPeriod",
+        "historyRetentionPeriod",
+        "limitMessage",
+        "periods",
+        "retentionPolicy"
+      ],
+      "additionalProperties": false
+    },
+    "RetentionPolicy": {
+      "type": "string",
+      "enum": ["retain_all", "retain_with_errors", "erase_all"]
+    },
+    "HistoryExportRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "insertedAt": {
+          "type": "string"
+        },
+        "fileName": {
+          "type": ["string", "null"]
+        },
+        "requestedBy": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/ExportStatus"
+        },
+        "downloadHref": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": [
+        "id",
+        "insertedAt",
+        "fileName",
+        "requestedBy",
+        "status",
+        "downloadHref"
+      ],
+      "additionalProperties": false
+    },
+    "ExportStatus": {
+      "type": "string",
+      "enum": ["enqueued", "in_progress", "completed", "failed"]
+    }
+  }
+}

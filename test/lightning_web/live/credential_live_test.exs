@@ -2,7 +2,6 @@ defmodule LightningWeb.CredentialLiveTest do
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
-  import LightningWeb.CredentialLiveHelpers
   import LightningWeb.CredentialPageHelpers
 
   import Lightning.AdaptorTestHelpers
@@ -14,6 +13,7 @@ defmodule LightningWeb.CredentialLiveTest do
   alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
+  alias LightningWeb.ProjectSettingsPageHelpers, as: Settings
 
   @create_attrs %{
     name: "some credential",
@@ -28,6 +28,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
   # An apostrophe is a legal name character. A control character is not.
   @invalid_attrs %{name: "this won't \u{0000} work"}
+
+  # The project settings page's Credentials tab: the same component, its
+  # rows under `credentials.credentials`.
+  defp settings_row(view, credential) do
+    Settings.props(view)["credentials"]["credentials"]
+    |> Enum.find(&(&1["id"] == credential.id))
+  end
 
   defp create_credential(%{user: user}) do
     credential = insert(:credential, user: user)
@@ -287,26 +294,15 @@ defmodule LightningWeb.CredentialLiveTest do
           project_credentials: [%{project: project}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = Settings.open(conn, project)
 
-      assert html =~ credential.name
-
-      refute has_element?(
-               view,
-               "#credential-actions-#{credential.id}-delete"
-             )
+      assert %{"canEdit" => false} = settings_row(view, credential)
 
       # send the event anyway
-      view
-      |> with_target("#credentials-index-component")
-      |> render_click("request_credential_deletion", %{id: credential.id})
+      Settings.send_event(view, "delete_credential", %{"id" => credential.id})
 
-      assert_patched(view, ~p"/projects/#{project}/settings")
-
-      assert render(view) =~ "You are not authorized to perform this action"
+      assert_reply(view, %{error: error})
+      assert error == refused()
 
       credential =
         Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
@@ -365,26 +361,17 @@ defmodule LightningWeb.CredentialLiveTest do
           project_credentials: [%{project: project}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = Settings.open(conn, project)
 
-      assert html =~ credential.name
-
-      refute has_element?(
-               view,
-               "#credential-actions-#{credential.id}-cancel-deletion"
-             )
+      assert %{"canEdit" => false} = settings_row(view, credential)
 
       # send the event anyway
-      view
-      |> with_target("#credentials-index-component")
-      |> render_click("cancel_credential_deletion", %{id: credential.id})
+      Settings.send_event(view, "cancel_credential_deletion", %{
+        "id" => credential.id
+      })
 
-      assert_patched(view, ~p"/projects/#{project}/settings")
-
-      assert render(view) =~ "You are not authorized to perform this action"
+      assert_reply(view, %{error: error})
+      assert error == refused()
 
       assert Lightning.Repo.reload(credential).scheduled_deletion
     end
@@ -406,29 +393,13 @@ defmodule LightningWeb.CredentialLiveTest do
           project_credentials: [%{project: project}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = Settings.open(conn, project)
 
-      assert html =~ credential.name
+      assert %{"canEdit" => true} = settings_row(view, credential)
 
-      html = open_delete_credential_modal(view, credential.id)
-
-      assert html =~
-               "Deleting this credential will immediately remove it from all jobs"
-
-      view
-      |> element(
-        "#delete-credential-#{credential.id}-modal button",
-        "Delete credential"
-      )
-      |> render_click()
-
-      flash =
-        assert_redirected(view, ~p"/projects/#{project}/settings#credentials")
-
-      assert flash["info"] == "Credential scheduled for deletion"
+      assert Settings.send_event(view, "delete_credential", %{
+               "id" => credential.id
+             }) =~ "Credential scheduled for deletion"
 
       credential =
         Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
@@ -454,31 +425,14 @@ defmodule LightningWeb.CredentialLiveTest do
           project_credentials: [%{project: project}]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = Settings.open(conn, project)
 
-      assert view
-             |> element("#credentials-table")
-             |> render()
-             |> Floki.parse_fragment!()
-             |> Floki.find("tr td:first-child")
-             |> Floki.text() =~ credential.name
-
-      refute has_element?(
-               view,
-               "#credential-actions-#{credential.id}-delete"
-             )
+      assert %{"canEdit" => false} = settings_row(view, credential)
 
       # send the event anyway
-      view
-      |> with_target("#credentials-index-component")
-      |> render_click("request_credential_deletion", %{id: credential.id})
-
-      assert_patched(view, ~p"/projects/#{project}/settings")
-
-      assert render(view) =~ "You are not authorized to perform this action"
+      Settings.send_event(view, "delete_credential", %{"id" => credential.id})
+      assert_reply(view, %{error: error})
+      assert error == refused()
     end
   end
 

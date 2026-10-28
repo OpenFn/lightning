@@ -9,7 +9,7 @@ import { liveViewJoined } from '../steps';
 
 // The toast the user sees reading `text`: announced as an alert, or as a
 // status where a design marks info messages politely
-export const toast = (page: Page, text: string) =>
+export const toast = (page: Page, text: string | RegExp) =>
   page
     .getByRole('alert')
     .or(page.getByRole('status'))
@@ -84,7 +84,11 @@ export async function S01(page: Page, text: string, act: () => Promise<void>) {
 //   When an action on the page puts the error flash "<text>"
 //   Then I see a red toast with an exclamation icon reading "<text>"
 //   And the toast is marked as an alert
-export async function S02(page: Page, text: string, act: () => Promise<void>) {
+export async function S02(
+  page: Page,
+  text: string | RegExp,
+  act: () => Promise<void>
+) {
   await act();
   const box = toast(page, text);
   await expect(box).toBeVisible();

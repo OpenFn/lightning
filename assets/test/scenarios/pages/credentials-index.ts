@@ -5,6 +5,7 @@
 import { expect, type Dialog, type Locator, type Page } from '@playwright/test';
 
 import {
+  expectTooltip,
   field,
   pushEvent,
   sendingValues,
@@ -34,11 +35,20 @@ export async function dialog(page: Page, title: string | RegExp) {
 }
 
 // When I choose "Add new" then <item> ("Credential" or "OAuth client")
+// On project settings today's menu sits in a header hidden from assistive
+// tech, so hidden elements are searched too and the visible one is used.
 export async function addNew(page: Page, item: 'Credential' | 'OAuth client') {
-  await page.getByRole('button', { name: 'Add new' }).click();
+  await page
+    .getByRole('button', { name: 'Add new', includeHidden: true })
+    .filter({ visible: true })
+    .click();
   // Today's "OAuth Client" item also reads "Advanced" (a badge)
   await page
-    .getByRole('menuitem', { name: new RegExp(`^${item}`, 'i') })
+    .getByRole('menuitem', {
+      name: new RegExp(`^${item}`, 'i'),
+      includeHidden: true,
+    })
+    .filter({ visible: true })
     .click();
 }
 
@@ -47,6 +57,15 @@ export const row = (page: Page, name: string) =>
   page
     .getByRole('row')
     .filter({ has: page.getByRole('cell').getByText(name, { exact: true }) });
+
+// Credential <of> lists environment <name>. Today the row shows a count with
+// the names in its label; the design system shows them in a tooltip on the
+// count.
+export async function expectEnvironment(page: Page, of: Locator, name: string) {
+  if (await isDesignSystem(page))
+    await expectTooltip(page, of.getByText(/^\d+$/), name);
+  else await expect(of).toHaveAccessibleName(new RegExp(escape(name)));
+}
 
 // The actions <row> offers, from its "Actions" menu; empty when it has none
 export async function actionsOf(page: Page, of: Locator) {
@@ -103,7 +122,7 @@ export async function addProject(form: Locator, name: string) {
 }
 
 // The chip of project <name> in the open form's project picker
-const projectChip = (form: Locator, name: string) =>
+export const projectChip = (form: Locator, name: string) =>
   removeProjectButton(form, name).locator('xpath=..');
 
 // Today the button is named "Remove" inside the chip; the design system names
@@ -254,9 +273,14 @@ export const projectOptions = (form: Locator) =>
     .allInnerTexts()
     .then(names => names.map(n => n.trim()));
 
-// Whether this is the design-system page rather than today's HEEx one
+// Whether this is a design-system page rather than today's HEEx one (the
+// project settings Credentials tab shows the same list)
 const isDesignSystem = async (page: Page) =>
-  (await page.locator('[data-react-name="CredentialsIndexPage"]').count()) > 0;
+  (await page
+    .locator(
+      '[data-react-name="CredentialsIndexPage"], [data-react-name="ProjectSettingsPage"]'
+    )
+    .count()) > 0;
 
 // When a "delete now" for credential <id> reaches the server although the
 // page offers none: today's deletion modal takes "delete" with the id, the

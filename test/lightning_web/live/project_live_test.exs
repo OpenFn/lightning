@@ -7,7 +7,9 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.AccountsFixtures
   import Lightning.AdaptorTestHelpers
   import Lightning.Factories
-  import LightningWeb.CredentialLiveHelpers
+  import LightningWeb.ProjectSettingsPageHelpers
+
+  import LightningWeb.CredentialPageHelpers, only: [raw_values: 1]
 
   import Lightning.ApplicationHelpers,
     only: [put_temporary_env: 3]
@@ -169,7 +171,7 @@ defmodule LightningWeb.ProjectLiveTest do
         superuser.id => ""
       })
 
-      assert_reply(view, %{})
+      assert_ok(view)
       assert_patch(view, ~p"/settings/projects")
       assert render(view) =~ "Project created successfully"
 
@@ -279,7 +281,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       push_page_event(view, @admin_page, "cancel_deletion", %{"id" => project.id})
 
-      assert_reply(view, %{})
+      assert_ok(view)
       assert_patch(view, ~p"/settings/projects")
       assert render(view) =~ "Project deletion canceled"
 
@@ -343,7 +345,7 @@ defmodule LightningWeb.ProjectLiveTest do
         user2.id => "viewer"
       })
 
-      assert_reply(view, %{})
+      assert_ok(view)
       assert_patch(view, ~p"/settings/projects")
       assert render(view) =~ "Project updated successfully"
 
@@ -395,7 +397,7 @@ defmodule LightningWeb.ProjectLiveTest do
         user3.id => "viewer"
       })
 
-      assert_reply(view, %{})
+      assert_ok(view)
 
       # Check that users were added
       updated_project = Repo.preload(project, [:project_users], force: true)
@@ -439,7 +441,7 @@ defmodule LightningWeb.ProjectLiveTest do
       # payload, keeps their role.
       save_project(view, project.name, %{user1.id => "owner", user2.id => ""})
 
-      assert_reply(view, %{})
+      assert_ok(view)
 
       updated_project = Repo.preload(project, [:project_users], force: true)
       user_ids = Enum.map(updated_project.project_users, & &1.user_id)
@@ -465,7 +467,7 @@ defmodule LightningWeb.ProjectLiveTest do
         user2.id => "owner"
       })
 
-      assert_reply(view, %{})
+      assert_ok(view)
 
       roles =
         project
@@ -494,7 +496,7 @@ defmodule LightningWeb.ProjectLiveTest do
         user2.id => "admin"
       })
 
-      assert_reply(view, %{})
+      assert_ok(view)
 
       # Check that user2's role was changed
       updated_project = Repo.preload(project, [:project_users], force: true)
@@ -511,43 +513,25 @@ defmodule LightningWeb.ProjectLiveTest do
            project: project
          } do
       {conn, _user} = setup_project_user(conn, project, :owner)
-      {:ok, index_live, html} = live(conn, ~p"/projects/#{project.id}/settings")
 
-      assert html =~ "Deleting your project is irreversible"
-      assert index_live |> element("a", "Delete project") |> has_element?()
+      assert %{"canDeleteProject" => true} =
+               conn |> open(project) |> props() |> Map.fetch!("setup")
 
-      {:ok, delete_project_modal, html} =
-        live(conn, ~p"/projects/#{project.id}/settings/delete")
+      view = open(conn, project, "settings/delete")
+      assert %{"deleting" => true} = props(view)
 
-      assert html =~ "Enter the project name to confirm deletion"
+      send_event(view, "delete_project", %{"nameConfirmation" => project.name})
 
-      {:ok, _delete_project_modal, html} =
-        delete_project_modal
-        |> form("#scheduled_deletion_form",
-          project: %{
-            name_confirmation: project.name
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/projects")
-
-      assert html =~ "Project scheduled for deletion"
+      flash = assert_redirect(view, ~p"/projects")
+      assert flash["info"] == "Project scheduled for deletion"
+      assert Repo.reload(project).scheduled_deletion
     end
 
     test "project members can export a project", %{conn: conn, project: project} do
-      {:ok, index_live, html} = live(conn, ~p"/projects/#{project.id}/settings")
+      href = conn |> open(project) |> props() |> get_in(["setup", "exportHref"])
 
-      assert html =~
-               "Export your project as code, to save this version or edit your project locally"
-
-      assert index_live
-             |> element(~s{a[target="_blank"]}, "Export project")
-             |> has_element?()
-
-      assert index_live
-             |> element(~s{a[target="_blank"]}, "Export project")
-             |> render_click()
-             |> follow_redirect(conn, "/download/yaml?id=#{project.id}")
+      assert href == "/download/yaml?id=#{project.id}"
+      assert conn |> get(href) |> response(200)
     end
 
     test "project members with role other than owner can't delete a project from the settings page",
@@ -559,14 +543,7 @@ defmodule LightningWeb.ProjectLiveTest do
       |> Enum.each(fn role ->
         {conn, _user} = setup_project_user(conn, project, role)
 
-        {:ok, index_live, html} =
-          live(conn, ~p"/projects/#{project.id}/settings")
-
-        refute html =~ "Deleting your project is irreversible"
-
-        refute index_live
-               |> element("button", "Delete project")
-               |> has_element?()
+        assert props(open(conn, project))["setup"]["canDeleteProject"] == false
 
         {:ok, _delete_project_modal, html} =
           live(conn, ~p"/projects/#{project.id}/settings/delete")
@@ -658,7 +635,23 @@ defmodule LightningWeb.ProjectLiveTest do
   describe "projects picker dropdown" do
     setup :register_and_log_in_user
 
-    test "Access project settings page", %{conn: conn, user: user} do
+    defp project_picker(view) do
+      picker =
+        view
+        |> element("#global-project-picker")
+        |> render()
+        |> Floki.parse_fragment!()
+
+      [items] = Floki.attribute(picker, "data-items")
+      [current_id] = Floki.attribute(picker, "data-current-id")
+
+      {current_id, items |> Jason.decode!() |> Map.new(&{&1["id"], &1["label"]})}
+    end
+
+    test "the project picker lists the user's projects", %{
+      conn: conn,
+      user: user
+    } do
       another_user = insert(:user)
 
       project_1 =
@@ -679,34 +672,18 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: another_user.id}]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
+      # Only the user's own projects are offered, the current one marked.
+      users_projects = %{
+        project_1.id => "project-1",
+        project_2.id => "project-2"
+      }
 
-      # Current project shown in breadcrumb project picker button (React mount point)
-      assert view
-             |> element(
-               "#breadcrumb-project-picker-trigger[data-label='project-1']"
-             )
-             |> has_element?()
+      for project <- [project_1, project_2] do
+        {:ok, view, _html} =
+          live(conn, ~p"/projects/#{project}/w", on_error: :raise)
 
-      # Project picker is a React component - check data attributes contain correct projects
-      html = render(view)
-      assert html =~ project_1.name
-      assert html =~ ~s(data-current-id="#{project_1.id}")
-
-      # Projects data is passed as JSON via data-items on the picker mount
-      # User's projects (project_1, project_2) should be in data-items
-      assert html =~ project_2.id
-      # Other user's project (project_3) should NOT be in data-items
-      refute html =~ project_3.id
-
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project_2}/w", on_error: :raise)
-
-      assert html =~ project_2.name
-      assert html =~ ~s(data-current-id="#{project_2.id}")
-      assert html =~ project_1.id
-      refute html =~ project_3.id
+        assert project_picker(view) == {project.id, users_projects}
+      end
 
       assert live(conn, ~p"/projects/#{project_3}/w", on_error: :raise) ==
                {:error,
@@ -752,25 +729,25 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      project_user =
+      %{user: user} =
         Lightning.Projects.get_project_users!(project.id)
         |> List.first()
 
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      assert [
+               %{
+                 "firstName" => first_name,
+                 "lastName" => last_name,
+                 "email" => email,
+                 "role" => "admin"
+               }
+             ] =
+               conn
+               |> open(project)
+               |> props()
+               |> get_in(["collaboration", "collaborators"])
 
-      assert html =~ "Collaborator"
-      assert html =~ "Role"
-
-      assert html =~
-               "#{project_user.user.first_name} #{project_user.user.last_name}"
-               |> Phoenix.HTML.Safe.to_iodata()
-               |> to_string()
-
-      assert html =~ project_user.role |> Atom.to_string() |> String.capitalize()
-
-      assert html =~
-               "#{project_user.user.first_name} #{project_user.user.last_name}"
+      assert {first_name, last_name, email} ==
+               {user.first_name, user.last_name, user.email}
     end
 
     test "project admin can view project credentials page",
@@ -784,7 +761,7 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, credential} =
+      {:ok, _credential} =
         Lightning.Credentials.create_credential(
           %{
             body: %{},
@@ -798,24 +775,13 @@ defmodule LightningWeb.ProjectLiveTest do
           user
         )
 
-      credential = Lightning.Repo.preload(credential, :user)
+      assert [%{"name" => "some name", "schema" => "raw", "ownerEmail" => email}] =
+               conn
+               |> open(project)
+               |> props()
+               |> get_in(["credentials", "credentials"])
 
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
-      assert html =~ "Name"
-      assert html =~ "Type"
-      assert html =~ "Owner"
-      assert html =~ "Environment"
-
-      assert html =~
-               credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
-
-      assert html =~ credential.schema
-      assert html =~ credential.name
-      assert html =~ credential.user.email
+      assert email == user.email
     end
 
     test "authorized project users can create new credentials in the project credentials page",
@@ -831,84 +797,26 @@ defmodule LightningWeb.ProjectLiveTest do
             project_users: [%{user_id: user.id, role: role}]
           )
 
-        {:ok, view, html} =
-          live(conn, ~p"/projects/#{project}/settings#credentials",
-            on_error: :raise
-          )
-
+        view = open(conn, project)
         credential_name = build(:credential).name
 
-        refute html =~ credential_name
+        assert %{"canCreateProjectCredential" => true, "credentials" => []} =
+                 props(view)["credentials"]
 
-        view |> element("#new-credential-option-menu-item") |> render_click()
+        send_event(
+          view,
+          "create_credential",
+          raw_values(%{"name" => credential_name, "projectIds" => [project.id]})
+        )
 
-        view |> select_credential_type("@openfn/language-http")
-        view |> click_continue()
+        assert_ok(view)
 
-        assert view
-               |> fill_credential(%{
-                 name: credential_name,
-                 body: %{
-                   username: "foo",
-                   password: "bar",
-                   baseUrl: "http://localhost"
-                 }
-               })
+        assert [%{"name" => ^credential_name}] =
+                 props(view)["credentials"]["credentials"]
 
-        {:ok, _view, html} =
-          view
-          |> click_save()
-          |> follow_redirect(
-            conn,
-            ~p"/projects/#{project}/settings#credentials"
-          )
-
-        assert html =~ credential_name
+        assert [%{name: ^credential_name}] =
+                 Lightning.Credentials.list_credentials(project)
       end)
-    end
-
-    test "new credential in a sandbox pre-selects only the active sandbox",
-         %{conn: conn, user: user} do
-      root =
-        insert(:project,
-          name: "root-project",
-          project_users: [%{user_id: user.id, role: :admin}]
-        )
-
-      intermediate = insert(:project, name: "intermediate", parent_id: root.id)
-
-      sandbox =
-        insert(:project,
-          name: "sandbox-project",
-          parent_id: intermediate.id,
-          project_users: [%{user_id: user.id, role: :admin}]
-        )
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{sandbox}/settings#credentials",
-          on_error: :raise
-        )
-
-      view |> element("#new-credential-option-menu-item") |> render_click()
-      view |> select_credential_type("@openfn/language-http")
-      view |> click_continue()
-
-      # Only the active sandbox is pre-selected. Ancestors are attached at
-      # merge time, not speculatively at credential creation.
-      assert has_element?(
-               view,
-               "#remove-project-credential-button-new-#{sandbox.id}"
-             )
-
-      refute has_element?(
-               view,
-               "#remove-project-credential-button-new-#{intermediate.id}"
-             )
-
-      refute has_element?(
-               view,
-               "#remove-project-credential-button-new-#{root.id}"
-             )
     end
 
     test "support users can create new credentials in the project credentials page",
@@ -925,101 +833,24 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user: build(:user), role: :owner}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
+      view = open(conn, project)
       credential_name = build(:credential).name
 
-      refute html =~ credential_name
+      assert %{"canCreateProjectCredential" => true, "credentials" => []} =
+               props(view)["credentials"]
 
-      # button is not disabled
-      refute view |> element("#new-credential-option-menu-item") |> render() =~
-               "disabled"
+      send_event(
+        view,
+        "create_credential",
+        raw_values(%{"name" => credential_name, "projectIds" => [project.id]})
+      )
 
-      view |> element("#new-credential-option-menu-item") |> render_click()
+      assert_ok(view)
 
-      view |> select_credential_type("@openfn/language-http")
-      view |> click_continue()
+      assert [%{name: ^credential_name, user_id: user_id}] =
+               Lightning.Credentials.list_credentials(project)
 
-      assert view
-             |> fill_credential(%{
-               name: credential_name,
-               body: %{
-                 username: "foo",
-                 password: "bar",
-                 baseUrl: "http://localhost"
-               }
-             })
-
-      {:ok, _view, html} =
-        view
-        |> click_save()
-        |> follow_redirect(
-          conn,
-          ~p"/projects/#{project}/settings#credentials"
-        )
-
-      assert html =~ credential_name
-    end
-
-    test "non authorized project users can't create new credentials in the project credentials page",
-         %{
-           conn: conn,
-           user: user
-         } do
-      project =
-        insert(:project,
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :viewer}]
-        )
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
-      # button appears disabled
-      assert view |> element("#new-credential-option-menu-item") |> render() =~
-               "cursor-not-allowed"
-
-      # send event anyway
-      view
-      |> with_target("#credentials-index-component")
-      |> render_click("show_modal", %{"target" => "new_credential"})
-
-      # for some reason the #credentials is not included in the url in tests
-      assert_patched(view, ~p"/projects/#{project}/settings")
-
-      assert render(view) =~ "You are not authorized to perform this action"
-    end
-
-    test "click on cancel button to close credential creation modal", %{
-      conn: conn,
-      user: user
-    } do
-      project =
-        insert(:project,
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :owner}]
-        )
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
-      # open modal
-      view |> element("#new-credential-option-menu-item") |> render_click()
-
-      assert has_element?(view, "#new-credential-modal")
-
-      view
-      |> element("#cancel-credential-type-picker", "Cancel")
-      |> render_click()
-
-      refute has_element?(view, "#new-credential-modal")
+      assert user_id == user.id
     end
 
     test "project admin can see keychain credential option in dropdown menu",
@@ -1033,17 +864,8 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
-      # Verify the new keychain credential option is in the page
-      assert has_element?(
-               view,
-               "#new-keychain-credential-option-menu-item",
-               "Keychain"
-             )
+      assert %{"canCreateKeychainCredential" => true} =
+               conn |> open(project) |> props() |> Map.fetch!("credentials")
     end
 
     test "excluded credential types do not appear in the type picker grid",
@@ -1051,7 +873,15 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      excluded_types = ["keychain"]
+      excluded_types = ["keychain", "googlesheets"]
+
+      Mimic.stub(Lightning.Adaptors, :packages, fn ->
+        {:ok,
+         [
+           %{name: "@openfn/language-http", has_schema: true},
+           %{name: "@openfn/language-googlesheets", has_schema: true}
+         ]}
+      end)
 
       project =
         insert(:project,
@@ -1059,16 +889,17 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      types =
+        conn
+        |> open(project)
+        |> props()
+        |> get_in(["credentials", "credentialTypes"])
+        |> Enum.map(& &1["key"])
 
-      view |> element("#new-credential-option-menu-item") |> render_click()
-      assert has_element?(view, "#new-credential-modal")
+      assert "http" in types
 
       for type <- excluded_types do
-        refute has_element?(view, "button[phx-value-key='#{type}']"),
+        refute type in types,
                "#{type} should not appear in the credential type picker"
       end
     end
@@ -1083,78 +914,32 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      keychain_credential =
-        insert(:keychain_credential,
-          name: "Test Keychain",
-          path: "$.organization.id",
-          project: project,
-          created_by: user
-        )
+      insert(:keychain_credential,
+        name: "Test Keychain",
+        path: "$.organization.id",
+        project: project,
+        created_by: user
+      )
 
-      # Create another project and keychain credential that should NOT be visible
+      # Another project's keychain credential isn't listed.
       other_project =
         insert(:project,
           name: "other-project",
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      other_keychain_credential =
-        insert(:keychain_credential,
-          name: "Other Project Keychain",
-          path: "$.user.department",
-          project: other_project,
-          created_by: user
-        )
+      insert(:keychain_credential,
+        name: "Other Project Keychain",
+        path: "$.user.department",
+        project: other_project,
+        created_by: user
+      )
 
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
-      assert html =~ "Keychain Credentials"
-      # Should see the keychain credential for this project
-      assert html =~ keychain_credential.name
-      assert html =~ keychain_credential.path
-      # Should NOT see the keychain credential from the other project
-      refute html =~ other_keychain_credential.name
-      refute html =~ other_keychain_credential.path
-    end
-
-    test "project admin can edit keychain credentials", %{
-      conn: conn,
-      user: user
-    } do
-      project =
-        insert(:project,
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        )
-
-      keychain_credential =
-        insert(:keychain_credential,
-          name: "Test Keychain",
-          path: "$.organization.id",
-          project: project,
-          created_by: user
-        )
-
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
-      # Verify the keychain credential appears with edit actions
-      assert html =~ "Test Keychain"
-      assert html =~ "$.organization.id"
-      assert html =~ "Actions"
-
-      html =
-        view
-        |> element("#keychain-credential-actions-#{keychain_credential.id}-edit")
-        |> render_click()
-
-      # Verify that edit modal component is present in the page
-      assert html =~ "edit-keychain-credential-#{keychain_credential.id}-modal"
+      assert [%{"name" => "Test Keychain", "path" => "$.organization.id"}] =
+               conn
+               |> open(project)
+               |> props()
+               |> get_in(["credentials", "keychainCredentials"])
     end
 
     test "project viewer cannot edit keychain credentials", %{
@@ -1180,16 +965,22 @@ defmodule LightningWeb.ProjectLiveTest do
           created_by: admin_user
         )
 
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = open(conn, project)
 
-      assert html =~ "Keychain Credentials"
-      assert html =~ keychain_credential.name
-      # Verify the actions dropdown is not present for viewers
-      refute html =~
-               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+      assert %{
+               "keychainCredentials" => [%{"name" => "Test Keychain"}],
+               "canEditKeychainCredential" => false
+             } = props(view)["credentials"]
+
+      send_event(view, "update_keychain_credential", %{
+        "id" => keychain_credential.id,
+        "name" => "renamed",
+        "path" => "$.id",
+        "defaultCredentialId" => nil
+      })
+
+      assert_refused(view)
+      assert Repo.reload(keychain_credential).name == "Test Keychain"
     end
 
     test "project admin can delete keychain credentials", %{
@@ -1210,48 +1001,20 @@ defmodule LightningWeb.ProjectLiveTest do
           created_by: user
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = open(conn, project)
 
-      # Verify the keychain credential appears with delete actions
-      assert html =~ keychain_credential.name
-      assert html =~ "Actions"
+      assert [%{"name" => "Test Keychain"}] =
+               props(view)["credentials"]["keychainCredentials"]
 
-      html =
-        view
-        |> element(
-          "#keychain-credential-actions-#{keychain_credential.id}-delete"
-        )
-        |> render_click()
+      assert send_event(view, "delete_keychain_credential", %{
+               "id" => keychain_credential.id
+             }) =~ "Keychain credential deleted"
 
-      # Verify that delete modal component is present in the page
-      assert html =~ "delete-keychain-credential-#{keychain_credential.id}-modal"
+      assert_ok(view)
+      assert props(view)["credentials"]["keychainCredentials"] == []
 
-      html =
-        view
-        |> element(
-          "#delete-keychain-credential-#{keychain_credential.id}-modal_confirm_button"
-        )
-        |> render_click()
-
-      # close the modal, which gets the
-      # view
-      # |> with_target("#credentials-index-component")
-      # |> render_hook("close_active_modal", %{})
-
-      # open_browser(view)
-      # Verify the flash message appears
-      assert html =~ "Keychain credential deleted"
-
-      html =
-        view
-        |> element("#keychain-credentials-table-container")
-        |> render()
-
-      # Verify the keychain credential is removed from the UI
-      refute html =~ keychain_credential.name
+      assert Lightning.Credentials.list_keychain_credentials_for_project(project) ==
+               []
     end
 
     test "project editor cannot edit keychain credentials", %{
@@ -1277,23 +1040,25 @@ defmodule LightningWeb.ProjectLiveTest do
           created_by: admin_user
         )
 
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = open(conn, project)
 
-      assert html =~ "Keychain Credentials"
-      assert html =~ keychain_credential.name
+      assert %{
+               "keychainCredentials" => [%{"name" => "Test Keychain"}],
+               "canEditKeychainCredential" => false
+             } = props(view)["credentials"]
 
-      # Verify the actions dropdown is not present for editors (only owners/admins)
-      refute html =~
-               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+      send_event(view, "update_keychain_credential", %{
+        "id" => keychain_credential.id,
+        "name" => "renamed",
+        "path" => "$.id",
+        "defaultCredentialId" => nil
+      })
+
+      assert_refused(view)
+      assert Repo.reload(keychain_credential).name == "Test Keychain"
     end
 
-    test "keychain credential delete permissions by role via UI", %{
-      conn: conn,
-      user: user
-    } do
+    test "keychain credential delete permissions by role", %{user: user} do
       admin_user = insert(:user)
       editor_user = insert(:user)
       viewer_user = insert(:user)
@@ -1317,81 +1082,49 @@ defmodule LightningWeb.ProjectLiveTest do
           created_by: admin_user
         )
 
-      # Test as owner - should see actions dropdown
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials")
+      for {member, may_delete} <- [
+            {user, true},
+            {admin_user, true},
+            {editor_user, false},
+            {viewer_user, false}
+          ] do
+        view = build_conn() |> log_in_user(member) |> open(project)
 
-      assert html =~
-               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+        assert props(view)["credentials"]["canEditKeychainCredential"] ==
+                 may_delete
 
-      # Test as admin - should see actions dropdown
-      admin_conn = log_in_user(build_conn(), admin_user)
+        unless may_delete do
+          send_event(view, "delete_keychain_credential", %{
+            "id" => keychain_credential.id
+          })
 
-      {:ok, _view, html} =
-        live(admin_conn, ~p"/projects/#{project}/settings#credentials")
+          assert_refused(view)
+        end
+      end
 
-      assert html =~
-               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
-
-      # Test as editor - should NOT see actions dropdown
-      editor_conn = log_in_user(build_conn(), editor_user)
-
-      {:ok, _view, html} =
-        live(editor_conn, ~p"/projects/#{project}/settings#credentials")
-
-      refute html =~
-               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
-
-      # Test as viewer - should NOT see actions dropdown
-      viewer_conn = log_in_user(build_conn(), viewer_user)
-
-      {:ok, _view, html} =
-        live(viewer_conn, ~p"/projects/#{project}/settings#credentials")
-
-      refute html =~
-               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
+      assert Repo.reload(keychain_credential)
     end
 
     test "project admin can create keychain credential from settings", %{
       conn: conn,
       user: user
     } do
-      credential = insert(:credential, user: user)
-
       project =
         insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      insert(:project_credential, project: project, credential: credential)
+      view = open(conn, project)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      assert send_event(view, "create_keychain_credential", %{
+               "name" => "My Keychain Credential",
+               "path" => "$.user_id",
+               "defaultCredentialId" => nil
+             }) =~ "Keychain credential created successfully"
 
-      # Open create keychain credential modal
-      html =
-        view
-        |> element("#new-keychain-credential-option-menu-item")
-        |> render_click()
+      assert_ok(view)
 
-      # Verify modal opened and form is present (testing from_collab_editor: false path)
-      assert html =~ "Keychain"
-      assert html =~ "keychain-credential-form-new"
-
-      # Submit form with name and path (covers save handler and push_event)
-      view
-      |> form("#keychain-credential-form-new", %{
-        "keychain_credential" => %{
-          "name" => "My Keychain Credential",
-          "path" => "$.user_id"
-        }
-      })
-      |> render_submit()
-
-      # Verify keychain credential was created (proves the form submitted successfully)
       keychain_credential =
         Repo.get_by(
           Lightning.Credentials.KeychainCredential,
@@ -1400,21 +1133,18 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert keychain_credential
       assert keychain_credential.created_by_id == user.id
+      assert keychain_credential.project_id == project.id
     end
 
     test "project admin can update keychain credential from settings", %{
       conn: conn,
       user: user
     } do
-      credential_1 = insert(:credential, user: user)
-
       project =
         insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :admin}]
         )
-
-      insert(:project_credential, project: project, credential: credential_1)
 
       keychain_credential =
         insert(:keychain_credential,
@@ -1424,34 +1154,17 @@ defmodule LightningWeb.ProjectLiveTest do
           path: "$.org_id"
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = open(conn, project)
 
-      # Open edit keychain credential modal
-      html =
-        view
-        |> element(
-          "a#keychain-credential-actions-#{keychain_credential.id}-edit"
-        )
-        |> render_click()
+      assert send_event(view, "update_keychain_credential", %{
+               "id" => keychain_credential.id,
+               "name" => "Updated Name",
+               "path" => "$.updated_path",
+               "defaultCredentialId" => nil
+             }) =~ "Keychain credential updated successfully"
 
-      # Verify modal opened (testing from_collab_editor: false path)
-      assert html =~ "Keychain"
-      assert html =~ "keychain-credential-form-#{keychain_credential.id}"
+      assert_ok(view)
 
-      # Update the form (covers update handler and push_event)
-      view
-      |> form("#keychain-credential-form-#{keychain_credential.id}", %{
-        "keychain_credential" => %{
-          "name" => "Updated Name",
-          "path" => "$.updated_path"
-        }
-      })
-      |> render_submit()
-
-      # Verify keychain credential was updated (proves the form submitted successfully)
       updated =
         Repo.get(
           Lightning.Credentials.KeychainCredential,
@@ -1473,28 +1186,23 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = open(conn, project)
 
-      # Open create keychain credential modal
-      view
-      |> element("#new-keychain-credential-option-menu-item")
-      |> render_click()
+      send_event(view, "create_keychain_credential", %{
+        "name" => "",
+        "path" => "",
+        "defaultCredentialId" => nil
+      })
 
-      # Submit empty form (covers validation error path)
-      html =
-        view
-        |> form("#keychain-credential-form-new", %{
-          "keychain_credential" => %{
-            "name" => "",
-            "path" => ""
-          }
-        })
-        |> render_submit()
+      assert_reply(view, %{
+        fieldErrors: %{
+          "name" => ["This field can't be blank."],
+          "path" => ["This field can't be blank."]
+        }
+      })
 
-      assert html =~ "can&#39;t be blank"
+      assert Lightning.Credentials.list_keychain_credentials_for_project(project) ==
+               []
     end
 
     test "viewer cannot create keychain credential (authorization check)", %{
@@ -1507,68 +1215,21 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :viewer}]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
+      view = open(conn, project)
 
-      # Button appears disabled for viewers
-      assert view
-             |> element("#new-keychain-credential-option-menu-item")
-             |> render() =~ "cursor-not-allowed"
+      assert %{"canCreateKeychainCredential" => false} =
+               props(view)["credentials"]
 
-      # Send event anyway (bypassing UI)
-      view
-      |> with_target("#credentials-index-component")
-      |> render_click("show_modal", %{"target" => "new_keychain_credential"})
-
-      # Authorization check in credential_index_component blocks it
-      assert render(view) =~ "You are not authorized to perform this action"
-    end
-
-    test "viewer cannot edit keychain credential (authorization check)", %{
-      conn: conn,
-      user: viewer_user
-    } do
-      admin_user = insert(:user)
-
-      project =
-        insert(:project,
-          name: "project-1",
-          project_users: [
-            %{user_id: admin_user.id, role: :admin},
-            %{user_id: viewer_user.id, role: :viewer}
-          ]
-        )
-
-      keychain_credential =
-        insert(:keychain_credential,
-          created_by: admin_user,
-          project: project,
-          name: "Protected",
-          path: "$.secret"
-        )
-
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
-      # Viewer sees the credential but not the edit button
-      assert html =~ "Protected"
-
-      refute html =~
-               "keychain-credential-actions-#{keychain_credential.id}-dropdown"
-
-      # Send edit event anyway (bypassing UI)
-      view
-      |> with_target("#credentials-index-component")
-      |> render_click("edit_keychain_credential", %{
-        "id" => keychain_credential.id
+      send_event(view, "create_keychain_credential", %{
+        "name" => "new",
+        "path" => "$.id",
+        "defaultCredentialId" => nil
       })
 
-      # Authorization check in credential_index_component blocks it
-      assert render(view) =~ "You are not authorized to perform this action"
+      assert_refused(view)
+
+      assert Lightning.Credentials.list_keychain_credentials_for_project(project) ==
+               []
     end
 
     test "project admin can't edit project name and description with invalid data",
@@ -1582,57 +1243,24 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      view = open(conn, project)
 
-      assert html =~ "Project settings"
+      invalid_project_description =
+        Enum.map(1..250, fn _ ->
+          Enum.random(Enum.to_list(?a..?z) ++ Enum.to_list(?0..?9))
+        end)
+        |> to_string()
 
-      invalid_project_description = %{
-        description:
-          Enum.map(1..250, fn _ ->
-            Enum.random(Enum.to_list(?a..?z) ++ Enum.to_list(?0..?9))
-          end)
-          |> to_string()
-      }
+      send_event(view, "save_identity", %{
+        "rawName" => "project-1",
+        "description" => invalid_project_description
+      })
 
-      assert view
-             |> form("#project-settings-form",
-               project: invalid_project_description
-             )
-             |> render_change() =~ "should be at most 240 character(s)"
+      assert_reply(view, %{
+        fieldErrors: %{"description" => ["should be at most 240 character(s)"]}
+      })
 
-      assert view |> has_element?("button[disabled][type=submit]")
-    end
-
-    test "project admin can edit project name and description with valid data",
-         %{
-           conn: conn,
-           user: user
-         } do
-      project =
-        insert(:project,
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        )
-
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
-
-      assert html =~ "Project settings"
-
-      valid_project_attrs = %{
-        raw_name: "somename",
-        description: "some description"
-      }
-
-      assert view
-             |> form("#project-settings-form", project: valid_project_attrs)
-             |> render_submit() =~ "Project updated successfully"
-
-      assert %{
-               name: "somename",
-               description: "some description"
-             } = Repo.get!(Project, project.id)
+      assert Repo.reload(project).description == project.description
     end
 
     test "project settings form cannot change the environment", %{
@@ -1646,44 +1274,22 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, view, html} = live(conn, ~p"/projects/#{project}/settings")
+      view = open(conn, project)
 
-      assert html =~ "Project environment"
+      assert %{"env" => "staging"} = props(view)["setup"]
 
-      assert_raise ArgumentError, ~r/could not find non-disabled input/, fn ->
-        view
-        |> form("#project-settings-form", project: %{env: "main"})
-        |> render_submit()
-      end
+      send_event(view, "save_identity", %{
+        "rawName" => "project-1",
+        "env" => "main"
+      })
+
+      assert_ok(view)
 
       assert render_submit(view, "save", %{
                "project" => %{"raw_name" => "project-1", "env" => "main"}
              }) =~ "Project updated successfully"
 
       assert %{env: "staging"} = Repo.get!(Project, project.id)
-    end
-
-    test "project settings form converts uppercase name to url-safe format",
-         %{
-           conn: conn,
-           user: user
-         } do
-      project =
-        insert(:project,
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        )
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
-
-      assert view
-             |> form("#project-settings-form",
-               project: %{raw_name: "DEP-burundi-datafi"}
-             )
-             |> render_submit() =~ "Project updated successfully"
-
-      assert %{name: "dep-burundi-datafi"} = Repo.get!(Project, project.id)
     end
 
     test "saving project settings with name that resolves to blank shows error",
@@ -1697,17 +1303,13 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      view = open(conn, project)
 
-      html =
-        view
-        |> form("#project-settings-form",
-          project: %{raw_name: "!!!"}
-        )
-        |> render_submit()
+      send_event(view, "save_identity", %{"rawName" => "!!!"})
 
-      assert html =~ "can&#39;t be blank"
+      assert_reply(view, %{
+        fieldErrors: %{"rawName" => ["This field can't be blank."]}
+      })
 
       # Project name is unchanged
       assert %{name: "project-1"} = Repo.get!(Project, project.id)
@@ -1726,13 +1328,11 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      view = open(conn, project)
 
-      view
-      |> form("#project-settings-form", project: %{raw_name: "renamed"})
-      |> render_submit(%{
+      render_submit(view, "save", %{
         "project" => %{
+          "raw_name" => "renamed",
           "requires_mfa" => "true",
           "scheduled_deletion" => "2038-01-01T00:00:00Z",
           "allow_support_access" => "true",
@@ -1744,7 +1344,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # The ordinary field is applied...
       assert reloaded.name == "renamed"
-      # ...but none of the privileged fields ride along.
+      # ...but none of the others are.
       refute reloaded.requires_mfa
       assert reloaded.scheduled_deletion == nil
       refute reloaded.allow_support_access
@@ -1762,16 +1362,12 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      view = open(conn, project)
 
-      assert html =~ "Project settings"
-
-      assert view
-             |> form("#project-concurrency-form")
-             |> render_submit(%{project: %{concurrency: "1"}}) =~
+      assert send_event(view, "save_concurrency", %{"concurrency" => 1}) =~
                "Project updated successfully"
 
+      assert_ok(view)
       assert %{concurrency: 1} = Repo.get!(Project, project.id)
     end
 
@@ -1785,25 +1381,17 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: user.id, role: :viewer}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      view = open(conn, project)
 
-      assert html =~ "Project settings"
+      assert %{"canEditProject" => false} = props(view)["setup"]
 
-      assert view
-             |> has_element?(
-               "input[disabled='disabled'][name='project[raw_name]']"
-             )
-
-      assert view
-             |> has_element?(
-               "textarea[disabled='disabled'][name='project[description]']"
-             )
-
-      assert view |> has_element?("button[disabled][type=submit]")
+      send_event(view, "save_identity", %{"rawName" => "renamed"})
+      assert_refused(view)
 
       assert view |> render_click("save", %{"project" => %{}}) =~
                "You are not authorized to perform this action."
+
+      assert Repo.reload(project).name == "project-1"
     end
 
     test "support users cannot edit project details", %{
@@ -1819,25 +1407,17 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user: build(:user), role: :owner}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      view = open(conn, project)
 
-      assert html =~ "Project settings"
+      assert %{"canEditProject" => false} = props(view)["setup"]
 
-      assert view
-             |> has_element?(
-               "input[disabled='disabled'][name='project[raw_name]']"
-             )
-
-      assert view
-             |> has_element?(
-               "textarea[disabled='disabled'][name='project[description]']"
-             )
-
-      assert view |> has_element?("button[disabled][type=submit]")
+      send_event(view, "save_identity", %{"rawName" => "renamed"})
+      assert_refused(view)
 
       assert view |> render_click("save", %{"project" => %{}}) =~
                "You are not authorized to perform this action."
+
+      assert Repo.reload(project).name == "project-1"
     end
 
     test "project members can edit their own digest frequency and failure alert settings",
@@ -1861,59 +1441,58 @@ defmodule LightningWeb.ProjectLiveTest do
           ]
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings" <> "#collaboration",
-          on_error: :raise
+      view = open(conn, project)
+
+      %{id: own} =
+        Enum.find(project.project_users, &(&1.user_id == authenticated_user.id))
+
+      %{id: theirs} =
+        Enum.find(
+          project.project_users,
+          &(&1.user_id == unauthenticated_user.id)
         )
 
-      authenticated_user_project_user =
-        project.project_users
-        |> Enum.find(fn pu -> pu.user_id == authenticated_user.id end)
-
-      unauthenticated_user_project_user =
-        project.project_users
-        |> Enum.find(fn pu -> pu.user_id == unauthenticated_user.id end)
-
-      assert_raise ArgumentError, fn ->
-        view
-        |> element("#project_user-#{unauthenticated_user_project_user.id}")
-        |> render_click()
+      own_row = fn ->
+        Enum.find(
+          props(view)["collaboration"]["collaborators"],
+          &(&1["id"] == own)
+        )
       end
 
-      form_id = "#failure-alert-#{authenticated_user_project_user.id}"
+      assert %{"failureAlert" => false, "digest" => "never"} = own_row.()
 
-      assert view |> has_element?("#{form_id} option[selected]", "Disabled")
+      refute send_event(view, "set_failure_alert", %{"id" => own, "on" => false}) =~
+               "Project user updated successfuly"
 
-      refute view
-             |> form(form_id, %{"failure_alert" => "false"})
-             |> render_change() =~ "Project user updated successfuly"
+      assert_ok(view)
 
-      assert view
-             |> form(form_id, %{"failure_alert" => "true"})
-             |> render_change() =~ "Project user updated successfuly"
+      assert send_event(view, "set_failure_alert", %{"id" => own, "on" => true}) =~
+               "Project user updated successfuly"
 
-      assert view
-             |> has_element?(
-               "#failure-alert-#{authenticated_user_project_user.id} option[selected]",
-               "Enabled"
-             )
+      assert_ok(view)
+      assert %{"failureAlert" => true} = own_row.()
 
       render_hook(view, "lv:clear-flash", %{key: "info"})
 
-      form_id = "#digest-#{authenticated_user_project_user.id}"
-
-      assert view |> has_element?("#{form_id} option[selected]", "Never")
-
-      refute view
-             |> element(form_id)
-             |> render_change(%{"digest" => "never"}) =~
+      refute send_event(view, "set_digest", %{"id" => own, "digest" => "never"}) =~
                "Project user updated successfuly"
 
-      assert view
-             |> form(form_id, %{"digest" => "daily"})
-             |> render_change() =~ "Project user updated successfuly"
+      assert_ok(view)
 
-      assert view |> has_element?("#{form_id} option[selected]", "Daily")
+      assert send_event(view, "set_digest", %{"id" => own, "digest" => "daily"}) =~
+               "Project user updated successfuly"
+
+      assert_ok(view)
+      assert %{"digest" => "daily"} = own_row.()
+
+      # Another member's settings are theirs to change.
+      send_event(view, "set_failure_alert", %{"id" => theirs, "on" => false})
+      assert_refused(view)
+      send_event(view, "set_digest", %{"id" => theirs, "digest" => "never"})
+      assert_refused(view)
+
+      assert %{failure_alert: true, digest: :daily} =
+               Repo.get(Lightning.Projects.ProjectUser, theirs)
     end
 
     test "all project users can view project security page",
@@ -1922,17 +1501,14 @@ defmodule LightningWeb.ProjectLiveTest do
          } do
       project = insert(:project)
 
-      # project editor and viewer cannot see the settings page
-
       [:admin, :owner, :editor, :viewer]
       |> Enum.each(fn role ->
         {conn, _user} = setup_project_user(conn, project, role)
 
-        {:ok, view, html} =
-          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+        assert %{"requiresMfa" => false, "canEditProject" => can_edit} =
+                 conn |> open(project) |> props() |> Map.fetch!("security")
 
-        assert has_element?(view, "#security-tab")
-        assert html =~ "Multi-Factor Authentication"
+        assert can_edit == role in [:admin, :owner]
       end)
     end
 
@@ -1946,14 +1522,13 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user: user, role: :admin}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      view = open(conn, project)
 
-      assert html =~ "Project settings"
+      assert send_event(view, "set_requires_mfa", %{"on" => true}) =~
+               "Project MFA requirement updated successfully"
 
-      assert view
-             |> element("#toggle-mfa-switch")
-             |> render_click() =~ "Project MFA requirement updated successfully"
+      assert_ok(view)
+      assert Repo.reload(project).requires_mfa
     end
 
     test "project editors and viewers cannot toggle MFA requirement", %{
@@ -1969,19 +1544,15 @@ defmodule LightningWeb.ProjectLiveTest do
       |> Enum.each(fn role ->
         {conn, _user} = setup_project_user(conn, project, role)
 
-        {:ok, view, html} =
-          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+        view = open(conn, project)
 
-        assert html =~ "Project settings"
+        assert %{"canEditProject" => false} = props(view)["security"]
 
-        toggle_button = element(view, "#toggle-mfa-switch")
-
-        assert render(toggle_button) =~
-                 "You do not have permission to perform this action"
-
-        assert render_click(toggle_button) =~
-                 "You are not authorized to perform this action."
+        send_event(view, "set_requires_mfa", %{"on" => true})
+        assert_refused(view)
       end)
+
+      refute Repo.reload(project).requires_mfa
     end
 
     test "only users with MFA enabled can access settings for a project with MFA requirement",
@@ -2044,24 +1615,21 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user: user, role: :admin}]
         )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings#collaboration",
-          on_error: :raise
-        )
+      view = open(conn, project)
 
-      assert html =~ "Project settings"
+      assert send_event(view, "set_support_access", %{"on" => true}) =~
+               "Granted access to support users successfully"
 
-      assert view
-             |> element("#toggle-support-access")
-             |> render_click() =~ "Granted access to support users successfully"
-
+      assert_ok(view)
       assert %{allow_support_access: true} = Repo.get(Project, project.id)
+      assert props(view)["collaboration"]["supportAccess"]
 
-      assert view
-             |> element("#toggle-support-access")
-             |> render_click() =~ "Revoked access to support users successfully"
+      assert send_event(view, "set_support_access", %{"on" => false}) =~
+               "Revoked access to support users successfully"
 
+      assert_ok(view)
       assert %{allow_support_access: false} = Repo.get(Project, project.id)
+      refute props(view)["collaboration"]["supportAccess"]
     end
 
     test "project editors and viewers cannot grant support access", %{
@@ -2077,12 +1645,14 @@ defmodule LightningWeb.ProjectLiveTest do
       |> Enum.each(fn role ->
         {conn, _user} = setup_project_user(conn, project, role)
 
-        {:ok, view, html} =
-          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+        view = open(conn, project)
 
-        assert html =~ "Project settings"
+        assert props(view)["collaboration"]["canEditProject"] == false
 
-        refute has_element?(view, "#toggle-support-access")
+        send_event(view, "set_support_access", %{"on" => true})
+        assert_refused(view)
+
+        refute Repo.reload(project).allow_support_access
       end)
     end
 
@@ -2097,14 +1667,16 @@ defmodule LightningWeb.ProjectLiveTest do
         :ok
       end)
 
-      conn = log_in_user(conn, project_user.user)
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/settings#security")
+      view = conn |> log_in_user(project_user.user) |> open(project)
 
-      refute has_element?(view, "#toggle-mfa-switch[disabled]")
+      refute has_element?(view, "#project-settings-mfa-banner")
+      assert %{"canRequireMfa" => true} = props(view)["security"]
 
-      assert view
-             |> element("#toggle-mfa-switch")
-             |> render_click() =~ "Project MFA requirement updated successfully"
+      assert send_event(view, "set_requires_mfa", %{"on" => true}) =~
+               "Project MFA requirement updated successfully"
+
+      assert_ok(view)
+      assert Repo.reload(project).requires_mfa
     end
 
     test "MFA limited: banner displayed, button is disabled, and MFA cannot be toggled",
@@ -2136,14 +1708,17 @@ defmodule LightningWeb.ProjectLiveTest do
         end
       end)
 
-      conn = log_in_user(conn, project_user.user)
-      {:ok, view, html} = live(conn, ~p"/projects/#{project}/settings#security")
+      view = conn |> log_in_user(project_user.user) |> open(project)
 
-      assert html =~ banner_message
-      assert has_element?(view, "#toggle-mfa-switch[disabled]")
+      assert view
+             |> element("#project-settings-mfa-banner")
+             |> render() =~ banner_message
 
-      assert view |> render_click("toggle-mfa", %{}) =~
-               "You are not authorized to perform this action"
+      assert %{"canRequireMfa" => false} = props(view)["security"]
+
+      send_event(view, "set_requires_mfa", %{"on" => true})
+      assert_refused(view)
+      refute Repo.reload(project).requires_mfa
     end
   end
 
@@ -2231,164 +1806,77 @@ defmodule LightningWeb.ProjectLiveTest do
 
       for conn <-
             build_project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
-        {:ok, view, html} =
-          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+        assert [
+                 %{
+                   "name" => name,
+                   "triggers" => [%{"name" => trigger_name}],
+                   "channels" => [%{"name" => channel_name}]
+                 }
+               ] =
+                 conn
+                 |> open(project)
+                 |> props()
+                 |> get_in(["webhookSecurity", "authMethods"])
 
-        modal_id = "#linked_usage_for_#{auth_method.id}_modal"
-        link_id = "#display_linked_usage_link_#{auth_method.id}"
-
-        assert html =~ auth_method.name
-
-        assert view |> element(link_id) |> render() =~ "1 trigger, 1 channel"
-
-        refute has_element?(view, modal_id)
-
-        view |> element(link_id) |> render_click()
-
-        assert has_element?(view, modal_id)
-
-        modal_html = view |> element(modal_id) |> render()
-
-        assert modal_html =~ "Workflow triggers (1)"
-        assert modal_html =~ workflow.name
-        assert modal_html =~ "Channels (1)"
-        assert modal_html =~ channel.name
+        assert {name, trigger_name, channel_name} ==
+                 {auth_method.name, workflow.name, channel.name}
       end
     end
 
     test "auth methods with no triggers or channels have no usage link" do
       project = insert(:project)
-      auth_method = insert(:webhook_auth_method, project: project)
+      insert(:webhook_auth_method, project: project)
 
       [conn] = build_project_user_conns(project, [:owner])
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
-
-      refute has_element?(view, "#display_linked_usage_link_#{auth_method.id}")
-      assert html =~ "No associated triggers or channels..."
+      assert [%{"triggers" => [], "channels" => []}] =
+               conn
+               |> open(project)
+               |> props()
+               |> get_in(["webhookSecurity", "authMethods"])
     end
 
     test "owners/admins can add a new project webhook auth method, editors/viewers can't" do
       project = insert(:project)
 
-      settings_path =
-        ~p"/projects/#{project}/settings"
-
-      modal_id = "webhook_auth_method_modal"
-
       for conn <- build_project_user_conns(project, [:owner, :admin]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            settings_path,
-            on_error: :raise
-          )
+        view = open(conn, project)
 
-        assert view |> element("button#add_new_auth_method") |> has_element?()
-
-        refute view
-               |> element("button#add_new_auth_method:disabled")
-               |> has_element?()
-
-        # modal doesn't exist
-        refute view |> element("##{modal_id}") |> has_element?()
-
-        # open modal
-        html = view |> element("button#add_new_auth_method") |> render_click()
-        assert view |> element("##{modal_id}") |> has_element?()
-
-        assert html =~ "Basic HTTP Authentication"
-        assert html =~ "API Key Authentication"
-
-        view
-        |> form("##{modal_id} form",
-          webhook_auth_method: %{auth_type: "basic"}
-        )
-        |> render_submit() =~ "Create credential"
-
-        # choose form is nolonger shown
-        html = render(view)
-        refute html =~ "Basic HTTP Authentication"
-        refute html =~ "API Key Authentication"
+        assert props(view)["webhookSecurity"]["canWrite"]
 
         credential_name = build(:credential).name
 
-        refute html =~ credential_name
+        assert send_event(view, "create_webhook_auth_method", %{
+                 "authType" => "basic",
+                 "name" => credential_name,
+                 "username" => "testusername",
+                 "password" => "testpassword123"
+               }) =~ "Webhook auth method created successfully"
 
-        view
-        |> form("##{modal_id} form",
-          webhook_auth_method: %{
-            name: credential_name,
-            username: "testusername",
-            password: "testpassword123"
-          }
-        )
-        |> render_submit()
+        assert_ok(view)
 
-        assert_patched(view, settings_path)
-
-        # modal doesn't exist
-        refute view |> element("##{modal_id}") |> has_element?()
-
-        html = render(view)
-
-        assert html =~ "Webhook auth method created successfully"
-        assert html =~ credential_name
+        assert Enum.any?(
+                 props(view)["webhookSecurity"]["authMethods"],
+                 &(&1["name"] == credential_name)
+               )
       end
 
       for conn <- build_project_user_conns(project, [:editor, :viewer]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            settings_path,
-            on_error: :raise
-          )
+        view = open(conn, project)
 
-        assert view
-               |> element("button#add_new_auth_method:disabled")
-               |> has_element?()
+        refute props(view)["webhookSecurity"]["canWrite"]
 
-        # forcing the event results in error
-        assert render_click(view, "show_modal", %{
-                 target: "new_webhook_auth_method"
-               }) =~
-                 "You are not authorized to perform this action"
+        send_event(view, "create_webhook_auth_method", %{
+          "authType" => "basic",
+          "name" => "not allowed",
+          "username" => "testusername",
+          "password" => "testpassword123"
+        })
 
-        # modal doesn't exist
-        refute view |> element("##{modal_id}") |> has_element?()
+        assert_refused(view)
       end
-    end
 
-    test "project viewers cannot add a new project webhook auth method", %{
-      conn: conn
-    } do
-      project = insert(:project)
-
-      project_user =
-        insert(:project_user,
-          role: :viewer,
-          project: project,
-          user: build(:user)
-        )
-
-      conn = log_in_user(conn, project_user.user)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
-
-      assert view
-             |> element("button#add_new_auth_method:disabled")
-             |> has_element?()
-
-      # forcing the event results in error
-      assert render_click(view, "show_modal", %{
-               target: "new_webhook_auth_method"
-             }) =~
-               "You are not authorized to perform this action"
-
-      # modal doesn't exist
-      refute view |> element("#webhook_auth_method_modal") |> has_element?()
+      assert length(Lightning.WebhookAuthMethods.list_for_project(project)) == 2
     end
 
     test "owners/admins can add edit a project webhook auth method, editors/viewers can't" do
@@ -2400,159 +1888,38 @@ defmodule LightningWeb.ProjectLiveTest do
           auth_type: :basic
         )
 
-      settings_path = ~p"/projects/#{project}/settings"
+      names =
+        for conn <- build_project_user_conns(project, [:owner, :admin]) do
+          view = open(conn, project)
+          credential_name = build(:credential).name
 
-      modal_id = "webhook_auth_method_modal"
+          assert send_event(view, "rename_webhook_auth_method", %{
+                   "id" => auth_method.id,
+                   "name" => credential_name
+                 }) =~ "Webhook auth method updated successfully"
 
-      for conn <- build_project_user_conns(project, [:owner, :admin]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            settings_path,
-            on_error: :raise
-          )
+          assert_ok(view)
 
-        # modal doesn't exist
-        refute view |> element("##{modal_id}") |> has_element?()
+          assert [%{"name" => ^credential_name}] =
+                   props(view)["webhookSecurity"]["authMethods"]
 
-        assert view
-               |> element("a#edit_auth_method_link_#{auth_method.id}")
-               |> has_element?()
-
-        view
-        |> element("a#edit_auth_method_link_#{auth_method.id}")
-        |> render_click()
-
-        # modal exists
-        assert view |> element("##{modal_id}") |> has_element?()
-
-        credential_name = build(:credential).name
-
-        refute render(view) =~ credential_name
-
-        view
-        |> form("##{modal_id} form",
-          webhook_auth_method: %{name: credential_name}
-        )
-        |> render_submit()
-
-        assert_patched(view, settings_path)
-
-        # modal doesn't exist
-        refute view |> element("##{modal_id}") |> has_element?()
-
-        html = render(view)
-        assert html =~ "Webhook auth method updated successfully"
-        assert html =~ credential_name
-      end
-
-      for conn <- build_project_user_conns(project, [:editor, :viewer]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            settings_path,
-            on_error: :raise
-          )
-
-        assert view
-               |> element(
-                 "a#edit_auth_method_link_#{auth_method.id}.cursor-not-allowed"
-               )
-               |> has_element?()
-
-        # forcing the event results in error
-        assert render_click(view, "show_modal", %{
-                 target: "edit_webhook_auth_method",
-                 id: auth_method.id
-               }) =~
-                 "You are not authorized to perform this action"
-
-        # modal doesn't exist
-        refute view |> element("##{modal_id}") |> has_element?()
-      end
-    end
-
-    test "owners/admins cannot open another project's webhook auth method by id" do
-      project = insert(:project)
-
-      # A webhook auth method that belongs to a DIFFERENT project.
-      foreign_auth_method =
-        insert(:webhook_auth_method,
-          project: insert(:project),
-          auth_type: :basic,
-          name: "someone-elses-auth"
-        )
-
-      modal_id = "webhook_auth_method_modal"
-
-      for conn <- build_project_user_conns(project, [:owner, :admin]) do
-        {:ok, view, _html} =
-          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
-
-        # edit and delete both reject the cross-project id and never open the
-        # modal on the foreign method
-        for target <- ["edit_webhook_auth_method", "delete_webhook_auth_method"] do
-          html =
-            render_click(view, "show_modal", %{
-              target: target,
-              id: foreign_auth_method.id
-            })
-
-          assert html =~ "Webhook auth method not found"
-          refute html =~ "someone-elses-auth"
-          refute view |> element("##{modal_id}") |> has_element?()
+          credential_name
         end
 
-        # the linked-usage view (a read with no write gate) is scoped too
-        html =
-          render_click(view, "show_modal", %{
-            target: "linked_usage_for_webhook_auth_method",
-            id: foreign_auth_method.id
-          })
+      for conn <- build_project_user_conns(project, [:editor, :viewer]) do
+        view = open(conn, project)
 
-        assert html =~ "Webhook auth method not found"
-        refute html =~ "someone-elses-auth"
+        refute props(view)["webhookSecurity"]["canWrite"]
+
+        send_event(view, "rename_webhook_auth_method", %{
+          "id" => auth_method.id,
+          "name" => "not allowed"
+        })
+
+        assert_refused(view)
       end
-    end
 
-    test "project viewers cannot edit a project webhook auth method", %{
-      conn: conn
-    } do
-      project = insert(:project)
-
-      auth_method =
-        insert(:webhook_auth_method,
-          project: project,
-          auth_type: :basic
-        )
-
-      project_user =
-        insert(:project_user,
-          role: :viewer,
-          project: project,
-          user: build(:user)
-        )
-
-      conn = log_in_user(conn, project_user.user)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
-
-      assert view
-             |> element(
-               "a#edit_auth_method_link_#{auth_method.id}.cursor-not-allowed"
-             )
-             |> has_element?()
-
-      # forcing the event results in error
-      assert render_click(view, "show_modal", %{
-               target: "edit_webhook_auth_method",
-               id: auth_method.id
-             }) =~
-               "You are not authorized to perform this action"
-
-      # modal doesn't exist
-      refute view |> element("#webhook_auth_method_modal") |> has_element?()
+      assert Repo.reload(auth_method).name == List.last(names)
     end
 
     test "password is required before displaying the API KEY of a project webhook auth method",
@@ -2575,58 +1942,32 @@ defmodule LightningWeb.ProjectLiveTest do
           user: build(:user)
         )
 
-      conn = log_in_user(conn, project_user.user)
+      view = conn |> log_in_user(project_user.user) |> open(project)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      # Only the last five characters are shown.
+      assert [%{"maskedSecret" => masked}] =
+               props(view)["webhookSecurity"]["authMethods"]
 
-      view
-      |> element("a#edit_auth_method_link_#{auth_method.id}")
-      |> render_click()
-
-      modal_id = "webhook_auth_method_modal"
-
-      assert view |> element("##{modal_id}") |> has_element?()
-
-      form_id = "webhook_auth_method"
-
-      assert view |> has_element?("##{form_id}_api_key_action_button", "Show")
-      refute view |> has_element?("##{form_id}_api_key_action_button", "Copy")
-      # API KEY not in DOM
+      assert masked == String.duplicate("*", 15) <> "y1234"
       refute render(view) =~ auth_method.api_key
 
-      refute view |> has_element?("#reauthentication-form")
+      send_event(view, "reveal_webhook_secret", %{
+        "id" => auth_method.id,
+        "password" => "wrongpass",
+        "code" => ""
+      })
 
-      view |> element("##{form_id}_api_key_action_button") |> render_click()
+      assert_reply(view, %{error: "Invalid! Please try again"})
 
-      assert view |> has_element?("#reauthentication-form")
+      send_event(view, "reveal_webhook_secret", %{
+        "id" => auth_method.id,
+        "password" => project_user.user.password,
+        "code" => ""
+      })
 
-      # test wrong password
-      refute render(view) =~ "Invalid! Please try again"
-
-      view
-      |> form("#reauthentication-form",
-        user: %{password: "wrongpass"}
-      )
-      |> render_submit()
-
-      assert render(view) =~ "Invalid! Please try again"
-      # form still exists
-      assert view |> has_element?("#reauthentication-form")
-
-      # correct password
-      view
-      |> form("#reauthentication-form",
-        user: %{password: project_user.user.password}
-      )
-      |> render_submit()
-
-      refute render(view) =~ "Invalid! Please try again"
-      refute view |> has_element?("#reauthentication-form")
-
-      refute view |> has_element?("##{form_id}_api_key_action_button", "Show")
-      assert view |> has_element?("##{form_id}_api_key_action_button", "Copy")
-      assert render(view) =~ auth_method.api_key
+      assert_reply(view, %{secret: secret})
+      assert secret == auth_method.api_key
+      refute render(view) =~ auth_method.api_key
     end
 
     test "password is required before displaying the password of a project webhook auth method",
@@ -2649,73 +1990,39 @@ defmodule LightningWeb.ProjectLiveTest do
           user: build(:user)
         )
 
-      conn = log_in_user(conn, project_user.user)
+      view = conn |> log_in_user(project_user.user) |> open(project)
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+      assert [%{"maskedSecret" => masked}] =
+               props(view)["webhookSecurity"]["authMethods"]
 
-      view
-      |> element("a#edit_auth_method_link_#{auth_method.id}")
-      |> render_click()
+      assert masked ==
+               String.duplicate("*", String.length(auth_method.password))
 
-      modal_id = "webhook_auth_method_modal"
-
-      assert view |> element("##{modal_id}") |> has_element?()
-
-      # this is to check that the root tag for the live component is mantained
-      root_div = "edit_auth_method_#{auth_method.id}"
-      assert has_element?(view, "##{root_div}")
-
-      form_id = "webhook_auth_method"
-
-      assert view |> has_element?("##{form_id}_password_action_button", "Show")
-      refute view |> has_element?("##{form_id}_password_action_button", "Copy")
-      # password not in DOM
       refute render(view) =~ auth_method.password
 
-      refute view |> has_element?("#reauthentication-form")
+      send_event(view, "reveal_webhook_secret", %{
+        "id" => auth_method.id,
+        "password" => "wrongpass",
+        "code" => ""
+      })
 
-      view |> element("##{form_id}_password_action_button") |> render_click()
+      assert_reply(view, %{error: "Invalid! Please try again"})
 
-      assert view |> has_element?("#reauthentication-form")
+      send_event(view, "reveal_webhook_secret", %{
+        "id" => auth_method.id,
+        "password" => project_user.user.password,
+        "code" => ""
+      })
 
-      # root html tag in livecomponent is mantained
-      assert has_element?(view, "##{root_div}")
-
-      # test wrong password
-      refute render(view) =~ "Invalid! Please try again"
-
-      view
-      |> form("#reauthentication-form",
-        user: %{password: "wrongpass"}
-      )
-      |> render_submit()
-
-      assert render(view) =~ "Invalid! Please try again"
-      # form still exists
-      assert view |> has_element?("#reauthentication-form")
-
-      # correct password
-      view
-      |> form("#reauthentication-form",
-        user: %{password: project_user.user.password}
-      )
-      |> render_submit()
-
-      refute render(view) =~ "Invalid! Please try again"
-      refute view |> has_element?("#reauthentication-form")
-
-      refute view |> has_element?("##{form_id}_password_action_button", "Show")
-      assert view |> has_element?("##{form_id}_password_action_button", "Copy")
-      assert render(view) =~ auth_method.password
+      assert_reply(view, %{secret: secret})
+      assert secret == auth_method.password
+      refute render(view) =~ auth_method.password
     end
 
-    test "the delete modal lists the dependent workflows and channels" do
+    test "an auth method lists its triggers and channels with links to each" do
       project = insert(:project)
       workflow = insert(:simple_workflow, project: project, name: "My Workflow")
+      [%{id: trigger_id}] = workflow.triggers
 
       auth_method =
         insert(:webhook_auth_method,
@@ -2737,45 +2044,26 @@ defmodule LightningWeb.ProjectLiveTest do
 
       [conn] = build_project_user_conns(project, [:owner])
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+      assert [
+               %{
+                 "triggers" => [
+                   %{"name" => "My Workflow", "href" => trigger_href}
+                 ],
+                 "channels" => [
+                   %{"name" => "My Channel", "href" => channel_href}
+                 ]
+               }
+             ] =
+               conn
+               |> open(project)
+               |> props()
+               |> get_in(["webhookSecurity", "authMethods"])
 
-      view
-      |> element("a#delete_auth_method_link_#{auth_method.id}")
-      |> render_click()
+      assert trigger_href ==
+               "/projects/#{project.id}/w/#{workflow.id}?s=#{trigger_id}"
 
-      html = view |> element("#delete_auth_method_#{auth_method.id}") |> render()
-
-      assert html =~ "1 workflow trigger will stop requiring authentication"
-      assert html =~ workflow.name
-
-      assert html =~ "1 channel will accept unauthenticated requests"
-      assert html =~ channel.name
-
-      assert has_element?(
-               view,
-               ~s{a[href="/projects/#{project.id}/channels/#{channel.id}/edit"]},
-               channel.name
-             )
-    end
-
-    test "the delete modal says so when nothing depends on the auth method" do
-      project = insert(:project)
-      auth_method = insert(:webhook_auth_method, project: project)
-
-      [conn] = build_project_user_conns(project, [:owner])
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
-
-      view
-      |> element("a#delete_auth_method_link_#{auth_method.id}")
-      |> render_click()
-
-      html = view |> element("#delete_auth_method_#{auth_method.id}") |> render()
-
-      assert html =~ "used by no workflows or channels"
-      refute html =~ "will accept unauthenticated requests"
+      assert channel_href ==
+               "/projects/#{project.id}/channels/#{channel.id}/edit"
     end
 
     test "owners and admins can delete a project webhook auth method",
@@ -2796,43 +2084,24 @@ defmodule LightningWeb.ProjectLiveTest do
             user: build(:user)
           )
 
-        settings_path =
-          ~p"/projects/#{project}/settings"
+        view = conn |> log_in_user(project_user.user) |> open(project)
 
-        conn = log_in_user(conn, project_user.user)
-
-        {:ok, view, html} = live(conn, settings_path)
-
-        assert html =~ auth_method.name
-
-        modal_id = "delete_auth_method_#{auth_method.id}_modal"
-
-        refute has_element?(view, "##{modal_id}")
-
-        view
-        |> element("a#delete_auth_method_link_#{auth_method.id}")
-        |> render_click()
-
-        assert has_element?(view, "##{modal_id}")
-
-        assert view
-               |> form("##{modal_id} form",
-                 delete_confirmation: %{confirmation: "diel"}
+        assert Enum.any?(
+                 props(view)["webhookSecurity"]["authMethods"],
+                 &(&1["id"] == auth_method.id)
                )
-               |> render_change() =~ "Please type DELETE to confirm"
 
-        view
-        |> form("##{modal_id} form",
-          delete_confirmation: %{confirmation: "DELETE"}
-        )
-        |> render_submit()
+        assert send_event(view, "delete_webhook_auth_method", %{
+                 "id" => auth_method.id
+               }) =~ "Your Webhook Authentication method has been deleted."
 
-        assert_patched(view, settings_path)
+        assert_ok(view)
+        assert Repo.reload(auth_method).scheduled_deletion
 
-        html = render(view)
-
-        assert html =~ "Your Webhook Authentication method has been deleted."
-        refute html =~ auth_method.name
+        refute Enum.any?(
+                 props(view)["webhookSecurity"]["authMethods"],
+                 &(&1["id"] == auth_method.id)
+               )
       end
 
       for role <- [:editor, :viewer] do
@@ -2849,29 +2118,11 @@ defmodule LightningWeb.ProjectLiveTest do
             user: build(:user)
           )
 
-        settings_path =
-          ~p"/projects/#{project}/settings"
+        view = conn |> log_in_user(project_user.user) |> open(project)
 
-        conn = log_in_user(conn, project_user.user)
-
-        {:ok, view, _html} = live(conn, settings_path)
-
-        modal_id = "delete_auth_method_#{auth_method.id}_modal"
-
-        assert view
-               |> has_element?(
-                 "a#delete_auth_method_link_#{auth_method.id}.cursor-not-allowed"
-               )
-
-        # forcing the event results in error
-        assert render_click(view, "show_modal", %{
-                 target: "delete_webhook_auth_method",
-                 id: auth_method.id
-               }) =~
-                 "You are not authorized to perform this action"
-
-        # modal doesn't exist
-        refute view |> element("##{modal_id}") |> has_element?()
+        send_event(view, "delete_webhook_auth_method", %{"id" => auth_method.id})
+        assert_refused(view)
+        refute Repo.reload(auth_method).scheduled_deletion
       end
     end
   end
@@ -2882,166 +2133,19 @@ defmodule LightningWeb.ProjectLiveTest do
 
     @tag role: :owner
     test "project owner can view these settings", %{conn: conn, project: project} do
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
-
-      assert html =~ "Input/Output Data Storage Policy"
+      assert %{"canEdit" => true} =
+               conn |> open(project) |> props() |> Map.fetch!("dataStorage")
     end
 
     @tag role: :admin
     test "project admin can view these settings", %{conn: conn, project: project} do
-      {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
-
-      assert html =~ "Input/Output Data Storage Policy"
-
-      assert html =~
-               "The input and output data associated with workflow runs and channel requests is useful for debugging. However it can contain sensitive PII. Should OpenFn store this data?"
-
       # retain_all is the default
-      assert ["checked"] ==
-               view
-               |> element("#retain_all")
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.attribute("input", "checked")
-
-      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
-      # refute ["checked"] ==
-      #          view
-      #          |> element("#retain_with_errors")
-      #          |> render()
-      #          |> Floki.parse_fragment!()
-      #          |> Floki.attribute("input", "checked")
-
-      refute ["checked"] ==
-               view
-               |> element("#erase_all")
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.attribute("input", "checked")
-
-      # heads up not shown for retain all
-      refute html =~ "heads-up-description"
-
-      # 3 radio buttons descriptions
-      assert "Retain all input/output data" =
-               view
-               |> element(~s{label#[for="retain_all"]})
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.text()
-               |> String.trim()
-
-      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
-      # assert "Only retain input/output data when a run fails" =
-      #          view
-      #          |> element(~s{label#[for="retain_with_errors"]})
-      #          |> render()
-      #          |> Floki.parse_fragment!()
-      #          |> Floki.text()
-      #          |> String.trim()
-
-      assert "Never retain input/output data (zero-persistence)" =
-               view
-               |> element(~s{label#[for="erase_all"]})
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.text()
-               |> String.trim()
-
-      # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
-      # show heads up for retain_with_errors
-      # view
-      # |> form("#retention-settings-form",
-      #   project: %{
-      #     retention_policy: "retain_with_errors"
-      #   }
-      # )
-      # |> render_change()
-
-      # assert ["checked"] ==
-      #          view
-      #          |> element("#retain_with_errors")
-      #          |> render()
-      #          |> Floki.parse_fragment!()
-      #          |> Floki.attribute("input", "checked")
-
-      # assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
-      #          view
-      #          |> element("#heads-up-description")
-      #          |> render()
-      #          |> Floki.parse_fragment!()
-      #          |> Floki.find("p")
-      #          |> Floki.text()
-      #          |> String.trim()
-
-      # show heads up for erase all
-      view
-      |> form("#retention-settings-form",
-        project: %{
-          retention_policy: "erase_all"
-        }
-      )
-      |> render_change()
-
-      assert ["checked"] ==
-               view
-               |> element("#erase_all")
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.attribute("input", "checked")
-
-      assert "When enabled, you will no longer be able to retry workflow runs, and channel request/response payloads will not be stored." =
-               view
-               |> element("#heads-up-description")
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.find("p")
-               |> Floki.text()
-               |> String.trim()
-    end
-
-    @tag role: :admin
-    test "cancel button resets retention form to saved values", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#data-storage")
-
-      # Change retention policy
-      view
-      |> form("#retention-settings-form",
-        project: %{retention_policy: "erase_all"}
-      )
-      |> render_change()
-
-      assert ["checked"] ==
-               view
-               |> element("#erase_all")
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.attribute("input", "checked")
-
-      # Click cancel
-      view
-      |> element("button[phx-click='cancel-retention-change']")
-      |> render_click()
-
-      # Verify it resets back to retain_all (the default)
-      assert ["checked"] ==
-               view
-               |> element("#retain_all")
-               |> render()
-               |> Floki.parse_fragment!()
-               |> Floki.attribute("input", "checked")
+      assert %{
+               "canEdit" => true,
+               "retentionPolicy" => "retain_all",
+               "historyRetentionPeriod" => nil,
+               "dataclipRetentionPeriod" => nil
+             } = conn |> open(project) |> props() |> Map.fetch!("dataStorage")
     end
 
     @tag role: :editor
@@ -3049,25 +2153,18 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
+      view = open(conn, project)
 
-      assert html =~ "Input/Output Data Storage Policy"
-      assert html =~ "You cannot modify this project&#39;s data storage"
+      assert %{"canEdit" => false} = props(view)["dataStorage"]
 
-      html =
-        render_submit(view, "save_retention_settings", %{
-          project: %{
-            retention_policy: "retain_all",
-            history_retention_period: 14,
-            dataclip_retention_period: 7
-          }
-        })
+      send_event(view, "save_data_storage", %{
+        "retentionPolicy" => "retain_all",
+        "historyRetentionPeriod" => 14,
+        "dataclipRetentionPeriod" => 7
+      })
 
-      assert html =~ "You are not authorized to perform this action."
+      assert_refused(view)
+      assert Repo.reload(project).history_retention_period == nil
     end
 
     @tag role: :viewer
@@ -3075,25 +2172,18 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
+      view = open(conn, project)
 
-      assert html =~ "Input/Output Data Storage Policy"
-      assert html =~ "You cannot modify this project&#39;s data storage"
+      assert %{"canEdit" => false} = props(view)["dataStorage"]
 
-      html =
-        render_submit(view, "save_retention_settings", %{
-          project: %{
-            retention_policy: "retain_all",
-            history_retention_period: 14,
-            dataclip_retention_period: 7
-          }
-        })
+      send_event(view, "save_data_storage", %{
+        "retentionPolicy" => "retain_all",
+        "historyRetentionPeriod" => 14,
+        "dataclipRetentionPeriod" => 7
+      })
 
-      assert html =~ "You are not authorized to perform this action."
+      assert_refused(view)
+      assert Repo.reload(project).history_retention_period == nil
     end
 
     @tag role: :admin
@@ -3101,63 +2191,26 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
+      # save, open the page again and the saved option is the one shown
+      # TODO - retain_with_errors will be added in https://github.com/OpenFn/Lightning/issues/1694
+      for policy <- ["erase_all", "retain_all"] do
+        view = open(conn, project)
 
-      # save, navigate to other page and saved option is checked when come back
-      Enum.reduce(
-        # TODO - this will be implemented in https://github.com/OpenFn/Lightning/issues/1694
-        # ["retain_with_errors", "erase_all", "retain_all"],
-        ["erase_all", "retain_all"],
-        view,
-        fn policy, view ->
-          view
-          |> form("#retention-settings-form",
-            project: %{
-              retention_policy: policy
-            }
-          )
-          |> render_change()
+        assert send_event(view, "save_data_storage", %{
+                 "retentionPolicy" => policy
+               }) =~ "Project updated successfully"
 
-          assert ["checked"] ==
-                   view
-                   |> element("#" <> policy)
-                   |> render()
-                   |> Floki.parse_fragment!()
-                   |> Floki.attribute("input", "checked")
+        assert_ok(view)
 
-          html =
-            view
-            |> form("#retention-settings-form")
-            |> render_submit()
+        assert policy ==
+                 project.id
+                 |> Projects.get_project!()
+                 |> Map.get(:retention_policy)
+                 |> Atom.to_string()
 
-          assert html =~ "Project updated successfully"
-          assert html =~ "Input/Output Data Storage Policy"
-
-          assert policy ==
-                   project.id
-                   |> Projects.get_project!()
-                   |> Map.get(:retention_policy)
-                   |> Atom.to_string()
-
-          live(conn, ~p"/projects/#{project.id}/w")
-
-          {:ok, view, _html} =
-            live(conn, ~p"/projects/#{project.id}/settings#data-storage")
-
-          assert ["checked"] ==
-                   view
-                   |> element("#" <> policy)
-                   |> render()
-                   |> Floki.parse_fragment!()
-                   |> Floki.attribute("input", "checked")
-
-          view
-        end
-      )
+        assert %{"retentionPolicy" => ^policy} =
+                 conn |> open(project) |> props() |> Map.fetch!("dataStorage")
+      end
     end
 
     @tag role: :admin
@@ -3166,159 +2219,17 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            project: %{id: project_id} = project
          } do
-      expected_options = [7, 14]
-      other_options = [30, 90, 180, 365]
-
       expect(
         Lightning.Extensions.MockUsageLimiter,
         :get_data_retention_periods,
         2,
         fn %{project_id: ^project_id} ->
-          expected_options
+          [7, 14]
         end
       )
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
-
-      html =
-        view
-        |> element("select[name='project[history_retention_period]']")
-        |> render()
-
-      for option <- expected_options do
-        assert html =~ "#{option} Days</option>"
-      end
-
-      for option <- other_options do
-        refute html =~ "#{option} Days</option>"
-      end
-    end
-
-    @tag role: :admin
-    test "history retention period is disabled when only one option is provided",
-         %{
-           conn: conn,
-           project: %{id: project_id} = project
-         } do
-      expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :get_data_retention_periods,
-        2,
-        fn %{project_id: ^project_id} ->
-          [7]
-        end
-      )
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
-
-      assert has_element?(
-               view,
-               "select[name='project[history_retention_period]']:disabled"
-             )
-    end
-
-    @tag role: :admin
-    test "dataclip retention period is disabled if the history period has not been set",
-         %{
-           conn: conn,
-           project: project
-         } do
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
-
-      # dataclip retention period is disabled if the history period has not been set
-      assert is_nil(project.history_retention_period)
-
-      assert has_element?(
-               view,
-               "select[name='project[dataclip_retention_period]']:disabled"
-             )
-
-      view
-      |> form("#retention-settings-form",
-        project: %{
-          history_retention_period: 7
-        }
-      )
-      |> render_change()
-
-      refute has_element?(
-               view,
-               "select[name='project[dataclip_retention_period]']:disabled"
-             )
-
-      assert has_element?(
-               view,
-               "select[name='project[dataclip_retention_period]']"
-             )
-    end
-
-    @tag role: :admin
-    test "dataclip retention period is disabled if the retention_policy has been set to erase_all",
-         %{
-           conn: conn,
-           project: project
-         } do
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
-
-      selected_dataclip_option =
-        element(
-          view,
-          "select[name='project[dataclip_retention_period]'] option[selected]"
-        )
-
-      # nothing has been selected for the dataclip period
-      refute has_element?(selected_dataclip_option)
-
-      # let us enable it first by setting the history retention period
-      view
-      |> form("#retention-settings-form")
-      |> render_change(%{
-        project: %{
-          history_retention_period: 14,
-          dataclip_retention_period: 7
-        }
-      })
-
-      refute has_element?(
-               view,
-               "#retention-settings-form select[name='project[dataclip_retention_period]']:disabled"
-             )
-
-      # 7 Days has been selected for the dataclip period
-      assert render(selected_dataclip_option) =~ "7 Days"
-
-      # now let's set the retention policy to erase_all
-      view
-      |> form("#retention-settings-form",
-        project: %{
-          retention_policy: "erase_all"
-        }
-      )
-      |> render_change()
-
-      assert has_element?(
-               view,
-               "#retention-settings-form select[name='project[dataclip_retention_period]']:disabled"
-             )
-
-      # 7 days gets cleared. Nothing is now selected
-      refute has_element?(selected_dataclip_option)
+      assert %{"periods" => [7, 14]} =
+               conn |> open(project) |> props() |> Map.fetch!("dataStorage")
     end
 
     @tag role: :admin
@@ -3326,49 +2237,32 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
+      view = open(conn, project)
 
-      # let's first set the history retention period
+      # a dataclip retention period longer than the history period is refused
+      send_event(view, "save_data_storage", %{
+        "historyRetentionPeriod" => 7,
+        "dataclipRetentionPeriod" => 14
+      })
 
-      view
-      |> form("#retention-settings-form",
-        project: %{
-          history_retention_period: 7
+      assert_reply(view, %{
+        fieldErrors: %{
+          "dataclipRetentionPeriod" => [
+            "dataclip retention period must be less or equal to the history retention period"
+          ]
         }
-      )
-      |> render_change()
-
-      # trying to set the dataclip retention period more than the history period shows error
-      refute render(view) =~
-               "must be less or equal to the history retention period"
-
-      html =
-        view
-        |> form("#retention-settings-form",
-          project: %{
-            dataclip_retention_period: 14
-          }
-        )
-        |> render_change()
-
-      assert html =~ "must be less or equal to the history retention period"
+      })
 
       # the project gets updated successfully
+      assert send_event(view, "save_data_storage", %{
+               "historyRetentionPeriod" => 7,
+               "dataclipRetentionPeriod" => 7
+             }) =~ "Project updated successfully"
 
-      html =
-        view
-        |> form("#retention-settings-form",
-          project: %{
-            dataclip_retention_period: 7
-          }
-        )
-        |> render_submit()
+      assert_ok(view)
 
-      assert html =~ "Project updated successfully"
+      assert %{history_retention_period: 7, dataclip_retention_period: 7} =
+               Repo.reload(project)
     end
 
     @tag role: :admin
@@ -3377,19 +2271,10 @@ defmodule LightningWeb.ProjectLiveTest do
       project: project,
       user: %{id: user_id}
     } do
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
+      view = open(conn, project)
 
-      view
-      |> form("#retention-settings-form",
-        project: %{
-          history_retention_period: 7
-        }
-      )
-      |> render_submit()
+      send_event(view, "save_data_storage", %{"historyRetentionPeriod" => 7})
+      assert_ok(view)
 
       assert %{actor_id: ^user_id} = Audit |> Repo.one!()
     end
@@ -3399,300 +2284,128 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#data-storage"
-        )
+      view = open(conn, project)
 
       with_mock(Lightning.Repo, [:passthrough],
         transaction: fn _multi ->
           {:error, :anything_other_than_project, %Ecto.Changeset{}, %{}}
         end
       ) do
-        html =
-          view
-          |> form("#retention-settings-form",
-            project: %{
-              history_retention_period: 7
-            }
-          )
-          |> render_submit()
+        send_event(view, "save_data_storage", %{"historyRetentionPeriod" => 7})
 
-        assert html =~ "Changes couldn&#39;t be saved"
+        assert_reply(view, %{
+          error: "Changes couldn't be saved, please try again"
+        })
       end
+
+      assert Repo.reload(project).history_retention_period == nil
     end
   end
 
   describe "projects settings:collaboration" do
     setup :register_and_log_in_user
 
-    test "only authorized users can access the add collaborators modal", %{
-      conn: conn
-    } do
+    defp collaborator(view, project_user_id) do
+      Enum.find(
+        props(view)["collaboration"]["collaborators"],
+        &(&1["id"] == project_user_id)
+      )
+    end
+
+    test "only authorized users can add collaborators", %{conn: conn} do
       project = insert(:project)
 
       for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
+        view = open(conn, project)
 
-        button = element(view, "#show_collaborators_modal_button")
-        assert has_element?(button)
+        assert %{
+                 "canAddProjectUser" => false,
+                 "addBlockedReason" =>
+                   "You are not authorized to perform this action"
+               } = props(view)["collaboration"]
 
-        # modal is not present
-        refute has_element?(view, "#add_collaborators_modal")
+        send_event(view, "add_collaborators", %{
+          "collaborators" => [
+            %{"email" => insert(:user).email, "role" => "editor"}
+          ]
+        })
 
-        # try clicking the button
-        assert_raise ArgumentError, ~r/is disabled/, fn ->
-          render_click(button)
-        end
-
-        # send event either way
-        refute render_click(view, "toggle_collaborators_modal") =~
-                 "Enter the email address and role of new collaborator"
-
-        # modal is still not present
-        refute has_element?(view, "#add_collaborators_modal")
+        assert_refused(view)
       end
 
       for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
-
-        button = element(view, "#show_collaborators_modal_button")
-        assert has_element?(button)
-
-        # modal is not present
-        refute has_element?(view, "#add_collaborators_modal")
-
-        # try clicking the button
-        assert render_click(button) =~
-                 "Enter the email address and role of new collaborator"
-
-        # modal is now present
-        assert has_element?(view, "#add_collaborators_modal")
+        assert %{"canAddProjectUser" => true, "addBlockedReason" => nil} =
+                 conn |> open(project) |> props() |> Map.fetch!("collaboration")
       end
+
+      assert length(Repo.preload(project, :project_users).project_users) == 4
     end
 
-    test "user can add and remove inputs for adding collaborators", %{
-      conn: conn
-    } do
-      project = insert(:project)
-
-      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
-
-        # Open Modal
-        view
-        |> element("#show_collaborators_modal_button")
-        |> render_click()
-
-        modal = element(view, "#add_collaborators_modal")
-
-        html = modal |> render() |> Floki.parse_fragment!()
-
-        # we only have 1 email input by default
-        assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
-                 1
-
-        # we dont have any button to remove the input
-        assert Floki.find(html, "button[name$='[collaborators_drop][]']")
-               |> Enum.count() == 0
-
-        # lets click to add another row
-        view
-        |> form("#add_collaborators_modal_form")
-        |> render_change(project: %{"collaborators_sort" => [0, "new"]})
-
-        html = modal |> render() |> Floki.parse_fragment!()
-
-        # we now have 2 email inputs and 2 buttons to remove the inputs
-        assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
-                 2
-
-        assert Floki.find(html, "button[name$='[collaborators_drop][]']")
-               |> Enum.count() == 2
-
-        # lets click to remove the first row
-        view
-        |> form("#add_collaborators_modal_form")
-        |> render_change(project: %{"collaborators_drop" => [0]})
-
-        html = modal |> render() |> Floki.parse_fragment!()
-
-        # we now have 1 email input and we dont have any button to remove the input
-        assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
-                 1
-
-        assert Floki.find(html, "button[name$='[collaborators_drop][]']")
-               |> Enum.count() == 0
-      end
-    end
-
-    test "validate event with invalid email shows error in modal", %{
+    test "adding a collaborator with an invalid email replies its error", %{
       conn: conn
     } do
       project = insert(:project)
       {conn, _user} = setup_project_user(conn, project, :owner)
+      view = open(conn, project)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+      send_event(view, "add_collaborators", %{
+        "collaborators" => [%{"email" => "not-an-email", "role" => "editor"}]
+      })
 
-      view |> element("#show_collaborators_modal_button") |> render_click()
-
-      modal = element(view, "#add_collaborators_modal")
-
-      view
-      |> form("#add_collaborators_modal_form",
-        project: %{
-          "collaborators" => %{
-            "0" => %{"email" => "not-an-email", "role" => "editor"}
-          }
-        }
-      )
-      |> render_change()
-
-      assert render(modal) =~ "Email address not valid."
-
-      view
-      |> form("#add_collaborators_modal_form",
-        project: %{
-          "collaborators" => %{
-            "0" => %{"email" => "valid@example.com", "role" => "editor"}
-          }
-        }
-      )
-      |> render_change()
-
-      refute render(modal) =~ "Email address not valid."
+      assert_reply(view, %{error: "Email address not valid."})
     end
 
-    test "validate event with invalid email shows error in invite modal", %{
-      conn: conn
-    } do
+    test "inviting a collaborator with an invalid email puts the error on its row",
+         %{conn: conn} do
       project = insert(:project, name: "my-project")
       {conn, _user} = setup_project_user(conn, project, :owner)
+      view = open(conn, project)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
-
-      view |> element("#show_collaborators_modal_button") |> render_click()
-
-      # Submit with a non-existent email to open the invite form
-      view
-      |> form("#add_collaborators_modal_form",
-        project: %{
-          "collaborators" => %{
-            "0" => %{"email" => "newuser@example.com", "role" => "editor"}
+      send_event(view, "invite_collaborators", %{
+        "collaborators" => [
+          %{
+            "email" => "not-an-email",
+            "role" => "editor",
+            "firstName" => "Test",
+            "lastName" => "User"
           }
+        ]
+      })
+
+      assert_reply(view, %{
+        fieldErrors: %{
+          "invitedCollaborators.0.email" => ["Email address not valid."]
         }
-      )
-      |> render_submit()
-
-      assert has_element?(view, "#invite_collaborators_modal_form")
-
-      invite_modal = element(view, "#invite_collaborators_modal")
-
-      view
-      |> form("#invite_collaborators_modal_form",
-        project: %{
-          "invited_collaborators" => %{
-            "0" => %{
-              "email" => "not-an-email",
-              "role" => "editor",
-              "first_name" => "Test",
-              "last_name" => "User"
-            }
-          }
-        }
-      )
-      |> render_change()
-
-      assert render(invite_modal) =~ "Email address not valid."
-
-      view
-      |> form("#invite_collaborators_modal_form",
-        project: %{
-          "invited_collaborators" => %{
-            "0" => %{
-              "email" => "valid@example.com",
-              "role" => "editor",
-              "first_name" => "Test",
-              "last_name" => "User"
-            }
-          }
-        }
-      )
-      |> render_change()
-
-      refute render(invite_modal) =~ "Email address not valid."
+      })
     end
 
     test "adding a non existent user triggers the invite users process", %{
       conn: conn
     } do
       project = insert(:project, name: "my-project")
-
       {conn, _user} = setup_project_user(conn, project, :owner)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
-
-      # Open Modal
-      view
-      |> element("#show_collaborators_modal_button")
-      |> render_click()
+      view = open(conn, project)
 
       email = "nonexists@localtests.com"
 
-      refute view |> has_element?("#invite_collaborators_modal_form")
+      send_event(view, "add_collaborators", %{
+        "collaborators" => [%{"email" => email, "role" => "editor"}]
+      })
 
-      view
-      |> form("#add_collaborators_modal_form",
-        project: %{
-          "collaborators" => %{
-            "0" => %{"email" => email, "role" => "editor"}
-          }
-        }
-      )
-      |> render_submit()
+      assert_reply(view, %{toInvite: [%{email: ^email, role: :editor}]})
 
-      assert view |> has_element?("#invite_collaborators_modal_form")
+      assert send_event(view, "invite_collaborators", %{
+               "collaborators" => [
+                 %{
+                   "email" => email,
+                   "role" => "editor",
+                   "firstName" => "Non",
+                   "lastName" => "Exists"
+                 }
+               ]
+             }) =~ "Invite sent successfully"
 
-      {:ok, _view, html} =
-        view
-        |> form("#invite_collaborators_modal_form",
-          project: %{
-            "invited_collaborators" => %{
-              "0" => %{
-                "email" => email,
-                "role" => "editor",
-                "first_name" => "Non",
-                "last_name" => "Exists"
-              }
-            }
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
-
-      assert html =~ "Invite sent successfully"
+      assert_ok(view)
 
       refute_email_sent(
         to: [{"Non Exists", "nonexists@localtests.com"}],
@@ -3709,60 +2422,27 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn
     } do
       project = insert(:project, name: "my-project")
-
       {conn, user} = setup_project_user(conn, project, :owner)
+      view = open(conn, project)
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
-
-      # Open Modal
-      view
-      |> element("#show_collaborators_modal_button")
-      |> render_click()
-
-      email = "nonexists@localtests.com"
-
-      refute view |> has_element?("#invite_collaborators_modal_form")
-
-      view
-      |> form("#add_collaborators_modal_form",
-        project: %{
-          "collaborators" => %{
-            "0" => %{"email" => email, "role" => "editor"}
+      send_event(view, "invite_collaborators", %{
+        "collaborators" => [
+          %{
+            "email" => user.email,
+            "role" => "editor",
+            "firstName" => "Non",
+            "lastName" => "Exists"
           }
+        ]
+      })
+
+      assert_reply(view, %{
+        fieldErrors: %{
+          "invitedCollaborators.0.email" => ["This email is already taken"]
         }
-      )
-      |> render_submit()
+      })
 
-      assert view |> has_element?("#invite_collaborators_modal_form")
-
-      assert view
-             |> form("#invite_collaborators_modal_form",
-               project: %{
-                 "invited_collaborators" => %{
-                   "0" => %{
-                     "email" => user.email,
-                     "role" => "editor",
-                     "first_name" => "Non",
-                     "last_name" => "Exists"
-                   }
-                 }
-               }
-             )
-             |> render_submit() =~ "This email is already taken"
-
-      refute_email_sent(
-        to: [{"", "nonexists@localtests.com"}],
-        subject: "You now have access to \"my-project\""
-      )
-
-      refute_email_sent(
-        to: [{"", "nonexists@localtests.com"}],
-        subject: "Join my-project on OpenFn as a collaborator"
-      )
+      refute_email_sent(subject: "Join my-project on OpenFn as a collaborator")
     end
 
     test "adding an existing project user displays an appropriate error message",
@@ -3772,34 +2452,15 @@ defmodule LightningWeb.ProjectLiveTest do
       project = insert(:project)
 
       for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
+        view = open(conn, project)
 
-        # Open Modal
-        view
-        |> element("#show_collaborators_modal_button")
-        |> render_click()
+        send_event(view, "add_collaborators", %{
+          "collaborators" => [%{"email" => user.email, "role" => "editor"}]
+        })
 
-        modal = element(view, "#add_collaborators_modal")
-
-        refute render(modal) =~ "This account is already part of this project"
-
-        # lets submit the form
-
-        view
-        |> form("#add_collaborators_modal_form",
-          project: %{
-            "collaborators" => %{
-              "0" => %{"email" => user.email, "role" => "editor"}
-            }
-          }
-        )
-        |> render_submit()
-
-        assert render(modal) =~ "This account is already part of this project"
+        assert_reply(view, %{
+          error: "This account is already part of this project"
+        })
       end
     end
 
@@ -3810,33 +2471,15 @@ defmodule LightningWeb.ProjectLiveTest do
       project = insert(:project)
 
       for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
+        other = insert(:user)
+        view = open(conn, project)
 
-        # Open Modal
-        view
-        |> element("#show_collaborators_modal_button")
-        |> render_click()
+        send_event(view, "add_collaborators", %{
+          "collaborators" => [%{"email" => other.email, "role" => "owner"}]
+        })
 
-        modal = element(view, "#add_collaborators_modal")
-
-        refute render(modal) =~ "is invalid"
-
-        # lets submit the form
-        view
-        |> form("#add_collaborators_modal_form")
-        |> render_submit(
-          project: %{
-            "collaborators" => %{
-              "0" => %{"email" => "dummy@email.com", "role" => "owner"}
-            }
-          }
-        )
-
-        assert render(modal) =~ "is invalid"
+        assert_reply(view, %{error: "is invalid"})
+        refute Projects.get_project_user(project, other)
       end
     end
 
@@ -3847,53 +2490,33 @@ defmodule LightningWeb.ProjectLiveTest do
       project = insert(:project)
 
       for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
-        {:ok, view, html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
-
+        view = open(conn, project)
         [admin, editor, viewer] = insert_list(3, :user)
 
-        # user is not shown in the page
-        for new_user <- [admin, editor, viewer] do
-          refute html =~ new_user.last_name
-        end
+        assert send_event(view, "add_collaborators", %{
+                 "collaborators" => [
+                   %{"email" => admin.email, "role" => "admin"},
+                   %{"email" => editor.email, "role" => "editor"},
+                   %{"email" => viewer.email, "role" => "viewer"}
+                 ]
+               }) =~ "Collaborators added successfully"
 
-        # Open Modal
-        view
-        |> element("#show_collaborators_modal_button")
-        |> render_click()
+        assert_reply(view, %{toInvite: []})
 
-        # lets click to add 2 more rows
-        view
-        |> form("#add_collaborators_modal_form")
-        |> render_change(project: %{"collaborators_sort" => [0, "new", "new"]})
+        assert [:admin, :editor, :viewer] ==
+                 Enum.map(
+                   [admin, editor, viewer],
+                   &Projects.get_project_user(project, &1).role
+                 )
 
-        # lets submit the form
-        view
-        |> form("#add_collaborators_modal_form",
-          project: %{
-            "collaborators" => %{
-              "0" => %{"email" => admin.email, "role" => "admin"},
-              "1" => %{"email" => editor.email, "role" => "editor"},
-              "2" => %{"email" => viewer.email, "role" => "viewer"}
-            }
-          }
-        )
-        |> render_submit()
+        emails =
+          Enum.map(props(view)["collaboration"]["collaborators"], & &1["email"])
 
-        flash =
-          assert_redirected(
-            view,
-            ~p"/projects/#{project}/settings#collaboration"
-          )
-
-        assert flash["info"] =~ "Collaborators added successfully"
+        assert Enum.all?([admin, editor, viewer], &(&1.email in emails))
       end
     end
 
-    test "add collaborators button is disabled if limit is reached", %{
+    test "adding collaborators is blocked if limit is reached", %{
       conn: conn
     } do
       %{id: project_id} = project = insert(:project)
@@ -3914,15 +2537,19 @@ defmodule LightningWeb.ProjectLiveTest do
         end
       )
 
-      {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
+      view = open(conn, project)
 
-      assert html =~ error_msg
+      assert %{"canAddProjectUser" => true, "addBlockedReason" => ^error_msg} =
+               props(view)["collaboration"]
 
-      assert has_element?(view, "#show_collaborators_modal_button:disabled")
+      other = insert(:user)
+
+      send_event(view, "add_collaborators", %{
+        "collaborators" => [%{"email" => other.email, "role" => "editor"}]
+      })
+
+      assert_reply(view, %{error: ^error_msg})
+      refute Projects.get_project_user(project, other)
     end
 
     test "error message is displayed if the allowed limits are exceeded", %{
@@ -3933,118 +2560,38 @@ defmodule LightningWeb.ProjectLiveTest do
       {conn, _user} = setup_project_user(conn, project, :admin)
 
       # users to add
-      [admin, editor, viewer] = insert_list(3, :user)
+      [admin, editor, viewer] = users = insert_list(3, :user)
 
-      # return ok for enabling the add collaboratos button
+      # we only want to allow 3 users. We already 1, the one logged in
+      expected_error_msg = "You can only have 3 collaborators in this project"
+
       stub(
         Lightning.Extensions.MockUsageLimiter,
         :limit_action,
         fn
-          %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
-            :ok
+          %{type: :new_user, amount: 3}, %{project_id: ^project_id} ->
+            {:error, :too_many_users, %{text: expected_error_msg}}
 
           _action, _project ->
             :ok
         end
       )
 
-      {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
+      view = open(conn, project)
 
-      # user is not shown in the page
-      for new_user <- [admin, editor, viewer] do
-        refute html =~ new_user.last_name
-      end
+      assert props(view)["collaboration"]["addBlockedReason"] == nil
 
-      # we only want to allow 3 users. We already 1, the one logged in
-      expected_error_msg = "You can only have 3 collaborators in this project"
+      send_event(view, "add_collaborators", %{
+        "collaborators" => [
+          %{"email" => admin.email, "role" => "admin"},
+          %{"email" => editor.email, "role" => "editor"},
+          %{"email" => viewer.email, "role" => "viewer"}
+        ]
+      })
 
-      # Open Modal
-      html =
-        view
-        |> element("#show_collaborators_modal_button")
-        |> render_click()
+      assert_reply(view, %{error: ^expected_error_msg})
 
-      refute html =~ expected_error_msg,
-             "no error message is displayed when the modal is opened"
-
-      # lets click to add 1 more row
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn %{type: :new_user, amount: 2}, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
-      html =
-        view
-        |> form("#add_collaborators_modal_form")
-        |> render_change(project: %{"collaborators_sort" => [0, "new"]})
-
-      refute html =~ expected_error_msg,
-             "no error message is displayed when only 2 rows are present"
-
-      # lets click to add 1 more row. So we now have 3 rows
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn %{type: :new_user, amount: 3}, %{project_id: ^project_id} ->
-          {:error, :too_many_users, %{text: expected_error_msg}}
-        end
-      )
-
-      html =
-        view
-        |> form("#add_collaborators_modal_form")
-        |> render_change(project: %{"collaborators_sort" => [0, 1, "new"]})
-
-      assert html =~ expected_error_msg,
-             "error message is displayed when we more than 2 rows are present"
-
-      # lets click to remove the first row
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn %{type: :new_user, amount: 2}, %{project_id: ^project_id} ->
-          :ok
-        end
-      )
-
-      html =
-        view
-        |> form("#add_collaborators_modal_form")
-        |> render_change(project: %{"collaborators_drop" => [0]})
-
-      refute html =~ expected_error_msg,
-             "no error message is displayed when only 2 rows are present"
-
-      # lets submit the form with the 3 users anyway
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn %{type: :new_user, amount: 3}, %{project_id: ^project_id} ->
-          {:error, :too_many_users, %{text: expected_error_msg}}
-        end
-      )
-
-      html =
-        view
-        |> form("#add_collaborators_modal_form")
-        |> render_submit(
-          project: %{
-            "collaborators" => %{
-              "0" => %{"email" => admin.email, "role" => "admin"},
-              "1" => %{"email" => editor.email, "role" => "editor"},
-              "2" => %{"email" => viewer.email, "role" => "viewer"}
-            }
-          }
-        )
-
-      assert html =~ expected_error_msg
+      for user <- users, do: refute(Projects.get_project_user(project, user))
     end
 
     test "only authorized users can remove a collaborator", %{
@@ -4060,28 +2607,13 @@ defmodule LightningWeb.ProjectLiveTest do
             role: :viewer
           )
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
+        view = open(conn, project)
 
-        tooltip =
-          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+        assert collaborator(view, project_user.id)["removeBlockedReason"] ==
+                 "You do not have permission to remove a user"
 
-        assert has_element?(tooltip)
-        assert render(tooltip) =~ "You do not have permission to remove a user"
-
-        # modal is not present
-        refute has_element?(view, "#remove_#{project_user.id}_modal")
-
-        # try sending the event either way
-        html =
-          render_click(view, "remove_project_user", %{
-            "project_user_id" => project_user.id
-          })
-
-        assert html =~ "You are not authorized to perform this action"
+        send_event(view, "remove_collaborator", %{"id" => project_user.id})
+        assert_refused(view)
 
         # project user still exists
         assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
@@ -4095,32 +2627,16 @@ defmodule LightningWeb.ProjectLiveTest do
             role: :viewer
           )
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
+        view = open(conn, project)
 
-        tooltip =
-          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+        assert collaborator(view, project_user.id)["removeBlockedReason"] == nil
 
-        refute has_element?(tooltip)
+        assert send_event(view, "remove_collaborator", %{
+                 "id" => project_user.id
+               }) =~ "Collaborator removed"
 
-        # modal is present
-        assert has_element?(view, "#remove_#{project_user.id}_modal")
-
-        # try clicking the confirm button
-        view
-        |> element("#remove_#{project_user.id}_modal_confirm_button")
-        |> render_click()
-
-        flash =
-          assert_redirected(
-            view,
-            ~p"/projects/#{project}/settings#collaboration"
-          )
-
-        assert flash["info"] == "Collaborator removed"
+        assert_ok(view)
+        refute collaborator(view, project_user.id)
 
         # project user is removed
         refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
@@ -4144,28 +2660,13 @@ defmodule LightningWeb.ProjectLiveTest do
           role: :owner
         )
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
+      view = open(conn, project)
 
-      tooltip =
-        element(view, "#remove_project_user_#{project_owner.id}_button-tooltip")
+      assert collaborator(view, project_owner.id)["removeBlockedReason"] ==
+               "You cannot remove an owner"
 
-      assert has_element?(tooltip)
-      assert render(tooltip) =~ "You cannot remove an owner"
-
-      # modal is not present
-      refute has_element?(view, "#remove_#{project_owner.id}_modal")
-
-      # try sending the event either way
-      html =
-        render_click(view, "remove_project_user", %{
-          "project_user_id" => project_owner.id
-        })
-
-      assert html =~ "You are not authorized to perform this action"
+      send_event(view, "remove_collaborator", %{"id" => project_owner.id})
+      assert_refused(view)
 
       # project user still exists
       assert Repo.get(Lightning.Projects.ProjectUser, project_owner.id)
@@ -4181,35 +2682,20 @@ defmodule LightningWeb.ProjectLiveTest do
         project_user =
           Repo.get_by(Lightning.Projects.ProjectUser, user_id: user.id)
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
+        view = open(conn, project)
 
-        tooltip =
-          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+        assert collaborator(view, project_user.id)["removeBlockedReason"] ==
+                 "You cannot remove yourself"
 
-        assert has_element?(tooltip)
-        assert render(tooltip) =~ "You cannot remove yourself"
-
-        # modal is not present
-        refute has_element?(view, "#remove_#{project_user.id}_modal")
-
-        # try sending the event either way
-        html =
-          render_click(view, "remove_project_user", %{
-            "project_user_id" => project_user.id
-          })
-
-        assert html =~ "You are not authorized to perform this action"
+        send_event(view, "remove_collaborator", %{"id" => project_user.id})
+        assert_refused(view)
 
         # project user still exists
         assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
       end
     end
 
-    test "cannot remove a collaborator belonging to another project (H-2)", %{
+    test "cannot remove a collaborator belonging to another project", %{
       conn: conn
     } do
       project_a = insert(:project)
@@ -4217,44 +2703,39 @@ defmodule LightningWeb.ProjectLiveTest do
 
       project_b = insert(:project)
 
-      victim =
+      other =
         insert(:project_user,
           project: project_b,
           user: build(:user),
           role: :editor
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project_a.id}/settings#collaboration")
+      view = open(conn, project_a)
 
-      html =
-        render_click(view, "remove_project_user", %{
-          "project_user_id" => victim.id
-        })
-
-      assert html =~ "You are not authorized to perform this action"
-      assert Repo.get(Lightning.Projects.ProjectUser, victim.id)
+      send_event(view, "remove_collaborator", %{"id" => other.id})
+      assert_refused(view)
+      assert Repo.get(Lightning.Projects.ProjectUser, other.id)
     end
 
-    test "cannot toggle failure alert for a collaborator in another project (H-2)",
+    test "cannot toggle failure alert for a collaborator in another project",
          %{conn: conn} do
-      assert_cross_project_pref_blocked(
+      assert_cross_project_pref_refused(
         conn,
         "set_failure_alert",
+        {"on", false},
         :failure_alert,
-        "false",
         true
       )
     end
 
-    test "cannot set digest for a collaborator in another project (H-2)", %{
+    test "cannot set digest for a collaborator in another project", %{
       conn: conn
     } do
-      assert_cross_project_pref_blocked(
+      assert_cross_project_pref_refused(
         conn,
         "set_digest",
+        {"digest", "daily"},
         :digest,
-        "daily",
         :never
       )
     end
@@ -4272,16 +2753,10 @@ defmodule LightningWeb.ProjectLiveTest do
           failure_alert: true
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+      view = open(conn, project)
 
-      html =
-        render_click(view, "set_failure_alert", %{
-          "project_user_id" => other.id,
-          "failure_alert" => "false"
-        })
-
-      assert html =~ "You are not authorized to perform this action"
+      send_event(view, "set_failure_alert", %{"id" => other.id, "on" => false})
+      assert_refused(view)
       assert Repo.reload(other).failure_alert == true
     end
 
@@ -4298,16 +2773,10 @@ defmodule LightningWeb.ProjectLiveTest do
           digest: :never
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+      view = open(conn, project)
 
-      html =
-        render_click(view, "set_digest", %{
-          "project_user_id" => other.id,
-          "digest" => "daily"
-        })
-
-      assert html =~ "You are not authorized to perform this action"
+      send_event(view, "set_digest", %{"id" => other.id, "digest" => "daily"})
+      assert_refused(view)
       assert Repo.reload(other).digest == :never
     end
 
@@ -4321,17 +2790,15 @@ defmodule LightningWeb.ProjectLiveTest do
           project_id: project.id
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+      view = open(conn, project)
 
       target = !pu.failure_alert
 
-      render_click(view, "set_failure_alert", %{
-        "project_user_id" => pu.id,
-        "failure_alert" => to_string(target)
-      })
+      send_event(view, "set_failure_alert", %{"id" => pu.id, "on" => target})
+      assert_ok(view)
 
       assert Repo.reload(pu).failure_alert == target
+      assert collaborator(view, pu.id)["failureAlert"] == target
     end
 
     test "a member can still set their own digest", %{conn: conn} do
@@ -4344,27 +2811,33 @@ defmodule LightningWeb.ProjectLiveTest do
           project_id: project.id
         )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+      view = open(conn, project)
 
-      render_click(view, "set_digest", %{
-        "project_user_id" => pu.id,
-        "digest" => "weekly"
-      })
+      send_event(view, "set_digest", %{"id" => pu.id, "digest" => "weekly"})
+      assert_ok(view)
 
       assert Repo.reload(pu).digest == :weekly
+      assert collaborator(view, pu.id)["digest"] == "weekly"
     end
 
-    # Exercises the shared cast-guarded getter that all three project_user_id
-    # handlers route through, so one malformed-id case covers the guard for all.
-    test "a non-binary project_user_id does not crash the view", %{conn: conn} do
+    # The three events that take a collaborator id look it up the same way
+    # (`Projects.get_project_user_for_project/3`); an id that isn't a string
+    # finds no one, so each event is refused rather than crashing the view.
+    test "a non-binary collaborator id is refused without crashing the view",
+         %{conn: conn} do
       project = insert(:project)
       {conn, _admin} = setup_project_user(conn, project, :admin)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+      view = open(conn, project)
 
-      render_click(view, "remove_project_user", %{"project_user_id" => ["x"]})
+      for {event, payload} <- [
+            {"remove_collaborator", %{"id" => ["x"]}},
+            {"set_failure_alert", %{"id" => ["x"], "on" => true}},
+            {"set_digest", %{"id" => ["x"], "digest" => "weekly"}}
+          ] do
+        send_event(view, event, payload)
+        assert_refused(view)
+      end
 
       assert Process.alive?(view.pid)
     end
@@ -4392,20 +2865,10 @@ defmodule LightningWeb.ProjectLiveTest do
         end
       )
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
+      view = open(conn, project)
 
-      # form exists
-      form_id = "form#failure-alert-#{project_user.id}"
-      assert has_element?(view, form_id)
-
-      # status is displayed as enabled
-      assert view |> has_element?("#{form_id} option[selected]", "Enabled")
-
-      refute has_element?(view, "#failure-alert-status-#{project_user.id}")
+      assert props(view)["collaboration"]["canReceiveFailureAlerts"]
+      assert collaborator(view, project_user.id)["failureAlert"]
 
       # now let us return error
       stub(
@@ -4420,22 +2883,15 @@ defmodule LightningWeb.ProjectLiveTest do
         end
       )
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
+      # the page shows the status as Unavailable, even though it is enabled
+      # on the project user
+      view = open(conn, project)
 
-      # form does not exist
-      refute has_element?(view, "form#failure-alert-#{project_user.id}")
-
-      # status is displayed as Unavailable even though it is enabled on the project user
-      assert view
-             |> element("#failure-alert-status-#{project_user.id}")
-             |> render() =~ "Unavailable"
+      refute props(view)["collaboration"]["canReceiveFailureAlerts"]
+      assert collaborator(view, project_user.id)["failureAlert"]
     end
 
-    test "removal confirmation modal shows user's credentials that will be removed",
+    test "a collaborator lists the names of the credentials they own in the project",
          %{
            conn: conn
          } do
@@ -4458,19 +2914,11 @@ defmodule LightningWeb.ProjectLiveTest do
           project_credentials: [%{project_id: project.id}]
         )
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
+      view = open(conn, project)
 
-      assert has_element?(view, "#remove_#{project_user.id}_modal")
-
-      modal = element(view, "#remove_#{project_user.id}_modal")
-      modal_html = render(modal)
-
-      assert modal_html =~ credential.name
-      assert modal_html =~ "and their owned credential #{credential.name}"
+      assert collaborator(view, project_user.id)["ownedCredentialNames"] == [
+               credential.name
+             ]
 
       credential2 =
         insert(:credential,
@@ -4479,18 +2927,12 @@ defmodule LightningWeb.ProjectLiveTest do
           project_credentials: [%{project_id: project.id}]
         )
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collaboration"
-        )
+      view = open(conn, project)
 
-      modal = element(view, "#remove_#{project_user.id}_modal")
-      modal_html = render(modal)
-
-      assert modal_html =~ "and their owned credentials"
-      assert modal_html =~ credential.name
-      assert modal_html =~ credential2.name
+      assert Enum.sort(
+               collaborator(view, project_user.id)["ownedCredentialNames"]
+             ) ==
+               Enum.sort([credential.name, credential2.name])
     end
   end
 
@@ -4513,14 +2955,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
       for {conn, _user} <-
             setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
-        {:ok, _view, html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        assert html =~
-                 "Version Control is not configured for this Lightning instance"
+        assert %{"enabled" => false, "connectAccountHref" => ""} =
+                 conn |> open(project) |> props() |> Map.fetch!("githubSync")
       end
     end
 
@@ -4531,33 +2967,23 @@ defmodule LightningWeb.ProjectLiveTest do
       # unauthorized users don't get any option at all
       for {conn, _user} <-
             setup_project_users(conn, project, [:viewer, :editor]) do
-        {:ok, view, html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        refute html =~
-                 "Version Control is not configured for this Lightning instance"
-
-        refute html =~ "Connect your OpenFn account to GitHub"
-        refute has_element?(view, "#connect-github-link")
+        assert %{"enabled" => true, "canInstall" => false} =
+                 conn |> open(project) |> props() |> Map.fetch!("githubSync")
       end
 
       # authorized users
       for {conn, _user} <-
             setup_project_users(conn, project, [:admin, :owner]) do
-        {:ok, view, html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
+        view = open(conn, project)
 
-        refute html =~
-                 "Version Control is not configured for this Lightning instance"
+        assert %{
+                 "enabled" => true,
+                 "canInstall" => true,
+                 "userConnected" => false,
+                 "connectAccountHref" => "https://github.com/login/oauth/" <> _
+               } = props(view)["githubSync"]
 
-        assert html =~ "Connect your OpenFn account to GitHub"
-        assert has_element?(view, "#connect-github-link")
+        refute has_element?(view, "#project-repo-connection-form")
       end
     end
 
@@ -4570,14 +2996,18 @@ defmodule LightningWeb.ProjectLiveTest do
             setup_project_users(conn, project, [:viewer, :editor]) do
         set_valid_github_oauth_token!(user)
 
-        {:ok, _view, html} =
+        {:ok, view, html} =
           live(
             conn,
             ~p"/projects/#{project.id}/settings#vcs"
           )
 
-        refute html =~
-                 "Version Control is not configured for this Lightning instance"
+        assert %{
+                 "enabled" => true,
+                 "userConnected" => true,
+                 "canInstall" => false
+               } =
+                 props(view)["githubSync"]
 
         refute html =~ "Create/update GitHub installations"
       end
@@ -4587,16 +3017,19 @@ defmodule LightningWeb.ProjectLiveTest do
             setup_project_users(conn, project, [:admin, :owner]) do
         set_valid_github_oauth_token!(user)
 
-        {:ok, _view, html} =
+        {:ok, view, html} =
           live(
             conn,
             ~p"/projects/#{project.id}/settings#vcs"
           )
 
-        refute html =~
-                 "Version Control is not configured for this Lightning instance"
+        assert %{
+                 "enabled" => true,
+                 "userConnected" => true,
+                 "canInstall" => true
+               } =
+                 props(view)["githubSync"]
 
-        refute html =~ "Connect your OpenFn account to GitHub"
         assert html =~ "Create/update GitHub installations"
       end
     end
@@ -4617,14 +3050,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       {conn, _user} = setup_project_user(conn, project, :admin)
 
-      {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
+      view = open(conn, project, "settings#vcs")
 
-      assert has_element?(view, "#connect-github-link")
-      refute html =~ "Create/update GitHub installations"
+      assert %{"userConnected" => false} = props(view)["githubSync"]
+      refute has_element?(view, "#project-repo-connection-form")
 
       # mock redirect from github
       get(conn, ~p"/oauth/github/callback?code=123456")
@@ -4633,10 +3062,11 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert flash["info"] == "GitHub account linked successfully"
 
-      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      view = open(conn, project, "settings#vcs")
+      render_async(view)
 
-      refute has_element?(view, "#connect-github-link")
-      assert html =~ "Create/update GitHub installations"
+      assert %{"userConnected" => true} = props(view)["githubSync"]
+      assert has_element?(view, "#project-repo-connection-form")
     end
 
     test "users get updated after failing to connect to github", %{
@@ -4653,14 +3083,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
       {conn, _user} = setup_project_user(conn, project, :admin)
 
-      {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
+      view = open(conn, project, "settings#vcs")
 
-      assert has_element?(view, "#connect-github-link")
-      refute html =~ "Create/update GitHub installations"
+      assert %{"userConnected" => false} = props(view)["githubSync"]
 
       # mock redirect from github
       get(conn, ~p"/oauth/github/callback?code=123456")
@@ -4670,9 +3095,9 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(view) =~
                "Oops! GitHub account failed to link. Please try again"
 
-      # button to connect is still available
-      assert has_element?(view, "#connect-github-link")
-      refute render(view) =~ "Create/update GitHub installations"
+      # the account is still to connect
+      assert %{"userConnected" => false} = props(view)["githubSync"]
+      refute has_element?(view, "#project-repo-connection-form")
     end
 
     test "github installations get listed properly when an error occurs", %{
@@ -4698,7 +3123,7 @@ defmodule LightningWeb.ProjectLiveTest do
       floki_fragment = Floki.parse_fragment!(html)
       options = Floki.find(floki_fragment, "#select-installations-input li")
       assert Enum.count(options) == 1
-      options |> hd() |> Floki.raw_html() =~ "Select an installation"
+      assert options |> hd() |> Floki.raw_html() =~ "Select an installation"
 
       # let us try refreshing the installation
       expected_installation = %{
@@ -4729,10 +3154,10 @@ defmodule LightningWeb.ProjectLiveTest do
       options = Floki.children(installations_input)
       assert Enum.count(options) == 2
       [default_option, installation_option] = options
-      Floki.raw_html(default_option) =~ "Select an installation"
+      assert Floki.raw_html(default_option) =~ "Select an installation"
 
-      Floki.raw_html(installation_option) =~
-        "#{expected_installation["account"]["type"]}: #{expected_installation["account"]["login"]}"
+      assert Floki.raw_html(installation_option) =~
+               "#{expected_installation["account"]["type"]}: #{expected_installation["account"]["login"]}"
     end
 
     test "does not show error banner when installations load successfully", %{
@@ -4787,27 +3212,20 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "You haven&#39;t installed the OpenFn GitHub App yet"
     end
 
-    test "shows reconnect link when user has expired OAuth token", %{
-      conn: conn
-    } do
+    test "an expired OAuth token asks the user to connect their account again",
+         %{conn: conn} do
       project = insert(:project)
       {conn, user} = setup_project_user(conn, project, :admin)
       set_expired_github_oauth_token!(user)
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
+      view = open(conn, project, "settings#vcs")
 
-      html = render(view)
+      # The form needs a valid token, so it isn't drawn and nothing is
+      # asked of GitHub.
+      assert %{"canInstall" => true, "userConnected" => false} =
+               props(view)["githubSync"]
 
-      # When token is expired, component doesn't render
-      # Instead shows the connect section with "Reconnect" link
-      assert html =~ "Connect your OpenFn account to GitHub"
-      assert html =~ "Reconnect your GitHub Account"
-      assert has_element?(view, "#connect-github-link")
-      refute html =~ "Unable to load GitHub installations"
+      refute has_element?(view, "#github-sync-component")
     end
 
     test "shows error banner when GitHub API returns an error", %{
@@ -5138,10 +3556,10 @@ defmodule LightningWeb.ProjectLiveTest do
       options = Floki.children(installations_input)
       assert Enum.count(options) == 2
       [default_option, installation_option] = options
-      Floki.raw_html(default_option) =~ "Select an installation"
+      assert Floki.raw_html(default_option) =~ "Select an installation"
 
-      Floki.raw_html(installation_option) =~
-        "#{expected_installation["account"]["type"]}: #{expected_installation["account"]["login"]}"
+      assert Floki.raw_html(installation_option) =~
+               "#{expected_installation["account"]["type"]}: #{expected_installation["account"]["login"]}"
 
       # before selecting any installation the repos are not listed.
       # We just have the default option
@@ -5149,7 +3567,7 @@ defmodule LightningWeb.ProjectLiveTest do
       [repos_input] = Floki.find(floki_fragment, "#select-repos-input")
       options = Floki.children(repos_input)
       assert Enum.count(options) == 1
-      options |> hd() |> Floki.raw_html() =~ "Select a repo"
+      assert options |> hd() |> Floki.raw_html() =~ "Select a repo"
 
       # lets select the installation
       view
@@ -5164,8 +3582,8 @@ defmodule LightningWeb.ProjectLiveTest do
       options = Floki.children(repos_input)
       assert Enum.count(options) == 2
       [default_option, repo_option] = options
-      Floki.raw_html(default_option) =~ "Select a repo"
-      Floki.raw_html(repo_option) =~ expected_repo["full_name"]
+      assert Floki.raw_html(default_option) =~ "Select a repo"
+      assert Floki.raw_html(repo_option) =~ expected_repo["full_name"]
 
       # before selecting any repo, the branches are not listed.
       # We just have the default option
@@ -5174,7 +3592,7 @@ defmodule LightningWeb.ProjectLiveTest do
       [branches_input] = Floki.find(floki_fragment, "#select-branches-input")
       options = Floki.children(branches_input)
       assert Enum.count(options) == 1
-      options |> hd() |> Floki.raw_html() =~ "Select a branch"
+      assert options |> hd() |> Floki.raw_html() =~ "Select a branch"
 
       # lets select the repo
       expect_get_user_installations(200, %{
@@ -5200,8 +3618,8 @@ defmodule LightningWeb.ProjectLiveTest do
       options = Floki.children(branches_input)
       assert Enum.count(options) == 2
       [default_option, branch_option] = options
-      Floki.raw_html(default_option) =~ "Select a branch"
-      Floki.raw_html(branch_option) =~ expected_branch["name"]
+      assert Floki.raw_html(default_option) =~ "Select a branch"
+      assert Floki.raw_html(branch_option) =~ expected_branch["name"]
 
       # try submitting without selecting branch
       error_msg = "This field can&#39;t be blank"
@@ -5750,587 +4168,30 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(submit_btn) =~ "disabled=\"disabled\""
     end
 
-    @tag :capture_log
     test "all users can see a saved repo connection", %{conn: conn} do
       project = insert(:project)
 
-      repo_connection =
-        insert(:project_repo_connection,
-          project: project,
-          repo: "someaccount/somerepo",
-          branch: "somebranch",
-          github_installation_id: "1234"
-        )
+      insert(:project_repo_connection,
+        project: project,
+        repo: "someaccount/somerepo",
+        branch: "somebranch",
+        github_installation_id: "1234"
+      )
 
       for {conn, _user} <-
             setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
-        # we are returning 404 for the access token so that we halt the pipeline for verifying the connection
-        expect_create_installation_token(
-          repo_connection.github_installation_id,
-          404,
-          %{"error" => "something terrible"}
-        )
-
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        html = render_async(view)
+        view = open(conn, project, "settings#vcs")
 
         refute has_element?(view, "#project-repo-connection-form")
 
-        assert html =~ repo_connection.repo
-        assert html =~ repo_connection.branch
-        assert html =~ repo_connection.github_installation_id
+        assert %{
+                 "repo" => "someaccount/somerepo",
+                 "branch" => "somebranch",
+                 "githubInstallationId" => "1234"
+               } = props(view)["githubSync"]["connection"]
       end
     end
 
-    test "unauthorized users cannot reconnect project even if they have access to the installation",
-         %{conn: conn} do
-      project = insert(:project)
-
-      repo_connection =
-        insert(:project_repo_connection,
-          project: project,
-          repo: "someaccount/somerepo",
-          branch: "somebranch",
-          github_installation_id: "1234"
-        )
-
-      expected_installation = %{
-        "id" => repo_connection.github_installation_id,
-        "account" => %{
-          "type" => "User",
-          "login" => "username"
-        }
-      }
-
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
-
-      for {conn, user} <- setup_project_users(conn, project, [:viewer, :editor]) do
-        set_valid_github_oauth_token!(user)
-
-        # NOTE: This hasn't been migrated to the expect_github_action/3 function
-        # because of flaky order of expections.
-        Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
-          # list installations for checking if the user has access to the intallation.
-          %{url: "https://api.github.com/user/installations"}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"installations" => [expected_installation]}
-             }}
-
-          # get installation access token. This is called twice.
-          # When fetching repos and when verifying connection
-          %{url: ^expected_access_token_endpoint}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"token" => "some-token"}
-             }}
-
-          # list repos
-          %{url: "https://api.github.com/installation/repositories"}, _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
-
-          # another call for verifying connection. Probably for checking if a file exists
-          # ignoring to halt the pipeline
-          %{url: _url}, _opts ->
-            {:error, "something unexpected happened"}
-        end)
-
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        render_async(view)
-
-        refute has_element?(view, "#reconnect-project-button")
-
-        # try sending the event either way
-        view
-        |> with_target("#github-sync-component")
-        |> render_click("reconnect", %{
-          "connection" => %{"sync_direction" => "deploy"}
-        })
-
-        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-        assert flash["error"] == "You are not authorized to perform this action"
-      end
-    end
-
-    @tag :capture_log
-    test "authorized users cannot reconnect project if they don't have access to the installation",
-         %{conn: conn} do
-      project = insert(:project)
-
-      repo_connection =
-        insert(:project_repo_connection,
-          project: project,
-          repo: "someaccount/somerepo",
-          branch: "somebranch",
-          github_installation_id: "1234",
-          access_token: "someaccesstoken"
-        )
-
-      for {conn, user} <-
-            setup_project_users(conn, project, [:admin, :owner]) do
-        set_valid_github_oauth_token!(user)
-
-        # list installations for checking if the user has access to the intallation.
-        # in this case we return an empty list to simulate user not having access to the installation
-        expect_get_user_installations(200, %{"installations" => []})
-        # get installation access token. This is called when verifying connection
-        expect_create_installation_token(
-          repo_connection.github_installation_id,
-          404,
-          %{"error" => "something bad"}
-        )
-
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        render_async(view)
-
-        refute has_element?(view, "#reconnect-project-button")
-      end
-    end
-
-    test "authorized users can reconnect project if they have access to the installation",
-         %{conn: conn} do
-      project = insert(:project)
-
-      repo_connection =
-        insert(:project_repo_connection,
-          project: project,
-          repo: "someaccount/somerepo",
-          branch: "somebranch",
-          github_installation_id: "1234",
-          access_token: "someaccesstoken"
-        )
-
-      expected_installation = %{
-        "id" => repo_connection.github_installation_id,
-        "account" => %{
-          "type" => "User",
-          "login" => "username"
-        }
-      }
-
-      expected_repo = %{
-        "full_name" => repo_connection.repo,
-        "default_branch" => "main"
-      }
-
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
-
-      for {conn, user} <-
-            setup_project_users(conn, project, [:admin, :owner]) do
-        set_valid_github_oauth_token!(user)
-
-        Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
-          # list installations for checking if the user has access to the intallation.
-          %{url: "https://api.github.com/user/installations"}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"installations" => [expected_installation]}
-             }}
-
-          # get installation access token. This is called twice.
-          # When fetching repos and when verifying connection
-          %{url: ^expected_access_token_endpoint}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"token" => "some-token"}
-             }}
-
-          # list repos
-          %{url: "https://api.github.com/installation/repositories"}, _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
-
-          # another call for verifying connection. Probably for checking if a file exists
-          # ignoring to halt the pipeline
-          %{url: _url}, _opts ->
-            {:error, "something unexpected happened"}
-        end)
-
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        render_async(view)
-
-        assert has_element?(view, "#reconnect-project-button")
-
-        # let's reconnect
-        # push pull.yml
-        expect_get_repo(repo_connection.repo, 200, expected_repo)
-        expect_create_blob(repo_connection.repo)
-
-        expect_get_commit(
-          repo_connection.repo,
-          expected_repo["default_branch"]
-        )
-
-        expect_create_tree(repo_connection.repo)
-        expect_create_commit(repo_connection.repo)
-
-        expect_update_ref(
-          repo_connection.repo,
-          expected_repo["default_branch"]
-        )
-
-        # push deploy.yml + config.json
-        # deploy.yml blob
-        expect_create_blob(repo_connection.repo)
-        # config.json blob
-        expect_create_blob(repo_connection.repo)
-        expect_get_commit(repo_connection.repo, repo_connection.branch)
-        expect_create_tree(repo_connection.repo)
-        expect_create_commit(repo_connection.repo)
-        expect_update_ref(repo_connection.repo, repo_connection.branch)
-
-        # write secret
-        expect_get_public_key(repo_connection.repo)
-        secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
-        expect_create_repo_secret(repo_connection.repo, secret_name)
-
-        # initialize sync
-        expect_create_installation_token(repo_connection.github_installation_id)
-        expect_get_repo(repo_connection.repo, 200, expected_repo)
-
-        expect_create_workflow_dispatch(
-          repo_connection.repo,
-          "openfn-pull.yml"
-        )
-
-        view
-        |> form("#reconnect-project-form")
-        |> render_submit(
-          connection: %{"sync_direction" => "pull", "accept" => "true"}
-        )
-
-        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-
-        assert flash["info"] == "Connected to GitHub"
-      end
-    end
-
-    test "reconnecting a project whose names collide says so, rather than blaming GitHub access",
-         %{conn: conn} do
-      project = insert(:project)
-
-      repo_connection =
-        insert(:project_repo_connection,
-          project: project,
-          repo: "someaccount/somerepo",
-          branch: "somebranch",
-          github_installation_id: "1234",
-          access_token: "someaccesstoken"
-        )
-
-      # Both hyphenate to `My-Flow`, so the export pre-flight inside
-      # initiate_sync/2 refuses. Snapshotted, because the sync exports the
-      # snapshot set rather than the live workflows.
-      for name <- ["My Flow", "My-Flow"] do
-        {:ok, _} =
-          insert(:simple_workflow, name: name, project: project)
-          |> Lightning.Workflows.Snapshot.create()
-      end
-
-      expected_installation = %{
-        "id" => repo_connection.github_installation_id,
-        "account" => %{"type" => "User", "login" => "username"}
-      }
-
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
-
-      [{conn, user}] = setup_project_users(conn, project, [:admin])
-      set_valid_github_oauth_token!(user)
-
-      Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
-        %{url: "https://api.github.com/user/installations"}, _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{"installations" => [expected_installation]}
-           }}
-
-        %{url: ^expected_access_token_endpoint}, _opts ->
-          {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
-
-        %{url: "https://api.github.com/installation/repositories"}, _opts ->
-          {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
-
-        %{url: _url}, _opts ->
-          {:error, "something unexpected happened"}
-      end)
-
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
-
-      render_async(view)
-
-      # Nothing is mocked past the connection check on purpose. The export
-      # pre-flight refuses before pull.yml, the workflow files or the API
-      # secret are pushed, so verify_on_exit! asserts we never wrote to the
-      # repo at all.
-
-      view
-      |> form("#reconnect-project-form")
-      |> render_submit(
-        connection: %{"sync_direction" => "pull", "accept" => "true"}
-      )
-
-      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-
-      assert flash["error"] =~ "two workflows in this project"
-      assert flash["error"] =~ ~s("My Flow")
-      assert flash["error"] =~ ~s("My-Flow")
-    end
-
-    test "authorized users get an error when reconnecting if the usage limiter returns an error",
-         %{conn: conn} do
-      %{id: project_id} = project = insert(:project)
-
-      repo_connection =
-        insert(:project_repo_connection,
-          project: project,
-          repo: "someaccount/somerepo",
-          branch: "somebranch",
-          github_installation_id: "1234",
-          access_token: "someaccesstoken"
-        )
-
-      expected_installation = %{
-        "id" => repo_connection.github_installation_id,
-        "account" => %{
-          "type" => "User",
-          "login" => "username"
-        }
-      }
-
-      expected_access_token_endpoint =
-        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
-
-      for {conn, user} <-
-            setup_project_users(conn, project, [:admin, :owner]) do
-        set_valid_github_oauth_token!(user)
-
-        Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
-          # list installations for checking if the user has access to the intallation.
-          %{url: "https://api.github.com/user/installations"}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"installations" => [expected_installation]}
-             }}
-
-          # get installation access token. This is called twice.
-          # When fetching repos and when verifying connection
-          %{url: ^expected_access_token_endpoint}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"token" => "some-token"}
-             }}
-
-          # list repos
-          %{url: "https://api.github.com/installation/repositories"}, _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
-
-          # another call for verifying connection. Probably for checking if a file exists
-          # ignoring to halt the pipeline
-          %{url: _url}, _opts ->
-            {:error, "something unexpected happened"}
-        end)
-
-        Mox.stub_with(
-          Lightning.Extensions.MockUsageLimiter,
-          Lightning.Extensions.UsageLimiter
-        )
-
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        render_async(view)
-
-        assert has_element?(view, "#reconnect-project-button")
-
-        # let's reconnect
-        error_msg = "Some funny error message"
-
-        Lightning.Extensions.MockUsageLimiter
-        |> Mox.expect(:limit_action, fn %{type: :github_sync},
-                                        %{project_id: ^project_id} ->
-          {:error, :disabled, %{text: error_msg}}
-        end)
-
-        view
-        |> form("#reconnect-project-form")
-        |> render_submit(
-          connection: %{"sync_direction" => "pull", "accept" => "true"}
-        )
-
-        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-
-        assert flash["error"] == error_msg
-      end
-    end
-
-    test "reconnect button does not show if everything checks out",
-         %{conn: conn} do
-      project = insert(:project)
-
-      repo_connection =
-        insert(:project_repo_connection,
-          project: project,
-          repo: "someaccount/somerepo",
-          branch: "somebranch",
-          github_installation_id: "1234",
-          access_token: "someaccesstoken"
-        )
-
-      for {conn, user} <-
-            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
-        set_valid_github_oauth_token!(user)
-
-        repo_name = repo_connection.repo
-        branch_name = repo_connection.branch
-        installation_id = repo_connection.github_installation_id
-
-        expected_default_branch = "main"
-
-        expected_deploy_yml_path =
-          ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
-
-        expected_config_json_path =
-          "openfn-#{repo_connection.project_id}-config.json"
-
-        expected_secret_name =
-          "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
-
-        Mox.expect(Lightning.Tesla.Mock, :call, 9, fn
-          # list installations for checking if the user has access to the installation.
-          %{url: "https://api.github.com/user/installations"}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "installations" => [
-                   %{
-                     "id" => installation_id,
-                     "account" => %{
-                       "type" => "User",
-                       "login" => "username"
-                     }
-                   }
-                 ]
-               }
-             }}
-
-          # get installation access token. This is called twice.
-          # When fetching repos and when verifying connection
-          %{
-            url:
-              "https://api.github.com/app/installations/" <>
-                  ^installation_id <> "/access_tokens"
-          },
-          _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"token" => "some-token"}
-             }}
-
-          # list repos. This goes hand in hand installations
-          %{url: "https://api.github.com/installation/repositories"}, _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
-
-          # get repo content
-          %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"default_branch" => expected_default_branch}
-             }}
-
-          # check if pull yml exists in the default branch
-          %{
-            method: :get,
-            query: [{:ref, "heads/" <> ^expected_default_branch}],
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if deploy yml exists in the target branch
-          %{
-            method: :get,
-            query: [{:ref, "heads/" <> ^branch_name}],
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if config.json exists in the target branch
-          %{
-            method: :get,
-            query: [{:ref, "heads/" <> ^branch_name}],
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/" <> ^expected_config_json_path
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if api key secret exists
-          %{
-            method: :get,
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{}}}
-        end)
-
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        html = render_async(view)
-
-        refute has_element?(view, "#reconnect-project-button")
-
-        assert html =~ "Your repository is properly configured."
-      end
-    end
-
-    @tag :capture_log
     test "unauthorized users cannot remove github connection", %{conn: conn} do
       project = insert(:project)
 
@@ -6347,53 +4208,17 @@ defmodule LightningWeb.ProjectLiveTest do
         # giving the user a valid token
         set_valid_github_oauth_token!(user)
 
-        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
-          # list installations for checking if the user has access to the installation.
-          # we return 400 to halt the pipeline
-          %{url: "https://api.github.com/user/installations"}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 400,
-               body: %{"something" => "bad"}
-             }}
+        view = open(conn, project, "settings#vcs")
 
-          # get access token. Gets called when verifying connection
-          %{
-            url: "https://api.github.com/app/installations/" <> _installation_id
-          },
-          _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 404,
-               body: %{"something" => "not right"}
-             }}
-        end)
+        refute props(view)["githubSync"]["canInstall"]
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        html = render_async(view)
-
-        refute has_element?(view, "#remove_connection_modal")
-
-        refute html =~ "Remove Integration"
-
-        # try sending the delete event either way
-        view
-        |> with_target("#github-sync-component")
-        |> render_click("delete-connection", %{})
-
-        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-        assert flash["error"] == "You are not authorized to perform this action"
+        send_event(view, "remove_github_connection")
+        assert_refused(view)
 
         assert Lightning.Repo.reload(repo_connection)
       end
     end
 
-    @tag :capture_log
     test "authorized users who have not setup github accounts can remove github connection",
          %{conn: conn} do
       project = insert(:project)
@@ -6410,46 +4235,26 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert is_nil(user.github_oauth_token)
 
-        Mox.expect(Lightning.Tesla.Mock, :call, 1, fn
-          # get access token. Gets called when verifying connection
-          # we return 400 to halt the pipeline
-          %{
-            url: "https://api.github.com/app/installations/" <> _installation_id
-          },
-          _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 404,
-               body: %{"something" => "not right"}
-             }}
-        end)
+        view = open(conn, project, "settings#vcs")
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
+        assert props(view)["githubSync"]["canInstall"]
 
-        html = render_async(view)
+        assert send_event(view, "remove_github_connection") =~
+                 "Connection removed successfully"
 
-        assert has_element?(view, "#remove_connection_modal")
-        assert has_element?(view, "#remove_connection_modal_confirm_button")
-        assert html =~ "Remove Integration"
-
-        # click the confirm button
-        view
-        |> element("#remove_connection_modal_confirm_button")
-        |> render_click()
-
-        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-
-        assert flash["info"] == "Connection removed successfully"
+        assert_ok(view)
 
         refute Lightning.Repo.reload(repo_connection)
+        assert props(view)["githubSync"]["connection"] == nil
+
+        assert Repo.get_by(Audit,
+                 item_id: project.id,
+                 event: "repo_connection_removed",
+                 actor_id: user.id
+               )
       end
     end
 
-    @tag :capture_log
     test "authorized users with valid github oauth can remove github connection even when undoing some github actions fail",
          %{conn: conn} do
       project = insert(:project)
@@ -6468,28 +4273,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert is_map(user.github_oauth_token)
 
-        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
-          # get access token. Gets called when verifying connection
-          # we return 400 to halt the pipeline
-          %{url: "https://api.github.com/app/installations/" <> _rest}, _opts ->
-            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
-
-          # check if user has access to the installation
-          %{url: "https://api.github.com/user/installations"}, _opts ->
-            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
-        end)
-
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#vcs"
-          )
-
-        html = render_async(view)
-
-        assert has_element?(view, "#remove_connection_modal")
-        assert has_element?(view, "#remove_connection_modal_confirm_button")
-        assert html =~ "Remove Integration"
+        view = open(conn, project, "settings#vcs")
 
         # check if deploy yml exists for deletion
         expected_deploy_yml_path =
@@ -6520,20 +4304,15 @@ defmodule LightningWeb.ProjectLiveTest do
           "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
         )
 
-        # click the confirm button
-        view
-        |> element("#remove_connection_modal_confirm_button")
-        |> render_click()
+        assert send_event(view, "remove_github_connection") =~
+                 "Connection removed successfully"
 
-        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-
-        assert flash["info"] == "Connection removed successfully"
+        assert_ok(view)
 
         refute Lightning.Repo.reload(repo_connection)
       end
     end
 
-    @tag :capture_log
     test "unauthorized users cannot initiate github sync", %{conn: conn} do
       project = insert(:project)
 
@@ -6549,31 +4328,13 @@ defmodule LightningWeb.ProjectLiveTest do
         # giving the user a valid token
         set_valid_github_oauth_token!(user)
 
-        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
-          # list installations for checking if the user has access to the installation.
-          # we return 400 to halt the pipeline
-          %{url: "https://api.github.com/user/installations"}, _opts ->
-            {:ok, %Tesla.Env{status: 400, body: %{"something" => "bad"}}}
+        view = open(conn, project, "settings#vcs")
 
-          # get access token. Gets called when verifying connection
-          %{url: "https://api.github.com/app/installations/" <> _rest}, _opts ->
-            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
-        end)
+        refute props(view)["githubSync"]["canInitiateSync"]
 
-        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
-
-        html = render_async(view)
-
-        assert html =~ "Contact an editor or admin to sync."
-        assert has_element?(view, "#initiate-sync-button:disabled")
-
-        # try sending the sync event either way
-        view
-        |> with_target("#github-sync-component")
-        |> render_click("initiate-sync", %{})
-
-        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-        assert flash["error"] == "You are not authorized to perform this action"
+        # nothing is asked of GitHub
+        send_event(view, "sync_github")
+        assert_refused(view)
       end
     end
 
@@ -6591,8 +4352,7 @@ defmodule LightningWeb.ProjectLiveTest do
       )
 
       # Both hyphenate to `My-Flow`. The export pre-flight refuses before any
-      # GitHub call, so no sync mocks are set. The stub below only carries the
-      # page-load connection check, and it is halted.
+      # GitHub call, so no sync mocks are set.
       for name <- ["My Flow", "My-Flow"] do
         {:ok, _} =
           insert(:simple_workflow, name: name, project: project)
@@ -6602,27 +4362,14 @@ defmodule LightningWeb.ProjectLiveTest do
       [{conn, user}] = setup_project_users(conn, project, [:admin])
       set_valid_github_oauth_token!(user)
 
-      Mox.stub(Lightning.Tesla.Mock, :call, fn
-        %{url: "https://api.github.com/user/installations"}, _opts ->
-          {:ok, %Tesla.Env{status: 400, body: %{"something" => "bad"}}}
+      view = open(conn, project, "settings#vcs")
 
-        %{url: _url}, _opts ->
-          {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
-      end)
+      send_event(view, "sync_github")
+      assert_reply(view, %{error: error})
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
-
-      render_async(view)
-
-      view
-      |> with_target("#github-sync-component")
-      |> render_click("initiate-sync", %{})
-
-      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-
-      assert flash["error"] =~ "two workflows in this project"
-      assert flash["error"] =~ ~s("My Flow")
-      assert flash["error"] =~ ~s("My-Flow")
+      assert error =~ "two workflows in this project"
+      assert error =~ ~s("My Flow")
+      assert error =~ ~s("My-Flow")
     end
 
     test "authorized users can initiate github sync successfully", %{
@@ -6644,108 +4391,16 @@ defmodule LightningWeb.ProjectLiveTest do
         # users dont need the oauth token in order to initialize sync
         assert is_nil(user.github_oauth_token)
 
-        # ensure project is all setup
-        repo_name = repo_connection.repo
-        branch_name = repo_connection.branch
-        installation_id = repo_connection.github_installation_id
+        view = open(conn, project, "settings#vcs")
 
-        expected_default_branch = "main"
+        assert props(view)["githubSync"]["canInitiateSync"]
 
-        expected_deploy_yml_path =
-          ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
-
-        expected_config_json_path =
-          "openfn-#{repo_connection.project_id}-config.json"
-
-        expected_secret_name =
-          "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
-
-        Mox.expect(Lightning.Tesla.Mock, :call, 6, fn
-          # get installation access token.
-          # called when verifying connection
-          %{
-            url:
-              "https://api.github.com/app/installations/" <>
-                  ^installation_id <> "/access_tokens"
-          },
-          _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"token" => "some-token"}
-             }}
-
-          # get repo content
-          %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"default_branch" => expected_default_branch}
-             }}
-
-          # check if pull yml exists in the default branch
-          %{
-            method: :get,
-            query: [{:ref, "heads/" <> ^expected_default_branch}],
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if deploy yml exists in the target branch
-          %{
-            method: :get,
-            query: [{:ref, "heads/" <> ^branch_name}],
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if config.json exists in the target branch
-          %{
-            method: :get,
-            query: [{:ref, "heads/" <> ^branch_name}],
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/" <> ^expected_config_json_path
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if api key secret exists
-          %{
-            method: :get,
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{}}}
-        end)
-
-        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
-
-        html = render_async(view)
-
-        refute html =~ "Contact an editor or admin to sync."
-
-        button = element(view, "#initiate-sync-button")
-        assert has_element?(button)
-
-        # try clicking the button
         expect_create_installation_token(repo_connection.github_installation_id)
         expect_get_repo(repo_connection.repo)
         expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
 
-        render_click(button)
-
-        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-
-        assert flash["info"] == "GitHub sync initiated"
+        assert send_event(view, "sync_github") =~ "GitHub sync initiated"
+        assert_ok(view)
       end
     end
 
@@ -6755,14 +4410,13 @@ defmodule LightningWeb.ProjectLiveTest do
          } do
       %{id: project_id} = project = insert(:project)
 
-      repo_connection =
-        insert(:project_repo_connection,
-          project: project,
-          repo: "someaccount/somerepo",
-          branch: "somebranch",
-          github_installation_id: "1234",
-          access_token: "someaccesstoken"
-        )
+      insert(:project_repo_connection,
+        project: project,
+        repo: "someaccount/somerepo",
+        branch: "somebranch",
+        github_installation_id: "1234",
+        access_token: "someaccesstoken"
+      )
 
       Mox.stub_with(
         Lightning.Extensions.MockUsageLimiter,
@@ -6788,99 +4442,18 @@ defmodule LightningWeb.ProjectLiveTest do
 
       for {conn, _user} <-
             setup_project_users(conn, project, [:editor, :admin, :owner]) do
-        # ensure project is all setup
-        repo_name = repo_connection.repo
-        branch_name = repo_connection.branch
-        installation_id = repo_connection.github_installation_id
+        view = open(conn, project, "settings#vcs")
 
-        expected_default_branch = "main"
+        refute props(view)["githubSync"]["canInitiateSync"]
 
-        expected_deploy_yml_path =
-          ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+        # The limit has no text, so the sync replies the general error;
+        # nothing is asked of GitHub.
+        send_event(view, "sync_github")
 
-        expected_config_json_path =
-          "openfn-#{repo_connection.project_id}-config.json"
-
-        expected_secret_name =
-          "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
-
-        Mox.expect(Lightning.Tesla.Mock, :call, 6, fn
-          # get installation access token.
-          # called when verifying connection
-          %{
-            url:
-              "https://api.github.com/app/installations/" <>
-                  ^installation_id <> "/access_tokens"
-          },
-          _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 201,
-               body: %{"token" => "some-token"}
-             }}
-
-          # get repo content
-          %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{"default_branch" => expected_default_branch}
-             }}
-
-          # check if pull yml exists in the default branch
-          %{
-            method: :get,
-            query: [{:ref, "heads/" <> ^expected_default_branch}],
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if deploy yml exists in the target branch
-          %{
-            method: :get,
-            query: [{:ref, "heads/" <> ^branch_name}],
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if config.json exists in the target branch
-          %{
-            method: :get,
-            query: [{:ref, "heads/" <> ^branch_name}],
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/contents/" <> ^expected_config_json_path
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
-
-          # check if api key secret exists
-          %{
-            method: :get,
-            url:
-              "https://api.github.com/repos/" <>
-                  ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
-          },
-          _opts ->
-            {:ok, %Tesla.Env{status: 200, body: %{}}}
-        end)
-
-        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
-
-        html = render_async(view)
-
-        refute html =~ "Contact an editor or admin to sync."
-
-        button = element(view, "#initiate-sync-button")
-        assert has_element?(button)
-
-        assert render(button) =~ "disabled=\"disabled\""
+        assert_reply(view, %{
+          error:
+            "Oops! An error occurred while connecting to GitHub. Please try again later"
+        })
       end
     end
 
@@ -6924,71 +4497,29 @@ defmodule LightningWeb.ProjectLiveTest do
   describe "project settings:collections" do
     setup :register_and_log_in_user
 
-    test "only authorized users can access the create modal", %{
+    test "only authorized users can create a collection", %{
       conn: conn
     } do
       project = insert(:project)
 
       for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
+        view = open(conn, project, "settings#collections")
 
-        button = element(view, "#open-create-collection-modal-button")
-        assert has_element?(button)
+        refute props(view)["collections"]["canManage"]
 
-        # modal is not present
-        refute has_element?(view, "#create-collection-modal")
-
-        # try clicking the button
-        assert_raise ArgumentError, ~r/is disabled/, fn ->
-          render_click(button)
-        end
-
-        # send event either way
-        view
-        |> with_target("#collections")
-        |> render_click("toggle_action", %{"action" => "new"})
-
-        flash =
-          assert_redirected(
-            view,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
-
-        assert flash["error"] == "You are not authorized to perform this action"
+        send_event(view, "create_collection", %{"rawName" => "not allowed"})
+        assert_refused(view)
       end
 
       for {conn, _user} <-
             setup_project_users(conn, project, [:owner, :admin]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
-
-        button = element(view, "#open-create-collection-modal-button")
-        assert has_element?(button)
-
-        # modal is not present
-        refute has_element?(view, "#create-collection-modal")
-
-        # try clicking the button
-        render_click(button)
-
-        # modal is now present
-        assert has_element?(view, "#create-collection-modal")
-
-        # clicking close button closes the modal
-        view
-        |> element("#create-collection-modal button", "Cancel")
-        |> render_click()
-
-        # modal is now closed
-        refute has_element?(view, "#create-collection-modal")
+        assert conn
+               |> open(project, "settings#collections")
+               |> props()
+               |> get_in(["collections", "canManage"])
       end
+
+      assert Lightning.Collections.list_project_collections(project) == []
     end
 
     test "user can create collection successfully", %{
@@ -6999,30 +4530,10 @@ defmodule LightningWeb.ProjectLiveTest do
       for {{conn, _user}, index} <-
             setup_project_users(conn, project, [:owner, :admin])
             |> Enum.with_index() do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
+        view = open(conn, project, "settings#collections")
 
-        # open the modal
-        view |> element("#open-create-collection-modal-button") |> render_click()
-
-        # modal is now present
-        assert has_element?(view, "#create-collection-modal")
-
-        # fill in the form
         collection_name = "test collection #{index}"
         expected_collection_name = String.replace(collection_name, " ", "-")
-
-        html =
-          view
-          |> form("#create-collection-modal form",
-            collection: %{raw_name: collection_name}
-          )
-          |> render_change()
-
-        assert html =~ "Your collection will be named"
 
         # collection does not exist
         refute Lightning.Repo.get_by(Lightning.Collections.Collection,
@@ -7030,21 +4541,21 @@ defmodule LightningWeb.ProjectLiveTest do
                  name: expected_collection_name
                )
 
-        # submit the form
-        view |> form("#create-collection-modal form") |> render_submit()
+        assert send_event(view, "create_collection", %{
+                 "rawName" => collection_name
+               }) =~ "Collection created"
 
-        flash =
-          assert_redirected(
-            view,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
-
-        assert flash["info"] == "Collection created"
+        assert_ok(view)
 
         # collection now exists
         assert Lightning.Repo.get_by(Lightning.Collections.Collection,
                  project_id: project.id,
                  name: expected_collection_name
+               )
+
+        assert Enum.any?(
+                 props(view)["collections"]["collections"],
+                 &(&1["name"] == expected_collection_name)
                )
       end
     end
@@ -7058,31 +4569,15 @@ defmodule LightningWeb.ProjectLiveTest do
 
       conn = setup_project_user(conn, project, user, :owner)
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collections"
-        )
+      view = open(conn, project, "settings#collections")
 
-      # open the modal
-      view |> element("#open-create-collection-modal-button") |> render_click()
+      send_event(view, "create_collection", %{"rawName" => collection.name})
 
-      # modal is now present
-      assert has_element?(view, "#create-collection-modal")
-
-      # fill in the form and submit with the same name
-      view
-      |> form("#create-collection-modal form",
-        collection: %{raw_name: collection.name}
-      )
-      |> render_change()
-
-      html =
-        view
-        |> form("#create-collection-modal form")
-        |> render_submit()
-
-      assert html =~ "A collection with this name already exists"
+      assert_reply(view, %{
+        fieldErrors: %{
+          "rawName" => ["A collection with this name already exists"]
+        }
+      })
     end
 
     test "shows an error when the limiter returns an error", %{
@@ -7100,36 +4595,12 @@ defmodule LightningWeb.ProjectLiveTest do
           {:error, :exceeds_limit, %{text: error_msg}}
       end)
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#collections"
-        )
+      view = open(conn, project, "settings#collections")
 
-      # open the modal
-      view |> element("#open-create-collection-modal-button") |> render_click()
+      send_event(view, "create_collection", %{"rawName" => "some name"})
+      assert_reply(view, %{error: ^error_msg})
 
-      # modal is now present
-      assert has_element?(view, "#create-collection-modal")
-
-      # fill in the form and submit with the same name
-      view
-      |> form("#create-collection-modal form",
-        collection: %{raw_name: "some name"}
-      )
-      |> render_change()
-
-      view
-      |> form("#create-collection-modal form")
-      |> render_submit()
-
-      flash =
-        assert_redirected(
-          view,
-          ~p"/projects/#{project.id}/settings#collections"
-        )
-
-      assert flash["error"] == error_msg
+      assert Lightning.Collections.list_project_collections(project) == []
     end
 
     test "unauthorized users cannot edit a collection", %{
@@ -7140,38 +4611,15 @@ defmodule LightningWeb.ProjectLiveTest do
       for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
         collection = insert(:collection, project: project)
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
+        view = open(conn, project, "settings#collections")
 
-        button = element(view, "#edit-collection-#{collection.id}-button")
-        assert has_element?(button)
-
-        # modal is not present
-        refute has_element?(view, "#edit-collection-#{collection.id}-modal")
-
-        # try clicking the button
-        assert_raise ArgumentError, ~r/is disabled/, fn ->
-          render_click(button)
-        end
-
-        # send event either way
-        view
-        |> with_target("#collections")
-        |> render_click("toggle_action", %{
-          "action" => "edit",
-          "collection" => collection.name
+        send_event(view, "rename_collection", %{
+          "id" => collection.id,
+          "rawName" => "renamed"
         })
 
-        flash =
-          assert_redirected(
-            view,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
-
-        assert flash["error"] == "You are not authorized to perform this action"
+        assert_refused(view)
+        assert Repo.reload(collection).name == collection.name
       end
     end
 
@@ -7184,31 +4632,9 @@ defmodule LightningWeb.ProjectLiveTest do
             setup_project_users(conn, project, [:owner, :admin]) do
         collection = insert(:collection, project: project)
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
+        view = open(conn, project, "settings#collections")
 
-        # open the modal
-        view
-        |> element("#edit-collection-#{collection.id}-button")
-        |> render_click()
-
-        # modal is now present
-        assert has_element?(view, "#edit-collection-#{collection.id}-modal")
-
-        # fill in the form
         new_collection_name = "#{collection.name}-#{collection.id}"
-
-        html =
-          view
-          |> form("#edit-collection-#{collection.id}-modal form",
-            collection: %{raw_name: new_collection_name}
-          )
-          |> render_change()
-
-        assert html =~ "Your collection will be named"
 
         # collection does not exist
         refute Lightning.Repo.get_by(Lightning.Collections.Collection,
@@ -7216,18 +4642,12 @@ defmodule LightningWeb.ProjectLiveTest do
                  name: new_collection_name
                )
 
-        # submit the form
-        view
-        |> form("#edit-collection-#{collection.id}-modal form")
-        |> render_submit()
+        assert send_event(view, "rename_collection", %{
+                 "id" => collection.id,
+                 "rawName" => new_collection_name
+               }) =~ "Collection updated"
 
-        flash =
-          assert_redirected(
-            view,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
-
-        assert flash["info"] == "Collection updated"
+        assert_ok(view)
 
         assert Lightning.Repo.get_by(Lightning.Collections.Collection,
                  project_id: project.id,
@@ -7244,38 +4664,12 @@ defmodule LightningWeb.ProjectLiveTest do
       for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
         collection = insert(:collection, project: project)
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
+        view = open(conn, project, "settings#collections")
 
-        button = element(view, "#delete-collection-#{collection.id}-button")
-        assert has_element?(button)
+        send_event(view, "delete_collection", %{"id" => collection.id})
+        assert_refused(view)
 
-        # modal is not present
-        refute has_element?(view, "#delete-collection-#{collection.id}-modal")
-
-        # try clicking the button
-        assert_raise ArgumentError, ~r/is disabled/, fn ->
-          render_click(button)
-        end
-
-        # send event either way
-        view
-        |> with_target("#collections")
-        |> render_click("toggle_action", %{
-          "action" => "delete",
-          "collection" => collection.name
-        })
-
-        flash =
-          assert_redirected(
-            view,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
-
-        assert flash["error"] == "You are not authorized to perform this action"
+        assert Repo.reload(collection)
       end
     end
 
@@ -7288,42 +4682,27 @@ defmodule LightningWeb.ProjectLiveTest do
             setup_project_users(conn, project, [:owner, :admin]) do
         collection = insert(:collection, project: project)
 
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
+        view = open(conn, project, "settings#collections")
 
-        # open the modal
-        view
-        |> element("#delete-collection-#{collection.id}-button")
-        |> render_click()
+        assert send_event(view, "delete_collection", %{"id" => collection.id}) =~
+                 "Collection deleted"
 
-        # modal is now present
-        assert has_element?(view, "#delete-collection-#{collection.id}-modal")
-
-        # click the delete button
-        view
-        |> element("#delete-collection-#{collection.id}-modal_confirm_button")
-        |> render_click()
-
-        flash =
-          assert_redirected(
-            view,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
-
-        assert flash["info"] == "Collection deleted"
+        assert_ok(view)
 
         # collection does not exist
         refute Lightning.Repo.get(
                  Lightning.Collections.Collection,
                  collection.id
                )
+
+        refute Enum.any?(
+                 props(view)["collections"]["collections"],
+                 &(&1["id"] == collection.id)
+               )
       end
     end
 
-    test "preview button appears for each collection row", %{
+    test "every collection of the project is listed", %{
       conn: conn,
       user: user
     } do
@@ -7332,45 +4711,19 @@ defmodule LightningWeb.ProjectLiveTest do
 
       collection_a = insert(:collection, project: project)
       collection_b = insert(:collection, project: project)
+      insert(:collection, project: insert(:project))
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collections")
+      ids =
+        conn
+        |> open(project, "settings#collections")
+        |> props()
+        |> get_in(["collections", "collections"])
+        |> Enum.map(& &1["id"])
 
-      assert has_element?(view, "#preview-collection-#{collection_a.id}-button")
-      assert has_element?(view, "#preview-collection-#{collection_b.id}-button")
+      assert Enum.sort(ids) == Enum.sort([collection_a.id, collection_b.id])
     end
 
-    test "clicking preview button opens modal with collection name and subtitle",
-         %{conn: conn, user: user} do
-      project = insert(:project)
-      insert(:project_user, role: :owner, project: project, user: user)
-      collection = insert(:collection, project: project)
-
-      insert(:collection_item,
-        collection: collection,
-        key: "preview-key",
-        value: "preview-value"
-      )
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collections")
-
-      view
-      |> element("#preview-collection-#{collection.id}-button")
-      |> render_click()
-
-      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
-
-      modal_html =
-        view
-        |> element("#preview-collection-#{collection.id}-modal")
-        |> render()
-
-      assert modal_html =~ "Collection Preview: #{collection.name}"
-      assert modal_html =~ "Showing first record"
-    end
-
-    test "preview modal shows item key and value", %{
+    test "preview replies the first item's key and value", %{
       conn: conn,
       user: user
     } do
@@ -7384,23 +4737,16 @@ defmodule LightningWeb.ProjectLiveTest do
         value: "my-value"
       )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collections")
+      view = open(conn, project, "settings#collections")
 
-      html =
-        view
-        |> with_target("#collections")
-        |> render_click("preview_collection", %{
-          "collection" => collection.name
-        })
+      send_event(view, "preview_collection", %{"id" => collection.id})
+      assert_reply(view, %{record: record})
 
-      assert html =~ "Collection Preview: #{collection.name}"
-      assert html =~ "my-key"
-      assert html =~ "my-value"
-      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+      assert [%{"key" => "my-key", "value" => "my-value"}] =
+               Jason.decode!(record)
     end
 
-    test "preview modal shows empty state for empty collection", %{
+    test "preview of an empty collection replies no record", %{
       conn: conn,
       user: user
     } do
@@ -7408,45 +4754,10 @@ defmodule LightningWeb.ProjectLiveTest do
       insert(:project_user, role: :owner, project: project, user: user)
       collection = insert(:collection, project: project)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collections")
+      view = open(conn, project, "settings#collections")
 
-      html =
-        view
-        |> with_target("#collections")
-        |> render_click("preview_collection", %{
-          "collection" => collection.name
-        })
-
-      assert html =~ "This collection is empty."
-      assert html =~ "Collection Preview: #{collection.name}"
-      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
-    end
-
-    test "preview modal closes when reset_action is triggered", %{
-      conn: conn,
-      user: user
-    } do
-      project = insert(:project)
-      insert(:project_user, role: :owner, project: project, user: user)
-      collection = insert(:collection, project: project)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collections")
-
-      view
-      |> with_target("#collections")
-      |> render_click("preview_collection", %{
-        "collection" => collection.name
-      })
-
-      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
-
-      view
-      |> with_target("#collections")
-      |> render_click("reset_action", %{})
-
-      refute has_element?(view, "#preview-collection-#{collection.id}-modal")
+      send_event(view, "preview_collection", %{"id" => collection.id})
+      assert_reply(view, %{record: nil})
     end
 
     test "all project members can preview a collection", %{conn: conn} do
@@ -7455,15 +4766,13 @@ defmodule LightningWeb.ProjectLiveTest do
       for {conn, _user} <-
             setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
         collection = insert(:collection, project: project)
+        insert(:collection_item, collection: collection, key: "visible")
 
-        {:ok, view, _html} =
-          live(conn, ~p"/projects/#{project.id}/settings#collections")
+        view = open(conn, project, "settings#collections")
 
-        view
-        |> with_target("#collections")
-        |> render_click("preview_collection", %{"collection" => collection.name})
-
-        assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+        send_event(view, "preview_collection", %{"id" => collection.id})
+        assert_reply(view, %{record: record})
+        assert [%{"key" => "visible"}] = Jason.decode!(record)
       end
     end
 
@@ -7476,23 +4785,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       other_project = insert(:project)
       other_collection = insert(:collection, project: other_project)
+      insert(:collection_item, collection: other_collection)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+      view = open(conn, their_project, "settings#collections")
 
-      view
-      |> with_target("#collections")
-      |> render_click("preview_collection", %{
-        "collection" => other_collection.name
-      })
-
-      flash =
-        assert_redirected(
-          view,
-          ~p"/projects/#{their_project.id}/settings#collections"
-        )
-
-      assert flash["error"] == "Collection not found"
+      send_event(view, "preview_collection", %{"id" => other_collection.id})
+      assert_reply(view, %{error: "Collection not found"})
     end
 
     test "cannot edit a collection belonging to another project", %{
@@ -7505,23 +4803,15 @@ defmodule LightningWeb.ProjectLiveTest do
       other_project = insert(:project)
       other_collection = insert(:collection, project: other_project)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+      view = open(conn, their_project, "settings#collections")
 
-      view
-      |> with_target("#collections")
-      |> render_click("toggle_action", %{
-        "action" => "edit",
-        "collection" => other_collection.name
+      send_event(view, "rename_collection", %{
+        "id" => other_collection.id,
+        "rawName" => "renamed"
       })
 
-      flash =
-        assert_redirected(
-          view,
-          ~p"/projects/#{their_project.id}/settings#collections"
-        )
-
-      assert flash["error"] == "Collection not found"
+      assert_reply(view, %{error: "Collection not found"})
+      assert Repo.reload(other_collection).name == other_collection.name
     end
 
     test "cannot delete a collection belonging to another project", %{
@@ -7534,26 +4824,16 @@ defmodule LightningWeb.ProjectLiveTest do
       other_project = insert(:project)
       other_collection = insert(:collection, project: other_project)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+      view = open(conn, their_project, "settings#collections")
 
-      view
-      |> with_target("#collections")
-      |> render_click("toggle_action", %{
-        "action" => "delete",
-        "collection" => other_collection.name
-      })
-
-      flash =
-        assert_redirected(
-          view,
-          ~p"/projects/#{their_project.id}/settings#collections"
-        )
-
-      assert flash["error"] == "Collection not found"
+      send_event(view, "delete_collection", %{"id" => other_collection.id})
+      assert_reply(view, %{error: "Collection not found"})
+      assert Repo.reload(other_collection)
     end
 
-    test "collections can be sorted by name and used storage", %{conn: conn} do
+    test "collections are listed by name with their used storage", %{
+      conn: conn
+    } do
       project = insert(:project)
       [{conn, _user} | _] = setup_project_users(conn, project, [:owner])
 
@@ -7575,67 +4855,36 @@ defmodule LightningWeb.ProjectLiveTest do
         byte_size_sum: 2_500_000
       )
 
-      {:ok, view, html} =
-        live(conn, ~p"/projects/#{project.id}/settings#collections")
-
-      assert html =~ "100 B"
-      assert html =~ "2.5 MB"
-      assert html =~ "5 GB"
-
-      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
-
-      view
-      |> element("#collections-table-table a[phx-value-by='name']")
-      |> render_click()
-
-      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
-
-      view
-      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
-      |> render_click()
-
-      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
-
-      view
-      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
-      |> render_click()
-
-      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
+      # The page sorts them and formats the sizes.
+      assert [
+               %{"name" => "Alpha", "byteSizeSum" => 5_000_000_000},
+               %{"name" => "Bravo", "byteSizeSum" => 2_500_000},
+               %{"name" => "Charlie", "byteSizeSum" => 100}
+             ] =
+               conn
+               |> open(project, "settings#collections")
+               |> props()
+               |> get_in(["collections", "collections"])
     end
   end
 
-  # Renders `event` against a project_user in a *different* project and asserts
-  # the targeted field is untouched and the deny flash is shown. Covers the H-2
-  # cross-project IDOR for both notification handlers.
-  defp assert_cross_project_pref_blocked(conn, event, field, submitted, seed) do
+  # Sends `event` for a project user in another project: the server refuses
+  # it and the field is left as it was.
+  defp assert_cross_project_pref_refused(conn, event, {key, value}, field, seed) do
     project_a = insert(:project)
     {conn, _admin} = setup_project_user(conn, project_a, :admin)
 
-    victim =
+    other =
       insert(
         :project_user,
         [project: insert(:project), user: build(:user)] ++ [{field, seed}]
       )
 
-    {:ok, view, _html} =
-      live(conn, ~p"/projects/#{project_a.id}/settings#collaboration")
+    view = open(conn, project_a)
 
-    html =
-      render_click(view, event, %{
-        "project_user_id" => victim.id,
-        to_string(field) => submitted
-      })
-
-    assert html =~ "You are not authorized to perform this action"
-    assert Map.fetch!(Repo.reload(victim), field) == seed
-  end
-
-  defp collection_row_names(view) do
-    view
-    |> render()
-    |> Floki.parse_fragment!()
-    |> Floki.find("#collections-table-table tbody tr td:first-child")
-    |> Enum.map(&(Floki.text(&1) |> String.trim()))
+    send_event(view, event, %{"id" => other.id, key => value})
+    assert_refused(view)
+    assert Map.fetch!(Repo.reload(other), field) == seed
   end
 
   defp find_selected_option(html, selector) do
