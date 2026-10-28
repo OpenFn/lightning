@@ -23,6 +23,8 @@ and this project adheres to
   after the repo was connected.
 - The GitHub sync "Remove integration" dialog says which files stay in the repo,
   so users know to delete them themselves.
+- Bump hackney to 4.9.1, jose to 1.11.13 and tidewave to 0.9.2 for security
+  fixes, and move tzdata back to a Hex release
 
 ### Fixed
 
