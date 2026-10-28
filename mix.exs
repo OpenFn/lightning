@@ -126,9 +126,7 @@ defmodule Lightning.MixProject do
       # Overridden because phoenix_swoosh 1.2.1 (latest) still declares
       # hackney ~> 1.10. It never actually calls hackney, so the constraint is
       # dead weight, but it has to be overridden to resolve.
-      # 4.6.0 is the ceiling: 4.6.1+ require h2 ~> 0.11.0 while hackney's own
-      # webtransport dep requires h2 ~> 0.10.4, so newer releases cannot resolve.
-      {:hackney, "~> 4.6.0", override: true},
+      {:hackney, "~> 4.9", override: true},
       {:heroicons, "~> 0.5.3"},
       {:highlander_pg, "~> 1.0"},
       {:httpoison, "~> 3.0.0", override: true},
@@ -172,17 +170,9 @@ defmodule Lightning.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tesla, "~> 1.18.2"},
-      {:tidewave, "~> 0.8.0", only: :dev},
+      {:tidewave, "~> 0.9", only: :dev},
       {:timex, "~> 3.7"},
-      # Pinned to the merge of `hackney ~> 1.17 or ~> 4.0` (lau/tzdata#170),
-      # which lets tzdata keep its autoupdater on hackney 4. Not on Hex yet --
-      # 1.1.4 predates the fix and no release is scheduled. Move back to a Hex
-      # release once one carries #170, since git deps are invisible to
-      # `mix deps.audit`.
-      {:tzdata,
-       github: "lau/tzdata",
-       ref: "766f38de21e9cd3dc4b185ac6244466e4ee65308",
-       override: true},
+      {:tzdata, "~> 1.2", override: true},
       {:yaml_elixir, "~> 2.12"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
