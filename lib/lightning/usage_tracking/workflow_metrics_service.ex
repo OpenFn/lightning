@@ -6,6 +6,7 @@ defmodule Lightning.UsageTracking.WorkflowMetricsService do
   """
 
   alias Lightning.Repo
+  alias Lightning.UsageTracking.Identity
   alias Lightning.UsageTracking.RunService
   alias Lightning.UsageTracking.WorkflowMetricsQuery
 
@@ -82,7 +83,7 @@ defmodule Lightning.UsageTracking.WorkflowMetricsService do
   defp instrument_identity(identity, false = _cleartext_enabled) do
     %{
       cleartext_uuid: nil,
-      hashed_uuid: identity |> build_hash()
+      hashed_uuid: Identity.hash(identity)
     }
   end
 
@@ -91,8 +92,6 @@ defmodule Lightning.UsageTracking.WorkflowMetricsService do
     |> instrument_identity(false)
     |> Map.merge(%{cleartext_uuid: identity})
   end
-
-  defp build_hash(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
 
   defp eligible_workflow?(%{deleted_at: nil, inserted_at: inserted_at}, date) do
     if Date.compare(inserted_at, date) == :gt do

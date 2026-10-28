@@ -95,23 +95,23 @@ defmodule LightningWeb.MaintenanceLive.Index do
       enabled: Lightning.Config.usage_tracking_enabled?(),
       cleartext: Lightning.Config.usage_tracking_cleartext_uuids_enabled?(),
       host: Lightning.Config.usage_tracking_host(),
-      identity: UsageTracking.instance_identity(),
-      latest_report: UsageTracking.latest_report()
+      identity: UsageTracking.instance_identity()
     }
   end
 
-  defp latest_report_summary(nil), do: "No reports have been sent yet."
+  attr :enabled, :boolean, required: true
 
-  defp latest_report_summary(%{submission_status: :failure} = report),
-    do: "Report for #{report.report_date} failed to send."
-
-  defp latest_report_summary(%{submitted: true} = report) do
-    "Report for #{report.report_date} sent at " <>
-      Calendar.strftime(report.submitted_at, "%Y-%m-%d %H:%M UTC") <> "."
+  defp usage_status_pill(%{enabled: true} = assigns) do
+    ~H"""
+    <.pill id="usage-metrics-status" color="green">Enabled</.pill>
+    """
   end
 
-  defp latest_report_summary(report),
-    do: "Report for #{report.report_date} is waiting to be sent."
+  defp usage_status_pill(assigns) do
+    ~H"""
+    <.pill id="usage-metrics-status" color="red">Disabled</.pill>
+    """
+  end
 
   attr :id, :string, default: nil
   attr :tone, :string, default: "gray", values: ["gray", "red"]

@@ -6,6 +6,7 @@ defmodule Lightning.UsageTracking.ReportData do
   """
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
+  alias Lightning.UsageTracking.Identity
   alias Lightning.UsageTracking.ProjectMetricsService
   alias Lightning.UsageTracking.UserService
 
@@ -36,7 +37,7 @@ defmodule Lightning.UsageTracking.ReportData do
   defp instrument_identity(identity, false = _cleartext_enabled) do
     %{
       cleartext_uuid: nil,
-      hashed_uuid: UsageTracking.hash_uuid(identity)
+      hashed_uuid: Identity.hash(identity)
     }
   end
 

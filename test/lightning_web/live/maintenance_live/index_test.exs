@@ -229,55 +229,6 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
 
       refute has_element?(live, "#usage-metrics-instance-id")
     end
-
-    test "says when no reports have been sent", %{conn: conn} do
-      live = open_page(conn)
-
-      assert has_element?(
-               live,
-               "#usage-metrics-latest-report",
-               "No reports have been sent yet."
-             )
-    end
-
-    test "shows the outcome of the most recent report", %{conn: conn} do
-      Lightning.Factories.insert(:usage_tracking_report,
-        report_date: ~D[2026-10-26],
-        submission_status: :success,
-        submitted_at: ~U[2026-10-27 00:05:00.000000Z]
-      )
-
-      Lightning.Factories.insert(:usage_tracking_report,
-        report_date: ~D[2026-10-27],
-        submitted: false,
-        submitted_at: nil,
-        submission_status: :failure
-      )
-
-      live = open_page(conn)
-
-      assert has_element?(
-               live,
-               "#usage-metrics-latest-report",
-               "Report for 2026-10-27 failed to send."
-             )
-    end
-
-    test "shows when the most recent report was sent", %{conn: conn} do
-      Lightning.Factories.insert(:usage_tracking_report,
-        report_date: ~D[2026-10-26],
-        submission_status: :success,
-        submitted_at: ~U[2026-10-27 00:05:00.000000Z]
-      )
-
-      live = open_page(conn)
-
-      assert has_element?(
-               live,
-               "#usage-metrics-latest-report",
-               "Report for 2026-10-26 sent at 2026-10-27 00:05 UTC."
-             )
-    end
   end
 
   defp open_page(conn) do

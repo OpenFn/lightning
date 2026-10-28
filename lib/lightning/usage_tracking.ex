@@ -8,6 +8,7 @@ defmodule Lightning.UsageTracking do
   alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.GithubClient
+  alias Lightning.UsageTracking.Identity
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
@@ -166,17 +167,8 @@ defmodule Lightning.UsageTracking do
         nil
 
       instance_id ->
-        %{instance_id: instance_id, hashed_id: hash_uuid(instance_id)}
+        %{instance_id: instance_id, hashed_id: Identity.hash(instance_id)}
     end
-  end
-
-  def hash_uuid(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
-
-  @doc """
-  Returns the report for the most recent report date, or `nil` if none exist.
-  """
-  def latest_report do
-    Repo.one(from r in Report, order_by: [desc: r.report_date], limit: 1)
   end
 
   def find_enabled_daily_report_config do
