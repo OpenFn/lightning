@@ -31,7 +31,7 @@ These files test what clients of `/api`, `/collections`, `/i/*` webhooks and the
 
 - **No token, a garbage token, a token of the wrong kind:** `api/sentinel_sweep_test.exs`, which walks every route from the router, and `auth_test.exs`, which holds the token-kind table and the lockout example. Controller test files keep no "without a token" or "with an invalid token" test.
 - **A rule in shared code** (`Filters`, `Request`, `Problem`'s Accept handling, pointer escaping, `Errors`): the module's unit test holds the cases. Each route that uses the module keeps one test that fails if the route stops calling it, for example one paging test per route that calls `Filters.page/1`.
-- **Who may reach a resource, what role it needs:** one table test per route family.
+- **Who may reach a resource, what role it needs:** one table test per route family. For a caller without permission it covers an existing record, an unknown id and a malformed id, and asserts the same 403 `forbidden` body for all three. A `PUT` that creates also covers an id held by a record the caller can see (409 `id_taken`) and one held by a record they can't (403 `forbidden`).
 - **Each code's status and `detail` wording:** the table in `api/codes_test.exs`, written out literally. Rewording a code means editing its row there.
 - **Everything else a route does:** the route test, through the router (`put(conn, ~p"/api/...", body)`), asserting status, headers and the whole body.
 
