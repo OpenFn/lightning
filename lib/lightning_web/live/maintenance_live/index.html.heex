@@ -48,6 +48,159 @@
           Run
         </.button>
       </div>
+
+      <div
+        id="usage-metrics-card"
+        class="bg-white shadow-xs rounded-lg border border-gray-200 p-6 flex flex-col gap-4"
+      >
+        <div class="flex items-start justify-between gap-6">
+          <div class="flex flex-col">
+            <h2 class="text-lg font-semibold text-secondary-900">
+              Anonymous Usage Metrics
+            </h2>
+            <p class="mt-1 text-sm text-secondary-600">
+              How this instance reports anonymous, aggregate usage metrics to
+              OpenFn. Configured with environment variables; share the details
+              below with the team maintaining your instance. See
+              <a
+                href="https://docs.openfn.org/documentation/contribute/impact#the-data-yes-all-of-it"
+                target="_blank"
+                class="link"
+              >
+                exactly what data is sent
+              </a>
+              and how it's used on the <a
+                href="https://www.openfn.org/impact"
+                target="_blank"
+                class="link"
+              >
+                public impact page</a>. Questions? Email <a
+                href="mailto:admin@openfn.org"
+                class="link"
+              >admin@openfn.org</a>.
+            </p>
+          </div>
+          <span
+            :if={@usage_tracking.enabled}
+            id="usage-metrics-status"
+            class="shrink-0 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
+          >
+            Enabled
+          </span>
+          <span
+            :if={!@usage_tracking.enabled}
+            id="usage-metrics-status"
+            class="shrink-0 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800"
+          >
+            Disabled
+          </span>
+        </div>
+
+        <div
+          :if={!@usage_tracking.enabled}
+          id="usage-metrics-disabled-callout"
+          class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          <p class="font-semibold">
+            Please consider turning anonymous usage metrics back on.
+          </p>
+          <p class="mt-1">
+            OpenFn is a free and open-source Digital Public Good. These
+            anonymous, aggregate reports are how we show our impact, understand
+            what our users need, and secure the donor funding that keeps the
+            project alive. Without them, your deployment is invisible to the
+            community who builds and maintains OpenFn.
+          </p>
+          <p class="mt-2">
+            Set <code class="font-mono">USAGE_TRACKING_ENABLED=true</code>
+            and restart Lightning. See
+            <a
+              href="https://www.openfn.org/impact"
+              target="_blank"
+              class="underline font-medium"
+            >
+              https://www.openfn.org/impact
+            </a>
+            to see how your fellow operators report.
+          </p>
+        </div>
+
+        <dl class="grid grid-cols-1 gap-3 text-sm">
+          <div>
+            <dt class="font-medium text-secondary-900">
+              {if @usage_tracking.enabled,
+                do: "Reporting to",
+                else: "Would report to"}
+            </dt>
+            <dd>
+              <ul id="usage-metrics-hosts" class="font-mono text-secondary-700">
+                <li :for={host <- @usage_tracking.hosts}>{host}</li>
+              </ul>
+            </dd>
+          </div>
+
+          <div>
+            <dt class="font-medium text-secondary-900">Identity sent</dt>
+            <dd id="usage-metrics-identity-mode" class="text-secondary-700">
+              <%= if @usage_tracking.cleartext do %>
+                The instance UUID is sent in cleartext (and hashed), so it can
+                be looked up directly by UUID.
+              <% else %>
+                Only the hashed UUID is sent. Share the hash below to identify
+                this instance, or set
+                <code class="font-mono">USAGE_TRACKING_UUIDS=cleartext</code>
+                to send the UUID itself.
+              <% end %>
+            </dd>
+          </div>
+
+          <%= if @usage_tracking.instance_id do %>
+            <div>
+              <dt class="font-medium text-secondary-900">Instance UUID</dt>
+              <dd class="flex items-center gap-1.5">
+                <span
+                  id="usage-metrics-instance-id"
+                  class="text-secondary-900 font-mono break-all"
+                >
+                  {@usage_tracking.instance_id}
+                </span>
+                <ChannelRequestLive.Components.copy_icon_button
+                  id="copy-usage-metrics-instance-id"
+                  value={@usage_tracking.instance_id}
+                  title="Copy instance UUID"
+                  size={3}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt class="font-medium text-secondary-900">
+                Hashed UUID (SHA-256)
+              </dt>
+              <dd class="flex items-center gap-1.5">
+                <span
+                  id="usage-metrics-hashed-id"
+                  class="text-secondary-900 font-mono break-all"
+                >
+                  {@usage_tracking.hashed_id}
+                </span>
+                <ChannelRequestLive.Components.copy_icon_button
+                  id="copy-usage-metrics-hashed-id"
+                  value={@usage_tracking.hashed_id}
+                  title="Copy hashed UUID"
+                  size={3}
+                />
+              </dd>
+            </div>
+          <% else %>
+            <div id="usage-metrics-no-instance-id">
+              <dt class="font-medium text-secondary-900">Instance UUID</dt>
+              <dd class="text-secondary-700">
+                An instance ID is generated the first time anonymous usage metrics are collected.
+              </dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
     </div>
   </LayoutComponents.centered>
 </LayoutComponents.page_content>

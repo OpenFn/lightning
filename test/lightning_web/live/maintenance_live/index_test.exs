@@ -103,4 +103,140 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
              )
     end
   end
+
+  describe "Anonymous usage metrics card" do
+    setup :register_and_log_in_superuser
+
+    setup do
+      stub(Lightning.MockConfig, :usage_tracking_enabled?, fn -> true end)
+
+      stub(Lightning.MockConfig, :usage_tracking_cleartext_uuids_enabled?, fn ->
+        false
+      end)
+
+      stub(Lightning.MockConfig, :usage_tracking_host, fn ->
+        "https://impact.example.com"
+      end)
+
+      :ok
+    end
+
+    test "shows the host, UUID and hash when reporting hashed UUIDs",
+         %{conn: conn} do
+      %{instance_id: instance_id} =
+        Lightning.Factories.insert(:usage_tracking_daily_report_configuration)
+
+      hashed_id = Lightning.UsageTracking.ReportData.hash_uuid(instance_id)
+
+      {:ok, live, _html} =
+        live(conn, ~p"/settings/maintenance", on_error: :raise)
+
+      assert has_element?(live, "#usage-metrics-status", "Enabled")
+      refute has_element?(live, "#usage-metrics-disabled-callout")
+
+      assert has_element?(
+               live,
+               "#usage-metrics-hosts li",
+               "https://impact.example.com"
+             )
+
+      assert has_element?(
+               live,
+               "#usage-metrics-links a[href='https://docs.openfn.org/documentation/contribute/impact#the-data-yes-all-of-it']"
+             )
+
+      assert has_element?(
+               live,
+               "#usage-metrics-links a[href='https://www.openfn.org/impact']"
+             )
+
+      assert has_element?(
+               live,
+               "#usage-metrics-links a[href='mailto:admin@openfn.org']"
+             )
+
+      assert has_element?(live, "#usage-metrics-instance-id", instance_id)
+
+      assert has_element?(
+               live,
+               "#copy-usage-metrics-instance-id[data-content='#{instance_id}']"
+             )
+
+      assert has_element?(live, "#usage-metrics-hashed-id", hashed_id)
+
+      assert has_element?(
+               live,
+               "#copy-usage-metrics-hashed-id[data-content='#{hashed_id}']"
+             )
+
+      assert has_element?(
+               live,
+               "#usage-metrics-identity-mode",
+               "Only the hashed UUID is sent"
+             )
+    end
+
+    test "says the UUID is sent in cleartext when configured", %{conn: conn} do
+      stub(Lightning.MockConfig, :usage_tracking_cleartext_uuids_enabled?, fn ->
+        true
+      end)
+
+      Lightning.Factories.insert(:usage_tracking_daily_report_configuration)
+
+      {:ok, live, _html} =
+        live(conn, ~p"/settings/maintenance", on_error: :raise)
+
+      assert has_element?(
+               live,
+               "#usage-metrics-identity-mode",
+               "sent in cleartext"
+             )
+    end
+
+    test "lists every tracker host", %{conn: conn} do
+      stub(Lightning.MockConfig, :usage_tracking_host, fn ->
+        ["https://one.example.com", "https://two.example.com"]
+      end)
+
+      {:ok, live, _html} =
+        live(conn, ~p"/settings/maintenance", on_error: :raise)
+
+      assert has_element?(
+               live,
+               "#usage-metrics-hosts li",
+               "https://one.example.com"
+             )
+
+      assert has_element?(
+               live,
+               "#usage-metrics-hosts li",
+               "https://two.example.com"
+             )
+    end
+
+    test "urges the operator to turn tracking on when disabled", %{conn: conn} do
+      stub(Lightning.MockConfig, :usage_tracking_enabled?, fn -> false end)
+
+      {:ok, live, html} =
+        live(conn, ~p"/settings/maintenance", on_error: :raise)
+
+      assert has_element?(live, "#usage-metrics-status", "Disabled")
+
+      assert has_element?(
+               live,
+               "#usage-metrics-disabled-callout",
+               "USAGE_TRACKING_ENABLED=true"
+             )
+
+      assert html =~ "Would report to"
+    end
+
+    test "explains when no instance ID exists yet", %{conn: conn} do
+      {:ok, live, _html} =
+        live(conn, ~p"/settings/maintenance", on_error: :raise)
+
+      assert has_element?(live, "#usage-metrics-no-instance-id")
+      refute has_element?(live, "#usage-metrics-instance-id")
+    end
+  end
 end

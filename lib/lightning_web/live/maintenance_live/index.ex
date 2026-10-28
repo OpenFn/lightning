@@ -11,6 +11,9 @@ defmodule LightningWeb.MaintenanceLive.Index do
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
+  alias Lightning.UsageTracking
+  alias Lightning.UsageTracking.ReportData
+  alias LightningWeb.ChannelRequestLive
 
   @impl true
   def mount(_params, _session, socket) do
@@ -18,7 +21,8 @@ defmodule LightningWeb.MaintenanceLive.Index do
       {:ok,
        assign(socket,
          active_menu_item: :maintenance,
-         page_title: "Maintenance"
+         page_title: "Maintenance",
+         usage_tracking: usage_tracking_status()
        ), layout: {LightningWeb.Layouts, :settings}}
     else
       {:ok,
@@ -86,6 +90,18 @@ defmodule LightningWeb.MaintenanceLive.Index do
   def handle_async(:refresh_icons, {:exit, reason}, socket) do
     {:noreply,
      put_flash(socket, :error, "Icon refresh failed: #{inspect(reason)}")}
+  end
+
+  defp usage_tracking_status do
+    instance_id = UsageTracking.instance_id()
+
+    %{
+      enabled: Lightning.Config.usage_tracking_enabled?(),
+      cleartext: Lightning.Config.usage_tracking_cleartext_uuids_enabled?(),
+      hosts: List.wrap(Lightning.Config.usage_tracking_host()),
+      instance_id: instance_id,
+      hashed_id: instance_id && ReportData.hash_uuid(instance_id)
+    }
   end
 
   defp superuser?(socket) do

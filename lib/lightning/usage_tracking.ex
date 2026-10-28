@@ -156,6 +156,10 @@ defmodule Lightning.UsageTracking do
     Oban.insert(Lightning.Oban, ReportWorker.new(%{date: date}))
   end
 
+  def instance_id do
+    Repo.one(from c in DailyReportConfiguration, select: c.instance_id)
+  end
+
   def find_enabled_daily_report_config do
     case Repo.one(DailyReportConfiguration) do
       %{tracking_enabled_at: nil} -> nil
