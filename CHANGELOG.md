@@ -22,6 +22,8 @@ and this project adheres to
 - The web app's interactive pages now run on React 19, up from React 18. They
   look and behave the same.
   [#5256](https://github.com/OpenFn/lightning/pull/5256)
+- Bump hackney to 4.9.1, jose to 1.11.13 and tidewave to 0.9.2 for security
+  fixes, and move tzdata back to a Hex release
 
 ### Fixed
 
