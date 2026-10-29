@@ -100,6 +100,8 @@ defmodule LightningWeb.MaintenanceLive.Index do
     {:noreply, assign_workers(socket)}
   end
 
+  def handle_info(_message, socket), do: {:noreply, socket}
+
   @impl true
   def handle_async(:refresh_icons, {:ok, result}, socket) do
     socket =

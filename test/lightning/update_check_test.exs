@@ -9,33 +9,52 @@ defmodule Lightning.UpdateCheckTest do
   @config [registry: @base, repository: "openfn/lightning", tag: "latest"]
   @worker_base "https://workers.example.com"
 
-  defp mock_registry(tags, digests) do
-    mock(fn
-      %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
-        json(%{"tags" => tags})
+  @worker_config @config ++
+                   [
+                     worker_registry: @base,
+                     worker_repository: "openfn/ws-worker"
+                   ]
 
-      %{method: :head, url: "#{@base}/v2/openfn/lightning/manifests/" <> tag} ->
-        case Map.fetch(digests, tag) do
-          {:ok, digest} ->
-            %Tesla.Env{status: 200, headers: [{"docker-content-digest", digest}]}
+  # Serves each `{registry, repository}` in `images` as a single-platform
+  # image at `latest`. An image is a map of:
+  #
+  # - `:config` - the image's runtime config, or `nil` for no `latest` tag
+  # - `:tags` - the repository's tag list
+  # - `:status` - answers every request with this status instead
+  defp mock_images(images) do
+    mock(fn %{url: url} ->
+      Enum.find_value(images, fn {{base, repository}, image} ->
+        prefix = "#{base}/v2/#{repository}/"
 
-          :error ->
-            %Tesla.Env{status: 404}
-        end
+        if String.starts_with?(url, prefix),
+          do: respond(String.replace_prefix(url, prefix, ""), image)
+      end)
     end)
   end
 
+  defp respond(_path, %{status: status}), do: %Tesla.Env{status: status}
+
+  defp respond("manifests/latest", %{config: nil}),
+    do: %Tesla.Env{status: 404}
+
+  defp respond("manifests/latest", _image),
+    do: json(%{"config" => %{"digest" => "sha256:config"}})
+
+  defp respond("blobs/sha256:config", %{config: config}),
+    do: json(%{"config" => config})
+
+  defp respond("tags/list", image), do: json(%{"tags" => image[:tags] || []})
+
+  defp app(image), do: %{{@base, "openfn/lightning"} => image}
+
+  defp labelled(version),
+    do: %{
+      config: %{"Labels" => %{"org.opencontainers.image.version" => version}}
+    }
+
   describe "check/2" do
-    test "the latest release is the stable tag sharing the channel tag's digest" do
-      mock_registry(
-        ["edge", "latest", "v2.19.1", "v2.19.2", "v2.20.0-pre"],
-        %{
-          "latest" => "sha256:b",
-          "v2.19.1" => "sha256:a",
-          "v2.19.2" => "sha256:b",
-          "v2.20.0-pre" => "sha256:c"
-        }
-      )
+    test "the latest release is the version label of the channel tag's image" do
+      mock_images(app(labelled("v2.19.2")))
 
       assert {:ok, status} = UpdateCheck.check(@config, "2.19.1")
 
@@ -49,101 +68,105 @@ defmodule Lightning.UpdateCheckTest do
              } = status
     end
 
-    test "ignores a newer stable tag that the channel tag doesn't point at" do
-      mock_registry(
-        ["latest", "v2.19.2", "v2.20.0"],
-        %{
-          "latest" => "sha256:b",
-          "v2.19.2" => "sha256:b",
-          "v2.20.0" => "sha256:x"
-        }
+    test "reads IMAGE_TAG from images built before the label" do
+      mock_images(
+        app(%{
+          config: %{
+            "Labels" => %{"commit" => "5f868a4"},
+            "Env" => ["BRANCH=", "IMAGE_TAG=v2.19.2"]
+          }
+        })
       )
 
       assert {:ok, %{latest: "2.19.2", update_available?: false}} =
                UpdateCheck.check(@config, "2.19.2")
     end
 
-    test "falls back to the newest stable tag when there is no channel tag" do
-      mock_registry(["v2.18.0", "v2.19.2", "edge"], %{})
+    test "prefers the label to IMAGE_TAG" do
+      mock_images(
+        app(%{
+          config: %{
+            "Labels" => %{"org.opencontainers.image.version" => "v2.19.3"},
+            "Env" => ["IMAGE_TAG=v2.19.2"]
+          }
+        })
+      )
+
+      assert {:ok, %{latest: "2.19.3"}} = UpdateCheck.check(@config, "2.19.2")
+    end
+
+    test "falls back to the newest full-release tag when the image has no version" do
+      mock_images(
+        app(%{
+          config: %{"Env" => ["IMAGE_TAG="]},
+          tags: ["v2.18.0", "v2.19.2", "v2.20.0-pre", "edge"]
+        })
+      )
+
+      assert {:ok, %{latest: "2.19.2", latest_tag: "v2.19.2"}} =
+               UpdateCheck.check(@config, "2.18.0")
+    end
+
+    test "falls back to the newest full-release tag when there is no channel tag" do
+      mock_images(app(%{config: nil, tags: ["v2.18.0", "v2.19.2"]}))
 
       assert {:ok, %{latest: "2.19.2", update_available?: true}} =
                UpdateCheck.check(@config, "2.18.0")
     end
 
     test "a pre-release build ahead of the latest release is not behind" do
-      mock_registry(["latest", "v2.19.2"], %{
-        "latest" => "sha256:b",
-        "v2.19.2" => "sha256:b"
-      })
+      mock_images(app(labelled("v2.19.2")))
 
       assert {:ok, %{update_available?: false}} =
                UpdateCheck.check(@config, "2.20.0-pre")
     end
 
     test "uses a configured instructions URL" do
-      config = [
-        registry: "https://registry.example.com",
-        repository: "openfn/lightning-private",
-        tag: "latest",
-        instructions_url: "https://example.com/upgrade"
-      ]
+      mock_images(app(labelled("v2.19.3")))
 
-      mock(fn %{method: :get} -> json(%{"tags" => ["v2.19.3"]}) end)
+      config =
+        Keyword.put(@config, :instructions_url, "https://example.com/upgrade")
 
       assert {:ok, status} = UpdateCheck.check(config, "2.19.2")
       assert status.instructions_url == "https://example.com/upgrade"
     end
 
-    test "fails when the channel tag matches none of the newest releases" do
-      mock_registry(["latest", "v2.19.2"], %{
-        "latest" => "sha256:b",
-        "v2.19.2" => "sha256:a"
-      })
+    test "fails when the channel tag's image isn't a full release" do
+      for version <- ["edge", "v2.20.0-pre"] do
+        mock_images(app(labelled(version)))
 
-      assert UpdateCheck.check(@config, "2.19.1") ==
-               {:error, :no_release_found}
+        assert UpdateCheck.check(@config, "2.19.1") ==
+                 {:error, :no_release_found}
+      end
     end
 
-    test "fails when there are no full releases" do
-      mock_registry(["latest", "edge", "v2.20.0-pre"], %{"latest" => "x"})
+    test "fails when falling back and there are no full releases" do
+      mock_images(app(%{config: nil, tags: ["latest", "edge", "v2.20.0-pre"]}))
 
       assert UpdateCheck.check(@config, "2.19.1") ==
                {:error, :no_release_found}
     end
 
     test "passes registry errors through" do
-      mock(fn %{method: :get} -> %Tesla.Env{status: 500} end)
+      mock_images(app(%{status: 500}))
 
       assert UpdateCheck.check(@config, "2.19.2") ==
                {:error, {:unexpected_status, 500}}
     end
 
     test "leaves workers unchecked without a worker repository" do
-      mock_registry(["v2.19.2"], %{})
+      mock_images(app(labelled("v2.19.2")))
 
       assert {:ok, %{worker: nil}} = UpdateCheck.check(@config, "2.19.2")
     end
   end
 
   describe "check/2 with a worker repository" do
-    @worker_config @config ++
-                     [
-                       worker_registry: @base,
-                       worker_repository: "openfn/ws-worker"
-                     ]
-
-    test "finds the latest worker release the same way" do
-      mock(fn
-        %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
-          json(%{"tags" => ["v2.19.2"]})
-
-        %{method: :get, url: "#{@base}/v2/openfn/ws-worker/tags/list"} ->
-          json(%{"tags" => ["latest", "v1.29.6", "v1.30.0", "v1.31.0-next"]})
-
-        %{method: :head, url: "#{@base}/v2/openfn/ws-worker/manifests/" <> tag} ->
-          digest = if tag in ["latest", "v1.30.0"], do: "sha256:w", else: "x"
-          %Tesla.Env{status: 200, headers: [{"docker-content-digest", digest}]}
-      end)
+    test "reads the worker release from its image's version label" do
+      mock_images(
+        app(labelled("v2.19.2"))
+        |> Map.put({@base, "openfn/ws-worker"}, labelled("v1.30.0"))
+      )
 
       assert {:ok, %{worker: worker}} =
                UpdateCheck.check(@worker_config, "2.19.2")
@@ -156,14 +179,24 @@ defmodule Lightning.UpdateCheckTest do
              }
     end
 
-    test "checks workers against the worker registry, not the app's" do
-      mock(fn
-        %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
-          json(%{"tags" => ["v2.19.2"]})
+    test "falls back to worker tags while worker images carry no version" do
+      mock_images(
+        app(labelled("v2.19.2"))
+        |> Map.put({@base, "openfn/ws-worker"}, %{
+          config: %{"Env" => ["NODE_VERSION=24.22.1"]},
+          tags: ["latest", "v1.29.6", "v1.30.0", "v1.31.0-next"]
+        })
+      )
 
-        %{method: :get, url: "#{@worker_base}/v2/openfn/ws-worker/tags/list"} ->
-          json(%{"tags" => ["v1.30.0"]})
-      end)
+      assert {:ok, %{worker: %{latest: "1.30.0", latest_tag: "v1.30.0"}}} =
+               UpdateCheck.check(@worker_config, "2.19.2")
+    end
+
+    test "checks workers against the worker registry, not the app's" do
+      mock_images(
+        app(labelled("v2.19.2"))
+        |> Map.put({@worker_base, "openfn/ws-worker"}, labelled("v1.30.0"))
+      )
 
       config = Keyword.put(@worker_config, :worker_registry, @worker_base)
 
@@ -172,13 +205,10 @@ defmodule Lightning.UpdateCheckTest do
     end
 
     test "a failed worker lookup doesn't fail the check" do
-      mock(fn
-        %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
-          json(%{"tags" => ["v2.19.2"]})
-
-        %{method: :get, url: "#{@base}/v2/openfn/ws-worker/tags/list"} ->
-          %Tesla.Env{status: 500}
-      end)
+      mock_images(
+        app(labelled("v2.19.2"))
+        |> Map.put({@base, "openfn/ws-worker"}, %{status: 500})
+      )
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
@@ -190,17 +220,10 @@ defmodule Lightning.UpdateCheckTest do
     end
 
     test "no worker release found leaves workers unchecked" do
-      mock(fn
-        %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
-          json(%{"tags" => ["v2.19.2"]})
-
-        %{method: :get, url: "#{@base}/v2/openfn/ws-worker/tags/list"} ->
-          json(%{"tags" => ["latest", "v1.30.0"]})
-
-        %{method: :head, url: "#{@base}/v2/openfn/ws-worker/manifests/" <> tag} ->
-          digest = if tag == "latest", do: "sha256:w", else: "sha256:x"
-          %Tesla.Env{status: 200, headers: [{"docker-content-digest", digest}]}
-      end)
+      mock_images(
+        app(labelled("v2.19.2"))
+        |> Map.put({@base, "openfn/ws-worker"}, %{config: nil, tags: ["latest"]})
+      )
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
@@ -226,15 +249,21 @@ defmodule Lightning.UpdateCheckTest do
       refute UpdateCheck.worker_outdated?(@status, "v1.30.0")
     end
 
-    test "a worker without a version, or no worker release, is never outdated" do
-      refute UpdateCheck.worker_outdated?(@status, nil)
+    test "a worker without a version is outdated" do
+      assert UpdateCheck.worker_outdated?(@status, nil)
+      assert UpdateCheck.update_available?(@status, ["1.30.0", nil])
+    end
+
+    test "nothing is outdated without a worker release" do
+      refute UpdateCheck.worker_outdated?(%{@status | worker: nil}, nil)
       refute UpdateCheck.worker_outdated?(%{@status | worker: nil}, "1.0.0")
+      refute UpdateCheck.worker_outdated?(nil, nil)
       refute UpdateCheck.worker_outdated?(nil, "1.0.0")
     end
 
     test "an update is available for the app or any connected worker" do
       refute UpdateCheck.update_available?(nil, ["1.0.0"])
-      refute UpdateCheck.update_available?(@status, ["1.30.0", nil])
+      refute UpdateCheck.update_available?(@status, ["1.30.0"])
       assert UpdateCheck.update_available?(@status, ["1.30.0", "1.29.6"])
 
       assert UpdateCheck.update_available?(
