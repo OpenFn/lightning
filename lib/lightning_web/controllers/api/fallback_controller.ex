@@ -18,6 +18,8 @@ defmodule LightningWeb.API.FallbackController do
 
   require Logger
 
+  @not_a_uuid {"is not a UUID", validation: :cast, type: :binary_id}
+
   # action_fallback hands the action's result to init/1, then to call/2.
   @doc false
   @spec init(term()) :: term()
@@ -34,12 +36,17 @@ defmodule LightningWeb.API.FallbackController do
       when reason in [
              :not_found,
              :no_such_project,
-             :no_standing,
              :workflow_deleted
            ],
       do: Problem.respond(conn, Problem.new(:not_found))
 
-  def call(conn, {:error, :forbidden}),
+  def call(conn, {:error, {:invalid_id, body_keys}}) when is_list(body_keys),
+    do: refuse_id(conn, :invalid, body_keys)
+
+  def call(conn, {:error, {:invalid_id, path_or_parameter}}),
+    do: refuse_id(conn, :invalid_parameter, path_or_parameter)
+
+  def call(conn, {:error, reason}) when reason in [:forbidden, :no_standing],
     do: Problem.respond(conn, Problem.new(:forbidden))
 
   def call(conn, {:error, {:insufficient_scope, grant}}) do
@@ -80,5 +87,10 @@ defmodule LightningWeb.API.FallbackController do
   def call(conn, {:error, :snapshot_failed}) do
     Logger.error("An API action could not save a workflow snapshot")
     Problem.respond(conn, Problem.new(:internal))
+  end
+
+  defp refuse_id(conn, code, location) do
+    entry = Errors.entry(location, @not_a_uuid)
+    Problem.respond(conn, Problem.new(code, errors: [entry]))
   end
 end

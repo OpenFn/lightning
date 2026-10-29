@@ -33,7 +33,9 @@ defmodule LightningWeb.API.SentinelSweepTest do
   @invalid_token {401, :invalid_token, [~s(Bearer error="invalid_token")]}
   @session {401, :unauthenticated, [~s(Session realm="Lightning")]}
   @not_found {404, :not_found, []}
+  @forbidden {403, :forbidden, []}
   @malformed {400, :malformed, []}
+  @invalid_id {400, :invalid_parameter, []}
 
   # What every in-scope route answers, by the pipelines it goes through.
   #
@@ -53,25 +55,19 @@ defmodule LightningWeb.API.SentinelSweepTest do
     [:person_or_service_account_api] => %{
       none: @unauthenticated,
       garbage: @invalid_token,
-      planted: @not_found,
-      array: %{real_ids: @malformed, other_ids: @not_found}
-    },
-    [:api, :authenticate_bearer, :require_authenticated_api_resource] => %{
-      none: @unauthenticated,
-      garbage: @invalid_token,
-      planted: @not_found,
-      array: %{real_ids: @malformed, other_ids: @not_found}
+      planted: :by_parent,
+      array: %{real_ids: @malformed, other_ids: :by_parent}
     },
     [:authenticated_api] => %{
       none: @unauthenticated,
       garbage: @invalid_token,
-      planted: @not_found,
-      array: %{real_ids: @malformed, other_ids: @not_found}
+      planted: :by_parent,
+      array: %{real_ids: @malformed, other_ids: :by_parent}
     },
     [:authenticated_json, :require_authenticated_user] => %{
       none: @session,
       garbage: @session,
-      planted: @not_found,
+      planted: :by_parent,
       array: nil
     }
   }
@@ -125,8 +121,17 @@ defmodule LightningWeb.API.SentinelSweepTest do
       |> log_in_user(user)
       |> put_req_header("authorization", "Bearer " <> token)
 
+    stranger = insert(:user)
+
     %{
       member: member,
+      stranger:
+        build_conn()
+        |> log_in_user(stranger)
+        |> put_req_header(
+          "authorization",
+          "Bearer " <> Lightning.Accounts.generate_api_token(stranger)
+        ),
       real: %{"project_id" => project.id, "workflow_id" => workflow.id}
     }
   end
@@ -148,7 +153,7 @@ defmodule LightningWeb.API.SentinelSweepTest do
     end
   end
 
-  test "a member who names ids that aren't there gets not found, or the token refusal",
+  test "a member who names ids that aren't there is refused for a project, and gets not found or the token refusal elsewhere",
        %{
          member: member
        } do
@@ -174,7 +179,7 @@ defmodule LightningWeb.API.SentinelSweepTest do
     end
   end
 
-  test "a member who sends a JSON array to a write route gets malformed, or not found for an id that isn't there",
+  test "a member who sends a JSON array to a write route gets malformed, or for an id that isn't there, refused for a project and not found elsewhere",
        %{member: member, real: real} do
     for %{verb: verb} = route <- in_scope_routes(),
         verb in [:post, :put, :patch] do
@@ -182,6 +187,27 @@ defmodule LightningWeb.API.SentinelSweepTest do
       assert_answer(conn, route, :array)
     end
   end
+
+  test "a caller with no standing who names an id that isn't a UUID is refused with 403, wherever the id is",
+       %{stranger: stranger, real: real} do
+    for route <- in_scope_routes(),
+        planted_ids(route, :array) != [],
+        refused_to_a_stranger?(route) do
+      with_route(route, :stranger, fn ->
+        stranger
+        |> request(route, real)
+        |> assert_problem(403, :forbidden, [])
+      end)
+    end
+  end
+
+  # Anyone holding the grant may create a credential, so a malformed id there
+  # is 400 to a stranger too.
+  defp refused_to_a_stranger?(%{verb: :put, path: "/api/credentials/:id"}),
+    do: false
+
+  defp refused_to_a_stranger?(%{pipeline: pipeline}),
+    do: pipeline != [:access_token_api] and Map.has_key?(@pipelines, pipeline)
 
   defp in_scope_routes do
     routes =
@@ -278,13 +304,52 @@ defmodule LightningWeb.API.SentinelSweepTest do
 
     case {Map.fetch!(row, attempt), attempt} do
       {%{real_ids: real, other_ids: other}, :array} ->
-        if all_ids_real?(route), do: real, else: other
+        if all_ids_real?(route), do: real, else: by_parent(other, route, :array)
 
       {answer, _attempt} ->
-        answer ||
-          flunk("#{describe(route)} has no #{attempt} answer in the table")
+        by_parent(
+          answer ||
+            flunk("#{describe(route)} has no #{attempt} answer in the table"),
+          route,
+          attempt
+        )
     end
   end
+
+  defp by_parent(:by_parent, route, attempt) do
+    cond do
+      no_standing_on_parent?(route, attempt) -> @forbidden
+      unseen_credential?(route) -> @forbidden
+      planted_ids(route, attempt) == [] -> @not_found
+      true -> @invalid_id
+    end
+  end
+
+  defp by_parent(answer, _route, _attempt), do: answer
+
+  defp no_standing_on_parent?(%{path: path}, :array),
+    do: path in ["/api/projects/:id", "/api/provision"]
+
+  defp no_standing_on_parent?(%{path: path}, :planted) do
+    path in [
+      "/api/projects/:id",
+      "/api/provision/:id",
+      "/api/workflows/:id",
+      "/api/jobs/:id",
+      "/api/runs/:id",
+      "/api/work_orders/:id"
+    ] or String.contains?(path, ":project_id")
+  end
+
+  # Only the service account may read every credential, and nobody may delete
+  # every one, so a person hears 403 for any id there. A `PUT` may create, so a
+  # malformed id there stays 400.
+  defp unseen_credential?(%{verb: verb, path: path}),
+    do: path == "/api/credentials/:id" and verb in [:get, :delete]
+
+  # Provisioning takes the project to replace from an `id` in the query, which
+  # the sweep plants, so its path has no real id to find either.
+  defp all_ids_real?(%{path: "/api/provision"}), do: false
 
   defp all_ids_real?(%{path: path}) do
     params = for ":" <> param <- String.split(path, "/"), do: param
@@ -296,11 +361,24 @@ defmodule LightningWeb.API.SentinelSweepTest do
   defp assert_answer(conn, route, attempt) do
     {status, code, challenges} = expected(route, attempt)
 
+    entries =
+      if code == :invalid_parameter, do: planted_ids(route, attempt), else: []
+
     with_route(route, attempt, fn ->
-      assert_problem(conn, status, code, [])
+      assert_problem(conn, status, code, entries)
       assert get_resp_header(conn, "www-authenticate") == challenges
       refute_sentinel(conn)
     end)
+  end
+
+  defp planted_ids(%{path: path}, attempt) do
+    real = if attempt == :array, do: ["project_id", "workflow_id"], else: []
+
+    for ":" <> param <- String.split(path, "/"),
+        param not in real,
+        param == "id" or String.ends_with?(param, "_id") do
+      not_a_uuid_entry(%{"path" => param})
+    end
   end
 
   defp assert_any_problem(conn, route) do

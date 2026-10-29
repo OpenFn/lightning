@@ -1,8 +1,8 @@
 defmodule LightningWeb.API.Request do
   @moduledoc """
-  The checks on a request's path id and JSON body before the body reaches a
-  changeset (error-format spec §7 item 8, §9.5, §9.6), and telling when a
-  create-or-replace `PUT /:id` lost the race for its id.
+  The checks on a request's ids and JSON body before the body reaches a
+  changeset, and telling when a create-or-replace `PUT /:id` lost the race for
+  its id.
   """
   alias Ecto.Changeset
   alias LightningWeb.API.Errors
@@ -13,18 +13,18 @@ defmodule LightningWeb.API.Request do
   @doc """
   Checks `body` against the keys the route accepts and the id in its path.
 
-  `path_id` is the path's id, already cast as a UUID.
+  `id` is the id the URL names, already known to be a UUID.
 
   Returns `{:error, problem}` with a 400 `malformed` problem when the body is
   not a JSON object. Otherwise returns `{:ok, entries}`, empty when the body
   passes: one `unknown_key` entry for each key outside `accepted`, and a
-  `mismatch` entry when the body's `id` is not `path_id`.
+  `mismatch` entry when the body's `id` names another.
   """
   @spec check(map(), Ecto.UUID.t(), [atom()]) ::
           {:ok, [Errors.entry()]} | {:error, Problem.t()}
-  def check(body, path_id, accepted) do
+  def check(body, id, accepted) do
     with :ok <- check_object(body) do
-      {:ok, unknown_keys(body, [], accepted) ++ id_mismatch(body, path_id)}
+      {:ok, unknown_keys(body, [], accepted) ++ id_mismatch(body, id)}
     end
   end
 
@@ -52,21 +52,48 @@ defmodule LightningWeb.API.Request do
 
   def check_object(_body), do: :ok
 
-  @doc """
-  The path's id, written out as a UUID.
-
-  Returns `{:error, :not_found}` for anything else, since an id that isn't a
-  UUID names nothing (spec §4). `Ecto.UUID.cast/1` would also take any 16-byte
-  string as a raw UUID, landing the request under an id it doesn't name.
+  @typedoc """
+  A value the request sent, with where it sent it, such as
+  `{{:path, "id"}, "a1b2..."}`. `param/2` reads one from a conn.
   """
-  @spec path_id(term()) :: {:ok, Ecto.UUID.t()} | {:error, :not_found}
-  def path_id(id) do
-    with {:ok, raw} <- Ecto.UUID.dump(id),
-         {:ok, uuid} <- Ecto.UUID.load(raw) do
-      {:ok, uuid}
-    else
-      :error -> {:error, :not_found}
+  @type param :: {Errors.location(), term()}
+
+  @doc """
+  The value of the request's parameter `name`, with where it came from: the
+  path, the query, or else the body.
+  """
+  @spec param(Plug.Conn.t(), String.t()) :: param()
+  def param(conn, name) do
+    cond do
+      Map.has_key?(conn.path_params, name) ->
+        {{:path, name}, conn.path_params[name]}
+
+      Map.has_key?(conn.query_params, name) ->
+        {{:parameter, name}, conn.query_params[name]}
+
+      true ->
+        {[name], conn.body_params[name]}
     end
+  end
+
+  @doc """
+  The id in `param`, written out as a UUID.
+
+  Returns `{:error, {:invalid_id, location}}` for anything else, naming where
+  the request sent it. `Ecto.UUID.cast/1` would also take any 16-byte string as
+  a raw UUID, landing the request under an id it doesn't name.
+  """
+  @spec id(param()) ::
+          {:ok, Ecto.UUID.t()} | {:error, {:invalid_id, Errors.location()}}
+  def id({location, value}) do
+    case uuid(value) do
+      {:ok, uuid} -> {:ok, uuid}
+      :error -> {:error, {:invalid_id, location}}
+    end
+  end
+
+  defp uuid(value) do
+    with {:ok, raw} <- Ecto.UUID.dump(value), do: Ecto.UUID.load(raw)
   end
 
   @doc """
@@ -82,12 +109,12 @@ defmodule LightningWeb.API.Request do
 
   @doc """
   `changeset` with a `mismatch` error on `field` when `body` names an id there
-  that is not `path_id`.
+  other than `id`.
   """
   @spec validate_matches_path(Changeset.t(), map(), atom(), Ecto.UUID.t()) ::
           Changeset.t()
-  def validate_matches_path(changeset, body, field, path_id) do
-    if matches_path?(body, field, path_id) do
+  def validate_matches_path(changeset, body, field, id) do
+    if matches_path?(body, field, id) do
       changeset
     else
       {message, opts} = @mismatch
@@ -95,15 +122,15 @@ defmodule LightningWeb.API.Request do
     end
   end
 
-  defp id_mismatch(body, path_id) do
-    if matches_path?(body, :id, path_id),
+  defp id_mismatch(body, id) do
+    if matches_path?(body, :id, id),
       do: [],
       else: [Errors.entry([:id], @mismatch)]
   end
 
-  defp matches_path?(body, field, path_id) do
+  defp matches_path?(body, field, id) do
     case Map.fetch(body, Atom.to_string(field)) do
-      {:ok, value} -> path_id(value) == {:ok, path_id}
+      {:ok, value} -> uuid(value) == uuid(id)
       :error -> true
     end
   end

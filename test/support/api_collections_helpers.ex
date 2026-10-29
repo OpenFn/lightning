@@ -2,9 +2,14 @@ defmodule LightningWeb.ApiCollectionsHelpers do
   @moduledoc """
   Setup shared by the `/collections` item API tests.
   """
+  use LightningWeb, :verified_routes
+
   import Lightning.Factories
+  import Phoenix.ConnTest, only: [get: 2, put: 3, post: 3, delete: 2]
 
   alias LightningWeb.ConnHelpers
+
+  @endpoint LightningWeb.Endpoint
 
   @doc """
   A `setup` callback giving a member of a project, the project, an empty
@@ -30,6 +35,23 @@ defmodule LightningWeb.ApiCollectionsHelpers do
       project: project,
       collection: collection
     }
+  end
+
+  @doc """
+  One request to each `/collections` route on the collection `name`, as
+  `{verb, request}` pairs whose `request` takes a conn. The key routes use the
+  key `k`.
+  """
+  def routes_for(name) do
+    [
+      get: &get(&1, ~p"/collections/#{name}"),
+      get: &get(&1, ~p"/collections/#{name}/k"),
+      put: &put(&1, ~p"/collections/#{name}/k", %{value: "v"}),
+      post:
+        &post(&1, ~p"/collections/#{name}", %{items: [%{key: "k", value: "v"}]}),
+      delete: &delete(&1, ~p"/collections/#{name}/k"),
+      delete: &delete(&1, ~p"/collections/#{name}")
+    ]
   end
 
   @doc """

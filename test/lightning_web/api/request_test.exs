@@ -18,8 +18,10 @@ defmodule LightningWeb.API.RequestTest do
           %{"id" => @id, "name" => "n"},
           %{"name" => "n"},
           %{"id" => String.upcase(@id)}
-        ] do
-      assert Request.check(body, @id, @accepted) == {:ok, []}, inspect(body)
+        ],
+        path_id <- [@id, String.upcase(@id)] do
+      assert Request.check(body, path_id, @accepted) == {:ok, []},
+             inspect({body, path_id})
     end
   end
 
@@ -102,15 +104,34 @@ defmodule LightningWeb.API.RequestTest do
     end
   end
 
-  describe "path_id/1" do
+  describe "id/1" do
     test "takes a UUID written out, in any case" do
-      assert Request.path_id(String.upcase(@id)) == {:ok, @id}
+      assert Request.id({{:path, "id"}, String.upcase(@id)}) == {:ok, @id}
     end
 
-    test "answers not_found for anything else, a 16-byte string included" do
-      for id <- ["not-a-uuid", "aaaaaaaaaaaaaaaa", ""] do
-        assert Request.path_id(id) == {:error, :not_found}, inspect(id)
+    test "answers invalid_id naming where the request sent it for anything else, a 16-byte string included" do
+      for id <- ["not-a-uuid", "aaaaaaaaaaaaaaaa", "", nil],
+          location <- [{:path, "id"}, {:parameter, "project_id"}, [:id]] do
+        assert Request.id({location, id}) == {:error, {:invalid_id, location}},
+               inspect({location, id})
       end
+    end
+  end
+
+  describe "param/2" do
+    test "reads the parameter from the path, then the query, then the body" do
+      conn = %Plug.Conn{
+        path_params: %{"id" => "path"},
+        query_params: %{"id" => "query", "project_id" => "query"},
+        body_params: %{"id" => "body", "project_id" => "body", "name" => "n"}
+      }
+
+      assert Enum.map(["id", "project_id", "name"], &Request.param(conn, &1)) ==
+               [
+                 {{:path, "id"}, "path"},
+                 {{:parameter, "project_id"}, "query"},
+                 {["name"], "n"}
+               ]
     end
   end
 

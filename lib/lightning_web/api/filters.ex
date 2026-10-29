@@ -11,6 +11,7 @@ defmodule LightningWeb.API.Filters do
   alias Lightning.Config
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Query
+  alias Lightning.Scope
 
   defmodule Cursor do
     @moduledoc false
@@ -61,12 +62,13 @@ defmodule LightningWeb.API.Filters do
 
   `state` is a comma-separated list of run states.
   """
-  @spec runs(map()) :: {:ok, map()} | {:error, Changeset.t()}
-  def runs(params) do
+  @spec runs(map(), Scope.t()) :: {:ok, map()} | {:error, Changeset.t()}
+  def runs(params, scope) do
     params
     |> split_list("state")
     |> cast(
       Query.run_filter_types(),
+      scope,
       &Changeset.validate_subset(&1, :state, @run_states)
     )
   end
@@ -77,13 +79,14 @@ defmodule LightningWeb.API.Filters do
 
   `id` and `state` are comma-separated lists, `id` also a repeated parameter.
   """
-  @spec work_orders(map()) :: {:ok, map()} | {:error, Changeset.t()}
-  def work_orders(params) do
+  @spec work_orders(map(), Scope.t()) :: {:ok, map()} | {:error, Changeset.t()}
+  def work_orders(params, scope) do
     params
     |> split_list("id")
     |> split_list("state")
     |> cast(
       Query.work_order_filter_types(),
+      scope,
       &Changeset.validate_subset(&1, :state, @work_order_states)
     )
   end
@@ -92,11 +95,12 @@ defmodule LightningWeb.API.Filters do
   The log line filters in `params`, or a changeset with an error on every bad
   parameter, none quoting its value.
   """
-  @spec log_lines(map()) :: {:ok, map()} | {:error, Changeset.t()}
-  def log_lines(params) do
+  @spec log_lines(map(), Scope.t()) :: {:ok, map()} | {:error, Changeset.t()}
+  def log_lines(params, scope) do
     cast(
       params,
       Query.log_line_filter_types(),
+      scope,
       &Changeset.validate_inclusion(&1, :level, @log_levels)
     )
   end
@@ -150,11 +154,21 @@ defmodule LightningWeb.API.Filters do
 
   defp leading_number(_value), do: :error
 
-  defp cast(params, types, validate) do
+  defp cast(params, types, scope, validate) do
     {%{}, types}
     |> Changeset.cast(params, Map.keys(types))
     |> validate.()
+    |> require_operator_project(params, scope)
     |> Changeset.apply_action(:validate)
+  end
+
+  defp require_operator_project(changeset, params, scope) do
+    if Scope.operator?(scope) and not Map.has_key?(params, "project_id"),
+      do:
+        Changeset.add_error(changeset, :project_id, "can't be blank",
+          validation: :required
+        ),
+      else: changeset
   end
 
   defp split_list(params, key) do

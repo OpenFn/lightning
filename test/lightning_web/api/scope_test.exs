@@ -103,15 +103,16 @@ defmodule LightningWeb.API.ScopeTest do
             repo_connection,
             ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
             ~s({"name": ""})
-          ),
-          post(
-            repo_connection,
-            ~p"/api/provision",
-            ~s({"id": "#{new_project_id}"})
           )
         ],
         "projects:write"
       )
+
+      # Its grant would provision the project if it were its own, so an id it
+      # can't see is refused as another project's would be.
+      repo_connection
+      |> post(~p"/api/provision", ~s({"id": "#{new_project_id}"}))
+      |> assert_problem(403, :forbidden, [])
 
       refute Lightning.Repo.get(Lightning.Projects.Project, new_project_id)
       refute Lightning.Repo.get(Lightning.Projects.Project, missing)
@@ -214,7 +215,8 @@ defmodule LightningWeb.API.ScopeTest do
         [
           get(short_account, ~p"/api/users?email=a@example.com"),
           get(short_account, ~p"/api/users/#{insert(:user).id}"),
-          get(short_account, ~p"/api/users/#{Ecto.UUID.generate()}")
+          get(short_account, ~p"/api/users/#{Ecto.UUID.generate()}"),
+          get(short_account, ~p"/api/users/not-a-uuid")
         ],
         "users:read"
       )
@@ -243,6 +245,11 @@ defmodule LightningWeb.API.ScopeTest do
           patch(
             short_account,
             ~p"/api/users/#{Ecto.UUID.generate()}",
+            ~s({"first_name": "Grace"})
+          ),
+          patch(
+            short_account,
+            ~p"/api/users/not-a-uuid",
             ~s({"first_name": "Grace"})
           )
         ],

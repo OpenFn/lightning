@@ -10,15 +10,16 @@ defmodule LightningWeb.API.Codes do
     bad_request: {400, "The request could not be read."},
     invalid_request: {400, "The credentials could not be read."},
     malformed: {400, "The body is not a JSON object."},
-    invalid_parameter: {400, "A query parameter is not valid. See errors."},
+    invalid_parameter:
+      {400, "A path or query parameter is not valid. See errors."},
     invalid_header: {400, "A request header is not valid. See errors."},
     unauthenticated: {401, "Authentication is required."},
     invalid_token: {401, "The token is not valid."},
     exceeds_limit: {402, "This would exceed a limit of your plan."},
-    forbidden: {403, "You may not do this."},
+    forbidden: {403, "You may not do this (or it might not exist)."},
     insufficient_scope: {403, "The token lacks the scope this needs."},
     trigger_disabled: {403, "This trigger is disabled."},
-    not_found: {404, "Not found, or you don't have access to it."},
+    not_found: {404, "Not found."},
     not_acceptable:
       {406, "This resource cannot be returned in the requested format."},
     request_timeout: {408, "The request body did not arrive in time."},
@@ -125,6 +126,10 @@ defmodule LightningWeb.API.Codes do
   @spec detail(code()) :: String.t()
   def detail(code), do: @response |> Map.fetch!(code) |> elem(1)
 
+  # phoenix_ecto gives these a 4xx status, but Lightning raises them where it
+  # should have returned an error, so `for_exception/2` answers `:internal`.
+  @raised_by_lightning [Ecto.Query.CastError, Ecto.StaleEntryError]
+
   @doc """
   The code a raise is answered with. Every exception a client can cause has a
   4xx status (`Plug.Exception.status/1`) and is answered by it. Anything else
@@ -133,12 +138,9 @@ defmodule LightningWeb.API.Codes do
   @spec for_exception(:error | :exit | :throw, term()) :: code()
   def for_exception(:error, %Plug.Parsers.ParseError{}), do: :malformed
 
-  # A path id that isn't a UUID is not found, like any other id (spec §4).
-  def for_exception(:error, %Ecto.Query.CastError{}), do: :not_found
-
-  # phoenix_ecto gives a stale write 409, but it is a race inside Lightning,
-  # not the client's doing: the producer has to return an error tuple instead.
-  def for_exception(:error, %Ecto.StaleEntryError{}), do: :internal
+  def for_exception(:error, %exception{})
+      when exception in @raised_by_lightning,
+      do: :internal
 
   def for_exception(:error, exception),
     do: Map.get(@by_status, Plug.Exception.status(exception), :internal)

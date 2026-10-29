@@ -91,6 +91,14 @@ defmodule LightningWeb.API.ProblemHelpers do
   end
 
   @doc """
+  The entry a malformed id gets, at `location`: a one-key map such as
+  `%{"path" => "id"}`, `%{"parameter" => "project_id"}` or
+  `%{"pointer" => "#/id"}`.
+  """
+  def not_a_uuid_entry(location),
+    do: Map.merge(location, %{"code" => "type", "detail" => "is not a UUID"})
+
+  @doc """
   Replaces every value in `params`, at any depth, with a marker that must
   never come back in an answer. Keys are kept, since a pointer may name them.
   """

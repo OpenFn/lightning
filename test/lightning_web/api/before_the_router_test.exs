@@ -272,30 +272,34 @@ defmodule LightningWeb.API.BeforeTheRouterTest do
   end
 
   describe "a path id that isn't a UUID" do
-    test "is 404 not_found on the service-account pipeline", %{conn: conn} do
+    test "is 400 invalid_parameter on the service-account pipeline", %{
+      conn: conn
+    } do
       {account, _private_key} = service_account_with_key()
       Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
 
       conn
       |> assign_bearer(AccessToken.issue(account, ["users:read"]))
       |> get("/api/users/not-a-uuid")
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(400, :invalid_parameter, [
+        not_a_uuid_entry(%{"path" => "id"})
+      ])
     end
 
-    test "is 404 not_found on the person-or-service-account pipeline", %{
-      conn: conn
-    } do
+    test "is 403 forbidden on the person-or-service-account pipeline, to a person who isn't a superuser",
+         %{conn: conn} do
       conn
       |> assign_bearer(insert(:user))
       |> get("/api/projects/not-a-uuid")
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(403, :forbidden, [])
     end
 
-    test "is 404 not_found where the controller casts the id", %{conn: conn} do
+    test "is 403 forbidden where the controller casts the id, to a person who isn't a superuser",
+         %{conn: conn} do
       conn
       |> assign_bearer(insert(:user))
       |> get("/api/jobs/not-a-uuid")
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(403, :forbidden, [])
     end
   end
 

@@ -2,10 +2,9 @@ defmodule LightningWeb.ApiUsersHelpers do
   @moduledoc """
   Setup and builders shared by the users API tests.
   """
-  import Lightning.ServiceAccountHelpers
+  import Lightning.ServiceAccountHelpers, only: [service_account_with_key: 0]
   import Plug.Conn, only: [put_req_header: 3]
 
-  alias Lightning.ServiceAccount.AccessToken
   alias LightningWeb.UserAuth
 
   @password "a long enough password"
@@ -24,14 +23,6 @@ defmodule LightningWeb.ApiUsersHelpers do
       conn: put_req_header(conn, "accept", "application/json"),
       account: account
     }
-  end
-
-  def with_scopes(conn, account, scopes) do
-    put_req_header(
-      conn,
-      "authorization",
-      "Bearer " <> AccessToken.issue(account, scopes)
-    )
   end
 
   def user_url(id), do: "#{LightningWeb.Endpoint.url()}/api/users/#{id}"

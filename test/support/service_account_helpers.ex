@@ -48,10 +48,18 @@ defmodule Lightning.ServiceAccountHelpers do
     {account, _private_key} = service_account_with_key()
     Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
 
-    token = AccessToken.issue(account, scopes)
+    {with_scopes(conn, account, scopes), account}
+  end
 
-    {Plug.Conn.put_req_header(conn, "authorization", "Bearer " <> token),
-     account}
+  @doc """
+  `conn` bearing a live access token for `account` carrying `scopes`.
+  """
+  def with_scopes(conn, account, scopes) do
+    Plug.Conn.put_req_header(
+      conn,
+      "authorization",
+      "Bearer " <> AccessToken.issue(account, issuable!(scopes))
+    )
   end
 
   @doc """
@@ -78,5 +86,12 @@ defmodule Lightning.ServiceAccountHelpers do
   def unsigned_assertion(claims) do
     encode = &Base.url_encode64(Jason.encode!(&1), padding: false)
     encode.(%{"alg" => "none"}) <> "." <> encode.(claims) <> "."
+  end
+
+  defp issuable!(scopes) do
+    case scopes -- AccessToken.scopes() do
+      [] -> scopes
+      others -> raise ArgumentError, "no token is issued #{inspect(others)}"
+    end
   end
 end

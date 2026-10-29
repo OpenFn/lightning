@@ -1,16 +1,22 @@
 defmodule LightningWeb.API.FiltersTest do
   use ExUnit.Case, async: true
 
+  alias Lightning.Scope
   alias LightningWeb.API.Errors
   alias LightningWeb.API.Filters
 
-  describe "runs/1" do
+  @person Scope.new(%Lightning.Accounts.User{})
+
+  describe "runs/2" do
     test "answers the filters it accepts, parsed" do
-      assert Filters.runs(%{
-               "inserted_before" => "2024-01-01T02:00:00+02:00",
-               "state" => "started,failed",
-               "page" => "2"
-             }) ==
+      assert Filters.runs(
+               %{
+                 "inserted_before" => "2024-01-01T02:00:00+02:00",
+                 "state" => "started,failed",
+                 "page" => "2"
+               },
+               @person
+             ) ==
                {:ok,
                 %{
                   inserted_before: ~U[2024-01-01 00:00:00.000000Z],
@@ -22,15 +28,15 @@ defmodule LightningWeb.API.FiltersTest do
   describe "datetime parameters" do
     test "a value that is not a datetime is refused, whatever it looks like" do
       for {filter, parameters} <- [
-            {&Filters.runs/1,
+            {&Filters.runs/2,
              ~w(inserted_after inserted_before updated_after updated_before)},
-            {&Filters.work_orders/1,
+            {&Filters.work_orders/2,
              ~w(inserted_after inserted_before updated_after updated_before)},
-            {&Filters.log_lines/1, ~w(timestamp_after timestamp_before)}
+            {&Filters.log_lines/2, ~w(timestamp_after timestamp_before)}
           ],
           parameter <- parameters,
           value <- ["not-a-valid-datetime", "2024-13-45", "123456"] do
-        assert {:error, changeset} = filter.(%{parameter => value})
+        assert {:error, changeset} = filter.(%{parameter => value}, @person)
 
         assert Errors.parameters(changeset).errors == [
                  %{parameter: parameter, code: :type, detail: "is invalid"}
@@ -40,10 +46,11 @@ defmodule LightningWeb.API.FiltersTest do
     end
   end
 
-  describe "runs/1 and work_orders/1 states" do
+  describe "runs/2 and work_orders/2 states" do
     test "a state that is not one of the resource's is refused" do
-      for filter <- [&Filters.runs/1, &Filters.work_orders/1] do
-        assert {:error, changeset} = filter.(%{"state" => "started,bogus"})
+      for filter <- [&Filters.runs/2, &Filters.work_orders/2] do
+        assert {:error, changeset} =
+                 filter.(%{"state" => "started,bogus"}, @person)
 
         assert Errors.parameters(changeset).errors == [
                  %{
@@ -56,9 +63,10 @@ defmodule LightningWeb.API.FiltersTest do
     end
   end
 
-  describe "log_lines/1" do
+  describe "log_lines/2" do
     test "refuses a level that is not a log level" do
-      assert {:error, changeset} = Filters.log_lines(%{"level" => "loud"})
+      assert {:error, changeset} =
+               Filters.log_lines(%{"level" => "loud"}, @person)
 
       assert Errors.parameters(changeset).errors == [
                %{parameter: "level", code: :not_allowed, detail: "is invalid"}
@@ -66,13 +74,48 @@ defmodule LightningWeb.API.FiltersTest do
     end
   end
 
-  describe "work_orders/1" do
+  describe "project_id" do
+    test "is required from the service account, after any other bad filter" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      operator = Scope.new(account)
+
+      required = %{
+        parameter: "project_id",
+        code: :required,
+        detail: "can't be blank"
+      }
+
+      for {filter, bad} <- [
+            {&Filters.runs/2, %{"state" => "bogus"}},
+            {&Filters.work_orders/2, %{"state" => "bogus"}},
+            {&Filters.log_lines/2, %{"level" => "loud"}}
+          ] do
+        assert {:error, changeset} = filter.(%{}, operator)
+        assert Errors.parameters(changeset).errors == [required]
+
+        assert {:error, changeset} = filter.(bad, operator)
+        assert [_bad, ^required] = Errors.parameters(changeset).errors
+
+        assert {:ok, _filters} =
+                 filter.(%{"project_id" => Ecto.UUID.generate()}, operator)
+
+        assert {:ok, _filters} = filter.(%{}, @person)
+      end
+    end
+  end
+
+  describe "work_orders/2" do
     test "refuses an id filter that isn't a UUID" do
       assert {:error, changeset} =
-               Filters.work_orders(%{
-                 "id" => "#{Ecto.UUID.generate()},nope",
-                 "workflow_id" => "nope"
-               })
+               Filters.work_orders(
+                 %{
+                   "id" => "#{Ecto.UUID.generate()},nope",
+                   "workflow_id" => "nope"
+                 },
+                 @person
+               )
 
       assert Enum.sort(Errors.parameters(changeset).errors) == [
                %{parameter: "id", code: :type, detail: "is invalid"},

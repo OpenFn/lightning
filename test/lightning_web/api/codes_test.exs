@@ -35,15 +35,16 @@ defmodule LightningWeb.API.CodesTest do
       bad_request: {400, "The request could not be read."},
       invalid_request: {400, "The credentials could not be read."},
       malformed: {400, "The body is not a JSON object."},
-      invalid_parameter: {400, "A query parameter is not valid. See errors."},
+      invalid_parameter:
+        {400, "A path or query parameter is not valid. See errors."},
       invalid_header: {400, "A request header is not valid. See errors."},
       unauthenticated: {401, "Authentication is required."},
       invalid_token: {401, "The token is not valid."},
       exceeds_limit: {402, "This would exceed a limit of your plan."},
-      forbidden: {403, "You may not do this."},
+      forbidden: {403, "You may not do this (or it might not exist)."},
       insufficient_scope: {403, "The token lacks the scope this needs."},
       trigger_disabled: {403, "This trigger is disabled."},
-      not_found: {404, "Not found, or you don't have access to it."},
+      not_found: {404, "Not found."},
       not_acceptable:
         {406, "This resource cannot be returned in the requested format."},
       request_timeout: {408, "The request body did not arrive in time."},
@@ -99,6 +100,7 @@ defmodule LightningWeb.API.CodesTest do
     test "a raise a client did not cause is internal" do
       for {kind, reason} <- [
             error: %Ecto.StaleEntryError{},
+            error: %Ecto.Query.CastError{},
             error: %RuntimeError{},
             exit: :timeout,
             throw: :oops
@@ -124,8 +126,7 @@ defmodule LightningWeb.API.CodesTest do
 
   # Every exception these apps give a 4xx status, through a `plug_status`
   # field or a `Plug.Exception` implementation, so an upgrade that adds one
-  # fails here until it has a code. CastError and StaleEntryError are left
-  # out, as `for_exception/2` deliberately answers them by another code.
+  # fails here until it has a code.
   defp client_exceptions do
     {:consolidated, implemented} = Plug.Exception.__protocol__(:impls)
 
