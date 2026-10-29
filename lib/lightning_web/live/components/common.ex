@@ -328,6 +328,8 @@ defmodule LightningWeb.Components.Common do
   end
 
   attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
+  attr :update_status, :map, default: nil
+  attr :dot, :atom, default: :right, values: [:right, :below]
 
   def version_chip(assigns) do
     {display, message} =
@@ -344,13 +346,36 @@ defmodule LightningWeb.Components.Common do
           {info.label, "No image tag found."}
       end
 
-    assigns = assign(assigns, display: display, message: message)
+    update = update_available(assigns.update_status)
+    up_to_date? = match?(%{update_available?: false}, assigns.update_status)
+
+    message =
+      cond do
+        update -> "v#{update.latest} is available. #{message}"
+        up_to_date? -> "Up to date. #{message}"
+        true -> message
+      end
+
+    assigns =
+      assign(assigns,
+        display: display,
+        message: message,
+        update: update,
+        up_to_date?: up_to_date?
+      )
 
     ~H"""
-    <div class="text-[8px] primary-light opacity-50 flex justify-center">
+    <div class={[
+      "text-[8px] primary-light flex items-center",
+      if(@dot == :below, do: "flex-col", else: "justify-center gap-1")
+    ]}>
       <code
         class={[
-          "py-1 rounded-md",
+          "rounded-md opacity-50",
+          if(@dot == :below and (@update || @up_to_date?),
+            do: "pt-1",
+            else: "py-1"
+          ),
           "break-keep primary-light",
           "inline-block align-middle text-center"
         ]}
@@ -358,9 +383,29 @@ defmodule LightningWeb.Components.Common do
       >
         {@display}
       </code>
+      <span
+        :if={@update}
+        class="version-update-dot block size-1.5 rounded-full bg-amber-400"
+        title={@message}
+        aria-label={"v#{@update.latest} is available"}
+      >
+      </span>
+      <span
+        :if={@up_to_date?}
+        class="version-current-dot block size-1.5 rounded-full bg-green-400"
+        title={@message}
+        aria-label="Up to date"
+      >
+      </span>
     </div>
     """
   end
+
+  @doc """
+  The update status when it reports a newer version, otherwise `nil`.
+  """
+  def update_available(%{update_available?: true} = status), do: status
+  def update_available(_status), do: nil
 
   attr :id, :string, required: true
   attr :title, :string, required: true

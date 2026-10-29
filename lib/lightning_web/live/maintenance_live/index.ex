@@ -11,6 +11,7 @@ defmodule LightningWeb.MaintenanceLive.Index do
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
+  alias Lightning.UpdateCheck
   alias Lightning.UsageTracking
 
   @impl true
@@ -19,6 +20,8 @@ defmodule LightningWeb.MaintenanceLive.Index do
       {:ok,
        socket
        |> assign(active_menu_item: :maintenance, page_title: "Maintenance")
+       |> assign(update_check: update_check_settings(), checking_update?: false)
+       |> assign_new(:update_status, fn -> nil end)
        |> assign_async(:usage_tracking, fn ->
          {:ok, %{usage_tracking: usage_tracking_status()}}
        end), layout: {LightningWeb.Layouts, :settings}}
@@ -43,6 +46,20 @@ defmodule LightningWeb.MaintenanceLive.Index do
         end
 
       {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:nav, :no_access)
+       |> push_navigate(to: "/projects")}
+    end
+  end
+
+  def handle_event("check_for_update", _params, socket) do
+    if superuser?(socket) do
+      {:noreply,
+       socket
+       |> assign(checking_update?: true)
+       |> start_async(:check_for_update, fn -> UpdateCheck.check_now() end)}
     else
       {:noreply,
        socket
@@ -85,9 +102,56 @@ defmodule LightningWeb.MaintenanceLive.Index do
     {:noreply, socket}
   end
 
+  def handle_async(:check_for_update, {:ok, result}, socket) do
+    socket = assign(socket, checking_update?: false)
+
+    socket =
+      case result do
+        {:ok, status} ->
+          socket
+          |> assign(update_status: status)
+          |> put_flash(:info, update_flash(status))
+
+        {:error, :disabled} ->
+          put_flash(
+            socket,
+            :error,
+            "The update check is turned off. Set UPDATE_CHECK_ENABLED=true and restart."
+          )
+
+        {:error, reason} ->
+          put_flash(socket, :error, "Update check failed: #{inspect(reason)}")
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_async(:check_for_update, {:exit, reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(checking_update?: false)
+     |> put_flash(:error, "Update check failed: #{inspect(reason)}")}
+  end
+
   def handle_async(:refresh_icons, {:exit, reason}, socket) do
     {:noreply,
      put_flash(socket, :error, "Icon refresh failed: #{inspect(reason)}")}
+  end
+
+  defp update_flash(%{update_available?: true, latest: latest}),
+    do: "v#{latest} is available."
+
+  defp update_flash(_status), do: "You're on the latest version."
+
+  defp update_check_settings do
+    config = Lightning.Config.update_check()
+
+    %{
+      enabled: Lightning.Config.update_check_enabled?(),
+      registry: config[:registry],
+      repository: config[:repository],
+      tag: config[:tag]
+    }
   end
 
   defp usage_tracking_status do
@@ -97,6 +161,26 @@ defmodule LightningWeb.MaintenanceLive.Index do
       host: Lightning.Config.usage_tracking_host(),
       identity: UsageTracking.instance_identity()
     }
+  end
+
+  attr :status, :map, default: nil
+
+  defp update_status_pill(%{status: %{update_available?: true}} = assigns) do
+    ~H"""
+    <.pill id="update-status" color="yellow">Update available</.pill>
+    """
+  end
+
+  defp update_status_pill(%{status: %{}} = assigns) do
+    ~H"""
+    <.pill id="update-status" color="green">Up to date</.pill>
+    """
+  end
+
+  defp update_status_pill(assigns) do
+    ~H"""
+    <.pill id="update-status" color="gray">Not checked yet</.pill>
+    """
   end
 
   attr :enabled, :boolean, required: true
