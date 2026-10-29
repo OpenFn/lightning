@@ -4,6 +4,7 @@ defmodule Lightning.InvocationTest do
   import Lightning.Factories
 
   alias Lightning.Runs
+  alias Lightning.Scope
   alias Lightning.WorkOrders.SearchParams
   alias Lightning.Invocation
   alias Lightning.Repo
@@ -2982,11 +2983,16 @@ defmodule Lightning.InvocationTest do
       )
 
       assert %Scrivener.Page{entries: [%{id: id}], total_entries: 1} =
-               Invocation.paginate_log_lines_for(user, %{level: "error"}, [])
+               Invocation.paginate_log_lines_for(
+                 Scope.new(user),
+                 %{level: "error"},
+                 []
+               )
 
       assert id == error.id
 
-      page = Invocation.paginate_log_lines_for(user, %{}, page_size: 1)
+      page =
+        Invocation.paginate_log_lines_for(Scope.new(user), %{}, page_size: 1)
 
       assert %Scrivener.Page{
                page_number: 1,
@@ -2996,7 +3002,7 @@ defmodule Lightning.InvocationTest do
              } = page
 
       assert MapSet.new(
-               Invocation.paginate_log_lines_for(user, %{}, []).entries,
+               Invocation.paginate_log_lines_for(Scope.new(user), %{}, []).entries,
                & &1.id
              ) == MapSet.new([info.id, error.id])
     end

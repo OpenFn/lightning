@@ -28,9 +28,11 @@ defmodule Lightning.Projects do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.Scope
   alias Lightning.Services.AccountHook
   alias Lightning.Services.ProjectHook
   alias Lightning.Storage.ProjectFileDefinition
+  alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
@@ -1147,25 +1149,47 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  defp projects_for_user_query(%User{id: user_id}) do
+  @doc """
+  The ids of the projects the caller may list: a repo connection's own project,
+  every project to an operator, and otherwise those the caller is a member of.
+  A superuser is a member like anyone else here. For use in a `subquery/1`.
+  """
+  @spec visible_project_ids(Scope.t()) :: Ecto.Query.t()
+  def visible_project_ids(%Scope{actor: %ProjectRepoConnection{project_id: id}}),
+    do: from(p in Project, where: p.id == ^id, select: p.id)
+
+  def visible_project_ids(%Scope{instance_role: :operator}),
+    do: from(p in Project, select: p.id)
+
+  def visible_project_ids(%Scope{actor: %User{} = user}),
+    do: member_project_ids(user)
+
+  defp member_project_ids(%User{id: user_id}),
+    do:
+      from(pu in ProjectUser,
+        where: pu.user_id == ^user_id,
+        select: pu.project_id
+      )
+
+  @doc """
+  A page of the live, top-level projects the caller may list, by name.
+  """
+  @spec paginate_projects_for(Scope.t(), keyword()) :: Scrivener.Page.t()
+  def paginate_projects_for(%Scope{} = scope, page) do
+    scope
+    |> visible_project_ids()
+    |> live_top_level()
+    |> Repo.paginate(page)
+  end
+
+  defp live_top_level(project_ids) do
     from(p in Project,
-      join: pu in assoc(p, :project_users),
       where:
-        pu.user_id == ^user_id and
+        p.id in subquery(project_ids) and
           is_nil(p.scheduled_deletion) and
           is_nil(p.parent_id),
       order_by: p.name
     )
-  end
-
-  @doc """
-  A page of the projects `user` is a member of, by name.
-  """
-  @spec paginate_projects_for_user(User.t(), keyword()) :: Scrivener.Page.t()
-  def paginate_projects_for_user(%User{} = user, page) do
-    user
-    |> projects_for_user_query()
-    |> Repo.paginate(page)
   end
 
   @doc """
@@ -1186,14 +1210,15 @@ defmodule Lightning.Projects do
           is_nil(p.scheduled_deletion) and
           is_nil(p.parent_id)
     )
-    |> union(^projects_for_user_query(user))
+    |> union(^live_top_level(member_project_ids(user)))
     |> Repo.all()
     |> Enum.uniq_by(& &1.id)
   end
 
   def get_projects_for_user(%User{} = user) do
     user
-    |> projects_for_user_query()
+    |> member_project_ids()
+    |> live_top_level()
     |> Repo.all()
   end
 

@@ -376,20 +376,15 @@ defmodule LightningWeb.RunLive.Index do
     require_run_workflow(socket, fn ->
       %{project: %{id: project_id}, current_user: current_user} = socket.assigns
 
-      # Scope the browser-supplied run_id to this project before retrying, so an
-      # editor of one project can't retry (execute) another project's run. Also
-      # reject a malformed id or a step that isn't part of the run rather than
-      # let those crash the query.
-      with true <- Lightning.Validators.valid_uuid?(run_id),
-           %Run{steps: steps} <-
-             Runs.get_for_project(run_id, project_id, include: [:steps]),
+      with {:ok, %Run{steps: steps}} <-
+             Runs.get_for_project(project_id, run_id, include: [:steps]),
            true <- Enum.any?(steps, &(&1.id == step_id)),
            :ok <- WorkOrders.limit_run_creation(project_id),
            {:ok, _run} <-
              WorkOrders.retry(run_id, step_id, created_by: current_user) do
         {:noreply, socket}
       else
-        result when result in [false, nil] ->
+        result when result in [false, {:error, :not_found}] ->
           {:noreply, put_flash(socket, :error, "Run not found.")}
 
         {:error, _reason, %{text: error_text}} ->

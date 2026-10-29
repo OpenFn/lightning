@@ -229,7 +229,7 @@ defmodule LightningWeb.DataclipController do
 
         # A run outside the caller's project (or purged) yields a null payload,
         # never another project's dataclip body.
-        Runs.get_for_project(run_id, project.id) == nil ->
+        Runs.get_for_project(project.id, run_id) == {:error, :not_found} ->
           json(conn, %{dataclip: nil, run_step: nil})
 
         true ->

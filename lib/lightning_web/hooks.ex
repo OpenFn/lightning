@@ -172,13 +172,15 @@ defmodule LightningWeb.Hooks do
         _session,
         %{assigns: %{project: project}} = socket
       ) do
-    if Lightning.Runs.get_for_project(run_id, project.id) do
-      {:cont, socket}
-    else
-      {:halt,
-       socket
-       |> put_flash(:error, "Run not found")
-       |> redirect(to: ~p"/projects/#{project}/history")}
+    case Lightning.Runs.get_for_project(project.id, run_id) do
+      {:ok, _run} ->
+        {:cont, socket}
+
+      {:error, :not_found} ->
+        {:halt,
+         socket
+         |> put_flash(:error, "Run not found")
+         |> redirect(to: ~p"/projects/#{project}/history")}
     end
   end
 

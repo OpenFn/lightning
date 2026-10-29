@@ -8,6 +8,8 @@ defmodule Lightning.WorkOrdersTest do
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.Message
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Scope
+  alias Lightning.WorkOrder
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.RetryManyWorkOrdersJob
@@ -3331,6 +3333,53 @@ defmodule Lightning.WorkOrdersTest do
     end
   end
 
+  describe "get_for_project/3" do
+    test "finds a work order only in the project its workflow belongs to" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      workflow_id = workflow.id
+
+      assert {:ok, %WorkOrder{workflow: %{id: ^workflow_id}}} =
+               WorkOrders.get_for_project(workflow.project_id, work_order.id,
+                 include: [:workflow]
+               )
+
+      for {project_id, id} <- [
+            {insert(:project).id, work_order.id},
+            {workflow.project_id, Ecto.UUID.generate()},
+            {workflow.project_id, "not-a-uuid"}
+          ] do
+        assert WorkOrders.get_for_project(project_id, id) == {:error, :not_found}
+      end
+    end
+  end
+
+  describe "get_project_id/1" do
+    test "finds the project a work order's workflow belongs to" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      assert WorkOrders.get_project_id(work_order.id) ==
+               {:ok, workflow.project_id}
+
+      assert WorkOrders.get_project_id(Ecto.UUID.generate()) ==
+               {:error, :not_found}
+    end
+  end
+
   describe "paginate_work_orders_for/3" do
     setup do
       user = insert(:user)
@@ -3371,7 +3420,10 @@ defmodule Lightning.WorkOrdersTest do
       success: success
     } do
       page =
-        WorkOrders.paginate_work_orders_for(user, %{}, page: 2, page_size: 1)
+        WorkOrders.paginate_work_orders_for(Scope.new(user), %{},
+          page: 2,
+          page_size: 1
+        )
 
       assert %Scrivener.Page{
                page_number: 2,
@@ -3381,7 +3433,7 @@ defmodule Lightning.WorkOrdersTest do
              } = page
 
       assert MapSet.new(
-               WorkOrders.paginate_work_orders_for(user, %{}, []).entries,
+               WorkOrders.paginate_work_orders_for(Scope.new(user), %{}, []).entries,
                & &1.id
              ) == MapSet.new([failed.id, success.id])
     end

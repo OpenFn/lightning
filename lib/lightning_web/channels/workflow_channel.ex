@@ -2239,8 +2239,8 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp resolve_release(workflow_id, version_number, version, project, user) do
     with :ok <- Permissions.can(:workflows, :access_read, user, project),
-         %Workflows.Workflow{} <-
-           Workflows.get_workflow_for_project(project, workflow_id) do
+         {:ok, _workflow} <-
+           Workflows.get_workflow_for_project(project.id, workflow_id) do
       resolve_released_snapshot(workflow_id, version_number, version, project)
     else
       {:error, :unauthorized} -> {:error, "unauthorized"}

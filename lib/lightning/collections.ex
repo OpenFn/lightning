@@ -66,6 +66,23 @@ defmodule Lightning.Collections do
   def get_collection_by_id(id), do: Repo.get(Collection, id)
 
   @doc """
+  The collection with primary key `id` in the project `project_id`, or
+  `{:error, :not_found}` when the id is malformed or no collection in that
+  project has it.
+  """
+  @spec get_collection_for_project(Ecto.UUID.t(), term()) ::
+          {:ok, Collection.t()} | {:error, :not_found}
+  def get_collection_for_project(project_id, id) do
+    if Lightning.Validators.valid_uuid?(id) do
+      Collection
+      |> where(id: ^id, project_id: ^project_id)
+      |> Repo.fetch_one()
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
   Looks up a collection scoped to a specific project.
 
   Unambiguous by construction: there is at most one collection with a given

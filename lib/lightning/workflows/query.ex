@@ -4,10 +4,11 @@ defmodule Lightning.Workflows.Query do
   """
   import Ecto.Query
 
-  alias Lightning.Accounts.User
   alias Lightning.Invocation.Step
+  alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Run
+  alias Lightning.Scope
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
@@ -16,17 +17,15 @@ defmodule Lightning.Workflows.Query do
   alias Lightning.WorkOrder
 
   @doc """
-  Returns all workflows accessible to a user, via their projects
-  or all workflows in a given project.
+  Returns the live workflows of every project the caller may list
+  (`Lightning.Projects.visible_project_ids/1`), or of a given project.
   """
-  @spec workflows_for(User.t()) :: Ecto.Queryable.t()
-  def workflows_for(%User{} = user) do
-    projects = Ecto.assoc(user, :projects) |> select([:id])
-
+  @spec workflows_for(Scope.t()) :: Ecto.Queryable.t()
+  def workflows_for(%Scope{} = scope) do
     from(w in Workflow,
-      join: p in subquery(projects),
-      on: w.project_id == p.id,
-      where: is_nil(w.deleted_at),
+      where:
+        w.project_id in subquery(Projects.visible_project_ids(scope)) and
+          is_nil(w.deleted_at),
       order_by: [desc: w.inserted_at]
     )
   end
@@ -40,16 +39,14 @@ defmodule Lightning.Workflows.Query do
   end
 
   @doc """
-  Returns all jobs accessible to a user, via their projects
-  or all jobs in a given project.
+  Returns the jobs of every project the caller may list
+  (`Lightning.Projects.visible_project_ids/1`), or of a given project.
   """
-  @spec jobs_for(User.t()) :: Ecto.Queryable.t()
-  def jobs_for(%User{} = user) do
-    projects = Ecto.assoc(user, :projects) |> select([:id])
-
+  @spec jobs_for(Scope.t()) :: Ecto.Queryable.t()
+  def jobs_for(%Scope{} = scope) do
     from(j in Job,
       join: w in assoc(j, :workflow),
-      where: w.project_id in subquery(projects)
+      where: w.project_id in subquery(Projects.visible_project_ids(scope))
     )
   end
 

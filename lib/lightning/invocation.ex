@@ -16,6 +16,7 @@ defmodule Lightning.Invocation do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.Scope
   alias Lightning.Scrubber
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -481,12 +482,13 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  A page of the log lines of every project `user` may access, narrowed by
+  A page of the log lines of every project the caller may list, narrowed by
   `filters` (see `Query.filter_log_lines/2`).
   """
-  @spec paginate_log_lines_for(User.t(), map(), keyword()) :: Scrivener.Page.t()
-  def paginate_log_lines_for(%User{} = user, filters, page) do
-    user
+  @spec paginate_log_lines_for(Project.t() | Scope.t(), map(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_log_lines_for(project_or_scope, filters, page) do
+    project_or_scope
     |> Query.log_lines_for()
     |> Query.filter_log_lines(filters)
     |> Repo.paginate(page)

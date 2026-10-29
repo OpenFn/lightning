@@ -46,6 +46,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Run
   alias Lightning.Runs
   alias Lightning.RunStep
+  alias Lightning.Scope
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -861,14 +862,51 @@ defmodule Lightning.WorkOrders do
   end
 
   @doc """
-  A page of the work orders of `project`, or of every project `user` may
-  access, narrowed by `filters` (see
+  Get a Work Order by id, scoped to a project.
+
+  Returns `{:error, :not_found}` when the id is malformed, or the work order
+  doesn't exist or belongs to a workflow in another project. Takes the same
+  `:include` option as `get/2`.
+  """
+  @spec get_for_project(Ecto.UUID.t(), term(), [{:include, list()}]) ::
+          {:ok, WorkOrder.t()} | {:error, :not_found}
+  def get_for_project(project_id, id, opts \\ []) do
+    if Lightning.Validators.valid_uuid?(id) do
+      from(wo in WorkOrder,
+        join: w in assoc(wo, :workflow),
+        where: wo.id == ^id and w.project_id == ^project_id,
+        preload: ^Keyword.get(opts, :include, [])
+      )
+      |> Repo.fetch_one()
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
+  The id of the project the work order `id` sits in, or `{:error, :not_found}`
+  when no work order has that id.
+  """
+  @spec get_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_project_id(id) do
+    from(wo in WorkOrder,
+      join: w in assoc(wo, :workflow),
+      where: wo.id == ^id,
+      select: w.project_id
+    )
+    |> Repo.fetch_one()
+  end
+
+  @doc """
+  A page of the work orders of `project`, or of every project the caller may
+  list, narrowed by `filters` (see
   `Lightning.Invocation.Query.filter_work_orders/2`).
   """
-  @spec paginate_work_orders_for(Project.t() | User.t(), map(), keyword()) ::
+  @spec paginate_work_orders_for(Project.t() | Scope.t(), map(), keyword()) ::
           Scrivener.Page.t()
-  def paginate_work_orders_for(project_or_user, filters, page) do
-    project_or_user
+  def paginate_work_orders_for(project_or_scope, filters, page) do
+    project_or_scope
     |> Lightning.Invocation.Query.work_orders_for()
     |> Lightning.Invocation.Query.filter_work_orders(filters)
     |> Repo.paginate(page)

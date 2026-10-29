@@ -487,7 +487,8 @@ defmodule LightningWeb.DataclipControllerTest do
       conn: conn,
       project: project,
       run: run,
-      job: job
+      job: job,
+      dataclip: %{id: dataclip_id}
     } do
       conn =
         get(
@@ -496,8 +497,8 @@ defmodule LightningWeb.DataclipControllerTest do
         )
 
       assert %{
-               "dataclip" => _dataclip,
-               "run_step" => _run_step
+               "dataclip" => %{"id" => ^dataclip_id},
+               "run_step" => %{}
              } = json_response(conn, 200)
     end
 
@@ -533,33 +534,16 @@ defmodule LightningWeb.DataclipControllerTest do
 
     test "returns a null payload for a run in another project", %{
       conn: conn,
-      project: project,
+      user: user,
+      run: run,
       job: job
     } do
-      # Authorized on our own project, but the run belongs to a different one:
-      # the dataclip body must not leak; the response is a null payload,
-      # indistinguishable from an own run with no dataclip.
-      other_project = insert(:project)
-      other_workflow = insert(:workflow, project: other_project)
-      other_trigger = insert(:trigger, workflow: other_workflow)
-      other_dataclip = insert(:dataclip, project: other_project)
-
-      other_run =
-        insert(:run,
-          work_order:
-            insert(:workorder,
-              workflow: other_workflow,
-              trigger: other_trigger,
-              dataclip: other_dataclip
-            ),
-          dataclip: other_dataclip,
-          starting_trigger: other_trigger
-        )
+      other_project = insert(:project, project_users: [%{user: user}])
 
       conn =
         get(
           conn,
-          ~p"/projects/#{project}/runs/#{other_run}/dataclip?job_id=#{job.id}"
+          ~p"/projects/#{other_project}/runs/#{run}/dataclip?job_id=#{job.id}"
         )
 
       assert %{"dataclip" => nil, "run_step" => nil} = json_response(conn, 200)

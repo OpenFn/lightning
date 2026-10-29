@@ -5,6 +5,7 @@ defmodule Lightning.JobsTest do
 
   alias Lightning.Auditing.Audit
   alias Lightning.Jobs
+  alias Lightning.Scope
   alias Lightning.Workflows.Job
   alias Lightning.Workflows
 
@@ -192,6 +193,33 @@ defmodule Lightning.JobsTest do
     end
   end
 
+  describe "get_job_for_project/3" do
+    test "finds a job only in the project its workflow belongs to" do
+      %{jobs: [job], project: project} = insert(:simple_workflow)
+      workflow_id = job.workflow_id
+
+      assert {:ok, %Job{workflow: %{id: ^workflow_id}}} =
+               Jobs.get_job_for_project(project.id, job.id, include: [:workflow])
+
+      for {project_id, id} <- [
+            {insert(:project).id, job.id},
+            {project.id, Ecto.UUID.generate()},
+            {project.id, "not-a-uuid"}
+          ] do
+        assert Jobs.get_job_for_project(project_id, id) == {:error, :not_found}
+      end
+    end
+  end
+
+  describe "get_project_id/1" do
+    test "finds the project a job's workflow belongs to" do
+      %{jobs: [job], project: %{id: project_id}} = insert(:simple_workflow)
+
+      assert Jobs.get_project_id(job.id) == {:ok, project_id}
+      assert Jobs.get_project_id(Ecto.UUID.generate()) == {:error, :not_found}
+    end
+  end
+
   describe "paginate_jobs_for/2" do
     test "pages a project's jobs, or those of every project a user may access" do
       user = insert(:user)
@@ -206,7 +234,7 @@ defmodule Lightning.JobsTest do
 
       assert job_id == job.id
 
-      page = Jobs.paginate_jobs_for(user, page_size: 1)
+      page = Jobs.paginate_jobs_for(Scope.new(user), page_size: 1)
 
       assert %Scrivener.Page{
                page_number: 1,
@@ -215,7 +243,10 @@ defmodule Lightning.JobsTest do
                total_pages: 2
              } = page
 
-      assert MapSet.new(Jobs.paginate_jobs_for(user, []).entries, & &1.id) ==
+      assert MapSet.new(
+               Jobs.paginate_jobs_for(Scope.new(user), []).entries,
+               & &1.id
+             ) ==
                MapSet.new([job.id, other_job.id])
     end
   end

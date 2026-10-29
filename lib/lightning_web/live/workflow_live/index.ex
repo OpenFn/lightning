@@ -7,7 +7,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
-  alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias LightningWeb.Live.Helpers.TableHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
@@ -234,8 +233,8 @@ defmodule LightningWeb.WorkflowLive.Index do
     redirect = ~p"/projects/#{project}/w?#{query_params}"
 
     with true <- Permissions.can?(ProjectUsers, :edit_workflow, actor, project),
-         %Workflow{} = workflow <-
-           Workflows.get_workflow_for_project(project, workflow_id,
+         {:ok, workflow} <-
+           Workflows.get_workflow_for_project(project.id, workflow_id,
              include: [:triggers]
            ) do
       workflow
@@ -266,7 +265,7 @@ defmodule LightningWeb.WorkflowLive.Index do
          |> put_flash(:error, "You are not authorized to perform this action.")
          |> push_patch(to: redirect)}
 
-      nil ->
+      {:error, :not_found} ->
         {:noreply,
          socket
          |> put_flash(:error, "Workflow not found.")
@@ -287,8 +286,8 @@ defmodule LightningWeb.WorkflowLive.Index do
     query_params = build_query_params(search_term, sort_key, sort_direction)
 
     with true <- can_delete_workflow?,
-         %Workflow{} = workflow <-
-           Workflows.get_workflow_for_project(project, id) do
+         {:ok, workflow} <-
+           Workflows.get_workflow_for_project(project.id, id) do
       workflow
       |> Workflows.mark_for_deletion(user)
       |> case do
@@ -309,7 +308,7 @@ defmodule LightningWeb.WorkflowLive.Index do
          socket
          |> put_flash(:error, "You are not authorized to perform this action.")}
 
-      nil ->
+      {:error, :not_found} ->
         {:noreply, socket |> put_flash(:error, "Workflow not found.")}
     end
   end

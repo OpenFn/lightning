@@ -222,7 +222,7 @@ defmodule Lightning.Credentials do
     attrs = normalize_keys(attrs)
 
     with :ok <-
-           authorize_credential(:edit_credential, actor, %Credential{
+           authorize_credential(:create_credential, actor, %Credential{
              user_id: attrs["user_id"]
            }) do
       do_create_credential(attrs, actor, opts[:id])

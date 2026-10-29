@@ -10,7 +10,7 @@ defmodule Lightning.Workflows do
   import Ecto.Query
 
   alias Ecto.Multi
-  alias Lightning.Accounts.User
+  alias Lightning.Scope
 
   alias Lightning.Config
   alias Lightning.Credentials.Scoping
@@ -145,16 +145,37 @@ defmodule Lightning.Workflows do
   @doc """
   Gets a workflow by id, scoped to the given project.
 
-  Returns `nil` when the id is malformed, missing, belongs to another project,
-  or is marked for deletion, so it can't be used to read or mutate a workflow
-  across projects or one on its way out.
+  Returns `{:error, :not_found}` when the id is malformed, missing, belongs to
+  another project, or is marked for deletion, so it can't be used to read or
+  mutate a workflow across projects or one on its way out.
   """
-  def get_workflow_for_project(%Project{} = project, id, opts \\ []) do
+  @spec get_workflow_for_project(Ecto.UUID.t(), term(), keyword()) ::
+          {:ok, Workflow.t()} | {:error, :not_found}
+  def get_workflow_for_project(project_id, id, opts \\ []) do
     if Lightning.Validators.valid_uuid?(id) do
-      from(w in Query.workflows_for(project), where: w.id == ^id)
-      |> preload(^Keyword.get(opts, :include, []))
-      |> Repo.one()
+      from(w in Workflow,
+        where:
+          w.id == ^id and w.project_id == ^project_id and is_nil(w.deleted_at),
+        preload: ^Keyword.get(opts, :include, [])
+      )
+      |> Repo.fetch_one()
+    else
+      {:error, :not_found}
     end
+  end
+
+  @doc """
+  The id of the project the workflow `id` sits in, or `{:error, :not_found}`
+  when no workflow has that id.
+
+  A workflow marked for deletion still answers its project, so that
+  `get_workflow_for_project/3` in that project is what finds it missing.
+  """
+  @spec get_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_project_id(id) do
+    from(w in Workflow, where: w.id == ^id, select: w.project_id)
+    |> Repo.fetch_one()
   end
 
   @doc """
@@ -868,14 +889,14 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Lists the workflows in the user's projects, newest first, preloading the
-  associations named in `include:`.
+  Lists the live workflows of every project the caller may list, newest first,
+  preloading the associations named in `include:`.
   """
-  @spec list_workflows_for_user(User.t(), keyword()) :: [Workflow.t()]
-  def list_workflows_for_user(%User{} = user, opts \\ []) do
+  @spec list_workflows_for(Scope.t(), keyword()) :: [Workflow.t()]
+  def list_workflows_for(%Scope{} = scope, opts \\ []) do
     include = Keyword.get(opts, :include, [])
 
-    user
+    scope
     |> Query.workflows_for()
     |> preload(^include)
     |> Repo.all()

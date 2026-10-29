@@ -8,24 +8,24 @@ defmodule Lightning.Invocation.Query do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
+  alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Run
+  alias Lightning.Scope
   alias Lightning.Workflows.Job
   alias Lightning.WorkOrder
 
   @doc """
-  Work orders for a specific project, or all runs available to the requesting user
+  Work orders of a given project, or of every project the caller may list
+  (`Lightning.Projects.visible_project_ids/1`).
   """
-  @spec work_orders_for(User.t()) :: Ecto.Queryable.t()
-  def work_orders_for(%User{} = user) do
-    projects = Ecto.assoc(user, :projects) |> select([:id])
-
+  @spec work_orders_for(Scope.t()) :: Ecto.Queryable.t()
+  def work_orders_for(%Scope{} = scope) do
     from(wo in WorkOrder,
       as: :work_order,
       join: w in assoc(wo, :workflow),
       as: :workflow,
-      join: p in subquery(projects),
-      on: w.project_id == p.id,
+      where: w.project_id in subquery(Projects.visible_project_ids(scope)),
       order_by: [desc: wo.last_activity]
     )
   end
@@ -63,20 +63,18 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
-  Runs for a specific project, or all runs available to the requesting user
+  Runs of a given project, or of every project the caller may list
+  (`Lightning.Projects.visible_project_ids/1`).
   """
-  @spec runs_for(User.t()) :: Ecto.Queryable.t()
-  def runs_for(%User{} = user) do
-    projects = Ecto.assoc(user, :projects) |> select([:id])
-
+  @spec runs_for(Scope.t()) :: Ecto.Queryable.t()
+  def runs_for(%Scope{} = scope) do
     from(r in Run,
       as: :run,
       join: wo in assoc(r, :work_order),
       as: :work_order,
       join: w in assoc(wo, :workflow),
       as: :workflow,
-      join: p in subquery(projects),
-      on: w.project_id == p.id,
+      where: w.project_id in subquery(Projects.visible_project_ids(scope)),
       order_by: [desc: r.inserted_at]
     )
   end
@@ -331,12 +329,11 @@ defmodule Lightning.Invocation.Query do
     do: where_timestamps(timestamp_filter, query)
 
   @doc """
-  Log lines for a specific user, filtered by their accessible projects
+  Log lines of every project the caller may list
+  (`Lightning.Projects.visible_project_ids/1`).
   """
-  @spec log_lines_for(User.t()) :: Ecto.Queryable.t()
-  def log_lines_for(%User{} = user) do
-    projects = Ecto.assoc(user, :projects) |> select([:id])
-
+  @spec log_lines_for(Scope.t()) :: Ecto.Queryable.t()
+  def log_lines_for(%Scope{} = scope) do
     from(log in LogLine,
       as: :log,
       join: r in assoc(log, :run),
@@ -345,8 +342,22 @@ defmodule Lightning.Invocation.Query do
       as: :work_order,
       join: w in assoc(wo, :workflow),
       as: :workflow,
-      join: p in subquery(projects),
-      on: w.project_id == p.id,
+      where: w.project_id in subquery(Projects.visible_project_ids(scope)),
+      order_by: [desc: log.timestamp]
+    )
+  end
+
+  @spec log_lines_for(Project.t()) :: Ecto.Queryable.t()
+  def log_lines_for(%Project{id: project_id}) do
+    from(log in LogLine,
+      as: :log,
+      join: r in assoc(log, :run),
+      as: :run,
+      join: wo in assoc(r, :work_order),
+      as: :work_order,
+      join: w in assoc(wo, :workflow),
+      as: :workflow,
+      where: w.project_id == ^project_id,
       order_by: [desc: log.timestamp]
     )
   end
@@ -354,7 +365,6 @@ defmodule Lightning.Invocation.Query do
   @log_line_filters %{
     timestamp_after: :utc_datetime_usec,
     timestamp_before: :utc_datetime_usec,
-    project_id: Ecto.UUID,
     workflow_id: Ecto.UUID,
     job_id: Ecto.UUID,
     work_order_id: Ecto.UUID,
@@ -381,9 +391,6 @@ defmodule Lightning.Invocation.Query do
 
   defp where_log_line({:timestamp_before, at}, query),
     do: from([log: log] in query, where: log.timestamp <= ^at)
-
-  defp where_log_line({:project_id, id}, query),
-    do: from([workflow: w] in query, where: w.project_id == ^id)
 
   defp where_log_line({:workflow_id, id}, query),
     do: from([work_order: wo] in query, where: wo.workflow_id == ^id)

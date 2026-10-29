@@ -22,6 +22,7 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.Scope
   alias Lightning.Workflows.Snapshot
   alias Lightning.WorkOrder
 
@@ -5223,15 +5224,65 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "paginate_projects_for_user/2" do
-    test "pages the projects the user is a member of, by name" do
+  describe "visible_project_ids/1" do
+    setup do
+      user = insert(:user)
+      member_of = insert(:project, project_users: [%{user_id: user.id}])
+      other = insert(:project)
+      %{user: user, member_of: member_of, other: other}
+    end
+
+    test "is the projects a person is a member of", %{
+      user: user,
+      member_of: member_of
+    } do
+      assert visible_ids(Scope.new(user)) == MapSet.new([member_of.id])
+    end
+
+    test "is the projects a superuser is a member of", %{member_of: member_of} do
+      superuser = insert(:user, role: :superuser)
+      insert(:project_user, project: member_of, user: superuser)
+
+      assert visible_ids(Scope.new(superuser)) == MapSet.new([member_of.id])
+    end
+
+    test "is every project to the service account", %{
+      member_of: member_of,
+      other: other
+    } do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      assert visible_ids(Scope.new(account)) ==
+               MapSet.new([member_of.id, other.id])
+    end
+
+    test "is its own project to a repo connection", %{member_of: member_of} do
+      connection = insert(:project_repo_connection, project: member_of)
+
+      assert visible_ids(Scope.new(connection)) == MapSet.new([member_of.id])
+    end
+
+    defp visible_ids(scope),
+      do: scope |> Projects.visible_project_ids() |> Repo.all() |> MapSet.new()
+  end
+
+  describe "paginate_projects_for/2" do
+    test "pages the live, top-level projects a person is a member of, by name" do
       user = insert(:user)
 
       insert(:project, name: "b-project", project_users: [%{user_id: user.id}])
       insert(:project, name: "a-project", project_users: [%{user_id: user.id}])
       insert(:project, name: "c-project")
 
-      page = Projects.paginate_projects_for_user(user, page: 2, page_size: 1)
+      insert(:project,
+        name: "d-scheduled",
+        scheduled_deletion: DateTime.utc_now(),
+        project_users: [%{user_id: user.id}]
+      )
+
+      page =
+        Projects.paginate_projects_for(Scope.new(user), page: 2, page_size: 1)
 
       assert %Scrivener.Page{
                page_number: 2,

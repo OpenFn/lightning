@@ -31,14 +31,13 @@ defmodule LightningWeb.RunLive.ShowTest do
       conn: conn,
       project: project
     } do
-      assert {:error, {:redirect, %{to: to, flash: flash}}} =
-               live(
-                 conn,
-                 ~p"/projects/#{project.id}/runs/#{Ecto.UUID.generate()}"
-               )
+      for run_id <- [Ecto.UUID.generate(), "not-a-uuid"] do
+        assert {:error, {:redirect, %{to: to, flash: flash}}} =
+                 live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
 
-      assert to == ~p"/projects/#{project.id}/history"
-      assert flash["error"] == "Run not found"
+        assert to == ~p"/projects/#{project.id}/history"
+        assert flash["error"] == "Run not found"
+      end
     end
   end
 

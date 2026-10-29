@@ -15,6 +15,24 @@ defmodule Lightning.CollectionsTest do
     end
   end
 
+  describe "get_collection_for_project/2" do
+    test "finds a collection only in its own project" do
+      %{id: id, project_id: project_id} = insert(:collection)
+
+      assert {:ok, %Collection{id: ^id}} =
+               Collections.get_collection_for_project(project_id, id)
+
+      for {project_id, id} <- [
+            {insert(:project).id, id},
+            {project_id, Ecto.UUID.generate()},
+            {project_id, "not-a-uuid"}
+          ] do
+        assert Collections.get_collection_for_project(project_id, id) ==
+                 {:error, :not_found}
+      end
+    end
+  end
+
   describe "get_collection/2" do
     test "returns the collection for the given project" do
       name = "shared-name"
