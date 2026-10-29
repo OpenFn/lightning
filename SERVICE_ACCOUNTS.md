@@ -123,13 +123,16 @@ Send the access token as `Authorization: Bearer <token>`. What it may do depends
 on the scopes it carries:
 
 - `users:read` finds users, and `users:write` creates and changes them.
-- `projects:write` reads, creates and changes projects.
+- `projects:write` reads, creates and changes projects, reads their workflows,
+  jobs, work orders, runs and log lines, and creates and changes their
+  workflows.
 - `collections:write` reads, creates and renames collections.
 - `credentials:write` reads, creates and replaces credentials.
 
-Ask for the scopes you need with the `scope` parameter when you request the
-token. Projects, collections and credentials have no read scopes: their `GET`
-routes need the same `:write` scope as their `PUT` routes.
+Name the scopes you need in the `scope` parameter when you request the token. A
+request without `scope`, or with an empty one, answers `invalid_scope`.
+Projects, collections and credentials have no read scopes: their `GET` routes
+need the same `:write` scope as their `PUT` routes.
 
 The service account acts on every project, as if it held every project role,
 owner included, but only as far as its token's scopes reach. It is never a
@@ -225,8 +228,9 @@ curl -X PATCH https://lightning.example.org/api/users/$USER_ID \
 ```
 
 A new role or password signs the user out of every browser session. The email
-can't be changed: a `PATCH` ignores it, as it ignores any key it doesn't take.
-The API can't delete or disable a user.
+can't be changed: a `PATCH` naming it answers 422 `invalid` with an
+`unknown_key` entry at `#/email`, as it does for any key it doesn't take. The
+API can't delete or disable a user.
 
 ## Manage projects
 
@@ -235,9 +239,10 @@ project under that id, or, if a project already has it, replaces its name and
 description. Both need `projects:write`.
 
 To create a project, send its `name` and `description`, its `members` as
-`{email, role}` pairs, and `notify`. Each member must already be a user.
-`notify` is `true` by default, and decides whether Lightning emails the members
-it adds. `members` and `notify` only count when the project is created:
+`{email, role}` pairs, and `notify`. Each member must already be a user, and
+exactly one must be the `owner`. `notify` is `true` by default, and decides
+whether Lightning emails the members it adds. `members` and `notify` only count
+when the project is created:
 
 ```bash
 curl -X PUT https://lightning.example.org/api/projects/$PROJECT_ID \
@@ -256,6 +261,32 @@ curl -X PUT https://lightning.example.org/api/projects/$PROJECT_ID \
 
 Lightning answers 201 with the project and its members when it creates one, and
 200 when it replaces one.
+
+`GET /api/provision/:id` describes a project for provisioning as JSON, and
+`GET /api/provision/yaml?id=` as YAML. Both need `projects:write`. The service
+account can't provision a project: `POST /api/provision` answers 403
+`forbidden`, whatever project the body names. Create a project with
+`PUT /api/projects/:id` instead.
+
+## Read workflows, runs and logs
+
+With `projects:write`, the token reads the workflows, jobs, work orders, runs
+and log lines of every project, and creates and changes workflows through
+`/api/projects/:project_id/workflows`. `GET /api/workflows` and `/api/jobs`
+cover every project, sandboxes and projects scheduled for deletion included.
+`GET /api/projects` lists only live top-level projects.
+
+`GET /api/work_orders`, `/api/runs` and `/api/log_lines` need a `project_id`,
+since those tables grow with every run:
+
+```bash
+curl "https://lightning.example.org/api/runs?project_id=$PROJECT_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+Without one, Lightning answers 400 `invalid_parameter` with a `required` entry
+whose `parameter` is `project_id`. The nested routes, such as
+`GET /api/projects/:project_id/runs`, name the project in the path.
 
 ## Manage collections
 
@@ -309,9 +340,15 @@ curl -X PUT https://lightning.example.org/api/credentials/$CREDENTIAL_ID \
 - The response never includes the credential's body. It lists every project the
   credential is linked to, but names a linked project only if the token also
   holds `projects:write`.
-- A service account can write credentials but never delete one. Listing,
-  creating with `POST` and deleting are for people: a service account's token
-  gets a 401 `invalid_token` from those routes.
+- Replacing a credential keeps its owner. A `PUT` naming a different owner
+  answers 422 `invalid` with a `not_allowed` entry at `#/owner`, and changes
+  nothing.
+- `GET /api/projects/:project_id/credentials` lists the credentials linked to a
+  project.
+- A service account can write credentials but never delete one. Listing your own
+  credentials with `GET /api/credentials`, creating with `POST`, which makes the
+  caller the owner, and deleting are for people: they answer a service account
+  403 `forbidden`. It creates a credential with `PUT`, naming the owner.
 
 ## When Lightning refuses
 
@@ -323,11 +360,13 @@ as `application/problem+json` when the request's `Accept` names that. Branch on
 
 When the problem lies in particular parts of the request, the document also has
 `errors`, a list of entries. Each entry has a `code` and a `detail`, and says
-where the problem is: a `pointer` into the body, as in `#/members/0/email`, or
-the name of a query `parameter`. Entries never quote a value from the request.
+where the problem is: a `pointer` into the body, as in `#/members/0/email`, the
+name of a query `parameter`, or a `path` segment, as in `"path": "id"`. Entries
+never quote a value from the request.
 
 - 400 `malformed`: the body isn't a JSON object.
-- 400 `invalid_parameter`: a query parameter isn't valid. `errors` names it.
+- 400 `invalid_parameter`: a query parameter or an id in the path isn't valid,
+  such as an id that isn't a UUID. `errors` names it.
 - 400 `invalid_request`, with
   `WWW-Authenticate: Bearer error="invalid_request"`: the `Authorization` header
   has no token after `Bearer`, has whitespace inside the token, or was sent
@@ -344,20 +383,24 @@ the name of a query `parameter`. Entries never quote a value from the request.
   request needed, as in `scope="credentials:write"`: the token lacks that scope.
   Lightning checks this first, so it comes before any 404 or 422, whether the
   project is missing or the body is wrong.
-- 404 `not_found`: the project, collection, credential or user doesn't exist, or
-  the id in the path isn't a UUID.
-- 409 `scheduled_for_deletion`: the project (on the projects and collections
-  routes) or the credential (on a credential `PUT`) is scheduled for deletion.
-  Lightning refuses changes until the deletion is cancelled or completes.
-- 409 `id_taken`: the id already belongs to a collection in another project, or
-  to a credential with a different owner. Lightning never moves either.
+- 403 `forbidden`: the service account may not do this, even with the scope the
+  route needs: provisioning, listing its own credentials, creating a credential
+  with `POST`, or deleting one.
+- 404 `not_found`: the project, workflow, job, run, work order, collection,
+  credential or user the id names doesn't exist.
+- 409 `scheduled_for_deletion`: the project the request acts on, or the
+  credential on a credential `PUT`, is scheduled for deletion. Lightning refuses
+  the request until the deletion is cancelled or completes.
+- 409 `id_taken`: the id already belongs to a collection in another project.
+  Lightning never moves a collection.
 - 415 `unsupported_media_type`: the body isn't sent as JSON.
 - 422 `invalid`: the body doesn't fit. `errors` has an entry for each field that
   is wrong. A `taken` entry means the value must be unique and is already in
   use: a user's email, a collection's name within its project, or a credential's
-  name among its owner's credentials. On the projects, collections and
-  credentials routes it also has one for each key the route doesn't accept. The
-  users routes ignore keys they don't take.
+  name among its owner's credentials. A `not_allowed` entry at `#/owner` means a
+  credential `PUT` named a different owner than the credential has. On the
+  users, projects, collections and credentials routes it also has an
+  `unknown_key` entry for each key the route doesn't accept.
 - 503 `not_ready`, with `Retry-After`: Lightning can't check a credential's
   schema yet. Try again after the number of seconds it gives.
 
