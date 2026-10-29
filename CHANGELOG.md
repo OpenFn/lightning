@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.20.0-pre1] - 2026-10-29
+
+### Changed
+
 - The GitHub sync "Last sync" and "Last deploy" statuses only show runs from
   after the repo was connected.
 - The GitHub sync "Remove integration" dialog says which files stay in the repo,
