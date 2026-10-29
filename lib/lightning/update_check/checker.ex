@@ -22,8 +22,10 @@ defmodule Lightning.UpdateCheck.Checker do
 
   - `:name` - registered name, defaults to `#{inspect(__MODULE__)}`; pass
     `nil` for an anonymous process
+  - `:config` - the `config :lightning, :update_check` keyword list, passed
+    to `Lightning.UpdateCheck.check/2`; required unless `:check_fun` is given
   - `:check_fun` - 0-arity function returning `{:ok, status} | {:error, _}`,
-    defaults to `&Lightning.UpdateCheck.check/0`
+    defaults to checking with `:config`
   - `:interval` - milliseconds between checks
   - `:initial_delay` - milliseconds before the first check
   """
@@ -62,8 +64,14 @@ defmodule Lightning.UpdateCheck.Checker do
 
   @impl true
   def init(opts) do
+    # Checks run unlinked under this supervisor, so a check that dies, for any
+    # reason, arrives as a :DOWN rather than taking the checker with it.
+    {:ok, task_supervisor} = Task.Supervisor.start_link()
+
     state = %{
-      check_fun: Keyword.get(opts, :check_fun, &Lightning.UpdateCheck.check/0),
+      task_supervisor: task_supervisor,
+      check_fun:
+        Keyword.get_lazy(opts, :check_fun, fn -> default_check(opts) end),
       interval: Keyword.fetch!(opts, :interval),
       status: nil,
       task: nil,
@@ -104,16 +112,24 @@ defmodule Lightning.UpdateCheck.Checker do
 
   def handle_info(_message, state), do: {:noreply, state}
 
+  defp default_check(opts) do
+    config = Keyword.fetch!(opts, :config)
+    fn -> Lightning.UpdateCheck.check(config) end
+  end
+
   defp start_check(%{task: nil} = state) do
     check_fun = state.check_fun
 
-    # A raise inside a linked task would take the checker down with it.
+    # Catching here turns a failed check into an ordinary error result instead
+    # of a task crash report.
     task =
-      Task.async(fn ->
+      Task.Supervisor.async_nolink(state.task_supervisor, fn ->
         try do
           check_fun.()
         rescue
           error -> {:error, error}
+        catch
+          kind, reason -> {:error, {kind, reason}}
         end
       end)
 

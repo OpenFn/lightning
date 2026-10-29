@@ -32,8 +32,8 @@ defmodule Lightning.UpdateCheck do
 
   @type status :: %{
           current: String.t(),
-          latest: String.t() | nil,
-          latest_tag: String.t() | nil,
+          latest: String.t(),
+          latest_tag: String.t(),
           update_available?: boolean(),
           registry: String.t(),
           repository: String.t(),
@@ -43,8 +43,8 @@ defmodule Lightning.UpdateCheck do
         }
 
   @type worker_status :: %{
-          latest: String.t() | nil,
-          latest_tag: String.t() | nil,
+          latest: String.t(),
+          latest_tag: String.t(),
           registry: String.t(),
           repository: String.t()
         }
@@ -53,18 +53,22 @@ defmodule Lightning.UpdateCheck do
   Queries the registry and returns the update status.
 
   `config` takes the keys set under `config :lightning, :update_check`:
-  `:registry`, `:repository`, `:tag`, `:instructions_url`, `:worker_registry` and `:worker_repository`. `current`
-  is the running version, defaulting to the app's own.
+  `:registry`, `:repository`, `:tag`, `:instructions_url`, `:worker_registry`
+  and `:worker_repository`. `current` is the running version, defaulting to
+  the app's own.
 
-  Workers are only checked when `:worker_repository` is set. A failed worker
+  Workers are only checked when `:worker_repository` is set, and always
+  against `:worker_registry`, never the app's `:registry`. A failed worker
   lookup is logged and leaves `:worker` as `nil` rather than failing the
   whole check.
+
+  When no release can be found, because there are no full-release tags or
+  none among the newest shares the channel tag's digest, the check fails
+  with `:no_release_found`. Reporting that as up to date would hide an
+  instance that is behind.
   """
   @spec check(keyword(), String.t()) :: {:ok, status()} | {:error, term()}
-  def check(
-        config \\ Lightning.Config.update_check(),
-        current \\ current_version()
-      ) do
+  def check(config, current \\ current_version()) do
     with {:ok, latest} <- latest_release(config) do
       status =
         config
@@ -140,11 +144,9 @@ defmodule Lightning.UpdateCheck do
       worker_config = worker_config(config)
 
       case latest_release(worker_config) do
-        {:ok, latest} ->
-          {latest_tag, latest_version} = latest || {nil, nil}
-
+        {:ok, {latest_tag, latest_version}} ->
           %{
-            latest: latest_version && to_string(latest_version),
+            latest: to_string(latest_version),
             latest_tag: latest_tag,
             registry: worker_config[:registry],
             repository: worker_config[:repository]
@@ -160,13 +162,14 @@ defmodule Lightning.UpdateCheck do
   # Workers always follow the `latest` tag.
   defp worker_config(config) do
     [
-      registry: config[:worker_registry] || config[:registry],
+      registry: config[:worker_registry],
       repository: config[:worker_repository],
       tag: "latest"
     ]
   end
 
-  defp find_latest(_registry, [], _channel_tag, _tags), do: {:ok, nil}
+  defp find_latest(_registry, [], _channel_tag, _tags),
+    do: {:error, :no_release_found}
 
   defp find_latest(registry, [newest | _] = stable, channel_tag, tags) do
     if channel_tag in tags do
@@ -183,26 +186,27 @@ defmodule Lightning.UpdateCheck do
     end
   end
 
-  defp match_digest(_registry, _candidates, nil), do: {:ok, nil}
+  defp match_digest(_registry, _candidates, nil),
+    do: {:error, :no_release_found}
 
   defp match_digest(registry, candidates, channel_digest) do
-    Enum.reduce_while(candidates, {:ok, nil}, fn {tag, _version} = candidate,
-                                                 {:ok, nil} ->
-      case Registry.digest(registry, tag) do
-        {:ok, ^channel_digest, _registry} -> {:halt, {:ok, candidate}}
-        {:ok, _other, _registry} -> {:cont, {:ok, nil}}
-        {:error, reason} -> {:halt, {:error, reason}}
+    Enum.reduce_while(
+      candidates,
+      {:error, :no_release_found},
+      fn {tag, _version} = candidate, not_found ->
+        case Registry.digest(registry, tag) do
+          {:ok, ^channel_digest, _registry} -> {:halt, {:ok, candidate}}
+          {:ok, _other, _registry} -> {:cont, not_found}
+          {:error, reason} -> {:halt, {:error, reason}}
+        end
       end
-    end)
+    )
   end
 
-  defp build_status(config, current, latest) do
-    {latest_tag, latest_version} = latest || {nil, nil}
-    latest_string = latest_version && to_string(latest_version)
-
+  defp build_status(config, current, {latest_tag, latest_version}) do
     %{
       current: current,
-      latest: latest_string,
+      latest: to_string(latest_version),
       latest_tag: latest_tag,
       update_available?: Releases.newer?(latest_version, current),
       registry: config[:registry],

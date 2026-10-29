@@ -1002,6 +1002,26 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "update_check interval_hours" do
+    test "defaults to 6" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :update_check)[:interval_hours] == 6
+    end
+
+    test "must be a positive integer" do
+      for hours <- ["0", "-1"] do
+        Dotenvy.source([%{"UPDATE_CHECK_INTERVAL_HOURS" => hours}])
+
+        assert_raise RuntimeError,
+                     ~r/UPDATE_CHECK_INTERVAL_HOURS must be a positive integer/,
+                     fn ->
+                       Bootstrap.configure()
+                     end
+      end
+    end
+  end
+
   describe "max_sandbox_nesting_depth" do
     test "defaults to 5" do
       Dotenvy.source([%{}])

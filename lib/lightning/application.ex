@@ -213,7 +213,8 @@ defmodule Lightning.Application do
       config = Lightning.Config.update_check()
 
       {Lightning.UpdateCheck.Checker,
-       interval: :timer.hours(config[:interval_hours] || 6),
+       config: config,
+       interval: :timer.hours(config[:interval_hours]),
        initial_delay: :timer.minutes(1) + :rand.uniform(:timer.seconds(30))}
     end
   end

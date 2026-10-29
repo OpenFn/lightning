@@ -864,7 +864,18 @@ defmodule Lightning.Config.Bootstrap do
         env!("UPDATE_CHECK_REGISTRY", :string, "https://registry-1.docker.io"),
       repository: env!("UPDATE_CHECK_REPOSITORY", :string, "openfn/lightning"),
       tag: env!("UPDATE_CHECK_TAG", :string, "latest"),
-      interval_hours: env!("UPDATE_CHECK_INTERVAL_HOURS", :integer, 6),
+      interval_hours:
+        env!("UPDATE_CHECK_INTERVAL_HOURS", :integer, 6)
+        |> then(fn hours ->
+          if hours <= 0 do
+            raise """
+            UPDATE_CHECK_INTERVAL_HOURS must be a positive integer. To turn
+            the update check off, set UPDATE_CHECK_ENABLED=false instead.
+            """
+          end
+
+          hours
+        end),
       instructions_url: env!("UPDATE_INSTRUCTIONS_URL", :string, nil),
       worker_registry:
         env!(
