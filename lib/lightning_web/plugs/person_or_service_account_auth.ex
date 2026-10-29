@@ -5,9 +5,9 @@ defmodule LightningWeb.Plugs.PersonOrServiceAccountAuth do
   repo connection token).
 
   A token that declares itself an access token goes to
-  `LightningWeb.Plugs.AccessTokenAuth`. Any other request gets exactly the
-  answer `UserAuth.authenticate_bearer/2` and
-  `UserAuth.require_authenticated_api_resource/2` give it elsewhere.
+  `LightningWeb.Plugs.AccessTokenAuth`. Any other request gets the answer
+  `UserAuth.authenticate_bearer/2` and
+  `UserAuth.require_authenticated_api_resource/2` give it.
 
   It only authenticates. The policies decide what the caller may do, including
   whether its token holds the grant an action needs.

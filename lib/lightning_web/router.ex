@@ -149,17 +149,6 @@ defmodule LightningWeb.Router do
     put "/projects/:project_id/collections/:id",
         API.CollectionController,
         :update
-  end
-
-  scope "/api", LightningWeb, as: :api do
-    pipe_through [:api]
-
-    post "/users/register", API.RegistrationController, :create
-
-    pipe_through [
-      :authenticate_bearer,
-      :require_authenticated_api_resource
-    ]
 
     get "/provision/yaml", API.ProvisioningController, :show_yaml
     resources "/provision", API.ProvisioningController, only: [:create, :show]
@@ -184,6 +173,12 @@ defmodule LightningWeb.Router do
     resources "/work_orders", API.WorkOrdersController, only: [:index, :show]
     resources "/runs", API.RunController, only: [:index, :show]
     resources "/log_lines", API.LogLinesController, only: [:index]
+  end
+
+  scope "/api", LightningWeb, as: :api do
+    pipe_through [:api]
+
+    post "/users/register", API.RegistrationController, :create
   end
 
   ## Cookie-authenticated JSON, for the app's own React components

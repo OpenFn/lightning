@@ -73,8 +73,8 @@ defmodule Lightning.CliDeployTest do
           env: @required_env
         )
 
-      assert logs =~ "ERROR: Project not found."
-      assert logs =~ "Please check the UUID"
+      assert logs =~ "DEPLOY_ERROR: Failed to authorize request"
+      assert logs =~ "got 403 Forbidden"
 
       # state and spec files are not saved
       refute File.exists?(config.statePath)

@@ -81,7 +81,6 @@ defmodule LightningWeb.AuthTest do
         access_token_api: "/api/users",
         person_or_service_account_api:
           "/api/projects/7b0c1b4c-0c62-4b8e-9a39-0a6c9e1f2d11",
-        api: "/api/projects",
         authenticated_api: "/collections/a-collection"
       ] do
     describe "the #{pipeline} pipeline, GET #{path}" do
@@ -301,17 +300,6 @@ defmodule LightningWeb.AuthTest do
          %{conn: conn, tokens: tokens, project: project} do
       assert_each_kind(conn, tokens, ~p"/api/projects/#{project.id}",
         service_account: :logs_in,
-        expired_service_account: :invalid_token,
-        personal: :logs_in,
-        repo_connection: {:insufficient_scope, "projects:write"},
-        run: :invalid_token
-      )
-    end
-
-    test "the :api scope takes a personal or repo connection token only",
-         %{conn: conn, tokens: tokens} do
-      assert_each_kind(conn, tokens, ~p"/api/projects",
-        service_account: :invalid_token,
         expired_service_account: :invalid_token,
         personal: :logs_in,
         repo_connection: {:insufficient_scope, "projects:write"},
