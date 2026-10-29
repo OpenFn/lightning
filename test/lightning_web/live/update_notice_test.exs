@@ -13,7 +13,7 @@ defmodule LightningWeb.UpdateNoticeTest do
   @behind %{
     current: "2.19.1",
     latest: "2.19.2",
-    latest_tag: "v2.19.2",
+    latest_tag: "2.19.2",
     update_available?: true,
     registry: "https://registry-1.docker.io",
     repository: "openfn/lightning",
@@ -22,7 +22,7 @@ defmodule LightningWeb.UpdateNoticeTest do
     checked_at: ~U[2026-10-29 07:00:00Z],
     worker: %{
       latest: "1.30.0",
-      latest_tag: "v1.30.0",
+      latest_tag: "1.30.0",
       registry: "https://registry-1.docker.io",
       repository: "openfn/ws-worker"
     }
