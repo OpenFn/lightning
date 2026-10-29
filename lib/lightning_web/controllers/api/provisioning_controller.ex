@@ -27,8 +27,6 @@ defmodule LightningWeb.API.ProvisioningController do
 
   action_fallback(FallbackController)
 
-  @provision {:provisioning, :provision_project}
-
   plug LightningWeb.Plugs.AuthorizeAction,
        {:provisioning, :provision_project}
        when action == :create
@@ -52,14 +50,17 @@ defmodule LightningWeb.API.ProvisioningController do
   ## Returns
 
   - `201 Created` with project JSON on success
-  - `404 Not Found` if the body names a project the caller has no standing on
-  - `403 Forbidden` if the caller lacks the role or grant to provision it, or
-    to create a project
+  - `403 Forbidden` if the body names a project the caller has no standing on,
+    or the caller lacks the role or grant to provision it, or to create a
+    project. The service account always hears `forbidden`, or, without
+    `projects:write`, `insufficient_scope` naming it
   - `409 Conflict` to a caller who may provision the project, if it is
     scheduled for deletion, or if another request changed what it writes
   - `400 Bad Request` if the body is not a JSON object
-  - `422 Unprocessable Content` when the document is not valid, including an
-    `id` that isn't a UUID or a value that must be unique and is taken
+  - `422 Unprocessable Content` when the document is not valid, including one
+    without an `id`, a value that must be unique and is taken, or, to a caller
+    who may create projects, a body `id` that isn't a UUID. The `id` is read
+    from the body only, never the query.
   - `402 Payment Required` when an otherwise valid document would exceed a
     plan limit
   - `503 Service Unavailable` while the adaptor catalogue is still loading
@@ -85,40 +86,27 @@ defmodule LightningWeb.API.ProvisioningController do
   """
   @spec create(Plug.Conn.t(), map()) ::
           Plug.Conn.t() | {:error, term()} | {:error, term(), Message.t()}
-  def create(conn, params) do
-    with {:ok, project} <- provision_target(conn.assigns.scope, params["id"]),
-         :ok <- Request.check_object(params),
+  def create(conn, _params) do
+    body = conn.body_params
+
+    with {:ok, project} <-
+           Target.project_or_new(
+             conn.assigns.scope,
+             {[:id], body["id"]},
+             {:provisioning, :provision_project},
+             {:provisioning, :provision_new_project}
+           ),
+         :ok <- Request.check_object(body),
          {:ok, project} <-
            Provisioner.import_document(
              project,
              conn.assigns.current_resource,
-             params
+             body
            ) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/provision/#{project.id}")
       |> render("create.json", project: project)
-    end
-  end
-
-  # The project the body names is the target, as if it were in the path. An id
-  # that isn't a UUID names nothing, so the request is a create. A caller who may
-  # not create projects is refused that, and anyone else hears that the id is a
-  # bad value. It is refused here rather than cast, since `Ecto.UUID.cast/1`
-  # takes any 16-byte string and would create the project under an id the body
-  # doesn't name.
-  defp provision_target(scope, nil),
-    do: Target.project_or_new(scope, nil, @provision)
-
-  defp provision_target(scope, id) do
-    case Request.path_id(id) do
-      {:ok, id} ->
-        Target.project_or_new(scope, id, @provision)
-
-      {:error, :not_found} ->
-        with {:ok, _new} <- Target.project_or_new(scope, nil, @provision),
-             do:
-               Errors.refuse([Errors.entry([:id], {"is invalid", code: :type})])
     end
   end
 
@@ -140,11 +128,12 @@ defmodule LightningWeb.API.ProvisioningController do
   ## Returns
 
   - `200 OK` with project JSON on success
-  - `400 Bad Request` if `snapshots` isn't a list of UUIDs
-  - `404 Not Found` if the project doesn't exist or the caller has no standing
-    on it
-  - `403 Forbidden` if the caller lacks the grant, or hasn't met the
-    project's MFA requirement
+  - `400 Bad Request` if `snapshots` isn't a list of UUIDs, or to a superuser
+    or the service account if `id` isn't a UUID
+  - `403 Forbidden` if the caller has no standing on the project, lacks the
+    grant, or hasn't met the project's MFA requirement
+  - `404 Not Found` to a superuser or the service account, if the project
+    doesn't exist
   - `409 Conflict` to a caller who may see the project, if it is scheduled
     for deletion
 
@@ -157,8 +146,8 @@ defmodule LightningWeb.API.ProvisioningController do
       GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d?snapshots[]=6f1e2d3c-4b5a-4968-8776-5a4b3c2d1e0f
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def show(conn, %{"id" => id} = params) do
-    with {:ok, project} <- describe_target(conn.assigns.scope, id),
+  def show(conn, params) do
+    with {:ok, project} <- describe_target(conn),
          {:ok, snapshot_ids} <- fetch_snapshot_ids(params) do
       ensure_workflows_have_versions(project)
 
@@ -198,11 +187,12 @@ defmodule LightningWeb.API.ProvisioningController do
 
   - `200 OK` with YAML content on success
   - `400 Bad Request` without an `id`
-  - `400 Bad Request` if `snapshots` isn't a list of UUIDs
-  - `404 Not Found` if the project doesn't exist or the caller has no standing
-    on it
-  - `403 Forbidden` if the caller lacks the grant, or hasn't met the
-    project's MFA requirement
+  - `400 Bad Request` if `snapshots` isn't a list of UUIDs, or to a superuser
+    or the service account if `id` isn't a UUID
+  - `403 Forbidden` if the caller has no standing on the project, lacks the
+    grant, or hasn't met the project's MFA requirement
+  - `404 Not Found` to a superuser or the service account, if the project
+    doesn't exist
   - `409 Conflict` to a caller who may see the project, if it is scheduled
     for deletion
 
@@ -215,8 +205,8 @@ defmodule LightningWeb.API.ProvisioningController do
       GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.yaml?snapshots[]=6f1e2d3c-4b5a-4968-8776-5a4b3c2d1e0f
   """
   @spec show_yaml(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def show_yaml(conn, %{"id" => id} = params) do
-    with {:ok, project} <- describe_target(conn.assigns.scope, id),
+  def show_yaml(conn, %{"id" => _} = params) do
+    with {:ok, project} <- describe_target(conn),
          {:ok, snapshot_ids} <- fetch_snapshot_ids(params),
          {:ok, yaml} <-
            Projects.export_project(:yaml, project.id, snapshot_ids, :v1) do
@@ -249,6 +239,11 @@ defmodule LightningWeb.API.ProvisioningController do
     end
   end
 
-  defp describe_target(scope, id),
-    do: Target.project(scope, id, {:provisioning, :describe_project})
+  defp describe_target(conn) do
+    Target.project(
+      conn.assigns.scope,
+      Request.param(conn, "id"),
+      {:provisioning, :describe_project}
+    )
+  end
 end

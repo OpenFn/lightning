@@ -314,12 +314,16 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
       conn
       |> get(~p"/api/projects/#{planted["name"]}")
       |> refute_sentinel()
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(400, :invalid_parameter, [
+        not_a_uuid_entry(%{"path" => "id"})
+      ])
 
       conn
       |> put_project(planted["name"], planted)
       |> refute_sentinel()
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(400, :invalid_parameter, [
+        not_a_uuid_entry(%{"path" => "id"})
+      ])
 
       conn
       |> put_project(Ecto.UUID.generate(), planted)

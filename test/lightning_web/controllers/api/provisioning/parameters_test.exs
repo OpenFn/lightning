@@ -19,13 +19,29 @@ defmodule LightningWeb.API.ProvisioningParametersTest do
       }
     end
 
-    test "a project id in the body that isn't a UUID is a create, which a caller who may not create projects is refused",
+    test "a project id in the body that isn't a UUID is refused to a person who isn't a superuser, and invalid at the id to a superuser",
          %{conn: conn} do
       %{body: body} = valid_payload("not-a-uuid")
+      superuser = insert(:user, role: :superuser)
 
-      conn
-      |> post(~p"/api/provision", body)
-      |> assert_problem(403, :forbidden, [])
+      superuser_conn =
+        put_req_header(
+          conn,
+          "authorization",
+          "Bearer " <> Lightning.Accounts.generate_api_token(superuser)
+        )
+
+      for {conn, status, code, entries} <- [
+            {conn, 403, :forbidden, []},
+            {superuser_conn, 422, :invalid,
+             [
+               not_a_uuid_entry(%{"pointer" => "#/id"})
+             ]}
+          ] do
+        conn
+        |> post(~p"/api/provision", body)
+        |> assert_problem(status, code, entries)
+      end
     end
 
     @tag login_as: "superuser"
@@ -40,7 +56,7 @@ defmodule LightningWeb.API.ProvisioningParametersTest do
         conn
         |> post(~p"/api/provision", Map.put(body, "id", id))
         |> assert_problem(422, :invalid, [
-          %{"pointer" => "#/id", "code" => "type", "detail" => "is invalid"}
+          not_a_uuid_entry(%{"pointer" => "#/id"})
         ])
       end
 
@@ -58,15 +74,34 @@ defmodule LightningWeb.API.ProvisioningParametersTest do
       |> assert_problem(400, :malformed, [])
     end
 
-    test "GET answers an id that isn't there, or a yaml id that isn't a UUID, as not found",
-         %{conn: conn} do
-      for path <- [
-            ~p"/api/provision/#{Ecto.UUID.generate()}",
-            ~p"/api/provision/yaml?#{%{id: Ecto.UUID.generate()}}",
-            ~p"/api/provision/yaml?#{%{id: "not-a-uuid"}}"
-          ] do
-        conn |> get(path) |> assert_problem(404, :not_found, [])
+    test "POST reads the project's id from the body only, never the query", %{
+      conn: conn
+    } do
+      superuser = insert(:user, role: :superuser)
+
+      existing =
+        insert(:project,
+          name: "a",
+          project_users: [%{user_id: superuser.id, role: :owner}]
+        )
+
+      superuser = assign_bearer(conn, superuser)
+      fresh = Ecto.UUID.generate()
+
+      for id <- [existing.id, fresh, "bad"] do
+        superuser
+        |> post(~p"/api/provision?#{%{id: id}}", %{"name" => "x"})
+        |> assert_problem(422, :invalid, [
+          %{
+            "pointer" => "#/id",
+            "code" => "required",
+            "detail" => "can't be blank"
+          }
+        ])
       end
+
+      assert Repo.reload!(existing).name == "a"
+      refute Repo.get(Lightning.Projects.Project, fresh)
     end
 
     test "GET yaml without an id names the parameter", %{conn: conn} do

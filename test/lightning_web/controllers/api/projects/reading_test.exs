@@ -64,6 +64,27 @@ defmodule LightningWeb.API.Projects.ReadingTest do
 
       assert ids == [other_project.id]
     end
+
+    test "lists only the projects a superuser belongs to", %{
+      conn: conn,
+      project: project
+    } do
+      superuser = insert(:user, role: :superuser)
+
+      member_project =
+        insert(:project, project_users: [%{user_id: superuser.id}])
+
+      ids =
+        conn
+        |> assign_bearer(superuser)
+        |> get(~p"/api/projects")
+        |> json_response(200)
+        |> Map.fetch!("data")
+        |> Enum.map(& &1["id"])
+
+      assert ids == [member_project.id]
+      refute project.id in ids
+    end
   end
 
   describe "showing, with a person's token" do

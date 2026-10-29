@@ -12,7 +12,7 @@ defmodule LightningWeb.API.ProvisioningRefusalsTest do
   describe "who may reach it, reading" do
     setup [:assign_bearer_for_api]
 
-    test "every role reads the project and a non-member is told it doesn't exist",
+    test "every role reads the project and a non-member is refused",
          %{conn: conn, user: user} do
       for role <- [:owner, :admin, :editor, :viewer],
           path <- [:state, :yaml] do
@@ -28,7 +28,7 @@ defmodule LightningWeb.API.ProvisioningRefusalsTest do
       for path <- [:state, :yaml] do
         conn
         |> get(read_path(path, project))
-        |> assert_problem(404, :not_found, [])
+        |> assert_problem(403, :forbidden, [])
       end
     end
 
@@ -49,7 +49,62 @@ defmodule LightningWeb.API.ProvisioningRefusalsTest do
         conn
         |> put_bearer(other.access_token)
         |> get(read_path(path, project))
-        |> assert_problem(404, :not_found, [])
+        |> assert_problem(403, :forbidden, [])
+      end
+    end
+
+    test "a caller who may not read a project gets the same 403 for it, an unknown id and a malformed one; a superuser hears 404 or 400 only for an id that names no project",
+         %{conn: stranger} do
+      unmet_mfa = insert(:user)
+
+      requires_mfa =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: unmet_mfa.id, role: :owner}]
+        )
+
+      repo_connection =
+        put_bearer(
+          build_conn(),
+          insert(:project_repo_connection, project: insert(:project)).access_token
+        )
+
+      project = insert(:project)
+      superuser = assign_bearer(build_conn(), insert(:user, role: :superuser))
+      unmet_mfa = assign_bearer(build_conn(), unmet_mfa)
+      unknown = Ecto.UUID.generate()
+
+      for {path, location} <- [
+            state: %{"path" => "id"},
+            yaml: %{"parameter" => "id"}
+          ],
+          {caller, id, status, code, entries} <- [
+            {stranger, project.id, 403, :forbidden, []},
+            {stranger, unknown, 403, :forbidden, []},
+            {stranger, "not-a-uuid", 403, :forbidden, []},
+            {unmet_mfa, requires_mfa.id, 403, :forbidden, []},
+            {unmet_mfa, unknown, 403, :forbidden, []},
+            {unmet_mfa, "not-a-uuid", 403, :forbidden, []},
+            {repo_connection, unknown, 403, :forbidden, []},
+            {repo_connection, "not-a-uuid", 403, :forbidden, []},
+            {superuser, project.id, 403, :forbidden, []},
+            {superuser, unknown, 404, :not_found, []},
+            {superuser, "not-a-uuid", 400, :invalid_parameter,
+             [not_a_uuid_entry(location)]}
+          ] do
+        caller
+        |> get(read_path(path, %{id: id}))
+        |> assert_problem(status, code, entries)
+      end
+
+      for {caller, status, code, entries} <- [
+            {stranger, 403, :forbidden, []},
+            {superuser, 400, :invalid_parameter,
+             [not_a_uuid_entry(%{"parameter" => "id"})]}
+          ] do
+        caller
+        |> get(~p"/api/provision/yaml?#{%{id: ["x"]}}")
+        |> assert_problem(status, code, entries)
       end
     end
   end
@@ -57,14 +112,14 @@ defmodule LightningWeb.API.ProvisioningRefusalsTest do
   describe "who may reach it, importing" do
     setup [:assign_bearer_for_api]
 
-    test "owners and admins import; editors and viewers are forbidden; a non-member is told the project doesn't exist",
+    test "owners and admins import; editors, viewers and non-members are forbidden",
          %{conn: conn, user: user} do
       for {member_role, refusal} <- [
             {:owner, nil},
             {:admin, nil},
             {:editor, {403, :forbidden}},
             {:viewer, {403, :forbidden}},
-            {nil, {404, :not_found}}
+            {nil, {403, :forbidden}}
           ] do
         project =
           insert(:project,
@@ -105,17 +160,67 @@ defmodule LightningWeb.API.ProvisioningRefusalsTest do
 
       conn
       |> post(~p"/api/provision", other_body)
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(403, :forbidden, [])
     end
 
-    test "a user who isn't a superuser can't create a new project", %{
-      conn: conn
-    } do
-      %{body: body} = valid_payload()
+    test "a caller who may not import gets the same 403 for an existing project, an unknown id, a malformed one and none, and nothing is written",
+         %{conn: conn} do
+      editor = insert(:user)
+      viewer = insert(:user)
+      unmet_mfa = insert(:user)
 
-      conn
-      |> post(~p"/api/provision", body)
-      |> assert_problem(403, :forbidden, [])
+      insert(:project,
+        project_users: [
+          %{user_id: editor.id, role: :editor},
+          %{user_id: viewer.id, role: :viewer}
+        ]
+      )
+
+      requires_mfa =
+        insert(:project,
+          name: "requires-mfa",
+          requires_mfa: true,
+          project_users: [%{user_id: unmet_mfa.id, role: :owner}]
+        )
+
+      repo_connection =
+        put_bearer(
+          build_conn(),
+          insert(:project_repo_connection, project: insert(:project)).access_token
+        )
+
+      editor = assign_bearer(build_conn(), editor)
+      viewer = assign_bearer(build_conn(), viewer)
+      unmet_mfa = assign_bearer(build_conn(), unmet_mfa)
+      unknown = Ecto.UUID.generate()
+      projects = Lightning.Repo.aggregate(Lightning.Projects.Project, :count)
+
+      for {caller, path, id} <- [
+            {editor, ~p"/api/provision", unknown},
+            {editor, ~p"/api/provision", "not-a-uuid"},
+            {viewer, ~p"/api/provision", unknown},
+            {viewer, ~p"/api/provision", "not-a-uuid"},
+            {unmet_mfa, ~p"/api/provision", requires_mfa.id},
+            {unmet_mfa, ~p"/api/provision", unknown},
+            {unmet_mfa, ~p"/api/provision", "not-a-uuid"},
+            {repo_connection, ~p"/api/provision", unknown},
+            {repo_connection, ~p"/api/provision", "not-a-uuid"},
+            {conn, ~p"/api/provision", unknown},
+            {conn, ~p"/api/provision", nil},
+            {conn, ~p"/api/provision?#{%{id: "not-a-uuid"}}", nil}
+          ] do
+        %{body: body} = valid_payload(unknown)
+        body = if id, do: Map.put(body, "id", id), else: Map.delete(body, "id")
+
+        caller
+        |> post(path, body)
+        |> assert_problem(403, :forbidden, [])
+      end
+
+      assert Lightning.Repo.aggregate(Lightning.Projects.Project, :count) ==
+               projects
+
+      assert Lightning.Repo.reload!(requires_mfa).name == "requires-mfa"
     end
   end
 
@@ -180,13 +285,15 @@ defmodule LightningWeb.API.ProvisioningRefusalsTest do
       end
     end
 
-    test "a non-member is told nothing about the deletion", %{project: project} do
+    test "a non-member is refused, and told nothing about the deletion", %{
+      project: project
+    } do
       %{conn: outsider} = assign_bearer_for_api(%{conn: build_conn()})
 
       for path <- [:state, :yaml] do
         outsider
         |> get(read_path(path, project))
-        |> assert_problem(404, :not_found, [])
+        |> assert_problem(403, :forbidden, [])
       end
     end
   end

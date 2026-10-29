@@ -87,10 +87,7 @@ defmodule LightningWeb.API.ProjectController do
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, params) do
     page =
-      Projects.paginate_projects_for_user(
-        conn.assigns.current_resource,
-        Filters.page(params)
-      )
+      Projects.paginate_projects_for(conn.assigns.scope, Filters.page(params))
 
     render(conn, "index.json", page: page, conn: conn)
   end
@@ -98,9 +95,10 @@ defmodule LightningWeb.API.ProjectController do
   @doc """
   Shows a project to a caller who may access it.
 
-  A project the caller isn't a member of answers 404 `not_found`, as if it
-  didn't exist. A member who hasn't met its MFA requirement, or a token without
-  `projects:write`, gets 403. A project scheduled for deletion answers 409
+  A caller who isn't a member, a member who hasn't met its MFA requirement, and
+  a token without `projects:write` get 403. So does an id that names no
+  project, unless the caller is a superuser or the service account, who get
+  404 `not_found`. A project scheduled for deletion answers 409
   `scheduled_for_deletion` to a caller who may see it.
 
   ## Examples
@@ -108,11 +106,11 @@ defmodule LightningWeb.API.ProjectController do
       GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def show(conn, %{"id" => id}) do
+  def show(conn, _params) do
     with {:ok, project} <-
            Target.project(
              conn.assigns.scope,
-             id,
+             Request.param(conn, "id"),
              {:project_users, :access_project}
            ) do
       render_project(conn, project)
@@ -128,15 +126,16 @@ defmodule LightningWeb.API.ProjectController do
   project's own fields together (error-format spec §9.6).
   """
   @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def update(conn, %{"id" => id}) do
+  def update(conn, _params) do
     body = conn.body_params
+    {_location, id} = param = Request.param(conn, "id")
 
-    with {:ok, id} <- Request.path_id(id),
-         {:ok, target} <-
+    with {:ok, target} <-
            Target.project_or_new(
              conn.assigns.scope,
-             id,
-             {:project_users, :edit_project}
+             param,
+             {:project_users, :edit_project},
+             {:provisioning, :create_project}
            ),
          {:ok, body_entries} <- Request.check(body, id, @accepted) do
       request =

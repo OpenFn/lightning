@@ -331,12 +331,7 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
       end
     end
 
-    # The boundary of this change, pinned rather than described. The un-nested
-    # list endpoints do not resolve a project scope at all — they authorise
-    # against a raw `Ecto.assoc(user, :projects)` subquery — so nothing above
-    # reaches them. The same subquery is why a project scheduled for deletion
-    # keeps being listed; both are fixed together in the follow-up, and
-    # these assertions are meant to be inverted by it.
+    # The unfiltered lists don't apply a project's MFA requirement yet (SEC-440).
     test "does not yet filter the un-nested list endpoints", %{
       conn: conn,
       project: project

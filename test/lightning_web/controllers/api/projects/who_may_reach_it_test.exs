@@ -11,27 +11,66 @@ defmodule LightningWeb.API.Projects.WhoMayReachItTest do
   end
 
   describe "who may reach it" do
-    test "an editor or a viewer may not replace a project, and a stranger may not see or replace it",
+    test "a caller refused on a project gets the same 403 for it, an id that names no project and one that isn't a UUID, and nothing is written",
          %{conn: conn} do
-      refusals = [
-        {:editor, [:put], 403, :forbidden},
-        {:viewer, [:put], 403, :forbidden},
-        {:stranger, [:get, :put], 404, :not_found}
-      ]
+      [editor, viewer, other_owner, short_of_mfa, stranger] =
+        insert_list(5, :user)
 
-      for {role, verbs, status, code} <- refusals, verb <- verbs do
-        user = insert(:user)
-        members = if role == :stranger, do: [], else: [%{user: user, role: role}]
-        project = insert(:project, name: "before", project_users: members)
+      support = insert(:user, support_user: true)
+      superuser = insert(:user, role: :superuser)
 
+      project =
+        insert(:project,
+          name: "before",
+          project_users: [
+            %{user: editor, role: :editor},
+            %{user: viewer, role: :viewer}
+          ]
+        )
+
+      insert(:project, project_users: [%{user: other_owner, role: :owner}])
+
+      mfa_project =
+        insert(:project,
+          name: "before",
+          requires_mfa: true,
+          project_users: [%{user: short_of_mfa, role: :admin}]
+        )
+
+      supported = insert(:project, name: "before", allow_support_access: true)
+      unknown = Ecto.UUID.generate()
+      three_ids = &[&1, unknown, "not-a-uuid"]
+
+      refused =
+        for(
+          user <- [editor, viewer],
+          id <- three_ids.(project.id),
+          do: {user, :put, id}
+        ) ++
+          [{other_owner, :put, unknown}, {support, :put, supported.id}] ++
+          for(
+            verb <- [:get, :put],
+            {user, ids} <- [
+              {short_of_mfa, three_ids.(mfa_project.id)},
+              {stranger, three_ids.(project.id)},
+              {superuser, [project.id]}
+            ],
+            id <- ids,
+            do: {user, verb, id}
+          )
+
+      for {user, verb, id} <- refused do
         conn
         |> with_pat(user)
-        |> reach(verb, project.id)
-        |> assert_problem(status, code, [])
-
-        assert Lightning.Repo.reload!(project).name == "before",
-               "#{role} changed the project by #{verb}"
+        |> reach(verb, id)
+        |> assert_problem(403, :forbidden, [])
       end
+
+      for written <- [project, mfa_project, supported] do
+        assert Lightning.Repo.reload!(written).name == "before"
+      end
+
+      refute Lightning.Repo.get(Lightning.Projects.Project, unknown)
     end
 
     test "an owner or an admin may replace a project", %{conn: conn} do
@@ -48,18 +87,31 @@ defmodule LightningWeb.API.Projects.WhoMayReachItTest do
       end
     end
 
-    test "an id that names no project is 404 to read, and creating it is refused unless the token's user is a superuser",
+    test "a superuser or the service account gets 400 for an id that isn't a UUID, and reads one that names no project as 404",
          %{conn: conn} do
-      conn = with_pat(conn, insert(:user))
-      id = Ecto.UUID.generate()
+      {service_account_conn, _account} =
+        with_service_account(conn, ["projects:write"])
 
-      conn |> reach(:get, id) |> assert_problem(404, :not_found, [])
-      conn |> reach(:put, id) |> assert_problem(403, :forbidden, [])
+      superuser_conn = with_pat(conn, insert(:user, role: :superuser))
 
-      refute Lightning.Repo.get(Lightning.Projects.Project, id)
+      for caller <- [superuser_conn, service_account_conn] do
+        caller
+        |> reach(:get, Ecto.UUID.generate())
+        |> assert_problem(404, :not_found, [])
+
+        for verb <- [:get, :put] do
+          caller
+          |> reach(verb, "not-a-uuid")
+          |> assert_problem(400, :invalid_parameter, [
+            not_a_uuid_entry(%{"path" => "id"})
+          ])
+        end
+      end
+
+      refute Lightning.Repo.get_by(Lightning.Projects.Project, name: "renamed")
     end
 
-    test "a project scheduled for deletion is 404 to a stranger and 409 to a member or a service account, on both routes",
+    test "a project scheduled for deletion is 403 to a stranger and 409 to a member or a service account, on both routes",
          %{conn: conn} do
       {service_account_conn, _account} =
         with_service_account(conn, ["projects:write"])
@@ -68,7 +120,7 @@ defmodule LightningWeb.API.Projects.WhoMayReachItTest do
       stranger = insert(:user)
 
       callers = [
-        {with_pat(conn, stranger), 404, :not_found},
+        {with_pat(conn, stranger), 403, :forbidden},
         {with_pat(conn, owner), 409, :scheduled_for_deletion},
         {service_account_conn, 409, :scheduled_for_deletion}
       ]
