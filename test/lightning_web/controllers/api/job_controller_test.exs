@@ -2,6 +2,7 @@ defmodule LightningWeb.API.JobControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import LightningWeb.API.ProblemHelpers
+  import LightningWeb.ApiReadHelpers
   import Lightning.Factories
   import Lightning.JobsFixtures
 
@@ -104,24 +105,18 @@ defmodule LightningWeb.API.JobControllerTest do
   end
 
   describe "who may reach it" do
-    setup [:assign_bearer_for_api, :create_project_for_current_user, :create_job]
+    setup [:assign_bearer_for_api, :create_project_for_current_user]
 
-    test "answers 404 for what the caller has no standing on or that is missing, and 403 to a member who has not met the MFA requirement",
-         %{conn: conn, project: project, job: job} do
-      elsewhere = insert(:project)
-      %{job: unseen} = create_job(%{project: elsewhere})
-      Lightning.Repo.update!(Ecto.Changeset.change(project, requires_mfa: true))
-
-      for {path, status, code} <- [
-            {~p"/api/projects/#{elsewhere.id}/jobs", 404, :not_found},
-            {~p"/api/projects/#{Ecto.UUID.generate()}/jobs", 404, :not_found},
-            {~p"/api/jobs?#{%{project_id: elsewhere.id}}", 404, :not_found},
-            {~p"/api/jobs/#{unseen.id}", 404, :not_found},
-            {~p"/api/jobs/#{Ecto.UUID.generate()}", 404, :not_found},
-            {~p"/api/jobs?#{%{project_id: project.id}}", 403, :forbidden},
-            {~p"/api/jobs/#{job.id}", 403, :forbidden}
-          ] do
-        conn |> get(path) |> assert_problem(status, code, [])
+    test "a caller without permission gets the same 403 whether or not the job exists, and a permitted one 404 or 400",
+         %{conn: member, project: project} do
+      for {caller, path, status, code, entries} <-
+            who_may_read(
+              member,
+              project,
+              "jobs",
+              &create_job(%{project: &1}).job
+            ) do
+        caller |> get(path) |> assert_problem(status, code, entries)
       end
     end
   end

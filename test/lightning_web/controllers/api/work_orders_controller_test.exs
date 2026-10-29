@@ -395,23 +395,11 @@ defmodule LightningWeb.API.WorkOrdersControllerTest do
   describe "who may reach it" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
-    test "answers 404 for what the caller has no standing on or that is missing, before the query is read, and 403 to a member who has not met the MFA requirement",
-         %{conn: conn, project: project} do
-      own = insert_work_order(project)
-      elsewhere = insert(:project)
-      unseen = insert_work_order(elsewhere)
-      Lightning.Repo.update!(Ecto.Changeset.change(project, requires_mfa: true))
-
-      for {path, status, code} <- [
-            {~p"/api/projects/#{elsewhere.id}/work_orders?state=sideways", 404,
-             :not_found},
-            {~p"/api/projects/#{Ecto.UUID.generate()}/work_orders", 404,
-             :not_found},
-            {~p"/api/work_orders/#{unseen.id}", 404, :not_found},
-            {~p"/api/work_orders/#{Ecto.UUID.generate()}", 404, :not_found},
-            {~p"/api/work_orders/#{own.id}", 403, :forbidden}
-          ] do
-        conn |> get(path) |> assert_problem(status, code, [])
+    test "a caller without permission gets the same 403 whether or not the work order exists, and a permitted one 404 or 400",
+         %{conn: member, project: project} do
+      for {caller, path, status, code, entries} <-
+            who_may_read(member, project, "work_orders", &insert_work_order/1) do
+        caller |> get(path) |> assert_problem(status, code, entries)
       end
     end
   end

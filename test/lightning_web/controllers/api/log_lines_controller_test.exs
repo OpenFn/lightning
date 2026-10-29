@@ -4,6 +4,7 @@ defmodule LightningWeb.API.LogLinesControllerTest do
   import LightningWeb.API.ProblemHelpers
   import LightningWeb.ApiReadHelpers
   import Lightning.Factories
+  import Lightning.ServiceAccountHelpers
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
@@ -144,14 +145,27 @@ defmodule LightningWeb.API.LogLinesControllerTest do
                [log1.id]
     end
 
-    test "narrows by project_id", %{conn: conn, user: user} do
+    test "narrows by project_id, and links to its pages with it", %{
+      conn: conn,
+      user: user
+    } do
       project1 = insert(:project, project_users: [%{user: user, role: :owner}])
       project2 = insert(:project, project_users: [%{user: user, role: :owner}])
       log1 = project1 |> insert_run() |> insert_log_line()
       insert_log_line(insert_run(project2))
 
-      assert ids(get(conn, ~p"/api/log_lines?project_id=#{project1.id}")) ==
-               [log1.id]
+      conn = get(conn, ~p"/api/log_lines?project_id=#{project1.id}")
+
+      assert ids(conn) == [log1.id]
+
+      assert json_response(conn, 200)["links"]["self"]
+             |> URI.parse()
+             |> Map.fetch!(:query)
+             |> URI.decode_query() == %{
+               "project_id" => project1.id,
+               "page" => "1",
+               "page_size" => "10"
+             }
     end
 
     test "narrows by every filter at once", %{conn: conn, project: project} do
@@ -333,15 +347,51 @@ defmodule LightningWeb.API.LogLinesControllerTest do
   describe "who may reach it" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
-    test "filtering by a project the caller has no standing on lists nothing",
-         %{conn: conn} do
+    test "filtering by a project the caller has no standing on is 403", %{
+      conn: conn
+    } do
       elsewhere = insert(:project)
       insert_log_line(insert_run(elsewhere), level: :error)
 
-      assert %{"data" => []} =
-               conn
-               |> get(~p"/api/log_lines?#{%{project_id: elsewhere.id}}")
-               |> json_response(200)
+      conn
+      |> get(~p"/api/log_lines?#{%{project_id: elsewhere.id}}")
+      |> assert_problem(403, :forbidden, [])
+    end
+
+    test "only a caller who may learn which projects exist hears that a project_id names none, or isn't a UUID",
+         %{conn: member} do
+      superuser = assign_bearer(member, insert(:user, role: :superuser))
+
+      {service_account, _account} =
+        with_service_account(member, ["projects:write"])
+
+      short_of_mfa = insert(:user)
+
+      guarded =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: short_of_mfa}]
+        )
+
+      short_of_mfa = assign_bearer(member, short_of_mfa)
+      unknown = Ecto.UUID.generate()
+
+      not_uuid = [
+        not_a_uuid_entry(%{"parameter" => "project_id"})
+      ]
+
+      for {caller, project_id, status, code, entries} <- [
+            {short_of_mfa, guarded.id, 403, :forbidden, []},
+            {member, unknown, 403, :forbidden, []},
+            {member, "not-a-uuid", 403, :forbidden, []},
+            {superuser, unknown, 404, :not_found, []},
+            {superuser, "not-a-uuid", 400, :invalid_parameter, not_uuid},
+            {service_account, unknown, 404, :not_found, []}
+          ] do
+        caller
+        |> get(~p"/api/log_lines?#{%{project_id: project_id}}")
+        |> assert_problem(status, code, entries)
+      end
     end
   end
 end

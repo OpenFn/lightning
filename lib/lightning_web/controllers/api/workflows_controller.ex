@@ -104,7 +104,7 @@ defmodule LightningWeb.API.WorkflowsController do
   Lists workflows, with their jobs, triggers and edges.
 
   With `project_id`, in the path or the query, lists that project's workflows; a
-  project the caller can't see answers 404 `not_found`. Without it, lists the
+  project the caller can't see answers 403 `forbidden`. Without it, lists the
   workflows of every project the caller can access.
 
   ## Examples
@@ -114,9 +114,13 @@ defmodule LightningWeb.API.WorkflowsController do
       GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/workflows
   """
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def index(conn, %{"project_id" => project_id}) do
+  def index(conn, %{"project_id" => _}) do
     with {:ok, project} <-
-           Target.project(conn.assigns.scope, project_id, @access_project) do
+           Target.project(
+             conn.assigns.scope,
+             Request.param(conn, "project_id"),
+             @access_project
+           ) do
       list =
         Workflows.list_project_workflows(project.id,
           include: [:edges, :jobs, :triggers]
@@ -128,7 +132,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
   def index(conn, _params) do
     list =
-      Workflows.list_workflows_for_user(conn.assigns.current_resource,
+      Workflows.list_workflows_for(conn.assigns.scope,
         include: [:edges, :jobs, :triggers]
       )
 
@@ -162,13 +166,13 @@ defmodule LightningWeb.API.WorkflowsController do
       }
   """
   @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def create(conn, %{"project_id" => project_id}) do
+  def create(conn, _params) do
     body = conn.body_params
 
     with {:ok, project} <-
            Target.project(
              conn.assigns.scope,
-             project_id,
+             Request.param(conn, "project_id"),
              {:project_users, :create_workflow}
            ),
          :ok <- Request.check_object(body),
@@ -190,8 +194,10 @@ defmodule LightningWeb.API.WorkflowsController do
   @doc """
   Shows a workflow, with its jobs, triggers and edges.
 
-  A workflow the caller can't see, a deleted one, or one outside the path's
-  project answers 404 `not_found`.
+  On `/api/workflows/:id`, `LightningWeb.API.Target.in_project_of/5` decides
+  who learns that an id names no workflow. On the nested route the path's
+  project is checked first, and a workflow outside it is 404 `not_found`. A
+  deleted workflow is 404 to a caller who can see its project.
 
   ## Examples
 
@@ -199,21 +205,33 @@ defmodule LightningWeb.API.WorkflowsController do
       GET /api/projects/a1b2c3d4-.../workflows/a1b2c3d4-...
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def show(conn, %{"project_id" => project_id, "id" => id}) do
+  def show(%{path_params: %{"project_id" => _}} = conn, _params) do
     with {:ok, workflow} <-
            Target.in_project(
              conn.assigns.scope,
-             project_id,
+             Request.param(conn, "project_id"),
              @access_project,
-             &fetch_workflow(id, &1)
+             Request.param(conn, "id"),
+             &Workflows.get_workflow_for_project(&1, &2,
+               include: [:edges, :jobs, :triggers]
+             )
            ) do
       json(conn, %{workflow: public_workflow(workflow)})
     end
   end
 
-  def show(conn, %{"id" => id} = params) do
-    with {:ok, project_id} <- workflow_project_id(id) do
-      show(conn, Map.put(params, "project_id", project_id))
+  def show(conn, _params) do
+    with {:ok, workflow} <-
+           Target.in_project_of(
+             conn.assigns.scope,
+             Request.param(conn, "id"),
+             @access_project,
+             &Workflows.get_project_id/1,
+             &Workflows.get_workflow_for_project(&1, &2,
+               include: [:edges, :jobs, :triggers]
+             )
+           ) do
+      json(conn, %{workflow: public_workflow(workflow)})
     end
   end
 
@@ -230,15 +248,18 @@ defmodule LightningWeb.API.WorkflowsController do
       {"name": "Updated Pipeline Name"}
   """
   @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def update(conn, %{"project_id" => project_id, "id" => id}) do
+  def update(conn, _params) do
     body = conn.body_params
 
     with {:ok, workflow} <-
            Target.in_project(
              conn.assigns.scope,
-             project_id,
+             Request.param(conn, "project_id"),
              {:project_users, :edit_workflow},
-             &fetch_workflow(id, &1)
+             Request.param(conn, "id"),
+             &Workflows.get_workflow_for_project(&1, &2,
+               include: [:edges, :jobs, :triggers]
+             )
            ),
          :ok <- refuse_being_edited(workflow),
          :ok <- Request.check_object(body),
@@ -253,25 +274,6 @@ defmodule LightningWeb.API.WorkflowsController do
            |> Request.validate_matches_path(body, :id, workflow.id)
            |> save(conn.assigns.current_resource) do
       json(conn, %{workflow: public_workflow(workflow)})
-    end
-  end
-
-  defp workflow_project_id(id) do
-    with {:ok, id} <- Request.path_id(id),
-         %Workflow{project_id: project_id} <- Workflows.get_workflow(id) do
-      {:ok, project_id}
-    else
-      nil -> {:error, :not_found}
-      refusal -> refusal
-    end
-  end
-
-  defp fetch_workflow(id, project) do
-    case Workflows.get_workflow_for_project(project, id,
-           include: [:edges, :jobs, :triggers]
-         ) do
-      nil -> {:error, :not_found}
-      workflow -> {:ok, workflow}
     end
   end
 

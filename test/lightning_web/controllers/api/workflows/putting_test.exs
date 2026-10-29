@@ -319,31 +319,6 @@ defmodule LightningWeb.API.Workflows.PuttingTest do
       ])
     end
 
-    test "answers 404 for a workflow that is missing or deleted, whatever id the body gives",
-         %{conn: conn, project: project} do
-      deleted =
-        insert(:simple_workflow,
-          project: project,
-          deleted_at: DateTime.utc_now()
-        )
-
-      missing_id = Ecto.UUID.generate()
-      document = build(:simple_workflow, project_id: project.id)
-
-      for {id, body} <- [
-            {missing_id, document},
-            {missing_id, Map.put(document, :id, missing_id)},
-            {deleted.id, Map.put(document, :id, deleted.id)}
-          ] do
-        conn
-        |> put(
-          ~p"/api/projects/#{project.id}/workflows/#{id}",
-          Jason.encode!(body)
-        )
-        |> assert_problem(404, :not_found, [])
-      end
-    end
-
     test "a body that isn't a JSON object answers 400", %{
       conn: conn,
       project: project

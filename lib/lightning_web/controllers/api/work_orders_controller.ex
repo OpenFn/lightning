@@ -11,6 +11,10 @@ defmodule LightningWeb.API.WorkOrdersController do
   - `inserted_before` - Filter work orders created before this ISO8601 datetime
   - `updated_after` - Filter work orders updated after this ISO8601 datetime
   - `updated_before` - Filter work orders updated before this ISO8601 datetime
+  - `project_id` - The project the work orders come from
+
+  The service account must send `project_id` on the list, as these tables grow
+  with every run; leaving it out is 400 `invalid_parameter`.
 
   ## Examples
 
@@ -85,16 +89,16 @@ defmodule LightningWeb.API.WorkOrdersController do
       GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/work_orders?inserted_after=2024-01-01T00:00:00Z
   """
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def index(conn, %{"project_id" => project_id} = params) do
+  def index(conn, %{"project_id" => _} = params) do
     with {:ok, project} <-
            Target.project(
              conn.assigns.scope,
-             project_id,
+             Request.param(conn, "project_id"),
              {:project_users, :access_project}
            ),
          {:ok, filters} <-
            params
-           |> Filters.work_orders()
+           |> Filters.work_orders(conn.assigns.scope)
            |> Errors.refuse_parameters() do
       list(project, conn, params, filters)
     end
@@ -103,46 +107,55 @@ defmodule LightningWeb.API.WorkOrdersController do
   def index(conn, params) do
     with {:ok, filters} <-
            params
-           |> Filters.work_orders()
+           |> Filters.work_orders(conn.assigns.scope)
            |> Errors.refuse_parameters() do
-      list(conn.assigns.current_resource, conn, params, filters)
+      list(conn.assigns.scope, conn, params, filters)
     end
   end
 
   @doc """
-  Shows a work order, with its runs, to a caller who may access its project. A
-  work order the caller has no standing on answers 404 `not_found`, as if it
-  didn't exist.
+  Shows a work order, with its runs, to a caller who may access its project.
+
+  On `/api/work_orders/:id`, `LightningWeb.API.Target.in_project_of/5` decides
+  who learns that an id names no work order. On the nested route the path's
+  project is checked first, and a work order outside it is 404 `not_found`.
 
   ## Examples
 
       GET /api/work_orders/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+      GET /api/projects/a1b2c3d4-.../work_orders/a1b2c3d4-...
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def show(conn, %{"id" => id}) do
-    with {:ok, id} <- Request.path_id(id),
-         {:ok, work_order} <- fetch_work_order(id),
-         {:ok, _project} <-
-           Target.project(
+  def show(%{path_params: %{"project_id" => _}} = conn, _params) do
+    with {:ok, work_order} <-
+           Target.in_project(
              conn.assigns.scope,
-             work_order.workflow.project_id,
-             {:project_users, :access_project}
+             Request.param(conn, "project_id"),
+             {:project_users, :access_project},
+             Request.param(conn, "id"),
+             &WorkOrders.get_for_project(&1, &2, include: [:workflow, runs: []])
            ) do
       render(conn, "show.json", work_order: work_order, conn: conn)
     end
   end
 
-  defp fetch_work_order(id) do
-    case WorkOrders.get(id, include: [:workflow, runs: []]) do
-      nil -> {:error, :not_found}
-      work_order -> {:ok, work_order}
+  def show(conn, _params) do
+    with {:ok, work_order} <-
+           Target.in_project_of(
+             conn.assigns.scope,
+             Request.param(conn, "id"),
+             {:project_users, :access_project},
+             &WorkOrders.get_project_id/1,
+             &WorkOrders.get_for_project(&1, &2, include: [:workflow, runs: []])
+           ) do
+      render(conn, "show.json", work_order: work_order, conn: conn)
     end
   end
 
-  defp list(project_or_user, conn, params, filters) do
+  defp list(project_or_scope, conn, params, filters) do
     page =
       WorkOrders.paginate_work_orders_for(
-        project_or_user,
+        project_or_scope,
         filters,
         Filters.page(params)
       )

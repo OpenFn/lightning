@@ -3,6 +3,7 @@ defmodule LightningWeb.API.Workflows.ReadingTest do
 
   import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
+  import LightningWeb.ApiReadHelpers
   import LightningWeb.ApiWorkflowsHelpers
 
   setup %{conn: conn} do
@@ -87,14 +88,6 @@ defmodule LightningWeb.API.Workflows.ReadingTest do
         assert id == workflow1.id
       end
     end
-
-    test "answers 404 for a project I can't see", %{conn: conn} do
-      other_project = insert(:project)
-
-      conn = get(conn, ~p"/api/projects/#{other_project.id}/workflows")
-
-      assert_problem(conn, 404, :not_found, [])
-    end
   end
 
   describe "showing a workflow" do
@@ -106,6 +99,7 @@ defmodule LightningWeb.API.Workflows.ReadingTest do
 
       for path <- [
             ~p"/api/workflows/#{workflow.id}",
+            ~p"/api/workflows/#{workflow.id}?#{%{project_id: Ecto.UUID.generate()}}",
             ~p"/api/projects/#{project.id}/workflows/#{workflow.id}"
           ] do
         assert conn |> get(path) |> json_response(200) == %{
@@ -114,8 +108,8 @@ defmodule LightningWeb.API.Workflows.ReadingTest do
       end
     end
 
-    test "answers 404 for a workflow that is missing, deleted, in a project I can't see, or under another project",
-         %{conn: conn, user: user, project: project} do
+    test "answers a member 404 for a deleted workflow, on either route, and for one of theirs outside the path's project",
+         %{conn: member, user: user, project: project} do
       deleted =
         insert(:simple_workflow,
           project: project,
@@ -126,17 +120,13 @@ defmodule LightningWeb.API.Workflows.ReadingTest do
         insert(:project, project_users: [%{user: user, role: :owner}])
 
       mine = insert(:simple_workflow, project: project)
-      secret = insert(:simple_workflow, name: "Secret")
 
       for path <- [
-            ~p"/api/workflows/#{Ecto.UUID.generate()}",
             ~p"/api/workflows/#{deleted.id}",
             ~p"/api/projects/#{project.id}/workflows/#{deleted.id}",
-            ~p"/api/workflows/#{secret.id}",
-            ~p"/api/projects/#{project.id}/workflows/#{secret.id}",
             ~p"/api/projects/#{other_project.id}/workflows/#{mine.id}"
           ] do
-        assert_problem(get(conn, path), 404, :not_found, [])
+        member |> get(path) |> assert_problem(404, :not_found, [])
       end
     end
 
@@ -146,6 +136,23 @@ defmodule LightningWeb.API.Workflows.ReadingTest do
       conn
       |> get(~p"/api/projects/#{project.id}/workflows/#{workflow.id}/edit")
       |> assert_problem(404, :not_found, [])
+    end
+  end
+
+  describe "who may reach it" do
+    setup [:assign_bearer_for_api, :create_project_for_current_user]
+
+    test "a caller without permission gets the same 403 whether or not the workflow exists, and a permitted one 404 or 400",
+         %{conn: member, project: project} do
+      for {caller, path, status, code, entries} <-
+            who_may_read(
+              member,
+              project,
+              "workflows",
+              &insert(:simple_workflow, project: &1)
+            ) do
+        caller |> get(path) |> assert_problem(status, code, entries)
+      end
     end
   end
 end

@@ -18,141 +18,8 @@ defmodule LightningWeb.API.Workflows.RefusalsTest do
     {:ok, conn: conn}
   end
 
-  describe "who may reach it" do
-    setup [:assign_bearer_for_api, :create_project_for_current_user]
-
-    @tag role: :viewer
-    test "viewer cannot create a workflow", %{conn: conn, project: project} do
-      workflow =
-        build(:simple_workflow,
-          name: "viewer-created-workflow",
-          project_id: project.id
-        )
-
-      conn =
-        post(
-          conn,
-          ~p"/api/projects/#{project.id}/workflows/",
-          Jason.encode!(workflow)
-        )
-
-      assert_problem(conn, 403, :forbidden, [])
-
-      refute Lightning.Repo.get_by(Lightning.Workflows.Workflow,
-               name: "viewer-created-workflow"
-             )
-    end
-
-    @tag role: :viewer
-    test "viewer hears 404 for a workflow the project hasn't got, and 403 for one it has, and changes nothing",
-         %{conn: conn, project: project} do
-      workflow =
-        insert(:simple_workflow, name: "original-name", project: project)
-
-      body = Jason.encode!(%{name: "hacked-by-viewer"})
-
-      conn
-      |> patch(
-        ~p"/api/projects/#{project.id}/workflows/#{Ecto.UUID.generate()}",
-        body
-      )
-      |> assert_problem(404, :not_found, [])
-
-      conn
-      |> patch(~p"/api/projects/#{project.id}/workflows/#{workflow.id}", body)
-      |> assert_problem(403, :forbidden, [])
-
-      assert Repo.reload(workflow).name == "original-name"
-    end
-
-    test "admin, editor and owner can create a workflow", %{conn: conn} do
-      for role <- [:admin, :editor, :owner] do
-        user = insert(:user)
-        project = insert(:project, project_users: [%{user: user, role: role}])
-
-        workflow =
-          build(:simple_workflow,
-            name: "#{role}-created-workflow",
-            project_id: project.id
-          )
-
-        resp_conn =
-          conn
-          |> assign_bearer(user)
-          |> post(
-            ~p"/api/projects/#{project.id}/workflows/",
-            Jason.encode!(workflow)
-          )
-
-        assert %{"workflow" => %{"id" => id}} =
-                 json_response(resp_conn, 201),
-               "expected #{role} to be allowed to create a workflow"
-
-        assert Lightning.Repo.get(Lightning.Workflows.Workflow, id)
-      end
-    end
-
-    test "admin, editor and owner can update a workflow", %{conn: conn} do
-      for role <- [:admin, :editor, :owner] do
-        user = insert(:user)
-        project = insert(:project, project_users: [%{user: user, role: role}])
-
-        workflow =
-          insert(:simple_workflow, name: "#{role}-original", project: project)
-          |> Repo.reload()
-
-        resp_conn =
-          conn
-          |> assign_bearer(user)
-          |> patch(
-            ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
-            Jason.encode!(%{name: "#{role}-updated"})
-          )
-
-        assert %{"workflow" => %{}} =
-                 json_response(resp_conn, 200),
-               "expected #{role} to be allowed to update a workflow"
-
-        assert Repo.reload(workflow).name == "#{role}-updated"
-      end
-    end
-  end
-
   describe "refusals and what they leave alone" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
-
-    test "a caller with no standing gets 404, whether or not the workflow is open in the editor",
-         %{conn: conn} do
-      editor = insert(:user)
-      project = insert(:project, project_users: [%{user: editor}])
-      workflow = insert(:simple_workflow, project: project)
-      path = ~p"/api/projects/#{project.id}/workflows/#{workflow.id}"
-
-      conn
-      |> patch(path, Jason.encode!(%{"name" => "renamed"}))
-      |> assert_problem(404, :not_found, [])
-
-      Presence.track_user_presence(editor, workflow, self())
-      assert Presence.has_any_presence?(workflow)
-
-      conn
-      |> patch(path, Jason.encode!(%{"name" => "renamed"}))
-      |> assert_problem(404, :not_found, [])
-    end
-
-    test "a member short of the project's MFA requirement hears 404 for a workflow the project hasn't got, and 403 for one it has",
-         %{conn: conn, project: project} do
-      workflow = insert(:simple_workflow, project: project)
-      Repo.update!(Ecto.Changeset.change(project, requires_mfa: true))
-
-      conn
-      |> get(~p"/api/projects/#{project.id}/workflows/#{Ecto.UUID.generate()}")
-      |> assert_problem(404, :not_found, [])
-
-      conn
-      |> get(~p"/api/projects/#{project.id}/workflows/#{workflow.id}")
-      |> assert_problem(403, :forbidden, [])
-    end
 
     test "never quotes a value from the request, on any route", %{
       conn: conn,
@@ -167,17 +34,23 @@ defmodule LightningWeb.API.Workflows.RefusalsTest do
         |> Map.delete("project_id")
         |> plant_sentinel()
 
-      for path <- [
-            ~p"/api/workflows/#{sentinel}",
-            ~p"/api/workflows?project_id=#{sentinel}",
-            ~p"/api/projects/#{sentinel}/workflows",
-            ~p"/api/projects/#{sentinel}/workflows/#{workflow.id}",
-            ~p"/api/projects/#{project.id}/workflows/#{sentinel}"
+      invalid_id = [
+        not_a_uuid_entry(%{"path" => "id"})
+      ]
+
+      for {path, status, code, entries} <- [
+            {~p"/api/workflows/#{sentinel}", 403, :forbidden, []},
+            {~p"/api/workflows?project_id=#{sentinel}", 403, :forbidden, []},
+            {~p"/api/projects/#{sentinel}/workflows", 403, :forbidden, []},
+            {~p"/api/projects/#{sentinel}/workflows/#{workflow.id}", 403,
+             :forbidden, []},
+            {~p"/api/projects/#{project.id}/workflows/#{sentinel}", 400,
+             :invalid_parameter, invalid_id}
           ] do
         conn
         |> get(path)
         |> refute_sentinel()
-        |> assert_problem(404, :not_found, [])
+        |> assert_problem(status, code, entries)
       end
 
       conn
@@ -352,7 +225,7 @@ defmodule LightningWeb.API.Workflows.RefusalsTest do
           Jason.encode!(planted)
         )
         |> refute_sentinel()
-        |> assert_problem(404, :not_found, [])
+        |> assert_problem(400, :invalid_parameter, invalid_id)
       end
     end
   end

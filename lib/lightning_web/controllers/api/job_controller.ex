@@ -72,11 +72,11 @@ defmodule LightningWeb.API.JobController do
       GET /api/projects/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/jobs
   """
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def index(conn, %{"project_id" => project_id} = params) do
+  def index(conn, %{"project_id" => _} = params) do
     with {:ok, project} <-
            Target.project(
              conn.assigns.scope,
-             project_id,
+             Request.param(conn, "project_id"),
              {:project_users, :access_project}
            ) do
       list(project, conn, params, %{project_id: project.id})
@@ -84,33 +84,50 @@ defmodule LightningWeb.API.JobController do
   end
 
   def index(conn, params) do
-    list(conn.assigns.current_resource, conn, params, %{})
+    list(conn.assigns.scope, conn, params, %{})
   end
 
   @doc """
-  Shows a job to a caller who may access its project. A job the caller has no
-  standing on answers 404 `not_found`, as if it didn't exist.
+  Shows a job to a caller who may access its project.
+
+  On `/api/jobs/:id`, `LightningWeb.API.Target.in_project_of/5` decides who
+  learns that an id names no job. On the nested route the path's project is
+  checked first, and a job outside it is 404 `not_found`.
 
   ## Examples
 
       GET /api/jobs/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+      GET /api/projects/a1b2c3d4-.../jobs/a1b2c3d4-...
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def show(conn, %{"id" => id}) do
-    with {:ok, id} <- Request.path_id(id),
-         {:ok, job} <- Jobs.get_job(id, include: [:workflow]),
-         {:ok, _project} <-
-           Target.project(
+  def show(%{path_params: %{"project_id" => _}} = conn, _params) do
+    with {:ok, job} <-
+           Target.in_project(
              conn.assigns.scope,
-             job.workflow.project_id,
-             {:project_users, :access_project}
+             Request.param(conn, "project_id"),
+             {:project_users, :access_project},
+             Request.param(conn, "id"),
+             &Jobs.get_job_for_project(&1, &2, include: [:workflow])
            ) do
       render(conn, "show.json", job: job, conn: conn)
     end
   end
 
-  defp list(project_or_user, conn, params, filters) do
-    page = Jobs.paginate_jobs_for(project_or_user, Filters.page(params))
+  def show(conn, _params) do
+    with {:ok, job} <-
+           Target.in_project_of(
+             conn.assigns.scope,
+             Request.param(conn, "id"),
+             {:project_users, :access_project},
+             &Jobs.get_project_id/1,
+             &Jobs.get_job_for_project(&1, &2, include: [:workflow])
+           ) do
+      render(conn, "show.json", job: job, conn: conn)
+    end
+  end
+
+  defp list(project_or_scope, conn, params, filters) do
+    page = Jobs.paginate_jobs_for(project_or_scope, Filters.page(params))
 
     render(conn, "index.json", page: page, filters: filters, conn: conn)
   end

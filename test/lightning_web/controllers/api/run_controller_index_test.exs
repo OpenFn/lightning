@@ -70,6 +70,18 @@ defmodule LightningWeb.API.RunControllerIndexTest do
              }
     end
 
+    test "lists a superuser's own projects' runs with no project_id", %{
+      conn: conn
+    } do
+      superuser = insert(:user, role: :superuser)
+      project = insert(:project, project_users: [%{user_id: superuser.id}])
+      run = insert_run(project)
+      insert_run(insert(:project))
+
+      assert conn |> assign_bearer(superuser) |> get(~p"/api/runs") |> ids() ==
+               [run.id]
+    end
+
     test "narrows by inserted_after", %{conn: conn, project: project} do
       insert_run(project, inserted_at: ~U[2024-01-01 10:00:00Z])
       new = insert_run(project, inserted_at: ~U[2024-01-01 12:00:00Z])

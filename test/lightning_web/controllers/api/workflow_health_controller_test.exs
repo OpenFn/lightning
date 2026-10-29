@@ -63,25 +63,62 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
 
     # `days` is read only once the caller is authorised, so a bad value never
     # gets the chance to produce a 400 for someone who can't see the workflow.
-    test "a caller with no standing on the project or workflow gets 404 on every slice, even with a bad days",
-         %{conn: conn, user: user, project: project, workflow: workflow} do
+    # The slices share one authorisation, so the id rows read one of them.
+    test "a refused caller gets the same 403 for an existing, unknown and malformed id on every slice, even with a bad days, and a member or superuser 404 for an unknown id and 400 for a malformed one",
+         %{conn: conn, user: member, project: project, workflow: workflow} do
       stranger = insert(:user)
+      superuser = insert(:user, role: :superuser)
+      short_of_mfa = insert(:user, mfa_enabled: false)
       other_workflow = insert(:simple_workflow)
 
-      for {get_slice, caller, project_id, workflow_id, params} <- [
-            {&get_outcomes/5, stranger, project.id, workflow.id, %{}},
-            {&get_outcomes/5, stranger, project.id, workflow.id,
-             %{"days" => "banana"}},
-            {&get_failures/5, stranger, project.id, workflow.id, %{}},
-            {&get_runs(&1, &2, &3, &4, &5), stranger, project.id, workflow.id,
-             %{}},
-            {&get_outcomes/5, user, project.id, other_workflow.id, %{}},
-            {&get_outcomes/5, user, other_workflow.project_id, other_workflow.id,
-             %{}}
-          ] do
-        refused = get_slice.(conn, caller, project_id, workflow_id, params)
+      mfa_project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: short_of_mfa, role: :owner}]
+        )
 
-        assert_problem(refused, 404, :not_found, [])
+      unknown = Ecto.UUID.generate()
+      refused = {403, :forbidden, []}
+      not_found = {404, :not_found, []}
+
+      malformed = fn location ->
+        {400, :invalid_parameter, [not_a_uuid_entry(%{"path" => location})]}
+      end
+
+      rows =
+        [
+          {&get_outcomes/5, stranger, project.id, workflow.id,
+           %{"days" => "banana"}, refused},
+          {&get_failures/5, stranger, project.id, workflow.id, %{}, refused},
+          {&get_runs(&1, &2, &3, &4, &5), stranger, project.id, workflow.id, %{},
+           refused}
+        ] ++
+          for {caller, project_id, workflow_id, expected} <- [
+                {stranger, project.id, workflow.id, refused},
+                {stranger, project.id, unknown, refused},
+                {stranger, project.id, "not-a-uuid", refused},
+                {stranger, unknown, unknown, refused},
+                {stranger, "not-a-uuid", unknown, refused},
+                {short_of_mfa, mfa_project.id, unknown, refused},
+                {short_of_mfa, mfa_project.id, "not-a-uuid", refused},
+                {member, other_workflow.project_id, other_workflow.id, refused},
+                {member, project.id, other_workflow.id, not_found},
+                {member, project.id, unknown, not_found},
+                {member, project.id, "not-a-uuid", malformed.("workflow_id")},
+                {superuser, project.id, workflow.id, refused},
+                {superuser, project.id, unknown, refused},
+                {superuser, project.id, "not-a-uuid", refused},
+                {superuser, unknown, unknown, not_found},
+                {superuser, "not-a-uuid", unknown, malformed.("project_id")}
+              ] do
+            {&get_outcomes/5, caller, project_id, workflow_id, %{}, expected}
+          end
+
+      for {get_slice, caller, project_id, workflow_id, params,
+           {status, code, entries}} <- rows do
+        conn
+        |> get_slice.(caller, project_id, workflow_id, params)
+        |> assert_problem(status, code, entries)
       end
     end
 
@@ -112,7 +149,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
           workflow.id
         )
 
-      assert_problem(refused, 404, :not_found, [])
+      assert_problem(refused, 403, :forbidden, [])
     end
 
     test "a member cannot read a project scheduled for deletion", %{
@@ -181,23 +218,6 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
         get_failures(conn, user, project.id, workflow.id)
 
       assert_problem(refused, 404, :not_found, [])
-    end
-
-    test "a member who hasn't met MFA is told a missing workflow is missing" do
-      unenrolled = insert(:user, mfa_enabled: false)
-
-      project =
-        insert(:project,
-          requires_mfa: true,
-          project_users: [%{user: unenrolled, role: :owner}]
-        )
-
-      conn =
-        build_conn()
-        |> put_req_header("accept", "application/json")
-        |> get_outcomes(unenrolled, project.id, Ecto.UUID.generate())
-
-      assert_problem(conn, 404, :not_found, [])
     end
   end
 

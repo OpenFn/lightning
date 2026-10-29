@@ -18,6 +18,7 @@ defmodule LightningWeb.API.WorkflowHealthController do
   alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
   alias LightningWeb.API.Problem
+  alias LightningWeb.API.Request
   alias LightningWeb.API.Target
 
   action_fallback FallbackController
@@ -101,19 +102,13 @@ defmodule LightningWeb.API.WorkflowHealthController do
      )}
   end
 
-  defp authorize(conn, %{"project_id" => project_id, "workflow_id" => id}) do
+  defp authorize(conn, _params) do
     Target.in_project(
       conn.assigns.current_user,
-      project_id,
+      Request.param(conn, "project_id"),
       {:project_users, :access_project},
-      &fetch_workflow(&1, id)
+      Request.param(conn, "workflow_id"),
+      &Workflows.get_workflow_for_project/2
     )
-  end
-
-  defp fetch_workflow(project, id) do
-    case Workflows.get_workflow_for_project(project, id) do
-      nil -> {:error, :not_found}
-      workflow -> {:ok, workflow}
-    end
   end
 end
