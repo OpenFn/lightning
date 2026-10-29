@@ -25,13 +25,12 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
 
-  # Logs, I/O (plus the step that crosses its budget) and the run index sent
-  # together must stay under Apollo's 250,000-character attachment limit, or
-  # the whole turn is refused.
-  @logs_byte_budget 120_000
-  @logs_line_overhead 150
+  # Logs, I/O and the run index sent together should stay under Apollo's
+  # 250,000-character attachment limit, or the whole turn is refused. Only a
+  # step whose data is unusually wide can still push it over.
+  @logs_char_budget 120_000
 
-  # On the scrubbed output as Apollo renders it, indented, and the step that
+  # On the scrubbed output as Apollo renders it, indented. The step that
   # crosses it is read whole.
   @io_byte_budget 50_000
 
@@ -1148,24 +1147,50 @@ defmodule Lightning.Invocation do
 
   # A job that logs per record produces hundreds of thousands of rows.
   defp take_until_over_budget(line, {lines, size}) do
-    # The ids and level ride along with every line, so a run of short messages
-    # costs far more on the wire than its text suggests.
-    line_size = byte_size(line.message || "") + @logs_line_overhead
+    line_size = rendered_size(line)
 
-    if size + line_size <= @logs_byte_budget do
+    if size + line_size <= @logs_char_budget do
       {:cont, {[line | lines], size + line_size}}
     else
-      {:halt, {cut_line(line, @logs_byte_budget - size, lines), :cut}}
+      {:halt, {cut_line(line, @logs_char_budget - size, lines), :cut}}
     end
   end
 
-  # A single line can hold a whole state dump; the room left keeps its start.
-  defp cut_line(line, room, lines) when room > @logs_line_overhead do
-    message = String.slice(line.message || "", 0, room - @logs_line_overhead)
-    [%{line | message: message <> @log_line_cut} | lines]
+  # Apollo renders each line as indented JSON with non-ASCII escaped, which can
+  # double the size of non-Latin text, and counts the characters of that.
+  defp rendered_size(line) do
+    line
+    |> Jason.encode!(pretty: true, escape: :unicode_safe)
+    |> byte_size()
+    |> Kernel.+(1)
   end
 
-  defp cut_line(_line, _room, lines), do: lines
+  # A single line can hold a whole state dump; the room left keeps its start.
+  defp cut_line(line, room, lines) do
+    marked = %{line | message: @log_line_cut}
+
+    case room - rendered_size(marked) do
+      left when left > 0 ->
+        start = take_rendered(line.message || "", left, [])
+        [%{line | message: start <> @log_line_cut} | lines]
+
+      _ ->
+        lines
+    end
+  end
+
+  defp take_rendered(message, room, kept) do
+    with {grapheme, rest} <- String.next_grapheme(message),
+         size when size <= room <- escaped_size(grapheme) do
+      take_rendered(rest, room - size, [kept | grapheme])
+    else
+      _ -> IO.iodata_to_binary(kept)
+    end
+  end
+
+  defp escaped_size(grapheme) do
+    byte_size(Jason.encode!(grapheme, escape: :unicode_safe)) - 2
+  end
 
   defp with_omitted_line(lines, run_id) do
     total =
@@ -1302,7 +1327,9 @@ defmodule Lightning.Invocation do
 
   defp io_entry_size(entry) do
     # Scrubbed output is always encodable.
-    entry |> Jason.encode!(pretty: true) |> byte_size()
+    entry
+    |> Jason.encode!(pretty: true, escape: :unicode_safe)
+    |> byte_size()
   end
 
   @doc """

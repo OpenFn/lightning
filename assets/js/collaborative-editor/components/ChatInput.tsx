@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { cn } from '#/utils/cn';
-
-import truncateUid from '../../utils/truncateUID';
+import truncateUid from '#/utils/truncateUID';
 
 import { Tooltip } from '../../components/Tooltip';
 import { useSlashCommand } from '../hooks/useSlashCommand';
@@ -40,8 +39,8 @@ interface MessageOptions {
 }
 
 const ATTACHED_RUN_DESCRIPTION =
-  "The assistant sees this run's logs and the structure of each step's " +
-  'input and output, not the values.';
+  "The assistant sees this run's logs as written, and the structure of each " +
+  "step's input and output without the values.";
 
 const MIN_TEXTAREA_HEIGHT = 52;
 const MAX_TEXTAREA_HEIGHT = 200;

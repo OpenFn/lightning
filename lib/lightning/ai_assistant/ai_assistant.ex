@@ -1515,7 +1515,7 @@ defmodule Lightning.AiAssistant do
   defp attachment_too_large_message(details) do
     log_attachment_sizes(details)
 
-    "The selected run's data is too large to send. Deselect the run " <>
+    "The selected run's data is too large to send. Detach the run " <>
       "and paste the part you need into the chat instead."
   end
 

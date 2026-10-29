@@ -2876,7 +2876,29 @@ defmodule Lightning.InvocationTest do
 
       assert [%{message: message}] = Invocation.logs_for_run(run.id, project.id)
       assert message =~ ~r/^startx+ \[rest of this line cut/
-      assert String.length(message) < 250_000
+      assert byte_size(message) <= 120_000
+    end
+
+    test "measures non-Latin text as Apollo renders it, escaped", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      # Each of these is one character but six once escaped as \uXXXX.
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: String.duplicate("ሰ", 300_000),
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      assert [line] = Invocation.logs_for_run(run.id, project.id)
+
+      rendered =
+        Jason.encode!(line, pretty: true, escape: :unicode_safe)
+
+      assert byte_size(rendered) <= 120_000
+      assert line.message =~ "[rest of this line cut"
     end
 
     test "returns lines oldest first with the step's job attributed", %{

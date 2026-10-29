@@ -3254,7 +3254,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
 
       assert_received {:ai_assistant, :streaming_error, %{error: message}}
-      assert message =~ "Deselect the run"
+      assert message =~ "Detach the run"
       assert message =~ "paste the part you need into the chat"
       refute message =~ "deliberately ignore"
 
