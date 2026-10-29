@@ -12,6 +12,8 @@ defmodule LightningWeb.SandboxLive.FormComponent do
 
   @type mode :: :new | :edit
 
+  @default_new_sandbox_name "Dev"
+
   @impl true
   def update(%{mode: mode} = assigns, socket) when mode in [:new, :edit] do
     base = base_struct(assigns)
@@ -213,7 +215,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
                 field={f[:raw_name]}
                 label="Name"
                 required
-                placeholder="My Sandbox"
                 phx-debounce="300"
               />
               <.input type="hidden" field={f[:name]} />
@@ -282,7 +283,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   end
 
   defp initial_params(%{mode: :new}) do
-    %{"color" => Components.random_color()}
+    %{
+      "raw_name" => @default_new_sandbox_name,
+      "color" => Components.random_color()
+    }
   end
 
   defp form_changeset(%Project{} = base, params, parent_id) do
