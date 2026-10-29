@@ -10,6 +10,10 @@ defmodule Lightning.UpdateCheck.Registry do
   `Basic` challenge is answered with the credentials directly. The resulting
   `authorization` header is kept on the struct, so callers thread the
   returned struct through later calls and authenticate once per check.
+
+  No setting supplies a username or password yet, so every check fetches an
+  anonymous token, which is all public Docker Hub repositories need. The
+  credential handling is here so an access key can be added later.
   """
 
   @manifest_types Enum.join(

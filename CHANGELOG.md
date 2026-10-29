@@ -21,7 +21,12 @@ and this project adheres to
   available in the image repository, and superusers are asked to upgrade, with a
   link to the upgrade guidelines. A green dot shows when the instance is on the
   latest version. The repository is set with `UPDATE_CHECK_*` environment
-  variables and defaults to `openfn/lightning` on Docker Hub.
+  variables and defaults to `openfn/lightning` on Docker Hub. Worker releases
+  are checked too, in `openfn/ws-worker`, and the sidebar callout says "New
+  version available" when either the app or any connected worker is behind.
+- A "Workers" card on the Maintenance page lists the workers connected right
+  now, grouped by the version and API version they report, flags outdated ones,
+  and updates live as workers connect and disconnect.
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
   metrics are enabled, where they're sent, and the instance UUID and its hash.
   [#5262](https://github.com/OpenFn/lightning/issues/5262)

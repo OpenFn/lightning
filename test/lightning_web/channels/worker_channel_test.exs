@@ -47,6 +47,16 @@ defmodule LightningWeb.WorkerChannelTest do
       assert WorkerPresence.total_worker_capacity() == 1
     end
 
+    test "tracks the versions the worker connected with" do
+      {:ok, _, _socket} =
+        ws_worker_socket()
+        |> Phoenix.Socket.assign(worker_version: "1.30.0", api_version: "1.2")
+        |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue")
+
+      assert [%{worker_version: "1.30.0", api_version: "1.2"}] =
+               WorkerPresence.list_workers()
+    end
+
     test "tracks worker presence with custom capacity" do
       {:ok, _, _socket} =
         ws_worker_socket()

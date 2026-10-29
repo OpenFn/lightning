@@ -864,10 +864,16 @@ defmodule Lightning.Config.Bootstrap do
         env!("UPDATE_CHECK_REGISTRY", :string, "https://registry-1.docker.io"),
       repository: env!("UPDATE_CHECK_REPOSITORY", :string, "openfn/lightning"),
       tag: env!("UPDATE_CHECK_TAG", :string, "latest"),
-      username: env!("UPDATE_CHECK_USERNAME", :string, nil),
-      password: env!("UPDATE_CHECK_PASSWORD", :string, nil),
       interval_hours: env!("UPDATE_CHECK_INTERVAL_HOURS", :integer, 6),
-      instructions_url: env!("UPDATE_INSTRUCTIONS_URL", :string, nil)
+      instructions_url: env!("UPDATE_INSTRUCTIONS_URL", :string, nil),
+      worker_registry:
+        env!(
+          "UPDATE_CHECK_WORKER_REGISTRY",
+          :string,
+          "https://registry-1.docker.io"
+        ),
+      worker_repository:
+        env!("UPDATE_CHECK_WORKER_REPOSITORY", :string, "openfn/ws-worker")
 
     config :lightning,
            :broadcast_work_available,

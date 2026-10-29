@@ -328,8 +328,7 @@ defmodule LightningWeb.Components.Common do
   end
 
   attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
-  attr :update_status, :map, default: nil
-  attr :dot, :atom, default: :right, values: [:right, :below]
+  attr :update, :atom, default: nil, values: [nil, :available, :current]
 
   def version_chip(assigns) do
     {display, message} =
@@ -346,36 +345,20 @@ defmodule LightningWeb.Components.Common do
           {info.label, "No image tag found."}
       end
 
-    update = update_available(assigns.update_status)
-    up_to_date? = match?(%{update_available?: false}, assigns.update_status)
-
     message =
-      cond do
-        update -> "v#{update.latest} is available. #{message}"
-        up_to_date? -> "Up to date. #{message}"
-        true -> message
+      case assigns.update do
+        :available -> "A new version is available. #{message}"
+        :current -> "Up to date. #{message}"
+        nil -> message
       end
 
-    assigns =
-      assign(assigns,
-        display: display,
-        message: message,
-        update: update,
-        up_to_date?: up_to_date?
-      )
+    assigns = assign(assigns, display: display, message: message)
 
     ~H"""
-    <div class={[
-      "text-[8px] primary-light flex items-center",
-      if(@dot == :below, do: "flex-col", else: "justify-center gap-1")
-    ]}>
+    <div class="text-[8px] primary-light opacity-50 flex justify-center">
       <code
         class={[
-          "rounded-md opacity-50",
-          if(@dot == :below and (@update || @up_to_date?),
-            do: "pt-1",
-            else: "py-1"
-          ),
+          "py-1 rounded-md",
           "break-keep primary-light",
           "inline-block align-middle text-center"
         ]}
@@ -383,29 +366,51 @@ defmodule LightningWeb.Components.Common do
       >
         {@display}
       </code>
-      <span
-        :if={@update}
-        class="version-update-dot block size-1.5 rounded-full bg-amber-400"
-        title={@message}
-        aria-label={"v#{@update.latest} is available"}
-      >
-      </span>
-      <span
-        :if={@up_to_date?}
-        class="version-current-dot block size-1.5 rounded-full bg-green-400"
-        title={@message}
-        aria-label="Up to date"
-      >
-      </span>
     </div>
     """
   end
 
+  attr :update, :atom, default: nil, values: [nil, :available, :current]
+
   @doc """
-  The update status when it reports a newer version, otherwise `nil`.
+  A small amber or green dot centred on the top-right corner of its
+  positioned parent, which is the logo's box in the sidebar.
   """
-  def update_available(%{update_available?: true} = status), do: status
-  def update_available(_status), do: nil
+  def update_dot(assigns) do
+    ~H"""
+    <span
+      :if={@update == :available}
+      class="version-update-dot absolute top-0.5 right-0.5 block size-2 translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400"
+      title="A new version is available"
+      aria-label="A new version is available"
+    >
+    </span>
+    <span
+      :if={@update == :current}
+      class="version-current-dot absolute top-0 right-0 block size-2 translate-x-1/2 -translate-y-1/2 rounded-full bg-green-400"
+      title="Up to date"
+      aria-label="Up to date"
+    >
+    </span>
+    """
+  end
+
+  @doc """
+  Whether anything needs upgrading, the app or any connected worker:
+  `:available`, `:current`, or `nil` when there's no update status yet.
+  """
+  @spec update_state(Lightning.UpdateCheck.status() | nil) ::
+          :available | :current | nil
+  def update_state(nil), do: nil
+
+  def update_state(status) do
+    worker_versions =
+      Enum.map(LightningWeb.WorkerPresence.list_workers(), & &1.worker_version)
+
+    if Lightning.UpdateCheck.update_available?(status, worker_versions),
+      do: :available,
+      else: :current
+  end
 
   attr :id, :string, required: true
   attr :title, :string, required: true

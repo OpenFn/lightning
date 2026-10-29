@@ -99,5 +99,84 @@ defmodule Lightning.UpdateCheckTest do
       assert UpdateCheck.check(@config, "2.19.2") ==
                {:error, {:unexpected_status, 500}}
     end
+
+    test "leaves workers unchecked without a worker repository" do
+      mock_registry(["v2.19.2"], %{})
+
+      assert {:ok, %{worker: nil}} = UpdateCheck.check(@config, "2.19.2")
+    end
+  end
+
+  describe "check/2 with a worker repository" do
+    @worker_config @config ++ [worker_repository: "openfn/ws-worker"]
+
+    test "finds the latest worker release the same way" do
+      mock(fn
+        %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
+          json(%{"tags" => ["v2.19.2"]})
+
+        %{method: :get, url: "#{@base}/v2/openfn/ws-worker/tags/list"} ->
+          json(%{"tags" => ["latest", "v1.29.6", "v1.30.0", "v1.31.0-next"]})
+
+        %{method: :head, url: "#{@base}/v2/openfn/ws-worker/manifests/" <> tag} ->
+          digest = if tag in ["latest", "v1.30.0"], do: "sha256:w", else: "x"
+          %Tesla.Env{status: 200, headers: [{"docker-content-digest", digest}]}
+      end)
+
+      assert {:ok, %{worker: worker}} =
+               UpdateCheck.check(@worker_config, "2.19.2")
+
+      assert worker == %{
+               latest: "1.30.0",
+               latest_tag: "v1.30.0",
+               registry: @base,
+               repository: "openfn/ws-worker"
+             }
+    end
+
+    test "a failed worker lookup doesn't fail the check" do
+      mock(fn
+        %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
+          json(%{"tags" => ["v2.19.2"]})
+
+        %{method: :get, url: "#{@base}/v2/openfn/ws-worker/tags/list"} ->
+          %Tesla.Env{status: 500}
+      end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:ok, %{latest: "2.19.2", worker: nil}} =
+                   UpdateCheck.check(@worker_config, "2.19.2")
+        end)
+
+      assert log =~ "Worker update check failed"
+    end
+  end
+
+  describe "worker_outdated?/2 and update_available?/2" do
+    @status %{update_available?: false, worker: %{latest: "1.30.0"}}
+
+    test "a worker behind the latest release is outdated" do
+      assert UpdateCheck.worker_outdated?(@status, "1.29.6")
+      refute UpdateCheck.worker_outdated?(@status, "1.30.0")
+      refute UpdateCheck.worker_outdated?(@status, "1.31.0-next")
+    end
+
+    test "a worker without a version, or no worker release, is never outdated" do
+      refute UpdateCheck.worker_outdated?(@status, nil)
+      refute UpdateCheck.worker_outdated?(%{@status | worker: nil}, "1.0.0")
+      refute UpdateCheck.worker_outdated?(nil, "1.0.0")
+    end
+
+    test "an update is available for the app or any connected worker" do
+      refute UpdateCheck.update_available?(nil, ["1.0.0"])
+      refute UpdateCheck.update_available?(@status, ["1.30.0", nil])
+      assert UpdateCheck.update_available?(@status, ["1.30.0", "1.29.6"])
+
+      assert UpdateCheck.update_available?(
+               %{@status | update_available?: true},
+               []
+             )
+    end
   end
 end

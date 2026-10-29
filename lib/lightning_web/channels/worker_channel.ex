@@ -22,7 +22,12 @@ defmodule LightningWeb.WorkerChannel do
 
     # Track this worker's presence with its capacity
     worker_id = "worker-#{inspect(self())}"
-    {:ok, _ref} = WorkerPresence.track_worker(self(), worker_id, capacity)
+
+    {:ok, _ref} =
+      WorkerPresence.track_worker(self(), worker_id, capacity,
+        worker_version: socket.assigns[:worker_version],
+        api_version: socket.assigns[:api_version]
+      )
 
     Observability.put_scope(worker_id: worker_id)
 

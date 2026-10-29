@@ -6,6 +6,7 @@ defmodule LightningWeb.UpdateNoticeTest do
   import Phoenix.LiveViewTest
 
   alias Lightning.UpdateCheck.Checker
+  alias LightningWeb.WorkerPresence
 
   setup :set_mox_global
 
@@ -18,7 +19,13 @@ defmodule LightningWeb.UpdateNoticeTest do
     repository: "openfn/lightning",
     instructions_url:
       "https://docs.openfn.org/documentation/deploy/options#technical-guidelines",
-    checked_at: ~U[2026-10-29 07:00:00Z]
+    checked_at: ~U[2026-10-29 07:00:00Z],
+    worker: %{
+      latest: "1.30.0",
+      latest_tag: "v1.30.0",
+      registry: "https://registry-1.docker.io",
+      repository: "openfn/ws-worker"
+    }
   }
 
   @up_to_date %{@behind | current: "2.19.2", update_available?: false}
@@ -34,6 +41,19 @@ defmodule LightningWeb.UpdateNoticeTest do
 
     {:ok, ^status} = Checker.check_now(Checker)
     :ok
+  end
+
+  defp connect_worker(version, capacity \\ 1) do
+    pid = spawn(fn -> Process.sleep(:infinity) end)
+    on_exit(fn -> Process.exit(pid, :kill) end)
+
+    {:ok, _ref} =
+      WorkerPresence.track_worker(pid, "worker-#{inspect(pid)}", capacity,
+        worker_version: version,
+        api_version: "1.2"
+      )
+
+    pid
   end
 
   describe "sidebar" do
@@ -59,10 +79,22 @@ defmodule LightningWeb.UpdateNoticeTest do
       assert has_element?(
                view,
                ~s{#update-callout a[href="/settings/maintenance#update-card"]},
-               "v2.19.2 is available"
+               "New version available"
              )
 
       assert render(view) =~ "Click for upgrade info"
+    end
+
+    test "a superuser sees the same callout when only a worker is behind",
+         %{conn: conn} do
+      start_checker(@up_to_date)
+      connect_worker("1.29.6")
+      %{conn: conn} = register_and_log_in_superuser(%{conn: conn})
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      assert has_element?(view, "#update-callout", "New version available")
+      assert has_element?(view, ".version-update-dot")
     end
 
     test "a green dot shows when on the latest version", %{conn: conn} do
@@ -111,6 +143,16 @@ defmodule LightningWeb.UpdateNoticeTest do
       assert has_element?(view, "#update-latest-version", "v2.19.2")
     end
 
+    test "the version card doesn't flag an app that's up to date", %{conn: conn} do
+      start_checker(@up_to_date)
+      connect_worker("1.29.6")
+
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+
+      assert has_element?(view, "#update-status", "Up to date")
+      refute has_element?(view, "#update-available-callout")
+    end
+
     test "says when the check is turned off", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
 
@@ -135,6 +177,79 @@ defmodule LightningWeb.UpdateNoticeTest do
              )
 
       assert has_element?(view, "#update-status", "Up to date")
+    end
+  end
+
+  describe "maintenance page workers card" do
+    setup :register_and_log_in_superuser
+
+    test "groups connected workers by version and flags the outdated ones",
+         %{conn: conn} do
+      start_checker(@up_to_date)
+      connect_worker("1.30.0", 5)
+      connect_worker("1.29.6", 2)
+      connect_worker("1.29.6", 2)
+
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+
+      assert has_element?(view, "#workers-status", "Update available")
+
+      assert has_element?(
+               view,
+               "#worker-update-callout",
+               "ws-worker v1.30.0 is available. Please upgrade."
+             )
+
+      assert has_element?(view, "#worker-update-callout", "2 of 3")
+      assert has_element?(view, "#worker-group-0", "v1.30.0")
+      refute has_element?(view, "#worker-group-0", "Outdated")
+      assert has_element?(view, "#worker-group-1", "v1.29.6")
+      assert has_element?(view, "#worker-group-1", "Outdated")
+      assert has_element?(view, "#worker-capacity", "9 concurrent runs")
+      assert has_element?(view, "#worker-latest-version", "v1.30.0")
+    end
+
+    test "says when no workers are connected", %{conn: conn} do
+      start_checker(@up_to_date)
+
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+
+      assert has_element?(view, "#workers-status", "None connected")
+      assert has_element?(view, "#no-workers")
+      refute has_element?(view, "#worker-versions")
+    end
+
+    test "workers without a reported version are listed but not flagged",
+         %{conn: conn} do
+      start_checker(@up_to_date)
+      connect_worker(nil)
+
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+
+      assert has_element?(view, "#workers-status", "Up to date")
+      assert has_element?(view, "#worker-group-0", "unknown")
+      refute has_element?(view, "#worker-update-callout")
+    end
+
+    test "updates as workers connect and disconnect", %{conn: conn} do
+      start_checker(@up_to_date)
+
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+      assert has_element?(view, "#no-workers")
+
+      # The view hears the same broadcast, so waiting for it here means the
+      # view has it queued before the next render.
+      Phoenix.PubSub.subscribe(Lightning.PubSub, WorkerPresence.topic())
+
+      pid = connect_worker("1.29.6")
+      assert_receive %Phoenix.Socket.Broadcast{event: "presence_diff"}
+      assert has_element?(view, "#worker-group-0", "v1.29.6")
+      assert has_element?(view, "#worker-update-callout")
+
+      Process.exit(pid, :kill)
+      assert_receive %Phoenix.Socket.Broadcast{event: "presence_diff"}
+      refute has_element?(view, "#worker-group-0")
+      assert has_element?(view, "#no-workers")
     end
   end
 end
