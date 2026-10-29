@@ -4,6 +4,7 @@ defmodule LightningWeb.API.UsersCreatingTest do
   import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
   import LightningWeb.ApiUsersHelpers
+  import Lightning.ServiceAccountHelpers, only: [with_scopes: 3]
 
   alias Lightning.Accounts
   alias Lightning.Accounts.User

@@ -56,17 +56,17 @@ defmodule LightningWeb.API.UserController do
     end
   end
 
-  def show(conn, %{"id" => id}) do
-    with {:ok, user} <- fetch_user(id) do
+  def show(conn, _params) do
+    with {:ok, user} <- fetch_user(Request.param(conn, "id")) do
       render(conn, "show.json", user: user, conn: conn)
     end
   end
 
-  def update(conn, %{"id" => id}) do
+  def update(conn, _params) do
     body = conn.body_params
     attrs = Map.take(body, @update_keys)
 
-    with {:ok, user} <- fetch_user(id),
+    with {:ok, user} <- fetch_user(Request.param(conn, "id")),
          :ok <- Request.check_object(body),
          :ok <-
            refuse_unknown_keys(body, @update_fields, fn ->
@@ -112,7 +112,7 @@ defmodule LightningWeb.API.UserController do
   defp applied_filters(_params), do: %{}
 
   defp fetch_user(id) do
-    with {:ok, id} <- Request.path_id(id),
+    with {:ok, id} <- Request.id(id),
          %User{} = user <- Accounts.get_user(id) do
       {:ok, user}
     else

@@ -4,6 +4,7 @@ defmodule LightningWeb.API.UsersRequestReadingTest do
   import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
   import LightningWeb.ApiUsersHelpers
+  import Lightning.ServiceAccountHelpers, only: [with_scopes: 3]
 
   alias Lightning.Accounts
   alias Lightning.Accounts.User
@@ -117,7 +118,9 @@ defmodule LightningWeb.API.UsersRequestReadingTest do
       conn
       |> patch(~p"/api/users/#{planted["email"]}", %{first_name: "A"})
       |> refute_sentinel()
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(400, :invalid_parameter, [
+        not_a_uuid_entry(%{"path" => "id"})
+      ])
 
       conn
       |> get("/api/users?email[]=" <> planted["email"])
@@ -129,7 +132,9 @@ defmodule LightningWeb.API.UsersRequestReadingTest do
       conn
       |> get(~p"/api/users/#{planted["email"]}")
       |> refute_sentinel()
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(400, :invalid_parameter, [
+        not_a_uuid_entry(%{"path" => "id"})
+      ])
     end
   end
 end

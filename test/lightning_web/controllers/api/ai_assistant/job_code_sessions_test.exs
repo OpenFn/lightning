@@ -4,7 +4,6 @@ defmodule LightningWeb.API.AiAssistantJobCodeSessionsTest do
   @moduletag :capture_log
 
   import Lightning.Factories
-  import LightningWeb.API.ProblemHelpers
   import LightningWeb.ApiAiAssistantHelpers
 
   setup %{conn: conn} do
@@ -184,7 +183,7 @@ defmodule LightningWeb.API.AiAssistantJobCodeSessionsTest do
              }
     end
 
-    test "returns 404 when the caller has no access to the job", %{job: job} do
+    test "lists nothing when the caller has no access to the job", %{job: job} do
       conn =
         build_conn()
         |> put_req_header("accept", "application/json")
@@ -193,7 +192,10 @@ defmodule LightningWeb.API.AiAssistantJobCodeSessionsTest do
           ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{job.id}"
         )
 
-      assert_problem(conn, 404, :not_found, [])
+      assert json_response(conn, 200) == %{
+               "sessions" => [],
+               "pagination" => pagination(0)
+             }
     end
   end
 
@@ -297,7 +299,7 @@ defmodule LightningWeb.API.AiAssistantJobCodeSessionsTest do
              }
     end
 
-    test "returns 404 when the caller has no access to the unsaved job's workflow",
+    test "lists nothing when the caller has no access to the unsaved job's workflow",
          %{conn: _conn} do
       other_user = insert(:user)
       project = insert(:project, project_users: [%{user_id: other_user.id}])
@@ -328,10 +330,13 @@ defmodule LightningWeb.API.AiAssistantJobCodeSessionsTest do
           ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{unsaved_job_id}"
         )
 
-      assert_problem(conn, 404, :not_found, [])
+      assert json_response(conn, 200) == %{
+               "sessions" => [],
+               "pagination" => pagination(0)
+             }
     end
 
-    test "returns 404 for a non-owner when the session names no workflow", %{
+    test "lists nothing for a non-owner when the session names no workflow", %{
       conn: _conn
     } do
       unsaved_job_id = Ecto.UUID.generate()
@@ -352,7 +357,10 @@ defmodule LightningWeb.API.AiAssistantJobCodeSessionsTest do
           ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{unsaved_job_id}"
         )
 
-      assert_problem(conn, 404, :not_found, [])
+      assert json_response(conn, 200) == %{
+               "sessions" => [],
+               "pagination" => pagination(0)
+             }
     end
   end
 

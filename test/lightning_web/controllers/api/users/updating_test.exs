@@ -5,6 +5,7 @@ defmodule LightningWeb.API.UsersUpdatingTest do
   import Lightning.RaceHelpers
   import Lightning.Factories
   import LightningWeb.ApiUsersHelpers
+  import Lightning.ServiceAccountHelpers, only: [with_scopes: 3]
 
   alias Lightning.Accounts
   alias Lightning.Accounts.User
@@ -292,14 +293,17 @@ defmodule LightningWeb.API.UsersUpdatingTest do
       assert %{entries: []} = Lightning.Auditing.list_all()
     end
 
-    test "answers 404 for a user that doesn't exist", %{conn: conn} do
+    test "answers 404 for a user that doesn't exist and 400 for an id that isn't a UUID",
+         %{conn: conn} do
       conn
       |> patch(~p"/api/users/#{Ecto.UUID.generate()}", %{first_name: "A"})
       |> assert_problem(404, :not_found, [])
 
       conn
       |> patch(~p"/api/users/not-a-uuid", %{first_name: "A"})
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(400, :invalid_parameter, [
+        not_a_uuid_entry(%{"path" => "id"})
+      ])
     end
 
     test "records what changed, with the service account as the actor", %{

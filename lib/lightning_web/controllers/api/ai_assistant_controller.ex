@@ -41,10 +41,11 @@ defmodule LightningWeb.API.AiAssistantController do
   - `offset`: Pagination offset (optional, default: 0)
   - `limit`: Pagination limit (optional, default: 20)
 
-  The job or project the query names is the target: it is authorised before the
-  other parameters are read, and a caller with no standing on it gets 404
-  (error-format spec §4). Every bad parameter is reported in one 400
-  `invalid_parameter` (§9.4).
+  The project the query names is the target: it is authorised before the other
+  parameters are read, and a caller with no standing on it gets 403. A `job_id`
+  is a filter instead: a job the caller may not see lists no sessions, as an
+  unknown one does, and only a `job_id` that isn't a UUID is refused. Every bad
+  parameter is reported in one 400 `invalid_parameter`.
 
   ## Examples
   - GET /api/ai_assistant/sessions?session_type=job_code&job_id=123
@@ -59,8 +60,7 @@ defmodule LightningWeb.API.AiAssistantController do
            changeset
            |> apply_action(:validate)
            |> Errors.refuse_parameters() do
-      %{sessions: sessions, pagination: pagination} =
-        AiAssistant.list_sessions(resource, :desc, list_opts(query))
+      %{sessions: sessions, pagination: pagination} = sessions(resource, query)
 
       json(conn, %{
         sessions: AiAssistantJSON.format_sessions(sessions),
@@ -97,9 +97,18 @@ defmodule LightningWeb.API.AiAssistantController do
     do: {:ok, {:job_code, job_id}}
 
   defp target(%{changes: %{session_type: "workflow_template", project_id: id}}),
-    do: {:ok, {:workflow_template, id}}
+    do: {:ok, {:workflow_template, {{:parameter, "project_id"}, id}}}
 
   defp target(changeset), do: {:error, Errors.parameters(changeset)}
+
+  defp sessions(:none, _query),
+    do: %{
+      sessions: [],
+      pagination: %{total_count: 0, has_next_page: false, has_prev_page: false}
+    }
+
+  defp sessions(resource, query),
+    do: AiAssistant.list_sessions(resource, :desc, list_opts(query))
 
   defp list_opts(%{session_type: "workflow_template"} = query) do
     workflow = query.workflow_id && Workflows.get_workflow(query.workflow_id)
@@ -112,9 +121,12 @@ defmodule LightningWeb.API.AiAssistantController do
     do: Target.project(user, project_id, @access_project)
 
   defp authorize({:job_code, job_id}, user) do
-    with {:ok, job_id} <- Request.path_id(job_id),
-         :ok <- authorize_job(job_id, user),
-         do: {:ok, job_id}
+    with {:ok, job_id} <- Request.id({{:parameter, "job_id"}, job_id}) do
+      case authorize_job(job_id, user) do
+        :ok -> {:ok, job_id}
+        {:error, _refused} -> {:ok, :none}
+      end
+    end
   end
 
   defp authorize_job(job_id, user) do
@@ -138,20 +150,17 @@ defmodule LightningWeb.API.AiAssistantController do
           workflow -> authorize_workflow(workflow, user)
         end
 
-      # No workflow to authorise against: owner-only, never allow-all (H-8a).
       session ->
         owner_only(session, user)
     end
   end
 
-  # Someone else's session with no workflow is one the caller has no standing
-  # on, so it answers as if it didn't exist (spec §4 row 3).
   defp owner_only(%{user_id: user_id}, %{id: user_id}), do: :ok
-  defp owner_only(_session, _user), do: {:error, :not_found}
+  defp owner_only(_session, _user), do: {:error, :no_standing}
 
   defp authorize_workflow(workflow, user) do
     with {:ok, _project} <-
-           Target.project(user, workflow.project_id, @access_project),
+           Target.project(user, workflow, @access_project),
          do: :ok
   end
 end

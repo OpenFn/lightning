@@ -4,6 +4,7 @@ defmodule LightningWeb.API.UsersListingTest do
   import LightningWeb.API.ProblemHelpers
   import Lightning.Factories
   import LightningWeb.ApiUsersHelpers
+  import Lightning.ServiceAccountHelpers, only: [with_scopes: 3]
 
   setup :json_conn_with_service_account
 
@@ -171,7 +172,7 @@ defmodule LightningWeb.API.UsersListingTest do
       assert self == user_url(user.id)
     end
 
-    test "answers 404 for a user that doesn't exist or an id that isn't a UUID",
+    test "answers 404 for a user that doesn't exist and 400 for an id that isn't a UUID",
          %{conn: conn, account: account} do
       conn = with_scopes(conn, account, ["users:read"])
 
@@ -181,7 +182,9 @@ defmodule LightningWeb.API.UsersListingTest do
 
       conn
       |> get(~p"/api/users/not-a-uuid")
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(400, :invalid_parameter, [
+        not_a_uuid_entry(%{"path" => "id"})
+      ])
     end
   end
 end
