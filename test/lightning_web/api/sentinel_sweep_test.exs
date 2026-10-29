@@ -262,6 +262,12 @@ defmodule LightningWeb.API.SentinelSweepTest do
     end
   end
 
+  # Provisioning takes its project from an `id` in the query, which the sweep
+  # plants. An id that isn't a UUID names no project, so the request is a create,
+  # which a member may not make.
+  defp expected(%{verb: :post, path: "/api/provision"}, :array),
+    do: {403, :forbidden, []}
+
   defp expected(%{pipeline: pipeline} = route, attempt) do
     row =
       Map.get(@pipelines, pipeline) || Map.get(@exceptions, pipeline) ||
@@ -279,10 +285,6 @@ defmodule LightningWeb.API.SentinelSweepTest do
           flunk("#{describe(route)} has no #{attempt} answer in the table")
     end
   end
-
-  # Provisioning takes the project to replace from an `id` in the query, which
-  # the sweep plants, so its path has no real id to find either.
-  defp all_ids_real?(%{path: "/api/provision"}), do: false
 
   defp all_ids_real?(%{path: path}) do
     params = for ":" <> param <- String.split(path, "/"), do: param
