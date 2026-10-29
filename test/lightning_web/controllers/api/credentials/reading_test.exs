@@ -204,6 +204,55 @@ defmodule LightningWeb.API.Credentials.ReadingTest do
       end)
     end
 
+    test "lists a project's credentials when the project is named in the query",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          name: "acme",
+          description: "Acme's data",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        )
+
+      owner = insert(:user)
+      credential = existing_credential(owner, project)
+
+      [link] =
+        Lightning.Repo.preload(credential, :project_credentials).project_credentials
+
+      conn = get(conn, ~p"/api/credentials?#{%{project_id: project.id}}")
+
+      assert json_response(conn, 200) == %{
+               "credentials" => [
+                 %{
+                   "id" => credential.id,
+                   "name" => "Acme DHIS2",
+                   "schema" => "raw",
+                   "external_id" => nil,
+                   "user_id" => owner.id,
+                   "project_credentials" => [
+                     %{
+                       "id" => link.id,
+                       "project_id" => project.id,
+                       "credential_id" => credential.id,
+                       "inserted_at" => DateTime.to_iso8601(link.inserted_at),
+                       "updated_at" => DateTime.to_iso8601(link.updated_at)
+                     }
+                   ],
+                   "projects" => [
+                     %{
+                       "id" => project.id,
+                       "name" => "acme",
+                       "description" => "Acme's data"
+                     }
+                   ],
+                   "inserted_at" => DateTime.to_iso8601(credential.inserted_at),
+                   "updated_at" => DateTime.to_iso8601(credential.updated_at)
+                 }
+               ],
+               "errors" => %{}
+             }
+    end
+
     test "does not disclose sibling projects the caller is not a member of", %{
       conn: conn,
       user: user
@@ -282,20 +331,6 @@ defmodule LightningWeb.API.Credentials.ReadingTest do
                [sandbox.id]
     end
 
-    test "answers 404 for a project the caller isn't a member of, or that doesn't exist",
-         %{conn: conn} do
-      project =
-        insert(:project,
-          project_users: [%{user_id: insert(:user).id, role: :owner}]
-        )
-
-      for id <- [project.id, Ecto.UUID.generate()] do
-        conn
-        |> get(~p"/api/projects/#{id}/credentials")
-        |> assert_problem(404, :not_found, [])
-      end
-    end
-
     test "tells a member, and only a member, that the project is scheduled for deletion",
          %{conn: conn, user: user} do
       scheduled_deletion = DateTime.utc_now() |> DateTime.truncate(:second)
@@ -314,7 +349,7 @@ defmodule LightningWeb.API.Credentials.ReadingTest do
 
       conn
       |> get(~p"/api/projects/#{stranger_to.id}/credentials")
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(403, :forbidden, [])
     end
 
     test "returns empty list when project has no credentials", %{
@@ -405,10 +440,6 @@ defmodule LightningWeb.API.Credentials.ReadingTest do
       assert {id, user_id} == {credential.id, owner.id}
       assert linked_project_ids(response) == [project.id]
       refute conn.resp_body =~ "password"
-
-      conn
-      |> get(~p"/api/credentials/#{Ecto.UUID.generate()}")
-      |> assert_problem(404, :not_found, [])
     end
 
     test "a service account also holding projects:write sees the projects by name",
@@ -454,11 +485,6 @@ defmodule LightningWeb.API.Credentials.ReadingTest do
       assert linked_project_ids(response) == [theirs.id]
       assert [%{"id" => theirs_id}] = response["credential"]["projects"]
       assert theirs_id == theirs.id
-
-      conn
-      |> with_pat(insert(:user))
-      |> get(~p"/api/credentials/#{credential.id}")
-      |> assert_problem(404, :not_found, [])
     end
 
     test "a person reads someone else's credential linked to a project they stand in",

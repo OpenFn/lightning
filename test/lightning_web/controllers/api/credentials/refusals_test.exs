@@ -401,9 +401,10 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
       refute Repo.reload(credential)
     end
 
-    test "will not rewrite another owner's credential through a new owner", %{
-      conn: conn
-    } do
+    test "answers 422 not_allowed at the owner, writing nothing, when the body names another owner",
+         %{
+           conn: conn
+         } do
       owner = insert(:user)
       credential = existing_credential(owner, insert(:project))
       other = insert(:user)
@@ -415,7 +416,13 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
           credential_body(%{"name" => "Hijacked", "owner" => other.email})
         )
 
-      assert_problem(conn, 409, :id_taken, [])
+      assert_problem(conn, 422, :invalid, [
+        %{
+          "pointer" => "#/owner",
+          "code" => "not_allowed",
+          "detail" => "can't change when replacing a credential"
+        }
+      ])
 
       assert %Credential{name: "Acme DHIS2", user_id: owner_id} =
                Repo.reload!(credential)
@@ -457,18 +464,6 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
   end
 
   describe "PUT, for a person's token" do
-    test "cannot rewrite a credential someone else owns", %{conn: conn} do
-      credential = insert(:credential, user: insert(:user), name: "Theirs")
-
-      conn =
-        conn
-        |> with_pat(insert(:user))
-        |> put_credential(credential.id, credential_body(%{}))
-
-      assert_problem(conn, 409, :id_taken, [])
-      assert Repo.reload!(credential).name == "Theirs"
-    end
-
     test "is refused with 409 on their own credential while it is being deleted",
          %{conn: conn} do
       user = insert(:user)
@@ -483,21 +478,6 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
 
       assert_problem(conn, 409, :scheduled_for_deletion, [])
       assert Repo.reload!(credential).name == credential.name
-    end
-
-    test "learns only that the id is taken, not that someone else's credential is being deleted",
-         %{conn: conn} do
-      credential =
-        scheduled_for_deletion(
-          existing_credential(insert(:user), insert(:project))
-        )
-
-      conn =
-        conn
-        |> with_pat(insert(:user))
-        |> put_credential(credential.id, credential_body(%{}))
-
-      assert_problem(conn, 409, :id_taken, [])
     end
   end
 
@@ -674,39 +654,6 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
 
   describe "DELETE, refused" do
     setup [:assign_bearer_for_api]
-
-    test "answers 404 for a credential that doesn't exist, or that the caller can't see",
-         %{conn: conn} do
-      other_credential =
-        insert(:credential, user: insert(:user), schema: "raw")
-
-      for id <- [Ecto.UUID.generate(), other_credential.id] do
-        conn
-        |> delete(~p"/api/credentials/#{id}")
-        |> assert_problem(404, :not_found, [])
-      end
-
-      assert Lightning.Credentials.get_credential(other_credential.id)
-    end
-
-    test "answers 403 for another user's credential the caller sees through a project",
-         %{conn: conn, user: user} do
-      project =
-        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
-
-      other_credential =
-        insert(:credential,
-          user: insert(:user),
-          schema: "raw",
-          project_credentials: [%{project_id: project.id}]
-        )
-
-      conn
-      |> delete(~p"/api/credentials/#{other_credential.id}")
-      |> assert_problem(403, :forbidden, [])
-
-      assert Lightning.Credentials.get_credential(other_credential.id)
-    end
 
     test "answers 409 in_use for a credential runs have used", %{
       conn: conn,

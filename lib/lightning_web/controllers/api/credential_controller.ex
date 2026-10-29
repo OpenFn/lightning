@@ -44,8 +44,12 @@ defmodule LightningWeb.API.CredentialController do
        when action == :index
 
   plug AuthorizeAction,
+       {:credentials, :create_credential}
+       when action == :create
+
+  plug AuthorizeAction,
        {:credentials, :edit_credential}
-       when action in [:create, :show, :update]
+       when action in [:show, :update]
 
   plug AuthorizeAction,
        {:credentials, :delete_credential}
@@ -64,8 +68,8 @@ defmodule LightningWeb.API.CredentialController do
   Lists credentials, without their bodies.
 
   With `project_id`, lists every credential linked to that project, whoever
-  owns it. A project the caller isn't a member of answers 404 `not_found`, as
-  if it didn't exist. Without `project_id`, lists the caller's own credentials.
+  owns it. A project the caller may not see answers 403 `forbidden`. Without
+  `project_id`, lists the caller's own credentials.
 
   ## Examples
 
@@ -76,11 +80,11 @@ defmodule LightningWeb.API.CredentialController do
       GET /api/credentials?project_id=a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def index(conn, %{"project_id" => project_id}) do
+  def index(conn, %{"project_id" => _}) do
     with {:ok, project} <-
            Target.project(
              conn.assigns.scope,
-             project_id,
+             Request.param(conn, "project_id"),
              {:project_users, :list_project_credentials}
            ) do
       credentials =
@@ -93,19 +97,13 @@ defmodule LightningWeb.API.CredentialController do
   end
 
   def index(conn, _params) do
-    current_user = conn.assigns.current_resource
+    scope = conn.assigns.scope
 
-    with :ok <-
-           Permissions.permit(
-             :credentials,
-             :list_credentials,
-             conn.assigns.scope,
-             nil
-           ) do
+    with :ok <- Permissions.permit(:credentials, :list_credentials, scope, nil) do
       credentials =
-        current_user
+        scope.actor
         |> Credentials.list_credentials()
-        |> hide_unseen_links(conn.assigns.scope)
+        |> hide_unseen_links(scope)
 
       render(conn, "index.json", credentials: credentials)
     end
@@ -129,6 +127,8 @@ defmodule LightningWeb.API.CredentialController do
   ## Returns
 
   - `201 Created` with credential JSON including body
+  - `403 Forbidden` to a caller that can't own a credential, such as the
+    service account
   - `400 Bad Request` (`malformed`) when the body isn't a JSON object
   - `422 Unprocessable Entity` on validation errors, with one entry for each
     project link the user may not make
@@ -157,7 +157,14 @@ defmodule LightningWeb.API.CredentialController do
     scope = conn.assigns.scope
     owner = scope.actor
 
-    with :ok <- Request.check_object(conn.body_params),
+    with :ok <-
+           Permissions.permit(
+             :credentials,
+             :create_credential,
+             scope,
+             %Credential{user_id: owner.id}
+           ),
+         :ok <- Request.check_object(conn.body_params),
          {link_entries, project_ids} =
            check_links(params, [], {:ok, owner}, scope),
          :ok <- Errors.refuse(link_entries),
@@ -179,20 +186,22 @@ defmodule LightningWeb.API.CredentialController do
   @doc """
   Shows a credential, without its body, to a caller who may edit it or who
   sees it linked to a project whose credentials it may list. Anyone else hears
-  404 `not_found`, as if it didn't exist.
+  403 `forbidden`, whether or not the credential exists.
+
+  Only the service account may read every credential, so only it hears 404
+  `not_found` for an id that names none, and 400 `invalid_parameter` for one
+  that isn't a UUID. Everyone else hears 403 for both.
 
   Links to projects whose credentials the caller may not list are left out.
   """
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def show(conn, %{"id" => id}) do
-    with {:ok, id} <- Request.path_id(id),
-         {:ok, credential} <- fetch_credential(id),
-         :ok <-
-           Permissions.permit(
-             :credentials,
-             :see_credential,
+  def show(conn, _params) do
+    with {:ok, credential} <-
+           Target.record(
              conn.assigns.scope,
-             credential
+             Request.param(conn, "id"),
+             {:credentials, :see_credential},
+             &fetch_credential/1
            ) do
       render_credential(conn, credential)
     end
@@ -206,18 +215,24 @@ defmodule LightningWeb.API.CredentialController do
   the credential already holds stays even if the body leaves it out. The
   response leaves out links the caller may not see, as `show/2` does.
 
-  The credential under the path's id is checked before the body: one the caller
-  may not edit is `id_taken`, and one being deleted is `scheduled_for_deletion`.
+  The path names the credential, so an id already in use is an update. It is
+  checked before the body: one the caller may not edit is 403 `forbidden`, even
+  when the caller can see it, and one being deleted is
+  `scheduled_for_deletion`. An id that isn't a UUID is 400 `invalid_parameter`
+  to anyone, since anyone holding the grant may create a credential.
+
   A refused body answers one 422 with every error in its keys, its owner and
-  its links (error-format spec §9.6). The credential's own fields and its body
-  are checked by `Lightning.Credentials` when it writes.
+  its links. The credential's own fields and its body
+  are checked by `Lightning.Credentials` when it writes. A body naming an owner
+  other than an existing credential's is 422 `not_allowed` at the owner, since
+  the owner applies only on create.
   """
   @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def update(conn, %{"id" => id}) do
+  def update(conn, _params) do
     scope = conn.assigns.scope
     body = conn.body_params
 
-    with {:ok, id} <- Request.path_id(id),
+    with {:ok, id} <- Request.id(Request.param(conn, "id")),
          {:ok, target} <- update_target(id, scope),
          {:ok, naming} <- owner_naming(body["owner"], scope),
          {:ok, key_entries} <- Request.check(body, id, @accepted),
@@ -238,18 +253,9 @@ defmodule LightningWeb.API.CredentialController do
   end
 
   defp editable(credential, scope) do
-    case Permissions.permit(:credentials, :edit_credential, scope, credential) do
-      :ok ->
-        {:ok, Credentials.preload_links(credential)}
-
-      # The id belongs to a credential the caller can't write, which no body
-      # can change (spec §4).
-      {:error, :forbidden} ->
-        {:error, :id_taken}
-
-      error ->
-        error
-    end
+    with :ok <-
+           Permissions.permit(:credentials, :edit_credential, scope, credential),
+         do: {:ok, Credentials.preload_links(credential)}
   end
 
   # A caller who may name an owner has to name one. Anyone else owns the
@@ -381,9 +387,12 @@ defmodule LightningWeb.API.CredentialController do
   defp check_links(_body, _held, _owner, _scope), do: {[], []}
 
   defp link_project_id(%{"project_id" => id}, index) when is_binary(id) do
-    case Request.path_id(id) do
-      {:ok, id} -> {:ok, id}
-      {:error, :not_found} -> {:error, link_entry(index, Errors.not_visible())}
+    case Request.id({[:project_credentials, index, :project_id], id}) do
+      {:ok, id} ->
+        {:ok, id}
+
+      {:error, {:invalid_id, _}} ->
+        {:error, link_entry(index, Errors.not_visible())}
     end
   end
 
@@ -451,7 +460,7 @@ defmodule LightningWeb.API.CredentialController do
       # caller is checked against that credential.
       {:error, %Ecto.Changeset{} = changeset} ->
         if Request.id_taken?(changeset),
-          do: update(conn, %{"id" => id}),
+          do: update(conn, conn.params),
           else: {:error, changeset}
 
       error ->
@@ -481,7 +490,12 @@ defmodule LightningWeb.API.CredentialController do
              ),
            do: render_credential(conn, credential)
     else
-      {:error, :id_taken}
+      Errors.refuse([
+        Errors.entry(
+          [:owner],
+          {"can't change when replacing a credential", code: :not_allowed}
+        )
+      ])
     end
   end
 
@@ -561,19 +575,24 @@ defmodule LightningWeb.API.CredentialController do
   ## Returns
 
   - `204 No Content` on successful deletion
-  - `404 Not Found` if the credential doesn't exist, the id isn't a UUID, or
-    the caller can't see it
-  - `403 Forbidden` if the caller can see it but doesn't own it
+  - `403 Forbidden` if the caller doesn't own it, whether or not it exists or
+    the id is a UUID
 
   ## Examples
 
       DELETE /api/credentials/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
   """
   @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def delete(conn, %{"id" => id}) do
-    with {:ok, id} <- Request.path_id(id),
-         {:ok, credential} <- fetch_credential(id),
-         :ok <- deletable(credential, conn.assigns.scope),
+  def delete(conn, _params) do
+    scope = conn.assigns.scope
+
+    with {:ok, credential} <-
+           Target.record(
+             scope,
+             Request.param(conn, "id"),
+             {:credentials, :delete_credential},
+             &fetch_credential/1
+           ),
          {:ok, _deleted} <-
            Credentials.delete_credential(
              credential,
@@ -581,20 +600,5 @@ defmodule LightningWeb.API.CredentialController do
            ) do
       send_resp(conn, :no_content, "")
     end
-  end
-
-  # Seeing a credential through a link is standing to read it and nothing more
-  # (spec §15 row 49), so a caller who sees it but may not delete it hears 403.
-  defp deletable(credential, scope) do
-    with {:error, :forbidden} <-
-           Permissions.permit(
-             :credentials,
-             :delete_credential,
-             scope,
-             credential
-           ),
-         :ok <-
-           Permissions.permit(:credentials, :see_credential, scope, credential),
-         do: {:error, :forbidden}
   end
 end
