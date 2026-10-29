@@ -16,6 +16,7 @@ defmodule LightningWeb.MaintenanceLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
   alias Lightning.UpdateCheck
+  alias Lightning.UpdateCheck.Releases
   alias Lightning.UsageTracking
   alias LightningWeb.WorkerPresence
 
@@ -138,6 +139,13 @@ defmodule LightningWeb.MaintenanceLive.Index do
             "The update check is turned off. Set UPDATE_CHECK_ENABLED=true and restart."
           )
 
+        {:error, :no_release_found} ->
+          put_flash(
+            socket,
+            :error,
+            "Update check failed: no release matches the #{socket.assigns.update_check.tag} tag."
+          )
+
         {:error, reason} ->
           put_flash(socket, :error, "Update check failed: #{inspect(reason)}")
       end
@@ -199,7 +207,7 @@ defmodule LightningWeb.MaintenanceLive.Index do
 
   # Versions that don't parse, including missing ones, sort last.
   defp compare_versions(a, b) do
-    case {Version.parse(a || ""), Version.parse(b || "")} do
+    case {Releases.parse_version(a), Releases.parse_version(b)} do
       {{:ok, a}, {:ok, b}} -> Version.compare(a, b)
       {{:ok, _a}, :error} -> :gt
       {:error, {:ok, _b}} -> :lt
@@ -215,7 +223,7 @@ defmodule LightningWeb.MaintenanceLive.Index do
       registry: config[:registry],
       repository: config[:repository],
       tag: config[:tag],
-      worker_registry: config[:worker_registry] || config[:registry],
+      worker_registry: config[:worker_registry],
       worker_repository: config[:worker_repository]
     }
   end
@@ -269,6 +277,13 @@ defmodule LightningWeb.MaintenanceLive.Index do
        when is_binary(latest) do
     ~H"""
     <.pill id="workers-status" color="green">Up to date</.pill>
+    """
+  end
+
+  # Checked, but no worker release was found or the lookup failed.
+  defp workers_status_pill(%{status: %{}} = assigns) do
+    ~H"""
+    <.pill id="workers-status" color="gray">Unknown</.pill>
     """
   end
 

@@ -5,16 +5,14 @@ defmodule Lightning.UpdateCheck.Registry do
   Harbor and other registries that implement the spec.
 
   Authentication follows the registry's `WWW-Authenticate` challenge. A
-  `Bearer` challenge is answered by fetching a token from its realm, sending
-  the configured username and password as basic auth when there are any. A
-  `Basic` challenge is answered with the credentials directly. The resulting
-  `authorization` header is kept on the struct, so callers thread the
-  returned struct through later calls and authenticate once per check.
-
-  No setting supplies a username or password yet, so every check fetches an
-  anonymous token, which is all public Docker Hub repositories need. The
-  credential handling is here so an access key can be added later.
+  `Bearer` challenge is answered by fetching an anonymous token from its
+  realm, which is all public repositories need. Any other challenge fails
+  with `:unauthorized`. The resulting `authorization` header is kept on the
+  struct, so callers thread the returned struct through later calls and
+  authenticate once per check.
   """
+
+  require Logger
 
   @manifest_types Enum.join(
                     [
@@ -29,32 +27,30 @@ defmodule Lightning.UpdateCheck.Registry do
   @max_pages 20
   @page_size 1000
 
-  defstruct [:base_url, :repository, :username, :password, :authorization]
+  defstruct [:base_url, :repository, :authorization]
 
   @type t :: %__MODULE__{
           base_url: String.t(),
           repository: String.t(),
-          username: String.t() | nil,
-          password: String.t() | nil,
           authorization: String.t() | nil
         }
 
   @doc """
-  Builds a client from the `:registry`, `:repository`, `:username` and
-  `:password` options.
+  Builds a client from the `:registry` and `:repository` options.
   """
   @spec new(keyword()) :: t()
   def new(opts) do
     %__MODULE__{
       base_url: opts |> Keyword.fetch!(:registry) |> String.trim_trailing("/"),
-      repository: Keyword.fetch!(opts, :repository),
-      username: blank_to_nil(opts[:username]),
-      password: blank_to_nil(opts[:password])
+      repository: Keyword.fetch!(opts, :repository)
     }
   end
 
   @doc """
-  Lists every tag in the repository, following `Link` pagination.
+  Lists the repository's tags, following `Link` pagination for up to
+  #{@max_pages} pages of #{@page_size}. Past that the tags listed so far are
+  returned and a warning is logged, since the tags left out may include the
+  newest releases.
   """
   @spec list_tags(t()) :: {:ok, [String.t()], t()} | {:error, term()}
   def list_tags(%__MODULE__{} = registry) do
@@ -62,16 +58,25 @@ defmodule Lightning.UpdateCheck.Registry do
     list_tags(registry, {path, [{"n", to_string(@page_size)}]}, [], @max_pages)
   end
 
-  defp list_tags(registry, _page, acc, 0), do: {:ok, acc, registry}
-
   defp list_tags(registry, {path, query}, acc, pages_left) do
     case request(registry, method: :get, url: path, query: query) do
       {:ok, %Tesla.Env{status: 200, body: body} = env, registry} ->
         tags = acc ++ (decode(body)["tags"] || [])
 
         case next_page(env) do
-          nil -> {:ok, tags, registry}
-          next -> list_tags(registry, next, tags, pages_left - 1)
+          nil ->
+            {:ok, tags, registry}
+
+          _next when pages_left == 1 ->
+            Logger.warning(
+              "Stopped listing tags for #{registry.repository} after " <>
+                "#{@max_pages} pages; the update check may miss newer releases"
+            )
+
+            {:ok, tags, registry}
+
+          next ->
+            list_tags(registry, next, tags, pages_left - 1)
         end
 
       {:ok, %Tesla.Env{status: status}, _registry} ->
@@ -143,7 +148,6 @@ defmodule Lightning.UpdateCheck.Registry do
   defp authorize(registry, env) do
     case parse_challenge(Tesla.get_header(env, "www-authenticate")) do
       {"bearer", params} -> fetch_token(registry, params)
-      {"basic", _params} -> basic_authorization(registry)
       _other -> {:error, :unauthorized}
     end
   end
@@ -151,13 +155,7 @@ defmodule Lightning.UpdateCheck.Registry do
   defp fetch_token(registry, %{"realm" => realm} = params) do
     query = params |> Map.take(["service", "scope"]) |> Enum.to_list()
 
-    headers =
-      case basic_authorization(registry) do
-        {:ok, authorization} -> [{"authorization", authorization}]
-        {:error, _} -> []
-      end
-
-    case Tesla.get(client(registry), realm, query: query, headers: headers) do
+    case Tesla.get(client(registry), realm, query: query) do
       {:ok, %Tesla.Env{status: 200, body: body}} ->
         case decode(body) do
           %{"token" => token} when is_binary(token) ->
@@ -179,13 +177,6 @@ defmodule Lightning.UpdateCheck.Registry do
   end
 
   defp fetch_token(_registry, _params), do: {:error, :unauthorized}
-
-  defp basic_authorization(%{username: username, password: password})
-       when is_binary(username) and is_binary(password) do
-    {:ok, "Basic " <> Base.encode64("#{username}:#{password}")}
-  end
-
-  defp basic_authorization(_registry), do: {:error, :unauthorized}
 
   @doc false
   # `Bearer realm="https://auth.docker.io/token",service="registry.docker.io"`
@@ -248,7 +239,4 @@ defmodule Lightning.UpdateCheck.Registry do
   defp adapter do
     Application.get_env(:tesla, __MODULE__, [])[:adapter]
   end
-
-  defp blank_to_nil(value) when value in [nil, ""], do: nil
-  defp blank_to_nil(value), do: value
 end

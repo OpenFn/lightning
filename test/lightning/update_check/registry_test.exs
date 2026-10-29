@@ -47,54 +47,7 @@ defmodule Lightning.UpdateCheck.RegistryTest do
       assert registry.authorization == "Bearer abc"
     end
 
-    test "sends credentials as basic auth when fetching a token" do
-      expected = "Basic " <> Base.encode64("robot:s3cret")
-
-      mock(fn
-        %{url: @tags_url, headers: headers} ->
-          if List.keyfind(headers, "authorization", 0),
-            do: json(%{"tags" => ["v1.0.0"]}),
-            else: %Tesla.Env{
-              status: 401,
-              headers: [{"www-authenticate", @challenge}]
-            }
-
-        %{url: @realm, headers: headers} ->
-          assert {"authorization", ^expected} =
-                   List.keyfind(headers, "authorization", 0)
-
-          json(%{"access_token" => "private"})
-      end)
-
-      assert {:ok, ["v1.0.0"], %{authorization: "Bearer private"}} =
-               Registry.list_tags(
-                 registry(username: "robot", password: "s3cret")
-               )
-    end
-
-    test "answers a Basic challenge with the credentials" do
-      expected = "Basic " <> Base.encode64("robot:s3cret")
-
-      mock(fn %{url: @tags_url, headers: headers} ->
-        case List.keyfind(headers, "authorization", 0) do
-          {"authorization", ^expected} ->
-            json(%{"tags" => ["v1.0.0"]})
-
-          nil ->
-            %Tesla.Env{
-              status: 401,
-              headers: [{"www-authenticate", ~s(Basic realm="Registry")}]
-            }
-        end
-      end)
-
-      assert {:ok, ["v1.0.0"], _registry} =
-               Registry.list_tags(
-                 registry(username: "robot", password: "s3cret")
-               )
-    end
-
-    test "fails on a Basic challenge without credentials" do
+    test "fails on a Basic challenge" do
       mock(fn %{url: @tags_url} ->
         %Tesla.Env{
           status: 401,
@@ -121,6 +74,26 @@ defmodule Lightning.UpdateCheck.RegistryTest do
 
       assert {:ok, ["v1.0.0", "v1.1.0"], _registry} =
                Registry.list_tags(registry())
+    end
+
+    test "stops after 20 pages and warns that tags were left out" do
+      # Every page says there's another.
+      mock(fn %{url: @tags_url} ->
+        json(%{"tags" => ["v1.0.0"]},
+          headers: [
+            {"link",
+             ~s(</v2/openfn/lightning/tags/list?last=v1.0.0&n=1000>; rel="next")}
+          ]
+        )
+      end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:ok, tags, _registry} = Registry.list_tags(registry())
+          assert length(tags) == 20
+        end)
+
+      assert log =~ "Stopped listing tags for openfn/lightning after 20 pages"
     end
 
     test "reports unexpected statuses" do

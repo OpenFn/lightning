@@ -7,6 +7,7 @@ defmodule Lightning.UpdateCheckTest do
 
   @base "https://registry-1.docker.io"
   @config [registry: @base, repository: "openfn/lightning", tag: "latest"]
+  @worker_base "https://workers.example.com"
 
   defp mock_registry(tags, digests) do
     mock(fn
@@ -93,6 +94,23 @@ defmodule Lightning.UpdateCheckTest do
       assert status.instructions_url == "https://example.com/upgrade"
     end
 
+    test "fails when the channel tag matches none of the newest releases" do
+      mock_registry(["latest", "v2.19.2"], %{
+        "latest" => "sha256:b",
+        "v2.19.2" => "sha256:a"
+      })
+
+      assert UpdateCheck.check(@config, "2.19.1") ==
+               {:error, :no_release_found}
+    end
+
+    test "fails when there are no full releases" do
+      mock_registry(["latest", "edge", "v2.20.0-pre"], %{"latest" => "x"})
+
+      assert UpdateCheck.check(@config, "2.19.1") ==
+               {:error, :no_release_found}
+    end
+
     test "passes registry errors through" do
       mock(fn %{method: :get} -> %Tesla.Env{status: 500} end)
 
@@ -108,7 +126,11 @@ defmodule Lightning.UpdateCheckTest do
   end
 
   describe "check/2 with a worker repository" do
-    @worker_config @config ++ [worker_repository: "openfn/ws-worker"]
+    @worker_config @config ++
+                     [
+                       worker_registry: @base,
+                       worker_repository: "openfn/ws-worker"
+                     ]
 
     test "finds the latest worker release the same way" do
       mock(fn
@@ -134,6 +156,21 @@ defmodule Lightning.UpdateCheckTest do
              }
     end
 
+    test "checks workers against the worker registry, not the app's" do
+      mock(fn
+        %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
+          json(%{"tags" => ["v2.19.2"]})
+
+        %{method: :get, url: "#{@worker_base}/v2/openfn/ws-worker/tags/list"} ->
+          json(%{"tags" => ["v1.30.0"]})
+      end)
+
+      config = Keyword.put(@worker_config, :worker_registry, @worker_base)
+
+      assert {:ok, %{worker: %{latest: "1.30.0", registry: @worker_base}}} =
+               UpdateCheck.check(config, "2.19.2")
+    end
+
     test "a failed worker lookup doesn't fail the check" do
       mock(fn
         %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
@@ -151,6 +188,28 @@ defmodule Lightning.UpdateCheckTest do
 
       assert log =~ "Worker update check failed"
     end
+
+    test "no worker release found leaves workers unchecked" do
+      mock(fn
+        %{method: :get, url: "#{@base}/v2/openfn/lightning/tags/list"} ->
+          json(%{"tags" => ["v2.19.2"]})
+
+        %{method: :get, url: "#{@base}/v2/openfn/ws-worker/tags/list"} ->
+          json(%{"tags" => ["latest", "v1.30.0"]})
+
+        %{method: :head, url: "#{@base}/v2/openfn/ws-worker/manifests/" <> tag} ->
+          digest = if tag == "latest", do: "sha256:w", else: "sha256:x"
+          %Tesla.Env{status: 200, headers: [{"docker-content-digest", digest}]}
+      end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:ok, %{worker: nil}} =
+                   UpdateCheck.check(@worker_config, "2.19.2")
+        end)
+
+      assert log =~ "Worker update check failed: :no_release_found"
+    end
   end
 
   describe "worker_outdated?/2 and update_available?/2" do
@@ -160,6 +219,11 @@ defmodule Lightning.UpdateCheckTest do
       assert UpdateCheck.worker_outdated?(@status, "1.29.6")
       refute UpdateCheck.worker_outdated?(@status, "1.30.0")
       refute UpdateCheck.worker_outdated?(@status, "1.31.0-next")
+    end
+
+    test "a worker version with a leading v is compared the same way" do
+      assert UpdateCheck.worker_outdated?(@status, "v1.29.6")
+      refute UpdateCheck.worker_outdated?(@status, "v1.30.0")
     end
 
     test "a worker without a version, or no worker release, is never outdated" do

@@ -37,6 +37,13 @@ defmodule Lightning.UpdateCheck.ReleasesTest do
       refute Releases.newer?(latest, "2.20.0")
     end
 
+    test "accepts a running version with a leading v" do
+      latest = Version.parse!("2.19.2")
+
+      assert Releases.newer?(latest, "v2.19.1")
+      refute Releases.newer?(latest, "v2.19.2")
+    end
+
     test "is false when either side is unknown" do
       refute Releases.newer?(nil, "2.19.1")
       refute Releases.newer?(Version.parse!("2.19.2"), "not-a-version")

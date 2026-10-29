@@ -231,6 +231,31 @@ defmodule LightningWeb.UpdateNoticeTest do
       refute has_element?(view, "#worker-update-callout")
     end
 
+    test "a worker reporting a leading v is compared and shown like any other",
+         %{conn: conn} do
+      start_checker(@up_to_date)
+      connect_worker("v1.29.6")
+
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+
+      assert has_element?(view, "#workers-status", "Update available")
+      assert has_element?(view, "#worker-group-0", "v1.29.6")
+      refute has_element?(view, "#worker-group-0", "vv1.29.6")
+      assert has_element?(view, "#worker-group-0", "Outdated")
+    end
+
+    test "says unknown, not up to date, when no worker release was found",
+         %{conn: conn} do
+      start_checker(%{@up_to_date | worker: nil})
+      connect_worker("1.29.6")
+
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+
+      assert has_element?(view, "#workers-status", "Unknown")
+      refute has_element?(view, "#worker-latest-version")
+      refute has_element?(view, "#worker-update-callout")
+    end
+
     test "updates as workers connect and disconnect", %{conn: conn} do
       start_checker(@up_to_date)
 

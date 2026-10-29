@@ -169,7 +169,9 @@
               <.td>
                 <span class="flex items-center gap-2">
                   <.inline_code value={
-                    if group.version, do: "v#{group.version}", else: "unknown"
+                    if group.version,
+                      do: "v#{String.trim_leading(group.version, "v")}",
+                      else: "unknown"
                   } />
                   <.pill :if={group.outdated?} color="yellow">Outdated</.pill>
                 </span>

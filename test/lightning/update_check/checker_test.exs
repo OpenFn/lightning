@@ -54,6 +54,49 @@ defmodule Lightning.UpdateCheck.CheckerTest do
     assert Process.alive?(checker)
   end
 
+  test "a check that exits or throws is reported as an error" do
+    {:ok, results} =
+      Agent.start_link(fn -> [{:ok, %{latest: "1"}}, :exit, :throw] end)
+
+    checker =
+      start_checker(fn ->
+        case Agent.get_and_update(results, fn [next | rest] -> {next, rest} end) do
+          :exit -> exit(:pool_gone)
+          :throw -> throw(:nope)
+          result -> result
+        end
+      end)
+
+    assert {:ok, _} = Checker.check_now(checker)
+
+    capture_log(fn ->
+      assert Checker.check_now(checker) == {:error, {:exit, :pool_gone}}
+      assert Checker.check_now(checker) == {:error, {:throw, :nope}}
+    end)
+
+    assert Checker.status(checker) == %{latest: "1"}
+  end
+
+  test "a check process that is killed doesn't take the checker down" do
+    test = self()
+
+    checker =
+      start_checker(fn ->
+        send(test, {:checking, self()})
+        receive do: (:never -> :ok)
+      end)
+
+    task = Task.async(fn -> Checker.check_now(checker) end)
+    assert_receive {:checking, check_pid}
+
+    capture_log(fn ->
+      Process.exit(check_pid, :kill)
+      assert {:error, {:exit, :killed}} = Task.await(task)
+    end)
+
+    assert Process.alive?(checker)
+  end
+
   test "status answers while a check is in flight" do
     test = self()
 
