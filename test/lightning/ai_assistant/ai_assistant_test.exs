@@ -3227,7 +3227,7 @@ defmodule Lightning.AiAssistantTest do
       :ok
     end
 
-    test "reports an oversized attachment with the checkbox to untick", %{
+    test "reports an oversized run with what to do instead", %{
       user: user,
       project: project,
       workflow: workflow
@@ -3254,7 +3254,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
 
       assert_received {:ai_assistant, :streaming_error, %{error: message}}
-      assert message =~ "Send run logs"
+      assert message =~ "Deselect the run"
       assert message =~ "paste the part you need into the chat"
       refute message =~ "deliberately ignore"
 
@@ -3263,37 +3263,9 @@ defmodule Lightning.AiAssistantTest do
       refute message =~ "250000"
     end
 
-    test "names the I/O checkbox when a dataclip is the largest attachment", %{
-      user: user,
-      project: project,
-      workflow: workflow
-    } do
-      session = global_session(user, project, workflow)
-      Lightning.subscribe("ai_session:#{session.id}")
-
-      error =
-        Jason.encode!(%{
-          "type" => "ATTACHMENT_TOO_LARGE",
-          "details" => %{
-            "total_characters" => 260_000,
-            "limit_characters" => 250_000,
-            "largest_attachment" => %{"type" => "input_dataclip"}
-          }
-        })
-
-      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
-        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
-      end)
-
-      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
-
-      assert_received {:ai_assistant, :streaming_error, %{error: message}}
-      assert message =~ "Send run data"
-    end
-
-    # Apollo can report the size without saying which attachment caused it, and
-    # can report nothing at all. Neither should cost the reader a sentence.
-    test "still says what to do when Apollo names no attachment", %{
+    # Apollo can report nothing about the sizes. That should not cost the
+    # reader a sentence.
+    test "still says what to do when Apollo gives no sizes", %{
       user: user,
       project: project,
       workflow: workflow
@@ -3311,8 +3283,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
 
       assert_received {:ai_assistant, :streaming_error, %{error: message}}
-      assert message =~ "The attached run data is too large"
-      assert message =~ "one of the attachment boxes"
+      assert message =~ "The selected run's data is too large"
       assert message =~ "paste the part you need into the chat"
     end
 

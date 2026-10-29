@@ -14,7 +14,6 @@
 
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { produce } from 'immer';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,7 +21,6 @@ import { AIAssistantPanel } from '../../../js/collaborative-editor/components/AI
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import { createAIAssistantStore } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
-import { createMockJobCodeContext } from '../__helpers__/aiAssistantHelpers';
 import {
   createMockHistoryStore,
   createMockSessionContextStore,
@@ -614,7 +612,7 @@ describe('AIAssistantPanel', () => {
       expect(textarea).toBeDisabled();
     });
 
-    it('should offer run context on the job page when a run is loaded', () => {
+    it('should attach the run on the job page when one is selected', () => {
       mockHistoryStore = createMockHistoryStore({}, {
         id: 'run-123',
       } as never);
@@ -628,12 +626,10 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      expect(
-        screen.getByRole('checkbox', { name: /send run logs/i })
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('attached-context')).toBeInTheDocument();
     });
 
-    it('should offer the same on the canvas', () => {
+    it('should attach the run on the canvas too', () => {
       mockHistoryStore = createMockHistoryStore({}, {
         id: 'run-123',
       } as never);
@@ -646,53 +642,7 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      expect(
-        screen.getByRole('checkbox', { name: /send run logs/i })
-      ).toBeInTheDocument();
-    });
-  });
-
-  describe('Storage Key Computation', () => {
-    it('should compute storageKey from job context via store state', () => {
-      // Update store state directly using produce pattern
-      const snapshot = mockStore.getSnapshot();
-      const newState = produce(snapshot, draft => {
-        draft.jobCodeContext = createMockJobCodeContext({ job_id: 'job-456' });
-        draft.sessionType = 'job_code';
-      });
-
-      // Replace state via the store's internal mechanism
-      // In real usage, this happens via connectJobCodeMode
-      renderWithStore(
-        <AIAssistantPanel isOpen={true} onClose={mockOnClose} page="job_code" />
-      );
-
-      // ChatInput receives storageKey via useSyncExternalStore
-      // The computation logic is tested - we can't easily assert the prop value
-      expect(mockStore.getSnapshot()).toBeDefined();
-    });
-
-    it('should compute storageKey from workflow context via store state', () => {
-      renderWithStore(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          page="workflow_template"
-        />
-      );
-
-      // Storage key computation depends on store state
-      // In real usage, context is set by connectWorkflowTemplateMode
-      expect(mockStore.getSnapshot()).toBeDefined();
-    });
-
-    it('should handle undefined storageKey when no context', () => {
-      renderWithStore(<AIAssistantPanel isOpen={true} onClose={mockOnClose} />);
-
-      // storageKey should be undefined when no context
-      const state = mockStore.getSnapshot();
-      expect(state.jobCodeContext).toBeNull();
-      expect(state.workflowTemplateContext).toBeNull();
+      expect(screen.getByTestId('attached-context')).toBeInTheDocument();
     });
   });
 

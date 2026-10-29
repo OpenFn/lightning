@@ -2837,27 +2837,46 @@ defmodule Lightning.InvocationTest do
       assert length(Invocation.logs_for_run(run.id, project.id)) < 2100
     end
 
-    test "stops reading once the lines cannot fit any consumer's limit", %{
+    test "keeps the tail of a long log and says how much was left out", %{
       project: project,
       run: run,
       step: step
     } do
-      # A job that logs per record over a large batch produces hundreds of
-      # thousands of rows. Reading them all to build a payload that is then
-      # refused costs the caller the whole run in memory.
-      for n <- 1..6 do
+      # The failure is usually at the end, and a reader told nothing takes the
+      # tail for the whole log.
+      for n <- 1..2100 do
         insert(:log_line,
           run: run,
           step: step,
-          message: String.duplicate("x", 100_000),
+          message: "line #{n}",
           timestamp: DateTime.add(~U[2026-08-25 10:00:00Z], n, :second)
         )
       end
 
-      lines = Invocation.logs_for_run(run.id, project.id)
+      [omitted | kept] = Invocation.logs_for_run(run.id, project.id)
 
-      assert length(lines) < 6
-      assert Enum.map_join(lines, & &1.message) |> byte_size() > 250_000
+      assert %{step_id: nil, job_id: nil, level: nil} = omitted
+      assert omitted.message =~ "first #{2100 - length(kept)} lines omitted"
+      assert List.last(kept).message == "line 2100"
+      assert hd(kept).message == "line #{2100 - length(kept) + 1}"
+    end
+
+    test "keeps the start of a line too long to fit", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      # One console.log of a whole state is one line.
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "start" <> String.duplicate("x", 300_000),
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      assert [%{message: message}] = Invocation.logs_for_run(run.id, project.id)
+      assert message =~ ~r/^startx+ \[rest of this line cut/
+      assert String.length(message) < 250_000
     end
 
     test "returns lines oldest first with the step's job attributed", %{

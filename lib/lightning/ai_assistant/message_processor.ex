@@ -177,19 +177,35 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     )
   end
 
-  # Run context the user ticked on the chat input; an unresolvable source is
-  # omitted rather than sent as an empty attachment.
+  # The selected run's data, plus an index of recent runs so the assistant can
+  # ask for one that isn't selected. An unresolvable source is omitted rather
+  # than sent as an empty attachment.
   @spec build_attachments(AiAssistant.ChatSession.t()) :: [map()]
   defp build_attachments(session) do
     opts = get_in(session.meta, ["message_options"]) || %{}
     run_id = get_in(session.meta, ["follow_run_id"])
 
-    log_attachments(opts["log"] == true, run_id, session.project_id) ++
+    # follow_run_id outlives the selection, so the per-message flags say
+    # whether a run is selected for this message.
+    selected_run_id =
+      if opts["log"] == true or opts["attach_io_data"] == true, do: run_id
+
+    run_index_attachments(session.workflow_id, selected_run_id) ++
+      log_attachments(opts["log"] == true, run_id, session.project_id) ++
       io_attachments(
         opts["attach_io_data"] == true,
         run_id,
         session.project_id
       )
+  end
+
+  defp run_index_attachments(nil, _selected_run_id), do: []
+
+  defp run_index_attachments(workflow_id, selected_run_id) do
+    case Invocation.recent_runs_summary(workflow_id, selected_run_id) do
+      [] -> []
+      runs -> [%{"type" => "run_index", "content" => runs}]
+    end
   end
 
   defp log_attachments(true, run_id, project_id) when is_binary(run_id) do

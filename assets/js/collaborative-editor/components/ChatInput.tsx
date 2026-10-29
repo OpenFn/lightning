@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
+import truncateUid from '../../utils/truncateUID';
+
 import { Tooltip } from '../../components/Tooltip';
 import { useSlashCommand } from '../hooks/useSlashCommand';
 import type { AISkill } from '../types/sessionContext';
@@ -17,8 +19,6 @@ interface ChatInputProps {
   isLoading?: boolean | undefined;
   /** Disabled state (separate from loading, e.g., due to limits) */
   isDisabled?: boolean | undefined;
-  /** Storage key for persisting checkbox preferences */
-  storageKey?: string | undefined;
   /** Enable automatic focus management for the input */
   enableAutoFocus?: boolean | undefined;
   /** Trigger value that when changed, re-focuses the input (e.g., timestamp) */
@@ -27,7 +27,7 @@ interface ChatInputProps {
   placeholder?: string | undefined;
   /** Message to show in tooltip when input is disabled */
   disabledMessage?: string | undefined;
-  /** The run both attachments are scoped to, and what gates them */
+  /** The run whose logs and data are attached to every message */
   selectedRunId?: string | null;
   /** Skills a leading slash command can invoke */
   skills?: AISkill[] | undefined;
@@ -39,25 +39,9 @@ interface MessageOptions {
   follow_run_id?: string;
 }
 
-/** What can be attached beyond the workflow, which the assistant always reads. */
-const ATTACHMENTS = [
-  {
-    key: 'logs',
-    label: 'Send run logs',
-    description:
-      'Sends every log line from this run, so the assistant can see what ' +
-      'actually happened.',
-  },
-  {
-    key: 'data',
-    label: 'Send run data',
-    description:
-      "Sends the shape of every step's input and output. Field names go as " +
-      'they are; the values are replaced by their types.',
-  },
-] as const;
-
-type AttachmentKey = (typeof ATTACHMENTS)[number]['key'];
+const ATTACHED_RUN_DESCRIPTION =
+  "The assistant sees this run's logs and the structure of each step's " +
+  'input and output, not the values.';
 
 const MIN_TEXTAREA_HEIGHT = 52;
 const MAX_TEXTAREA_HEIGHT = 200;
@@ -72,7 +56,6 @@ export function ChatInput({
   onSendMessage,
   isLoading = false,
   isDisabled = false,
-  storageKey,
   enableAutoFocus = false,
   focusTrigger,
   placeholder = 'Ask me anything...',
@@ -84,53 +67,17 @@ export function ChatInput({
   const slash = useSlashCommand(skills, textareaRef);
   const { input, skill, content } = slash;
 
+  const [detachedRunId, setDetachedRunId] = useState<string | null>(null);
+  const attachedRunId =
+    selectedRunId && selectedRunId !== detachedRunId ? selectedRunId : null;
+
+  useEffect(() => {
+    setDetachedRunId(null);
+  }, [selectedRunId]);
+
   const tooLong = content.length > MAX_MESSAGE_LENGTH;
   const showCount = content.length >= COUNT_FROM;
   const canSend = !!content && !isLoading && !isDisabled && !tooLong;
-
-  const [attachLogs, setAttachLogs] = useState(() => {
-    if (!storageKey) {
-      return false;
-    }
-    try {
-      const key = `${storageKey}:attach-logs`;
-      const saved = localStorage.getItem(key);
-      return saved === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const [attachIoData, setAttachIoData] = useState(() => {
-    if (!storageKey) {
-      return false;
-    }
-    try {
-      const key = `${storageKey}:attach-run-data`;
-      const saved = localStorage.getItem(key);
-      return saved === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const isLoadingFromStorageRef = useRef(false);
-
-  const attachmentState: Record<AttachmentKey, boolean> = {
-    logs: attachLogs,
-    data: attachIoData,
-  };
-
-  const toggleAttachment = (key: AttachmentKey) => {
-    switch (key) {
-      case 'logs':
-        setAttachLogs(current => !current);
-        break;
-      case 'data':
-        setAttachIoData(current => !current);
-        break;
-    }
-  };
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -143,57 +90,6 @@ export function ChatInput({
       textarea.style.height = `${newHeight}px`;
     }
   }, [input]);
-
-  useEffect(() => {
-    if (!storageKey) return;
-
-    isLoadingFromStorageRef.current = true;
-
-    try {
-      const logsKey = `${storageKey}:attach-logs`;
-      const savedLogs = localStorage.getItem(logsKey);
-      const logsValue = savedLogs === 'true';
-      setAttachLogs(logsValue);
-    } catch {
-      // Ignore localStorage errors
-    }
-
-    try {
-      const ioDataKey = `${storageKey}:attach-run-data`;
-      const savedIoData = localStorage.getItem(ioDataKey);
-      const ioDataValue = savedIoData === 'true';
-      setAttachIoData(ioDataValue);
-    } catch {
-      // Ignore localStorage errors
-    }
-
-    setTimeout(() => {
-      isLoadingFromStorageRef.current = false;
-    }, 0);
-  }, [storageKey]);
-
-  useEffect(() => {
-    if (!storageKey) return;
-    if (isLoadingFromStorageRef.current) return;
-    try {
-      localStorage.setItem(`${storageKey}:attach-logs`, String(attachLogs));
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [attachLogs, storageKey]);
-
-  useEffect(() => {
-    if (!storageKey) return;
-    if (isLoadingFromStorageRef.current) return;
-    try {
-      localStorage.setItem(
-        `${storageKey}:attach-run-data`,
-        String(attachIoData)
-      );
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [attachIoData, storageKey]);
 
   useEffect(() => {
     if (enableAutoFocus && textareaRef.current) {
@@ -219,10 +115,10 @@ export function ChatInput({
     const options: MessageOptions = {};
     // The run rides along so what we promise to attach and what the backend
     // looks up cannot drift: LiveView push_patch strips the URL param.
-    if (selectedRunId) {
-      options.attach_logs = attachLogs;
-      options.attach_io_data = attachIoData;
-      options.follow_run_id = selectedRunId;
+    if (attachedRunId) {
+      options.attach_logs = true;
+      options.attach_io_data = true;
+      options.follow_run_id = attachedRunId;
     }
 
     onSendMessage?.(content, options);
@@ -263,37 +159,34 @@ export function ChatInput({
                     : 'border-gray-200 hover:border-gray-300'
                 )}
               >
-                {selectedRunId && (
+                {attachedRunId && (
                   <div
                     className="flex flex-wrap items-center gap-3 px-3 pt-3"
                     data-testid="attached-context"
                   >
-                    {ATTACHMENTS.map(({ key, label, description }) => (
-                      <Tooltip key={key} content={description} side="top">
-                        <label className="flex items-center gap-1.5 group cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={attachmentState[key]}
-                            onChange={() => {
-                              toggleAttachment(key);
-                            }}
-                            className={cn(
-                              'w-3.5 h-3.5 rounded border-gray-300',
-                              'text-primary-600 cursor-pointer',
-                              'focus:ring-primary-500 focus:ring-offset-0'
-                            )}
-                          />
-                          <span
-                            className={cn(
-                              'text-[11px] font-medium text-gray-600',
-                              'group-hover:text-gray-900'
-                            )}
-                          >
-                            {label}
-                          </span>
-                        </label>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-md',
+                        'bg-gray-100 px-1.5 py-0.5',
+                        'text-[11px] font-medium text-gray-600'
+                      )}
+                    >
+                      <Tooltip content={ATTACHED_RUN_DESCRIPTION} side="top">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="hero-paper-clip h-3 w-3" />
+                          Run {truncateUid(attachedRunId)} attached
+                        </span>
                       </Tooltip>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => setDetachedRunId(attachedRunId)}
+                        className="-mr-0.5 flex items-center justify-center rounded-sm hover:bg-gray-200"
+                        aria-label="Detach run"
+                        title="Detach run"
+                      >
+                        <span className="hero-x-mark h-3 w-3" />
+                      </button>
+                    </span>
                   </div>
                 )}
 

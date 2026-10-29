@@ -5,25 +5,14 @@
  * - Text input and submission
  * - Keyboard shortcuts
  * - Loading states
- * - Run attachment controls (send logs, send data)
- * - LocalStorage persistence
+ * - The attached run
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ChatInput } from '../../../js/collaborative-editor/components/ChatInput';
-
-const toggleContext = async (name: RegExp) => {
-  await userEvent.click(screen.getByRole('checkbox', { name }));
-};
 
 describe('ChatInput', () => {
   let mockSendMessage: ReturnType<typeof vi.fn>;
@@ -62,23 +51,11 @@ describe('ChatInput', () => {
       );
     });
 
-    it('should offer no attachment controls when there is no run to take them from', () => {
+    it('should show no attached run when none is selected', () => {
       render(<ChatInput />);
 
       expect(screen.queryByTestId('attached-context')).not.toBeInTheDocument();
       expect(screen.getByText(/Please use AI responsibly/)).toBeInTheDocument();
-    });
-
-    it('should offer both boxes, unticked, once a run is loaded', () => {
-      render(<ChatInput selectedRunId="run-123" />);
-
-      const controls = screen.getByTestId('attached-context');
-      expect(
-        within(controls).getByRole('checkbox', { name: /send run logs/i })
-      ).not.toBeChecked();
-      expect(
-        within(controls).getByRole('checkbox', { name: /send run data/i })
-      ).not.toBeChecked();
     });
   });
 
@@ -338,59 +315,23 @@ describe('ChatInput', () => {
     });
   });
 
-  describe('Run Attachment Controls', () => {
-    it('should include both flags and the run when a run is selected', async () => {
+  describe('Attached Run', () => {
+    it('should attach the run whenever one is selected', async () => {
       render(
         <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
       );
-
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      // Unticked is still an answer, so both ride along as false rather than
-      // being left out.
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_logs: false,
-        attach_io_data: false,
-        follow_run_id: 'run-123',
-      });
-    });
-
-    it('should include attach_logs when run logs are added', async () => {
-      render(
-        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
-      );
-
-      await toggleContext(/send run logs/i);
 
       const textarea = screen.getByPlaceholderText('Ask me anything...');
       await userEvent.type(textarea, 'Test{Enter}');
 
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_logs: true,
-        attach_io_data: false,
-        follow_run_id: 'run-123',
-      });
-    });
-
-    it('should include attach_io_data when run data is added', async () => {
-      render(
-        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
-      );
-
-      await toggleContext(/send run data/i);
-
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_logs: false,
         attach_io_data: true,
         follow_run_id: 'run-123',
       });
     });
 
-    it('should send no attachment options when no run is loaded', async () => {
+    it('should send no attachment options when no run is selected', async () => {
       render(
         <ChatInput onSendMessage={mockSendMessage} selectedRunId={null} />
       );
@@ -398,153 +339,53 @@ describe('ChatInput', () => {
       const textarea = screen.getByPlaceholderText('Ask me anything...');
       await userEvent.type(textarea, 'Test{Enter}');
 
-      // A step without a run cannot be attached, so nothing goes.
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {});
     });
-  });
 
-  describe('Attached Context', () => {
-    it('should tick only the box that was clicked', async () => {
-      render(<ChatInput selectedRunId="run-123" />);
-
-      await toggleContext(/send run logs/i);
-
-      const controls = screen.getByTestId('attached-context');
-      expect(
-        within(controls).getByRole('checkbox', { name: /send run logs/i })
-      ).toBeChecked();
-      expect(
-        within(controls).getByRole('checkbox', { name: /send run data/i })
-      ).not.toBeChecked();
-    });
-
-    it('should untick on a second click', async () => {
+    it('should name the attached run by the id the history panel shows', () => {
       render(
-        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-1" />
+        <ChatInput selectedRunId="7f3a9c21-0000-4000-8000-000000000000" />
       );
 
-      await toggleContext(/send run logs/i);
-      await toggleContext(/send run logs/i);
+      expect(screen.getByTestId('attached-context')).toHaveTextContent(
+        'Run 7f3a9c21 attached'
+      );
+    });
 
-      expect(
-        screen.getByRole('checkbox', { name: /send run logs/i })
-      ).not.toBeChecked();
+    it('should stop attaching the run once detached', async () => {
+      render(
+        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Detach run' }));
+      expect(screen.queryByTestId('attached-context')).not.toBeInTheDocument();
+
+      const textarea = screen.getByPlaceholderText('Ask me anything...');
+      await userEvent.type(textarea, 'First{Enter}');
+      await userEvent.type(textarea, 'Second{Enter}');
+
+      expect(mockSendMessage).toHaveBeenNthCalledWith(1, 'First', {});
+      expect(mockSendMessage).toHaveBeenNthCalledWith(2, 'Second', {});
+    });
+
+    it('should attach again when another run is selected', async () => {
+      const { rerender } = render(
+        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Detach run' }));
+      rerender(
+        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-456" />
+      );
 
       const textarea = screen.getByPlaceholderText('Ask me anything...');
       await userEvent.type(textarea, 'Test{Enter}');
 
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_logs: false,
-        attach_io_data: false,
-        follow_run_id: 'run-1',
+        attach_logs: true,
+        attach_io_data: true,
+        follow_run_id: 'run-456',
       });
-    });
-
-    it('should claim nothing when there is no run, whatever was remembered', () => {
-      localStorage.setItem('test-key:attach-logs', 'true');
-      localStorage.setItem('test-key:attach-run-data', 'true');
-
-      // A step on its own is not enough: both attachments are run-scoped.
-      render(<ChatInput storageKey="test-key" selectedRunId={null} />);
-
-      expect(screen.queryByTestId('attached-context')).not.toBeInTheDocument();
-    });
-
-    it('should bring the remembered attachments back when a run arrives', async () => {
-      localStorage.setItem('test-key:attach-logs', 'true');
-
-      const { rerender } = render(
-        <ChatInput storageKey="test-key" selectedRunId={null} />
-      );
-
-      expect(screen.queryByTestId('attached-context')).not.toBeInTheDocument();
-
-      rerender(<ChatInput storageKey="test-key" selectedRunId="run-123" />);
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole('checkbox', { name: /send run logs/i })
-        ).toBeChecked();
-      });
-    });
-  });
-
-  describe('LocalStorage Persistence', () => {
-    it('should load remembered attachments from localStorage', () => {
-      localStorage.setItem('test-key:attach-logs', 'true');
-      localStorage.setItem('test-key:attach-run-data', 'true');
-
-      render(<ChatInput storageKey="test-key" selectedRunId="run-123" />);
-
-      expect(
-        screen.getByRole('checkbox', { name: /send run logs/i })
-      ).toBeChecked();
-      expect(
-        screen.getByRole('checkbox', { name: /send run data/i })
-      ).toBeChecked();
-    });
-
-    it('should attach nothing by default', () => {
-      render(<ChatInput storageKey="test-key" selectedRunId="run-123" />);
-
-      expect(
-        screen.getByRole('checkbox', { name: /send run logs/i })
-      ).not.toBeChecked();
-      expect(
-        screen.getByRole('checkbox', { name: /send run data/i })
-      ).not.toBeChecked();
-    });
-
-    it('should save each attachment to localStorage', async () => {
-      render(<ChatInput storageKey="test-key" selectedRunId="run-123" />);
-
-      await toggleContext(/send run logs/i);
-      await waitFor(() => {
-        expect(localStorage.getItem('test-key:attach-logs')).toBe('true');
-      });
-
-      await toggleContext(/send run data/i);
-      await waitFor(() => {
-        expect(localStorage.getItem('test-key:attach-run-data')).toBe('true');
-      });
-    });
-
-    it('should update preferences when storageKey changes', async () => {
-      localStorage.setItem('key-1:attach-logs', 'false');
-      localStorage.setItem('key-2:attach-logs', 'true');
-
-      const { rerender } = render(
-        <ChatInput storageKey="key-1" selectedRunId="run-123" />
-      );
-
-      expect(
-        screen.getByRole('checkbox', { name: /send run logs/i })
-      ).not.toBeChecked();
-
-      // Change storageKey
-      rerender(<ChatInput storageKey="key-2" selectedRunId="run-123" />);
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole('checkbox', { name: /send run logs/i })
-        ).toBeChecked();
-      });
-    });
-
-    it('should handle localStorage errors gracefully', () => {
-      // Mock localStorage.getItem to throw error
-      const originalGetItem = Storage.prototype.getItem;
-      Storage.prototype.getItem = vi.fn(() => {
-        throw new Error('localStorage error');
-      });
-
-      // Should not crash
-      expect(() => {
-        render(<ChatInput storageKey="test-key" />);
-      }).not.toThrow();
-
-      // Restore
-      Storage.prototype.getItem = originalGetItem;
     });
   });
 

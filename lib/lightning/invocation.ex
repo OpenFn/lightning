@@ -25,13 +25,15 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
 
-  # Comfortably above Apollo's own 250,000-character attachment limit, so a
-  # payload that would have been accepted is never shortened here.
-  @logs_byte_budget 300_000
+  # Logs, I/O (plus the step that crosses its budget) and the run index sent
+  # together must stay under Apollo's 250,000-character attachment limit, or
+  # the whole turn is refused.
+  @logs_byte_budget 120_000
   @logs_line_overhead 150
 
-  # On the scrubbed output, and the step that crosses it is read whole.
-  @io_byte_budget 100_000
+  # On the scrubbed output as Apollo renders it, indented, and the step that
+  # crosses it is read whole.
+  @io_byte_budget 50_000
 
   # Past this a body is described rather than read.
   @io_dataclip_byte_cap 1_000_000
@@ -39,6 +41,9 @@ defmodule Lightning.Invocation do
   @io_erased "[erased by this project's retention policy]"
   @io_too_large "[too large to summarise]"
   @io_over_budget "[not read, the run's data ran past what can be sent]"
+  @log_line_cut " [rest of this line cut, it ran past what can be sent]"
+
+  @run_summary_limit 10
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
@@ -1090,11 +1095,15 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Return every log line for a run in `project_id`, oldest first, as maps.
+  Return the log lines for a run in `project_id`, oldest first, as maps.
 
   Unlike the `assemble_logs_*` functions this keeps the columns needed to tell
   the lines apart: `job_id` for attribution, `level`, and `step_id` to separate
   retries. Run-level lines have no step, so both ids are nil for them.
+
+  A long log keeps its tail, where a failure usually is. What was left out is
+  said in a first line with nil ids and level, because a reader that is told
+  nothing takes the tail for the whole log.
   """
   @spec logs_for_run(Ecto.UUID.t(), Ecto.UUID.t()) :: [map()]
   def logs_for_run(_run_id, nil), do: []
@@ -1114,7 +1123,7 @@ defmodule Lightning.Invocation do
         join: w in assoc(wo, :workflow),
         left_join: s in assoc(l, :step),
         where: l.run_id == ^run_id and w.project_id == ^project_id,
-        order_by: [asc: l.timestamp],
+        order_by: [desc: l.timestamp],
         select: %{
           step_id: l.step_id,
           job_id: s.job_id,
@@ -1123,28 +1132,55 @@ defmodule Lightning.Invocation do
         }
       )
 
-    {:ok, lines} =
+    # Read newest first and prepended, so the kept lines come out oldest first.
+    {:ok, result} =
       Repo.transaction(fn ->
         query
         |> Repo.stream()
         |> Enum.reduce_while({[], 0}, &take_until_over_budget/2)
-        |> then(fn {lines, _size} -> Enum.reverse(lines) end)
       end)
 
-    lines
+    case result do
+      {lines, :cut} -> with_omitted_line(lines, run_id)
+      {lines, _size} -> lines
+    end
   end
 
   # A job that logs per record produces hundreds of thousands of rows.
   defp take_until_over_budget(line, {lines, size}) do
     # The ids and level ride along with every line, so a run of short messages
     # costs far more on the wire than its text suggests.
-    size = size + byte_size(line.message || "") + @logs_line_overhead
-    lines = [line | lines]
+    line_size = byte_size(line.message || "") + @logs_line_overhead
 
-    if size > @logs_byte_budget do
-      {:halt, {lines, size}}
+    if size + line_size <= @logs_byte_budget do
+      {:cont, {[line | lines], size + line_size}}
     else
-      {:cont, {lines, size}}
+      {:halt, {cut_line(line, @logs_byte_budget - size, lines), :cut}}
+    end
+  end
+
+  # A single line can hold a whole state dump; the room left keeps its start.
+  defp cut_line(line, room, lines) when room > @logs_line_overhead do
+    message = String.slice(line.message || "", 0, room - @logs_line_overhead)
+    [%{line | message: message <> @log_line_cut} | lines]
+  end
+
+  defp cut_line(_line, _room, lines), do: lines
+
+  defp with_omitted_line(lines, run_id) do
+    total =
+      from(l in LogLine, where: l.run_id == ^run_id, select: count())
+      |> Repo.one()
+
+    case total - length(lines) do
+      0 ->
+        lines
+
+      omitted ->
+        message =
+          "[first #{omitted} lines omitted, the log ran past what can be sent]"
+
+        [%{step_id: nil, job_id: nil, level: nil, message: message} | lines]
     end
   end
 
@@ -1266,7 +1302,58 @@ defmodule Lightning.Invocation do
 
   defp io_entry_size(entry) do
     # Scrubbed output is always encodable.
-    entry |> Jason.encode!() |> byte_size()
+    entry |> Jason.encode!(pretty: true) |> byte_size()
+  end
+
+  @doc """
+  Summarise a workflow's recent runs, newest first, so an assistant can name a
+  run for the user to select.
+
+  The runs are those the history panel shows, with `selected_run_id` kept and
+  marked even when it is older than the rest. Ids are shortened the way the
+  panel shows them, so the user can find the one named.
+  """
+  @spec recent_runs_summary(Ecto.UUID.t(), Ecto.UUID.t() | nil) :: [map()]
+  def recent_runs_summary(workflow_id, selected_run_id) do
+    runs =
+      workflow_id
+      |> Lightning.WorkOrders.get_workorders_with_runs(selected_run_id)
+      |> Enum.flat_map(& &1.runs)
+      |> Enum.sort_by(& &1.inserted_at, {:desc, DateTime})
+
+    recent = Enum.take(runs, @run_summary_limit)
+
+    runs =
+      case Enum.find(runs, &(&1.id == selected_run_id)) do
+        nil -> recent
+        selected -> Enum.uniq_by(recent ++ [selected], & &1.id)
+      end
+
+    failed = failed_steps_by_run(Enum.map(runs, & &1.id))
+
+    Enum.map(runs, fn run ->
+      %{
+        run: String.slice(run.id, 0, 8),
+        state: run.state,
+        started_at: run.started_at,
+        failed_steps: Map.get(failed, run.id, []),
+        selected: run.id == selected_run_id
+      }
+    end)
+  end
+
+  defp failed_steps_by_run([]), do: %{}
+
+  defp failed_steps_by_run(run_ids) do
+    from(rs in RunStep,
+      join: s in assoc(rs, :step),
+      join: j in assoc(s, :job),
+      where: rs.run_id in ^run_ids and s.exit_reason != "success",
+      order_by: [asc: s.started_at],
+      select: {rs.run_id, j.name}
+    )
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
   def assemble_logs_for_step(nil), do: nil

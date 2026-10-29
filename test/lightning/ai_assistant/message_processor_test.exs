@@ -1413,13 +1413,85 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
     end
 
+    test "sends the workflow's recent runs with the selected one marked", %{
+      user: user,
+      project: project
+    } do
+      %{workflow: workflow, job: job, run: run, step: step} =
+        step_in_run(project)
+
+      Lightning.Repo.update_all(
+        from(s in Lightning.Invocation.Step, where: s.id == ^step.id),
+        set: [exit_reason: "fail"]
+      )
+
+      message =
+        global_message(user, project, %{
+          "log" => true,
+          "attach_io_data" => true,
+          "follow_run_id" => run.id,
+          "workflow" => workflow
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert [
+                 %{
+                   "type" => "run_index",
+                   "content" => [
+                     %{
+                       "run" => short_id,
+                       "failed_steps" => [failed_step],
+                       "selected" => true
+                     }
+                   ]
+                 }
+                 | _run_data
+               ] = Jason.decode!(env.body)["attachments"]
+
+        assert short_id == String.slice(run.id, 0, 8)
+        assert failed_step == job.name
+
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "marks no run selected when this message has none", %{
+      user: user,
+      project: project
+    } do
+      %{workflow: workflow, run: run} = step_in_run(project)
+
+      # A run followed on an earlier message stays in the session's meta.
+      message =
+        global_message(user, project, %{
+          "follow_run_id" => run.id,
+          "workflow" => workflow
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert [
+                 %{
+                   "type" => "run_index",
+                   "content" => [%{"selected" => false}]
+                 }
+               ] = Jason.decode!(env.body)["attachments"]
+
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
     # --- helpers ---------------------------------------------------------------
 
     # A global session in `project`. `opts` is merged into message_options,
     # except "follow_run_id" which is lifted to session meta where the
-    # processor reads it from.
+    # processor reads it from, and "workflow", the session's workflow.
     defp global_message(user, project, opts, content \\ "why did this fail?") do
-      {run_id, message_options} = Map.pop(opts, "follow_run_id")
+      {run_id, opts} = Map.pop(opts, "follow_run_id")
+      {workflow, message_options} = Map.pop(opts, "workflow")
 
       meta = %{
         "message_options" =>
@@ -1433,7 +1505,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
           user: user,
           session_type: "workflow_template",
           project: project,
-          workflow: insert(:workflow, project: project),
+          workflow: workflow || insert(:workflow, project: project),
           meta: meta
         )
 

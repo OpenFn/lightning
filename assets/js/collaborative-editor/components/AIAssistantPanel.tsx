@@ -4,7 +4,6 @@ import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
 import {
-  useAIStorageKey,
   useAISessionType,
   useAIHasSessionContext,
   useAIHasCompletedSessionLoad,
@@ -116,7 +115,6 @@ export function AIAssistantPanel({
   const prevViewRef = useRef(view);
 
   // Use hooks to get state from AI Assistant store
-  const storageKey = useAIStorageKey();
   const storeSessionType = useAISessionType();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const hasSessionContext = useAIHasSessionContext();
@@ -471,7 +469,6 @@ export function AIAssistantPanel({
           (view === 'sessions' &&
             (!hasSessionContext || !hasCompletedSessionLoad))
         }
-        storageKey={storageKey}
         enableAutoFocus={
           isOpen &&
           !isAboutOpen &&
@@ -620,11 +617,10 @@ export function AIAssistantPanel({
               changes it makes are applied to the canvas as they arrive.
             </p>
             <p>
-              <strong>What you attach:</strong> with a run open, two tickboxes
-              above the message box add that run to what you send. "Send run
-              logs" adds every log line. "Send run data" adds the shape of each
-              step's input and output, where the field names go as they are and
-              the values are replaced by their types.
+              <strong>What you attach:</strong> with a run selected, its logs
+              and the structure of each step's input and output go with your
+              message, not the values. The assistant also sees a list of the
+              workflow's recent runs, with their states and failed steps.
             </p>
             <p>
               All chat sessions are shared with project collaborators. Everyone

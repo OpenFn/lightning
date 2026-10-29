@@ -1053,7 +1053,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      # Simulate user selecting a run and checking "Send run logs"
+      # Simulate user sending a message with a run selected
       ref =
         push(socket, "new_message", %{
           "content" => "Help me debug these logs",
@@ -4433,7 +4433,11 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       assert_receive {:apollo_body, body}
 
-      assert [%{"type" => "log", "content" => [line]}] = body["attachments"]
+      assert [
+               %{"type" => "run_index"},
+               %{"type" => "log", "content" => [line]}
+             ] = body["attachments"]
+
       assert line["message"] == "boom"
     end
 
