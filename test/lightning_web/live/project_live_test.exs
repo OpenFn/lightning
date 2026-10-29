@@ -5964,7 +5964,8 @@ defmodule LightningWeb.ProjectLiveTest do
       {conn, user} = setup_project_user(conn, project, :admin)
       set_valid_github_oauth_token!(user)
       other_id = Ecto.UUID.generate()
-      contents = "https://api.github.com/repos/someaccount/somerepo/contents/"
+      repo_url = "https://api.github.com/repos/someaccount/somerepo"
+      contents = repo_url <> "/contents/"
 
       stub_connect_form(%{
         (contents <> "ws/.projects") =>
@@ -5974,11 +5975,12 @@ defmodule LightningWeb.ProjectLiveTest do
              body: [
                %{
                  "name" => "main@app.example.org.yaml",
-                 "path" => "ws/.projects/main@app.example.org.yaml"
+                 "path" => "ws/.projects/main@app.example.org.yaml",
+                 "sha" => "copysha"
                }
              ]
            }},
-        (contents <> "ws/.projects/main@app.example.org.yaml") =>
+        (repo_url <> "/git/blobs/copysha") =>
           {:ok,
            %Tesla.Env{
              status: 200,
@@ -6038,13 +6040,66 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> element("#workspace-alias") |> render() =~ "main"
     end
 
+    test "warns without blocking when a copy under the same alias has no readable uuid",
+         %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+      repo_url = "https://api.github.com/repos/someaccount/somerepo"
+
+      copy =
+        "main@#{URI.parse(Lightning.VersionControl.endpoint_url()).host}.yaml"
+
+      stub_connect_form(%{
+        (repo_url <> "/contents/ws/.projects") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: [
+               %{"name" => copy, "path" => "ws/.projects/" <> copy, "sha" => "s"}
+             ]
+           }},
+        # may be this project's own copy, so not a certain clash
+        (repo_url <> "/git/blobs/s") =>
+          {:ok,
+           %Tesla.Env{status: 200, body: %{"content" => Base.encode64(": [")}}}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      for params <- [
+            %{},
+            %{branch: "main", workspace_path: "ws", accept: "true"}
+          ] do
+        view
+        |> form("#project-repo-connection-form")
+        |> render_change(
+          connection:
+            Map.merge(
+              %{github_installation_id: "1234", repo: "someaccount/somerepo"},
+              params
+            )
+        )
+
+        render_async(view)
+      end
+
+      assert view |> element("#workspace-unreadable-copy") |> render() =~
+               "ws/.projects/" <> copy
+
+      refute has_element?(view, "#workspace-alias-clash")
+      refute has_element?(view, "#connect-and-sync-button[disabled]")
+    end
+
     test "asks to confirm taking over a folder another project syncs to",
          %{conn: conn} do
       project = insert(:project)
       {conn, user} = setup_project_user(conn, project, :admin)
       set_valid_github_oauth_token!(user)
       other_id = Ecto.UUID.generate()
-      contents = "https://api.github.com/repos/someaccount/somerepo/contents/"
+      repo_url = "https://api.github.com/repos/someaccount/somerepo"
+      contents = repo_url <> "/contents/"
       copy = "main@app.example.org.yaml"
 
       stub_connect_form(%{
@@ -6058,9 +6113,15 @@ defmodule LightningWeb.ProjectLiveTest do
           {:ok,
            %Tesla.Env{
              status: 200,
-             body: [%{"name" => copy, "path" => "ws/.projects/" <> copy}]
+             body: [
+               %{
+                 "name" => copy,
+                 "path" => "ws/.projects/" <> copy,
+                 "sha" => "copysha"
+               }
+             ]
            }},
-        (contents <> "ws/.projects/" <> copy) =>
+        (repo_url <> "/git/blobs/copysha") =>
           {:ok,
            %Tesla.Env{
              status: 200,
@@ -7009,6 +7070,10 @@ defmodule LightningWeb.ProjectLiveTest do
         assert has_element?(view, "#remove_connection_modal")
         assert has_element?(view, "#remove_connection_modal_confirm_button")
         assert html =~ "Remove Integration"
+
+        # leftover sync files are the user's to clean up
+        assert view |> element("#remove-connection-leftover-files") |> render() =~
+                 "somebranch"
 
         # click the confirm button
         view
@@ -8374,10 +8439,14 @@ defmodule LightningWeb.ProjectLiveTest do
           else:
             ok.(
               for {name, _uuid} <- projects,
-                  do: %{"name" => name, "path" => ".projects/" <> name}
+                  do: %{
+                    "name" => name,
+                    "path" => ".projects/" <> name,
+                    "sha" => name
+                  }
             )
 
-      %{url: ^projects_url <> "/" <> name}, _opts ->
+      %{url: ^repo_url <> "/git/blobs/" <> name}, _opts ->
         ok.(%{
           "content" =>
             Base.encode64(

@@ -173,6 +173,10 @@ defmodule Lightning.VersionControl do
   def get_sync_status(repo_connection) do
     %{repo: repo, branch: branch, project_id: project_id} = repo_connection
 
+    # Ignore runs from before this connection, e.g. a previous connection's
+    # deploys of the same repo/branch
+    created = ">=#{DateTime.to_iso8601(repo_connection.inserted_at)}"
+
     with {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -186,7 +190,7 @@ defmodule Lightning.VersionControl do
              client,
              repo,
              Path.basename(pull_yml_target_path()),
-             [event: "workflow_dispatch", per_page: 30],
+             [event: "workflow_dispatch", created: created, per_page: 30],
              &String.contains?(&1["display_title"] || "", project_id)
            ),
          {:ok, last_deploy} <-
@@ -195,6 +199,7 @@ defmodule Lightning.VersionControl do
              repo,
              Path.basename(deploy_yml_target_path(repo_connection)),
              branch: branch,
+             created: created,
              per_page: 1
            ) do
       {:ok,
@@ -287,7 +292,9 @@ defmodule Lightning.VersionControl do
   end
 
   # The CLI keeps a copy of each project it pulls at
-  # <workspace>/.projects/<alias>@<host>.yaml, with the uuid inside.
+  # <workspace>/.projects/<alias>@<host>.yaml, with the uuid inside. Read by
+  # blob: the contents API leaves out the content of files over 1 MB, and big
+  # projects pass that.
   # ponytail: one request per copy, fine for the handful a workspace holds
   defp workspace_projects(client, %{repo: repo, branch: branch} = connection) do
     dir = ProjectRepoConnection.workspace_file(connection, ".projects")
@@ -298,14 +305,23 @@ defmodule Lightning.VersionControl do
         |> Enum.flat_map(fn entry ->
           case Regex.run(~r/\A([^@]+)@(.+)\.ya?ml\z/, entry["name"]) do
             [_name, alias, host] ->
-              [%{alias: alias, host: host, path: entry["path"]}]
+              [
+                %{
+                  alias: alias,
+                  host: host,
+                  path: entry["path"],
+                  sha: entry["sha"]
+                }
+              ]
 
             nil ->
               []
           end
         end)
         |> Enum.reduce_while({:ok, []}, fn project, {:ok, acc} ->
-          case project_identity(client, repo, project.path, branch) do
+          {sha, project} = Map.pop!(project, :sha)
+
+          case project_identity(client, repo, sha) do
             {:ok, identity} ->
               {:cont, {:ok, acc ++ [Map.merge(project, identity)]}}
 
@@ -325,9 +341,9 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp project_identity(client, repo, path, branch) do
+  defp project_identity(client, repo, sha) do
     with {:ok, %{body: %{"content" => content}}} <-
-           GithubClient.get_repo_content(client, repo, path, "heads/#{branch}") do
+           GithubClient.get_blob(client, repo, sha) do
       with {:ok, yaml} <- Base.decode64(content, ignore: :whitespace),
            {:ok, project} <- YamlElixir.read_from_string(yaml) do
         {:ok,
