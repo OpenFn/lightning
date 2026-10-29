@@ -10,9 +10,13 @@ defmodule Lightning.UpdateCheck do
   takes three small requests, however many tags the repository has.
 
   When the image carries neither, or the channel tag doesn't exist, the
-  highest full-release tag (`vX.Y.Z`, no pre-release suffix) is used
+  highest full-release tag (`X.Y.Z`, no pre-release suffix) is used
   instead, from one page of the repository's tag list. A version that isn't a
   full release fails the check with `:no_release_found`.
+
+  Images are tagged `2.19.2` while git releases are `v2.19.2`. Older images
+  were tagged with the `v`, so a leading `v` is accepted wherever a version is
+  read.
 
   Worker releases are found the same way, in the `openfn/ws-worker`
   repository by default. Which workers are connected, and so whether any are

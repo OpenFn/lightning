@@ -3,9 +3,9 @@ defmodule Lightning.UpdateCheck.Releases do
   Pure helpers for picking full releases out of an image repository's tags
   and comparing them with the running version.
 
-  A full release is a tag shaped like `vX.Y.Z` (the `v` is optional) with no
-  pre-release suffix. `v2.20.0-pre`, `edge`, `latest` and branch tags are not
-  releases.
+  A full release is a tag shaped like `X.Y.Z` with no pre-release suffix.
+  Older images were tagged `vX.Y.Z`, so a leading `v` is accepted.
+  `2.20.0-pre`, `edge`, `latest` and branch tags are not releases.
   """
 
   @doc """

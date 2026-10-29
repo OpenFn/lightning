@@ -54,14 +54,14 @@ defmodule Lightning.UpdateCheckTest do
 
   describe "check/2" do
     test "the latest release is the version label of the channel tag's image" do
-      mock_images(app(labelled("v2.19.2")))
+      mock_images(app(labelled("2.19.2")))
 
       assert {:ok, status} = UpdateCheck.check(@config, "2.19.1")
 
       assert %{
                current: "2.19.1",
                latest: "2.19.2",
-               latest_tag: "v2.19.2",
+               latest_tag: "2.19.2",
                update_available?: true,
                instructions_url:
                  "https://docs.openfn.org/documentation/deploy/options#technical-guidelines"
@@ -86,7 +86,7 @@ defmodule Lightning.UpdateCheckTest do
       mock_images(
         app(%{
           config: %{
-            "Labels" => %{"org.opencontainers.image.version" => "v2.19.3"},
+            "Labels" => %{"org.opencontainers.image.version" => "2.19.3"},
             "Env" => ["IMAGE_TAG=v2.19.2"]
           }
         })
@@ -99,30 +99,46 @@ defmodule Lightning.UpdateCheckTest do
       mock_images(
         app(%{
           config: %{"Env" => ["IMAGE_TAG="]},
-          tags: ["v2.18.0", "v2.19.2", "v2.20.0-pre", "edge"]
+          tags: ["2.18.0", "2.19.2", "2.20.0-pre", "edge"]
         })
       )
 
-      assert {:ok, %{latest: "2.19.2", latest_tag: "v2.19.2"}} =
+      assert {:ok, %{latest: "2.19.2", latest_tag: "2.19.2"}} =
                UpdateCheck.check(@config, "2.18.0")
     end
 
+    test "falls back across old v-prefixed tags and new unprefixed ones" do
+      mock_images(
+        app(%{config: nil, tags: ["v2.18.0", "v2.19.2", "2.19.3", "2.20.0-pre"]})
+      )
+
+      assert {:ok, %{latest: "2.19.3", latest_tag: "2.19.3"}} =
+               UpdateCheck.check(@config, "2.18.0")
+    end
+
+    test "reads a v-prefixed version label from older images" do
+      mock_images(app(labelled("v2.19.2")))
+
+      assert {:ok, %{latest: "2.19.2", latest_tag: "v2.19.2"}} =
+               UpdateCheck.check(@config, "2.19.1")
+    end
+
     test "falls back to the newest full-release tag when there is no channel tag" do
-      mock_images(app(%{config: nil, tags: ["v2.18.0", "v2.19.2"]}))
+      mock_images(app(%{config: nil, tags: ["2.18.0", "2.19.2"]}))
 
       assert {:ok, %{latest: "2.19.2", update_available?: true}} =
                UpdateCheck.check(@config, "2.18.0")
     end
 
     test "a pre-release build ahead of the latest release is not behind" do
-      mock_images(app(labelled("v2.19.2")))
+      mock_images(app(labelled("2.19.2")))
 
       assert {:ok, %{update_available?: false}} =
                UpdateCheck.check(@config, "2.20.0-pre")
     end
 
     test "uses a configured instructions URL" do
-      mock_images(app(labelled("v2.19.3")))
+      mock_images(app(labelled("2.19.3")))
 
       config =
         Keyword.put(@config, :instructions_url, "https://example.com/upgrade")
@@ -132,7 +148,7 @@ defmodule Lightning.UpdateCheckTest do
     end
 
     test "fails when the channel tag's image isn't a full release" do
-      for version <- ["edge", "v2.20.0-pre"] do
+      for version <- ["edge", "2.20.0-pre"] do
         mock_images(app(labelled(version)))
 
         assert UpdateCheck.check(@config, "2.19.1") ==
@@ -141,7 +157,7 @@ defmodule Lightning.UpdateCheckTest do
     end
 
     test "fails when falling back and there are no full releases" do
-      mock_images(app(%{config: nil, tags: ["latest", "edge", "v2.20.0-pre"]}))
+      mock_images(app(%{config: nil, tags: ["latest", "edge", "2.20.0-pre"]}))
 
       assert UpdateCheck.check(@config, "2.19.1") ==
                {:error, :no_release_found}
@@ -155,7 +171,7 @@ defmodule Lightning.UpdateCheckTest do
     end
 
     test "leaves workers unchecked without a worker repository" do
-      mock_images(app(labelled("v2.19.2")))
+      mock_images(app(labelled("2.19.2")))
 
       assert {:ok, %{worker: nil}} = UpdateCheck.check(@config, "2.19.2")
     end
@@ -164,8 +180,8 @@ defmodule Lightning.UpdateCheckTest do
   describe "check/2 with a worker repository" do
     test "reads the worker release from its image's version label" do
       mock_images(
-        app(labelled("v2.19.2"))
-        |> Map.put({@base, "openfn/ws-worker"}, labelled("v1.30.0"))
+        app(labelled("2.19.2"))
+        |> Map.put({@base, "openfn/ws-worker"}, labelled("1.30.0"))
       )
 
       assert {:ok, %{worker: worker}} =
@@ -173,7 +189,7 @@ defmodule Lightning.UpdateCheckTest do
 
       assert worker == %{
                latest: "1.30.0",
-               latest_tag: "v1.30.0",
+               latest_tag: "1.30.0",
                registry: @base,
                repository: "openfn/ws-worker"
              }
@@ -181,21 +197,21 @@ defmodule Lightning.UpdateCheckTest do
 
     test "falls back to worker tags while worker images carry no version" do
       mock_images(
-        app(labelled("v2.19.2"))
+        app(labelled("2.19.2"))
         |> Map.put({@base, "openfn/ws-worker"}, %{
           config: %{"Env" => ["NODE_VERSION=24.22.1"]},
-          tags: ["latest", "v1.29.6", "v1.30.0", "v1.31.0-next"]
+          tags: ["latest", "1.29.6", "1.30.0", "1.31.0-next"]
         })
       )
 
-      assert {:ok, %{worker: %{latest: "1.30.0", latest_tag: "v1.30.0"}}} =
+      assert {:ok, %{worker: %{latest: "1.30.0", latest_tag: "1.30.0"}}} =
                UpdateCheck.check(@worker_config, "2.19.2")
     end
 
     test "checks workers against the worker registry, not the app's" do
       mock_images(
-        app(labelled("v2.19.2"))
-        |> Map.put({@worker_base, "openfn/ws-worker"}, labelled("v1.30.0"))
+        app(labelled("2.19.2"))
+        |> Map.put({@worker_base, "openfn/ws-worker"}, labelled("1.30.0"))
       )
 
       config = Keyword.put(@worker_config, :worker_registry, @worker_base)
@@ -206,7 +222,7 @@ defmodule Lightning.UpdateCheckTest do
 
     test "a failed worker lookup doesn't fail the check" do
       mock_images(
-        app(labelled("v2.19.2"))
+        app(labelled("2.19.2"))
         |> Map.put({@base, "openfn/ws-worker"}, %{status: 500})
       )
 
@@ -221,7 +237,7 @@ defmodule Lightning.UpdateCheckTest do
 
     test "no worker release found leaves workers unchecked" do
       mock_images(
-        app(labelled("v2.19.2"))
+        app(labelled("2.19.2"))
         |> Map.put({@base, "openfn/ws-worker"}, %{config: nil, tags: ["latest"]})
       )
 
