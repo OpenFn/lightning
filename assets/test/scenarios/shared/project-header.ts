@@ -26,8 +26,11 @@ const otherThan = (email: string) =>
 
 // When I open the project picker
 async function openPicker(page: Page) {
-  await page.keyboard.press('ControlOrMeta+p');
-  await expect(picker(page)).toBeFocused();
+  // The shortcut is ignored until the picker has mounted
+  await expect(async () => {
+    await page.keyboard.press('ControlOrMeta+p');
+    await expect(picker(page)).toBeFocused({ timeout: 1000 });
+  }).toPass();
 }
 
 const option = (page: Page, name: string) =>

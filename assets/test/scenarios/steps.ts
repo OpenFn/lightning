@@ -92,6 +92,11 @@ export function exec(statement: string) {
 export async function signInAs(page: Page, email: string, password = PASSWORD) {
   if (onDemo) return; // the demo is always signed in as its one user
   await page.goto('/users/log_in');
+  // Signed in already, as someone: the form is skipped, so sign out first
+  if (!new URL(page.url()).pathname.startsWith('/users/log_in')) {
+    await page.context().clearCookies();
+    await page.goto('/users/log_in');
+  }
   await field(page, 'Email').fill(forWorker(email));
   await field(page, 'Password').fill(password);
   await page.getByRole('button', { name: 'Log in' }).click();
@@ -1901,9 +1906,15 @@ export function withFlag(flag: string, value: boolean) {
 
 // Given the usage limiter refuses workflow activation with <text> — returns a
 // function that puts the previous limiter back
+// The limiter configured before a test, never a stand-in a failed test left
+const configuredLimiter = (key: string) => {
+  const was = onNode(`:persistent_term.get(${key}, nil)`).trim();
+  return was.includes('Scenario') ? 'nil' : was;
+};
+
 export function withRefusingLimiter(text = 'No more workflows') {
   const key = '{Lightning.Services.AdapterHelper, :usage_limiter}';
-  const was = onNode(`:persistent_term.get(${key}, nil)`).trim();
+  const was = configuredLimiter(key);
   onNode(`
     defmodule Lightning.Extensions.ScenarioRefusingLimiter do
       @behaviour Lightning.Extensions.UsageLimiting
@@ -2494,7 +2505,7 @@ export function withLimiterRefusing(
   { banner = false, over }: { banner?: boolean; over?: number } = {}
 ) {
   const key = '{Lightning.Services.AdapterHelper, :usage_limiter}';
-  const was = onNode(`:persistent_term.get(${key}, nil)`).trim();
+  const was = configuredLimiter(key);
   const message = banner
     ? `%Lightning.Extensions.Message{text: ${ex(text)}, attrs: %{text: ${ex(text)}}, function: &__MODULE__.banner/1}`
     : `%Lightning.Extensions.Message{text: ${ex(text)}}`;
@@ -4468,3 +4479,207 @@ export const keychainsOf = (projectId: string) =>
      join users u on u.id = k.created_by_id
      where k.project_id = '${projectId}' order by k.name`
   );
+
+// ---------------------------------------------------------------------------
+// Workflow editor (annotations/views/workflow-editor-*.md and
+// annotations/shared/shared-editor-session.md)
+// ---------------------------------------------------------------------------
+
+export type EditorWorkflowSeed = {
+  name?: string;
+  /** step names, each with the common adaptor */
+  steps?: string[];
+  /** paths between steps, by name; a path from "trigger" leaves the trigger */
+  paths?: [string, string][];
+  /** the trigger, or none */
+  trigger?: 'webhook' | 'cron' | null;
+  /** whether the trigger is on */
+  enabled?: boolean;
+  /** saved hand-placed positions, by step name, which puts it in manual layout */
+  positions?: Record<string, { x: number; y: number }>;
+};
+
+export type EditorWorkflow = {
+  id: string;
+  projectId: string;
+  name: string;
+  /** step name -> job id */
+  steps: Record<string, string>;
+  triggerId: string | null;
+};
+
+// Given workflow "Intake" (or <seed>'s) exists in project <projectId>, saved
+// through Lightning by "<by>" so it has a snapshot: by default a webhook
+// trigger, on, leading to "Fetch", then "Load" on success. It goes with the
+// project (seedWorkspace's remove).
+export function seedEditorWorkflow(
+  projectId: string,
+  by: string,
+  {
+    name = 'Intake',
+    steps = ['Fetch', 'Load'],
+    paths,
+    trigger = 'webhook',
+    enabled = true,
+    positions,
+  }: EditorWorkflowSeed = {}
+): EditorWorkflow {
+  const ids = Object.fromEntries(steps.map(s => [s, randomUUID()]));
+  const triggerId = trigger ? randomUUID() : null;
+  const links =
+    paths ??
+    ([
+      ...(trigger ? [['trigger', steps[0]]] : []),
+      ...steps.slice(1).map((s, i) => [steps[i], s]),
+    ] as [string, string][]);
+  const jobs = steps.map(
+    s =>
+      `%{id: ${ex(ids[s])}, name: ${ex(s)}, body: "fn(s => s)", adaptor: "@openfn/language-common@latest"}`
+  );
+  const triggers = triggerId
+    ? [
+        `%{id: ${ex(triggerId)}, type: :${trigger}, enabled: ${enabled}${trigger === 'cron' ? ', cron_expression: "0 * * * *"' : ''}}`,
+      ]
+    : [];
+  const edges = links.map(([from, to]) =>
+    from === 'trigger'
+      ? `%{id: Ecto.UUID.generate(), source_trigger_id: ${ex(triggerId)}, target_job_id: ${ex(ids[to])}, condition_type: :always, enabled: true}`
+      : `%{id: Ecto.UUID.generate(), source_job_id: ${ex(ids[from])}, target_job_id: ${ex(ids[to])}, condition_type: :on_job_success, enabled: true}`
+  );
+  const placed = positions
+    ? `, positions: %{${Object.entries(positions)
+        .map(([s, p]) => `${ex(ids[s])} => %{"x" => ${p.x}, "y" => ${p.y}}`)
+        .join(', ')}}`
+    : '';
+  // The node's log lines come back too; the id is the last line
+  const out = onNode(
+    `{:ok, wf} = Lightning.Workflows.save_workflow(%{name: ${ex(name)}, project_id: ${ex(projectId)},
+       jobs: [${jobs.join(', ')}], triggers: [${triggers.join(', ')}], edges: [${edges.join(', ')}]${placed}}, ${exUser(by)})
+     wf.id`
+  );
+  const id = JSON.parse(out.trim().split('\n').pop()!) as string;
+  return { id, projectId, name, steps: ids, triggerId };
+}
+
+export type StoredWorkflow = {
+  name: string;
+  lock_version: number;
+  state: string;
+  deleted: boolean;
+  steps: string[];
+  triggers_enabled: boolean[];
+  paths: number;
+  positions: Record<string, { x: number; y: number }> | null;
+};
+
+// Workflow <id> as saved in the database
+export const storedWorkflow = (id: string) =>
+  sql<StoredWorkflow>(
+    `select w.name, w.lock_version, w.state::text as state,
+            w.deleted_at is not null as deleted, w.positions,
+            coalesce((select array_agg(j.name order by j.name) from jobs j where j.workflow_id = w.id), '{}') as steps,
+            coalesce((select array_agg(t.enabled) from triggers t where t.workflow_id = w.id), '{}') as triggers_enabled,
+            (select count(*) from workflow_edges e where e.workflow_id = w.id)::int as paths
+     from workflows w where w.id = '${id}'`
+  )[0];
+
+// How many releases workflow <id> has recorded (one per go live)
+export const releasesOf = (id: string) =>
+  sql<{ n: number }>(
+    `select count(*)::int as n from workflow_releases where workflow_id = '${id}'`
+  )[0].n;
+
+export type SharedDoc = {
+  name: string;
+  steps: string[];
+  paths: number;
+  triggers_enabled: boolean[];
+};
+
+// The shared (unsaved) copy of workflow <id> that the server holds while
+// someone has it open, or null when nobody does. `room` names a version room
+// ("v3"), the live one otherwise.
+export function sharedDocOf(id: string, room = ''): SharedDoc | null {
+  const out = onNode(`
+    case Lightning.Collaboration.Session.lookup_shared_doc("workflow:${id}${room ? `:${room}` : ''}") do
+      nil -> "null"
+      pid ->
+        data = pid |> Yex.Sync.SharedDoc.get_doc() |> Lightning.Collaboration.WorkflowSerializer.deserialize_from_ydoc("${id}")
+        Jason.encode!(%{
+          name: data["name"],
+          steps: data["jobs"] |> Enum.map(& &1["name"]) |> Enum.sort(),
+          paths: length(data["edges"]),
+          triggers_enabled: Enum.map(data["triggers"], & &1["enabled"])
+        })
+    end`).trim();
+  return JSON.parse(
+    JSON.parse(out.split('\n').pop()!) as string
+  ) as SharedDoc | null;
+}
+
+// When "<by>" renames step <step> of workflow <id> to <to> and saves it
+// through Lightning, outside the editor, so it gets a new version
+export function renameStepOnNode(
+  id: string,
+  step: string,
+  to: string,
+  by: string
+) {
+  onNodeOk([
+    `import Ecto.Query`,
+    `wf = Lightning.Repo.get!(Lightning.Workflows.Workflow, ${ex(id)}) |> Lightning.Repo.preload([:jobs, :triggers, :edges])`,
+    // Every job goes in the change: the ones left out would be deleted
+    `jobs = Enum.map(wf.jobs, &if(&1.name == ${ex(step)}, do: %{id: &1.id, name: ${ex(to)}}, else: %{id: &1.id}))`,
+    `{:ok, _} = wf |> Lightning.Workflows.Workflow.changeset(%{jobs: jobs}) |> Lightning.Workflows.save_workflow(${exUser(by)})`,
+  ]);
+}
+
+// Given "<by>" has taken workflow <id> live through Lightning
+export function goLiveOnNode(id: string, by: string) {
+  onNodeOk([
+    `wf = Lightning.Repo.get!(Lightning.Workflows.Workflow, ${ex(id)})`,
+    `{:ok, _} = Lightning.Workflows.go_live(wf, ${exUser(by)})`,
+  ]);
+}
+
+// When "<by>" switches every trigger of workflow <id> on or off through
+// Lightning, as the workflows list does
+export function switchWorkflowOnNode(id: string, enabled: boolean, by: string) {
+  onNodeOk([
+    `wf = Lightning.Repo.get!(Lightning.Workflows.Workflow, ${ex(id)}) |> Lightning.Repo.preload([:triggers])`,
+    `{:ok, _} = Lightning.Workflows.update_triggers_enabled_state(wf, ${enabled}) |> Lightning.Workflows.save_workflow(${exUser(by)})`,
+  ]);
+}
+
+// Given the shared copies of workflow <id> are written to the database now,
+// as they are when the last person leaves
+export const sharedDocStoredOf = (id: string) =>
+  sql<{ n: number }>(
+    `select count(*)::int as n from collaboration_document_states where document_name like 'workflow:${id}%'`
+  )[0].n;
+
+// "<first> <last>" and initials of "<email>"
+export function nameOf(email: string) {
+  const [u] = sql<{ first_name: string; last_name: string; email: string }>(
+    `select first_name, last_name, email from users where id = '${user(email).id}'`
+  );
+  return {
+    full: `${u.first_name} ${u.last_name}`,
+    initials: `${u.first_name[0]}${u.last_name[0]}`.toUpperCase(),
+    email: u.email,
+  };
+}
+
+// When a client sends PATCH <path> with "Authorization: Bearer <token>" and
+// <body> as JSON
+export function patchWithBearer(
+  request: APIRequestContext,
+  path: string,
+  token: string,
+  body: Record<string, unknown>
+) {
+  return request.patch(path, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: body,
+  });
+}
