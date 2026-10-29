@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Users see a small badge on the version chip when a newer full release is
+  available in the image repository, and superusers are asked to upgrade, with a
+  link to the upgrade guidelines. A green dot shows when the instance is on the
+  latest version. The repository is set with `UPDATE_CHECK_*` environment
+  variables and defaults to `openfn/lightning` on Docker Hub.
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
   metrics are enabled, where they're sent, and the instance UUID and its hash.
   [#5262](https://github.com/OpenFn/lightning/issues/5262)

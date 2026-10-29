@@ -853,6 +853,22 @@ defmodule Lightning.Config.Bootstrap do
       daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10),
       run_chunk_size: env!("USAGE_TRACKING_RUN_CHUNK_SIZE", :integer, 100)
 
+    config :lightning, :update_check,
+      enabled:
+        env!(
+          "UPDATE_CHECK_ENABLED",
+          &Utils.ensure_boolean/1,
+          config_env() != :test
+        ),
+      registry:
+        env!("UPDATE_CHECK_REGISTRY", :string, "https://registry-1.docker.io"),
+      repository: env!("UPDATE_CHECK_REPOSITORY", :string, "openfn/lightning"),
+      tag: env!("UPDATE_CHECK_TAG", :string, "latest"),
+      username: env!("UPDATE_CHECK_USERNAME", :string, nil),
+      password: env!("UPDATE_CHECK_PASSWORD", :string, nil),
+      interval_hours: env!("UPDATE_CHECK_INTERVAL_HOURS", :integer, 6),
+      instructions_url: env!("UPDATE_INSTRUCTIONS_URL", :string, nil)
+
     config :lightning,
            :broadcast_work_available,
            env!("BROADCAST_WORK_AVAILABLE", &Utils.ensure_boolean/1, true)

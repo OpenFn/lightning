@@ -189,7 +189,8 @@ defmodule Lightning.Application do
         {Lightning.TaskWorker, name: :cli_task_worker},
         {Lightning.Runtime.RuntimeManager,
          worker_secret: Lightning.Config.worker_secret(),
-         endpoint: LightningWeb.Endpoint}
+         endpoint: LightningWeb.Endpoint},
+        update_checker_childspec()
         # Start a worker by calling: Lightning.Worker.start_link(arg)
         # {Lightning.Worker, arg}
       ]
@@ -203,6 +204,18 @@ defmodule Lightning.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Lightning.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # The first check waits a minute, plus jitter so the nodes of a cluster
+  # don't all ask the registry at once.
+  defp update_checker_childspec do
+    if Lightning.Config.update_check_enabled?() do
+      config = Lightning.Config.update_check()
+
+      {Lightning.UpdateCheck.Checker,
+       interval: :timer.hours(config[:interval_hours] || 6),
+       initial_delay: :timer.minutes(1) + :rand.uniform(:timer.seconds(30))}
+    end
   end
 
   # Size, count and protocol restate Finch's own defaults, so this changes

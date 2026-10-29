@@ -12,6 +12,7 @@ config :tesla, Lightning.AuthProviders.OauthHTTPClient,
 
 config :tesla, Lightning.UsageTracking.Client, adapter: Tesla.Mock
 config :tesla, Lightning.UsageTracking.GithubClient, adapter: Tesla.Mock
+config :tesla, Lightning.UpdateCheck.Registry, adapter: Tesla.Mock
 
 # Configure your database
 #
