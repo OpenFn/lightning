@@ -148,7 +148,7 @@ defmodule LightningWeb.ChannelRequestLive.Show do
             <span class="text-secondary-900 font-mono">
               {String.slice(@channel_request.id, 0..7)}
             </span>
-            <.copy_icon_button
+            <Common.copy_icon_button
               id="copy-request-id"
               value={@channel_request.id}
               title="Copy request ID"

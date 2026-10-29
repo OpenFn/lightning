@@ -137,6 +137,29 @@ defmodule LightningWeb.Components.Common do
     }
   end
 
+  attr :id, :string, required: true
+  attr :value, :string, required: true
+  attr :title, :string, default: "Copy"
+  attr :size, :integer, default: 4
+  attr :class, :string, default: nil
+
+  def copy_icon_button(assigns) do
+    ~H"""
+    <button
+      id={@id}
+      phx-hook="Copy"
+      data-content={@value}
+      class={[
+        "copy-btn text-secondary-400 hover:text-secondary-600 transition-colors shrink-0 cursor-pointer",
+        @class
+      ]}
+      title={@title}
+    >
+      <.icon name="hero-clipboard" class={"h-#{@size} w-#{@size}"} />
+    </button>
+    """
+  end
+
   attr :id, :string, default: "alert"
   attr :type, :string, required: true
   attr :class, :string, default: ""

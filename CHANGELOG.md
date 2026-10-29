@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
+  metrics are enabled, where they're sent, and the instance UUID and its hash.
+  [#5262](https://github.com/OpenFn/lightning/issues/5262)
+
 ### Changed
 
 - The web app's interactive pages now run on React 19, up from React 18. They
