@@ -41,6 +41,65 @@ defmodule LightningWeb.API.ProvisioningImportingTest do
       refute conn.resp_body =~ error_text
     end
 
+    test "a document over a plan limit answers 402 with a fixed detail and writes nothing",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      # :no_more_collections is outside UsageLimiting's listed reasons.
+      for reason <- [:exceeds_limit, :no_more_collections] do
+        limit_collections(reason)
+        %{body: body} = valid_payload(project.id)
+        collection_id = Ecto.UUID.generate()
+
+        body =
+          Map.put(body, "collections", [
+            %{"id" => collection_id, "name" => "new"}
+          ])
+
+        conn = post(conn, ~p"/api/provision", body)
+
+        assert_problem(conn, 402, :exceeds_limit, [
+          %{
+            "pointer" => "#/id",
+            "code" => "exceeds_limit",
+            "detail" => "would exceed a limit of your plan"
+          }
+        ])
+
+        refute conn.resp_body =~ "Upgrade for more collections"
+
+        refute Lightning.Repo.get(
+                 Lightning.Collections.Collection,
+                 collection_id
+               )
+      end
+    end
+
+    test "a document over a plan limit that also has a duplicate answers 422 with only the taken entry",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      limit_collections(:exceeds_limit)
+      %{body: body} = valid_payload(project.id)
+
+      body =
+        Map.put(body, "collections", [
+          %{"id" => insert(:collection).id, "name" => "new"}
+        ])
+
+      conn
+      |> post(~p"/api/provision", body)
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/collections/0/id",
+          "code" => "taken",
+          "detail" => "has already been taken"
+        }
+      ])
+    end
+
     test "an owner replaces a project's name and jobs by posting a changed document",
          %{
            conn: conn,
@@ -323,5 +382,16 @@ defmodule LightningWeb.API.ProvisioningImportingTest do
 
       assert workflow.triggers |> MapSet.new(& &1.id) == MapSet.new([trigger_id])
     end
+  end
+
+  defp limit_collections(reason) do
+    Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn
+      %{type: :new_collection}, _context ->
+        {:error, reason,
+         %Lightning.Extensions.Message{text: "Upgrade for more collections"}}
+
+      _action, _context ->
+        :ok
+    end)
   end
 end

@@ -19,14 +19,43 @@ defmodule LightningWeb.API.ProvisioningParametersTest do
       }
     end
 
-    test "a project id in the body that isn't a UUID is not found", %{
-      conn: conn
-    } do
+    test "a project id in the body that isn't a UUID is a create, which a caller who may not create projects is refused",
+         %{conn: conn} do
       %{body: body} = valid_payload("not-a-uuid")
 
       conn
       |> post(~p"/api/provision", body)
-      |> assert_problem(404, :not_found, [])
+      |> assert_problem(403, :forbidden, [])
+    end
+
+    @tag login_as: "superuser"
+    test "a project id in the body that isn't a UUID answers 422 type at the id to a caller who may create projects",
+         %{conn: conn} do
+      projects = Lightning.Repo.aggregate(Lightning.Projects.Project, :count)
+
+      # A 16-byte string would cast to a UUID it doesn't spell.
+      for id <- ["not-a-uuid", 5, "abcdefghijklmnop"] do
+        %{body: body} = valid_payload()
+
+        conn
+        |> post(~p"/api/provision", Map.put(body, "id", id))
+        |> assert_problem(422, :invalid, [
+          %{"pointer" => "#/id", "code" => "type", "detail" => "is invalid"}
+        ])
+      end
+
+      assert Lightning.Repo.aggregate(Lightning.Projects.Project, :count) ==
+               projects
+    end
+
+    @tag login_as: "superuser"
+    test "a body that is JSON but not an object answers 400 malformed", %{
+      conn: conn
+    } do
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post(~p"/api/provision", "[1, 2]")
+      |> assert_problem(400, :malformed, [])
     end
 
     test "GET answers an id that isn't there, or a yaml id that isn't a UUID, as not found",

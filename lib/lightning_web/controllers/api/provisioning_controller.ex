@@ -27,6 +27,8 @@ defmodule LightningWeb.API.ProvisioningController do
 
   action_fallback(FallbackController)
 
+  @provision {:provisioning, :provision_project}
+
   plug LightningWeb.Plugs.AuthorizeAction,
        {:provisioning, :provision_project}
        when action == :create
@@ -54,9 +56,12 @@ defmodule LightningWeb.API.ProvisioningController do
   - `403 Forbidden` if the caller lacks the role or grant to provision it, or
     to create a project
   - `409 Conflict` to a caller who may provision the project, if it is
-    scheduled for deletion, or if a value that must be unique is taken
-  - `422 Unprocessable Content` when the document is not valid
-  - `402 Payment Required` when a plan limit is reached
+    scheduled for deletion, or if another request changed what it writes
+  - `400 Bad Request` if the body is not a JSON object
+  - `422 Unprocessable Content` when the document is not valid, including an
+    `id` that isn't a UUID or a value that must be unique and is taken
+  - `402 Payment Required` when an otherwise valid document would exceed a
+    plan limit
   - `503 Service Unavailable` while the adaptor catalogue is still loading
 
   Every error is a problem document.
@@ -82,6 +87,7 @@ defmodule LightningWeb.API.ProvisioningController do
           Plug.Conn.t() | {:error, term()} | {:error, term(), Message.t()}
   def create(conn, params) do
     with {:ok, project} <- provision_target(conn.assigns.scope, params["id"]),
+         :ok <- Request.check_object(params),
          {:ok, project} <-
            Provisioner.import_document(
              project,
@@ -95,15 +101,25 @@ defmodule LightningWeb.API.ProvisioningController do
     end
   end
 
-  # The project the body names is the target, as if it were in the path (spec
-  # §4).
+  # The project the body names is the target, as if it were in the path. An id
+  # that isn't a UUID names nothing, so the request is a create. A caller who may
+  # not create projects is refused that, and anyone else hears that the id is a
+  # bad value. It is refused here rather than cast, since `Ecto.UUID.cast/1`
+  # takes any 16-byte string and would create the project under an id the body
+  # doesn't name.
   defp provision_target(scope, nil),
-    do: Target.project_or_new(scope, nil, {:provisioning, :provision_project})
+    do: Target.project_or_new(scope, nil, @provision)
 
   defp provision_target(scope, id) do
-    with {:ok, id} <- Request.path_id(id),
-         do:
-           Target.project_or_new(scope, id, {:provisioning, :provision_project})
+    case Request.path_id(id) do
+      {:ok, id} ->
+        Target.project_or_new(scope, id, @provision)
+
+      {:error, :not_found} ->
+        with {:ok, _new} <- Target.project_or_new(scope, nil, @provision),
+             do:
+               Errors.refuse([Errors.entry([:id], {"is invalid", code: :type})])
+    end
   end
 
   @doc """
