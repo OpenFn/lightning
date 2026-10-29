@@ -252,20 +252,11 @@ defmodule LightningWeb.API.ErrorsTest do
     end
 
     test "answers 402 when every error is a plan limit" do
-      stub(MockUsageLimiter, :limit_action, fn
-        %{type: :new_collection}, _context ->
-          {:error, :exceeds_limit, %{text: "No collections left"}}
-
-        _action, _context ->
-          :ok
-      end)
-
       changeset =
-        Provisioner.parse_document(
-          %Project{},
-          Map.put(provision([]), "collections", [
-            %{"id" => Ecto.UUID.generate(), "name" => "more"}
-          ])
+        %Project{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.add_error(:id, "would exceed a limit of your plan",
+          code: :exceeds_limit
         )
 
       assert Errors.problem(changeset) ==
@@ -273,7 +264,11 @@ defmodule LightningWeb.API.ErrorsTest do
                  status: 402,
                  code: :exceeds_limit,
                  errors: [
-                   entry_at("#/id", :exceeds_limit, "No collections left")
+                   entry_at(
+                     "#/id",
+                     :exceeds_limit,
+                     "would exceed a limit of your plan"
+                   )
                  ]
                }
     end
