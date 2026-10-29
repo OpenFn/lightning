@@ -853,13 +853,15 @@ defmodule Lightning.Config.Bootstrap do
       daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10),
       run_chunk_size: env!("USAGE_TRACKING_RUN_CHUNK_SIZE", :integer, 100)
 
+    update_check_enabled? =
+      env!(
+        "UPDATE_CHECK_ENABLED",
+        &Utils.ensure_boolean/1,
+        config_env() != :test
+      )
+
     config :lightning, :update_check,
-      enabled:
-        env!(
-          "UPDATE_CHECK_ENABLED",
-          &Utils.ensure_boolean/1,
-          config_env() != :test
-        ),
+      enabled: update_check_enabled?,
       registry:
         env!("UPDATE_CHECK_REGISTRY", :string, "https://registry-1.docker.io"),
       repository: env!("UPDATE_CHECK_REPOSITORY", :string, "openfn/lightning"),
@@ -867,7 +869,7 @@ defmodule Lightning.Config.Bootstrap do
       interval_hours:
         env!("UPDATE_CHECK_INTERVAL_HOURS", :integer, 6)
         |> then(fn hours ->
-          if hours <= 0 do
+          if update_check_enabled? and hours <= 0 do
             raise """
             UPDATE_CHECK_INTERVAL_HOURS must be a positive integer. To turn
             the update check off, set UPDATE_CHECK_ENABLED=false instead.
@@ -876,7 +878,10 @@ defmodule Lightning.Config.Bootstrap do
 
           hours
         end),
-      instructions_url: env!("UPDATE_INSTRUCTIONS_URL", :string, nil),
+      # `:string?` reads an empty value as nil, so `UPDATE_INSTRUCTIONS_URL=`
+      # falls back to the default link and `UPDATE_CHECK_WORKER_REPOSITORY=`
+      # skips the worker check.
+      instructions_url: env!("UPDATE_INSTRUCTIONS_URL", :string?, nil),
       worker_registry:
         env!(
           "UPDATE_CHECK_WORKER_REGISTRY",
@@ -884,7 +889,7 @@ defmodule Lightning.Config.Bootstrap do
           "https://registry-1.docker.io"
         ),
       worker_repository:
-        env!("UPDATE_CHECK_WORKER_REPOSITORY", :string, "openfn/ws-worker")
+        env!("UPDATE_CHECK_WORKER_REPOSITORY", :string?, "openfn/ws-worker")
 
     config :lightning,
            :broadcast_work_available,

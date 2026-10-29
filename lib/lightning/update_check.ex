@@ -3,11 +3,16 @@ defmodule Lightning.UpdateCheck do
   Finds out whether a newer full release is available in the configured
   image repository.
 
-  The newest release is the highest full-release tag (`vX.Y.Z`, no
-  pre-release suffix) whose manifest digest equals that of the channel tag,
-  `latest` by default. This is the tagging used by the public
-  `openfn/lightning` repository on Docker Hub. When the channel tag doesn't
-  exist, the highest full-release tag is used instead.
+  The newest release is the version of the image the channel tag, `latest` by
+  default, points at. It is read from the image's
+  `org.opencontainers.image.version` label, or from its `IMAGE_TAG`
+  environment variable for images built before the label was added. That
+  takes three small requests, however many tags the repository has.
+
+  When the image carries neither, or the channel tag doesn't exist, the
+  highest full-release tag (`vX.Y.Z`, no pre-release suffix) is used
+  instead, from one page of the repository's tag list. A version that isn't a
+  full release fails the check with `:no_release_found`.
 
   Worker releases are found the same way, in the `openfn/ws-worker`
   repository by default. Which workers are connected, and so whether any are
@@ -23,10 +28,6 @@ defmodule Lightning.UpdateCheck do
   alias Lightning.UpdateCheck.Releases
 
   require Logger
-
-  # How many of the newest release tags to compare against the channel tag's
-  # digest before giving up. Each comparison is one HEAD request.
-  @max_candidates 10
 
   @default_instructions_url "https://docs.openfn.org/documentation/deploy/options#technical-guidelines"
 
@@ -62,10 +63,10 @@ defmodule Lightning.UpdateCheck do
   lookup is logged and leaves `:worker` as `nil` rather than failing the
   whole check.
 
-  When no release can be found, because there are no full-release tags or
-  none among the newest shares the channel tag's digest, the check fails
-  with `:no_release_found`. Reporting that as up to date would hide an
-  instance that is behind.
+  When no release can be found, because the channel tag's image names
+  something other than a full release or there are no full-release tags, the
+  check fails with `:no_release_found`. Reporting that as up to date would
+  hide an instance that is behind.
   """
   @spec check(keyword(), String.t()) :: {:ok, status()} | {:error, term()}
   def check(config, current \\ current_version()) do
@@ -81,10 +82,14 @@ defmodule Lightning.UpdateCheck do
 
   @doc """
   Whether a worker reporting `version` is behind the latest worker release in
-  `status`. A worker that reports no version, or one that can't be parsed, is
-  never behind.
+  `status`. Workers only started reporting their version recently, so one
+  that reports none is behind. One whose version can't be parsed is not.
   """
   @spec worker_outdated?(status() | nil, String.t() | nil) :: boolean()
+  def worker_outdated?(%{worker: %{latest: latest}}, nil)
+      when is_binary(latest),
+      do: true
+
   def worker_outdated?(%{worker: %{latest: latest}}, version)
       when is_binary(latest) do
     Releases.newer?(Version.parse!(latest), version)
@@ -134,8 +139,55 @@ defmodule Lightning.UpdateCheck do
     registry = Registry.new(config)
     channel_tag = Keyword.get(config, :tag, "latest")
 
-    with {:ok, tags, registry} <- Registry.list_tags(registry) do
-      find_latest(registry, Releases.stable_tags(tags), channel_tag, tags)
+    with {:ok, image_config, registry} <-
+           Registry.image_config(registry, channel_tag) do
+      case image_version(image_config) do
+        nil -> newest_tag(registry)
+        tag -> release(tag)
+      end
+    end
+  end
+
+  # The version label is the standard place for it. Images built before the
+  # label was added carry the release tag in `IMAGE_TAG` instead.
+  defp image_version(nil), do: nil
+
+  defp image_version(image_config) do
+    labels = image_config["Labels"] || %{}
+
+    Enum.find(
+      [
+        labels["org.opencontainers.image.version"],
+        env_var(image_config["Env"] || [], "IMAGE_TAG")
+      ],
+      &(&1 not in [nil, ""])
+    )
+  end
+
+  defp env_var(env, name) do
+    Enum.find_value(env, fn entry ->
+      case String.split(entry, "=", parts: 2) do
+        [^name, value] -> value
+        _other -> nil
+      end
+    end)
+  end
+
+  # A channel tag whose image names anything but a full release, such as a
+  # branch build, has no release to report.
+  defp release(tag) do
+    case Releases.parse(tag) do
+      {:ok, version} -> {:ok, {tag, version}}
+      :error -> {:error, :no_release_found}
+    end
+  end
+
+  defp newest_tag(registry) do
+    with {:ok, tags, _registry} <- Registry.list_tags(registry) do
+      case Releases.stable_tags(tags) do
+        [newest | _older] -> {:ok, newest}
+        [] -> {:error, :no_release_found}
+      end
     end
   end
 
@@ -166,41 +218,6 @@ defmodule Lightning.UpdateCheck do
       repository: config[:worker_repository],
       tag: "latest"
     ]
-  end
-
-  defp find_latest(_registry, [], _channel_tag, _tags),
-    do: {:error, :no_release_found}
-
-  defp find_latest(registry, [newest | _] = stable, channel_tag, tags) do
-    if channel_tag in tags do
-      with {:ok, channel_digest, registry} <-
-             Registry.digest(registry, channel_tag) do
-        match_digest(
-          registry,
-          Enum.take(stable, @max_candidates),
-          channel_digest
-        )
-      end
-    else
-      {:ok, newest}
-    end
-  end
-
-  defp match_digest(_registry, _candidates, nil),
-    do: {:error, :no_release_found}
-
-  defp match_digest(registry, candidates, channel_digest) do
-    Enum.reduce_while(
-      candidates,
-      {:error, :no_release_found},
-      fn {tag, _version} = candidate, not_found ->
-        case Registry.digest(registry, tag) do
-          {:ok, ^channel_digest, _registry} -> {:halt, {:ok, candidate}}
-          {:ok, _other, _registry} -> {:cont, not_found}
-          {:error, reason} -> {:halt, {:error, reason}}
-        end
-      end
-    )
   end
 
   defp build_status(config, current, {latest_tag, latest_version}) do

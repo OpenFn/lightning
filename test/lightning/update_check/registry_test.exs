@@ -7,8 +7,15 @@ defmodule Lightning.UpdateCheck.RegistryTest do
 
   @base "https://registry.example.com"
   @tags_url "#{@base}/v2/openfn/lightning/tags/list"
+  @manifests_url "#{@base}/v2/openfn/lightning/manifests"
+  @blobs_url "#{@base}/v2/openfn/lightning/blobs"
   @realm "https://auth.example.com/token"
   @challenge ~s(Bearer realm="#{@realm}",service="registry.example.com",scope="repository:openfn/lightning:pull")
+
+  @image_config %{
+    "Labels" => %{"org.opencontainers.image.version" => "v2.19.2"},
+    "Env" => ["IMAGE_TAG=v2.19.2"]
+  }
 
   defp registry(opts \\ []) do
     Registry.new(
@@ -19,20 +26,133 @@ defmodule Lightning.UpdateCheck.RegistryTest do
     )
   end
 
+  defp authorized?(headers) do
+    List.keyfind(headers, "authorization", 0) == {"authorization", "Bearer abc"}
+  end
+
+  defp challenge do
+    %Tesla.Env{status: 401, headers: [{"www-authenticate", @challenge}]}
+  end
+
+  describe "image_config/2" do
+    test "reads the config of the first real platform in an index" do
+      mock(fn
+        %{url: @realm} ->
+          json(%{"token" => "abc"})
+
+        %{url: "#{@manifests_url}/latest", headers: headers} ->
+          assert {"accept", accept} = List.keyfind(headers, "accept", 0)
+          assert accept =~ "application/vnd.oci.image.index.v1+json"
+
+          if authorized?(headers) do
+            json(%{
+              "manifests" => [
+                %{
+                  "digest" => "sha256:attestation",
+                  "platform" => %{"os" => "unknown", "architecture" => "unknown"}
+                },
+                %{
+                  "digest" => "sha256:amd64",
+                  "platform" => %{"os" => "linux", "architecture" => "amd64"}
+                }
+              ]
+            })
+          else
+            challenge()
+          end
+
+        %{url: "#{@manifests_url}/sha256:amd64", headers: headers} ->
+          assert authorized?(headers)
+          json(%{"config" => %{"digest" => "sha256:config"}})
+
+        %{url: "#{@blobs_url}/sha256:config", headers: headers} ->
+          assert authorized?(headers)
+          json(%{"architecture" => "amd64", "config" => @image_config})
+      end)
+
+      assert {:ok, @image_config, registry} =
+               Registry.image_config(registry(), "latest")
+
+      assert registry.authorization == "Bearer abc"
+    end
+
+    test "reads a single-platform image directly" do
+      mock(fn
+        %{url: "#{@manifests_url}/latest"} ->
+          json(%{"config" => %{"digest" => "sha256:config"}})
+
+        %{url: "#{@blobs_url}/sha256:config"} ->
+          # Blobs aren't served as application/json.
+          %Tesla.Env{
+            status: 200,
+            headers: [{"content-type", "application/octet-stream"}],
+            body: Jason.encode!(%{"config" => @image_config})
+          }
+      end)
+
+      assert {:ok, @image_config, _registry} =
+               Registry.image_config(registry(), "latest")
+    end
+
+    test "follows a blob redirect without sending the token off the registry" do
+      mock(fn
+        %{url: @realm} ->
+          json(%{"token" => "abc"})
+
+        %{url: "#{@manifests_url}/latest", headers: headers} ->
+          if authorized?(headers),
+            do: json(%{"config" => %{"digest" => "sha256:config"}}),
+            else: challenge()
+
+        %{url: "#{@blobs_url}/sha256:config"} ->
+          %Tesla.Env{
+            status: 307,
+            headers: [{"location", "https://cdn.example.com/blob?sig=x"}]
+          }
+
+        %{url: "https://cdn.example.com/blob?sig=x", headers: headers} ->
+          refute List.keyfind(headers, "authorization", 0)
+          json(%{"config" => @image_config})
+      end)
+
+      assert {:ok, @image_config, _registry} =
+               Registry.image_config(registry(), "latest")
+    end
+
+    test "returns nil for a missing tag" do
+      mock(fn %{url: "#{@manifests_url}/nope"} -> %Tesla.Env{status: 404} end)
+
+      assert {:ok, nil, _registry} = Registry.image_config(registry(), "nope")
+    end
+
+    test "fails on an index with no real platform" do
+      mock(fn %{url: "#{@manifests_url}/latest"} ->
+        json(%{
+          "manifests" => [
+            %{"digest" => "sha256:a", "platform" => %{"os" => "unknown"}}
+          ]
+        })
+      end)
+
+      assert Registry.image_config(registry(), "latest") ==
+               {:error, :no_image_manifest}
+    end
+
+    test "reports unexpected statuses" do
+      mock(fn %{url: "#{@manifests_url}/latest"} -> %Tesla.Env{status: 503} end)
+
+      assert Registry.image_config(registry(), "latest") ==
+               {:error, {:unexpected_status, 503}}
+    end
+  end
+
   describe "list_tags/1" do
     test "answers a Bearer challenge with an anonymous token and retries" do
       mock(fn
-        %{url: @tags_url, headers: headers} ->
-          case List.keyfind(headers, "authorization", 0) do
-            {"authorization", "Bearer abc"} ->
-              json(%{"tags" => ["v2.19.2", "latest"]})
-
-            nil ->
-              %Tesla.Env{
-                status: 401,
-                headers: [{"www-authenticate", @challenge}]
-              }
-          end
+        %{url: @tags_url, query: [{"n", "1000"}], headers: headers} ->
+          if authorized?(headers),
+            do: json(%{"tags" => ["v2.19.2", "latest"]}),
+            else: challenge()
 
         %{url: @realm, query: query, headers: headers} ->
           assert {"service", "registry.example.com"} in query
@@ -58,42 +178,22 @@ defmodule Lightning.UpdateCheck.RegistryTest do
       assert Registry.list_tags(registry()) == {:error, :unauthorized}
     end
 
-    test "follows Link pagination" do
-      mock(fn
-        %{url: @tags_url, query: [{"n", "1000"}]} ->
-          json(%{"tags" => ["v1.0.0"]},
-            headers: [
-              {"link",
-               ~s(</v2/openfn/lightning/tags/list?last=v1.0.0&n=1000>; rel="next")}
-            ]
-          )
-
-        %{url: @tags_url, query: [{"last", "v1.0.0"}, {"n", "1000"}]} ->
-          json(%{"tags" => ["v1.1.0"]})
-      end)
-
-      assert {:ok, ["v1.0.0", "v1.1.0"], _registry} =
-               Registry.list_tags(registry())
-    end
-
-    test "stops after 20 pages and warns that tags were left out" do
-      # Every page says there's another.
+    test "lists one page and warns when the registry has more" do
       mock(fn %{url: @tags_url} ->
         json(%{"tags" => ["v1.0.0"]},
           headers: [
             {"link",
-             ~s(</v2/openfn/lightning/tags/list?last=v1.0.0&n=1000>; rel="next")}
+             ~s(<https://elsewhere.example.com/v2/openfn/lightning/tags/list?last=v1.0.0>; rel="next")}
           ]
         )
       end)
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
-          assert {:ok, tags, _registry} = Registry.list_tags(registry())
-          assert length(tags) == 20
+          assert {:ok, ["v1.0.0"], _registry} = Registry.list_tags(registry())
         end)
 
-      assert log =~ "Stopped listing tags for openfn/lightning after 20 pages"
+      assert log =~ "Listed only the first 1000 tags of openfn/lightning"
     end
 
     test "reports unexpected statuses" do
@@ -101,33 +201,6 @@ defmodule Lightning.UpdateCheck.RegistryTest do
 
       assert Registry.list_tags(registry()) ==
                {:error, {:unexpected_status, 503}}
-    end
-  end
-
-  describe "digest/2" do
-    test "reads the content digest of a tag" do
-      mock(fn %{
-                method: :head,
-                url: "#{@base}/v2/openfn/lightning/manifests/latest",
-                headers: headers
-              } ->
-        assert {"accept", accept} = List.keyfind(headers, "accept", 0)
-        assert accept =~ "application/vnd.oci.image.index.v1+json"
-
-        %Tesla.Env{
-          status: 200,
-          headers: [{"docker-content-digest", "sha256:abc"}]
-        }
-      end)
-
-      assert {:ok, "sha256:abc", _registry} =
-               Registry.digest(registry(), "latest")
-    end
-
-    test "returns nil for a missing tag" do
-      mock(fn %{method: :head} -> %Tesla.Env{status: 404} end)
-
-      assert {:ok, nil, _registry} = Registry.digest(registry(), "nope")
     end
   end
 

@@ -88,6 +88,9 @@ ARG COMMIT=""
 ARG IMAGE_TAG=""
 LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
+# Release builds pass the git tag, such as v2.19.2, as IMAGE_TAG. The update
+# check reads this label from the image `latest` points at.
+LABEL org.opencontainers.image.version=${IMAGE_TAG}
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
   libstdc++6 openssl libncurses5 locales ca-certificates \

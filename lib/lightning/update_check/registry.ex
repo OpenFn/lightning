@@ -1,8 +1,9 @@
 defmodule Lightning.UpdateCheck.Registry do
   @moduledoc """
-  Minimal client for the OCI Distribution API, enough to list a repository's
-  tags and read the digest a tag points at. Works with Docker Hub, GHCR,
-  Harbor and other registries that implement the spec.
+  Minimal client for the OCI Distribution API, enough to read an image's
+  config, labels and environment included, and to list a repository's tags.
+  Works with Docker Hub, GHCR, Harbor and other registries that implement the
+  spec.
 
   Authentication follows the registry's `WWW-Authenticate` challenge. A
   `Bearer` challenge is answered by fetching an anonymous token from its
@@ -10,6 +11,10 @@ defmodule Lightning.UpdateCheck.Registry do
   with `:unauthorized`. The resulting `authorization` header is kept on the
   struct, so callers thread the returned struct through later calls and
   authenticate once per check.
+
+  Registries often serve blobs by redirecting to a storage host. Redirects are
+  followed, and the `authorization` header is dropped when one leaves the
+  registry's origin.
   """
 
   require Logger
@@ -24,7 +29,6 @@ defmodule Lightning.UpdateCheck.Registry do
                     ", "
                   )
 
-  @max_pages 20
   @page_size 1000
 
   defstruct [:base_url, :repository, :authorization]
@@ -47,37 +51,53 @@ defmodule Lightning.UpdateCheck.Registry do
   end
 
   @doc """
-  Lists the repository's tags, following `Link` pagination for up to
-  #{@max_pages} pages of #{@page_size}. Past that the tags listed so far are
-  returned and a warning is logged, since the tags left out may include the
-  newest releases.
+  Reads the runtime config of the image `tag` points at: the `config` object
+  of the image config blob, which holds `Labels` and `Env`. Returns `nil` when
+  the tag doesn't exist.
+
+  A multi-platform tag points at an index; the first image in it for a real
+  platform is read, skipping attestations. Every platform is built from the
+  same source, so their labels match.
+  """
+  @spec image_config(t(), String.t()) ::
+          {:ok, map() | nil, t()} | {:error, term()}
+  def image_config(%__MODULE__{} = registry, tag) do
+    case fetch_manifest(registry, tag) do
+      {:ok, nil, registry} ->
+        {:ok, nil, registry}
+
+      {:ok, manifest, registry} ->
+        with {:ok, manifest, registry} <- image_manifest(registry, manifest) do
+          fetch_config(registry, manifest)
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Lists the repository's tags, in a single request for up to #{@page_size}.
+  If the registry says there are more, the tags listed so far are returned and
+  a warning is logged, since the tags left out may include the newest
+  releases.
   """
   @spec list_tags(t()) :: {:ok, [String.t()], t()} | {:error, term()}
   def list_tags(%__MODULE__{} = registry) do
-    path = "/v2/#{registry.repository}/tags/list"
-    list_tags(registry, {path, [{"n", to_string(@page_size)}]}, [], @max_pages)
-  end
-
-  defp list_tags(registry, {path, query}, acc, pages_left) do
-    case request(registry, method: :get, url: path, query: query) do
+    case request(registry,
+           method: :get,
+           url: "/v2/#{registry.repository}/tags/list",
+           query: [{"n", to_string(@page_size)}]
+         ) do
       {:ok, %Tesla.Env{status: 200, body: body} = env, registry} ->
-        tags = acc ++ (decode(body)["tags"] || [])
-
-        case next_page(env) do
-          nil ->
-            {:ok, tags, registry}
-
-          _next when pages_left == 1 ->
-            Logger.warning(
-              "Stopped listing tags for #{registry.repository} after " <>
-                "#{@max_pages} pages; the update check may miss newer releases"
-            )
-
-            {:ok, tags, registry}
-
-          next ->
-            list_tags(registry, next, tags, pages_left - 1)
+        if Tesla.get_header(env, "link") do
+          Logger.warning(
+            "Listed only the first #{@page_size} tags of " <>
+              "#{registry.repository}; the update check may miss newer releases"
+          )
         end
+
+        {:ok, decode(body)["tags"] || [], registry}
 
       {:ok, %Tesla.Env{status: status}, _registry} ->
         {:error, {:unexpected_status, status}}
@@ -87,21 +107,14 @@ defmodule Lightning.UpdateCheck.Registry do
     end
   end
 
-  @doc """
-  Reads the content digest of `tag`, or `nil` when the tag doesn't exist.
-  """
-  @spec digest(t(), String.t()) ::
-          {:ok, String.t() | nil, t()} | {:error, term()}
-  def digest(%__MODULE__{} = registry, tag) do
-    path = "/v2/#{registry.repository}/manifests/#{tag}"
-
+  defp fetch_manifest(registry, reference) do
     case request(registry,
-           method: :head,
-           url: path,
+           method: :get,
+           url: "/v2/#{registry.repository}/manifests/#{reference}",
            headers: [{"accept", @manifest_types}]
          ) do
-      {:ok, %Tesla.Env{status: 200} = env, registry} ->
-        {:ok, Tesla.get_header(env, "docker-content-digest"), registry}
+      {:ok, %Tesla.Env{status: 200, body: body}, registry} ->
+        {:ok, decode(body), registry}
 
       {:ok, %Tesla.Env{status: 404}, registry} ->
         {:ok, nil, registry}
@@ -113,6 +126,37 @@ defmodule Lightning.UpdateCheck.Registry do
         {:error, reason}
     end
   end
+
+  defp image_manifest(registry, %{"manifests" => manifests}) do
+    case Enum.find(manifests, &image_platform?/1) do
+      %{"digest" => digest} -> fetch_manifest(registry, digest)
+      nil -> {:error, :no_image_manifest}
+    end
+  end
+
+  defp image_manifest(registry, manifest), do: {:ok, manifest, registry}
+
+  # Attestations are listed with an `unknown/unknown` platform.
+  defp image_platform?(%{"platform" => %{"os" => os}}), do: os != "unknown"
+  defp image_platform?(_entry), do: false
+
+  defp fetch_config(registry, %{"config" => %{"digest" => digest}}) do
+    case request(registry,
+           method: :get,
+           url: "/v2/#{registry.repository}/blobs/#{digest}"
+         ) do
+      {:ok, %Tesla.Env{status: 200, body: body}, registry} ->
+        {:ok, decode(body)["config"] || %{}, registry}
+
+      {:ok, %Tesla.Env{status: status}, _registry} ->
+        {:error, {:unexpected_status, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp fetch_config(_registry, _manifest), do: {:error, :invalid_manifest}
 
   defp request(registry, request) do
     case send_request(registry, request) do
@@ -185,39 +229,19 @@ defmodule Lightning.UpdateCheck.Registry do
   def parse_challenge(nil), do: nil
 
   def parse_challenge(header) do
-    case String.split(String.trim(header), " ", parts: 2) do
-      [scheme | rest] ->
-        params =
-          ~r/([A-Za-z_]+)="([^"]*)"/
-          |> Regex.scan(Enum.join(rest))
-          |> Map.new(fn [_match, key, value] ->
-            {String.downcase(key), value}
-          end)
+    [scheme | rest] = String.split(String.trim(header), " ", parts: 2)
 
-        {String.downcase(scheme), params}
+    params =
+      ~r/([A-Za-z_]+)="([^"]*)"/
+      |> Regex.scan(Enum.join(rest))
+      |> Map.new(fn [_match, key, value] -> {String.downcase(key), value} end)
 
-      [] ->
-        nil
-    end
+    {String.downcase(scheme), params}
   end
 
-  # `Link: </v2/openfn/lightning/tags/list?last=v2.1.0&n=1000>; rel="next"`
-  # becomes `{"/v2/openfn/lightning/tags/list", [{"last", "v2.1.0"}, {"n", "1000"}]}`.
-  defp next_page(env) do
-    with link when is_binary(link) <- Tesla.get_header(env, "link"),
-         [_, url] <- Regex.run(~r/<([^>]+)>\s*;\s*rel="?next"?/, link) do
-      uri = URI.parse(url)
-      query = URI.query_decoder(uri.query || "") |> Enum.to_list()
-
-      # Usually a path on the same registry, but an absolute URL is allowed.
-      {URI.to_string(%{uri | query: nil}), query}
-    else
-      _ -> nil
-    end
-  end
-
-  # Registries don't always send `application/json`, so the JSON middleware
-  # can leave the body undecoded.
+  # Registries don't always send `application/json`, and manifests and blobs
+  # have their own media types, so the JSON middleware can leave the body
+  # undecoded.
   defp decode(body) when is_map(body), do: body
 
   defp decode(body) when is_binary(body) do
@@ -229,9 +253,15 @@ defmodule Lightning.UpdateCheck.Registry do
 
   defp decode(_body), do: %{}
 
+  # FollowRedirects drops `authorization` when a redirect leaves the
+  # registry's origin, so the token never reaches a blob storage host.
   defp client(registry) do
     Tesla.client(
-      [{Tesla.Middleware.BaseUrl, registry.base_url}, Tesla.Middleware.JSON],
+      [
+        {Tesla.Middleware.BaseUrl, registry.base_url},
+        Tesla.Middleware.FollowRedirects,
+        Tesla.Middleware.JSON
+      ],
       adapter()
     )
   end
