@@ -9,6 +9,7 @@ defmodule Lightning.Policies.DecisionTest do
 
   alias Lightning.Policies.Collections
   alias Lightning.Policies.Credentials
+  alias Lightning.Policies.Decision
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Provisioning
   alias Lightning.Policies.Users
@@ -154,6 +155,40 @@ defmodule Lightning.Policies.DecisionTest do
 
     assert Scope.fetch(repo_connection, insert(:project)) ==
              {:error, :no_standing}
+  end
+
+  describe "a list of grants" do
+    setup do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      %{account: account, project: insert(:project)}
+    end
+
+    test "is satisfied by any one of them on a project", %{
+      account: account,
+      project: project
+    } do
+      {:ok, only_b} =
+        Scope.fetch(%{account | grants: MapSet.new(["b"])}, project)
+
+      {:ok, neither} = Scope.fetch(%{account | grants: MapSet.new()}, project)
+
+      assert Decision.project(only_b, project, ["a", "b"], true) == true
+
+      assert Decision.project(neither, project, ["a", "b"], true) ==
+               {:error, {:insufficient_scope, "a"}}
+    end
+
+    test "is satisfied by any one of them on the instance", %{account: account} do
+      only_b = Scope.new(%{account | grants: MapSet.new(["b"])})
+      neither = Scope.new(%{account | grants: MapSet.new()})
+
+      assert Decision.instance(only_b, nil, ["a", "b"], true) == true
+
+      assert Decision.instance(neither, nil, ["a", "b"], true) ==
+               {:error, {:insufficient_scope, "a"}}
+    end
   end
 
   defp grant(ProjectUsers, action)

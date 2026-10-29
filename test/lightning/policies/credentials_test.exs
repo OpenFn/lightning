@@ -722,7 +722,7 @@ defmodule Lightning.Policies.CredentialsTest do
                {:error, {:insufficient_scope, "credentials:write"}}
     end
 
-    test "only a person may list their credentials or create one for themselves" do
+    test "only a person may list their credentials or create one for themselves; an operator may create one for a person" do
       {account, _key} =
         Lightning.ServiceAccountHelpers.service_account_with_key()
 
@@ -732,25 +732,60 @@ defmodule Lightning.Policies.CredentialsTest do
       assert Credentials.authorize(:list_credentials, person, nil) == true
 
       assert Credentials.authorize(
-               :edit_credential,
+               :create_credential,
                person,
                %Lightning.Credentials.Credential{user_id: person.id}
              ) == true
 
+      assert Credentials.authorize(
+               :create_credential,
+               person,
+               %Lightning.Credentials.Credential{user_id: insert(:user).id}
+             ) == false
+
       assert Credentials.authorize(:list_credentials, operator, nil) == false
 
       assert Credentials.authorize(
-               :edit_credential,
+               :create_credential,
                operator,
                %Lightning.Credentials.Credential{user_id: operator.id}
              ) == false
 
-      # An operator can't own a credential, but can create one for a person.
       assert Credentials.authorize(
-               :edit_credential,
+               :create_credential,
                operator,
                %Lightning.Credentials.Credential{user_id: person.id}
              ) == true
+    end
+  end
+
+  describe "asked about the instance, with no credential" do
+    test "only an operator with the grant may see every credential, and nobody may delete every credential" do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      callers = [
+        %{account | grants: MapSet.new(["credentials:write"])},
+        %{account | grants: MapSet.new(["projects:write"])},
+        insert(:user),
+        insert(:user, role: :superuser)
+      ]
+
+      answers =
+        for caller <- callers do
+          scope = Lightning.Scope.new(caller)
+
+          {Credentials.authorize(:see_credential, scope, nil),
+           Credentials.authorize(:delete_credential, scope, nil)}
+        end
+
+      assert answers == [
+               {true, false},
+               {{:error, {:insufficient_scope, "credentials:write"}},
+                {:error, {:insufficient_scope, "credentials:write"}}},
+               {false, false},
+               {false, false}
+             ]
     end
   end
 

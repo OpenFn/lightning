@@ -80,20 +80,36 @@ defmodule Lightning.ScopeTest do
       assert scope.role == :editor
     end
 
-    test "an unsaved project is no such project", %{editor: editor} do
-      assert {:error, :no_such_project} = Scope.fetch(editor, %Project{})
+    test "a subject naming no project is no standing to a person who isn't a superuser, a malformed id included",
+         %{editor: editor} do
+      for subject <- [
+            %Project{},
+            "not-a-uuid",
+            ["x"],
+            %{"a" => "x"},
+            nil,
+            Ecto.UUID.generate()
+          ] do
+        assert Scope.fetch(editor, subject) == {:error, :no_standing}
+      end
     end
 
-    test "a malformed id is refused, not raised", %{editor: editor} do
-      assert {:error, :no_such_project} = Scope.fetch(editor, "not-a-uuid")
-      assert {:error, :no_such_project} = Scope.fetch(editor, nil)
-    end
+    test "a subject naming no project is no such project to a superuser, and an id that isn't a UUID, or a value that isn't an id at all, is invalid" do
+      superuser = insert(:user, role: :superuser)
 
-    test "an id for a project that does not exist is no such project", %{
-      editor: editor
-    } do
-      assert {:error, :no_such_project} =
-               Scope.fetch(editor, Ecto.UUID.generate())
+      for subject <- [%Project{}, nil, Ecto.UUID.generate()] do
+        assert Scope.fetch(superuser, subject) == {:error, :no_such_project}
+      end
+
+      for subject <- [
+            "not-a-uuid",
+            "aaaaaaaaaaaaaaaa",
+            ["x"],
+            %{"a" => "x"},
+            %{project_id: "not-a-uuid"}
+          ] do
+        assert Scope.fetch(superuser, subject) == {:error, :invalid_id}
+      end
     end
   end
 
@@ -430,10 +446,10 @@ defmodule Lightning.ScopeTest do
                Scope.fetch(repo_connection, %Project{id: project.id})
     end
 
-    test "gets no such project for an unknown id" do
+    test "gets no standing for an unknown id" do
       repo_connection = insert(:project_repo_connection)
 
-      assert {:error, :no_such_project} =
+      assert {:error, :no_standing} =
                Scope.fetch(repo_connection, Ecto.UUID.generate())
     end
 
@@ -521,13 +537,12 @@ defmodule Lightning.ScopeTest do
                Scope.fetch(account, %Project{id: project.id})
     end
 
-    test "gets no such project for an unknown or malformed id", %{
-      account: account
-    } do
-      assert {:error, :no_such_project} =
-               Scope.fetch(account, Ecto.UUID.generate())
+    test "gets no such project for an unknown id, and invalid for one that isn't a UUID",
+         %{account: account} do
+      assert Scope.fetch(account, Ecto.UUID.generate()) ==
+               {:error, :no_such_project}
 
-      assert {:error, :no_such_project} = Scope.fetch(account, "not-a-uuid")
+      assert Scope.fetch(account, "not-a-uuid") == {:error, :invalid_id}
     end
   end
 end

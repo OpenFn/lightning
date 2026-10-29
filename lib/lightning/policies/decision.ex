@@ -31,22 +31,25 @@ defmodule Lightning.Policies.Decision do
   """
   @type insufficient_scope :: {:insufficient_scope, grant :: String.t()}
 
+  @type grants :: String.t() | [String.t(), ...]
+
   @type answer ::
           boolean()
           | {:error,
              insufficient_scope() | :no_standing | :scheduled_for_deletion}
 
   @doc """
-  Decides an action on a project. Without the grant the answer is
-  `{:error, {:insufficient_scope, grant}}`. A refused caller with no standing
-  on the project hears `{:error, :no_standing}`, and
+  Decides an action on a project. `grants` is one token grant or a list, any
+  one of which is enough; holding none, the answer is
+  `{:error, {:insufficient_scope, grant}}` naming the first. A refused caller
+  with no standing on the project hears `{:error, :no_standing}`, and
   `{:error, :scheduled_for_deletion}` comes only to a caller every other check
   allows.
   """
-  @spec project(Scope.t(), term(), String.t(), boolean()) :: answer()
-  def project(%Scope{} = scope, subject, grant, allowed?) do
+  @spec project(Scope.t(), term(), grants(), boolean()) :: answer()
+  def project(%Scope{} = scope, subject, grants, allowed?) do
     cond do
-      not Scope.allows?(scope, grant) -> {:error, {:insufficient_scope, grant}}
+      not holds_any?(scope, grants) -> insufficient(grants)
       subject == :before_target -> true
       not Scope.describes?(scope, subject) -> false
       true -> on_project(scope, allowed?)
@@ -64,15 +67,21 @@ defmodule Lightning.Policies.Decision do
   end
 
   @doc """
-  Decides an action with no project, answering `allowed?` once the grant is
-  held.
+  Decides an action with no project, answering `allowed?` once one of `grants`
+  is held.
   """
-  @spec instance(Scope.t(), term(), String.t(), boolean()) :: answer()
-  def instance(%Scope{} = scope, subject, grant, allowed?) do
+  @spec instance(Scope.t(), term(), grants(), boolean()) :: answer()
+  def instance(%Scope{} = scope, subject, grants, allowed?) do
     cond do
-      not Scope.allows?(scope, grant) -> {:error, {:insufficient_scope, grant}}
+      not holds_any?(scope, grants) -> insufficient(grants)
       subject == :before_target -> true
       true -> allowed?
     end
   end
+
+  defp holds_any?(scope, grants),
+    do: grants |> List.wrap() |> Enum.any?(&Scope.allows?(scope, &1))
+
+  defp insufficient(grants),
+    do: {:error, {:insufficient_scope, grants |> List.wrap() |> hd()}}
 end

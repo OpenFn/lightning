@@ -7,14 +7,24 @@ defmodule Lightning.Policies.Credentials do
   A credential belongs to its owner, not to a project. Only the owner or an
   operator may edit a credential, and only the owner may delete one. Only an
   operator may write a credential for someone else (`:name_credential_owner`).
-  Listing your credentials, or creating one for yourself, needs a caller that
-  can own credentials, which only a person can.
+  Listing your credentials needs a caller that can own credentials, which only
+  a person can.
+
+  `:create_credential` is asked of the unsaved credential, which names its
+  owner. A person may create one for themselves, and an operator for a person.
+  So the service account is refused `POST /api/credentials`, which makes the
+  caller the owner; it creates through `PUT`, naming one.
 
   `:see_credential` lets in whoever may edit the credential, and a caller who
   may list the credentials of a project it is linked to. It needs the
   credential's `project_credentials` loaded. Anyone else hears
   `{:error, :no_standing}`, since they may not learn that the credential
   exists.
+
+  Asked with a nil credential, the policy answers for every credential.
+  `:see_credential` then says whether the caller may see every credential,
+  which only an operator may, and `:delete_credential` whether they may delete
+  every credential, which nobody may.
 
   A caller who may edit a credential scheduled for deletion hears
   `{:error, :scheduled_for_deletion}` for `:edit_credential`. Seeing it and
@@ -38,6 +48,7 @@ defmodule Lightning.Policies.Credentials do
 
   @type actions ::
           :see_credential
+          | :create_credential
           | :edit_credential
           | :delete_credential
           | :name_credential_owner
@@ -48,6 +59,7 @@ defmodule Lightning.Policies.Credentials do
           | :view_keychain_credential
 
   @ownership_actions [
+    :create_credential,
     :edit_credential,
     :delete_credential,
     :name_credential_owner,
@@ -85,6 +97,10 @@ defmodule Lightning.Policies.Credentials do
         answer
     end
   end
+
+  def authorize(:see_credential, %Scope{} = scope, nil),
+    do:
+      Decision.instance(scope, nil, "credentials:write", Scope.operator?(scope))
 
   def authorize(
         :edit_credential,
@@ -149,14 +165,15 @@ defmodule Lightning.Policies.Credentials do
         owns?(action, scope, subject)
       )
 
-  # Creating a credential for yourself makes you its owner, which only a caller
-  # that can own credentials may be.
   defp owns?(
-         :edit_credential,
+         :create_credential,
          %Scope{actor: %{id: id}} = scope,
-         %Credential{id: nil, user_id: id}
+         %Credential{user_id: id}
        ),
        do: scope.can_own_credentials?
+
+  defp owns?(:create_credential, scope, %Credential{}),
+    do: Scope.operator?(scope)
 
   defp owns?(:edit_credential, scope, %Credential{user_id: owner_id}),
     do: scope.actor.id == owner_id or Scope.operator?(scope)

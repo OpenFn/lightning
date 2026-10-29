@@ -135,23 +135,44 @@ defmodule Lightning.Policies.ProvisioningTest do
       %{account: account, project: insert(:project)}
     end
 
-    test "is refused both actions without projects:provision, whatever else it holds",
+    test "describes it, but is refused provisioning it, with every grant the token endpoint issues",
          %{account: account, project: project} do
       account = %{account | grants: MapSet.new(AccessToken.scopes())}
 
-      for action <- [:provision_project, :describe_project] do
-        assert permit_target(account, action, project) ==
-                 {:error, {:insufficient_scope, "projects:provision"}}
-      end
+      assert permit_target(account, :describe_project, project) == :ok
+
+      assert permit_target(account, :provision_project, project) ==
+               {:error, :forbidden}
     end
 
-    test "may provision with projects:provision", %{
+    test "describes it holding only projects:write", %{
       account: account,
       project: project
     } do
-      account = %{account | grants: MapSet.new(["projects:provision"])}
+      account = %{account | grants: MapSet.new(["projects:write"])}
 
-      assert permit_target(account, :provision_project, project) == :ok
+      assert permit_target(account, :describe_project, project) == :ok
+    end
+
+    test "is refused both holding neither projects grant, hearing projects:write",
+         %{account: account, project: project} do
+      account = %{account | grants: MapSet.new(["users:write"])}
+
+      for action <- [:provision_project, :describe_project] do
+        assert permit_target(account, action, project) ==
+                 {:error, {:insufficient_scope, "projects:write"}}
+      end
+    end
+
+    test "is refused provisioning even with every grant, projects:provision included",
+         %{account: account, project: project} do
+      account = %{
+        account
+        | grants: MapSet.new(AccessToken.scopes() ++ ["projects:provision"])
+      }
+
+      assert permit_target(account, :provision_project, project) ==
+               {:error, :forbidden}
     end
 
     test "needs projects:write as well to describe, as :access_project does", %{
@@ -171,21 +192,20 @@ defmodule Lightning.Policies.ProvisioningTest do
       assert permit_target(both, :describe_project, project) == :ok
     end
 
-    test "hears the project is scheduled for deletion only once allowed", %{
-      account: account
-    } do
+    test "is refused provisioning a project scheduled for deletion without hearing of the schedule",
+         %{account: account} do
       project =
         insert(:project,
           scheduled_deletion: DateTime.utc_now() |> DateTime.add(1, :day)
         )
 
       assert permit_target(account, :provision_project, project) ==
-               {:error, {:insufficient_scope, "projects:provision"}}
+               {:error, {:insufficient_scope, "projects:write"}}
 
       account = %{account | grants: MapSet.new(["projects:provision"])}
 
       assert permit_target(account, :provision_project, project) ==
-               {:error, :scheduled_for_deletion}
+               {:error, :forbidden}
     end
   end
 
@@ -225,9 +245,37 @@ defmodule Lightning.Policies.ProvisioningTest do
     end
   end
 
-  # The routes reach only people (every grant) and repo connections
-  # (projects:provision), so these refusals are for tokens that can't reach
-  # /api/provision.
+  describe ":provision_new_project" do
+    test "is allowed for a superuser" do
+      superuser = insert(:user, role: :superuser, mfa_enabled: false)
+
+      assert permit_new(superuser) == :ok
+    end
+
+    test "is refused for a person who is not a superuser" do
+      user = insert(:user)
+      insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      assert permit_new(user) == {:error, :forbidden}
+    end
+
+    test "is refused for the service account, and names projects:write to one without it" do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      assert permit_new(%{account | grants: MapSet.new(["projects:write"])}) ==
+               {:error, :forbidden}
+
+      assert permit_new(%{account | grants: MapSet.new(["users:write"])}) ==
+               {:error, {:insufficient_scope, "projects:write"}}
+    end
+
+    test "is refused for a repo connection, which holds no projects:write" do
+      assert permit_new(insert(:project_repo_connection)) ==
+               {:error, {:insufficient_scope, "projects:write"}}
+    end
+  end
+
   describe "before the target is loaded" do
     setup do
       {account, _private_key} =
@@ -236,21 +284,19 @@ defmodule Lightning.Policies.ProvisioningTest do
       %{account: account}
     end
 
-    test "describing needs projects:provision", %{account: account} do
+    test "describing needs either projects grant, and names projects:write without one",
+         %{account: account} do
       assert permit(account, [], :describe_project) ==
-               {:error, {:insufficient_scope, "projects:provision"}}
+               {:error, {:insufficient_scope, "projects:write"}}
 
-      assert permit(account, ["projects:write"], :describe_project) ==
-               {:error, {:insufficient_scope, "projects:provision"}}
-
+      assert permit(account, ["projects:write"], :describe_project) == :ok
       assert permit(account, ["projects:provision"], :describe_project) == :ok
     end
 
-    # Creating needs projects:write and provisioning an existing project
-    # projects:provision; which applies waits for the body's target.
-    test "provisioning needs either grant", %{account: account} do
+    test "provisioning needs either grant, and names projects:write without one",
+         %{account: account} do
       assert permit(account, ["users:write"], :provision_project) ==
-               {:error, {:insufficient_scope, "projects:provision"}}
+               {:error, {:insufficient_scope, "projects:write"}}
 
       assert permit(account, ["projects:write"], :provision_project) == :ok
       assert permit(account, ["projects:provision"], :provision_project) == :ok
@@ -288,4 +334,13 @@ defmodule Lightning.Policies.ProvisioningTest do
 
   defp permit_create(actor),
     do: Permissions.permit(:provisioning, :create_project, Scope.new(actor), nil)
+
+  defp permit_new(actor),
+    do:
+      Permissions.permit(
+        :provisioning,
+        :provision_new_project,
+        Scope.new(actor),
+        nil
+      )
 end

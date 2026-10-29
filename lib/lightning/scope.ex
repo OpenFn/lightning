@@ -15,9 +15,14 @@ defmodule Lightning.Scope do
       {:ok, %Scope{role: :editor}}
       {:ok, %Scope{role: nil}}                      no membership row
       {:ok, %Scope{scheduled_for_deletion?: true}}  scheduled for deletion
-      {:error, :no_such_project}                    no such project
-      {:error, :no_standing}                        a repo connection naming
-                                                    another project
+      {:error, :no_such_project}                    no such project, to an
+                                                    operator or a superuser
+      {:error, :invalid_id}                         an id that isn't a UUID, to
+                                                    an operator or a superuser
+      {:error, :no_standing}                        no such project or an id
+                                                    that isn't a UUID, to anyone
+                                                    else, or a repo connection
+                                                    naming another project
 
   So `{:ok, _}` is not permission. A non-member of a live project gets
   `role: nil`, which support access can still make meaningful. Whether the
@@ -54,6 +59,7 @@ defmodule Lightning.Scope do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
   alias Lightning.ServiceAccount
+  alias Lightning.Validators
   alias Lightning.VersionControl.ProjectRepoConnection
 
   # `grants`, `mfa_satisfied?` and `can_own_credentials?` default to refusing,
@@ -108,7 +114,7 @@ defmodule Lightning.Scope do
           | %{:project_id => Ecto.UUID.t(), optional(any()) => any()}
           | nil
 
-  @type error :: :no_such_project | :no_standing
+  @type error :: :no_such_project | :invalid_id | :no_standing
 
   @doc """
   The facts about the caller alone, with no project.
@@ -150,19 +156,27 @@ defmodule Lightning.Scope do
   The actor's standing in the project. Given a `%Scope{}` from `new/1`, adds
   the project's facts to it rather than building it again.
 
-  Returns `{:error, :no_such_project}` when the subject does not identify a
-  project that exists, and `{:error, :no_standing}` when a
-  `%ProjectRepoConnection{}` actor names a project other than the connection's
-  own. A project scheduled for deletion resolves, with `scheduled_for_deletion?`
-  set; refusing it is the policy's call.
+  When the subject does not identify a project that exists, a caller with
+  `instance_wide?/1` access gets `{:error, :invalid_id}` for an id that isn't a
+  UUID, or a value that isn't an id at all, and `{:error, :no_such_project}`
+  for any other. Anyone else gets `{:error, :no_standing}`, the same answer as
+  for a project they can't see.
+
+  Returns `{:error, :no_standing}` when a `%ProjectRepoConnection{}` actor names
+  a project other than the connection's own. A project scheduled for deletion
+  resolves, with `scheduled_for_deletion?` set; refusing it is the policy's
+  call.
 
   A `%ServiceAccount{}` resolves any project, with no role.
   """
   @spec fetch(t() | actor(), subject()) :: {:ok, t()} | {:error, error()}
   def fetch(%__MODULE__{} = scope, subject) do
-    case resolve(scope, List.wrap(subject_id(subject))) do
-      [result] -> result
-      [] -> {:error, :no_such_project}
+    with {:ok, id} <- subject_id(subject),
+         [result] <- resolve(scope, [id]) do
+      result
+    else
+      [] -> refuse_unknown(scope, :no_such_project)
+      {:error, reason} -> refuse_unknown(scope, reason)
     end
   end
 
@@ -216,6 +230,15 @@ defmodule Lightning.Scope do
     do: instance_role == :operator
 
   @doc """
+  Whether the caller may learn which projects exist: an operator or a
+  superuser. Anyone else is told nothing about a project they have no standing
+  on, including that it doesn't exist.
+  """
+  @spec instance_wide?(t()) :: boolean()
+  def instance_wide?(%__MODULE__{instance_role: instance_role}),
+    do: instance_role in [:operator, :superuser]
+
+  @doc """
   Whether `subject` names this scope's project: the project itself, its id, or
   anything carrying its `project_id`.
   """
@@ -252,6 +275,10 @@ defmodule Lightning.Scope do
     end
   end
 
+  defp refuse_unknown(scope, reason) do
+    if instance_wide?(scope), do: {:error, reason}, else: {:error, :no_standing}
+  end
+
   # Answered here rather than at the call site so no policy can forget the
   # comparison. The repeated `id` binds both patterns to the same value. Another
   # project is refused like a missing one: the connection has no standing on
@@ -278,16 +305,23 @@ defmodule Lightning.Scope do
   # read for its id and reloaded, so no caller can assert its own standing from
   # a struct it happens to hold — whether assembled in code or loaded before the
   # facts changed.
-  defp subject_id(%Project{id: id}), do: id
-  defp subject_id(%{project_id: id}), do: id
-  defp subject_id(id) when is_binary(id), do: id
-  defp subject_id(_), do: nil
+  defp subject_id(%Project{id: id}), do: project_id(id)
+  defp subject_id(%{project_id: id}), do: project_id(id)
+  defp subject_id(id), do: project_id(id)
+
+  defp project_id(nil), do: {:error, :no_such_project}
+
+  defp project_id(id) when is_binary(id) do
+    if Validators.valid_uuid?(id), do: {:ok, id}, else: {:error, :invalid_id}
+  end
+
+  defp project_id(_id), do: {:error, :invalid_id}
 
   # Each project comes with the user's own membership row, or nil. Querying a
   # malformed binary_id raises Ecto.Query.CastError, which would turn a denial
-  # into a 500, so ids are cast first.
+  # into a 500, so ids are checked first.
   defp load(actor, project_ids) do
-    case for(id <- project_ids, {:ok, uuid} <- [Ecto.UUID.cast(id)], do: uuid) do
+    case Enum.filter(project_ids, &Validators.valid_uuid?/1) do
       [] -> []
       uuids -> Repo.all(load_query(actor, uuids))
     end
