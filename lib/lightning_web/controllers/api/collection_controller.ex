@@ -29,13 +29,14 @@ defmodule LightningWeb.API.CollectionController do
   @manage_collection {:collections, :manage_collection}
 
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def show(conn, %{"project_id" => project_id, "id" => id}) do
+  def show(conn, _params) do
     with {:ok, collection} <-
            Target.in_project(
              conn.assigns.scope,
-             project_id,
+             Request.param(conn, "project_id"),
              @manage_collection,
-             &fetch_collection(id, &1)
+             Request.param(conn, "id"),
+             &Collections.get_collection_for_project/2
            ) do
       render_collection(conn, collection)
     end
@@ -45,18 +46,23 @@ defmodule LightningWeb.API.CollectionController do
   Creates the collection under the path's id in the project, or renames the
   project's collection that has it, keeping its items.
 
-  An id held by another project's collection answers 409 `id_taken`, since
-  Lightning never moves a collection between projects. A refused body answers
-  one 422 with its keys and the collection's fields together, before the plan
-  limit is asked (error-format spec §4, D13).
+  An id held by another project's collection answers 409 `id_taken` to anyone
+  permitted on the path's project, whether or not they can see the holder,
+  since Lightning never moves a collection between projects. A refused body
+  answers one 422 with its keys and the collection's fields together, before
+  the plan limit is asked.
   """
   @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
-  def update(conn, %{"project_id" => project_id, "id" => id}) do
+  def update(conn, _params) do
     body = conn.body_params
 
     with {:ok, project} <-
-           Target.project(conn.assigns.scope, project_id, @manage_collection),
-         {:ok, id} <- Request.path_id(id),
+           Target.project(
+             conn.assigns.scope,
+             Request.param(conn, "project_id"),
+             @manage_collection
+           ),
+         {:ok, id} <- Request.id(Request.param(conn, "id")),
          {:ok, target} <- update_target(id, project),
          {:ok, entries} <- Request.check(body, id, @accepted) do
       attrs = %{"name" => body["name"]}
@@ -64,15 +70,6 @@ defmodule LightningWeb.API.CollectionController do
       case target do
         :new -> create(conn, project, id, attrs, entries)
         collection -> rename(conn, collection, attrs, entries)
-      end
-    end
-  end
-
-  defp fetch_collection(id, %Project{id: project_id}) do
-    with {:ok, id} <- Request.path_id(id) do
-      case Collections.get_collection_by_id(id) do
-        %Collection{project_id: ^project_id} = collection -> {:ok, collection}
-        _ -> {:error, :not_found}
       end
     end
   end
@@ -103,7 +100,7 @@ defmodule LightningWeb.API.CollectionController do
         # meets that collection.
         {:error, %Ecto.Changeset{} = changeset} ->
           if Request.id_taken?(changeset),
-            do: update(conn, %{"project_id" => project.id, "id" => id}),
+            do: update(conn, conn.params),
             else: {:error, changeset}
 
         error ->

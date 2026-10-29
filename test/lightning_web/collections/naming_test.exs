@@ -12,16 +12,10 @@ defmodule LightningWeb.API.CollectionsNamingTest do
   setup :member_with_collection
 
   describe "a bare name" do
+    @tag role: :owner
     test "answers 404 for a collection the project hasn't got, on every route",
          %{conn: conn} do
-      for request <- [
-            &get(&1, ~p"/collections/misspelled-collection/foo"),
-            &put(&1, ~p"/collections/misspelled-collection/baz", value: "qux"),
-            &post(&1, ~p"/collections/misspelled-collection",
-              items: [%{key: "baz", value: "qux"}]
-            ),
-            &delete(&1, ~p"/collections/misspelled-collection/foo")
-          ] do
+      for {_verb, request} <- routes_for("misspelled-collection") do
         assert_problem(request.(conn), 404, :not_found, [])
       end
     end
@@ -33,14 +27,7 @@ defmodule LightningWeb.API.CollectionsNamingTest do
       insert(:collection, name: name, project: project)
       insert(:collection, name: name, project: other_project)
 
-      for request <- [
-            &get(&1, ~p"/collections/#{name}"),
-            &get(&1, ~p"/collections/#{name}/some-key"),
-            &put(&1, ~p"/collections/#{name}/some-key", value: "val"),
-            &post(&1, ~p"/collections/#{name}", items: []),
-            &delete(&1, ~p"/collections/#{name}/some-key"),
-            &delete(&1, ~p"/collections/#{name}")
-          ] do
+      for {_verb, request} <- routes_for(name) do
         assert_problem(request.(conn), 409, :ambiguous_name, [])
       end
     end

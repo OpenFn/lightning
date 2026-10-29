@@ -16,20 +16,28 @@ defmodule LightningWeb.API.CollectionsRefusalsTest do
   describe "who may reach it" do
     setup :member_with_collection
 
-    test "answers 404 to a token with no access to the project's collection", %{
-      conn: conn,
-      collection: collection
-    } do
+    test "answers 404 for a name in no project the token can see, on every route, and changes nothing",
+         %{conn: conn, collection: collection} do
+      insert(:collection_item, collection: collection, key: "k", value: "kept")
       outsider = Accounts.generate_api_token(insert(:user))
 
-      for token <- [outsider, run_token()],
-          path <- [
-            ~p"/collections/#{collection.name}",
-            ~p"/collections/#{collection.name}?project_id=#{collection.project_id}"
-          ] do
-        conn = conn |> assign_bearer(token) |> get(path)
+      for {_verb, request} <- routes_for(collection.name) do
+        conn
+        |> assign_bearer(outsider)
+        |> request.()
+        |> assert_problem(404, :not_found, [])
+      end
 
-        assert_problem(conn, 404, :not_found, [])
+      unseen =
+        for token <- [outsider, run_token()],
+            path <- [
+              ~p"/collections/#{collection.name}",
+              ~p"/collections/#{collection.name}?project_id=#{collection.project_id}"
+            ],
+            do: {assign_bearer(conn, token), path}
+
+      for {conn, path} <- [{conn, ~p"/collections/no-such-collection"} | unseen] do
+        conn |> get(path) |> assert_problem(404, :not_found, [])
       end
 
       conn =
@@ -41,7 +49,7 @@ defmodule LightningWeb.API.CollectionsRefusalsTest do
         )
 
       assert_problem(conn, 404, :not_found, [])
-      assert Collections.get(collection, "k") == nil
+      assert Collections.get(collection, "k").value == "kept"
     end
 
     test "answers 401 to a token that was deleted, or to a disabled user",
@@ -126,18 +134,20 @@ defmodule LightningWeb.API.CollectionsRefusalsTest do
              |> get(~p"/collections/#{collection.name}")
              |> json_response(200)
 
+      writes =
+        for {verb, request} <- routes_for(collection.name),
+            verb != :get,
+            do: request
+
       for request <- [
-            &put(&1, ~p"/collections/#{collection.name}/new", value: "v"),
-            &post(&1, ~p"/collections/#{collection.name}",
-              items: [%{key: "new", value: "v"}]
-            ),
             &delete(&1, ~p"/collections/#{collection.name}/foo"),
-            &delete(&1, ~p"/collections/#{collection.name}")
+            (&delete(&1, ~p"/collections/#{collection.name}/missing")) | writes
           ] do
         assert_problem(request.(conn), 403, :forbidden, [])
       end
 
       assert Collections.get(collection, "foo")
+      refute Collections.get(collection, "k")
     end
 
     test "editors may read and write but not delete every item", ctx do
@@ -159,11 +169,36 @@ defmodule LightningWeb.API.CollectionsRefusalsTest do
                |> delete(~p"/collections/#{collection.name}/foo")
                |> json_response(200)
 
-      conn = delete(conn, ~p"/collections/#{collection.name}")
-
-      assert_problem(conn, 403, :forbidden, [])
+      for path <- [
+            ~p"/collections/#{collection.name}",
+            ~p"/collections/#{collection.name}?key=nomatch*"
+          ] do
+        conn |> delete(path) |> assert_problem(403, :forbidden, [])
+      end
 
       assert Collections.get(collection, "baz")
+    end
+
+    test "a member short of the project's MFA requirement may not write", %{
+      conn: conn
+    } do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      collection = insert(:collection, project: project)
+      insert(:collection_item, collection: collection, key: "k", value: "kept")
+      conn = assign_bearer(conn, Lightning.Accounts.generate_api_token(user))
+
+      for {verb, request} <- routes_for(collection.name), verb != :get do
+        assert_problem(request.(conn), 403, :forbidden, [])
+      end
+
+      assert Collections.get(collection, "k").value == "kept"
     end
 
     for role <- [:admin, :owner] do

@@ -11,6 +11,8 @@ defmodule LightningWeb.API.CollectionControllerTest do
   alias Lightning.Collections.Collection
   alias Lightning.Repo
 
+  @body_no_route_accepts %{"name" => "Not Safe", "x" => 1}
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
@@ -347,43 +349,11 @@ defmodule LightningWeb.API.CollectionControllerTest do
     end
   end
 
-  describe "answering 404 for what is not there" do
-    setup :service_account
-
-    test "PUT answers 404 for a project or a path id that does not exist", %{
-      conn: conn,
-      project: project
-    } do
-      for {project_id, id} <- [
-            {Ecto.UUID.generate(), Ecto.UUID.generate()},
-            {"not-a-uuid", Ecto.UUID.generate()},
-            {project.id, "not-a-uuid"}
-          ] do
-        conn = put_collection(conn, project_id, id, %{"name" => "patients"})
-
-        assert_problem(conn, 404, :not_found, [])
-      end
-    end
-
-    test "GET answers 404 for a collection of another project or none", %{
-      conn: conn,
-      project: project
-    } do
-      elsewhere = insert(:collection)
-
-      for id <- [elsewhere.id, Ecto.UUID.generate(), "not-a-uuid"] do
-        conn = get(conn, ~p"/api/projects/#{project.id}/collections/#{id}")
-        assert_problem(conn, 404, :not_found, [])
-      end
-    end
-  end
-
-  describe "GET" do
-    setup :service_account
-
+  describe "reading" do
     test "a service account with the scope reads a project's collection", %{
       conn: conn
     } do
+      {conn, _account} = with_service_account(conn, ["collections:write"])
       collection = insert(:collection, name: "patients")
 
       conn =
@@ -400,38 +370,162 @@ defmodule LightningWeb.API.CollectionControllerTest do
                }
              }
     end
-  end
 
-  describe "who may reach it" do
-    test "an editor or a viewer is refused with 403, an outsider with 404, an outsider on a project scheduled for deletion with 404",
-         %{conn: conn} do
-      outsider = insert(:user)
-
-      for {role, deletion, status, code} <- [
-            {:editor, nil, 403, :forbidden},
-            {:viewer, nil, 403, :forbidden},
-            {nil, nil, 404, :not_found},
-            {nil, scheduled_for_deletion(), 404, :not_found}
-          ] do
-        user = if role, do: insert(:user), else: outsider
-
-        project_users = if role, do: [%{user: user, role: role}], else: []
-
-        project =
-          insert(:project,
-            project_users: project_users,
-            scheduled_deletion: deletion
-          )
-
-        id = Ecto.UUID.generate()
+    test "an owner or an admin reads a project's collection", %{conn: conn} do
+      for role <- [:owner, :admin] do
+        user = insert(:user)
+        project = insert(:project, project_users: [%{user: user, role: role}])
+        collection = insert(:collection, project: project, name: "patients")
 
         conn =
           conn
           |> with_pat(user)
-          |> put_collection(project.id, id, %{"name" => "patients"})
+          |> get(~p"/api/projects/#{project.id}/collections/#{collection.id}")
 
-        assert_problem(conn, status, code, [])
-        refute Repo.get(Collection, id)
+        assert json_response(conn, 200) == %{
+                 "data" => %{
+                   "id" => collection.id,
+                   "project_id" => project.id,
+                   "name" => "patients"
+                 }
+               }
+      end
+    end
+  end
+
+  describe "who may reach it" do
+    test "a caller the project refuses gets the same 403 for every id, and a permitted caller hears what is missing, malformed or held elsewhere",
+         %{conn: conn} do
+      [owner, admin, editor, viewer, stranger, short_of_mfa] =
+        insert_list(6, :user)
+
+      superuser = insert(:user, role: :superuser)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: admin, role: :admin},
+            %{user: editor, role: :editor},
+            %{user: viewer, role: :viewer}
+          ]
+        )
+
+      mfa_project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: short_of_mfa, role: :owner}]
+        )
+
+      scheduled = insert(:project, scheduled_deletion: scheduled_for_deletion())
+
+      held_out_of_sight = insert(:collection, name: "hidden")
+
+      held_in_sight =
+        insert(:collection,
+          name: "visible",
+          project:
+            insert(:project,
+              project_users: [
+                %{user: owner, role: :owner},
+                %{user: admin, role: :admin},
+                %{user: viewer, role: :admin}
+              ]
+            )
+        )
+
+      {service_account, _account} =
+        with_service_account(conn, ["collections:write"])
+
+      unknown = Ecto.UUID.generate()
+      malformed_id = [not_a_uuid_entry(%{"path" => "id"})]
+
+      refused =
+        for {user, project} <- [
+              {stranger, project},
+              {editor, project},
+              {viewer, project},
+              {short_of_mfa, mfa_project},
+              {stranger, scheduled}
+            ],
+            {project_id, id} <- [
+              {project.id, insert(:collection, project: project).id},
+              {project.id, unknown},
+              {project.id, "not-a-uuid"},
+              {project.id, held_out_of_sight.id},
+              {project.id, held_in_sight.id},
+              {Ecto.UUID.generate(), unknown},
+              {"not-a-uuid", unknown}
+            ],
+            verb <- [:get, :put],
+            do: {with_pat(conn, user), verb, project_id, id, 403, :forbidden, []}
+
+      refused_superuser =
+        for id <- [
+              insert(:collection, project: project).id,
+              unknown,
+              "not-a-uuid"
+            ],
+            verb <- [:get, :put],
+            do:
+              {with_pat(conn, superuser), verb, project.id, id, 403, :forbidden,
+               []}
+
+      permitted =
+        for caller <- [
+              with_pat(conn, owner),
+              with_pat(conn, admin),
+              service_account
+            ],
+            {verb, id, status, code, entries} <- [
+              {:get, unknown, 404, :not_found, []},
+              {:get, held_out_of_sight.id, 404, :not_found, []},
+              {:get, held_in_sight.id, 404, :not_found, []},
+              {:get, "not-a-uuid", 400, :invalid_parameter, malformed_id},
+              {:put, "not-a-uuid", 400, :invalid_parameter, malformed_id},
+              {:put, held_out_of_sight.id, 409, :id_taken, []},
+              {:put, held_in_sight.id, 409, :id_taken, []}
+            ],
+            do: {caller, verb, project.id, id, status, code, entries}
+
+      unknown_project =
+        for {caller, status, code, entries} <- [
+              {with_pat(conn, owner), 403, :forbidden, []},
+              {with_pat(conn, superuser), 404, :not_found, []},
+              {service_account, 404, :not_found, []}
+            ],
+            verb <- [:get, :put],
+            do:
+              {caller, verb, Ecto.UUID.generate(), unknown, status, code,
+               entries}
+
+      malformed_project =
+        for {caller, status, code, entries} <- [
+              {with_pat(conn, owner), 403, :forbidden, []},
+              {with_pat(conn, superuser), 400, :invalid_parameter,
+               [not_a_uuid_entry(%{"path" => "project_id"})]},
+              {service_account, 400, :invalid_parameter,
+               [not_a_uuid_entry(%{"path" => "project_id"})]}
+            ],
+            verb <- [:get, :put],
+            do: {caller, verb, "not-a-uuid", unknown, status, code, entries}
+
+      for {caller, verb, project_id, id, status, code, entries} <-
+            refused ++
+              refused_superuser ++
+              permitted ++ unknown_project ++ malformed_project do
+        caller
+        |> reach(verb, project_id, id)
+        |> assert_problem(status, code, entries)
+      end
+
+      refute Repo.get(Collection, unknown)
+
+      for held <- [held_out_of_sight, held_in_sight] do
+        assert Map.take(Repo.reload!(held), [:name, :project_id]) ==
+                 Map.take(held, [:name, :project_id])
+
+        assert audits(held.id) == []
       end
     end
 
@@ -458,35 +552,11 @@ defmodule LightningWeb.API.CollectionControllerTest do
 
       assert_problem(read, 409, :scheduled_for_deletion, [])
     end
-
-    test "reading needs :manage_collection on the project, checked after the collection exists",
-         %{conn: conn} do
-      admin = insert(:user)
-      editor = insert(:user)
-
-      project =
-        insert(:project,
-          project_users: [
-            %{user: admin, role: :admin},
-            %{user: editor, role: :editor}
-          ]
-        )
-
-      collection = insert(:collection, project: project)
-      path = ~p"/api/projects/#{project.id}/collections/#{collection.id}"
-
-      assert json_response(conn |> with_pat(admin) |> get(path), 200)
-
-      assert_problem(conn |> with_pat(editor) |> get(path), 403, :forbidden, [])
-
-      for id <- [Ecto.UUID.generate(), "not-a-uuid"] do
-        conn =
-          conn
-          |> with_pat(editor)
-          |> get(~p"/api/projects/#{project.id}/collections/#{id}")
-
-        assert_problem(conn, 404, :not_found, [])
-      end
-    end
   end
+
+  defp reach(conn, :get, project_id, id),
+    do: get(conn, ~p"/api/projects/#{project_id}/collections/#{id}")
+
+  defp reach(conn, :put, project_id, id),
+    do: put_collection(conn, project_id, id, @body_no_route_accepts)
 end
