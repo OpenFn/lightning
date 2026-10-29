@@ -627,22 +627,23 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
-  attr :status, :map, required: true
-
   # Shown to superusers only, and not dismissible: it stays until the
-  # instance is upgraded.
+  # instance and its workers are upgraded. It doesn't say what's out of date;
+  # the maintenance page does.
   defp update_callout(assigns) do
     ~H"""
-    <div id="update-callout" class="mx-3 mb-3">
+    <div id="update-callout" class="mx-2 mb-3">
       <.link
         navigate={~p"/settings/maintenance#update-card"}
-        class="sidebar-branding-expanded block w-full rounded-lg bg-amber-50 px-3 py-2 text-center text-xs text-amber-900 hover:bg-amber-100"
+        class="sidebar-branding-expanded block w-full rounded-lg bg-amber-50 px-2 py-2 text-center text-xs text-amber-900 hover:bg-amber-100"
       >
-        <span class="flex items-center justify-center gap-1 font-semibold">
+        <%!-- One line at the sidebar's 192px; wrapped, the icon sits apart
+             from the text. --%>
+        <span class="flex items-center justify-center gap-1 whitespace-nowrap font-semibold">
           <.icon
             name="hero-exclamation-triangle-solid"
-            class="h-4 w-4 shrink-0 text-amber-500"
-          /> v{@status.latest} is available
+            class="size-3.5 shrink-0 text-amber-500"
+          /> New version available
         </span>
         <span class="mt-1 block whitespace-normal">
           Click for upgrade info
@@ -651,8 +652,8 @@ defmodule LightningWeb.LayoutComponents do
       <.link
         navigate={~p"/settings/maintenance#update-card"}
         class="sidebar-branding-collapsed h-10 w-full"
-        title={"v#{@status.latest} is available. Please upgrade."}
-        aria-label={"v#{@status.latest} is available. Please upgrade."}
+        title="New version available. Please upgrade."
+        aria-label="New version available. Please upgrade."
       >
         <%!-- The sidebar CSS sets this link to display: block when collapsed,
              so the centring lives on an inner element. --%>
@@ -674,35 +675,39 @@ defmodule LightningWeb.LayoutComponents do
     label = Lightning.release()[:label]
     compact? = is_binary(label) and not String.contains?(label, " ")
 
-    superuser_update =
-      match?(%{role: :superuser}, assigns.current_user) &&
-        LightningWeb.Components.Common.update_available(assigns.update_status)
+    update = LightningWeb.Components.Common.update_state(assigns.update_status)
 
     assigns =
       assign(assigns,
         compact_version?: compact?,
-        superuser_update: superuser_update
+        update: update,
+        superuser_update?:
+          update == :available and
+            match?(%{role: :superuser}, assigns.current_user)
       )
 
     ~H"""
     <div class="flex-shrink-0 sidebar-footer flex flex-col border-t border-white/10 pt-3 mt-3">
-      <.update_callout :if={@superuser_update} status={@superuser_update} />
+      <.update_callout :if={@superuser_update?} />
       <%!-- Expanded branding: centered --%>
       <div class="sidebar-branding-expanded h-14 text-center animate-[fade-in-keys_1s_ease-out_forwards]">
         <div class="pt-2">
-          <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light mx-auto" />
+          <div class="relative mx-auto w-fit">
+            <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light" />
+            <LightningWeb.Components.Common.update_dot update={@update} />
+          </div>
         </div>
-        <LightningWeb.Components.Common.version_chip update_status={@update_status} />
+        <LightningWeb.Components.Common.version_chip update={@update} />
       </div>
       <%!-- Collapsed branding: centered --%>
       <div class="sidebar-branding-collapsed hidden h-14 text-center animate-[fade-in-keys_1s_ease-out_forwards]">
         <div class={if @compact_version?, do: "pt-2", else: "pt-0.5"}>
-          <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light mx-auto" />
+          <div class="relative mx-auto w-fit">
+            <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light" />
+            <LightningWeb.Components.Common.update_dot update={@update} />
+          </div>
         </div>
-        <LightningWeb.Components.Common.version_chip
-          update_status={@update_status}
-          dot={:below}
-        />
+        <LightningWeb.Components.Common.version_chip update={@update} />
       </div>
       <div class="border-t border-white/10 mt-2">
         <button
