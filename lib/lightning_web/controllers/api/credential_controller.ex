@@ -130,6 +130,8 @@ defmodule LightningWeb.API.CredentialController do
   - `403 Forbidden` to a caller that can't own a credential, such as the
     service account
   - `400 Bad Request` (`malformed`) when the body isn't a JSON object
+  - `503 Service Unavailable` (`not_ready`) while the adaptor catalogue can't
+    answer for the body's schema, whatever else is wrong with the body
   - `422 Unprocessable Entity` on validation errors, with one entry for each
     project link the user may not make
 
@@ -165,6 +167,7 @@ defmodule LightningWeb.API.CredentialController do
              %Credential{user_id: owner.id}
            ),
          :ok <- Request.check_object(conn.body_params),
+         :ok <- Credentials.check_catalogue(params["schema"]),
          {link_entries, project_ids} =
            check_links(params, [], {:ok, owner}, scope),
          :ok <- Errors.refuse(link_entries),
@@ -222,10 +225,11 @@ defmodule LightningWeb.API.CredentialController do
   to anyone, since anyone holding the grant may create a credential.
 
   A refused body answers one 422 with every error in its keys, its owner and
-  its links. The credential's own fields and its body
-  are checked by `Lightning.Credentials` when it writes. A body naming an owner
-  other than an existing credential's is 422 `not_allowed` at the owner, since
-  the owner applies only on create.
+  its links, unless the adaptor catalogue can't yet answer for the schema the
+  credential would have, which is 503 `not_ready`. The credential's own fields
+  and its body are checked by `Lightning.Credentials` when it writes. A body
+  naming an owner other than an existing credential's is 422 `not_allowed` at
+  the owner, since the owner applies only on create.
   """
   @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def update(conn, _params) do
@@ -236,6 +240,7 @@ defmodule LightningWeb.API.CredentialController do
          {:ok, target} <- update_target(id, scope),
          {:ok, naming} <- owner_naming(body["owner"], scope),
          {:ok, key_entries} <- Request.check(body, id, @accepted),
+         :ok <- Credentials.check_catalogue(schema(body, target)),
          {:ok, {owner, project_ids}} <-
            check_put_body(body, key_entries, naming, target, scope) do
       case target do
@@ -244,6 +249,11 @@ defmodule LightningWeb.API.CredentialController do
       end
     end
   end
+
+  # A replace that leaves out the schema keeps the credential's.
+  defp schema(%{"schema" => schema}, _target), do: schema
+  defp schema(_body, :new), do: nil
+  defp schema(_body, credential), do: credential.schema
 
   defp update_target(id, scope) do
     case Credentials.get_credential(id) do

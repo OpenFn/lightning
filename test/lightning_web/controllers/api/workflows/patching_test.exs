@@ -384,6 +384,39 @@ defmodule LightningWeb.API.Workflows.PatchingTest do
       |> assert_problem(402, :exceeds_limit, [])
     end
 
+    test "an invalid update that enables a trigger over the workflow limit answers 422, not 402",
+         %{conn: conn, project: project} do
+      workflow =
+        insert(:simple_workflow, name: "work2", project: project)
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      [trigger] = workflow.triggers
+      trigger |> Ecto.Changeset.change(enabled: false) |> Repo.update!()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :activate_workflow}, _context ->
+          {:error, :too_many_workflows, %Message{text: "upgrade"}}
+        end
+      )
+
+      patch = %{name: "", triggers: [%{id: trigger.id, enabled: true}]}
+
+      conn
+      |> patch(
+        ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+        Jason.encode!(patch)
+      )
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/name",
+          "code" => "required",
+          "detail" => "can't be blank"
+        }
+      ])
+    end
+
     test "an update that leaves an enabled trigger enabled isn't held to the workflow limit",
          %{conn: conn, project: project} do
       workflow =

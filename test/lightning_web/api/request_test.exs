@@ -25,6 +25,10 @@ defmodule LightningWeb.API.RequestTest do
     end
   end
 
+  test "check_object/1 takes an object that sends a _json key among others" do
+    assert Request.check_object(%{"_json" => 1, "value" => "v"}) == :ok
+  end
+
   test "answers 400 malformed for a body that is not a JSON object" do
     assert Request.check(%{"_json" => [1, 2]}, @id, @accepted) ==
              {:error, Problem.new(:malformed)}

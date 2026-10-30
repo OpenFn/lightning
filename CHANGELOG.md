@@ -178,7 +178,8 @@ and this project adheres to
     ID already in use, answers 422 `invalid` with a `taken` entry at `#/name` or
     `#/external_id`.
   - `POST /api/credentials` with a typed body while the adaptor catalogue is
-    still loading answers 503 `not_ready` with `Retry-After: 5`, instead of 422.
+    still loading answers 503 `not_ready` with `Retry-After: 5`, instead of 422,
+    whatever else is wrong with the body. So does `PUT /api/credentials/:id`.
   - `DELETE /api/credentials/:id` answers 403 `forbidden` for a credential the
     caller doesn't own, one that doesn't exist and an id that isn't a UUID,
     instead of `{"error": "Forbidden"}` and `{"error": "Not Found"}`.
@@ -363,9 +364,10 @@ and this project adheres to
     `{"error": "Bad Request"}`. An `offset` or `limit` that isn't a whole
     number, a negative `offset`, a `limit` below 1 and a `workflow_id` that
     isn't a UUID answer the same, where they used to fail with a 500 or a 400
-    with no entries, or on `job_code` sessions ignore the `workflow_id`. The
-    project the query names is checked first, so a caller who can't see it gets
-    403 whatever the other parameters say.
+    with no entries, or on `job_code` sessions ignore the `workflow_id`. Unless
+    `session_type` is `job_code`, the project the query names is checked first,
+    so a caller who can't see it gets 403 whatever the other parameters say, a
+    missing or unknown `session_type` among them.
   - A caller who isn't a member of the project answers 403 `forbidden` instead
     of `{"error": "Forbidden"}`. A project that doesn't exist, and a
     `project_id` that isn't a UUID, answer a person the same 403, instead of
@@ -420,6 +422,8 @@ and this project adheres to
   - `PUT /collections/:name/:key` with no `value`, and `POST /collections/:name`
     with no `items`, answer 422 `invalid` with a `required` entry, instead of
     `{"error": "Missing required field: <field>"}`.
+  - `PUT /collections/:name/:key` and `POST /collections/:name` with a body that
+    isn't a JSON object, such as an array, answer 400 `malformed`.
   - `POST /collections/:name` with a key repeated in `items` answers 422
     `invalid` with a `duplicate` entry at the later item's key, instead of
     `{"upserted": 0, "error": "Duplicate key found"}`. An item that isn't an

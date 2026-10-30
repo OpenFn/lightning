@@ -41,11 +41,12 @@ defmodule LightningWeb.API.AiAssistantController do
   - `offset`: Pagination offset (optional, default: 0)
   - `limit`: Pagination limit (optional, default: 20)
 
-  The project the query names is the target: it is authorised before the other
-  parameters are read, and a caller with no standing on it gets 403. A `job_id`
-  is a filter instead: a job the caller may not see lists no sessions, as an
-  unknown one does, and only a `job_id` that isn't a UUID is refused. Every bad
-  parameter is reported in one 400 `invalid_parameter`.
+  The project the query names is the target, unless `session_type` is
+  "job_code". It is authorised before the other parameters are read,
+  `session_type` among them, and a caller with no standing on it gets 403. A
+  `job_id` is a filter instead: a job the caller may not see lists no sessions,
+  as an unknown one does, and only a `job_id` that isn't a UUID is refused.
+  Every bad parameter is reported in one 400 `invalid_parameter`.
 
   ## Examples
   - GET /api/ai_assistant/sessions?session_type=job_code&job_id=123
@@ -91,12 +92,16 @@ defmodule LightningWeb.API.AiAssistantController do
     end
   end
 
-  # With no target named there is nothing to authorise, so every bad parameter
-  # is reported at once.
+  # A project_id is the target whatever else the query says, unless the session
+  # type asks for a job. With no target named there is nothing to authorise, so
+  # every bad parameter is reported at once.
   defp target(%{changes: %{session_type: "job_code", job_id: job_id}}),
     do: {:ok, {:job_code, job_id}}
 
-  defp target(%{changes: %{session_type: "workflow_template", project_id: id}}),
+  defp target(%{changes: %{session_type: "job_code"}} = changeset),
+    do: {:error, Errors.parameters(changeset)}
+
+  defp target(%{changes: %{project_id: id}}),
     do: {:ok, {:workflow_template, {{:parameter, "project_id"}, id}}}
 
   defp target(changeset), do: {:error, Errors.parameters(changeset)}
