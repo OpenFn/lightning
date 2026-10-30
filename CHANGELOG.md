@@ -364,9 +364,10 @@ and this project adheres to
     `{"error": "Bad Request"}`. An `offset` or `limit` that isn't a whole
     number, a negative `offset`, a `limit` below 1 and a `workflow_id` that
     isn't a UUID answer the same, where they used to fail with a 500 or a 400
-    with no entries, or on `job_code` sessions ignore the `workflow_id`. The
-    project the query names is checked first, so a caller who can't see it gets
-    403 whatever the other parameters say.
+    with no entries, or on `job_code` sessions ignore the `workflow_id`. Unless
+    `session_type` is `job_code`, the project the query names is checked first,
+    so a caller who can't see it gets 403 whatever the other parameters say, a
+    missing or unknown `session_type` among them.
   - A caller who isn't a member of the project answers 403 `forbidden` instead
     of `{"error": "Forbidden"}`. A project that doesn't exist, and a
     `project_id` that isn't a UUID, answer a person the same 403, instead of

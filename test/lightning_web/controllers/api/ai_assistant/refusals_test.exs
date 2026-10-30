@@ -23,12 +23,19 @@ defmodule LightningWeb.API.AiAssistantRefusalsTest do
 
   describe "naming the sessions to list" do
     test "names a session type or target that is missing or not allowed", %{
-      conn: conn
+      conn: conn,
+      user: user
     } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
       for {query, parameter, code, detail} <- [
             {"job_id=123", "session_type", "required", "can't be blank"},
             {"session_type=invalid&job_id=123", "session_type", "not_allowed",
              "is invalid"},
+            {"session_type=invalid&project_id=#{project.id}", "session_type",
+             "not_allowed", "is invalid"},
+            {"project_id=#{project.id}", "session_type", "required",
+             "can't be blank"},
             {"session_type=job_code", "job_id", "required", "can't be blank"},
             {"session_type=workflow_template", "project_id", "required",
              "can't be blank"}
@@ -254,6 +261,15 @@ defmodule LightningWeb.API.AiAssistantRefusalsTest do
         workflow_id: "nope"
       )
       |> assert_problem(403, :forbidden, [])
+
+      for session_type <- [nil, "invalid"] do
+        conn
+        |> get(~p"/api/ai_assistant/sessions",
+          session_type: session_type,
+          project_id: project.id
+        )
+        |> assert_problem(403, :forbidden, [])
+      end
     end
 
     test "a member who hasn't met MFA is refused 403 on the project, and finds no sessions for its job",
