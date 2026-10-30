@@ -4433,11 +4433,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       assert_receive {:apollo_body, body}
 
-      assert [
-               %{"type" => "run_index"},
-               %{"type" => "log", "content" => [line]}
-             ] = body["attachments"]
-
+      assert [%{"type" => "log", "content" => [line]}] = body["attachments"]
       assert line["message"] == "boom"
     end
 

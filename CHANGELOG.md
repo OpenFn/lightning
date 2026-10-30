@@ -30,9 +30,7 @@ and this project adheres to
   fixes, and move tzdata back to a Hex release
 - The AI assistant always reads the selected run's logs and data unless you
   detach it, replacing the "Send run logs" and "Send run data" boxes. A long log
-  sends its latest part, marked as cut, instead of failing the message, and the
-  assistant sees the workflow's recent runs so it can ask for the one it needs.
-  Needs the matching Apollo release first.
+  sends its latest part, marked as cut, instead of failing the message.
 
 ### Fixed
 

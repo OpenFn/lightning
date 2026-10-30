@@ -619,9 +619,7 @@ export function AIAssistantPanel({
             <p>
               <strong>What you attach:</strong> with a run selected, its logs as
               written and the structure of each step's input and output, without
-              the values, go with your message until you detach it. The
-              assistant also sees a list of the workflow's recent runs, with
-              their states and failed steps.
+              the values, go with your message until you detach it.
             </p>
             <p>
               All chat sessions are shared with project collaborators. Everyone

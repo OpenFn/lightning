@@ -25,10 +25,14 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
 
-  # Logs, I/O and the run index sent together should stay under Apollo's
-  # 250,000-character attachment limit, or the whole turn is refused. Only a
-  # step whose data is unusually wide can still push it over.
+  # Logs and I/O sent together should stay under Apollo's 250,000-character
+  # attachment limit, or the whole turn is refused. Only a step whose data is
+  # unusually wide can still push it over.
   @logs_char_budget 120_000
+
+  # The ids and level ride along with every line, indented as Apollo renders
+  # them, so a run of short messages costs far more than its text suggests.
+  @logs_line_overhead 150
 
   # On the scrubbed output as Apollo renders it, indented. The step that
   # crosses it is read whole.
@@ -41,8 +45,6 @@ defmodule Lightning.Invocation do
   @io_too_large "[too large to summarise]"
   @io_over_budget "[not read, the run's data ran past what can be sent]"
   @log_line_cut " [rest of this line cut, it ran past what can be sent]"
-
-  @run_summary_limit 10
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
@@ -1147,7 +1149,7 @@ defmodule Lightning.Invocation do
 
   # A job that logs per record produces hundreds of thousands of rows.
   defp take_until_over_budget(line, {lines, size}) do
-    line_size = rendered_size(line)
+    line_size = escaped_size(line.message || "") + @logs_line_overhead
 
     if size + line_size <= @logs_char_budget do
       {:cont, {[line | lines], size + line_size}}
@@ -1156,22 +1158,11 @@ defmodule Lightning.Invocation do
     end
   end
 
-  # Apollo renders each line as indented JSON with non-ASCII escaped, which can
-  # double the size of non-Latin text, and counts the characters of that.
-  defp rendered_size(line) do
-    line
-    |> Jason.encode!(pretty: true, escape: :unicode_safe)
-    |> byte_size()
-    |> Kernel.+(1)
-  end
-
   # A single line can hold a whole state dump; the room left keeps its start.
   defp cut_line(line, room, lines) do
-    marked = %{line | message: @log_line_cut}
-
-    case room - rendered_size(marked) do
+    case room - @logs_line_overhead - byte_size(@log_line_cut) do
       left when left > 0 ->
-        start = take_rendered(line.message || "", left, [])
+        start = take_escaped(line.message || "", left, [])
         [%{line | message: start <> @log_line_cut} | lines]
 
       _ ->
@@ -1179,17 +1170,19 @@ defmodule Lightning.Invocation do
     end
   end
 
-  defp take_rendered(message, room, kept) do
+  defp take_escaped(message, room, kept) do
     with {grapheme, rest} <- String.next_grapheme(message),
          size when size <= room <- escaped_size(grapheme) do
-      take_rendered(rest, room - size, [kept | grapheme])
+      take_escaped(rest, room - size, [kept | grapheme])
     else
       _ -> IO.iodata_to_binary(kept)
     end
   end
 
-  defp escaped_size(grapheme) do
-    byte_size(Jason.encode!(grapheme, escape: :unicode_safe)) - 2
+  # Apollo escapes non-ASCII as \uXXXX, which can double the size of non-Latin
+  # text, and counts the characters of that.
+  defp escaped_size(text) do
+    byte_size(Jason.encode!(text, escape: :unicode_safe)) - 2
   end
 
   defp with_omitted_line(lines, run_id) do
@@ -1330,57 +1323,6 @@ defmodule Lightning.Invocation do
     entry
     |> Jason.encode!(pretty: true, escape: :unicode_safe)
     |> byte_size()
-  end
-
-  @doc """
-  Summarise a workflow's recent runs, newest first, so an assistant can name a
-  run for the user to select.
-
-  The runs are those the history panel shows, with `selected_run_id` kept and
-  marked even when it is older than the rest. Ids are shortened the way the
-  panel shows them, so the user can find the one named.
-  """
-  @spec recent_runs_summary(Ecto.UUID.t(), Ecto.UUID.t() | nil) :: [map()]
-  def recent_runs_summary(workflow_id, selected_run_id) do
-    runs =
-      workflow_id
-      |> Lightning.WorkOrders.get_workorders_with_runs(selected_run_id)
-      |> Enum.flat_map(& &1.runs)
-      |> Enum.sort_by(& &1.inserted_at, {:desc, DateTime})
-
-    recent = Enum.take(runs, @run_summary_limit)
-
-    runs =
-      case Enum.find(runs, &(&1.id == selected_run_id)) do
-        nil -> recent
-        selected -> Enum.uniq_by(recent ++ [selected], & &1.id)
-      end
-
-    failed = failed_steps_by_run(Enum.map(runs, & &1.id))
-
-    Enum.map(runs, fn run ->
-      %{
-        run: String.slice(run.id, 0, 8),
-        state: run.state,
-        started_at: run.started_at,
-        failed_steps: Map.get(failed, run.id, []),
-        selected: run.id == selected_run_id
-      }
-    end)
-  end
-
-  defp failed_steps_by_run([]), do: %{}
-
-  defp failed_steps_by_run(run_ids) do
-    from(rs in RunStep,
-      join: s in assoc(rs, :step),
-      join: j in assoc(s, :job),
-      where: rs.run_id in ^run_ids and s.exit_reason != "success",
-      order_by: [asc: s.started_at],
-      select: {rs.run_id, j.name}
-    )
-    |> Repo.all()
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
   def assemble_logs_for_step(nil), do: nil
