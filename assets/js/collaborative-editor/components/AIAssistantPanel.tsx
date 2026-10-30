@@ -551,8 +551,8 @@ export function AIAssistantPanel({
                 for a new line
               </li>
               <li>
-                When you have a run open you can attach its logs and its data to
-                a message
+                Selecting a run attaches it to your messages; click the x on its
+                chip to detach it
               </li>
               <li>
                 Generated workflows appear as artifacts with Apply and Copy
