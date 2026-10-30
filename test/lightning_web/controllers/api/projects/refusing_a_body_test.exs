@@ -6,6 +6,8 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
   import Lightning.Factories
   import Lightning.ServiceAccountHelpers
 
+  alias Lightning.Projects.Project
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
@@ -120,7 +122,7 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
         refute Jason.encode!(response) =~ "@",
                "#{case_name} echoes an email: #{inspect(response)}"
 
-        refute Lightning.Repo.get(Lightning.Projects.Project, id)
+        refute Lightning.Repo.get(Project, id)
       end
     end
 
@@ -161,16 +163,11 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
 
     test "answers 402 with the members list when the project refuses a member for want of a seat",
          %{conn: conn} do
-      # An extension refusing a member the way a seat limit does.
-      Mox.expect(Lightning.Extensions.MockProjectHook, :handle_create_project, fn
-        attrs ->
-          %Lightning.Projects.Project{}
-          |> Lightning.Projects.Project.project_with_users_changeset(attrs)
-          |> Ecto.Changeset.add_error(:project_users, "has no seat left",
-            code: :exceeds_limit
-          )
-          |> Ecto.Changeset.apply_action(:insert)
-      end)
+      Mox.expect(
+        Lightning.Extensions.MockProjectHook,
+        :handle_create_project,
+        &without_a_seat/1
+      )
 
       conn
       |> put_project(Ecto.UUID.generate(), %{
@@ -182,6 +179,28 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
           "pointer" => "#/members",
           "code" => "exceeds_limit",
           "detail" => "has no seat left"
+        }
+      ])
+    end
+
+    test "answers 422 rather than 402 for a refused body, when a member would also go without a seat",
+         %{conn: conn} do
+      Mox.stub(
+        Lightning.Extensions.MockProjectHook,
+        :handle_create_project,
+        &without_a_seat/1
+      )
+
+      conn
+      |> put_project(Ecto.UUID.generate(), %{
+        "name" => "",
+        "members" => four_members()
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/name",
+          "code" => "required",
+          "detail" => "can't be blank"
         }
       ])
     end
@@ -226,7 +245,7 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
         }
       ])
 
-      refute Lightning.Repo.get(Lightning.Projects.Project, id)
+      refute Lightning.Repo.get(Project, id)
     end
 
     test "refuses a notify of null, under notify", %{conn: conn} do
@@ -246,7 +265,7 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
         }
       ])
 
-      refute Lightning.Repo.get(Lightning.Projects.Project, id)
+      refute Lightning.Repo.get(Project, id)
     end
 
     test "refuses a body that is not a JSON object", %{conn: conn} do
@@ -360,5 +379,15 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
         %{"pointer" => "#/notify", "code" => "type", "detail" => "is invalid"}
       ])
     end
+  end
+
+  # An extension refusing a member the way a seat limit does.
+  defp without_a_seat(attrs) do
+    %Project{}
+    |> Project.project_with_users_changeset(attrs)
+    |> Ecto.Changeset.add_error(:project_users, "has no seat left",
+      code: :exceeds_limit
+    )
+    |> Ecto.Changeset.apply_action(:insert)
   end
 end
