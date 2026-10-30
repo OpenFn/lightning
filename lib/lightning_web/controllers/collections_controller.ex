@@ -11,6 +11,7 @@ defmodule LightningWeb.CollectionsController do
   alias LightningWeb.API.Filters
   alias LightningWeb.API.Filters.Cursor
   alias LightningWeb.API.Problem
+  alias LightningWeb.API.Request
 
   action_fallback FallbackController
 
@@ -19,7 +20,8 @@ defmodule LightningWeb.CollectionsController do
   @max_chunk_size 100
 
   def put(conn, %{"name" => name, "key" => key}) do
-    with {:ok, collection} <- fetch_collection(conn, name, :put_collection_item) do
+    with {:ok, collection} <- fetch_collection(conn, name, :put_collection_item),
+         :ok <- Request.check_object(conn.body_params) do
       case Collections.put(collection, key, conn.body_params["value"]) do
         :ok ->
           json(conn, %{upserted: 1, error: nil})
@@ -35,6 +37,7 @@ defmodule LightningWeb.CollectionsController do
 
   def put_all(conn, %{"name" => name}) do
     with {:ok, collection} <- fetch_collection(conn, name, :put_collection_item),
+         :ok <- Request.check_object(conn.body_params),
          {:ok, count} <-
            Collections.put_all(collection, conn.body_params["items"]) do
       json(conn, %{upserted: count, error: nil})

@@ -218,6 +218,33 @@ defmodule LightningWeb.API.CollectionsRefusalsTest do
   describe "refusing a body or a key" do
     setup :member_with_collection
 
+    test "PUT answers 400 malformed for a body that is not a JSON object, even with a key too long to store",
+         %{conn: conn, collection: collection} do
+      key = String.duplicate("k", 256)
+
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> put(~p"/collections/#{collection.name}/#{key}", Jason.encode!(["v"]))
+      |> assert_problem(400, :malformed, [])
+
+      assert Collections.get(collection, key) == nil
+    end
+
+    test "POST answers 400 malformed for a body that is not a JSON object", %{
+      conn: conn,
+      collection: collection
+    } do
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post(
+        ~p"/collections/#{collection.name}",
+        Jason.encode!([%{key: "k", value: "v"}])
+      )
+      |> assert_problem(400, :malformed, [])
+
+      assert Collections.get(collection, "k") == nil
+    end
+
     test "PUT answers 422 for a value it cannot take", %{
       conn: conn,
       collection: collection
@@ -397,25 +424,30 @@ defmodule LightningWeb.API.CollectionsRefusalsTest do
       end
     end
 
-    test "an invalid PUT over the limit answers 422, not 402",
+    test "an invalid PUT or POST over the limit answers 422, not 402",
          %{conn: conn, collection: collection} do
       Mox.stub(Lightning.Extensions.MockCollectionHook, :handle_put_items, fn _c,
                                                                               _s ->
         {:error, :exceeds_limit, %Message{text: "limit"}}
       end)
 
-      conn =
-        put(conn, ~p"/collections/#{collection.name}/k",
-          value: String.duplicate("x", 1_000_001)
-        )
+      too_long = String.duplicate("x", 1_000_001)
 
-      assert_problem(conn, 422, :invalid, [
-        %{
-          "pointer" => "#/value",
-          "code" => "too_long",
-          "detail" => "should be at most 1000000 character(s)"
-        }
-      ])
+      for {request, pointer} <- [
+            {&put(&1, ~p"/collections/#{collection.name}/k", value: too_long),
+             "#/value"},
+            {&post(&1, ~p"/collections/#{collection.name}",
+               items: [%{key: "k", value: too_long}]
+             ), "#/items/0/value"}
+          ] do
+        assert_problem(request.(conn), 422, :invalid, [
+          %{
+            "pointer" => pointer,
+            "code" => "too_long",
+            "detail" => "should be at most 1000000 character(s)"
+          }
+        ])
+      end
     end
   end
 

@@ -44,11 +44,13 @@ defmodule LightningWeb.API.Request do
   @doc """
   `:ok` when `body`, a request's body params, was a JSON object. Otherwise a
   400 `malformed` problem, for any route that takes an object (spec §9.5).
-  Plug.Parsers puts any other JSON value under `"_json"`.
+  Plug.Parsers puts any other JSON value under `"_json"`, alone. An object
+  that sends a `"_json"` key among others is still an object.
   """
   @spec check_object(map()) :: :ok | {:error, Problem.t()}
-  def check_object(%{"_json" => _not_an_object}),
-    do: {:error, Problem.new(:malformed)}
+  def check_object(%{"_json" => _not_an_object} = body)
+      when map_size(body) == 1,
+      do: {:error, Problem.new(:malformed)}
 
   def check_object(_body), do: :ok
 

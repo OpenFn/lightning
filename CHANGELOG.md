@@ -422,6 +422,8 @@ and this project adheres to
   - `PUT /collections/:name/:key` with no `value`, and `POST /collections/:name`
     with no `items`, answer 422 `invalid` with a `required` entry, instead of
     `{"error": "Missing required field: <field>"}`.
+  - `PUT /collections/:name/:key` and `POST /collections/:name` with a body that
+    isn't a JSON object, such as an array, answer 400 `malformed`.
   - `POST /collections/:name` with a key repeated in `items` answers 422
     `invalid` with a `duplicate` entry at the later item's key, instead of
     `{"upserted": 0, "error": "Duplicate key found"}`. An item that isn't an
