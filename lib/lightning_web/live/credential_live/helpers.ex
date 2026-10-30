@@ -5,6 +5,9 @@ defmodule LightningWeb.CredentialLive.Helpers do
   of projects associations to credentials and / or oauth clients.
   """
 
+  alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.OauthClient
+
   defp build_project_assoc_map(
          %{id: id, project_id: project_id},
          extra_fields \\ %{}
@@ -167,4 +170,49 @@ defmodule LightningWeb.CredentialLive.Helpers do
       |> Phoenix.LiveView.push_navigate(to: socket.assigns.return_to)
     end
   end
+
+  @spec empty_page() :: Scrivener.Page.t()
+  def empty_page do
+    %Scrivener.Page{
+      entries: [],
+      page_number: 1,
+      page_size: 0,
+      total_entries: 0,
+      total_pages: 1
+    }
+  end
+
+  @doc """
+   Fills in the `project_names` and `environment_names` the credentials table
+  displays, for every credential on the page.
+  """
+  @spec with_credential_display_fields(Scrivener.Page.t()) ::
+          Scrivener.Page.t()
+  def with_credential_display_fields(%Scrivener.Page{} = page) do
+    %{page | entries: Enum.map(page.entries, &credential_display_fields/1)}
+  end
+
+  @doc """
+  Fills in the `project_names` the OAuth clients table displays, labelling
+  global clients as `GLOBAL`.
+  """
+  @spec with_oauth_client_display_fields(Scrivener.Page.t()) ::
+          Scrivener.Page.t()
+  def with_oauth_client_display_fields(%Scrivener.Page{} = page) do
+    %{page | entries: Enum.map(page.entries, &oauth_client_display_fields/1)}
+  end
+
+  defp credential_display_fields(%Credential{} = credential) do
+    %{
+      credential
+      | project_names: Enum.map(credential.projects, & &1.name),
+        environment_names: Enum.map(credential.credential_bodies, & &1.name)
+    }
+  end
+
+  defp oauth_client_display_fields(%OauthClient{global: true} = client),
+    do: %{client | project_names: ["GLOBAL"]}
+
+  defp oauth_client_display_fields(%OauthClient{} = client),
+    do: %{client | project_names: Enum.map(client.projects, & &1.name)}
 end
