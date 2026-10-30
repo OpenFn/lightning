@@ -698,6 +698,21 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
+  `{:error, :not_ready}` while the adaptor catalogue has never loaded, so no
+  typed body can be checked yet. Otherwise `:ok`, including for a schema that
+  isn't a string, or is `"raw"` or `"oauth"`.
+  """
+  @spec check_catalogue(term()) :: :ok | {:error, :not_ready}
+  def check_catalogue(schema_name) when is_binary(schema_name) do
+    case Lightning.Adaptors.resolve_name(schema_name) do
+      {:error, :not_ready} -> {:error, :not_ready}
+      _answer -> :ok
+    end
+  end
+
+  def check_catalogue(_schema_name), do: :ok
+
+  @doc """
   Creates a credential schema from credential json schema.
 
   `{:error, :not_found}` means the catalogue has no such adaptor;

@@ -627,28 +627,66 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
       assert main_body(credential.id) == %{"password" => "old"}
     end
 
-    test "answers 503 not_ready while the adaptor catalogue can't answer", %{
-      conn: conn,
-      owner: owner
-    } do
-      Mimic.stub(Lightning.Adaptors, :resolve_name, fn name -> {:ok, name} end)
-
-      Mimic.stub(Lightning.Adaptors, :schema, fn _name ->
-        {:error, :not_ready}
-      end)
-
+    test "answers 503 not_ready while the adaptor catalogue can't answer, whatever else the body gets wrong",
+         %{conn: conn, owner: owner} do
+      stub_unloaded_catalogue()
       id = Ecto.UUID.generate()
 
       conn =
         put_credential(
           conn,
           id,
-          typed_body(owner, %{"host" => "https://db.example"})
+          owner
+          |> typed_body(%{"host" => "https://db.example"})
+          |> Map.merge(%{"name" => nil, "colour" => "blue"})
         )
 
       assert_problem(conn, 503, :not_ready, [])
       assert get_resp_header(conn, "retry-after") == ["5"]
       refute Repo.get(Credential, id)
+    end
+
+    test "answers 503 not_ready to a refused replace that keeps the credential's schema, while the catalogue can't answer",
+         %{conn: conn, owner: owner} do
+      stub_unloaded_catalogue()
+
+      credential =
+        insert(:credential, schema: "postgresql", user: owner)
+        |> with_body(%{name: "main", body: %{"host" => "https://db.example"}})
+
+      body =
+        owner
+        |> typed_body(%{"host" => "https://db.example"})
+        |> Map.drop(["schema"])
+        |> Map.put("colour", "blue")
+
+      conn
+      |> put_credential(credential.id, body)
+      |> assert_problem(503, :not_ready, [])
+    end
+  end
+
+  describe "POST, while the adaptor catalogue can't answer" do
+    setup [:assign_bearer_for_api]
+
+    test "answers 503 not_ready, whatever else the body gets wrong", %{
+      conn: conn,
+      user: user
+    } do
+      stub_unloaded_catalogue()
+
+      conn
+      |> post(
+        ~p"/api/credentials",
+        credential_body(%{
+          "name" => nil,
+          "schema" => "postgresql",
+          "project_credentials" => [%{"project_id" => Ecto.UUID.generate()}]
+        })
+      )
+      |> assert_problem(503, :not_ready, [])
+
+      assert Credentials.list_credentials(user) == []
     end
   end
 
@@ -675,6 +713,14 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
 
     test "never quotes a value planted in the credential's own keys, on POST and PUT",
          %{conn: conn, user: user} do
+      # A loaded catalogue with no adaptor of the planted name, so the planted
+      # schema gets past the wait for the catalogue to the body's checks.
+      Mimic.stub(Lightning.Adaptors, :resolve_name, fn name -> {:ok, name} end)
+
+      Mimic.stub(Lightning.Adaptors, :schema, fn _name ->
+        {:error, :not_found}
+      end)
+
       planted =
         plant_sentinel(%{
           "id" => nil,
@@ -776,5 +822,11 @@ defmodule LightningWeb.API.Credentials.RefusalsTest do
         |> assert_problem(422, :invalid, entries)
       end
     end
+  end
+
+  defp stub_unloaded_catalogue do
+    Mimic.stub(Lightning.Adaptors, :resolve_name, fn _name ->
+      {:error, :not_ready}
+    end)
   end
 end

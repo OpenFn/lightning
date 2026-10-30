@@ -178,7 +178,8 @@ and this project adheres to
     ID already in use, answers 422 `invalid` with a `taken` entry at `#/name` or
     `#/external_id`.
   - `POST /api/credentials` with a typed body while the adaptor catalogue is
-    still loading answers 503 `not_ready` with `Retry-After: 5`, instead of 422.
+    still loading answers 503 `not_ready` with `Retry-After: 5`, instead of 422,
+    whatever else is wrong with the body. So does `PUT /api/credentials/:id`.
   - `DELETE /api/credentials/:id` answers 403 `forbidden` for a credential the
     caller doesn't own, one that doesn't exist and an id that isn't a UUID,
     instead of `{"error": "Forbidden"}` and `{"error": "Not Found"}`.

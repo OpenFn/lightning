@@ -70,6 +70,9 @@ defmodule LightningWeb.API.FallbackController do
            ],
       do: Problem.respond(conn, Problem.new(reason))
 
+  def call(conn, {:error, :not_ready}),
+    do: Problem.respond(conn, Problem.new(:not_ready, retry_after: 5))
+
   def call(conn, {:error, :unknown_project, %Message{}}),
     do: call(conn, {:error, :not_found})
 
