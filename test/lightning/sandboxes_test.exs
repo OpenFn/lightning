@@ -657,7 +657,7 @@ defmodule Lightning.Projects.SandboxesTest do
       refute Repo.get_by(Project, name: "sb-big")
     end
 
-    test "copies trigger webhook auth methods when present" do
+    test "does not link the parent's webhook auth methods to cloned triggers" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 
       {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sb-wam"})
@@ -672,7 +672,25 @@ defmodule Lightning.Projects.SandboxesTest do
         )
         |> Repo.one()
 
-      assert cnt >= 1
+      assert cnt == 0
+
+      # The sandbox UI can neither show nor manage parent-owned auth methods,
+      # so the webhook must not enforce them: an unauthenticated request to a
+      # cloned trigger passes the auth plug rather than getting a 401.
+      sandbox_trigger =
+        from(t in Trigger,
+          join: w in assoc(t, :workflow),
+          where: w.project_id == ^sandbox.id and t.type == :webhook,
+          limit: 1
+        )
+        |> Repo.one!()
+
+      conn =
+        Plug.Test.conn(:post, "/i/#{sandbox_trigger.id}")
+        |> LightningWeb.Plugs.WebhookAuth.call([])
+
+      refute conn.halted
+      assert conn.assigns[:trigger].id == sandbox_trigger.id
     end
 
     test "ensures parent workflows have a version before provisioning sandbox" do
