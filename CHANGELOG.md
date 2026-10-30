@@ -31,6 +31,7 @@ and this project adheres to
 - The AI assistant always reads the selected run's logs and data unless you
   detach it, replacing the "Send run logs" and "Send run data" boxes. A long log
   sends its latest part, marked as cut, instead of failing the message.
+  [#5271](https://github.com/OpenFn/lightning/pull/5271)
 
 ### Fixed
 
