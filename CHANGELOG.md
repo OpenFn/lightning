@@ -37,6 +37,9 @@ and this project adheres to
   Postgres and SMTP, so if you build your own image or run outside Docker,
   update `ca-certificates` or distrust these two roots yourself.
   [#5266](https://github.com/OpenFn/lightning/pull/5266)
+- The Docker image's Node.js moves from 24.18.1 to 24.22.1, so Node's own
+  bundled certificate list no longer trusts the emSign C1 and ECC C3 roots
+  either.
 
 ## [2.20.0] - 2026-10-30
 
