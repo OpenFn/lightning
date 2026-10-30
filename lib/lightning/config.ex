@@ -633,7 +633,7 @@ defmodule Lightning.Config do
 
   @doc """
   Settings for the new-version check: registry, repository, channel tag,
-  credentials, interval and upgrade instructions URL.
+  interval, upgrade instructions URL, and the worker registry and repository.
   """
   def update_check do
     impl().update_check()

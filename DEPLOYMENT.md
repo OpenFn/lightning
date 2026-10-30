@@ -395,5 +395,3 @@ attempts), stopping sooner if `WEBHOOK_RETRY_TIMEOUT_MS` elapses.
 **Server timeout alignment:** Set your Phoenix `IDLE_TIMEOUT` to be **at least**
 `WEBHOOK_RETRY_TIMEOUT_MS + 15000` (in milliseconds) so long retries finish
 before the connection is closed.
-
-## Upgrading
