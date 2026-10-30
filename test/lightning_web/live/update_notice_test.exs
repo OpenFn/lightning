@@ -2,6 +2,7 @@ defmodule LightningWeb.UpdateNoticeTest do
   # async: false because the pages read the globally named checker.
   use LightningWeb.ConnCase, async: false
 
+  import ExUnit.CaptureLog
   import Mox
   import Phoenix.LiveViewTest
 
@@ -40,6 +41,18 @@ defmodule LightningWeb.UpdateNoticeTest do
     )
 
     {:ok, ^status} = Checker.check_now(Checker)
+    :ok
+  end
+
+  defp start_failing_checker(error) do
+    start_supervised!(
+      {Checker,
+       name: Checker,
+       check_fun: fn -> error end,
+       interval: :timer.hours(1),
+       initial_delay: :timer.hours(1)}
+    )
+
     :ok
   end
 
@@ -177,6 +190,57 @@ defmodule LightningWeb.UpdateNoticeTest do
              )
 
       assert has_element?(view, "#update-status", "Up to date")
+    end
+
+    test "Check now says when the checker isn't running", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+
+      render_click(view, "check_for_update", %{})
+      render_async(view)
+
+      assert has_element?(
+               view,
+               "p[role=alert][phx-value-key=error]",
+               "The update check is turned off."
+             )
+    end
+
+    test "Check now says when the channel tag isn't a release", %{conn: conn} do
+      stub(Lightning.MockConfig, :update_check_enabled?, fn -> true end)
+      start_failing_checker({:error, :no_release_found})
+
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+
+      capture_log(fn ->
+        view |> element("#check-for-update-button") |> render_click()
+        render_async(view)
+      end)
+
+      assert has_element?(
+               view,
+               "p[role=alert][phx-value-key=error]",
+               "no release matches the latest tag"
+             )
+
+      assert has_element?(view, "#update-status", "Not checked yet")
+    end
+
+    test "Check now reports any other failure", %{conn: conn} do
+      stub(Lightning.MockConfig, :update_check_enabled?, fn -> true end)
+      start_failing_checker({:error, {:unexpected_status, 429}})
+
+      {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
+
+      capture_log(fn ->
+        view |> element("#check-for-update-button") |> render_click()
+        render_async(view)
+      end)
+
+      assert has_element?(
+               view,
+               "p[role=alert][phx-value-key=error]",
+               "Update check failed: {:unexpected_status, 429}"
+             )
     end
   end
 
