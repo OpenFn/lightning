@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
   use Mix.Task
 
   @default_path "priv/openfn"
-  @cli_version "1.41.3"
+  @cli_version "1.45.0"
 
   def run(args) do
     for exe <- ~w(node npm) do

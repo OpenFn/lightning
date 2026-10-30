@@ -138,6 +138,24 @@ defmodule Lightning.GithubHelpers do
     )
   end
 
+  def expect_get_blob(repo, sha, content) do
+    Mox.expect(
+      Lightning.Tesla.Mock,
+      :call,
+      fn %{
+           method: :get,
+           url: "https://api.github.com/repos/" <> ^repo <> "/git/blobs/" <> ^sha
+         },
+         _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{"content" => Base.encode64(content), "encoding" => "base64"}
+         }}
+      end
+    )
+  end
+
   # the repo's shared openfn-pull.yml, as committed from one of our templates
   def expect_pull_workflow(repo, template),
     do: expect_workflow_file(repo, "openfn-pull.yml", template)

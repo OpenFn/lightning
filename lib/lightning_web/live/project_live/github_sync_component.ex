@@ -707,15 +707,25 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   # The workspace's local project copies that share `alias` with this project
   # but not its uuid or host. The CLI refuses to pull with any of these around.
+  # A copy on this host whose uuid we couldn't read may be this project's own,
+  # so it's left to `unreadable_copies/2` rather than blocking.
   defp alias_clashes(projects, project_id, alias) do
-    # the host the CLI was given, so it matches the files it writes
-    host = URI.parse(VersionControl.endpoint_url()).host
+    host = cli_host()
 
     Enum.filter(
       projects,
-      &(&1.alias == alias and (&1.uuid != project_id or &1.host != host))
+      &(&1.alias == alias and
+          (&1.host != host or (&1.uuid != nil and &1.uuid != project_id)))
     )
   end
+
+  defp unreadable_copies(projects, alias) do
+    host = cli_host()
+    Enum.filter(projects, &(&1.alias == alias and &1.host == host and !&1.uuid))
+  end
+
+  # the host the CLI was given, so it matches the files it writes
+  defp cli_host, do: URI.parse(VersionControl.endpoint_url()).host
 
   # Nothing has committed this project's checkout yet
   defp pending_check(nil, conn),
@@ -1231,7 +1241,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp pull_alias_check(assigns) do
     %{check: check, form: form, project: project} = assigns
 
-    %{alias: alias, clashes: clashes, error: error} =
+    %{alias: alias, clashes: clashes, unreadable: unreadable, error: error} =
       form_alias(check, form, project)
 
     takeover_uuid =
@@ -1244,6 +1254,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       assign(assigns,
         alias: alias,
         clashes: clashes,
+        unreadable: unreadable,
         alias_error: error,
         takeover_uuid: takeover_uuid
       )
@@ -1290,6 +1301,20 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         </div>
       </:message>
     </Common.alert>
+    <Common.alert
+      :if={@clashes == [] && @unreadable != []}
+      id="workspace-unreadable-copy"
+      type="warning"
+      header={"Couldn't check what's saved as \"#{@alias}\""}
+    >
+      <:message>
+        <.clash_list clashes={@unreadable} />
+        <p class="mt-2">
+          If it belongs to another project, the first pull may fail. To be safe,
+          set a local alias under <.advanced_link myself={@myself} />.
+        </p>
+      </:message>
+    </Common.alert>
     <p :if={@alias_error} id="local-alias-error" class="mt-1 text-xs text-red-600">
       Local alias: {@alias_error}
     </p>
@@ -1321,6 +1346,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     %{
       alias: alias,
       clashes: alias_clashes(check.projects, project.id, alias),
+      unreadable: unreadable_copies(check.projects, alias),
       error: error && elem(error, 0)
     }
   end
@@ -1386,10 +1412,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           </button>
         </div>
       </:title>
-      <div class="px-6">
+      <div>
         <p class="text-sm text-gray-500">
           You are about to disconnect this project from GitHub.
           Until you reconnect, you will not be able to sync this project to GitHub.
+        </p>
+        <p id="remove-connection-leftover-files" class="mt-2 text-sm text-gray-500">
+          This removes the deploy workflow and API secret from <code>{@repo_connection.repo}</code>. Any other files the sync committed to <code>{@repo_connection.branch}</code>, like the project and workflow files, stay in the repo. Delete them yourself if you no longer need them.
         </p>
       </div>
       <.modal_footer>

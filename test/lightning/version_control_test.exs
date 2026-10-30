@@ -736,16 +736,16 @@ defmodule Lightning.VersionControlTest do
       expect_get_repo_content(repo_connection.repo, ".projects", 200, [
         %{
           "name" => "main@app.openfn.org.yaml",
-          "path" => ".projects/main@app.openfn.org.yaml"
+          "path" => ".projects/main@app.openfn.org.yaml",
+          "sha" => "mainsha"
         },
         %{"name" => "README.md", "path" => ".projects/README.md"}
       ])
 
-      expect_get_repo_content(
+      expect_get_blob(
         repo_connection.repo,
-        ".projects/main@app.openfn.org.yaml",
-        200,
-        %{"content" => Base.encode64("openfn:\n  uuid: #{project_id}\n")}
+        "mainsha",
+        "openfn:\n  uuid: #{project_id}\n"
       )
 
       # openfn-pull.yml is shared: skip another project's run
