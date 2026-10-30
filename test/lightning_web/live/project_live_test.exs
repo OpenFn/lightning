@@ -92,7 +92,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> render_submit()
 
       assert html =~
-               "Every project must have exactly one owner. Please specify one below."
+               "Every project must have exactly one owner."
     end
 
     test "saves new project with members", %{conn: conn} do
@@ -109,14 +109,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # error for no owner is not shown until you make a change
       refute render(index_live) =~
-               "Every project must have exactly one owner. Please specify one below."
+               "Every project must have exactly one owner."
 
       assert index_live
              |> form("#project-form", project: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
       assert render(index_live) =~
-               "Every project must have exactly one owner. Please specify one below."
+               "Every project must have exactly one owner."
 
       user_1_index = find_user_index_in_list(index_live, user_1)
       user_2_index = find_user_index_in_list(index_live, user_2)

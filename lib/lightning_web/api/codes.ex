@@ -17,7 +17,7 @@ defmodule LightningWeb.API.Codes do
     invalid_token: {401, "The token is not valid."},
     exceeds_limit: {402, "This would exceed a limit of your plan."},
     forbidden: {403, "You may not do this (or it might not exist)."},
-    insufficient_scope: {403, "The token lacks the scope this needs."},
+    insufficient_scope: {403, "The token lacks the token grant this needs."},
     trigger_disabled: {403, "This trigger is disabled."},
     not_found: {404, "Not found."},
     not_acceptable:

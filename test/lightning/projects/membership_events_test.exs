@@ -266,7 +266,7 @@ defmodule Lightning.Projects.MembershipEventsTest do
 
       assert %{
                owner: [
-                 "Every project must have exactly one owner. Please specify one below."
+                 "Every project must have exactly one owner."
                ]
              } = errors_on(changeset)
 

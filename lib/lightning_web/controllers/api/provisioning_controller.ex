@@ -9,7 +9,7 @@ defmodule LightningWeb.API.ProvisioningController do
 
   - `POST /api/provision` - Create or update a project
   - `GET /api/provision/:id` - Get project state as JSON
-  - `GET /api/provision/:id.yaml` - Get project state as YAML
+  - `GET /api/provision/yaml?id=:id` - Get project state as YAML
   """
   use LightningWeb, :controller
 
@@ -199,10 +199,10 @@ defmodule LightningWeb.API.ProvisioningController do
   ## Examples
 
       # Get project state as YAML
-      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.yaml
+      GET /api/provision/yaml?id=a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
 
       # Get project state as YAML with snapshots
-      GET /api/provision/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d.yaml?snapshots[]=6f1e2d3c-4b5a-4968-8776-5a4b3c2d1e0f
+      GET /api/provision/yaml?id=a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d&snapshots[]=6f1e2d3c-4b5a-4968-8776-5a4b3c2d1e0f
   """
   @spec show_yaml(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def show_yaml(conn, %{"id" => _} = params) do

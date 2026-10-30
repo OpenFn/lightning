@@ -342,7 +342,7 @@ defmodule Lightning.Projects.Project do
         add_error(
           changeset,
           :owner,
-          "Every project must have exactly one owner. Please specify one below.",
+          "Every project must have exactly one owner.",
           code: :one_owner
         )
 

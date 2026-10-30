@@ -33,7 +33,7 @@ defmodule LightningWeb.API.ErrorsTest do
     %{"id" => Ecto.UUID.generate(), "name" => "p", "workflows" => [workflow]}
   end
 
-  @one_owner "Every project must have exactly one owner. Please specify one below."
+  @one_owner "Every project must have exactly one owner."
 
   defp project_with(name \\ "members", roles) do
     Project.project_with_users_changeset(%Project{}, %{

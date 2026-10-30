@@ -504,6 +504,11 @@ and this project adheres to
   `Service account enabled, id <id>`, so an operator can copy it into the
   assertion's `iss` and `sub`.
   [#5239](https://github.com/OpenFn/lightning/pull/5239)
+- [API.md](API.md) covers what every `/api` route shares (authentication, ids,
+  lists, problem documents, and who hears 403, 404 or 400) and lists every route
+  with the token grant it needs. [SERVICE_ACCOUNTS.md](SERVICE_ACCOUNTS.md) now
+  covers only the service account: setting it up, getting a token, and its token
+  grants. [#5239](https://github.com/OpenFn/lightning/pull/5239)
 - `GET /api/credentials/:id` reads one credential, never its body. Its owner,
   the service account, and a caller who sees it linked to a project whose
   credentials they may list get it, with links only to the projects whose

@@ -83,9 +83,7 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
         no_owner: {
           [admin],
           [
-            one_owner.(
-              "Every project must have exactly one owner. Please specify one below."
-            )
+            one_owner.("Every project must have exactly one owner.")
           ]
         },
         no_members: {
@@ -96,9 +94,7 @@ defmodule LightningWeb.API.Projects.RefusingABodyTest do
               "code" => "required",
               "detail" => "can't be blank"
             },
-            one_owner.(
-              "Every project must have exactly one owner. Please specify one below."
-            )
+            one_owner.("Every project must have exactly one owner.")
           ]
         },
         not_a_list: {
