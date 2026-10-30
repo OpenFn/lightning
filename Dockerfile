@@ -93,6 +93,15 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
   libstdc++6 openssl libncurses5 locales ca-certificates \
   curl libsodium-dev
 
+# Mozilla distrusted emSign C1 and C3 (eMudhra intermediates with weak keys).
+# This fails once Debian's ca-certificates drops them, so the step can go.
+RUN for cert in emSign_Root_CA_-_C1 emSign_ECC_Root_CA_-_C3; do \
+      grep -qx "mozilla/${cert}.crt" /etc/ca-certificates.conf \
+        || { echo "${cert} is no longer shipped; remove this step" >&2; exit 1; }; \
+      sed -i "s|^mozilla/${cert}.crt\$|!mozilla/${cert}.crt|" /etc/ca-certificates.conf; \
+    done \
+  && update-ca-certificates --fresh
+
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
 # Set the locale

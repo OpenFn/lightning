@@ -29,6 +29,15 @@ and this project adheres to
 
 ### Fixed
 
+### Security
+
+- The Docker image no longer trusts the emSign Root CA C1 and ECC Root CA C3
+  certificates, which Mozilla removed after eMudhra issued intermediates with
+  weak keys. Lightning trusts the OS certificate store for most outbound HTTPS,
+  Postgres and SMTP, so if you build your own image or run outside Docker,
+  update `ca-certificates` or distrust these two roots yourself.
+  [#5266](https://github.com/OpenFn/lightning/pull/5266)
+
 ## [2.20.0] - 2026-10-30
 
 ## [2.20.0-pre1] - 2026-10-29
