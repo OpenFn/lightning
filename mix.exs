@@ -274,6 +274,7 @@ defmodule Lightning.MixProject do
         "WORKERS.md": [title: "Workers"],
         "PROVISIONING.md": [title: "Provisioning"],
         "SERVICE_ACCOUNTS.md": [title: "Service Accounts"],
+        "API.md": [title: "API"],
         "CHANGELOG.md": [title: "Changelog"]
       ],
       source_url: "https://github.com/OpenFn/lightning",

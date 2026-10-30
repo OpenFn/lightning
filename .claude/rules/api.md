@@ -58,3 +58,9 @@ Tests for these files follow `.claude/rules/api-tests.md`. Policies and `Lightni
   3. Add `plug AuthorizeAction, {policy, action}` per action.
   4. Name the route's parent, the instance or a project. On `conn.assigns.scope`, use `Target.project/3` for a project, `Target.in_project/5` for a record in the path's project, `Target.in_project_of/5` for a top-level record whose project comes from the record, and `Target.record/4` for a top-level record with no project, such as a credential. Delete hand-written not-found branches. A lookup outside `Target` asks the policy before it answers `:not_found`.
   5. Leave every status to `FallbackController`.
+
+## Docs
+
+- Adding, removing or changing a route, or the token grant it needs, updates its row in `API.md`'s route table in the same commit. `test/lightning_web/api/api_doc_routes_test.exs` fails when the table's methods and paths differ from the router's `/api` routes; it doesn't check the grant column.
+- `API.md` holds only what every route shares and the route table. Request and response bodies, field lists and per-route errors stay out of it.
+- `SERVICE_ACCOUNTS.md` is not API documentation. It covers the service account, its token endpoint and its token grants, and links to `API.md` for everything else.

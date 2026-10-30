@@ -1,12 +1,14 @@
 ---
 paths:
   - "/ADAPTORS.md"
+  - "/API.md"
   - "/CHANGELOG.md"
   - "/DEPLOYMENT.md"
   - "/PROVISIONING.md"
   - "/README.md"
   - "/RUNNINGLOCAL.md"
   - "/SECURITY.md"
+  - "/SERVICE_ACCOUNTS.md"
   - "/WORKERS.md"
   - "tooling/**/README.md"
 ---
