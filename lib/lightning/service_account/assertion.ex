@@ -32,18 +32,24 @@ defmodule Lightning.ServiceAccount.Assertion do
           | :expired
           | :lives_too_long
           | :issued_in_future
+          | :wrong_client_id
           | :replayed
 
   @doc """
   Checks `assertion` was signed by the registered service account for
   `audience`, the token endpoint's URL, and records its `jti`.
+
+  `client_id` is the one the request names, or nil when it names none. One
+  that isn't the account is refused with `:wrong_client_id` before the `jti`
+  is recorded, so the assertion can still be used.
   """
-  @spec verify(String.t(), String.t()) ::
+  @spec verify(String.t(), String.t(), term()) ::
           {:ok, ServiceAccount.t()} | {:error, error()}
-  def verify(assertion, audience) do
+  def verify(assertion, audience, client_id) do
     with {:ok, account} <- find_service_account(assertion),
          {:ok, claims} <- verify_signature(account, assertion),
-         :ok <- check_claims(claims, account, audience) do
+         :ok <- check_claims(claims, account, audience),
+         :ok <- check_client_id(client_id, account) do
       record(claims, account)
     end
   end
@@ -88,6 +94,12 @@ defmodule Lightning.ServiceAccount.Assertion do
       iat > now + @clock_skew -> {:error, :issued_in_future}
       true -> :ok
     end
+  end
+
+  defp check_client_id(client_id, account) do
+    if client_id in [nil, account.id],
+      do: :ok,
+      else: {:error, :wrong_client_id}
   end
 
   defp valid_jti?(jti) do

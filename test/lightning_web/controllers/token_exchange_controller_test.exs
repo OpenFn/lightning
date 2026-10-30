@@ -239,6 +239,27 @@ defmodule LightningWeb.TokenExchangeControllerTest do
                conn |> exchange(params) |> json_response(401)
     end
 
+    test "leaves an assertion refused for its client_id usable once", %{
+      conn: conn,
+      account: account,
+      private_key: private_key
+    } do
+      params = valid_params(account, private_key, token_endpoint(conn))
+
+      assert %{"error" => "invalid_client"} =
+               conn
+               |> exchange(Map.put(params, "client_id", "someone-else"))
+               |> json_response(401)
+
+      assert %{"access_token" => _} =
+               conn
+               |> exchange(Map.put(params, "client_id", account.id))
+               |> json_response(200)
+
+      assert %{"error" => "invalid_client"} =
+               conn |> exchange(params) |> json_response(401)
+    end
+
     # No other test module refuses with :wrong_client_id, so no test running
     # alongside this one shares its log bucket.
     test "warns of refusals at most once a minute and counts every one", %{

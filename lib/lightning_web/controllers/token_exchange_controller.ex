@@ -92,14 +92,13 @@ defmodule LightningWeb.TokenExchangeController do
   defp requested_scopes(_params), do: {:error, :invalid_scope}
 
   defp authenticate(assertion, params) do
-    case Assertion.verify(assertion, url(~p"/api/oauth/token")) do
-      {:ok, account} ->
-        if params["client_id"] in [nil, account.id],
-          do: {:ok, account},
-          else: refuse(:wrong_client_id)
-
-      {:error, reason} ->
-        refuse(reason)
+    case Assertion.verify(
+           assertion,
+           url(~p"/api/oauth/token"),
+           params["client_id"]
+         ) do
+      {:ok, account} -> {:ok, account}
+      {:error, reason} -> refuse(reason)
     end
   end
 

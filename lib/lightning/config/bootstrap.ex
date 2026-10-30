@@ -1186,7 +1186,7 @@ defmodule Lightning.Config.Bootstrap do
       service_account
     else
       :error ->
-        raise "SERVICE_ACCOUNT_PUBLIC_KEY is not unpadded base64"
+        raise "SERVICE_ACCOUNT_PUBLIC_KEY must be the PEM public key, base64-encoded on one line"
 
       {:error, reason} ->
         raise "SERVICE_ACCOUNT_PUBLIC_KEY #{reason}"

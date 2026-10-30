@@ -1463,18 +1463,32 @@ defmodule Lightning.Config.BootstrapTest do
       assert get_env(:lightning, :allow_first_setup) == true
     end
 
-    test "stops the boot on a value that is not base64" do
-      value = "not base64!"
+    test "stops the boot on a value that is not a single line of base64" do
+      pem = public_pem(2048)
 
-      error =
-        assert_raise RuntimeError, fn ->
-          reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
-        end
+      wrapped =
+        pem
+        |> Base.encode64()
+        |> String.graphemes()
+        |> Enum.chunk_every(76)
+        |> Enum.map_join("\n", &Enum.join/1)
 
-      assert error.message =~
-               "SERVICE_ACCOUNT_PUBLIC_KEY is not unpadded base64"
+      for value <- ["not base64!", pem, wrapped] do
+        error =
+          assert_raise RuntimeError, fn ->
+            reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
+          end
 
-      refute error.message =~ value
+        assert error.message ==
+                 "SERVICE_ACCOUNT_PUBLIC_KEY must be the PEM public key, base64-encoded on one line"
+      end
+    end
+
+    test "accepts a padded base64 value" do
+      encoded = Base.encode64(public_pem(2048))
+      reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => encoded})
+
+      assert %Lightning.ServiceAccount{} = get_env(:lightning, :service_account)
     end
 
     test "stops the boot on an RSA key shorter than 2048 bits" do
@@ -1596,13 +1610,17 @@ defmodule Lightning.Config.BootstrapTest do
   end
 
   defp encoded_public_key(bits) do
+    bits |> public_pem() |> Base.encode64(padding: false)
+  end
+
+  defp public_pem(bits) do
     {_, pem} =
       {:rsa, bits}
       |> JOSE.JWK.generate_key()
       |> JOSE.JWK.to_public()
       |> JOSE.JWK.to_pem()
 
-    Base.encode64(pem, padding: false)
+    pem
   end
 
   defp reconfigure(envs) do

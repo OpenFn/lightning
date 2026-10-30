@@ -500,6 +500,10 @@ and this project adheres to
 
 ### Added
 
+- Each node logs the service account's id at boot, as
+  `Service account enabled, id <id>`, so an operator can copy it into the
+  assertion's `iss` and `sub`.
+  [#5239](https://github.com/OpenFn/lightning/pull/5239)
 - `GET /api/credentials/:id` reads one credential, never its body. Its owner,
   the service account, and a caller who sees it linked to a project whose
   credentials they may list get it, with links only to the projects whose
@@ -579,6 +583,13 @@ and this project adheres to
 
 ### Fixed
 
+- A token request whose `client_id` doesn't match the service account no longer
+  uses up its assertion, so the same assertion works when sent again with the
+  right `client_id`. [#5239](https://github.com/OpenFn/lightning/pull/5239)
+- Lightning's boot error for a `SERVICE_ACCOUNT_PUBLIC_KEY` that isn't base64 on
+  one line now says the value must be the PEM public key, base64-encoded on one
+  line. It used to say "unpadded", although padded values were always accepted.
+  [#5239](https://github.com/OpenFn/lightning/pull/5239)
 - Toggling a project's MFA requirement or support access in its settings shows
   an error when the change can't be saved, instead of crashing the page.
 - The workflow editor and the settings forms for projects, sandboxes, users,
