@@ -44,7 +44,6 @@ defmodule Lightning do
     @impl true
     def release do
       Application.get_env(:lightning, :release,
-        label: nil,
         commit: nil,
         image_tag: nil,
         branch: nil
@@ -55,7 +54,6 @@ defmodule Lightning do
   end
 
   @type release_info() :: %{
-          label: String.t() | nil,
           commit: String.t() | nil,
           image_tag: String.t() | nil,
           branch: String.t() | nil,

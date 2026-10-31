@@ -757,7 +757,7 @@ defmodule Lightning.Config.Bootstrap do
       filter: Lightning.SentryEventFilter,
       environment_name: env!("SENTRY_ENVIRONMENT", :string, config_env()),
       tags: %{host: host},
-      release: release[:label],
+      release: to_string(Application.spec(:lightning, :vsn)),
       enable_source_code_context: true,
       root_source_code_paths: [File.cwd!()]
 
@@ -1032,12 +1032,15 @@ defmodule Lightning.Config.Bootstrap do
 
   defp release_info do
     [
-      label: to_string(Application.spec(:lightning, :vsn)),
-      image_tag: env!("IMAGE_TAG", :string, nil),
+      image_tag: env!("IMAGE_TAG", &normalize_image_tag/1, nil),
       branch: env!("BRANCH", :string, nil),
       commit: env!("COMMIT", :string, nil)
     ]
   end
+
+  # Release builds set IMAGE_TAG to the git tag (`v2.19.2`), but images are
+  # tagged with the bare version (`2.19.2`), so drop the `v` here once.
+  defp normalize_image_tag(tag), do: String.trim_leading(tag, "v")
 
   defp configure_adaptors_strategy(
          local_adaptors_repos,

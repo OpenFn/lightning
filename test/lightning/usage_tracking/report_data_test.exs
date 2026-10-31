@@ -59,7 +59,7 @@ defmodule Lightning.UsageTracking.ReportDataTest do
       config: report_config,
       date: date
     } do
-      expected = "v#{Application.spec(:lightning, :vsn)}:edge:#{commit}"
+      expected = "#{Application.spec(:lightning, :vsn)}:edge:#{commit}"
 
       assert %{
                instance: %{
@@ -295,7 +295,7 @@ defmodule Lightning.UsageTracking.ReportDataTest do
       config: report_config,
       date: date
     } do
-      expected = "v#{Application.spec(:lightning, :vsn)}:edge:#{commit}"
+      expected = "#{Application.spec(:lightning, :vsn)}:edge:#{commit}"
 
       assert %{
                instance: %{
@@ -450,7 +450,6 @@ defmodule Lightning.UsageTracking.ReportDataTest do
 
     Mox.stub(LightningMock, :release, fn ->
       %{
-        label: to_string(Application.spec(:lightning, :vsn)),
         commit: commit,
         image_tag: "edge",
         branch: "main",

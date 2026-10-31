@@ -338,10 +338,10 @@ defmodule LightningWeb.Components.Common do
            "Unreleased build '#{info.image_tag}' from #{info.commit} on #{info.branch}"}
 
         %{image_tag: image} = info when not is_nil(image) ->
-          {info.label, "Build '#{info.image_tag}' from #{info.commit}"}
+          {to_string(info.vsn), "Build '#{info.image_tag}' from #{info.commit}"}
 
         info ->
-          {info.label, "No image tag found."}
+          {to_string(info.vsn), "No image tag found."}
       end
 
     assigns = assign(assigns, display: display, message: message)

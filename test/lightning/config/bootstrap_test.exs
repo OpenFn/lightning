@@ -795,6 +795,34 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "release image tag" do
+    test "drops a leading `v` so it matches the image's tag" do
+      Dotenvy.source([%{"IMAGE_TAG" => "v2.19.2"}])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, :release)[:image_tag] == "2.19.2"
+    end
+
+    test "leaves a tag without a `v` unchanged" do
+      for tag <- ["2.19.2", "edge"] do
+        Dotenvy.source([%{"IMAGE_TAG" => tag}])
+
+        Bootstrap.configure()
+
+        assert get_env(:lightning, :release)[:image_tag] == tag
+      end
+    end
+
+    test "is nil when IMAGE_TAG isn't set" do
+      Dotenvy.source([%{}])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, :release)[:image_tag] == nil
+    end
+  end
+
   describe "adaptors refresh interval" do
     test "ADAPTORS_REFRESH_INTERVAL_SECONDS sets refresh_interval in ms" do
       Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_SECONDS" => "60"}])

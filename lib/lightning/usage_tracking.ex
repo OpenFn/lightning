@@ -215,7 +215,7 @@ defmodule Lightning.UsageTracking do
   def lightning_version do
     info = Lightning.release()
 
-    "v#{info.vsn}:#{image_for_submission(info.image_tag, info.vsn)}:#{commit_for_submission(info.commit)}"
+    "#{info.vsn}:#{image_for_submission(info.image_tag, info.vsn)}:#{commit_for_submission(info.commit)}"
   end
 
   defp commit_for_submission(commit) do
@@ -225,9 +225,7 @@ defmodule Lightning.UsageTracking do
   defp image_for_submission(tag, vsn) do
     cond do
       tag == "edge" -> "edge"
-      # Release builds set IMAGE_TAG to the git tag, `v2.19.2`, but accept the
-      # version alone too, since images are tagged `2.19.2`.
-      tag in ["v#{vsn}", to_string(vsn)] -> "match"
+      tag == to_string(vsn) -> "match"
       true -> "other"
     end
   end

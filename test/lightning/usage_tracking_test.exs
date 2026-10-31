@@ -850,7 +850,7 @@ defmodule Lightning.UsageTrackingTest do
       }
     ]) do
       commit = "abc123"
-      spec_version = "v#{Application.spec(:lightning, :vsn)}"
+      spec_version = to_string(Application.spec(:lightning, :vsn))
 
       %{
         commit: commit,
@@ -873,20 +873,6 @@ defmodule Lightning.UsageTrackingTest do
       spec_version: spec_version
     } do
       set_release(branch: "ignored", commit: commit, image_tag: spec_version)
-
-      assert UsageTracking.lightning_version() ==
-               "#{spec_version}:match:#{commit}"
-    end
-
-    test "indicates a match when the image tag has no `v` prefix", %{
-      commit: commit,
-      spec_version: spec_version
-    } do
-      set_release(
-        branch: "ignored",
-        commit: commit,
-        image_tag: String.trim_leading(spec_version, "v")
-      )
 
       assert UsageTracking.lightning_version() ==
                "#{spec_version}:match:#{commit}"
@@ -917,7 +903,7 @@ defmodule Lightning.UsageTrackingTest do
       }
     ]) do
       commit = "abc123"
-      spec_version = "v#{Application.spec(:lightning, :vsn)}"
+      spec_version = to_string(Application.spec(:lightning, :vsn))
 
       %{
         commit: commit,
