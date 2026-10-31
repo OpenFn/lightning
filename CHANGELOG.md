@@ -26,6 +26,10 @@ and this project adheres to
 - The web app's interactive pages now run on React 19, up from React 18. They
   look and behave the same.
   [#5256](https://github.com/OpenFn/lightning/pull/5256)
+- Versions are shown without a leading `v` (`2.21.0`, not `v2.21.0`) in the
+  sidebar version chip, to match how images are now tagged. Images carry their
+  version in the standard `org.opencontainers.image.version` label, and usage
+  tracking counts an image tag with or without the `v` as a match.
 
 ### Fixed
 

@@ -878,6 +878,20 @@ defmodule Lightning.UsageTrackingTest do
                "#{spec_version}:match:#{commit}"
     end
 
+    test "indicates a match when the image tag has no `v` prefix", %{
+      commit: commit,
+      spec_version: spec_version
+    } do
+      set_release(
+        branch: "ignored",
+        commit: commit,
+        image_tag: String.trim_leading(spec_version, "v")
+      )
+
+      assert UsageTracking.lightning_version() ==
+               "#{spec_version}:match:#{commit}"
+    end
+
     test "indicates when the image is neither version nor `edge`", %{
       commit: commit,
       spec_version: spec_version

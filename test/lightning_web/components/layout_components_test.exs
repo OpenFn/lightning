@@ -81,7 +81,8 @@ defmodule LightningWeb.LayoutComponentsTest do
       assert html =~ "sidebar-expand-icon"
 
       # Check for version
-      assert html =~ "v#{Application.spec(:lightning, :vsn)}"
+      assert html =~ to_string(Application.spec(:lightning, :vsn))
+      refute html =~ "v#{Application.spec(:lightning, :vsn)}"
     end
   end
 
