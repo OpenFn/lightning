@@ -450,7 +450,7 @@ defmodule Lightning.UsageTracking.ReportDataTest do
 
     Mox.stub(LightningMock, :release, fn ->
       %{
-        label: "v#{Application.spec(:lightning, :vsn)}",
+        label: to_string(Application.spec(:lightning, :vsn)),
         commit: commit,
         image_tag: "edge",
         branch: "main",

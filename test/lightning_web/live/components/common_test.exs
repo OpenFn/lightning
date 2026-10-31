@@ -62,9 +62,9 @@ defmodule LightningWeb.Components.CommonTest do
     setup do
       Mox.stub(LightningMock, :release, fn ->
         %{
-          label: "v#{Application.spec(:lightning, :vsn)}",
+          label: to_string(Application.spec(:lightning, :vsn)),
           commit: "abcdef7",
-          image_tag: "v#{Application.spec(:lightning, :vsn)}",
+          image_tag: to_string(Application.spec(:lightning, :vsn)),
           branch: "main",
           vsn: Application.spec(:lightning, :vsn)
         }
@@ -77,7 +77,8 @@ defmodule LightningWeb.Components.CommonTest do
       html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
       assert html =~ "Build"
-      assert html =~ "v#{Application.spec(:lightning, :vsn)}"
+      assert html =~ to_string(Application.spec(:lightning, :vsn))
+      refute html =~ "v#{Application.spec(:lightning, :vsn)}"
     end
   end
 
@@ -85,7 +86,7 @@ defmodule LightningWeb.Components.CommonTest do
     test "displays the SHA and a cube" do
       Mox.stub(LightningMock, :release, fn ->
         %{
-          label: "v#{Application.spec(:lightning, :vsn)}",
+          label: to_string(Application.spec(:lightning, :vsn)),
           commit: "abcdef7",
           image_tag: "edge",
           branch: "main",
@@ -107,7 +108,7 @@ defmodule LightningWeb.Components.CommonTest do
     test "displays the Lightning version without an icon" do
       Mox.stub(LightningMock, :release, fn ->
         %{
-          label: "v#{Application.spec(:lightning, :vsn)}",
+          label: to_string(Application.spec(:lightning, :vsn)),
           commit: "abcdef7",
           image_tag: nil,
           branch: "main",
@@ -117,7 +118,8 @@ defmodule LightningWeb.Components.CommonTest do
 
       html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
-      assert html =~ "v#{Application.spec(:lightning, :vsn)}"
+      assert html =~ to_string(Application.spec(:lightning, :vsn))
+      refute html =~ "v#{Application.spec(:lightning, :vsn)}"
       assert html =~ "No image tag found."
     end
   end

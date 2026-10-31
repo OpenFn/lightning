@@ -1077,7 +1077,7 @@ defmodule Lightning.Config.Bootstrap do
 
   defp release_info do
     [
-      label: "v#{Application.spec(:lightning, :vsn)}",
+      label: to_string(Application.spec(:lightning, :vsn)),
       image_tag: env!("IMAGE_TAG", :string, nil),
       branch: env!("BRANCH", :string, nil),
       commit: env!("COMMIT", :string, nil)
