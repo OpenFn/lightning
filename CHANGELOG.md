@@ -17,6 +17,21 @@ and this project adheres to
 
 ### Added
 
+- Users see a small badge on the version chip when a newer full release is
+  available in the image repository, and superusers are asked to upgrade, with a
+  link to the upgrade guidelines. A green dot shows when the instance is on the
+  latest version. The repository is set with `UPDATE_CHECK_*` environment
+  variables and defaults to `openfn/lightning` on Docker Hub. Worker releases
+  are checked too, in `openfn/ws-worker`, and the sidebar callout says "New
+  version available" when either the app or any connected worker is behind. The
+  check is on by default: every node contacts Docker Hub about a minute after
+  boot and then every 6 hours (`UPDATE_CHECK_INTERVAL_HOURS`). The requests
+  carry no instance data, but the registry sees each node's IP address, and they
+  may count towards Docker Hub's anonymous pull limit. Set
+  `UPDATE_CHECK_ENABLED=false` to turn it off.
+- A "Workers" card on the Maintenance page lists the workers connected right
+  now, grouped by the version and API version they report, flags outdated ones,
+  and updates live as workers connect and disconnect.
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
   metrics are enabled, where they're sent, and the instance UUID and its hash.
   [#5262](https://github.com/OpenFn/lightning/issues/5262)
@@ -26,6 +41,9 @@ and this project adheres to
 - The web app's interactive pages now run on React 19, up from React 18. They
   look and behave the same.
   [#5256](https://github.com/OpenFn/lightning/pull/5256)
+- Versions are shown without a leading `v` (`2.21.0`, not `v2.21.0`), in the
+  sidebar version chip and on the Maintenance page, to match how images are now
+  tagged.
 
 ### Fixed
 

@@ -853,6 +853,44 @@ defmodule Lightning.Config.Bootstrap do
       daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10),
       run_chunk_size: env!("USAGE_TRACKING_RUN_CHUNK_SIZE", :integer, 100)
 
+    update_check_enabled? =
+      env!(
+        "UPDATE_CHECK_ENABLED",
+        &Utils.ensure_boolean/1,
+        config_env() != :test
+      )
+
+    config :lightning, :update_check,
+      enabled: update_check_enabled?,
+      registry:
+        env!("UPDATE_CHECK_REGISTRY", :string, "https://registry-1.docker.io"),
+      repository: env!("UPDATE_CHECK_REPOSITORY", :string, "openfn/lightning"),
+      tag: env!("UPDATE_CHECK_TAG", :string, "latest"),
+      interval_hours:
+        env!("UPDATE_CHECK_INTERVAL_HOURS", :integer, 6)
+        |> then(fn hours ->
+          if update_check_enabled? and hours <= 0 do
+            raise """
+            UPDATE_CHECK_INTERVAL_HOURS must be a positive integer. To turn
+            the update check off, set UPDATE_CHECK_ENABLED=false instead.
+            """
+          end
+
+          hours
+        end),
+      # `:string?` reads an empty value as nil, so `UPDATE_INSTRUCTIONS_URL=`
+      # falls back to the default link and `UPDATE_CHECK_WORKER_REPOSITORY=`
+      # skips the worker check.
+      instructions_url: env!("UPDATE_INSTRUCTIONS_URL", :string?, nil),
+      worker_registry:
+        env!(
+          "UPDATE_CHECK_WORKER_REGISTRY",
+          :string,
+          "https://registry-1.docker.io"
+        ),
+      worker_repository:
+        env!("UPDATE_CHECK_WORKER_REPOSITORY", :string?, "openfn/ws-worker")
+
     config :lightning,
            :broadcast_work_available,
            env!("BROADCAST_WORK_AVAILABLE", &Utils.ensure_boolean/1, true)
@@ -1039,7 +1077,7 @@ defmodule Lightning.Config.Bootstrap do
 
   defp release_info do
     [
-      label: "v#{Application.spec(:lightning, :vsn)}",
+      label: to_string(Application.spec(:lightning, :vsn)),
       image_tag: env!("IMAGE_TAG", :string, nil),
       branch: env!("BRANCH", :string, nil),
       commit: env!("COMMIT", :string, nil)

@@ -199,6 +199,16 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def update_check do
+      Application.get_env(:lightning, :update_check, [])
+    end
+
+    @impl true
+    def update_check_enabled? do
+      update_check() |> Keyword.get(:enabled, false)
+    end
+
+    @impl true
     def usage_tracking_cron_opts do
       opts = usage_tracking()
 
@@ -451,6 +461,8 @@ defmodule Lightning.Config do
   @callback usage_tracking_enabled?() :: boolean()
   @callback usage_tracking_host() :: String.t()
   @callback usage_tracking_run_chunk_size() :: integer()
+  @callback update_check() :: Keyword.t()
+  @callback update_check_enabled?() :: boolean()
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
   @callback credential_transfer_token_validity_in_days() :: integer()
@@ -617,6 +629,18 @@ defmodule Lightning.Config do
 
   def usage_tracking_run_chunk_size do
     impl().usage_tracking_run_chunk_size()
+  end
+
+  @doc """
+  Settings for the new-version check: registry, repository, channel tag,
+  interval, upgrade instructions URL, and the worker registry and repository.
+  """
+  def update_check do
+    impl().update_check()
+  end
+
+  def update_check_enabled? do
+    impl().update_check_enabled?()
   end
 
   def max_dataclip_size_bytes do

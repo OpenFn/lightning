@@ -37,14 +37,25 @@ defmodule LightningWeb.WorkerSocket do
        |> assign(
          claims: claims,
          token: token,
-         worker_version: params["worker_version"],
-         api_version: params["api_version"]
+         worker_version: version_param(params["worker_version"]),
+         api_version: version_param(params["api_version"])
        )}
     else
       _ ->
         {:error, :unauthorized}
     end
   end
+
+  # Phoenix decodes nested query keys like `worker_version[a]=b` into maps, so
+  # keep a reported version only when it's a short string. Anything else is
+  # treated as not reported, which keeps it safe to render and compare.
+  @max_version_length 64
+
+  defp version_param(version)
+       when is_binary(version) and byte_size(version) in 1..@max_version_length,
+       do: version
+
+  defp version_param(_version), do: nil
 
   # Socket id's are topics that allow you to identify all sockets for a given user:
   #

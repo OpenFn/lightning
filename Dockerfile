@@ -86,8 +86,14 @@ ARG ERL_FLAGS
 ARG BRANCH=""
 ARG COMMIT=""
 ARG IMAGE_TAG=""
+# Release builds pass the git tag, such as v2.19.2, as IMAGE_TAG, and the
+# version without the `v`, such as 2.19.2, as VERSION. Images are tagged with
+# VERSION, and the update check reads this label from the image `latest`
+# points at.
+ARG VERSION=""
 LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
+LABEL org.opencontainers.image.version=${VERSION}
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
   libstdc++6 openssl libncurses5 locales ca-certificates \
