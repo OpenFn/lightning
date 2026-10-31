@@ -11,6 +11,7 @@ defmodule Lightning.VersionControl do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.VersionControl.Audit
   alias Lightning.VersionControl.Events
@@ -22,20 +23,31 @@ defmodule Lightning.VersionControl do
 
   require Logger
 
+  @doc "Subscribes to a user's version control events, such as a failed OAuth token refresh."
   defdelegate subscribe(user), to: Events
 
   @doc """
-  Creates a connection between a project and a github repo
+  Creates a connection between a project and a github repo.
+
+  The `(root_project_id, repo, branch)` uniqueness constraint on
+  `project_repo_connections` is the source of truth: two concurrent inserts
+  for the same project family + (repo, branch) cannot both succeed even at
+  READ COMMITTED isolation. The constraint violation is translated back into
+  `:branch_used_in_project_tree` for callers.
   """
   @spec create_github_connection(map(), User.t()) ::
           {:ok, ProjectRepoConnection.t()}
-          | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
+          | {:error,
+             Ecto.Changeset.t()
+             | UsageLimiting.message()
+             | :branch_used_in_project_tree
+             | binary()}
   def create_github_connection(attrs, user) do
     changeset =
       ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
 
     Repo.transact(fn ->
-      with {:ok, repo_connection} <- Repo.insert(changeset),
+      with {:ok, repo_connection} <- insert_repo_connection(changeset),
            {:ok, _audit} <-
              repo_connection
              |> Audit.repo_connection(:created, user)
@@ -50,21 +62,57 @@ defmodule Lightning.VersionControl do
     end)
   end
 
+  defp insert_repo_connection(changeset) do
+    case Repo.insert(changeset) do
+      {:ok, repo_connection} ->
+        {:ok, repo_connection}
+
+      {:error, %Ecto.Changeset{} = failed} ->
+        if ProjectRepoConnection.tree_unique_violation?(failed) do
+          {:error, :branch_used_in_project_tree}
+        else
+          {:error, failed}
+        end
+    end
+  end
+
+  # `binary()` because this reaches `initiate_sync/2`, whose export pre-flight
+  # fails with a plain string naming the colliding entities.
   @spec reconfigure_github_connection(ProjectRepoConnection.t(), map(), User.t()) ::
-          :ok | {:error, UsageLimiting.message() | map()}
+          :ok | {:error, UsageLimiting.message() | map() | binary()}
   def reconfigure_github_connection(repo_connection, params, user) do
     changeset =
       ProjectRepoConnection.reconfigure_changeset(repo_connection, params)
 
-    with :ok <-
-           VersionControlUsageLimiter.limit_github_sync(
-             repo_connection.project_id
-           ),
-         {:ok, updated_repo_connection} <-
-           Ecto.Changeset.apply_action(changeset, :update) do
-      configure_github_repo(updated_repo_connection, user)
+    Repo.transact(fn ->
+      with :ok <-
+             VersionControlUsageLimiter.limit_github_sync(
+               repo_connection.project_id
+             ),
+           {:ok, updated_repo_connection} <- save_reconfigured(changeset, user),
+           :ok <- configure_github_repo(updated_repo_connection, user) do
+        {:ok, updated_repo_connection}
+      end
+    end)
+    |> case do
+      {:ok, _updated} -> :ok
+      error -> error
     end
   end
+
+  # Only a new workspace folder is stored, the rest is virtual
+  defp save_reconfigured(%{changes: %{workspace_path: _}} = changeset, user) do
+    with {:ok, updated} <- Repo.update(changeset),
+         {:ok, _audit} <-
+           changeset.data
+           |> Audit.repo_connection_updated(updated, user)
+           |> Repo.insert() do
+      {:ok, updated}
+    end
+  end
+
+  defp save_reconfigured(changeset, _user),
+    do: Ecto.Changeset.apply_action(changeset, :update)
 
   @spec verify_github_connection(repo_connection :: ProjectRepoConnection.t()) ::
           :ok | {:error, GithubError.t() | map()}
@@ -89,18 +137,290 @@ defmodule Lightning.VersionControl do
              repo_connection.branch,
              deploy_yml_target_path(repo_connection)
            ),
-         :ok <-
-           verify_file_exists(
-             client,
-             repo_connection.repo,
-             repo_connection.branch,
-             config_target_path(repo_connection)
-           ) do
+         :ok <- maybe_verify_config_exists(client, repo_connection) do
       verify_repo_secret_exists(
         client,
         repo_connection,
         api_secret_name(repo_connection)
       )
+    end
+  end
+
+  # v2 has no config file: the CLI owns the workspace, see get_sync_status/1
+  defp maybe_verify_config_exists(_client, %{sync_version: true}), do: :ok
+
+  defp maybe_verify_config_exists(client, repo_connection) do
+    verify_file_exists(
+      client,
+      repo_connection.repo,
+      repo_connection.branch,
+      config_target_path(repo_connection)
+    )
+  end
+
+  @doc """
+  Reports how a v2 connection's branch is doing:
+
+  - `tracking`: which project the branch's CLI checkout belongs to.
+    `:pending` until the first pull commits it, `{:other_project, uuid}` when
+    the branch tracks a different project.
+  - `last_pull` / `last_deploy`: the latest run of each GitHub workflow, or nil.
+  - `workflows`: `:current`, or `:outdated` when the repo still has the v1
+    workflow files. Reconnecting replaces them.
+  """
+  @spec get_sync_status(ProjectRepoConnection.t()) ::
+          {:ok, map()} | {:error, GithubError.t() | Tesla.Env.t() | term()}
+  def get_sync_status(repo_connection) do
+    %{repo: repo, branch: branch, project_id: project_id} = repo_connection
+
+    # Ignore runs from before this connection, e.g. a previous connection's
+    # deploys of the same repo/branch
+    created = ">=#{DateTime.to_iso8601(repo_connection.inserted_at)}"
+
+    with {:ok, client} <-
+           GithubClient.build_installation_client(
+             repo_connection.github_installation_id
+           ),
+         {:ok, workspace} <- workspace_state(client, repo_connection),
+         {:ok, workflows} <- workflows_state(client, repo_connection),
+         # openfn-pull.yml is shared by every project in the repo, so pick this
+         # project's runs by the run-name set in pull_v2.yml.
+         {:ok, last_pull} <-
+           latest_run(
+             client,
+             repo,
+             Path.basename(pull_yml_target_path()),
+             [event: "workflow_dispatch", created: created, per_page: 30],
+             &String.contains?(&1["display_title"] || "", project_id)
+           ),
+         {:ok, last_deploy} <-
+           latest_run(
+             client,
+             repo,
+             Path.basename(deploy_yml_target_path(repo_connection)),
+             branch: branch,
+             created: created,
+             per_page: 1
+           ) do
+      {:ok,
+       Map.merge(workspace, %{
+         last_pull: last_pull,
+         last_deploy: last_deploy,
+         workflows: workflows
+       })}
+    end
+  end
+
+  # v2 connections made before the v2 templates existed got the v1 ones
+  defp workflows_state(client, %{repo: repo, branch: branch} = repo_connection) do
+    with {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
+           GithubClient.get_repo(client, repo),
+         {:ok, pull} <- pull_workflow_version(client, repo, default_branch),
+         {:ok, deploy} <-
+           workflow_version(
+             client,
+             repo,
+             deploy_yml_target_path(repo_connection),
+             branch
+           ) do
+      {:ok, if(:v1 in [pull, deploy], do: :outdated, else: :current)}
+    end
+  end
+
+  @doc """
+  What a not-yet-connected repo already holds:
+
+  - `pull_workflow`: which format the repo's shared openfn-pull.yml is set up
+    for, `:v1`, `:v2` or nil when there is none. Every project connected to
+    the repo uses it, so they all have to use the same format.
+  - v2 only, the workspace on the branch: the `tracking` and `projects` of
+    `get_sync_status/1`.
+
+  Checks `user` can access the installation first, as `fetch_repo_branches/3`
+  does.
+  """
+  @spec check_workspace(User.t(), ProjectRepoConnection.t()) ::
+          {:ok, map()} | {:error, term()}
+  def check_workspace(user, repo_connection) do
+    installation_id = repo_connection.github_installation_id
+
+    with :ok <- authorize_installation_access(user, installation_id),
+         {:ok, client} <-
+           GithubClient.build_installation_client(installation_id),
+         {:ok, pull_workflow} <- pull_workflow_version(client, repo_connection),
+         {:ok, workspace} <- maybe_workspace_state(client, repo_connection) do
+      {:ok, Map.put(workspace, :pull_workflow, pull_workflow)}
+    end
+  end
+
+  defp pull_workflow_version(client, %{repo: repo}) do
+    with {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
+           GithubClient.get_repo(client, repo) do
+      pull_workflow_version(client, repo, default_branch)
+    end
+  end
+
+  defp pull_workflow_version(client, repo, default_branch),
+    do: workflow_version(client, repo, pull_yml_target_path(), default_branch)
+
+  # Our v1 templates use the @v1 actions, the v2 ones @v2
+  defp workflow_version(client, repo, path, branch) do
+    case GithubClient.get_repo_content(client, repo, path, "heads/#{branch}") do
+      {:ok, %{body: %{"content" => content}}} ->
+        with {:ok, yaml} <- Base.decode64(content, ignore: :whitespace) do
+          {:ok, if(yaml =~ "action@v1", do: :v1, else: :v2)}
+        end
+
+      {:error, %Tesla.Env{status: 404}} ->
+        {:ok, nil}
+
+      error ->
+        error
+    end
+  end
+
+  defp maybe_workspace_state(client, %{sync_version: true} = repo_connection),
+    do: workspace_state(client, repo_connection)
+
+  defp maybe_workspace_state(_client, _legacy_connection), do: {:ok, %{}}
+
+  defp workspace_state(client, repo_connection) do
+    with {:ok, tracking} <- tracking_status(client, repo_connection),
+         {:ok, projects} <- workspace_projects(client, repo_connection) do
+      {:ok, %{tracking: tracking, projects: projects}}
+    end
+  end
+
+  # The CLI keeps a copy of each project it pulls at
+  # <workspace>/.projects/<alias>@<host>.yaml, with the uuid inside. Read by
+  # blob: the contents API leaves out the content of files over 1 MB, and big
+  # projects pass that.
+  # ponytail: one request per copy, fine for the handful a workspace holds
+  defp workspace_projects(client, %{repo: repo, branch: branch} = connection) do
+    dir = ProjectRepoConnection.workspace_file(connection, ".projects")
+
+    case GithubClient.get_repo_content(client, repo, dir, "heads/#{branch}") do
+      {:ok, %{body: entries}} when is_list(entries) ->
+        entries
+        |> Enum.flat_map(fn entry ->
+          case Regex.run(~r/\A([^@]+)@(.+)\.ya?ml\z/, entry["name"]) do
+            [_name, alias, host] ->
+              [
+                %{
+                  alias: alias,
+                  host: host,
+                  path: entry["path"],
+                  sha: entry["sha"]
+                }
+              ]
+
+            nil ->
+              []
+          end
+        end)
+        |> Enum.reduce_while({:ok, []}, fn project, {:ok, acc} ->
+          {sha, project} = Map.pop!(project, :sha)
+
+          case project_identity(client, repo, sha) do
+            {:ok, identity} ->
+              {:cont, {:ok, acc ++ [Map.merge(project, identity)]}}
+
+            error ->
+              {:halt, error}
+          end
+        end)
+
+      {:ok, _not_a_dir} ->
+        {:ok, []}
+
+      {:error, %Tesla.Env{status: 404}} ->
+        {:ok, []}
+
+      error ->
+        error
+    end
+  end
+
+  defp project_identity(client, repo, sha) do
+    with {:ok, %{body: %{"content" => content}}} <-
+           GithubClient.get_blob(client, repo, sha) do
+      with {:ok, yaml} <- Base.decode64(content, ignore: :whitespace),
+           {:ok, project} <- YamlElixir.read_from_string(yaml) do
+        {:ok,
+         %{uuid: get_in(project, ["openfn", "uuid"]), name: project["name"]}}
+      else
+        _invalid -> {:ok, %{uuid: nil, name: nil}}
+      end
+    end
+  end
+
+  defp tracking_status(client, %{branch: branch} = repo_connection) do
+    case GithubClient.get_repo_content(
+           client,
+           repo_connection.repo,
+           checkout_path(repo_connection),
+           "heads/#{branch}"
+         ) do
+      {:ok, %{body: %{"content" => content}}} ->
+        with {:ok, yaml} <- Base.decode64(content, ignore: :whitespace),
+             {:ok, checkout} <- YamlElixir.read_from_string(yaml) do
+          uuid = checkout["uuid"]
+
+          {:ok,
+           if(uuid == repo_connection.project_id,
+             do: :ok,
+             else: {:other_project, uuid}
+           )}
+        else
+          _invalid -> {:error, :invalid_checkout}
+        end
+
+      {:error, %Tesla.Env{status: 404}} ->
+        {:ok, :pending}
+
+      error ->
+        error
+    end
+  end
+
+  # Written by `openfn project pull/deploy`, see @openfn/project util/config.ts
+  defp checkout_path(%{branch: branch} = repo_connection) do
+    ProjectRepoConnection.workspace_file(
+      repo_connection,
+      ".openfn/branches/#{branch}/checkout.yaml"
+    )
+  end
+
+  defp latest_run(client, repo, workflow_file, query, match \\ fn _ -> true end) do
+    case GithubClient.list_workflow_runs(client, repo, workflow_file, query) do
+      {:ok, %{body: %{"workflow_runs" => runs}}} ->
+        {:ok, runs |> Enum.find(match) |> run_summary()}
+
+      # GitHub only knows a workflow once it has run or is on the default
+      # branch, e.g. a pull-direction deploy workflow on another branch
+      {:error, %Tesla.Env{status: 404}} ->
+        {:ok, nil}
+
+      error ->
+        error
+    end
+  end
+
+  defp run_summary(nil), do: nil
+
+  defp run_summary(run) do
+    %{
+      status: run["status"],
+      conclusion: run["conclusion"],
+      url: run["html_url"],
+      created_at: parse_datetime(run["created_at"])
+    }
+  end
+
+  defp parse_datetime(iso8601) do
+    case DateTime.from_iso8601(iso8601 || "") do
+      {:ok, datetime, _offset} -> datetime
+      _error -> nil
     end
   end
 
@@ -135,10 +455,18 @@ defmodule Lightning.VersionControl do
     Repo.get_by(ProjectRepoConnection, access_token: token)
   end
 
+  @doc """
+  Fires the GitHub Action that pulls the project spec and commits it.
+
+  The export runs here first and its result is thrown away. The Action fetches
+  `/api/provision/:id.yaml`, and a 400 there lands in a GitHub Actions log
+  Lightning cannot read, so the user sees a sync that failed with no reason.
+  Costs one extra full spec generation on every successful sync.
+  """
   @spec initiate_sync(
           repo_connection :: ProjectRepoConnection.t(),
           commit_message :: String.t()
-        ) :: :ok | {:error, UsageLimiting.message() | map()}
+        ) :: :ok | {:error, UsageLimiting.message() | map() | binary()}
   def initiate_sync(repo_connection, commit_message) do
     with :ok <-
            VersionControlUsageLimiter.limit_github_sync(
@@ -146,12 +474,21 @@ defmodule Lightning.VersionControl do
            ),
          snapshots <-
            list_snapshots_for_project(repo_connection),
+         {:ok, _spec} <-
+           Projects.export_project(
+             :yaml,
+             repo_connection.project_id,
+             snapshot_ids_for_export(snapshots),
+             :v1
+           ),
          {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
            ),
          {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
            GithubClient.get_repo(client, repo_connection.repo),
+         {:ok, pull_workflow} <-
+           dispatch_format(client, repo_connection, default_branch),
          {:ok, %Tesla.Env{status: 204}} <-
            GithubClient.create_workflow_dispatch_event(
              client,
@@ -160,19 +497,65 @@ defmodule Lightning.VersionControl do
              %{
                ref: default_branch,
                inputs:
-                 %{
-                   projectId: repo_connection.project_id,
-                   apiSecretName: api_secret_name(repo_connection),
-                   pathToConfig: config_target_path(repo_connection),
-                   branch: repo_connection.branch,
-                   commitMessage: commit_message
-                 }
-                 |> maybe_add_snapshots(snapshots)
+                 pull_inputs(
+                   pull_workflow,
+                   repo_connection,
+                   commit_message,
+                   snapshots
+                 )
              }
            ) do
       :ok
     end
   end
+
+  # GitHub rejects a dispatch whose inputs don't match the repo's pull.yml.
+  # v2 connections made before the v2 templates were committed with the v1
+  # ones, so ask the repo which format it has.
+  defp dispatch_format(
+         client,
+         %{sync_version: true, repo: repo},
+         default_branch
+       ),
+       do: pull_workflow_version(client, repo, default_branch)
+
+  defp dispatch_format(_client, _legacy_connection, _default_branch),
+    do: {:ok, :v1}
+
+  defp pull_inputs(:v1, repo_connection, commit_message, snapshots) do
+    %{
+      projectId: repo_connection.project_id,
+      apiSecretName: api_secret_name(repo_connection),
+      # a v2 connection on v1 workflows was set up with config_path or
+      # openfn.yaml at the root
+      pathToConfig:
+        Path.relative_to(
+          repo_connection.config_path || config_target_path(repo_connection),
+          "."
+        ),
+      branch: repo_connection.branch,
+      commitMessage: commit_message
+    }
+    |> maybe_add_snapshots(snapshots)
+  end
+
+  # v2 pulls the live project with `openfn project pull`, which has no
+  # snapshot or config path options
+  defp pull_inputs(_v2, repo_connection, commit_message, _snapshots) do
+    %{
+      projectId: repo_connection.project_id,
+      apiSecretName: api_secret_name(repo_connection),
+      endpoint: endpoint_url(),
+      branch: repo_connection.branch,
+      workspace: ProjectRepoConnection.workspace_path(repo_connection),
+      commitMessage: commit_message
+    }
+    |> maybe_put_alias(repo_connection.local_alias)
+  end
+
+  # Only the first pull needs it: the CLI keeps the alias of a local copy
+  defp maybe_put_alias(inputs, nil), do: inputs
+  defp maybe_put_alias(inputs, alias), do: Map.put(inputs, :alias, alias)
 
   defp list_snapshots_for_project(%{project_id: project_id}) do
     current_query =
@@ -180,9 +563,27 @@ defmodule Lightning.VersionControl do
         join: s in assoc(w, :snapshots),
         on: s.lock_version == w.lock_version,
         where: w.project_id == ^project_id and is_nil(w.deleted_at),
+        order_by: s.id,
         select: s.id
 
-    Repo.all(current_query) |> Enum.reverse()
+    Repo.all(current_query)
+  end
+
+  # Mirrors maybe_add_snapshots/2 below: an empty list means the Action fetches
+  # the current workflows rather than a set of snapshots, so the pre-flight has
+  # to ask for the same spec the Action will.
+  defp snapshot_ids_for_export([]), do: nil
+  defp snapshot_ids_for_export(snapshot_ids), do: snapshot_ids
+
+  defp export_preflight(repo_connection) do
+    Projects.export_project(
+      :yaml,
+      repo_connection.project_id,
+      repo_connection
+      |> list_snapshots_for_project()
+      |> snapshot_ids_for_export(),
+      :v1
+    )
   end
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do
@@ -605,8 +1006,7 @@ defmodule Lightning.VersionControl do
            }),
          {:ok, %{status: 201, body: created_commit}} <-
            GithubClient.create_commit(client, repo_connection.repo, %{
-             message:
-               "#{if(repo_connection.sync_direction == :pull, do: "[skip actions]")} Configure OpenFn",
+             message: configure_commit_message(repo_connection),
              tree: created_tree["sha"],
              parents: [base_commit["sha"]]
            }),
@@ -621,6 +1021,14 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  defp configure_commit_message(%{sync_direction: :pull}),
+    do: "[skip actions] Configure OpenFn"
+
+  defp configure_commit_message(%{sync_version: true}),
+    do: "Configure OpenFn [openfn force]"
+
+  defp configure_commit_message(_repo_connection), do: "Configure OpenFn"
+
   @spec push_pull_yml_to_default_branch(
           client :: Tesla.Client.t(),
           repo_connection :: ProjectRepoConnection.t()
@@ -630,7 +1038,7 @@ defmodule Lightning.VersionControl do
            GithubClient.get_repo(client, repo_connection.repo),
          {:ok, %{status: 201, body: pull_blob}} <-
            GithubClient.create_blob(client, repo_connection.repo, %{
-             content: pull_yml()
+             content: pull_yml(repo_connection)
            }),
          {:ok, %{status: 200, body: base_commit}} <-
            GithubClient.get_commit(
@@ -667,17 +1075,14 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  # v2 workspaces (openfn.yaml and friends) are written by the CLI, not here
+  defp maybe_create_config_blob(_tesla_client, %{sync_version: true}),
+    do: {:ok, nil}
+
   defp maybe_create_config_blob(tesla_client, repo_connection) do
     if is_nil(repo_connection.config_path) do
-      content =
-        if repo_connection.sync_version do
-          path_to_openfn_yaml(repo_connection)
-        else
-          config_json(repo_connection)
-        end
-
       GithubClient.create_blob(tesla_client, repo_connection.repo, %{
-        content: content
+        content: config_json(repo_connection)
       })
     else
       {:ok, nil}
@@ -699,44 +1104,50 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp pull_yml do
+  defp pull_yml(repo_connection) do
     :code.priv_dir(:lightning)
-    |> Path.join("github/pull.yml")
+    |> Path.join(github_template("pull", repo_connection))
     |> File.read!()
   end
 
   defp deploy_yml(repo_connection) do
     :code.priv_dir(:lightning)
-    |> Path.join("github/deploy.yml")
+    |> Path.join(github_template("deploy", repo_connection))
     |> EEx.eval_file(
       assigns: [
         project_id: repo_connection.project_id,
         config_path: config_target_path(repo_connection),
         api_secret_name: api_secret_name(repo_connection),
-        branch: repo_connection.branch
+        branch: repo_connection.branch,
+        workspace: ProjectRepoConnection.workspace_path(repo_connection),
+        workspace_glob:
+          ProjectRepoConnection.workspace_file(repo_connection, "**"),
+        endpoint: endpoint_url()
       ]
     )
   end
 
+  @doc """
+  The Lightning URL the GitHub actions call back to. The CLI names its project
+  copies after this URL's host. This is public to allow for easy local testing.
+  If you have a tunneling software like ngrok, you can replace it with a public
+  URL
+  """
+  def endpoint_url, do: LightningWeb.Endpoint.url()
+
+  # v2 sync uses @v2 of the GitHub actions (openfn.yaml workspaces)
+  defp github_template(name, %{sync_version: true}), do: "github/#{name}_v2.yml"
+  defp github_template(name, _repo_connection), do: "github/#{name}.yml"
+
   defp config_json(repo_connection) do
     Jason.encode!(
       %{
-        endpoint: LightningWeb.Endpoint.url(),
+        endpoint: endpoint_url(),
         statePath: "openfn-#{repo_connection.project_id}-state.json",
         specPath: "openfn-#{repo_connection.project_id}-spec.yaml"
       },
       pretty: true
     )
-  end
-
-  defp path_to_openfn_yaml(repo_connection) do
-    project_id = repo_connection.project_id
-
-    """
-    project:
-      uuid: #{project_id}
-      endpoint: #{LightningWeb.Endpoint.url()}
-    """
   end
 
   defp pull_yml_target_path do
@@ -768,11 +1179,14 @@ defmodule Lightning.VersionControl do
         deploy_yml_target_path(repo_connection)
       )
 
-      maybe_delete_file(
-        client,
-        repo_connection,
-        config_target_path(repo_connection)
-      )
+      # v2's openfn.yaml belongs to the CLI workspace, so leave it in place
+      if !repo_connection.sync_version do
+        maybe_delete_file(
+          client,
+          repo_connection,
+          config_target_path(repo_connection)
+        )
+      end
 
       GithubClient.delete_repo_secret(
         client,
@@ -824,15 +1238,22 @@ defmodule Lightning.VersionControl do
   end
 
   @spec configure_github_repo(ProjectRepoConnection.t(), User.t()) ::
-          :ok | {:error, map()}
+          :ok | {:error, map() | binary()}
   defp configure_github_repo(repo_connection, user) do
-    with {:ok, user_token} <- fetch_user_access_token(user),
+    # Before anything is written to the repo. This path pushes pull.yml, the
+    # workflow files and the API secret before it reaches initiate_sync/2, so a
+    # project whose names collide would otherwise leave a modified GitHub repo
+    # behind and no connection row to show for it.
+    with {:ok, _spec} <- export_preflight(repo_connection),
+         {:ok, user_token} <- fetch_user_access_token(user),
          {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
          {:ok, _} <-
            push_pull_yml_to_default_branch(tesla_client, repo_connection),
+         # The secret goes in before the deploy workflow, which can run as
+         # soon as it lands on the branch
+         {:ok, _} <- configure_api_secret(tesla_client, repo_connection),
          {:ok, _} <-
-           push_files_to_selected_branch(tesla_client, repo_connection),
-         {:ok, _} <- configure_api_secret(tesla_client, repo_connection) do
+           push_files_to_selected_branch(tesla_client, repo_connection) do
       if repo_connection.sync_direction == :pull do
         initiate_sync(repo_connection, user.email)
       else

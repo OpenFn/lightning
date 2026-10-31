@@ -80,6 +80,9 @@ defmodule Lightning.Channels.Channel do
   """
   def validate(changeset) do
     changeset
+    # A channel name is an identity key in the project spec, so two that differ
+    # only by normal form export as two keys that render identically.
+    |> Validators.validate_name(:name)
     |> Validators.validate_url(:destination_url)
     |> assoc_constraint(:project)
     |> unique_constraint([:project_id, :name],

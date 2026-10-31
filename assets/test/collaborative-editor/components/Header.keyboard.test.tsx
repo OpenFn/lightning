@@ -44,11 +44,6 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
 }));
 
-// Mock useAdaptorIcons to prevent async fetch warnings
-vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
-  default: () => ({}),
-}));
-
 // Mock Tooltip to prevent Radix UI timer-based updates
 vi.mock('../../../js/collaborative-editor/components/Tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -190,6 +185,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   // Wrapper with KeyboardProvider (keyboard-specific)
@@ -216,10 +212,10 @@ async function createTestSetup(options: WrapperOptions = {}) {
   };
 }
 
-// Helper to render and wait for component to be ready
 async function renderAndWaitForReady(
   wrapper: React.ComponentType<{ children: React.ReactNode }>,
-  emitSessionContext: () => void
+  emitSessionContext: () => void,
+  { readOnly = false }: { readOnly?: boolean } = {}
 ) {
   const result = render(
     <Header projectId="project-1" workflowId="workflow-1">
@@ -234,8 +230,11 @@ async function renderAndWaitForReady(
   });
 
   await waitFor(() => {
-    const saveButton = screen.getByTestId('save-workflow-button');
-    expect(saveButton).toBeInTheDocument();
+    if (readOnly) {
+      expect(screen.getByText('Read-only')).toBeInTheDocument();
+    } else {
+      expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
+    }
   });
 
   return result;
@@ -313,7 +312,8 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}s{/Meta}');
@@ -337,7 +337,8 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}s{/Meta}');
@@ -413,7 +414,8 @@ describe('Header - Save Workflow (Cmd+S / Ctrl+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}s{/Meta}');
@@ -684,7 +686,8 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
@@ -709,7 +712,8 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
@@ -737,7 +741,8 @@ describe('Header - Save & Sync to GitHub (Cmd+Shift+S / Ctrl+Shift+S)', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     await user.keyboard('{Meta>}{Shift>}s{/Shift}{/Meta}');
@@ -943,7 +948,8 @@ describe('Header - Guard Condition Interactions', () => {
 
     const { unmount } = await renderAndWaitForReady(
       wrapper,
-      emitSessionContext!
+      emitSessionContext!,
+      { readOnly: true }
     );
 
     // Try Cmd+S
@@ -1083,6 +1089,7 @@ async function createRunSetup(
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -1097,7 +1104,9 @@ async function createRunSetup(
     </KeyboardProvider>
   );
 
-  async function renderAndWait() {
+  async function renderAndWait({
+    readOnly = false,
+  }: { readOnly?: boolean } = {}) {
     const result = render(
       <Header
         projectId="project-1"
@@ -1116,7 +1125,11 @@ async function createRunSetup(
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
+      if (readOnly) {
+        expect(screen.getByText('Read-only')).toBeInTheDocument();
+      } else {
+        expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
+      }
     });
 
     return result;
@@ -1189,7 +1202,7 @@ describe('Header - Submit Manual Run (Cmd+Enter / Ctrl+Enter)', () => {
       permissions: { can_edit_workflow: false, can_run_workflow: false },
     });
 
-    const { unmount } = await renderAndWait();
+    const { unmount } = await renderAndWait({ readOnly: true });
 
     await user.keyboard('{Meta>}{Enter}{/Meta}');
 

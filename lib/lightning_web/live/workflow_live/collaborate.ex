@@ -81,7 +81,12 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
          CredentialLive.Helpers.default_project_credentials(project),
        show_webhook_auth_modal: false,
        webhook_auth_method: nil,
-       ai_assistant_enabled: AiAssistant.enabled?()
+       ai_assistant_enabled: AiAssistant.enabled?(),
+       static_changed: static_changed?(socket),
+       experimental_features_enabled:
+         Lightning.Accounts.experimental_features_enabled?(
+           socket.assigns.current_user
+         )
      )}
   end
 
@@ -235,6 +240,15 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       function={@banner.function}
       args={@banner.attrs}
     />
+    <%!-- phx-update="ignore" stops a rejoin from patching href to the new
+    build's digest, so later reconnects still report the bundle this tab loaded. --%>
+    <link
+      id="collaborative-editor-bundle"
+      rel="modulepreload"
+      phx-track-static
+      phx-update="ignore"
+      href={~p"/assets/js/collaborative-editor/CollaborativeEditor.js"}
+    />
     <div
       id="collaborative-editor-react"
       class="h-full"
@@ -244,6 +258,13 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-react-file={~p"/assets/js/collaborative-editor/CollaborativeEditor.js"}
       data-workflow-id={@workflow_id}
       data-workflow-name={@workflow.name}
+      data-workflow-state={@workflow.state}
+      data-first-trigger-id={
+        case @workflow.triggers do
+          [%{id: id} | _] -> id
+          _ -> nil
+        end
+      }
       data-project-id={@workflow.project_id}
       data-project-name={@project.name}
       data-project-display-name={@project_display_name}
@@ -254,6 +275,10 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-project-env={@project.env}
       data-is-new-workflow={if @is_new_workflow, do: "true", else: nil}
       data-ai-assistant-enabled={if @ai_assistant_enabled, do: "true", else: "false"}
+      data-experimental-features={
+        if @experimental_features_enabled, do: "true", else: "false"
+      }
+      data-static-changed={if @static_changed, do: "true"}
       data-initial-run-data={
         if assigns[:initial_run_data],
           do: Jason.encode!(assigns[:initial_run_data]),
@@ -418,7 +443,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   end
 
   defp workflow_assigns(:edit, %{"id" => workflow_id}, _project) do
-    workflow = Workflows.get_workflow!(workflow_id)
+    workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
 
     %{
       workflow: workflow,

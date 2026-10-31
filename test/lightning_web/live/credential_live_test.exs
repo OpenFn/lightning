@@ -4,6 +4,7 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   import Ecto.Query
@@ -25,7 +26,8 @@ defmodule LightningWeb.CredentialLiveTest do
     external_id: "updated-external-id"
   }
 
-  @invalid_attrs %{name: "this won't work"}
+  # An apostrophe is a legal name character. A control character is not.
+  @invalid_attrs %{name: "this won't \u{0000} work"}
 
   defp create_credential(%{user: user}) do
     credential = insert(:credential, user: user)
@@ -41,6 +43,12 @@ defmodule LightningWeb.CredentialLiveTest do
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+  setup :isolated_adaptors
+
+  setup do
+    Lightning.AdaptorTestHelpers.seed_all_credential_schemas()
+    :ok
+  end
 
   defp get_decoded_state(url) when is_nil(url) do
     [
@@ -296,10 +304,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "cancel a scheduled for deletion credential", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
       insert(:step, credential: credential)
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       assert credential.scheduled_deletion
 
@@ -327,9 +338,11 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "can delete credential that has no activity in projects", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -364,10 +377,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "cannot delete credential that has activity in projects", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
       insert(:step, credential: credential)
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -650,9 +666,18 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      assert index_live
+      # The rendered HTML escapes the apostrophe, so the refute has to match the
+      # escaped form or it can never fail.
+      refute index_live
              |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
-             |> render_change() =~ "credential name has invalid format"
+             |> render_change() =~ "credential name can&#39;t contain"
+
+      assert index_live
+             |> form("#credential-form-new",
+               credential: %{name: "bad\u{0000}name"}
+             )
+             |> render_change() =~
+               "credential name can&#39;t contain control characters"
 
       # Select second project
       index_live
@@ -763,9 +788,18 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      assert index_live
+      # The rendered HTML escapes the apostrophe, so the refute has to match the
+      # escaped form or it can never fail.
+      refute index_live
              |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
-             |> render_change() =~ "credential name has invalid format"
+             |> render_change() =~ "credential name can&#39;t contain"
+
+      assert index_live
+             |> form("#credential-form-new",
+               credential: %{name: "bad\u{0000}name"}
+             )
+             |> render_change() =~
+               "credential name can&#39;t contain control characters"
 
       index_live
       |> element("#project-credentials-list-new")
@@ -803,7 +837,7 @@ defmodule LightningWeb.CredentialLiveTest do
       open_create_credential_modal(index_live)
 
       # Pick a type
-      index_live |> select_credential_type("dhis2")
+      index_live |> select_credential_type("@openfn/language-dhis2")
       index_live |> click_continue()
 
       refute index_live |> has_element?("#credential-type-picker")
@@ -868,7 +902,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       open_create_credential_modal(index_live)
 
-      index_live |> select_credential_type("postgresql")
+      index_live |> select_credential_type("@openfn/language-postgresql")
       index_live |> click_continue()
 
       refute index_live |> has_element?("#credential-type-picker")
@@ -964,7 +998,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       open_create_credential_modal(index_live)
 
-      index_live |> select_credential_type("http")
+      index_live |> select_credential_type("@openfn/language-http")
       index_live |> click_continue()
 
       assert index_live
@@ -1031,7 +1065,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       open_create_credential_modal(view)
 
-      select_credential_type(view, "godata")
+      select_credential_type(view, "@openfn/language-godata")
       click_continue(view)
 
       assert fill_credential(view, %{body: %{email: ""}}) =~ "can&#39;t be blank"
@@ -1085,7 +1119,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       open_create_credential_modal(view)
-      select_credential_type(view, "unknownish")
+      select_credential_type(view, "@openfn/language-unknownish")
       click_continue(view)
 
       refute view |> has_element?("#credential-type-picker")
@@ -1103,7 +1137,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       open_create_credential_modal(view)
-      select_credential_type(view, "dhis2")
+      select_credential_type(view, "@openfn/language-dhis2")
       click_continue(view)
 
       html = view |> element("#credential-form-new") |> render()
@@ -1126,7 +1160,7 @@ defmodule LightningWeb.CredentialLiveTest do
                @invalid_attrs,
                "#credential-form-#{credential.id}"
              ) =~
-               "credential name has invalid format"
+               "credential name can&#39;t contain control characters"
 
       refute_redirected(index_live, ~p"/credentials")
 
@@ -1146,10 +1180,15 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "displays external_id in credentials table", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
       # Update credential with external_id
-      Credentials.update_credential(credential, %{external_id: "display-test-id"})
+      Credentials.update_credential(
+        credential,
+        %{external_id: "display-test-id"},
+        user
+      )
 
       {:ok, _index_live, html} = live(conn, ~p"/credentials")
 
@@ -2722,17 +2761,67 @@ defmodule LightningWeb.CredentialLiveTest do
       html_tree = Floki.parse_document!(html)
 
       for adaptor <- ["postgresql", "dhis2", "http"] do
+        full_name = "@openfn/language-#{adaptor}"
+
         adaptor_label =
           Floki.find(
             html_tree,
-            "label[for='credential-schema-picker_selected_#{adaptor}']"
+            "label[for='credential-schema-picker_selected_#{full_name}']"
           )
 
         adaptor_icon = Floki.find(adaptor_label, "object")
         assert length(adaptor_icon) > 0
         img_src = adaptor_icon |> Floki.attribute("data") |> List.first()
-        assert img_src =~ "/images/adaptors/#{adaptor}-square.png"
+
+        assert img_src =~
+                 "/adaptors/icons/#{URI.encode(full_name, &URI.char_unreserved?/1)}/square-"
       end
+    end
+
+    test "omits a deprecated adaptor from the type options", %{conn: conn} do
+      insert(:adaptor,
+        name: "deprecated-adaptor",
+        deprecated: true,
+        schema_data: ~s({"type":"object"})
+      )
+
+      Lightning.AdaptorTestHelpers.prime_packages_cache()
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      html = open_create_credential_modal(view)
+      html_tree = Floki.parse_document!(html)
+
+      assert Floki.find(
+               html_tree,
+               "label[for='credential-schema-picker_selected_@openfn/language-http']"
+             ) != []
+
+      assert Floki.find(
+               html_tree,
+               "label[for='credential-schema-picker_selected_deprecated-adaptor']"
+             ) == []
+    end
+
+    test "omits an adaptor with no configuration schema", %{conn: conn} do
+      insert(:adaptor, name: "@openfn/language-no-schema", schema_data: nil)
+
+      Lightning.AdaptorTestHelpers.prime_packages_cache()
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      html = open_create_credential_modal(view)
+      html_tree = Floki.parse_document!(html)
+
+      assert Floki.find(
+               html_tree,
+               "label[for='credential-schema-picker_selected_@openfn/language-http']"
+             ) != []
+
+      assert Floki.find(
+               html_tree,
+               "label[for='credential-schema-picker_selected_@openfn/language-no-schema']"
+             ) == []
     end
   end
 
@@ -3753,7 +3842,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       open_create_credential_modal(view)
-      select_credential_type(view, "dhis2")
+      select_credential_type(view, "@openfn/language-dhis2")
       click_continue(view)
 
       # Fill in values for the main environment
@@ -3818,6 +3907,77 @@ defmodule LightningWeb.CredentialLiveTest do
       html = render(view)
       assert html =~ ~s(value="staging_user")
       refute html =~ ~s(value="main_user")
+    end
+  end
+
+  describe "when the adaptor catalogue cannot answer" do
+    setup %{sup: sup} do
+      Lightning.Repo.delete_all(Lightning.Adaptors.Catalogue.Adaptor)
+      Cachex.clear(Lightning.Adaptors.Supervisor.cache_name(sup))
+
+      :ok =
+        Supervisor.terminate_child(
+          sup,
+          Lightning.Adaptors.Supervisor.highlander_name(sup)
+        )
+
+      :ok
+    end
+
+    test "the credential type picker offers a retry", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      html = open_create_credential_modal(view)
+
+      assert html =~ "Couldn&#39;t load adaptors. Please try again."
+
+      assert has_element?(
+               view,
+               "#credential-type-adaptors-error button",
+               "Retry"
+             )
+
+      assert html =~ "Raw JSON"
+
+      seed_credential_schema("http")
+
+      html =
+        view
+        |> element("#credential-type-adaptors-error button", "Retry")
+        |> render_click()
+
+      refute html =~ "Couldn&#39;t load adaptors. Please try again."
+      assert html =~ "credential-schema-picker_selected_@openfn/language-http"
+    end
+
+    test "the credential form offers a retry instead of crashing", %{
+      conn: conn,
+      user: user
+    } do
+      credential =
+        insert(:credential, user: user, schema: "@openfn/language-http")
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      html = open_edit_credential_modal(view, credential.id)
+
+      assert html =~ "Couldn&#39;t load adaptors. Please try again."
+
+      assert has_element?(
+               view,
+               "#credential-schema-unavailable button",
+               "Retry"
+             )
+
+      seed_credential_schema("http")
+
+      html =
+        view
+        |> element("#credential-schema-unavailable button", "Retry")
+        |> render_click()
+
+      refute html =~ "Couldn&#39;t load adaptors. Please try again."
+      assert html =~ "baseUrl"
     end
   end
 end

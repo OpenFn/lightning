@@ -42,11 +42,14 @@ defmodule Lightning.Projects.Sandboxes do
   import Ecto.Query
 
   alias Lightning.Accounts.User
+  alias Lightning.Collaboration.WorkflowReconciler
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.Events
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
@@ -54,7 +57,6 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
-  alias Lightning.Services.CollectionHook
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -76,20 +78,27 @@ defmodule Lightning.Projects.Sandboxes do
   * `:env` - Environment identifier (e.g. `"staging"`, `"dev"`)
   * `:dataclip_ids` - UUIDs of dataclips to copy (only copies named dataclips
     of types `:global`, `:saved_input`, or `:http_request`)
+  * `:starting_dataclip` - a `%{body: json_string, name: string | nil}` map. The
+    body is created in the sandbox as a `:saved_input` dataclip rather than
+    copied from the parent, so what the caller reviewed is what lands.
 
   The sandbox's `project_users` are derived from the parent project: every
   parent user is copied across with their role preserved, except the parent
   owner who is demoted to `:admin`. The `actor` is then set as the sandbox
   owner (replacing any other role they may have had on the parent). To add
   a user to the sandbox who is not on the parent, call
-  `Lightning.Projects.add_project_users/3` after provision returns — that
+  `Lightning.Projects.add_project_users/4` after provision returns — that
   path goes through the seat-limit check.
   """
   @type provision_attrs :: %{
           required(:name) => String.t(),
           optional(:color) => String.t() | nil,
           optional(:env) => String.t() | nil,
-          optional(:dataclip_ids) => [Ecto.UUID.t()]
+          optional(:dataclip_ids) => [Ecto.UUID.t()],
+          optional(:starting_dataclip) => %{
+            required(:body) => String.t(),
+            optional(:name) => String.t() | nil
+          }
         }
 
   @cloned_project_fields ~w(
@@ -141,12 +150,120 @@ defmodule Lightning.Projects.Sandboxes do
              | Ecto.Changeset.t()
              | term()}
   def provision(%Project{} = parent, %User{} = actor, attrs) do
-    if Permissions.can?(:sandboxes, :provision_sandbox, actor, parent) do
+    with true <- Permissions.can?(:sandboxes, :provision_sandbox, actor, parent),
+         {:ok, attrs} <- cast_starting_dataclip(attrs) do
       create_sandbox_from_parent(parent, actor, attrs)
     else
-      {:error, :unauthorized}
+      false -> {:error, :unauthorized}
+      {:error, _reason} = error -> error
     end
   end
+
+  @doc """
+  Whether every id names a dataclip this parent can copy into a sandbox.
+
+  `provision/3` drops ineligible ids silently, which suits a bulk selection but
+  not a caller offering one deliberate choice: that caller wants to say why
+  nothing arrived.
+  """
+  @spec copyable_dataclips?(Project.t(), [Ecto.UUID.t()]) :: boolean()
+  def copyable_dataclips?(%Project{} = parent, ids) when is_list(ids) do
+    Enum.all?(ids, &valid_uuid?/1) and
+      eligible_dataclip_count(parent.id, ids) == length(Enum.uniq(ids))
+  end
+
+  defp valid_uuid?(value) when is_binary(value) do
+    match?({:ok, _}, Ecto.UUID.cast(value))
+  end
+
+  defp valid_uuid?(_value), do: false
+
+  defp eligible_dataclip_count(parent_id, ids) do
+    from(dataclip in Dataclip,
+      where:
+        dataclip.project_id == ^parent_id and dataclip.id in ^ids and
+          dataclip.type in ^@allowed_dataclip_types and
+          not is_nil(dataclip.name) and is_nil(dataclip.wiped_at)
+    )
+    |> Repo.aggregate(:count)
+  end
+
+  defp cast_starting_dataclip(attrs) do
+    case Map.get(attrs, :starting_dataclip) do
+      nil ->
+        {:ok, attrs}
+
+      %{} = starting ->
+        with {:ok, body} <-
+               decode_dataclip_body(get_either(starting, :body)),
+             {:ok, name} <- cast_dataclip_name(get_either(starting, :name)) do
+          {:ok, Map.put(attrs, :starting_dataclip, %{body: body, name: name})}
+        end
+
+      _other ->
+        {:error, :invalid_starting_dataclip}
+    end
+  end
+
+  defp get_either(map, key) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  @starting_dataclip_fallback_name "Reviewed input"
+
+  defp cast_dataclip_name(nil), do: {:ok, @starting_dataclip_fallback_name}
+
+  defp cast_dataclip_name(name) when is_binary(name) do
+    case String.trim(name) do
+      "" ->
+        {:ok, @starting_dataclip_fallback_name}
+
+      trimmed when byte_size(trimmed) > 255 ->
+        {:error, :invalid_starting_dataclip}
+
+      trimmed ->
+        if contains_null_byte?(trimmed),
+          do: {:error, :invalid_starting_dataclip},
+          else: {:ok, trimmed}
+    end
+  end
+
+  defp cast_dataclip_name(_name), do: {:error, :invalid_starting_dataclip}
+
+  defp decode_dataclip_body(body) when is_binary(body) do
+    if byte_size(body) > Lightning.Config.max_dataclip_size_bytes() do
+      {:error, :starting_dataclip_too_large}
+    else
+      case Jason.decode(body) do
+        {:ok, %{} = decoded} ->
+          if contains_null_byte?(decoded),
+            do: {:error, :starting_dataclip_invalid_json},
+            else: {:ok, decoded}
+
+        {:ok, _not_an_object} ->
+          {:error, :starting_dataclip_not_an_object}
+
+        {:error, _} ->
+          {:error, :starting_dataclip_invalid_json}
+      end
+    end
+  end
+
+  defp decode_dataclip_body(_body), do: {:error, :invalid_starting_dataclip}
+
+  defp contains_null_byte?(value) when is_binary(value),
+    do: String.contains?(value, <<0>>)
+
+  defp contains_null_byte?(value) when is_map(value) do
+    Enum.any?(value, fn {key, nested} ->
+      contains_null_byte?(key) or contains_null_byte?(nested)
+    end)
+  end
+
+  defp contains_null_byte?(value) when is_list(value),
+    do: Enum.any?(value, &contains_null_byte?/1)
+
+  defp contains_null_byte?(_value), do: false
 
   defp nesting_depth_exceeded?(%Project{id: parent_id}) do
     Lightning.Projects.depth_of(parent_id) >=
@@ -154,46 +271,26 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
-  Merges a sandbox into its target project.
+  Merges a sandbox into its target project, in one transaction.
 
-  Imports the sandbox's workflow configuration into the target via the
-  provisioner and synchronises collection names. Runs inside a single
-  transaction. Collection data is never copied.
+  Imports the sandbox's workflows into the target through the provisioner and
+  synchronises collection names; collection data is never copied. Each merged
+  workflow also gains the target's resulting head in its version history, so a
+  later merge can tell the target has moved on.
 
-  Callers must authorise the merge before calling (e.g. `:merge_sandbox`).
+  Callers must authorise the merge first (`:merge_sandbox`).
 
-  ## Parameters
-  * `source` - The sandbox project being merged
-  * `target` - The project receiving the merge
-  * `actor` - The user performing the merge
-  * `opts` - Merge options (`:selected_workflow_ids`,
-    `:deleted_target_workflow_ids`, `:selected_credential_ids`)
+  ## Options
+  * `:selected_workflow_ids`, `:deleted_target_workflow_ids` - scope the merge
+  * `:selected_credential_ids` - sandbox-only credentials to attach to the
+    target first, so the remap matches them instead of dropping them. Keychains
+    follow the same rule, and are skipped rather than failing the merge when the
+    actor cannot create one in the target.
+  * `:skip_collections` - names to leave out. A merge never deletes collections.
+  * `:record_release`
 
-  ## Credential attachment
-
-  A credential that lives only in the sandbox (the target has no
-  `project_credential` for its underlying `credential_id`) would otherwise be
-  dropped on merge, since the remap only matches on shared credentials. Pass
-  `:selected_credential_ids` (a list of the sandbox `project_credential` ids the
-  caller chose to carry over) and each one is attached to the target before the
-  document is imported, so the remap finds a match instead of dropping it.
-  Sandbox `project_credentials` left out of the list stay dropped.
-
-  Keychain credentials are handled analogously: a keychain that lives only in the
-  sandbox and is used by a to-be-merged workflow is attached to the target (along
-  with its default credential) before the document is imported, so the keychain
-  remap name-matches it instead of dropping it. Attachment follows the same scope
-  as the merge, so a partial merge (via `:selected_workflow_ids`) only carries
-  over keychains used by the selected workflows. A keychain whose name already
-  exists in the target is left as the target's own.
-
-  ## Returns
-  * `{:ok, updated_target}` - Merge succeeded
-  * `{:error, merge_error}` - Merge failed, classified into a domain reason
-
-  Failures are returned as typed reasons (see `t:merge_error/0`) so callers can
-  render user-facing copy without inspecting changeset internals. The full
-  validation detail is logged for diagnosis.
+  Returns `{:ok, updated_target}` or `{:error, merge_error}`, typed so callers
+  can render copy without reading changesets.
   """
   @type merge_error ::
           :merge_failed | Lightning.Extensions.UsageLimiting.message()
@@ -208,10 +305,11 @@ defmodule Lightning.Projects.Sandboxes do
       ) do
     selected_credential_ids = Map.get(opts, :selected_credential_ids, [])
 
-    # `:merge_sandbox` allows editors, but deleting collections needs owner/admin.
-    # Gate only the destructive half so an editor can merge without pruning data.
-    allow_collection_deletions? =
-      Permissions.can?(:collections, :manage_collection, actor, target)
+    # A malformed skip list raises rather than silently changing what gets
+    # created. A merge never deletes target collections, whatever options a
+    # caller passes.
+    skip_collection_names =
+      validate_skip_collections!(Map.get(opts, :skip_collections, []))
 
     Repo.transact(fn ->
       # Preload once so both attach_sandbox_keychains and merge_project derive
@@ -221,7 +319,7 @@ defmodule Lightning.Projects.Sandboxes do
 
       with :ok <-
              attach_selected_credentials(source, target, selected_credential_ids),
-           :ok <- attach_sandbox_keychains(source, target, opts),
+           :ok <- attach_sandbox_keychains(source, target, actor, opts),
            # Re-preload so the credential and keychain remaps see the
            # just-attached associations; merge_project skips the preload if
            # they're already loaded.
@@ -232,22 +330,164 @@ defmodule Lightning.Projects.Sandboxes do
                force: true
              ),
            merge_doc = MergeProjects.merge_project(source, target, opts),
+           selected_target_ids = selected_target_ids(source, opts, merge_doc),
            {:ok, updated_target} <-
-             Provisioner.import_document(target, actor, merge_doc,
-               allow_stale: true
+             Provisioner.import_document(
+               target,
+               actor,
+               merge_doc,
+               [allow_stale: true, reconcile_collaboration: false] ++
+                 release_import_opts(source, opts, selected_target_ids)
              ),
            :ok <- reject_out_of_project_credentials(target),
            {:ok, _} <-
-             sync_collections(source, target,
-               allow_deletions: allow_collection_deletions?
-             ) do
-        {:ok, updated_target}
+             sync_collections(source, target, skip_names: skip_collection_names),
+           :ok <-
+             record_merge_sync_points(source, merge_doc, selected_target_ids) do
+        {:ok, {updated_target, merge_doc, selected_target_ids}}
       end
     end)
     |> case do
-      {:ok, _} = ok -> ok
-      {:error, reason} -> {:error, classify_merge_error(reason)}
+      {:ok, {updated_target, merge_doc, selected_target_ids}} ->
+        merge_doc
+        |> Provisioner.reconcilable_workflow_ids()
+        |> reconcilable_after_merge(selected_target_ids)
+        |> WorkflowReconciler.request_reconciliation()
+
+        {:ok, updated_target}
+
+      {:error, reason} ->
+        {:error, classify_merge_error(reason)}
     end
+  end
+
+  defp reconcilable_after_merge(workflow_ids, nil), do: workflow_ids
+
+  defp reconcilable_after_merge(workflow_ids, selected_target_ids) do
+    selected = MapSet.new(selected_target_ids)
+    Enum.filter(workflow_ids, &MapSet.member?(selected, &1))
+  end
+
+  defp release_import_opts(source, opts, selected_target_ids) do
+    with :promote <- Map.get(opts, :record_release),
+         [_ | _] <- Map.get(opts, :selected_workflow_ids) do
+      [
+        release: %{
+          kind: :promote,
+          source_project_id: source.id,
+          workflow_ids: selected_target_ids
+        }
+      ]
+    else
+      _ -> []
+    end
+  end
+
+  defp selected_target_ids(source, opts, merge_doc) do
+    case Map.get(opts, :selected_workflow_ids) do
+      nil -> nil
+      selected_ids -> promoted_target_ids(source, selected_ids, merge_doc)
+    end
+  end
+
+  defp record_merge_sync_points(source, merge_doc, selected_target_ids) do
+    merged = merged_workflow_pairs(source, merge_doc, selected_target_ids)
+    source_hashes = existing_hashes(Map.values(merged))
+
+    merged
+    |> Map.keys()
+    |> latest_versions_by_workflow()
+    |> Enum.reduce_while(:ok, fn %{workflow_id: target_id, hash: hash}, :ok ->
+      source_id = Map.fetch!(merged, target_id)
+
+      if hash in Map.get(source_hashes, source_id, []) do
+        {:cont, :ok}
+      else
+        %WorkflowVersion{}
+        |> WorkflowVersion.changeset(%{
+          workflow_id: source_id,
+          hash: hash,
+          source: "cli"
+        })
+        |> Repo.insert()
+        |> case do
+          {:ok, _} -> {:cont, :ok}
+          {:error, changeset} -> {:halt, {:error, changeset}}
+        end
+      end
+    end)
+  end
+
+  defp merged_workflow_pairs(source, merge_doc, selected_target_ids) do
+    entries =
+      merge_doc
+      |> Map.get("workflows", [])
+      |> Enum.reject(&(&1["delete"] == true))
+
+    entries =
+      if selected_target_ids do
+        Enum.filter(entries, &MapSet.member?(selected_target_ids, &1["id"]))
+      else
+        entries
+      end
+
+    source_ids_by_name = Map.new(source.workflows, &{&1.name, &1.id})
+
+    entries
+    |> Enum.flat_map(fn entry ->
+      case Map.fetch(source_ids_by_name, entry["name"]) do
+        {:ok, source_id} -> [{entry["id"], source_id}]
+        :error -> []
+      end
+    end)
+    |> Map.new()
+  end
+
+  defp latest_versions_by_workflow([]), do: []
+
+  defp latest_versions_by_workflow(workflow_ids) do
+    from(version in WorkflowVersion,
+      where: version.workflow_id in ^workflow_ids,
+      distinct: version.workflow_id,
+      order_by: [
+        asc: version.workflow_id,
+        desc: version.inserted_at,
+        desc: version.id
+      ],
+      select: %{workflow_id: version.workflow_id, hash: version.hash}
+    )
+    |> Repo.all()
+  end
+
+  defp existing_hashes([]), do: %{}
+
+  defp existing_hashes(workflow_ids) do
+    from(version in WorkflowVersion,
+      where: version.workflow_id in ^workflow_ids,
+      select: {version.workflow_id, version.hash}
+    )
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
+
+  defp promoted_target_ids(source, selected_source_ids, merge_doc) do
+    selected_names =
+      from(w in Workflow,
+        where:
+          w.id in ^selected_source_ids and w.project_id == ^source.id and
+            is_nil(w.deleted_at),
+        select: w.name
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    merge_doc
+    |> Map.get("workflows", [])
+    |> Enum.filter(fn wf ->
+      wf["delete"] != true and MapSet.member?(selected_names, wf["name"])
+    end)
+    |> Enum.map(& &1["id"])
+    |> MapSet.new()
   end
 
   # Defence-in-depth backstop: after the document lands, re-read the target's
@@ -334,7 +574,7 @@ defmodule Lightning.Projects.Sandboxes do
   # KeychainCredential changeset's validate_default_credential_belongs_to_project
   # passes against the target. Returns `{:error, changeset}` on the first genuine
   # insert failure so the merge transaction rolls back.
-  defp attach_sandbox_keychains(source, target, opts) do
+  defp attach_sandbox_keychains(source, target, actor, opts) do
     target_keychain_names =
       from(k in KeychainCredential,
         where: k.project_id == ^target.id,
@@ -343,20 +583,46 @@ defmodule Lightning.Projects.Sandboxes do
       |> Repo.all()
       |> MapSet.new()
 
-    source
-    |> MergeProjects.carried_source_workflows(opts)
-    |> Enum.flat_map(& &1.jobs)
-    |> Enum.map(& &1.keychain_credential_id)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> load_source_keychains(source.id)
-    |> Enum.reject(&MapSet.member?(target_keychain_names, &1.name))
-    |> Enum.reduce_while(:ok, fn keychain, :ok ->
-      case attach_keychain_to_target(keychain, target) do
-        {:ok, _} -> {:cont, :ok}
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
+    to_attach =
+      source
+      |> MergeProjects.carried_source_workflows(opts)
+      |> Enum.flat_map(& &1.jobs)
+      |> Enum.map(& &1.keychain_credential_id)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> load_source_keychains(source.id)
+      |> Enum.reject(&MapSet.member?(target_keychain_names, &1.name))
+
+    # Attaching one of these creates a keychain in the target, which is an
+    # owner/admin action, while merging is not: `:merge_sandbox` allows editors.
+    # Without asking, an editor could make a keychain in a sandbox they own,
+    # where they are allowed to, and carry it into a project where they are not.
+    #
+    # Not attaching it is enough. `build_keychain_remap/2` maps a source
+    # keychain with no counterpart in the target to nil, so the job arrives
+    # without one rather than pointing at the sandbox's. That matches the
+    # collection
+    # deletions gated a few lines up, which an editor also merges without
+    # performing, rather than failing the whole merge over one part of it.
+    if may_create_keychain?(actor, target) do
+      Enum.reduce_while(to_attach, :ok, fn keychain, :ok ->
+        case attach_keychain_to_target(keychain, target) do
+          {:ok, _} -> {:cont, :ok}
+          {:error, _} = error -> {:halt, error}
+        end
+      end)
+    else
+      :ok
+    end
+  end
+
+  defp may_create_keychain?(%User{} = actor, %Project{} = target) do
+    Permissions.can?(
+      :credentials,
+      :create_keychain_credential,
+      actor,
+      %KeychainCredential{project_id: target.id}
+    )
   end
 
   # Only ever loads source-owned keychains: a job could, via changeset bypass,
@@ -374,9 +640,9 @@ defmodule Lightning.Projects.Sandboxes do
   defp attach_keychain_to_target(keychain, target) do
     attach_keychain_default_credential(keychain, target)
 
-    # The project must be on the base struct so that
-    # validate_default_credential_belongs_to_project can see it when
-    # changeset/2 runs; put_assoc after the fact would skip the check.
+    # `project_id` on the base struct is what
+    # validate_default_credential_belongs_to_project reads first, so it is set
+    # here rather than put_assoc'd afterwards, where the guard would not see it.
     %KeychainCredential{
       project: target,
       project_id: target.id,
@@ -463,10 +729,13 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:error, changeset}` - Validation error
 
   ## Example
-    {:ok, updated} = Sandboxes.update_sandbox(sandbox, user, %{
-      name: "new-name",
-      color: "#ff6b35"
-    })
+
+  ```elixir
+  {:ok, updated} = Sandboxes.update_sandbox(sandbox, user, %{
+    name: "new-name",
+    color: "#ff6b35"
+  })
+  ```
   """
   @spec update_sandbox(Project.t() | Ecto.UUID.t(), User.t(), map()) ::
           {:ok, Project.t()}
@@ -480,7 +749,7 @@ defmodule Lightning.Projects.Sandboxes do
       sandbox
     )
     |> if do
-      allowed_attrs = Map.take(attrs, [:name, :color, :env])
+      allowed_attrs = Map.take(attrs, [:name, :color])
       Lightning.Projects.update_project(sandbox, allowed_attrs, actor)
     else
       {:error, :unauthorized}
@@ -633,7 +902,10 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Parameters
   * `sandbox` - Sandbox project to restore (or sandbox ID as string)
-  * `actor` - User performing the action (needs `:delete_sandbox` permission)
+  * `actor` - User performing the action (needs `:cancel_scheduled_deletion`
+    permission — the same owner/admin rule as `:delete_sandbox`, read directly
+    rather than through Scope, since the subject is by definition a project
+    scheduled for deletion)
 
   ## Returns
   * `{:ok, restored_sandbox}` - Sandbox subtree restored
@@ -649,7 +921,7 @@ defmodule Lightning.Projects.Sandboxes do
           | {:error, :unauthorized | :not_found | term()}
           | Lightning.Extensions.UsageLimiting.error()
   def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
-    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+    if Permissions.can?(:sandboxes, :cancel_scheduled_deletion, actor, sandbox) do
       case ProjectLimiter.limit_new_sandbox(sandbox.id) do
         :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
         {:error, _reason, _message} = error -> error
@@ -690,6 +962,14 @@ defmodule Lightning.Projects.Sandboxes do
       SandboxPromExPlugin.fire_sandbox_scheduled_for_deletion_event()
 
       {:ok, %{sandbox | scheduled_deletion: date}}
+    end)
+    # Every descendant was wound down too, so every descendant's sessions have
+    # to hear about it. After the commit, not inside it: a subscriber that
+    # re-reads its project must not see it still live.
+    |> tap(fn result ->
+      with {:ok, _sandbox} <- result do
+        Enum.each(subtree_ids, &Events.project_deletion_scheduled/1)
+      end
     end)
   end
 
@@ -863,9 +1143,9 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   defp create_keychain_in_sandbox(original_keychain, sandbox, actor) do
-    # The project must be on the base struct so that
-    # validate_default_credential_belongs_to_project can see it when
-    # changeset/2 runs; put_assoc after the fact would skip the check.
+    # `project_id` on the base struct is what
+    # validate_default_credential_belongs_to_project reads first, so it is set
+    # here rather than put_assoc'd afterwards, where the guard would not see it.
     %KeychainCredential{
       project: sandbox,
       project_id: sandbox.id,
@@ -917,6 +1197,7 @@ defmodule Lightning.Projects.Sandboxes do
           enable_job_logs: parent_workflow.enable_job_logs,
           positions: %{}
         })
+        |> Ecto.Changeset.put_change(:state, :draft)
         |> Repo.insert()
 
       Map.put(mapping, parent_workflow.id, sandbox_workflow.id)
@@ -987,17 +1268,12 @@ defmodule Lightning.Projects.Sandboxes do
           comment: parent_trigger.comment,
           custom_path: parent_trigger.custom_path,
           cron_expression: parent_trigger.cron_expression,
-          kafka_configuration:
-            case parent_trigger.kafka_configuration do
-              %_{} = config -> Map.from_struct(config)
-              other -> other
-            end
+          webhook_reply: parent_trigger.webhook_reply,
+          webhook_response_config:
+            webhook_response_config_attrs(parent_trigger.webhook_response_config)
         }
 
-        {:ok, sandbox_trigger} =
-          %Trigger{}
-          |> Trigger.changeset(sandbox_trigger_attrs)
-          |> Repo.insert()
+        {:ok, sandbox_trigger} = insert_sandbox_trigger(sandbox_trigger_attrs)
 
         if parent_trigger.webhook_auth_methods &&
              parent_trigger.webhook_auth_methods != [] do
@@ -1015,6 +1291,51 @@ defmodule Lightning.Projects.Sandboxes do
       end)
     end)
     |> Map.new()
+  end
+
+  defp webhook_response_config_attrs(nil), do: nil
+
+  defp webhook_response_config_attrs(config) do
+    %{success_code: config.success_code, error_code: config.error_code}
+  end
+
+  # A parent can hold a pre-migration path the clone's changeset rejects. The
+  # clone is written without it and the value copied in directly. Verbatim
+  # matters: an empty clone would clear the parent's path on promote.
+  defp insert_sandbox_trigger(attrs) do
+    # `mode: :savepoint` so a DB-level failure leaves the retry below usable.
+    %Trigger{}
+    |> Trigger.changeset(attrs)
+    |> Repo.insert(mode: :savepoint)
+    |> case do
+      {:ok, trigger} ->
+        {:ok, trigger}
+
+      {:error, changeset} ->
+        # Only a format failure. The other two rules keyed to `:custom_path`,
+        # a duplicate and a missing project, must not end with the path being
+        # written back. Neither is reachable through a provision today.
+        if Trigger.custom_path_shape_error?(changeset) do
+          insert_with_legacy_custom_path(attrs)
+        else
+          {:error, changeset}
+        end
+    end
+  end
+
+  defp insert_with_legacy_custom_path(attrs) do
+    with {:ok, trigger} <-
+           %Trigger{}
+           |> Trigger.changeset(%{attrs | custom_path: nil})
+           |> Repo.insert() do
+      {1, _} =
+        Repo.update_all(
+          from(t in Trigger, where: t.id == ^trigger.id),
+          set: [custom_path: attrs.custom_path]
+        )
+
+      {:ok, %{trigger | custom_path: attrs.custom_path}}
+    end
   end
 
   defp clone_workflow_edges(sandbox, parent) do
@@ -1084,6 +1405,7 @@ defmodule Lightning.Projects.Sandboxes do
     |> copy_workflow_version_history(sandbox.workflow_id_mapping)
     |> create_initial_workflow_snapshots()
     |> copy_selected_dataclips(parent.id, Map.get(original_attrs, :dataclip_ids))
+    |> create_starting_dataclip(Map.get(original_attrs, :starting_dataclip))
     |> clone_collections_from_parent(parent)
   end
 
@@ -1094,58 +1416,86 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
-  Synchronises collection names from a sandbox to its merge target.
+  Computes the collections a merge from `source` into `target` would create,
+  without applying anything.
 
-  Names only in the source are created empty in the target; names only in
-  the target are deleted along with their items. Collection data is never
-  copied. The combined byte-size of deleted collections is reported via
-  `CollectionHook.handle_delete/2` for usage accounting.
+  Returns a map with:
 
-  Runs inside a single transaction.
+  * `:to_create` - sorted names that exist only in the source and would be
+    created empty in the target
+
+  Used by the merge screen to show what a merge would change before the
+  user commits to it. Callers pass the names the user explicitly unchecked
+  back as `:skip_collections`; the merge recomputes the missing names at
+  merge time, so a collection added to the source after the preview is
+  still created. A merge never deletes collections, so there is nothing
+  else to preview.
+  """
+  @spec preview_collections(Project.t(), Project.t()) :: %{
+          to_create: [String.t()]
+        }
+  def preview_collections(%Project{} = source, %Project{} = target) do
+    %{
+      to_create:
+        source
+        |> source_only_collection_names(target)
+        |> MapSet.to_list()
+        |> Enum.sort()
+    }
+  end
+
+  @doc """
+  Creates the source's collections in its merge target.
+
+  Names only in the source are created empty in the target; collection data
+  is never copied. Collections that exist only in the target are never
+  touched - a merge cannot delete a collection.
 
   ## Options
 
-    * `:allow_deletions` - when `true`, target-only collections (and their items)
-      are deleted so the target matches the source. Defaults to `false`: callers
-      must opt in. The merge path opts in only when the actor holds
-      `:manage_collection`, so an editor merge never prunes target collections.
+    * `:skip_names` - collection names not to create even though the target
+      lacks them; everything else missing is created. Defaults to `[]`.
+      The merge passes the names the user explicitly unchecked, so any
+      collection added to the source since the preview is still created.
   """
   @spec sync_collections(Project.t(), Project.t(), keyword()) ::
-          {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
-          | {:error, term()}
+          {:ok, %{created: non_neg_integer()}}
   def sync_collections(%Project{} = source, %Project{} = target, opts \\ []) do
-    allow_deletions? = Keyword.get(opts, :allow_deletions, false)
+    skip_names = Keyword.get(opts, :skip_names, [])
 
+    to_create =
+      source
+      |> source_only_collection_names(target)
+      |> MapSet.difference(MapSet.new(skip_names))
+
+    {created, _} = insert_empty_collections(target.id, to_create)
+
+    {:ok, %{created: created}}
+  end
+
+  defp validate_skip_collections!(names) when is_list(names) do
+    if Enum.all?(names, &is_binary/1) do
+      names
+    else
+      raise ArgumentError,
+            ":skip_collections must be a list of collection names, " <>
+              "got: #{inspect(names)}"
+    end
+  end
+
+  defp validate_skip_collections!(other) do
+    raise ArgumentError,
+          ":skip_collections must be a list of collection names, " <>
+            "got: #{inspect(other)}"
+  end
+
+  # Shared by the merge-time sync and the merge screen's preview so the two
+  # cannot disagree.
+  defp source_only_collection_names(source, target) do
     source_names = source |> Collections.list_project_collections() |> names()
+    target_names = target |> Collections.list_project_collections() |> names()
 
-    target_collections = Collections.list_project_collections(target)
-    target_names = names(target_collections)
-
-    to_create = MapSet.difference(source_names, target_names)
-
-    collections_to_delete =
-      if allow_deletions? do
-        names_to_delete = MapSet.difference(target_names, source_names)
-        Enum.filter(target_collections, &(&1.name in names_to_delete))
-      else
-        []
-      end
-
-    to_delete_ids = Enum.map(collections_to_delete, & &1.id)
-
-    deleted_byte_size =
-      Enum.reduce(collections_to_delete, 0, &(&1.byte_size_sum + &2))
-
-    Repo.transaction(fn ->
-      {created, _} = insert_empty_collections(target.id, to_create)
-      {deleted, _} = delete_collections(to_delete_ids)
-
-      if deleted_byte_size > 0 do
-        :ok = CollectionHook.handle_delete(target.id, deleted_byte_size)
-      end
-
-      %{created: created, deleted: deleted}
-    end)
+    MapSet.difference(source_names, target_names)
   end
 
   defp names(collections), do: MapSet.new(collections, & &1.name)
@@ -1171,12 +1521,6 @@ defmodule Lightning.Projects.Sandboxes do
       # Concurrent merges may race to create the same collection.
       Repo.insert_all(Collection, rows, on_conflict: :nothing)
     end
-  end
-
-  defp delete_collections([]), do: {0, nil}
-
-  defp delete_collections(ids) do
-    Repo.delete_all(from c in Collection, where: c.id in ^ids)
   end
 
   defp copy_workflow_version_history(sandbox, workflow_id_mapping) do
@@ -1230,28 +1574,49 @@ defmodule Lightning.Projects.Sandboxes do
   defp copy_selected_dataclips(sandbox, parent_id, dataclip_ids)
        when is_list(dataclip_ids) do
     selected_dataclips =
-      from(dataclip in Lightning.Invocation.Dataclip,
+      from(dataclip in Dataclip,
         where:
           dataclip.project_id == ^parent_id and
             dataclip.id in ^dataclip_ids and
             dataclip.type in ^@allowed_dataclip_types and
-            not is_nil(dataclip.name),
+            not is_nil(dataclip.name) and is_nil(dataclip.wiped_at),
         select: %{
           name: dataclip.name,
           body: type(dataclip.body, :map),
+          request:
+            fragment(
+              "case when ? = 'http_request' then ? else null end",
+              dataclip.type,
+              dataclip.request
+            ),
           type: dataclip.type
         }
       )
       |> Repo.all()
 
-    Enum.each(selected_dataclips, fn dataclip_attrs ->
-      dataclip_attrs
-      |> Map.put(:project_id, sandbox.id)
-      |> Lightning.Invocation.Dataclip.new()
-      |> Repo.insert!()
-    end)
+    copied =
+      Enum.map(selected_dataclips, fn dataclip_attrs ->
+        dataclip_attrs
+        |> Map.put(:project_id, sandbox.id)
+        |> Dataclip.new()
+        |> Repo.insert!()
+      end)
 
-    sandbox
+    case copied do
+      [%Dataclip{id: id}] -> %{sandbox | starting_dataclip_id: id}
+      _ -> sandbox
+    end
+  end
+
+  defp create_starting_dataclip(sandbox, nil), do: sandbox
+
+  defp create_starting_dataclip(sandbox, %{body: body, name: name}) do
+    dataclip =
+      %{project_id: sandbox.id, body: body, name: name, type: :saved_input}
+      |> Dataclip.new()
+      |> Repo.insert!()
+
+    %{sandbox | starting_dataclip_id: dataclip.id}
   end
 
   defp get_sandbox_keychain_id(

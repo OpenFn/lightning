@@ -6,50 +6,81 @@ defmodule Lightning.CLITest do
   alias Lightning.CLI
 
   describe "metadata/2" do
-    test "with incorrect state" do
-      state = %{"foo" => "bar"}
-      adaptor_path = "/tmp/foo"
+    test "passes the state in a file in a private directory, not on the command line" do
+      test_pid = self()
 
-      FakeRambo.Helpers.stub_run(
-        {:ok,
-         %{
-           status: 1,
-           out:
-             "{\"level\":\"debug\",\"name\":\"CLI\",\"message\":[\"Load state...\"]}\n{\"level\":\"success\",\"name\":\"CLI\",\"message\":[\"Read state from stdin\"]}\n{\"level\":\"debug\",\"name\":\"CLI\",\"message\":[\"state:\",{}]}\n{\"level\":\"success\",\"name\":\"CLI\",\"message\":[\"Generating metadata\"]}\n{\"level\":\"info\",\"name\":\"CLI\",\"message\":[\"config:\",null]}\n",
-           err:
-             "{\"level\":\"error\",\"name\":\"CLI\",\"message\":[\"ERROR: Invalid configuration passed\"]}\n"
-         }}
-      )
+      stub(Lightning.OsProcess, :run, fn cmd, args, opts ->
+        [_, _, _, "-s", state_path | _] = args
 
-      res = CLI.metadata(state, adaptor_path)
+        send(
+          test_pid,
+          {:run, cmd, args, opts, File.read!(state_path),
+           File.stat!(Path.dirname(state_path)).mode}
+        )
 
-      expected_command =
-        [
-          "openfn",
-          "metadata",
-          "--log-json",
-          "-S",
-          "{\"foo\":\"bar\"}",
-          "-a",
-          adaptor_path,
-          "--log",
-          "debug"
-        ]
+        {:ok, %{status: 0, out: "", err: ""}}
+      end)
 
-      {command, opts} = expect_command()
+      assert {:ok, %CLI.Result{status: 0}} =
+               CLI.metadata(%{"foo" => "bar"}, "/tmp/foo")
 
-      assert command == expected_command
+      assert_received {:run, "/usr/bin/env", args, opts, state_json, mode}
 
       assert [
-               timeout: nil,
-               log: true,
-               env: %{
-                 "NODE_PATH" => "./priv/openfn",
-                 "PATH" => "./priv/openfn/bin:" <> _
-               }
-             ] = opts
+               "openfn",
+               "metadata",
+               "--log-json",
+               "-s",
+               state_path,
+               "-a",
+               "/tmp/foo",
+               "--log",
+               "debug"
+             ] = args
 
-      assert res
+      assert state_json == ~s({"foo":"bar"})
+      assert Bitwise.band(mode, 0o777) == 0o700
+      refute File.exists?(Path.dirname(state_path))
+      assert opts[:cleanup_paths] == [Path.dirname(state_path)]
+
+      assert opts[:timeout] == :timer.minutes(2)
+
+      assert %{
+               "NODE_PATH" => "./priv/openfn",
+               "PATH" => "./priv/openfn/bin:" <> _
+             } = opts[:env]
+    end
+
+    test "logs the CLI's stderr when it fails, and removes the state" do
+      stub(Lightning.OsProcess, :run, fn _cmd, _args, opts ->
+        send(self(), {:dir, hd(opts[:cleanup_paths])})
+        {:ok, %{status: 1, out: "", err: "Error: Cannot find module 'x'\n"}}
+      end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:ok, %CLI.Result{status: 1}} =
+                   CLI.metadata(%{}, "/tmp/foo")
+        end)
+
+      assert log =~ "openfn metadata exited with status 1"
+      assert log =~ "Cannot find module 'x'"
+      assert_received {:dir, dir}
+      refute File.exists?(dir)
+    end
+
+    test "logs a warning with the CLI's stderr on timeout" do
+      stub(Lightning.OsProcess, :run, fn _cmd, _args, _opts ->
+        {:error, {:timeout, %{out: "", err: "still waiting\n"}}}
+      end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, :timeout} = CLI.metadata(%{}, "/tmp/foo")
+        end)
+
+      assert log =~ "timed out after 120000ms"
+      assert log =~ "still waiting"
     end
 
     test "with correct state" do
@@ -72,9 +103,11 @@ defmodule Lightning.CLITest do
       {"message":["/tmp/openfn/repo/meta/b57c9a0c121b0a835b25436133e69221035602da3ff9981e1fcf2d6128aec622.json"]}
       """
 
-      FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
+      stub(Lightning.OsProcess, :run, fn _cmd, _args, _opts ->
+        {:ok, %{status: 0, out: stdout, err: ""}}
+      end)
 
-      res = CLI.metadata(state, adaptor_path)
+      assert {:ok, res} = CLI.metadata(state, adaptor_path)
 
       assert res.status == 0
       assert res.end_time - res.start_time >= 0
@@ -86,49 +119,5 @@ defmodule Lightning.CLITest do
       assert last ==
                "/tmp/openfn/repo/meta/b57c9a0c121b0a835b25436133e69221035602da3ff9981e1fcf2d6128aec622.json"
     end
-
-    @tag :tmp_dir
-    test "does not allow shell injection via the state", %{tmp_dir: dir} do
-      marker = Path.join(dir, "pwned-#{Ecto.UUID.generate()}")
-
-      state = %{"foo" => "'$(touch #{marker})'"}
-      adaptor_path = "/tmp/foo"
-
-      run_on_real_rambo()
-
-      CLI.metadata(state, adaptor_path)
-
-      refute File.exists?(marker)
-    end
-
-    @tag :tmp_dir
-    test "does not allow shell injection via the adaptor path", %{tmp_dir: dir} do
-      marker = Path.join(dir, "pwned-#{Ecto.UUID.generate()}")
-
-      state = %{"foo" => "barbar"}
-      adaptor_path = "; touch #{marker}; "
-
-      run_on_real_rambo()
-
-      _res = CLI.metadata(state, adaptor_path)
-
-      refute File.exists?(marker)
-    end
-  end
-
-  defp run_on_real_rambo do
-    Mimic.copy(FakeRambo)
-
-    FakeRambo
-    |> stub(:run, fn cmd, args, opts ->
-      opts = Keyword.put(opts, :log, false)
-      Rambo.run(cmd, args, opts)
-    end)
-  end
-
-  defp expect_command do
-    assert_received {"/usr/bin/env", command, opts}
-
-    {command, opts}
   end
 end

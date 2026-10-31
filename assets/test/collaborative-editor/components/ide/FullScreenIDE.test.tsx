@@ -31,6 +31,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 vi.mock('../../../../js/monaco', () => ({
@@ -176,6 +177,17 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
+  useSessionContext: () => ({ workflow: null, permissions: null }),
+  useExperimentalFeatures: () => mockExperimentalFeatures,
   useProject: () => ({
     id: 'project-1',
     name: 'Test Project',
@@ -192,10 +204,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useAppConfig: () => ({
     ai_enabled: false,
   }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
 }));
 
 // Mock workflow hooks
@@ -235,18 +247,24 @@ const mockWorkflow: Workflow = {
 const mockYText = new Y.Text();
 mockYText.insert(0, 'fn(state => state)');
 
+const mockReadOnlyState = { isReadOnly: false, tooltipMessage: '' };
+let mockExperimentalFeatures = true;
+let mockVersionMismatch: { runVersion: number; currentVersion: number } | null =
+  null;
+
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowEnabled: () => ({ enabled: true, setEnabled: vi.fn() }),
   useCanSave: () => ({
     canSave: true,
     tooltipMessage: 'Save workflow',
   }),
   useCanRun: () => ({
-    canRun: true,
+    canRun: !mockReadOnlyState.isReadOnly,
     tooltipMessage: 'Run workflow',
   }),
   useWorkflowReadOnly: () => ({
-    isReadOnly: false,
-    tooltipMessage: '',
+    isReadOnly: mockReadOnlyState.isReadOnly,
+    tooltipMessage: mockReadOnlyState.tooltipMessage,
   }),
   useWorkflowSettingsErrors: () => ({
     hasErrors: false,
@@ -317,11 +335,18 @@ vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
     loading: false,
     error: null,
   }),
-  useProjectAdaptors: () => ({
-    projectAdaptors: [],
+  useAdaptorsInUse: () => ({
+    adaptorsInUse: [],
     allAdaptors: [],
   }),
   useAdaptors: () => [],
+  useAdaptorsLoading: () => false,
+  useAdaptorsError: () => null,
+  useAdaptorCommands: () => ({
+    requestAdaptors: vi.fn(),
+    setAdaptors: vi.fn(),
+    clearError: vi.fn(),
+  }),
 }));
 
 // Mock credentials hooks
@@ -383,7 +408,15 @@ vi.mock(
 
 // Mock version select hook
 vi.mock('../../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
-  useVersionSelect: () => vi.fn(),
+  useVersionSelect: () => ({
+    handleVersionSelect: vi.fn(),
+    prompt: {
+      isAsking: false,
+      saveAndRunPending: vi.fn(),
+      runPending: vi.fn(),
+      cancel: vi.fn(),
+    },
+  }),
 }));
 
 // Mock JobSelector
@@ -428,6 +461,10 @@ vi.mock('react-resizable-panels', () => ({
   PanelResizeHandle: () => <div data-testid="resize-handle" />,
 }));
 
+vi.mock('../../../../js/collaborative-editor/hooks/useVersionMismatch', () => ({
+  useVersionMismatch: () => mockVersionMismatch,
+}));
+
 // Helper function to render FullScreenIDE with providers
 function renderFullScreenIDE(
   props: React.ComponentProps<typeof FullScreenIDE>
@@ -444,6 +481,10 @@ function renderFullScreenIDE(
 describe('FullScreenIDE', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockExperimentalFeatures = true;
+    mockVersionMismatch = null;
+    mockReadOnlyState.isReadOnly = false;
+    mockReadOnlyState.tooltipMessage = '';
 
     // Default mock for searchDataclips
     vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
@@ -455,6 +496,9 @@ describe('FullScreenIDE', () => {
     // Reset search params to default state
     Object.keys(mockParams).forEach(key => delete mockParams[key]);
     mockParams.job = 'job-1';
+
+    mockReadOnlyState.isReadOnly = false;
+    mockReadOnlyState.tooltipMessage = '';
   });
 
   describe('Initial State', () => {
@@ -467,6 +511,20 @@ describe('FullScreenIDE', () => {
         expect(screen.getByText('History')).toBeInTheDocument();
         expect(screen.getByText('Run')).toBeInTheDocument();
       });
+    });
+
+    test('keeps New Run and History on a read-only workflow', async () => {
+      mockReadOnlyState.isReadOnly = true;
+      const onClose = vi.fn();
+
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() => {
+        expect(screen.getByText('History')).toBeInTheDocument();
+      });
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
 
     test('right panel is not shown initially', async () => {
@@ -746,6 +804,65 @@ describe('FullScreenIDE', () => {
         ).toBeInTheDocument();
         expect(screen.getByTitle('Show metadata explorer')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('what the experimental flag changes', () => {
+    test('keeps New Run put and disabled on a read-only view, without the flag', async () => {
+      mockExperimentalFeatures = false;
+      mockReadOnlyState.isReadOnly = true;
+      mockReadOnlyState.tooltipMessage = 'This workflow is read-only';
+
+      renderFullScreenIDE({ onClose: vi.fn() });
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
+      });
+    });
+
+    test('keeps New Run on a read-only view once the flag is on', async () => {
+      mockExperimentalFeatures = true;
+      mockReadOnlyState.isReadOnly = true;
+
+      renderFullScreenIDE({ onClose: vi.fn() });
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('panel-group').length).toBeGreaterThan(0);
+      });
+
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
+    });
+
+    test('warns when the run on screen executed different content', async () => {
+      mockExperimentalFeatures = false;
+      mockParams.panel = 'editor';
+      mockParams.run = 'run-1';
+      mockVersionMismatch = { runVersion: 3, currentVersion: 7 };
+
+      renderFullScreenIDE({ onClose: vi.fn() });
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(
+          'This run took place on version 3.'
+        );
+      });
+    });
+
+    test('says nothing when the run matches what is on screen', async () => {
+      mockExperimentalFeatures = false;
+      mockParams.panel = 'editor';
+      mockParams.run = 'run-1';
+      mockVersionMismatch = null;
+
+      renderFullScreenIDE({ onClose: vi.fn() });
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('panel-group').length).toBeGreaterThan(0);
+      });
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
   });
 });

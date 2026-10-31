@@ -6,8 +6,6 @@ defmodule LightningWeb.AuditLive.Index do
 
   on_mount {LightningWeb.Hooks, :ensure_admin}
 
-  import PetalComponents.Badge
-
   alias Lightning.Auditing
 
   @impl true

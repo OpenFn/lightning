@@ -36,6 +36,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 vi.mock('../../../../js/monaco', () => ({
@@ -129,6 +130,17 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useSessionContext: () => ({ workflow: null, permissions: null }),
+  useExperimentalFeatures: () => true,
   useProject: () => ({
     id: 'project-1',
     name: 'Test Project',
@@ -145,10 +157,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useAppConfig: () => ({
     ai_enabled: false,
   }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
 }));
 
 // Mock workflow hooks
@@ -180,6 +192,7 @@ const mockYText = new Y.Text();
 mockYText.insert(0, 'fn(state => state)');
 
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowEnabled: () => ({ enabled: true, setEnabled: vi.fn() }),
   useCanSave: () => ({
     canSave: true,
     tooltipMessage: 'Save workflow',
@@ -210,10 +223,6 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useNodeSelection: () => ({
     currentNode: { node: null, type: null, id: null },
     selectNode: vi.fn(),
-  }),
-  useWorkflowEnabled: () => ({
-    enabled: true,
-    setEnabled: vi.fn(),
   }),
   useWorkflowActions: () => ({
     selectJob: vi.fn(),
@@ -269,10 +278,11 @@ vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
 
 // Mock adaptor hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
-  useProjectAdaptors: () => ({
-    projectAdaptors: [],
+  useAdaptorsInUse: () => ({
+    adaptorsInUse: [],
     allAdaptors: [],
   }),
+  useAdaptorsLoading: () => false,
 }));
 
 // Mock LiveView actions

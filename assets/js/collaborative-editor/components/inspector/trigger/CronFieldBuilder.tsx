@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 
-import { cn } from '../../../../utils/cn';
+import { humanizeCron } from '#/utils/humanizeCron';
 
-import { humanizeCron } from './cronSchedule';
+import { cn } from '../../../../utils/cn';
 
 interface CronFieldBuilderProps {
   value: string;

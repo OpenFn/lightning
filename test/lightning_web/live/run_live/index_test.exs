@@ -971,6 +971,163 @@ defmodule LightningWeb.RunLive.IndexTest do
       chip = element(view, "#workorder-id-filter-chip")
       assert render(chip) =~ "Work order:"
     end
+
+    test "error signature filter chip appears when the filter is set", %{
+      conn: conn,
+      project: project,
+      jobs: [job | _]
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              error_signature_exit_reason: "fail",
+              error_signature_error_type: "AdaptorError",
+              error_signature_job_id: job.id
+            }
+          )
+        )
+
+      assert has_element?(view, "#error-signature-filter-chip")
+      chip = element(view, "#error-signature-filter-chip")
+
+      assert render(chip) =~ "fail:AdaptorError @ #{job.name}"
+    end
+
+    # The name is read back from the id, so the read is scoped to the project
+    # the page is on — a hand-edited id from elsewhere names nothing here.
+    test "error signature filter chip falls back to the id for a job outside the project",
+         %{conn: conn, project: project} do
+      other_job = insert(:job, workflow: build(:workflow))
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              error_signature_exit_reason: "fail",
+              error_signature_job_id: other_job.id
+            }
+          )
+        )
+
+      chip = render(element(view, "#error-signature-filter-chip"))
+
+      refute chip =~ other_job.name
+
+      assert chip =~
+               LightningWeb.LiveHelpers.display_short_uuid(other_job.id)
+    end
+
+    test "error signature filter chip omits error type and job id when absent",
+         %{
+           conn: conn,
+           project: project
+         } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{error_signature_exit_reason: "lost"}
+          )
+        )
+
+      chip = element(view, "#error-signature-filter-chip")
+      html = render(chip)
+      assert html =~ "lost"
+      refute html =~ "@"
+    end
+
+    test "error signature filter chip is absent when the filter is not set",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      refute has_element?(view, "#error-signature-filter-chip")
+    end
+
+    # A band of a bar on the workflow health page's runs chart links here, and
+    # sets both. Two chips, so either can be dropped without the other: the
+    # band without the slot is every failure in the range, the slot without
+    # the band is the whole bar.
+    test "a runs-chart band renders a run status chip and a run date chip", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              run_date_after: "2026-09-08T02:00:00Z",
+              run_date_before: "2026-09-08T04:00:00Z",
+              run_status: ["failed", "crashed"]
+            }
+          )
+        )
+
+      assert render(element(view, "#run-status-filter-chip")) =~
+               "Run status: Failed, Crashed"
+
+      dates = render(element(view, "#run-dates-filter-chip"))
+
+      # The stamp is UTC and says so: the bars are cut on the reader's clock
+      # and nothing here records what that clock is.
+      assert dates =~ "Run created 8-Sep 02:00"
+      assert dates =~ "8-Sep 04:00 UTC"
+    end
+
+    test "a run status filter renders no run date chip", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{run_status: ["success"]}
+          )
+        )
+
+      assert render(element(view, "#run-status-filter-chip")) =~
+               "Run status: Success"
+
+      refute has_element?(view, "#run-dates-filter-chip")
+    end
+
+    # The newest bar is still filling, so its link carries no upper bound.
+    test "run date chip reads open-ended without a run_date_before", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{run_date_after: "2026-09-08T02:00:00Z"}
+          )
+        )
+
+      assert render(element(view, "#run-dates-filter-chip")) =~
+               "Run created after 8-Sep 02:00 UTC"
+
+      refute has_element?(view, "#run-status-filter-chip")
+    end
+
+    test "run chips are absent when neither filter is set", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      refute has_element?(view, "#run-status-filter-chip")
+      refute has_element?(view, "#run-dates-filter-chip")
+    end
   end
 
   describe "cancel work orders" do

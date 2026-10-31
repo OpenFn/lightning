@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import {
+  useAISkills,
   useAppConfig,
   useProject,
   useSessionContextError,
@@ -71,7 +72,6 @@ function createMockProject(): ProjectContext {
 function createMockAppConfig(): AppConfig {
   return {
     require_email_verification: false,
-    kafka_triggers_enabled: false,
   };
 }
 
@@ -352,5 +352,41 @@ describe('Hook Integration', () => {
     act(() => store.setError('Something went wrong'));
     expect(loadingResult.current).toBe(false);
     expect(errorResult.current).toBe('Something went wrong');
+  });
+});
+
+describe('useAISkills()', () => {
+  const skills = [
+    { name: 'design', description: 'Plan a workflow', workflow: 'any' },
+    { name: 'qa', description: 'Review this workflow', workflow: 'existing' },
+  ];
+
+  test.each([
+    [true, ['design']],
+    [false, ['design', 'qa']],
+  ])('on a new workflow (%s) offers %j', async (isNewWorkflow, expected) => {
+    const store = createSessionContextStore(isNewWorkflow);
+    const { mockChannel } = setupHookTest(store);
+    const { result } = renderHook(() => useAISkills(), {
+      wrapper: createWrapper(store),
+    });
+
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: createMockAppConfig(),
+        permissions: mockPermissions,
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+        ai_skills: skills,
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.map(s => s.name)).toEqual(expected);
+    });
   });
 });

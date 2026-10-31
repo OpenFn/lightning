@@ -10,6 +10,7 @@ defmodule Lightning.WorkflowEdgeCasesTest do
   use LightningWeb.ConnCase, async: false
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Mox
 
@@ -40,14 +41,19 @@ defmodule Lightning.WorkflowEdgeCasesTest do
     %{uri: uri}
   end
 
-  setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
+  setup [
+    :isolated_adaptors,
+    :register_and_log_in_superuser,
+    :stub_rate_limiter_ok,
+    :seed_default_adaptor
+  ]
 
   # ---------------------------------------------------------------------------
   # Test cases — each one only needs to supply the job body and assertions.
   # ---------------------------------------------------------------------------
 
   @tag :integration
-  @tag timeout: 10_000
+  @tag timeout: 120_000
   test "job that returns 42 completes successfully", %{uri: uri} do
     job_body = """
     fn(state => {
@@ -67,7 +73,7 @@ defmodule Lightning.WorkflowEdgeCasesTest do
   end
 
   @tag :integration
-  @tag timeout: 10_000
+  @tag timeout: 20_000
   test "job that uses too much memory very quickly is properly killed", %{
     uri: uri
   } do
@@ -170,6 +176,15 @@ defmodule Lightning.WorkflowEdgeCasesTest do
     work_order = WorkOrders.get(workorder_id)
 
     %{run: run, step: step, work_order: work_order}
+  end
+
+  defp seed_default_adaptor(_context) do
+    Lightning.AdaptorTestHelpers.seed_adaptor_package(
+      "@openfn/language-common",
+      "3.0.2"
+    )
+
+    :ok
   end
 
   defp start_runtime_manager(_context \\ nil) do

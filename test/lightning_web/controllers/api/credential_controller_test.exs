@@ -408,6 +408,45 @@ defmodule LightningWeb.API.CredentialControllerTest do
   describe "create" do
     setup [:assign_bearer_for_api]
 
+    test "refuses a repo connection token instead of crashing", %{conn: conn} do
+      # `require_authenticated_api_resource` lets these through the pipeline,
+      # and a credential belongs to a person, so there is no sensible owner to
+      # give it. It used to fall over on the user association and come back a
+      # 422; it must not become a 500 now that the actor is threaded through.
+      repo_connection =
+        insert(:project_repo_connection, project: insert(:project))
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      assert conn
+             |> post(~p"/api/credentials", %{
+               "name" => "Planted",
+               "schema" => "raw",
+               "credential_bodies" => [
+                 %{"name" => "main", "body" => %{"a" => "b"}}
+               ]
+             })
+             |> json_response(403)
+
+      refute Lightning.Repo.get_by(Lightning.Credentials.Credential,
+               name: "Planted"
+             )
+
+      # Listing crashed the same way, for the same reason, on both routes.
+      assert conn |> get(~p"/api/credentials") |> json_response(403)
+
+      project = insert(:project)
+
+      assert conn
+             |> get(~p"/api/projects/#{project.id}/credentials")
+             |> json_response(403)
+    end
+
     test "creates a basic credential without project associations", %{
       conn: conn,
       user: user

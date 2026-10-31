@@ -73,6 +73,94 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     })
   end
 
+  describe "messages it does not recognise" do
+    setup [:setup_document_supervisor]
+
+    test "an unexpected message leaves the document standing", context do
+      log =
+        capture_log(fn ->
+          send(context.doc_supervisor, {:something, :unexpected})
+          Process.sleep(50)
+        end)
+
+      assert log =~ "unexpected message"
+
+      assert Process.alive?(context.doc_supervisor)
+      assert Process.alive?(context.shared_doc)
+      assert Process.alive?(context.persistence_writer)
+    end
+
+    test "a reconcile that raises leaves the document standing", context do
+      {:ok, stub} = Agent.start(fn -> :ok end)
+      document_name = "workflow:#{context.workflow_id}"
+      :pg.join(:workflow_collaboration, document_name, stub)
+
+      on_exit(fn ->
+        if Process.alive?(stub) do
+          :pg.leave(:workflow_collaboration, document_name, stub)
+          Agent.stop(stub)
+        end
+      end)
+
+      log =
+        capture_log(fn ->
+          send(
+            context.doc_supervisor,
+            %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{
+              workflow_id: context.workflow_id
+            }
+          )
+
+          Process.sleep(200)
+        end)
+
+      assert log =~ "Reconcile failed"
+
+      assert Process.alive?(context.doc_supervisor)
+      assert Process.alive?(context.shared_doc)
+      assert Process.alive?(context.persistence_writer)
+    end
+
+    test "a reconcile that exits leaves the document standing", context do
+      Ecto.Adapters.SQL.Sandbox.allow(
+        Lightning.Repo,
+        self(),
+        context.doc_supervisor
+      )
+
+      {:ok, stub} = Agent.start(fn -> :ok end)
+
+      document_name = "workflow:#{context.workflow_id}"
+
+      :pg.join(:workflow_collaboration, document_name, stub)
+
+      on_exit(fn ->
+        if Process.alive?(stub) do
+          :pg.leave(:workflow_collaboration, document_name, stub)
+          Agent.stop(stub)
+        end
+      end)
+
+      log =
+        capture_log(fn ->
+          send(
+            context.doc_supervisor,
+            %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{
+              workflow_id: context.workflow_id
+            }
+          )
+
+          Process.sleep(200)
+        end)
+
+      assert log =~ "Reconcile exited"
+
+      assert Process.alive?(context.doc_supervisor)
+      assert Process.alive?(context.shared_doc)
+      assert Process.alive?(context.persistence_writer)
+    end
+  end
+
   # Setup for tests that need a test supervisor (like restart strategy test)
   defp setup_test_supervisor(context) do
     {:ok, test_supervisor} = DynamicSupervisor.start_link(strategy: :one_for_one)

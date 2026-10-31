@@ -26,7 +26,6 @@ import type { CredentialStoreInstance } from '../../../../js/collaborative-edito
 import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
 import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { UIStoreInstance } from '../../../../js/collaborative-editor/stores/createUIStore';
 import { createUIStore } from '../../../../js/collaborative-editor/stores/createUIStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
@@ -35,7 +34,10 @@ import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
-import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
+import {
+  createMockSocket,
+  createTestSessionStore,
+} from '../../__helpers__/sessionStoreHelpers';
 import {
   createMockURLState,
   getURLStateMockValue,
@@ -97,9 +99,10 @@ function createWrapper(
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const mockSocket = createMockSocket();
   sessionStore.initializeSession(
     mockSocket,
@@ -134,7 +137,7 @@ describe('TriggerInspector — show dispatch by type', () => {
   let awarenessStore: AwarenessStoreInstance;
   let uiStore: UIStoreInstance;
 
-  function makeSessionContextStore(triggerType: string): {
+  function makeSessionContextStore(): {
     sessionContextStore: SessionContextStoreInstance;
   } {
     const sessionContextStore = createSessionContextStore();
@@ -152,12 +155,12 @@ describe('TriggerInspector — show dispatch by type', () => {
         project: null,
         config: {
           require_email_verification: false,
-          kafka_triggers_enabled: triggerType === 'kafka',
         },
         permissions: {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
@@ -190,12 +193,6 @@ describe('TriggerInspector — show dispatch by type', () => {
       { enabled: true, cron_expression: '0 9 * * *' },
       'On a schedule',
     ],
-    [
-      'kafka trigger renders KafkaShowPanel',
-      'kafka',
-      { enabled: true },
-      'Kafka',
-    ],
   ])('%s', (_, triggerType, extraFields, expectedHeading) => {
     const triggerId = `trigger-${triggerType}`;
     const ydoc = createWorkflowYDoc({
@@ -206,7 +203,7 @@ describe('TriggerInspector — show dispatch by type', () => {
     ydoc.getMap('workflow').set('lock_version', 1);
 
     const workflowStore = createConnectedWorkflowStore(ydoc);
-    const { sessionContextStore } = makeSessionContextStore(triggerType);
+    const { sessionContextStore } = makeSessionContextStore();
     const trigger = workflowStore.getSnapshot().triggers[0];
 
     render(

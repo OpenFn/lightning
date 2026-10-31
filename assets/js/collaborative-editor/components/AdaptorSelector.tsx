@@ -20,8 +20,8 @@ interface AdaptorSelectorProps {
   updateJob: (jobId: string, updates: Partial<Workflow.Job>) => void;
   /** Setter to control configure modal state */
   setIsConfigureModalOpen: (open: boolean) => void;
-  /** Available project adaptors */
-  projectAdaptors: Adaptor[];
+  /** Adaptors currently in use in this workflow */
+  adaptorsInUse: Adaptor[];
   /** Optional callback before adaptor change (for form sync in JobForm) */
   onAdaptorChangeStart?: () => void;
 }
@@ -45,7 +45,7 @@ export function AdaptorSelector({
   job,
   updateJob,
   setIsConfigureModalOpen,
-  projectAdaptors,
+  adaptorsInUse,
   onAdaptorChangeStart,
 }: AdaptorSelectorProps) {
   const {
@@ -90,7 +90,7 @@ export function AdaptorSelector({
         isOpen={isOpen}
         onClose={handlePickerCloseGuarded}
         onSelect={handleAdaptorSelect}
-        projectAdaptors={projectAdaptors}
+        adaptorsInUse={adaptorsInUse}
       />
 
       <AlertDialog

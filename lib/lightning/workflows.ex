@@ -3,12 +3,16 @@ defmodule Lightning.Workflows do
   The Workflows context.
   """
 
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
+
   import Ecto.Query
 
   alias Ecto.Multi
 
+  alias Lightning.Config
   alias Lightning.Credentials.Scoping
-  alias Lightning.KafkaTriggers
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Audit
@@ -18,13 +22,19 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Query
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Triggers
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowRelease
+  alias Lightning.Workflows.WorkflowReleases
   alias Lightning.WorkflowVersions
+  alias Lightning.WorkOrder
 
+  @doc "Subscribes to the workflow events of a single project."
   defdelegate subscribe(project_id), to: Events
 
   require Logger
+
+  # Matches Lightning.Validators, which enforces the same width on write.
+  @name_column_limit 255
 
   @doc """
   Returns the list of workflows.
@@ -134,16 +144,45 @@ defmodule Lightning.Workflows do
   @doc """
   Gets a workflow by id, scoped to the given project.
 
-  Returns `nil` when the id is malformed, missing, or belongs to another
-  project, so it can't be used to read or mutate a workflow across projects.
+  Returns `nil` when the id is malformed, missing, belongs to another project,
+  or is marked for deletion, so it can't be used to read or mutate a workflow
+  across projects or one on its way out.
   """
   def get_workflow_for_project(%Project{} = project, id, opts \\ []) do
     if Lightning.Validators.valid_uuid?(id) do
-      id
-      |> get_workflow_query(opts)
-      |> where([w], w.project_id == ^project.id)
+      from(w in Query.workflows_for(project), where: w.id == ^id)
+      |> preload(^Keyword.get(opts, :include, []))
       |> Repo.one()
     end
+  end
+
+  @doc """
+  Returns true when a workflow's lifecycle state permits editing in the given
+  project. A `:live` workflow is read-only on its own project; inside a sandbox
+  the clone stays editable, and drafts are always editable. Anything that is not
+  a live workflow (a draft, or a snapshot view) is editable as far as this rule
+  is concerned.
+  """
+  @spec editable_state?(struct() | nil, Project.t()) :: boolean()
+  def editable_state?(%Workflow{state: :live}, %Project{} = project),
+    do: Project.sandbox?(project)
+
+  def editable_state?(_workflow, _project), do: true
+
+  @doc """
+  Fetches the single active (non-deleted) workflow with `name` in a project, or
+  `nil`. Workflow names are unique per project, so at most one row matches.
+  """
+  @spec get_workflow_by_name(Ecto.UUID.t(), String.t()) :: Workflow.t() | nil
+  def get_workflow_by_name(project_id, name)
+      when is_binary(project_id) and is_binary(name) do
+    from(w in Workflow,
+      where:
+        w.project_id == ^project_id and w.name == ^name and
+          is_nil(w.deleted_at),
+      limit: 1
+    )
+    |> Repo.one()
   end
 
   @spec save_workflow(
@@ -171,7 +210,7 @@ defmodule Lightning.Workflows do
     transaction_result =
       try do
         changeset
-        |> build_save_multi(actor)
+        |> build_save_multi(actor, opts)
         |> Repo.transaction()
 
         # NOTE: Ecto.StaleEntryError is deliberately NOT caught — optimistic
@@ -285,7 +324,7 @@ defmodule Lightning.Workflows do
   # Builds the Ecto.Multi pipeline for save_workflow. Does NOT call
   # Repo.transaction — that stays in the try/rescue block of the caller so
   # rescue wraps only the transaction, not this builder.
-  defp build_save_multi(changeset, actor) do
+  defp build_save_multi(changeset, actor, opts) do
     Multi.new()
     |> Multi.put(:actor, actor)
     |> Multi.run(:validate, fn _repo, _changes ->
@@ -308,11 +347,67 @@ defmodule Lightning.Workflows do
     end)
     |> maybe_capture_snapshot(changeset)
     |> maybe_audit_workflow_state_changes(changeset)
-    |> Multi.run(:workflow_version, fn _repo, %{workflow: workflow} ->
-      hash = WorkflowVersions.generate_hash(workflow)
-      WorkflowVersions.record_version(workflow, hash)
+    |> maybe_record_version(changeset)
+    |> maybe_record_go_live_release(opts)
+  end
+
+  defp maybe_record_version(multi, changeset) do
+    if unmergeable_change_only?(changeset) do
+      Multi.put(multi, :workflow_version, nil)
+    else
+      Multi.run(multi, :workflow_version, fn _repo, %{workflow: workflow} ->
+        hash = WorkflowVersions.generate_hash(workflow)
+        WorkflowVersions.record_version(workflow, hash)
+      end)
+    end
+  end
+
+  @unmergeable_workflow_changes [:state, :triggers, :lock_version, :snapshot]
+
+  defp unmergeable_change_only?(%Ecto.Changeset{changes: changes}) do
+    changes |> Map.keys() |> Enum.all?(&(&1 in @unmergeable_workflow_changes)) and
+      changes |> Map.get(:triggers, []) |> Enum.all?(&enabled_only_change?/1)
+  end
+
+  defp enabled_only_change?(%Ecto.Changeset{action: action})
+       when action in [:replace, :delete],
+       do: false
+
+  defp enabled_only_change?(%Ecto.Changeset{changes: changes}) do
+    changes |> Map.keys() |> Enum.all?(&(&1 == :enabled))
+  end
+
+  defp maybe_record_go_live_release(multi, opts) do
+    case Keyword.get(opts, :record_release) do
+      nil -> multi
+      :go_live -> record_release(multi, :go_live, nil)
+      {:restore, from} -> record_release(multi, :restore, from)
+    end
+  end
+
+  defp record_release(multi, kind, restored_from) do
+    Multi.run(multi, :workflow_release, fn repo, changes ->
+      %{workflow: workflow, actor: actor} = changes
+
+      case changes[:snapshot] do
+        nil ->
+          {:ok, nil}
+
+        snapshot ->
+          WorkflowReleases.insert_release(repo, %{
+            workflow_id: workflow.id,
+            kind: kind,
+            snapshot_id: snapshot.id,
+            published_by_id: actor_id(actor),
+            source_project_id: nil,
+            restored_from_version_number: restored_from
+          })
+      end
     end)
   end
+
+  defp actor_id(%Lightning.Accounts.User{id: id}), do: id
+  defp actor_id(_actor), do: nil
 
   defp validate_not_deleted(%{data: %{deleted_at: nil}}), do: {:ok, true}
   defp validate_not_deleted(_changeset), do: {:error, :workflow_deleted}
@@ -409,15 +504,13 @@ defmodule Lightning.Workflows do
        ),
        do: {:error, reason}
 
-  # Post-commit side effects: Kafka events, workflow_updated broadcast,
+  # Post-commit side effects: workflow_updated broadcast,
   # telemetry, and optional reconciliation. Runs OUTSIDE the rescue block: the
   # write is already durable, so these MUST NOT raise the rescued Ecto types
   # (they operate on already-validated/committed data) — a raise here is an honest
   # crash, never a downgrade of a committed save. If you add a post-commit step
   # that can fail, handle it here; don't widen the rescue to cover it.
   defp after_commit(workflow, changeset, skip_reconcile) do
-    publish_kafka_trigger_events(changeset)
-
     Events.workflow_updated(workflow)
 
     fire_workflow_saved_telemetry(workflow)
@@ -567,35 +660,6 @@ defmodule Lightning.Workflows do
     end)
 
     {:ok, count}
-  end
-
-  @spec publish_kafka_trigger_events(Ecto.Changeset.t(Workflow.t())) :: :ok
-  def publish_kafka_trigger_events(changeset) do
-    changeset
-    |> KafkaTriggers.get_kafka_triggers_being_updated()
-    |> Enum.each(fn trigger_id ->
-      Triggers.Events.kafka_trigger_updated(trigger_id)
-    end)
-  end
-
-  @doc """
-  Fires `kafka_trigger_updated` for every kafka trigger belonging to the
-  given workflow IDs. Call after triggers have been disabled so kafka pipeline
-  supervisors shut down those pipelines.
-  """
-  @spec notify_kafka_triggers_for_workflows([Ecto.UUID.t()]) :: :ok
-  def notify_kafka_triggers_for_workflows([]), do: :ok
-
-  def notify_kafka_triggers_for_workflows(workflow_ids)
-      when is_list(workflow_ids) do
-    from(t in Trigger,
-      where: t.workflow_id in ^workflow_ids and t.type == :kafka,
-      select: t.id
-    )
-    |> Repo.all()
-    |> Enum.each(&Triggers.Events.kafka_trigger_updated/1)
-
-    :ok
   end
 
   @doc """
@@ -850,14 +914,20 @@ defmodule Lightning.Workflows do
     |> Multi.update_all(
       :disable_triggers,
       workflow_triggers_query,
-      set: [enabled: false]
+      # The path goes with the workflow's name, or a hidden row keeps it
+      # reserved against a replacement.
+      set: [enabled: false, custom_path: nil, legacy_bare_path: false]
     )
     |> Repo.transaction()
     |> tap(fn result ->
       with {:ok, _} <- result do
         preloaded = Repo.preload(workflow, [:triggers], force: true)
-        notify_kafka_triggers_for_workflows([workflow.id])
         Events.workflow_updated(preloaded)
+
+        # The deletion goes out on the *project's* topic, not this module's:
+        # sessions have to be told, and they cannot subscribe to a topic that
+        # also fires on every save. See `Lightning.Projects.Events`.
+        Lightning.Projects.Events.workflow_deleted(preloaded)
       end
     end)
   end
@@ -895,7 +965,7 @@ defmodule Lightning.Workflows do
         name: name,
         project_id: project_id
       }) do
-    base_name = "#{name}_del"
+    base_name = "#{trim_to_fit_suffix(name)}_del"
 
     existing_names =
       from(w in Workflow,
@@ -918,6 +988,152 @@ defmodule Lightning.Workflows do
       else: candidate
   end
 
+  # workflows.name is varchar(255) and Postgres counts those in codepoints. The
+  # `_del` suffix goes on after every validation has run, so a workflow already
+  # at the column width would raise a bare Postgrex 22001 out of the delete
+  # button, in a LiveView handler with nothing to rescue it.
+  @suffix_headroom String.length("_del") + 4
+
+  defp trim_to_fit_suffix(name) do
+    limit = @name_column_limit - @suffix_headroom
+    codepoints = String.codepoints(name)
+
+    if length(codepoints) > limit do
+      codepoints |> Enum.take(limit) |> Enum.join()
+    else
+      name
+    end
+  end
+
+  @doc """
+  Permanently deletes workflows that were marked for deletion long enough ago
+  and have no history left.
+
+  A workflow becomes purgeable `purge_deleted_after_days` days after it was
+  marked for deletion, and only once the last of its work orders is gone.
+  Deleting a workflow's history is the data retention policy's job, not this
+  one's: a workflow whose project keeps history forever is never purged, and
+  one whose retention window is shorter than the purge window is purged on the
+  first nightly sweep after its history expires.
+
+  An unset `purge_deleted_after_days` reads as zero days, in line with the
+  other purge workers — the cron entry driving this is only registered when
+  the setting is greater than zero.
+  """
+  @impl Oban.Worker
+  def perform(%Oban.Job{
+        args: %{"workflow_id" => workflow_id, "type" => "purge_deleted"}
+      }) do
+    case Repo.get(Workflow, workflow_id) do
+      nil ->
+        :ok
+
+      %Workflow{deleted_at: nil} ->
+        # The workflow came back between this job being enqueued and it
+        # running. A purge can't be undone, so leave it alone.
+        :ok
+
+      workflow ->
+        case delete_workflow(workflow) do
+          {:ok, _workflow} ->
+            :ok
+
+          {:error, :has_history} ->
+            # History arrived, or outlasted its expected retention window,
+            # between this job being enqueued and it running. Not an error:
+            # tomorrow's sweep re-checks and enqueues the workflow again.
+            {:cancel, :has_history}
+
+          {:error, %Ecto.Changeset{} = changeset} ->
+            {:error,
+             "workflow #{workflow_id} could not be purged: " <>
+               Enum.map_join(changeset.errors, "; ", fn {_, {msg, _}} -> msg end)}
+        end
+    end
+  end
+
+  def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
+    jobs =
+      purgeable_workflows_query()
+      |> Repo.all()
+      |> Enum.map(fn workflow_id ->
+        new(%{workflow_id: workflow_id, type: "purge_deleted"}, max_attempts: 3)
+      end)
+
+    Oban.insert_all(Lightning.Oban, jobs)
+
+    :ok
+  end
+
+  defp purgeable_workflows_query do
+    days = Config.purge_deleted_after_days() || 0
+
+    from(w in Workflow,
+      as: :workflow,
+      where: not is_nil(w.deleted_at) and w.deleted_at <= ago(^days, "day"),
+      where: not exists(workflow_history_query()),
+      select: w.id
+    )
+  end
+
+  defp workflow_history_query do
+    from(wo in WorkOrder,
+      where: wo.workflow_id == parent_as(:workflow).id,
+      select: 1
+    )
+  end
+
+  @doc """
+  Permanently deletes a workflow that has no history left.
+
+  Returns `{:error, :has_history}` for a workflow that still has work orders.
+  Their history belongs to the project and is the data retention policy's to
+  remove; until it does, work orders and steps hold `RESTRICT` references to
+  the workflow's snapshots and the delete could not succeed anyway.
+
+  Deleting the workflow row cascades to its jobs, triggers, edges, snapshots,
+  versions, templates and AI chat sessions. Project-scoped records the
+  workflow merely referenced, dataclips above all, are left where they are:
+  they belong to the project and outlive it.
+  """
+  @spec delete_workflow(Workflow.t()) ::
+          {:ok, Workflow.t()} | {:error, :has_history | Ecto.Changeset.t()}
+  def delete_workflow(%Workflow{} = workflow) do
+    if has_history?(workflow) do
+      {:error, :has_history}
+    else
+      Logger.debug(fn ->
+        # coveralls-ignore-start
+        "Deleting workflow ##{workflow.id}..."
+        # coveralls-ignore-stop
+      end)
+
+      workflow
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.foreign_key_constraint(:id,
+        name: :work_orders_snapshot_id_fkey,
+        message: "has work orders still recorded against its snapshots"
+      )
+      |> Ecto.Changeset.foreign_key_constraint(:id,
+        name: :runs_snapshot_id_fkey,
+        message: "has runs still recorded against its snapshots"
+      )
+      |> Ecto.Changeset.foreign_key_constraint(:id,
+        name: :steps_snapshot_id_fkey,
+        message: "has steps still recorded against its snapshots"
+      )
+      |> Repo.delete()
+    end
+  end
+
+  @doc """
+  Whether any work orders are still recorded against `workflow`.
+  """
+  @spec has_history?(Workflow.t()) :: boolean()
+  def has_history?(%Workflow{id: workflow_id}) do
+    Repo.exists?(from(wo in WorkOrder, where: wo.workflow_id == ^workflow_id))
+  end
+
   @doc """
   Creates an edge
   """
@@ -937,20 +1153,97 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Gets a single Webhook Trigger by its `custom_path` or `id`.
-  """
-  def get_webhook_trigger(path, opts \\ []) when is_binary(path) do
-    preloads = opts |> Keyword.get(:include, [])
+  Gets a single Webhook Trigger from the segments of an `/i/` request path.
 
-    from(t in Trigger,
-      where:
-        fragment(
-          "coalesce(?, ?)",
-          t.custom_path,
-          type(t.id, :string)
-        ) == ^path and t.type == :webhook,
-      preload: ^preloads
+  Tried in order, and no step can match more than one row, so a request can
+  never fail on an ambiguous path:
+
+    1. A project id and a custom path, when there is a second segment.
+    2. The first segment as a trigger id.
+    3. A bare custom path, for the triggers that held one before paths were
+       namespaced. That set is fixed at migration time and never grows.
+
+  Trailing segments are ignored: `/i/<trigger-uuid>/Patient` posts to the same
+  trigger as `/i/<trigger-uuid>`.
+  """
+  @spec get_webhook_trigger([String.t()], keyword()) :: Trigger.t() | nil
+  def get_webhook_trigger(segments, opts \\ [])
+
+  # Ordered so the likely answer is the first query. A request carrying a second
+  # segment is almost always the namespaced form, and one carrying none can only
+  # be an id or a legacy bare path.
+  def get_webhook_trigger([first | rest], opts) do
+    case cast_uuid(first) do
+      {:ok, id} when rest != [] ->
+        by_project_path(id, rest, opts) || by_trigger_id(id, opts) ||
+          by_legacy_path(first, opts)
+
+      {:ok, id} ->
+        by_trigger_id(id, opts) || by_legacy_path(first, opts)
+
+      :error ->
+        by_legacy_path(first, opts)
+    end
+  end
+
+  def get_webhook_trigger(_segments, _opts), do: nil
+
+  # `Ecto.UUID.cast/1` also accepts any 16-byte binary as a raw UUID, which
+  # would swallow a 16-character custom path like `orders_intake_v1`. Only the
+  # 36-character textual form is a URL segment we mean to read as an id.
+  defp cast_uuid(<<_::288>> = segment), do: Ecto.UUID.cast(segment)
+  defp cast_uuid(_segment), do: :error
+
+  defp by_trigger_id(id, opts) do
+    Trigger |> where([t], t.id == ^id) |> fetch_webhook(opts)
+  end
+
+  @doc """
+  Whether another webhook trigger in the project already answers on this path.
+
+  Advisory, so the editor can say so while the field is still open. The partial
+  unique index is what actually guarantees it, and a save still has to handle
+  losing the race.
+  """
+  @spec custom_path_taken?(term(), Ecto.UUID.t(), term()) :: boolean()
+  def custom_path_taken?(custom_path, project_id, except_trigger_id \\ nil)
+
+  def custom_path_taken?(custom_path, project_id, except_trigger_id)
+      when is_binary(custom_path) do
+    Trigger
+    |> where(
+      [t],
+      t.project_id == ^project_id and t.custom_path == ^custom_path and
+        t.type == :webhook
     )
+    |> then(fn query ->
+      # A malformed id excludes nothing rather than raising.
+      case Ecto.UUID.cast(except_trigger_id) do
+        {:ok, id} -> where(query, [t], t.id != ^id)
+        :error -> query
+      end
+    end)
+    |> Repo.exists?()
+  end
+
+  def custom_path_taken?(_custom_path, _project_id, _except), do: false
+
+  defp by_project_path(project_id, [custom_path | _rest], opts) do
+    Trigger
+    |> where([t], t.project_id == ^project_id and t.custom_path == ^custom_path)
+    |> fetch_webhook(opts)
+  end
+
+  defp by_legacy_path(custom_path, opts) do
+    Trigger
+    |> where([t], t.legacy_bare_path and t.custom_path == ^custom_path)
+    |> fetch_webhook(opts)
+  end
+
+  defp fetch_webhook(query, opts) do
+    query
+    |> where([t], t.type == :webhook)
+    |> preload(^Keyword.get(opts, :include, []))
     |> Repo.one()
   end
 
@@ -1032,14 +1325,14 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-    Checks if a workflow exists in the given project
+  Checks if a workflow exists in the given project
   """
   def workflow_exists_in_project?(project_id, workflow_id) do
-    query =
-      from q in Query.workflows_for(%Project{id: project_id}),
-        where: q.id == ^workflow_id
-
-    Repo.exists?(query)
+    Lightning.Validators.valid_uuid?(workflow_id) &&
+      from(w in Query.workflows_for(%Project{id: project_id}),
+        where: w.id == ^workflow_id
+      )
+      |> Repo.exists?()
   end
 
   @doc """
@@ -1133,6 +1426,63 @@ defmodule Lightning.Workflows do
     workflow
     |> change_workflow()
     |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
+  end
+
+  @doc """
+  Publishes a draft workflow: sets its state to `:live`, enables its triggers,
+  and saves in one transaction (capturing a snapshot and recording a version).
+  """
+  @spec go_live(Workflow.t(), struct()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def go_live(%Workflow{} = workflow, actor) do
+    workflow
+    |> Repo.preload(:triggers)
+    |> update_triggers_enabled_state(true)
+    |> Ecto.Changeset.put_change(:state, :live)
+    |> save_workflow(actor, record_release: :go_live)
+  end
+
+  @doc """
+  Puts an earlier version's content back, without taking the workflow offline.
+
+  A restore is a publish, not an edit: it writes the release's snapshot in as
+  the content, leaves the lifecycle state and surviving triggers' enabled flags
+  alone, and records the result as the next version labelled with where it came
+  from. Anything the snapshot does not hold is deleted, so a trigger added since
+  goes and its URL stops answering.
+
+  The caller authorises this and reconciles any open editor afterwards, as a
+  promote does; `save_workflow/3` skips its own reconcile because a wholesale
+  replacement is more than the incremental reconciler can express.
+  """
+  @spec restore_version(Workflow.t(), WorkflowRelease.t(), struct()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def restore_version(
+        %Workflow{} = workflow,
+        %WorkflowRelease{snapshot: %Snapshot{} = snapshot} = release,
+        actor
+      ) do
+    workflow.id
+    |> get_workflow(include: [:triggers, :jobs, :edges])
+    |> change_workflow(Snapshot.to_workflow_attrs(snapshot))
+    |> save_workflow(actor,
+      skip_reconcile: true,
+      record_release: {:restore, release.version_number}
+    )
+  end
+
+  @doc """
+  Takes a live workflow offline for editing: sets its state to `:draft` and
+  disables its triggers, saved in one transaction.
+  """
+  @spec switch_to_draft(Workflow.t(), struct()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def switch_to_draft(%Workflow{} = workflow, actor) do
+    workflow
+    |> Repo.preload(:triggers)
+    |> update_triggers_enabled_state(false)
+    |> Ecto.Changeset.put_change(:state, :draft)
+    |> save_workflow(actor)
   end
 
   defp update_triggers(triggers, enabled?) do

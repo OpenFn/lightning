@@ -96,6 +96,7 @@ function createTestWrapper() {
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   return function Wrapper({ children }: { children: React.ReactNode }) {
@@ -118,6 +119,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock the monaco module that CustomView imports
@@ -145,6 +147,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
     awareness: null,
     isConnected: false,
     isSynced: false,
+    settled: true,
   }),
 }));
 
@@ -263,7 +266,6 @@ const mockWorkflow: Workflow = {
       enabled: true,
       has_auth_method: false,
       cron_expression: null,
-      kafka_configuration: null,
     },
   ],
   edges: [],
@@ -316,7 +318,6 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
     // Create mock channel and connect session context store
     mockChannel = createMockPhoenixChannel();
     const mockProvider = createMockPhoenixChannelProvider(mockChannel);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     stores.sessionContextStore._connectChannel(mockProvider as any);
 
     // Clear followed run state on the NEW stores
@@ -332,6 +333,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,

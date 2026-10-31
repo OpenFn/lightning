@@ -25,6 +25,7 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   alias Lightning.Collaboration.Persistence
   alias Lightning.Collaboration.PersistenceWriter
   alias Lightning.Collaboration.Registry
+  alias Lightning.Collaboration.WorkflowReconciler
 
   require Logger
 
@@ -116,6 +117,10 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
       allow.(owner, shared_doc_pid)
     end
 
+    if document_name == "workflow:#{workflow.id}" do
+      WorkflowReconciler.subscribe(workflow.id)
+    end
+
     {:ok,
      %{
        workflow: workflow,
@@ -196,6 +201,29 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     {:stop, :normal, %{state | owner_ref: nil}}
   end
 
+  def handle_info(
+        %WorkflowReconciler.ReconcileRequested{workflow_id: workflow_id},
+        state
+      ) do
+    try do
+      WorkflowReconciler.reconcile_workflow_document(workflow_id)
+    rescue
+      error ->
+        Logger.error(
+          "Reconcile failed for workflow " <>
+            "#{workflow_id}: #{Exception.format(:error, error, __STACKTRACE__)}"
+        )
+    catch
+      :exit, reason ->
+        Logger.error(
+          "Reconcile exited for workflow #{workflow_id}: #{inspect(reason)}"
+        )
+    end
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
     key =
       [:persistence_writer_ref, :shared_doc_ref]
@@ -208,6 +236,12 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     # We're not going to stop the children here, we handle that in terminate.
 
     {:stop, :normal, state |> Map.put(key, nil)}
+  end
+
+  def handle_info(message, state) do
+    Logger.warning("DocumentSupervisor: unexpected message #{inspect(message)}")
+
+    {:noreply, state}
   end
 
   defp register_shared_doc_with_pg(pg_scope, document_name, shared_doc_pid) do

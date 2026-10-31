@@ -5,6 +5,7 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
   """
   use Lightning.DataCase, async: true
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.CollaborationHelpers
 
@@ -12,6 +13,8 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
   alias Lightning.Workflows
 
   describe "saving without changes" do
+    setup :isolated_adaptors
+
     setup do
       # Each test drives its own isolated collaboration tree (Registry,
       # DynamicSupervisor, and `:pg` scope), so concurrent tests can't see each
@@ -22,6 +25,8 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
       # test's mocks/sandbox, and the DocumentSupervisor's spawned children are
       # granted access by the owner-anchored startup hook via `owner: self()`.
       Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+      seed_ready_catalogue()
 
       instance = start_collaboration_instance()
 

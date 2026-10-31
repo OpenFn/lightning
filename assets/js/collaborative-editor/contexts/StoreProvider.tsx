@@ -72,6 +72,7 @@ import {
 } from '../stores/createMetadataStore';
 import {
   createSessionContextStore,
+  selectCanEditContent,
   type SessionContextStoreInstance,
 } from '../stores/createSessionContextStore';
 import { createUIStore, type UIStoreInstance } from '../stores/createUIStore';
@@ -109,6 +110,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Get isNewWorkflow and initialRunData from SessionContext
   const sessionContext = useContext(SessionContext);
   const isNewWorkflow = sessionContext?.isNewWorkflow ?? false;
+  const experimentalFeatures = sessionContext?.experimentalFeatures ?? false;
   const initialRunData = sessionContext?.initialRunData;
 
   // Create store instances once and reuse them
@@ -129,8 +131,10 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     }
 
     // Create the SessionContextStore first so the WorkflowStore can read the
-    // current user's `can_edit_workflow` permission lazily.
-    const sessionContextStore = createSessionContextStore(isNewWorkflow);
+    const sessionContextStore = createSessionContextStore(
+      isNewWorkflow,
+      experimentalFeatures
+    );
 
     return {
       adaptorStore: createAdaptorStore(),
@@ -139,8 +143,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       awarenessStore: createAwarenessStore(),
       workflowStore: createWorkflowStore({
         getCanEdit: () =>
-          sessionContextStore.getSnapshot().permissions?.can_edit_workflow ??
-          false,
+          selectCanEditContent(sessionContextStore.getSnapshot()),
       }),
       sessionContextStore,
       historyStore: createHistoryStore({
@@ -151,6 +154,12 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       aiAssistantStore: createAIAssistantStore(),
     };
   });
+
+  // Fetch the adaptor catalogue over HTTP as soon as the store mounts,
+  // independent of Phoenix channel connection/document sync.
+  useEffect(() => {
+    void stores.adaptorStore.requestAdaptors();
+  }, [stores.adaptorStore]);
 
   // Bridge the SessionContextStore's `isNewWorkflow` flag up to SessionProvider
   // so the channel-join `action` stays honest across in-place reconnects.

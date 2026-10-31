@@ -155,6 +155,124 @@ defmodule Lightning.DataclipScrubberTest do
     end
   end
 
+  describe "scrub_dataclip_bodies!/1" do
+    setup do
+      [first, second] =
+        for password <- ["secret-one", "secret-two"] do
+          project = insert(:project)
+          workflow = insert(:workflow, project: project)
+          trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+          webhook_auth =
+            insert(:webhook_auth_method,
+              project: project,
+              auth_type: :basic,
+              username: "user",
+              password: password
+            )
+
+          trigger
+          |> Repo.preload(:webhook_auth_methods)
+          |> Ecto.Changeset.change()
+          |> Ecto.Changeset.put_assoc(:webhook_auth_methods, [webhook_auth])
+          |> Repo.update!()
+
+          dataclip =
+            insert(:dataclip,
+              project: project,
+              type: :http_request,
+              # The marker must not contain the secret as a substring, or the
+              # scrubber - correctly - eats it too.
+              body: %{
+                "password" => password,
+                "keep" => "kept-" <> String.replace(password, "secret-", "")
+              }
+            )
+
+          insert(:workorder,
+            workflow: workflow,
+            trigger: trigger,
+            dataclip: dataclip
+          )
+
+          %{password: password, dataclip: dataclip, project: project}
+        end
+
+      unprotected =
+        insert(:dataclip,
+          project: insert(:project),
+          type: :http_request,
+          body: %{"borrowed" => "secret-one"}
+        )
+
+      %{first: first, second: second, unprotected: unprotected}
+    end
+
+    test "scrubs each dataclip against its own secrets only", %{
+      first: first,
+      second: second,
+      unprotected: unprotected
+    } do
+      scrubbed =
+        [first.dataclip, second.dataclip, unprotected]
+        |> Enum.map(&to_scrubbable/1)
+        |> DataclipScrubber.scrub_dataclip_bodies!()
+
+      refute scrubbed[first.dataclip.id] =~ "secret-one"
+      assert scrubbed[first.dataclip.id] =~ "kept-one"
+
+      refute scrubbed[second.dataclip.id] =~ "secret-two"
+      assert scrubbed[second.dataclip.id] =~ "kept-two"
+
+      # Nothing about this dataclip is sensitive, so batching must not pool
+      # the other dataclips' samples into it.
+      assert scrubbed[unprotected.id] =~ "secret-one"
+    end
+
+    test "agrees with scrub_dataclip_body!/1", %{
+      first: first,
+      second: second,
+      unprotected: unprotected
+    } do
+      dataclips =
+        Enum.map(
+          [first.dataclip, second.dataclip, unprotected],
+          &to_scrubbable/1
+        )
+
+      batched = DataclipScrubber.scrub_dataclip_bodies!(dataclips)
+
+      for dataclip <- dataclips do
+        assert batched[dataclip.id] ==
+                 DataclipScrubber.scrub_dataclip_body!(dataclip)
+      end
+    end
+
+    test "passes through nil bodies and types that are never scrubbed" do
+      nil_body = %{id: Ecto.UUID.generate(), type: :http_request, body: nil}
+
+      saved_input = %{
+        id: Ecto.UUID.generate(),
+        type: :saved_input,
+        body: ~s({"data":"kept"})
+      }
+
+      scrubbed =
+        DataclipScrubber.scrub_dataclip_bodies!([nil_body, saved_input])
+
+      assert scrubbed[nil_body.id] == nil
+      assert scrubbed[saved_input.id] == saved_input.body
+    end
+
+    defp to_scrubbable(dataclip) do
+      %{
+        id: dataclip.id,
+        type: dataclip.type,
+        body: Jason.encode!(dataclip.body)
+      }
+    end
+  end
+
   describe "webhook_auth_methods_for_dataclip/1" do
     test "returns webhook auth methods for a dataclip" do
       project = insert(:project)

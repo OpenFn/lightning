@@ -1,12 +1,8 @@
 defmodule LightningWeb.Components.Loaders do
   @moduledoc """
-  UI component to render a pill to create tags.
+  Loading indicators.
   """
   use Phoenix.Component
-
-  import LightningWeb.Components.Icons
-
-  alias Phoenix.LiveView.JS
 
   slot :inner_block, required: true
 
@@ -23,43 +19,6 @@ defmodule LightningWeb.Components.Loaders do
         </span>
       </span>
     </span>
-    """
-  end
-
-  slot :inner_block, required: true
-
-  def button_loader(assigns) do
-    ~H"""
-    <span class="relative inline-flex">
-      <button
-        type="button"
-        class="inline-flex items-center px-4 py-2 font-semibold leading-6
-            text-sm shadow rounded-md bg-white dark:bg-slate-800
-            transition ease-in-out duration-150 cursor-not-allowed ring-1
-            ring-slate-900/10 dark:ring-slate-200/20"
-        disabled=""
-      >
-        {render_slot(@inner_block)}
-      </button>
-      <span class="flex absolute h-3 w-3 top-0 right-0 -mt-1 -mr-1">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75">
-        </span>
-        <span class="relative inline-flex rounded-full h-3 w-3 bg-primary-500">
-        </span>
-      </span>
-    </span>
-    """
-  end
-
-  def offline_indicator(assigns) do
-    ~H"""
-    <div
-      class="hidden"
-      phx-disconnected={JS.show(transition: "fade-in")}
-      phx-connected={JS.hide(transition: "fade-out")}
-    >
-      <.icon name="hero-signal-slash" class="w-6 h-6 mr-2 text-red-500" />
-    </div>
     """
   end
 end

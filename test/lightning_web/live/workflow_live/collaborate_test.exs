@@ -1,9 +1,37 @@
 defmodule LightningWeb.WorkflowLive.CollaborateTest do
   use LightningWeb.ConnCase, async: false
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.WorkflowsFixtures
   import Phoenix.LiveViewTest
+
+  describe "what the editor knows before its channel connects" do
+    test "the page carries the lifecycle state and the experimental flag", %{
+      conn: conn
+    } do
+      user = insert(:user, preferences: %{"experimental_features" => true})
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      {:ok, live_workflow} =
+        workflow
+        |> Lightning.Repo.preload(:triggers)
+        |> Lightning.Workflows.go_live(user)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      assert live_workflow.state == :live
+      assert html =~ "data-workflow-state=\"live\""
+      assert html =~ "data-experimental-features=\"true\""
+    end
+  end
 
   describe "sandbox indicator banner data attributes" do
     test "sets root project data attributes to the user's access root in a sandbox project",
@@ -1028,6 +1056,13 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
   end
 
   describe "credential modal interactions" do
+    setup :isolated_adaptors
+
+    setup do
+      Lightning.AdaptorTestHelpers.seed_credential_schema("http")
+      :ok
+    end
+
     test "opens credential modal with schema via handle_event", %{conn: conn} do
       user = insert(:user)
 
@@ -1789,6 +1824,53 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
       # Verify PubSub broadcast
       assert_receive %{event: "credentials_updated", payload: _}, 1000
+    end
+
+    test "refuses a viewer creating one from the editor", %{conn: conn} do
+      # This is the hole the PR is about. The form is offered to everybody in
+      # the collaborative editor, and the write used to happen with nothing
+      # asked, so a viewer could create an owner/admin-only keychain here.
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: insert(:user).id, role: :owner},
+            %{user_id: user.id, role: :viewer}
+          ]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      view
+      |> element("#collaborative-editor-react")
+      |> render_hook("open_credential_modal", %{"schema" => "raw"})
+
+      view |> element("button", "Advanced") |> render_click()
+      view |> element("button[phx-value-key='keychain']") |> render_click()
+      view |> element("button", "Continue") |> render_click()
+
+      view
+      |> element("form[id*='keychain-credential-form']")
+      |> render_submit(%{
+        "keychain_credential" => %{
+          "name" => "Planted Keychain",
+          "path" => "$.user_id"
+        }
+      })
+
+      refute Lightning.Repo.get_by(Lightning.Credentials.KeychainCredential,
+               name: "Planted Keychain"
+             ),
+             "a viewer created a keychain credential"
+
+      # Only the write is asserted. The refusal flash is put on the component's
+      # own socket and does not reach the page, so the viewer sees nothing
+      # happen. Worth fixing, but it is not what this test is here to hold.
     end
 
     test "shows validation errors for invalid keychain credential", %{

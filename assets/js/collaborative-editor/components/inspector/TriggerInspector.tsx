@@ -5,7 +5,6 @@ import type { Workflow } from '../../types/workflow';
 import {
   CronShowPanel,
   type EditFocus,
-  KafkaShowPanel,
   TriggerEditWizard,
   WebhookShowPanel,
 } from './trigger';
@@ -72,14 +71,6 @@ export function TriggerInspector({
     case 'cron':
       return (
         <CronShowPanel
-          trigger={trigger}
-          onClose={onClose}
-          onEdit={() => setView('edit')}
-        />
-      );
-    case 'kafka':
-      return (
-        <KafkaShowPanel
           trigger={trigger}
           onClose={onClose}
           onEdit={() => setView('edit')}

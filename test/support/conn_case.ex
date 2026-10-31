@@ -227,6 +227,13 @@ defmodule LightningWeb.ConnCase do
   end
 
   @doc """
+  Builds a fresh `conn` with `user` logged into it.
+  """
+  def user_conn(user) do
+    log_in_user(Phoenix.ConnTest.build_conn(), user)
+  end
+
+  @doc """
   """
   def build_project_user_conns(project, roles) do
     Enum.map(roles, fn role ->

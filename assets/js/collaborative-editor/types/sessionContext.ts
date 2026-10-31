@@ -19,6 +19,7 @@ export const ProjectContextSchema = z.object({
   name: z.string(),
   concurrency: z.number().int().nullable().optional(),
   env: z.string().nullable().optional(),
+  is_sandbox: z.boolean().optional(),
 });
 
 export const ProjectRepoConnectionSchema = z.object({
@@ -30,7 +31,6 @@ export const ProjectRepoConnectionSchema = z.object({
 
 export const AppConfigSchema = z.object({
   require_email_verification: z.boolean(),
-  kafka_triggers_enabled: z.boolean(),
   max_dataclip_size_bytes: z.number().int().optional(),
 });
 
@@ -38,6 +38,8 @@ export const PermissionsSchema = z.object({
   can_edit_workflow: z.boolean(),
   can_run_workflow: z.boolean(),
   can_write_webhook_auth_method: z.boolean(),
+  can_provision_sandbox: z.boolean().optional().default(false),
+  can_archive_sandbox: z.boolean().optional().default(false),
 });
 
 export type Permissions = z.infer<typeof PermissionsSchema>;
@@ -49,6 +51,20 @@ export const WebhookAuthMethodSchema = z.object({
 });
 
 export type WebhookAuthMethod = z.infer<typeof WebhookAuthMethodSchema>;
+
+export const ReleaseSchema = z.object({
+  version_number: z.number().int(),
+  kind: z.string(),
+  inserted_at: z.string(),
+  published_by: z.string().nullable(),
+  source_project: z.string().nullable(),
+  lock_version: z.number().int(),
+  snapshot_id: z.string().nullish().default(null),
+  restored_from_version_number: z.number().int().nullish().default(null),
+  is_latest: z.boolean(),
+});
+
+export type Release = z.infer<typeof ReleaseSchema>;
 
 export const VersionSchema = z.object({
   lock_version: z.number().int(),
@@ -90,21 +106,35 @@ export const LimitsSchema = z.object({
   workflow_activation: LimitInfoSchema.optional(),
   github_sync: LimitInfoSchema.optional(),
   ai_assistant: LimitInfoSchema.optional(),
+  new_sandbox: LimitInfoSchema.optional(),
 });
 
 export type Limits = z.infer<typeof LimitsSchema>;
+
+export const AISkillSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  /** Whether the skill fits any workflow, or only a saved one */
+  workflow: z.enum(['any', 'existing']),
+});
+
+export type AISkill = z.infer<typeof AISkillSchema>;
 
 export const SessionContextResponseSchema = z.object({
   user: UserContextSchema.nullable(),
   project: ProjectContextSchema.nullable(),
   config: AppConfigSchema,
   permissions: PermissionsSchema,
+  content_locked: z.boolean().optional().default(false),
   latest_snapshot_lock_version: z.number().int().nullable(),
+  latest_snapshot_id: z.string().nullable().optional(),
   project_repo_connection: ProjectRepoConnectionSchema.nullable(),
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
   workflow_template: WorkflowTemplateSchema.nullable(),
+  suppress_enable_trigger_warning: z.boolean().optional().default(false),
   experimental_features_enabled: z.boolean().optional().default(false),
   limits: LimitsSchema.optional(),
+  ai_skills: z.array(AISkillSchema).optional().default([]),
   workflow: BaseWorkflowSchema.optional(),
 });
 
@@ -119,15 +149,24 @@ export interface SessionContextState {
   workflow: BaseWorkflow | null;
   config: AppConfig | null;
   permissions: Permissions | null;
+  contentLocked: boolean;
+  experimentalFeaturesEnabled: boolean;
   latestSnapshotLockVersion: number | null;
+  latestSnapshotId: string | null;
   projectRepoConnection: ProjectRepoConnection | null;
   webhookAuthMethods: WebhookAuthMethod[];
+  releases: Release[];
+  releasesLoaded: boolean;
+  releasesLoading: boolean;
+  releasesError: string | null;
   versions: Version[];
+  versionsLoaded: boolean;
   versionsLoading: boolean;
   versionsError: string | null;
   workflow_template: WorkflowTemplate | null;
-  experimentalFeaturesEnabled: boolean;
+  suppressEnableTriggerWarning: boolean;
   limits: Limits;
+  aiSkills: AISkill[];
   isNewWorkflow: boolean;
   isLoading: boolean;
   error: string | null;
@@ -136,6 +175,8 @@ export interface SessionContextState {
 
 interface SessionContextCommands {
   requestSessionContext: () => Promise<void>;
+  requestReleases: () => Promise<void>;
+  clearReleases: () => void;
   requestVersions: () => Promise<void>;
   clearVersions: () => void;
   setLoading: (loading: boolean) => void;
@@ -144,6 +185,8 @@ interface SessionContextCommands {
   setLatestSnapshotLockVersion: (lockVersion: number) => void;
   clearIsNewWorkflow: () => void;
   setBaseWorkflow: (workflow: BaseWorkflow) => void;
+  setSuppressEnableTriggerWarning: (suppress: boolean) => void;
+  markEnableTriggerWarningSuppressed: () => Promise<void>;
   getLimits: (
     actionType: 'new_run' | 'activate_workflow' | 'github_sync'
   ) => Promise<void>;

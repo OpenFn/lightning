@@ -19,6 +19,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { BreadcrumbContent } from '../../../js/collaborative-editor/CollaborativeEditor';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import {
   createMockURLState,
   getURLStateMockValue,
@@ -27,6 +28,14 @@ import {
 const urlState = createMockURLState();
 const closeRunPanel = vi.fn();
 const closeRunViewer = vi.fn();
+
+vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: () => ({ isSynced: true, settled: true }),
+}));
+
+vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => ({ hasChanges: false }),
+}));
 
 vi.mock('#/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
@@ -60,12 +69,28 @@ vi.mock('../../../js/collaborative-editor/components/VersionDropdown', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useExperimentalFeatures: () => true,
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
   useLatestSnapshotLockVersion: () => 1,
   useIsNewWorkflow: () => false,
+  usePermissions: () => ({ can_edit_workflow: true }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowActions: () => ({
+    saveWorkflow: vi.fn(),
+    restoreVersion: vi.fn(),
+    checkRestore: vi.fn().mockResolvedValue({ losing_triggers: [] }),
+  }),
   useWorkflowState: (selector: (state: unknown) => unknown) => {
     const state = { workflow: { id: 'workflow-1', lock_version: 1 } };
     return typeof selector === 'function' ? selector(state) : state;
@@ -82,16 +107,26 @@ vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
-  useVersionSelect: () => vi.fn(),
+  useVersionSelect: () => ({
+    handleVersionSelect: vi.fn(),
+    prompt: {
+      isAsking: false,
+      cancel: vi.fn(),
+      runPending: vi.fn(),
+      saveAndRunPending: vi.fn().mockResolvedValue(true),
+    },
+  }),
 }));
 
 function renderBreadcrumbs() {
   return render(
-    <BreadcrumbContent
-      workflowId="workflow-1"
-      workflowName="Test Workflow"
-      aiAssistantEnabled={false}
-    />
+    <KeyboardProvider>
+      <BreadcrumbContent
+        workflowId="workflow-1"
+        workflowName="Test Workflow"
+        aiAssistantEnabled={false}
+      />
+    </KeyboardProvider>
   );
 }
 

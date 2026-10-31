@@ -2,6 +2,7 @@ defmodule Lightning.WebAndWorkerTest do
   use LightningWeb.ConnCase, async: false
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Mox
 
@@ -26,18 +27,34 @@ defmodule Lightning.WebAndWorkerTest do
       Lightning.Extensions.UsageLimiter
     )
 
-    start_runtime_manager()
+    # The worker subprocess logs at :debug via RuntimeManager; without this its
+    # startup output (adaptor installs, connection failures) is dropped before
+    # `capture_log` can hold onto it for a failing test's report.
+    level = Logger.level()
+    Logger.configure(level: :debug)
+    on_exit(fn -> Logger.configure(level: level) end)
+
+    runtime_manager = start_runtime_manager()
 
     uri = LightningWeb.Endpoint.url()
 
-    %{uri: uri}
+    %{uri: uri, runtime_manager: runtime_manager}
   end
 
   describe "webhook triggered runs" do
-    setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
+    setup [
+      :isolated_adaptors,
+      :register_and_log_in_superuser,
+      :stub_rate_limiter_ok,
+      :seed_default_adaptor
+    ]
 
     @tag :integration
-    test "complete a run on a complex workflow with parallel jobs", %{uri: uri} do
+    @tag timeout: 120_000
+    test "complete a run on a complex workflow with parallel jobs", %{
+      uri: uri,
+      runtime_manager: runtime_manager
+    } do
       project = insert(:project)
 
       %{triggers: [%{id: webhook_trigger_id}], edges: edges} =
@@ -59,13 +76,7 @@ defmodule Lightning.WebAndWorkerTest do
       webhook_body = %{"x" => 1}
 
       response =
-        Tesla.client(
-          [
-            {Tesla.Middleware.BaseUrl, uri},
-            Tesla.Middleware.JSON
-          ],
-          {Tesla.Adapter.Finch, name: Lightning.Finch}
-        )
+        build_tesla_client(uri)
         |> Tesla.post!("/i/#{webhook_trigger_id}", webhook_body)
 
       assert response.status == 200
@@ -79,8 +90,7 @@ defmodule Lightning.WebAndWorkerTest do
 
       assert %{id: run_id, steps: []} = Runs.get(run.id, include: [:steps])
 
-      assert_receive %Events.RunUpdated{run: %{id: ^run_id, state: :success}},
-                     115_000
+      await_run_success(run_id, runtime_manager)
 
       assert %{state: :success} = WorkOrders.get(workorder_id)
 
@@ -115,8 +125,13 @@ defmodule Lightning.WebAndWorkerTest do
     end
 
     @tag :integration
-    @tag timeout: 20_000
+    @tag timeout: 120_000
     test "the whole thing", %{conn: conn, user: user} do
+      Lightning.AdaptorTestHelpers.seed_adaptor_package(
+        "@openfn/language-http",
+        "3.1.12"
+      )
+
       project = insert(:project)
 
       # Create credential with body for main environment
@@ -270,7 +285,7 @@ defmodule Lightning.WebAndWorkerTest do
       version_logs = pick_out_version_logs(run)
       assert version_logs["@openfn/language-http"] =~ "3.1.12"
       assert version_logs["worker"] =~ "1.29"
-      assert version_logs["node.js"] =~ "24.18"
+      assert version_logs["node.js"] =~ "24.22"
       assert version_logs["@openfn/language-common"] == "3.0.2"
 
       [step_1, step_2, step_3, step_4] = run.steps
@@ -397,7 +412,12 @@ defmodule Lightning.WebAndWorkerTest do
   end
 
   describe "webhook with delayed response (after_completion)" do
-    setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
+    setup [
+      :isolated_adaptors,
+      :register_and_log_in_superuser,
+      :stub_rate_limiter_ok,
+      :seed_default_adaptor
+    ]
 
     @tag :integration
     @tag timeout: 120_000
@@ -1005,10 +1025,23 @@ defmodule Lightning.WebAndWorkerTest do
     end
   end
 
+  defp seed_default_adaptor(_context) do
+    Lightning.AdaptorTestHelpers.seed_adaptor_package(
+      "@openfn/language-common",
+      "3.0.2"
+    )
+
+    :ok
+  end
+
+  # The server side (handle_delayed_response/2) can legitimately wait up to
+  # `webhook_response_timeout_ms` (30s by default). Finch's HTTP1 default
+  # receive_timeout is 15s, so the client was aborting requests the server
+  # was still correctly waiting on. Give the client more room than the server.
   defp build_tesla_client(uri) do
     Tesla.client(
       [{Tesla.Middleware.BaseUrl, uri}, Tesla.Middleware.JSON],
-      {Tesla.Adapter.Finch, name: Lightning.Finch}
+      {Tesla.Adapter.Finch, name: Lightning.Finch, receive_timeout: 35_000}
     )
   end
 
@@ -1074,7 +1107,40 @@ defmodule Lightning.WebAndWorkerTest do
         worker_secret: Lightning.Config.worker_secret()
       )
 
-    start_supervised!({RuntimeManager, opts}, restart: :transient)
+    start_supervised!({RuntimeManager, opts}, restart: :temporary)
+  end
+
+  @failure_states Lightning.Run.final_states() -- [:success]
+
+  # A dead RuntimeManager means the Node worker never started (or exited), so
+  # fail immediately with its reason instead of blocking for the full window.
+  defp await_run_success(run_id, runtime_manager) do
+    ref = Process.monitor(runtime_manager)
+
+    receive do
+      %Events.RunUpdated{run: %{id: ^run_id, state: :success}} ->
+        Process.demonitor(ref, [:flush])
+
+      %Events.RunUpdated{run: %{id: ^run_id, state: state} = run}
+      when state in @failure_states ->
+        Process.demonitor(ref, [:flush])
+        flunk("run #{run_id} finished with state #{state}: #{inspect(run)}")
+
+      {:DOWN, ^ref, :process, _pid, :noproc} ->
+        flunk(
+          "runtime manager had already exited before the run started - " <>
+            "see the captured log for the worker's exit status"
+        )
+
+      {:DOWN, ^ref, :process, _pid, reason} ->
+        flunk("runtime manager exited: #{inspect(reason)}")
+    after
+      115_000 ->
+        flunk(
+          "run #{run_id} did not succeed within 115s. Mailbox: " <>
+            inspect(Process.info(self(), :messages))
+        )
+    end
   end
 
   defp select_dataclip_body(uuid) do

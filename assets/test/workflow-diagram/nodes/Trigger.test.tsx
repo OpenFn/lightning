@@ -2,7 +2,8 @@
  * Trigger Node Component Tests
  *
  * Tests that trigger nodes display correct icons for all trigger types
- * (webhook, cron, kafka) and handle edge cases gracefully.
+ * (webhook, cron) and handle edge cases gracefully, and that a cron node's
+ * sublabel shows the humanized schedule.
  */
 
 import { render } from '@testing-library/react';
@@ -15,11 +16,12 @@ import type { Lightning } from '../../../js/workflow-diagram/types';
 /**
  * Helper to render a trigger node within ReactFlow context
  *
- * Note: TriggerNode expects data.trigger to contain the trigger info,
- * which is how from-workflow structures it
+ * Mirrors from-workflow: data holds the trigger's own fields (which
+ * TriggerNode reads) plus a data.trigger summary
  */
 function renderTriggerNode(trigger: Lightning.TriggerNode) {
   const data: any = {
+    ...trigger,
     trigger: {
       type: trigger.type,
       enabled: trigger.enabled,
@@ -27,9 +29,6 @@ function renderTriggerNode(trigger: Lightning.TriggerNode) {
         cron_expression: trigger.cron_expression,
       }),
       ...(trigger.type === 'webhook' && {
-        has_auth_method: trigger.has_auth_method,
-      }),
-      ...(trigger.type === 'kafka' && {
         has_auth_method: trigger.has_auth_method,
       }),
     },
@@ -112,23 +111,6 @@ describe('Trigger Node - Icon Display', () => {
     expect(svgElement).toBeInTheDocument();
   });
 
-  test('displays icon for kafka trigger', () => {
-    const kafkaTrigger: Lightning.KafkaTrigger = {
-      id: 'trigger-5',
-      name: 'Kafka Trigger',
-      type: 'kafka',
-      enabled: true,
-      has_auth_method: true,
-      workflow_id: 'test-workflow',
-    };
-
-    const { container } = renderTriggerNode(kafkaTrigger);
-
-    // Kafka icon (custom SVG) should be rendered
-    const svgElement = container.querySelector('svg');
-    expect(svgElement).toBeInTheDocument();
-  });
-
   test('displays lock icon for webhook trigger with auth', () => {
     const webhookTrigger: Lightning.WebhookTrigger = {
       id: 'trigger-11',
@@ -146,21 +128,23 @@ describe('Trigger Node - Icon Display', () => {
     const svgElements = container.querySelectorAll('svg');
     expect(svgElements.length).toBeGreaterThanOrEqual(1);
   });
+});
 
-  test('displays lock icon for kafka trigger with auth', () => {
-    const kafkaTrigger: Lightning.KafkaTrigger = {
-      id: 'trigger-12',
-      name: 'Kafka Trigger',
-      type: 'kafka',
+describe('Trigger Node - Cron Sublabel', () => {
+  test.each([
+    ['0 9 * * 1-5', 'At 09:00 AM UTC, Monday through Friday'],
+    ['invalid cron', 'Invalid cron expression'],
+    ['', 'Not configured'],
+  ])('%j shows "%s"', (cron_expression, expected) => {
+    const { getByText } = renderTriggerNode({
+      id: 'trigger-5',
+      name: 'Cron Trigger',
+      type: 'cron',
       enabled: true,
-      has_auth_method: true,
+      cron_expression,
       workflow_id: 'test-workflow',
-    };
+    });
 
-    const { container } = renderTriggerNode(kafkaTrigger);
-
-    // Should have both primary icon and lock icon
-    const svgElements = container.querySelectorAll('svg');
-    expect(svgElements.length).toBeGreaterThanOrEqual(1);
+    expect(getByText(expected)).toBeInTheDocument();
   });
 });

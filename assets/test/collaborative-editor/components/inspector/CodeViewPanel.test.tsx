@@ -14,8 +14,8 @@
  * - Click handler for opening publish panel
  * - Button styling based on enabled/disabled state
  *
- * Note: Download and copy functionality require manual testing due to jsdom
- * limitations with DOM manipulation and clipboard API.
+ * Note: Copy functionality requires manual testing because jsdom has no
+ * clipboard API.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -25,16 +25,17 @@ import YAML from 'yaml';
 
 import { CodeViewPanel } from '../../../../js/collaborative-editor/components/inspector/CodeViewPanel';
 import { createMockURLState, getURLStateMockValue } from '../../__helpers__';
-import * as yamlUtil from '../../../../js/yaml/util';
+import * as yamlFormat from '../../../../js/yaml/format';
 
-// Mock yaml/util with simple pass-through
-vi.mock('../../../../js/yaml/util', () => ({
-  convertWorkflowStateToSpec: vi.fn((workflowState: any) => ({
-    name: workflowState.name,
-    jobs: workflowState.jobs || [],
-    triggers: workflowState.triggers || [],
-    edges: workflowState.edges || [],
-  })),
+// Mock the public yaml/format facade — `serializeWorkflow` is the v2-only
+// outbound entry point used by CodeViewPanel after #4718 Phase 4. The mock
+// returns a stable, easy-to-assert YAML stub so the tests stay focused on
+// component behavior, not v2 formatting nuances.
+vi.mock('../../../../js/yaml/format', () => ({
+  serializeWorkflow: vi.fn(
+    (workflowState: any) =>
+      `name: ${workflowState.name}\nsteps: ${workflowState.jobs?.length || 0}\n`
+  ),
 }));
 
 // Mock useWorkflowState hook with state management
@@ -133,6 +134,16 @@ const resetSessionContextMocks = () => {
 
 // Mock useSessionContext hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
+  useExperimentalFeatures: () => true,
   useUser: vi.fn(() => mockUser),
   useWorkflowTemplate: vi.fn(() => mockWorkflowTemplate),
   useLatestSnapshotLockVersion: vi.fn(() => mockLatestSnapshotLockVersion),
@@ -209,11 +220,9 @@ describe('CodeViewPanel', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
-      vi.mocked(yamlUtil.convertWorkflowStateToSpec).mockImplementationOnce(
-        () => {
-          throw new Error('YAML generation failed');
-        }
-      );
+      vi.mocked(yamlFormat.serializeWorkflow).mockImplementationOnce(() => {
+        throw new Error('YAML generation failed');
+      });
 
       setMockWorkflowState({
         workflow: { id: 'w1', name: 'Test' },
@@ -226,6 +235,60 @@ describe('CodeViewPanel', () => {
       expect(textarea.value).toContain('# Error generating YAML');
 
       consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe('download filename', () => {
+    const downloadNameFor = async (workflowName: string) => {
+      setMockWorkflowState({
+        workflow: { id: 'w1', name: workflowName },
+        jobs: [],
+        triggers: [],
+        edges: [],
+      });
+
+      // jsdom has no Blob URL support at all, so these are assigned rather
+      // than spied on, and put back afterwards.
+      const urlApi = URL as unknown as Record<string, unknown>;
+      const prevCreate = urlApi['createObjectURL'];
+      const prevRevoke = urlApi['revokeObjectURL'];
+      urlApi['createObjectURL'] = () => 'blob:stub';
+      urlApi['revokeObjectURL'] = () => undefined;
+
+      const createElement = document.createElement.bind(document);
+      const captured: { anchor?: HTMLAnchorElement } = {};
+
+      const spy = vi
+        .spyOn(document, 'createElement')
+        .mockImplementation((tagName: string, ...rest: unknown[]) => {
+          const el = createElement(
+            tagName,
+            ...(rest as [ElementCreationOptions?])
+          );
+          if (tagName === 'a') captured.anchor = el as HTMLAnchorElement;
+          return el;
+        });
+
+      const view = render(<CodeViewPanel />);
+      await userEvent.click(screen.getByRole('button', { name: 'Download' }));
+      view.unmount();
+      spy.mockRestore();
+      urlApi['createObjectURL'] = prevCreate;
+      urlApi['revokeObjectURL'] = prevRevoke;
+
+      return captured.anchor?.download;
+    };
+
+    test('keeps the ASCII-safe part of the name', async () => {
+      expect(await downloadNameFor('My  Workflow')).toBe('My-Workflow.yaml');
+    });
+
+    test('falls back to a usable name when nothing survives sanitising', async () => {
+      // A CJK or Arabic name sanitises down to nothing, which would hand the
+      // browser a file called ".yaml".
+      expect(await downloadNameFor('患者確認')).toBe('workflow.yaml');
+      expect(await downloadNameFor('تسجيل المريض')).toBe('workflow.yaml');
+      expect(await downloadNameFor('🎉')).toBe('workflow.yaml');
     });
   });
 

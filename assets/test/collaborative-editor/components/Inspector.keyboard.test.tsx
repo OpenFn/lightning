@@ -64,6 +64,7 @@ function createTestWrapper() {
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   return function Wrapper({ children }: { children: React.ReactNode }) {

@@ -31,6 +31,8 @@ defmodule Lightning.Config.Bootstrap do
 
   alias Lightning.Config.Utils
 
+  require Logger
+
   def source_envs do
     {:ok, _} =
       source([
@@ -131,6 +133,38 @@ defmodule Lightning.Config.Bootstrap do
           end
         end)
 
+    # Read here rather than from System.get_env: envs come through Dotenvy, so
+    # a value set in a .env file never reaches the system environment. Recorded
+    # for the boot warning in Lightning.Application, where Logger is up.
+    config :lightning,
+           :apollo_timeout_env_still_set,
+           env!("APOLLO_TIMEOUT", :string, nil) != nil
+
+    apollo_connect_timeout =
+      env!(
+        "APOLLO_CONNECT_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :connect_timeout])
+      )
+
+    # Covers the wait for the first byte as well as the gaps after it. Apollo
+    # sends a keepalive every 15s from v3.1.1, so half a minute of silence means
+    # the path is broken rather than a model thinking. Raise it on an older one.
+    apollo_idle_timeout =
+      env!(
+        "APOLLO_IDLE_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :idle_timeout])
+      )
+
+    # The whole request, however steadily it is streaming.
+    apollo_request_timeout =
+      env!(
+        "APOLLO_REQUEST_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :request_timeout])
+      )
+
     config :lightning, :apollo,
       endpoint:
         env!(
@@ -138,18 +172,9 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, :apollo, :endpoint])
         ),
-      # APOLLO_TIMEOUT (ms) bounds every request to Apollo. For streaming
-      # (all AI chat) it is the time-to-headers and the max gap between SSE
-      # chunks — and because the AI job's total-runtime ceiling is derived
-      # from the same value, it effectively bounds the whole run too, so
-      # size it above the longest expected AI run. Unset, it falls back to
-      # the per-env compiled config.
-      timeout:
-        env!(
-          "APOLLO_TIMEOUT",
-          :integer,
-          Utils.get_env([:lightning, :apollo, :timeout])
-        ),
+      connect_timeout: apollo_connect_timeout,
+      idle_timeout: apollo_idle_timeout,
+      request_timeout: apollo_request_timeout,
       ai_assistant_api_key: env!("AI_ASSISTANT_API_KEY", :string, nil)
 
     config :lightning, Lightning.Runtime.RuntimeManager,
@@ -202,6 +227,12 @@ defmodule Lightning.Config.Bootstrap do
           end
         end)
 
+    service_account =
+      env!("SERVICE_ACCOUNT_PUBLIC_KEY", &decode_service_account!/1, nil)
+
+    config :lightning, :service_account, service_account
+    config :lightning, :allow_first_setup, is_nil(service_account)
+
     release = release_info()
 
     config :lightning, :release, release
@@ -210,48 +241,33 @@ defmodule Lightning.Config.Bootstrap do
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
     # Comma-separated to match the ws-worker parser, so the picker view and
-    # @local resolution agree on the same repo list. See RUNNINGLOCAL.md.
+    # @local resolution agree on the same repo list. See ADAPTORS.md.
     local_adaptors_repos =
-      env!("OPENFN_ADAPTORS_REPO", :string, nil)
-      |> case do
-        nil ->
-          []
-
-        value when is_binary(value) ->
-          value
-          |> String.split(",", trim: true)
-          |> Enum.map(&String.trim/1)
-          |> Enum.reject(&(&1 == ""))
-          |> Enum.map(&Path.expand/1)
-      end
+      parse_repo_list(env!("OPENFN_ADAPTORS_REPO", :string, nil))
 
     use_local_adaptors_repos? =
       env!("LOCAL_ADAPTORS", &Utils.ensure_boolean/1, false)
-      |> tap(fn v ->
-        if v && local_adaptors_repos == [] do
-          raise """
-          LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set.
-          """
-        end
-      end)
 
-    config :lightning, Lightning.AdaptorRegistry,
-      use_cache:
-        env!(
-          "ADAPTORS_REGISTRY_JSON_PATH",
-          :string,
-          Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
-        ),
-      local_adaptors_repos:
-        if(use_local_adaptors_repos?, do: local_adaptors_repos, else: [])
+    configure_adaptors_strategy(local_adaptors_repos, use_local_adaptors_repos?)
 
+    # Upstreams for the NPM strategy. registry_url is the npm search and
+    # packument endpoint, jsdelivr_url serves configuration schemas, and
+    # github_url plus github_ref locate the raw icon files under
+    # OpenFn/adaptors. Defaults live on the Lightning.Adaptors.NPM.* modules,
+    # and an unset env var leaves the default alone.
+    #
+    # Point all of them at `bin/adaptor_cache` to serve from a local disk
+    # cache while working on adaptors.
     config :lightning,
-      schemas_path:
-        env!(
-          "SCHEMAS_PATH",
-          :string,
-          Utils.get_env([:lightning, :schemas_path], "./priv")
-        )
+           Lightning.Adaptors.NPM,
+           [
+             registry_url: env!("ADAPTORS_NPM_REGISTRY_URL", :string, nil),
+             jsdelivr_url: env!("ADAPTORS_NPM_JSDELIVR_URL", :string, nil),
+             github_url: env!("ADAPTORS_NPM_GITHUB_URL", :string, nil),
+             github_ref: env!("ADAPTORS_NPM_GITHUB_REF", :string, nil),
+             http_timeout: env!("ADAPTORS_NPM_HTTP_TIMEOUT", :integer?, nil)
+           ]
+           |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
     config :lightning,
            :purge_deleted_after_days,
@@ -273,6 +289,8 @@ defmodule Lightning.Config.Bootstrap do
       {"* * * * *", Lightning.Workflows.Scheduler},
       {"* * * * *", ObanPruner},
       {"*/5 * * * *", Lightning.Janitor},
+      {"*/5 * * * *", Lightning.AiAssistant.StuckMessageReaper},
+      {"*/10 * * * *", Lightning.ServiceAccount.Assertion},
       {"0 10 * * *", Lightning.DigestEmailWorker,
        args: %{"type" => "daily_project_digest"}},
       {"0 10 * * 1", Lightning.DigestEmailWorker,
@@ -281,7 +299,6 @@ defmodule Lightning.Config.Bootstrap do
        args: %{"type" => "monthly_project_digest"}},
       #  TODO - move this into an ENV?
       {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
-      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker},
       {"* * * * *", Lightning.LogLines.SearchVectorWorker},
       {"* * * * *", Lightning.Invocation.DataclipSearchVectorWorker}
     ]
@@ -294,7 +311,8 @@ defmodule Lightning.Config.Bootstrap do
            args: %{"type" => "purge_deleted"}},
           {"45 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
           {"0 3 * * *", Lightning.WebhookAuthMethods,
-           args: %{"type" => "purge_deleted"}}
+           args: %{"type" => "purge_deleted"}},
+          {"15 3 * * *", Lightning.Workflows, args: %{"type" => "purge_deleted"}}
         ],
         else: []
 
@@ -306,13 +324,24 @@ defmodule Lightning.Config.Bootstrap do
       plugins: [
         {Oban.Plugins.Cron, crontab: all_cron}
       ],
-      shutdown_grace_period: :timer.minutes(2),
+      # Must exceed MessageProcessor.job_timeout/0, or an interrupted AI job is
+      # killed after Oban's producer has stopped and nothing reports it; boot
+      # warns if that inverts. This only holds if the platform lets the node
+      # live that long: Kubernetes force-kills after
+      # terminationGracePeriodSeconds, set in the deployment manifests and 30s
+      # if left out, so until that is raised the reaper is what recovers a
+      # severed message.
+      shutdown_grace_period: :timer.minutes(6),
       dispatch_cooldown: 100,
       queues: [
         scheduler: 1,
         workflow_failures: 1,
         background: 1,
         history_exports: 1,
+        # One-off data repairs enqueued by migrations. A queue of its own means
+        # nodes still on the previous release during a blue-green deploy never
+        # poll it, so they can't pick up a worker they don't have.
+        maintenance: 1,
         ai_assistant: 10,
         # Shared by Lightning.LogLines.SearchVectorWorker and
         # Lightning.Invocation.DataclipSearchVectorWorker. Concurrency 2 gives
@@ -477,13 +506,59 @@ defmodule Lightning.Config.Bootstrap do
     end
 
     database_url = env!("DATABASE_URL", :string, nil)
+    database_timeout = env!("DATABASE_TIMEOUT", :integer, 15_000)
+
+    # Drops a connection whose network path has died silently, including one
+    # checked out with `timeout: :infinity` that DBConnection would never time
+    # out. TCP_USER_TIMEOUT (IPPROTO_TCP=6, opt 18, ms) only fires on
+    # unacknowledged sent data, and a connection blocked waiting on a reply has
+    # none, so keepalive probes (TCP_KEEPIDLE=4, TCP_KEEPINTVL=5, seconds) supply
+    # it. With both set the kernel gives up after the user timeout rather than
+    # after TCP_KEEPCNT probes. A live peer acks the probes, so long-running
+    # queries are unaffected. The option numbers are Linux's.
+    linux? = match?({:unix, :linux}, :os.type())
+
+    tcp_user_timeout =
+      case env!("DATABASE_TCP_USER_TIMEOUT", :integer, database_timeout + 5_000) do
+        0 ->
+          nil
+
+        ms when ms in 1..2_147_483_647 ->
+          ms
+
+        ms ->
+          raise "DATABASE_TCP_USER_TIMEOUT must be 0 (disabled) or between 1 " <>
+                  "and 2147483647 ms, got #{ms}"
+      end
+
+    db_socket_options =
+      if linux? && tcp_user_timeout do
+        if tcp_user_timeout < database_timeout do
+          Logger.warning(
+            "DATABASE_TCP_USER_TIMEOUT (#{tcp_user_timeout}ms) is below " <>
+              "DATABASE_TIMEOUT (#{database_timeout}ms), so a large write that " <>
+              "is slow to be acknowledged can be dropped before the query " <>
+              "timeout fires. Set it above DATABASE_TIMEOUT."
+          )
+        end
+
+        [
+          {:keepalive, true},
+          {:raw, 6, 4, <<5::32-native>>},
+          {:raw, 6, 5, <<5::32-native>>},
+          {:raw, 6, 18, <<tcp_user_timeout::32-native>>}
+        ]
+      else
+        []
+      end
 
     config :lightning, Lightning.Repo,
       url: database_url,
       pool_size: env!("DATABASE_POOL_SIZE", :integer, 10),
-      timeout: env!("DATABASE_TIMEOUT", :integer, 15_000),
+      timeout: database_timeout,
       queue_target: env!("DATABASE_QUEUE_TARGET", :integer, 50),
-      queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
+      queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000),
+      socket_options: db_socket_options
 
     port =
       env!(
@@ -558,9 +633,11 @@ defmodule Lightning.Config.Bootstrap do
 
       disable_db_ssl = env!("DISABLE_DB_SSL", &Utils.ensure_boolean/1, false)
 
+      # appends rather than overwrites db_socket_options, so the IPv6 toggle and
+      # the socket timeout both apply
       config :lightning, Lightning.Repo,
         url: database_url,
-        socket_options: maybe_ipv6
+        socket_options: maybe_ipv6 ++ db_socket_options
 
       if disable_db_ssl do
         config :lightning, Lightning.Repo, ssl: false
@@ -776,49 +853,6 @@ defmodule Lightning.Config.Bootstrap do
       daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10),
       run_chunk_size: env!("USAGE_TRACKING_RUN_CHUNK_SIZE", :integer, 100)
 
-    config :lightning, :kafka_triggers,
-      alternate_storage_enabled:
-        env!(
-          "KAFKA_ALTERNATE_STORAGE_ENABLED",
-          &Utils.ensure_boolean/1,
-          false
-        )
-        |> tap(fn enabled ->
-          if enabled do
-            touch_result =
-              env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil)
-              |> to_string()
-              |> then(fn path ->
-                if File.exists?(path) do
-                  path
-                  |> Path.join(".lightning_storage_check")
-                  |> File.touch()
-                else
-                  :error
-                end
-              end)
-
-            unless touch_result == :ok do
-              raise """
-              KAFKA_ALTERNATE_STORAGE_ENABLED is set to yes/true.
-
-              KAFKA_ALTERNATE_STORAGE_FILE_PATH must be a writable directory.
-              """
-            end
-          end
-        end),
-      alternate_storage_file_path:
-        env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil),
-      duplicate_tracking_retention_seconds:
-        env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600),
-      enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
-      notification_embargo_seconds:
-        env!("KAFKA_NOTIFICATION_EMBARGO_SECONDS", :integer, 3600),
-      number_of_consumers: env!("KAFKA_NUMBER_OF_CONSUMERS", :integer, 1),
-      number_of_messages_per_second:
-        env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
-      number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
-
     config :lightning,
            :broadcast_work_available,
            env!("BROADCAST_WORK_AVAILABLE", &Utils.ensure_boolean/1, true)
@@ -1012,6 +1046,122 @@ defmodule Lightning.Config.Bootstrap do
     ]
   end
 
+  defp configure_adaptors_strategy(
+         local_adaptors_repos,
+         use_local_adaptors_repos?
+       ) do
+    adaptors_strategy_value =
+      case env!("ADAPTORS_STRATEGY", :string, nil) do
+        nil -> nil
+        value -> String.trim(value)
+      end
+
+    adaptors_strategy =
+      case adaptors_strategy_value do
+        blank when blank in [nil, ""] ->
+          local_adaptors_back_compat_strategy(use_local_adaptors_repos?)
+
+        "npm" ->
+          Lightning.Adaptors.NPM
+
+        "local" ->
+          Lightning.Adaptors.Local
+
+        unknown ->
+          raise """
+          Unknown ADAPTORS_STRATEGY: #{unknown}
+
+          Currently supported strategies are:
+
+          - npm (default)
+          - local
+          """
+      end
+
+    local_strategy_paths =
+      resolve_local_strategy_paths(local_adaptors_repos, adaptors_strategy)
+
+    if adaptors_strategy == Lightning.Adaptors.Local and
+         local_strategy_paths == [] do
+      raise """
+      ADAPTORS_STRATEGY is set to local, but neither ADAPTORS_LOCAL_REPO nor the deprecated OPENFN_ADAPTORS_REPO is set.
+      """
+    end
+
+    config :lightning,
+           Lightning.Adaptors,
+           [
+             # config/test.exs pins :strategy to StrategyMock so the
+             # application-level supervisor never hits the network during the
+             # test suite. config/runtime.exs deep-merges this config over
+             # test.exs on every boot (including :test), so writing a real
+             # strategy here unconditionally would silently replace the mock.
+             strategy:
+               if(config_env() == :test, do: nil, else: adaptors_strategy),
+             # An operator-supplied path is expanded once at boot, unlike
+             # Config.icon_path/0's {:tmp, ...} default, which is deliberately
+             # resolved at call time (see its doc) so a compiled release
+             # doesn't bake in a build-time tmp path. An explicit override has
+             # no such concern.
+             icon_path:
+               env!("ADAPTORS_ICONS_PATH", :string, nil) |> expand_or_nil(),
+             refresh_interval:
+               env!("ADAPTORS_REFRESH_INTERVAL_SECONDS", :integer?, nil)
+               |> seconds_to_ms()
+           ]
+           |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+
+    config :lightning, Lightning.Adaptors.Local, paths: local_strategy_paths
+  end
+
+  defp local_adaptors_back_compat_strategy(use_local_adaptors_repos?) do
+    if use_local_adaptors_repos? do
+      Logger.warning(
+        "LOCAL_ADAPTORS is deprecated, use ADAPTORS_STRATEGY=local instead."
+      )
+
+      Lightning.Adaptors.Local
+    else
+      Lightning.Adaptors.NPM
+    end
+  end
+
+  # The deprecation warning only fires under the Local strategy. An operator
+  # on the npm strategy can leave OPENFN_ADAPTORS_REPO set for the ws-worker
+  # and should not be told to drop a var they still need.
+  defp resolve_local_strategy_paths(local_adaptors_repos, adaptors_strategy) do
+    case env!("ADAPTORS_LOCAL_REPO", :string, nil) |> parse_repo_list() do
+      [] ->
+        if local_adaptors_repos != [] and
+             adaptors_strategy == Lightning.Adaptors.Local do
+          Logger.warning(
+            "OPENFN_ADAPTORS_REPO is deprecated, use ADAPTORS_LOCAL_REPO instead."
+          )
+        end
+
+        local_adaptors_repos
+
+      paths ->
+        paths
+    end
+  end
+
+  defp parse_repo_list(nil), do: []
+
+  defp parse_repo_list(value) when is_binary(value) do
+    value
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.map(&Path.expand/1)
+  end
+
+  defp seconds_to_ms(nil), do: nil
+  defp seconds_to_ms(seconds) when is_integer(seconds), do: seconds * 1000
+
+  defp expand_or_nil(nil), do: nil
+  defp expand_or_nil(path) when is_binary(path), do: Path.expand(path)
+
   defp get_env(app) do
     Process.get({Config, :config})
     |> Keyword.get(app)
@@ -1027,6 +1177,19 @@ defmodule Lightning.Config.Bootstrap do
     case get_env(app) |> get_in(keys) do
       nil -> Application.get_all_env(app) |> get_in(keys)
       value -> value
+    end
+  end
+
+  defp decode_service_account!(encoded) do
+    with {:ok, pem} <- Base.decode64(encoded, padding: false),
+         {:ok, service_account} <- Lightning.ServiceAccount.from_pem(pem) do
+      service_account
+    else
+      :error ->
+        raise "SERVICE_ACCOUNT_PUBLIC_KEY is not unpadded base64"
+
+      {:error, reason} ->
+        raise "SERVICE_ACCOUNT_PUBLIC_KEY #{reason}"
     end
   end
 

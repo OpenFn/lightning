@@ -10,9 +10,13 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
-# Apollo (AI assistant service) — see Config.Bootstrap for what the
-# timeout governs and how APOLLO_TIMEOUT overrides it.
-config :lightning, :apollo, timeout: 120_000
+# Apollo (AI assistant service). Compiled defaults so these are never nil;
+# Config.Bootstrap overrides them from the environment. See there for what
+# each one bounds.
+config :lightning, :apollo,
+  connect_timeout: 5_000,
+  idle_timeout: 30_000,
+  request_timeout: 300_000
 
 config :lightning, Lightning.Repo,
   types: Lightning.PostgrexTypes,
@@ -87,7 +91,7 @@ config :oauth2, adapter: Tesla.Adapter.Hackney
 # hackney 4 negotiates HTTP/2 via ALPN by default, where 1.x was HTTP/1.1 only.
 # Concurrent requests to one host then multiplex onto a single connection, so
 # retiring that connection fails every in-flight request at once -- around a
-# quarter of the fetches in `mix lightning.install_schemas`. Pinned to HTTP/1.1
+# quarter of a bulk schema fetch when this was first seen. Pinned to HTTP/1.1
 # to keep the transport hackney 1.25 used; revisit as a deliberate change if we
 # want h2 multiplexing.
 config :hackney, default_protocols: [:http1]
@@ -119,6 +123,7 @@ config :esbuild,
          js/collaborative-editor/CollaborativeEditor.tsx
          js/picker/Picker.tsx
          js/picker/PickerButton.tsx
+         js/health/WorkflowHealth.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js
@@ -152,21 +157,36 @@ config :tailwind,
     cd: Path.expand("..", __DIR__)
   ]
 
+# Every key the app attaches with Logger.metadata/1, mostly via
+# LightningWeb.Observability.put_scope/1. Defined once so the console and
+# Sentry can't drift; a new key has to be added here to reach either.
+log_metadata = [
+  :request_id,
+  :session_id,
+  :prompt_size,
+  :credential_id,
+  :run_id,
+  :project_id,
+  :project_env,
+  :user_id,
+  :workflow_id,
+  :worker_id
+]
+
+config :lightning, :log_metadata, log_metadata
+
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: [
-    :request_id,
-    :session_id,
-    :prompt_size,
-    :credential_id,
-    :run_id,
-    :project_id,
-    :project_env
-  ]
+  metadata: log_metadata
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Without this every `DateTime.shift_zone/2` with a zone name returns
+# `{:error, :utc_only_time_zone_database}`. Needed by the workflow health
+# charts, which bucket on the reader's clock.
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 
 config :lightning, Lightning.Vault, json_library: Jason
 
@@ -197,6 +217,7 @@ config :philter,
 
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil
+
 config :lightning, :claim_work_mem, nil
 
 config :lightning, :log_lines_search_indexing, batch_size: 2_500, max_batches: 10

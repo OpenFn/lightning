@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 
@@ -113,7 +116,7 @@ function switchToPasteMode() {
 
 function enterYAML(content: string) {
   fireEvent.change(
-    screen.getByPlaceholderText(/Paste your YAML content here/i),
+    screen.getByPlaceholderText(/Paste your workflow YAML here/i),
     {
       target: { value: content },
     }
@@ -322,6 +325,70 @@ describe('YAMLImportModal', () => {
       expect(
         screen.getByRole('button', { name: /Create/i })
       ).not.toBeDisabled();
+    });
+  });
+
+  // Phase 5 of #4718: import accepts both v1 (legacy Lightning) and v2
+  // (CLI-aligned portability spec) YAML transparently. The modal is
+  // format-agnostic; it routes through `parseWorkflowYAML`, which detects.
+  describe('Format dispatch (v1 + v2)', () => {
+    // The canonical workflow exercises every feature (multi-trigger, cron
+    // cursor, webhook reply, JS-expression edge, branching). Asserting the
+    // exact job/trigger names catches a regression that silently truncates
+    // either list.
+    const EXPECTED_JOBS = [
+      'ingest',
+      'load',
+      'maybe skip',
+      'report failure',
+      'transform',
+    ];
+    const EXPECTED_TRIGGERS = ['cron', 'webhook'];
+
+    const readKitchenSink = (format: 'v1' | 'v2') =>
+      readFileSync(
+        resolve(
+          __dirname,
+          `../../../../../test/fixtures/portability/${format}/canonical_workflow.yaml`
+        ),
+        'utf-8'
+      );
+
+    const importFixture = async (format: 'v1' | 'v2') => {
+      renderModal();
+      switchToPasteMode();
+      enterYAML(readKitchenSink(format));
+
+      await waitFor(
+        () =>
+          expect(
+            screen.getByRole('button', { name: /Create/i })
+          ).not.toBeDisabled(),
+        { timeout: 500 }
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Create/i }));
+
+      await waitFor(() => expect(mockImportWorkflow).toHaveBeenCalledOnce());
+
+      return mockImportWorkflow.mock.calls[0]?.[0] as {
+        jobs: { name: string }[];
+        triggers: { type: string }[];
+      };
+    };
+
+    test('accepts the v1 canonical workflow', async () => {
+      const state = await importFixture('v1');
+
+      expect(state.jobs.map(j => j.name).sort()).toEqual(EXPECTED_JOBS);
+      expect(state.triggers.map(t => t.type).sort()).toEqual(EXPECTED_TRIGGERS);
+    });
+
+    test('accepts the v2 canonical workflow', async () => {
+      const state = await importFixture('v2');
+
+      expect(state.jobs.map(j => j.name).sort()).toEqual(EXPECTED_JOBS);
+      expect(state.triggers.map(t => t.type).sort()).toEqual(EXPECTED_TRIGGERS);
     });
   });
 });

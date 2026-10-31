@@ -239,6 +239,7 @@ defmodule Lightning.ApolloClientTest do
         decoded = Jason.decode!(body)
         refute Map.has_key?(decoded, "workflow_yaml")
         refute Map.has_key?(decoded, "page")
+        refute Map.has_key?(decoded, "skill")
         assert decoded["options"] == %{"stream" => true}
         assert decoded["content"] == "Hello"
         assert decoded["history"] == []
@@ -305,6 +306,52 @@ defmodule Lightning.ApolloClientTest do
 
       {:ok, _} = ApolloClient.global_chat_stream("hi")
     end
+
+    test "forwards attachments" do
+      stub_apollo_config()
+
+      attachments = [
+        %{
+          "type" => "log",
+          "content" => [%{"job_id" => "j-1", "level" => "error"}]
+        },
+        %{"type" => "input_dataclip", "content" => %{"a" => "string"}}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert Jason.decode!(env.body)["attachments"] == attachments
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.global_chat_stream("hi", attachments: attachments)
+    end
+
+    test "sends an empty attachments list when none are given" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.global_chat_stream("hi")
+    end
+
+    test "names the skill and leaves its command in the content" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        decoded = Jason.decode!(env.body)
+        assert decoded["skill"] == %{"name" => "diagnose"}
+        assert decoded["content"] == "/diagnose why did this fail?"
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} =
+        ApolloClient.global_chat_stream("/diagnose why did this fail?",
+          skill: "diagnose"
+        )
+    end
   end
 
   # Private helper function to stub Apollo configuration
@@ -316,7 +363,9 @@ defmodule Lightning.ApolloClientTest do
       case key do
         :endpoint -> endpoint
         :ai_assistant_api_key -> api_key
-        :timeout -> 5_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
   end

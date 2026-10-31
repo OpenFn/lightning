@@ -261,6 +261,13 @@ defmodule LightningWeb.WorkflowController do
         |> put_status(:unprocessable_entity)
         |> json(%{error: "Cannot retry run for deleted workflow"})
 
+      # An authorisation refusal is not an unprocessable entity. Without this
+      # the catch-all below would turn every denial into a 422 carrying the
+      # reason atom; hand it to the fallback controller instead, so this route
+      # answers a refused caller the way the rest of the app does.
+      {:error, :unauthorized} = error ->
+        LightningWeb.FallbackController.call(conn, error)
+
       {:error, reason} ->
         conn
         |> put_status(:unprocessable_entity)

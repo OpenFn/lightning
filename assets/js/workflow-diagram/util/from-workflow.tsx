@@ -9,7 +9,7 @@ import {
 import type { Lightning, Flow, Positions } from '../types';
 
 function getEdgeLabel(edge: Lightning.Edge) {
-  let label: string | JSX.Element = '{ }';
+  let label: string | React.JSX.Element = '{ }';
 
   switch (edge.condition_type) {
     case 'on_job_success':
@@ -133,9 +133,6 @@ const fromWorkflow = (
               cron_expression: triggerNode.cron_expression,
             }),
             ...(triggerNode.type === 'webhook' && {
-              has_auth_method: triggerNode.has_auth_method,
-            }),
-            ...(triggerNode.type === 'kafka' && {
               has_auth_method: triggerNode.has_auth_method,
             }),
           };

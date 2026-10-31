@@ -8,6 +8,7 @@ defmodule Lightning.UsageTracking do
   alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.GithubClient
+  alias Lightning.UsageTracking.Identity
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
@@ -154,6 +155,20 @@ defmodule Lightning.UsageTracking do
 
   defp enqueue(date) do
     Oban.insert(Lightning.Oban, ReportWorker.new(%{date: date}))
+  end
+
+  @doc """
+  Returns the instance UUID and the SHA-256 hash that reports carry in its
+  place, or `nil` if no instance ID has been generated yet.
+  """
+  def instance_identity do
+    case Repo.one(from c in DailyReportConfiguration, select: c.instance_id) do
+      nil ->
+        nil
+
+      instance_id ->
+        %{instance_id: instance_id, hashed_id: Identity.hash(instance_id)}
+    end
   end
 
   def find_enabled_daily_report_config do

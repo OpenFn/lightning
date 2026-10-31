@@ -45,6 +45,21 @@ function createWithSelectorMock(getSnapshot: () => any) {
 // Mock useURLState using centralized helper
 const urlState = createMockURLState();
 
+vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => ({
+  ...(await vi.importActual<
+    typeof import('../../../../js/collaborative-editor/hooks/useWorkflow')
+  >('../../../../js/collaborative-editor/hooks/useWorkflow')),
+  useWorkflowActions: () => ({ saveWorkflow: vi.fn() }),
+}));
+
+vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: () => ({ isSynced: true, settled: true }),
+}));
+
+vi.mock('../../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => ({ hasChanges: false }),
+}));
+
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
 }));
@@ -87,7 +102,9 @@ vi.mock('date-fns', async () => {
 
 function createWrapper(
   editorPreferencesStore: EditorPreferencesStore,
-  historyStateOverride?: any
+  historyStateOverride?: any,
+  historyStoreOverride?: Record<string, any>,
+  sessionStateOverride?: Record<string, any>
 ): React.ComponentType<{ children: React.ReactNode }> {
   // Create mock stores with proper getSnapshot functions
   const workflowState = {
@@ -102,6 +119,9 @@ function createWrapper(
     error: null,
     config: {},
     permissions: {},
+    experimentalFeaturesEnabled: true,
+    contentLocked: true,
+    ...sessionStateOverride,
   };
   const historyState = historyStateOverride || {
     history: [],
@@ -132,6 +152,7 @@ function createWrapper(
       getSnapshot: sessionGetSnapshot,
       subscribe: () => () => {},
       withSelector: createWithSelectorMock(sessionGetSnapshot),
+      requestVersions: vi.fn(),
     } as any,
     historyStore: {
       getSnapshot: historyGetSnapshot,
@@ -145,6 +166,7 @@ function createWrapper(
       unsubscribeFromRunSteps: vi.fn(),
       _viewRun: vi.fn(),
       _closeRunViewer: vi.fn(),
+      ...historyStoreOverride,
     } as any,
     uiStore: {} as any,
   };
@@ -210,7 +232,6 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
-      // Should start expanded - but since history is empty, it shows "No related history"
       const noHistoryText = screen.queryByText(/No related history/i);
       expect(noHistoryText).toBeInTheDocument();
 
@@ -301,11 +322,209 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
-      // Should respect stored expanded state - shows "No related history" when expanded with no data
       expect(screen.getByText(/No related history/i)).toBeInTheDocument();
 
       // Verify the store has the correct state
       expect(store.getSnapshot().historyPanelCollapsed).toBe(false);
+    });
+  });
+
+  describe('run-select vs version switch', () => {
+    test('a dropdown version switch clears the run (URL + run viewer/overlay)', async () => {
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+
+      const closeRunViewer = vi.fn();
+      wrapper = createWrapper(
+        store,
+        {
+          history: [],
+          isLoading: false,
+          error: null,
+          isChannelConnected: true,
+          activeRun: { id: 'stale-run' },
+          runStepsCache: {},
+          runStepsSubscribers: {},
+          runStepsLoading: new Set(),
+        },
+        { _closeRunViewer: closeRunViewer }
+      );
+
+      urlState.setParams({ run: 'stale-run' });
+
+      const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+        wrapper,
+      });
+
+      urlState.setParams({ release: '2' });
+      rerender(<CollaborativeWorkflowDiagram />);
+
+      await waitFor(() => {
+        expect(closeRunViewer).toHaveBeenCalled();
+        expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+          run: null,
+          step: null,
+        });
+      });
+    });
+
+    test('leaving a run view for latest clears the run', async () => {
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+
+      const closeRunViewer = vi.fn();
+      wrapper = createWrapper(
+        store,
+        {
+          history: [],
+          isLoading: false,
+          error: null,
+          isChannelConnected: true,
+          activeRun: { id: 'old-run' },
+          runStepsCache: {},
+          runStepsSubscribers: {},
+          runStepsLoading: new Set(),
+        },
+        { _closeRunViewer: closeRunViewer }
+      );
+
+      urlState.setParams({ run: 'old-run', as_run: 'old-run' });
+
+      const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+        wrapper,
+      });
+
+      urlState.deleteParam('as_run');
+      rerender(<CollaborativeWorkflowDiagram />);
+
+      await waitFor(() => {
+        expect(closeRunViewer).toHaveBeenCalled();
+        expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+          run: null,
+          step: null,
+        });
+      });
+    });
+
+    test('a retry keeps its new run when leaving the old run view', async () => {
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+
+      const closeRunViewer = vi.fn();
+      wrapper = createWrapper(
+        store,
+        {
+          history: [],
+          isLoading: false,
+          error: null,
+          isChannelConnected: true,
+          activeRun: { id: 'old-run' },
+          runStepsCache: {},
+          runStepsSubscribers: {},
+          runStepsLoading: new Set(),
+        },
+        { _closeRunViewer: closeRunViewer }
+      );
+
+      urlState.setParams({ run: 'old-run', as_run: 'old-run' });
+
+      const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+        wrapper,
+      });
+
+      urlState.setParams({ run: 'new-run' });
+      rerender(<CollaborativeWorkflowDiagram />);
+
+      await waitFor(() => {
+        expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith(
+          expect.objectContaining({ run: null })
+        );
+      });
+    });
+
+    test('clicking a run of a different version loads it as-executed WITHOUT clearing it', async () => {
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+
+      urlState.mockFns.updateSearchParams.mockImplementation(
+        (updates: Record<string, string | number | boolean | null>) => {
+          for (const [key, value] of Object.entries(updates)) {
+            if (value === null) delete urlState.mockParams[key];
+            else urlState.mockParams[key] = String(value);
+          }
+        }
+      );
+
+      const closeRunViewer = vi.fn();
+      wrapper = createWrapper(
+        store,
+        {
+          history: [
+            {
+              id: 'wo-1',
+              version: 5,
+              state: 'success',
+              last_activity: '2025-10-23T21:00:02.293382Z',
+              runs: [
+                {
+                  id: 'run-old',
+                  state: 'success',
+                  error_type: null,
+                  started_at: '2025-10-23T20:59:58Z',
+                  finished_at: '2025-10-23T21:00:02Z',
+                  version: 5,
+                },
+              ],
+            },
+          ],
+          isLoading: false,
+          error: null,
+          isChannelConnected: true,
+          runStepsCache: {},
+          runStepsSubscribers: {},
+          runStepsLoading: new Set(),
+        },
+        { _closeRunViewer: closeRunViewer },
+        { latestSnapshotLockVersion: 9 }
+      );
+
+      urlState.setParams({ release: '2' });
+
+      const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+        wrapper,
+      });
+
+      fireEvent.click(
+        screen.getByRole('button', { name: /Expand work order details/i })
+      );
+      rerender(<CollaborativeWorkflowDiagram />);
+
+      await waitFor(() => {
+        expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+          release: null,
+          v: null,
+          as_run: 'run-old',
+          run: 'run-old',
+        });
+      });
+
+      expect(closeRunViewer).not.toHaveBeenCalled();
+      expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith({
+        run: null,
+        step: null,
+      });
     });
   });
 
@@ -456,10 +675,11 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       const closeButton = screen.getByLabelText(/Remove/i);
       fireEvent.click(closeButton);
 
-      // Should call updateSearchParams to clear the run parameter
       await waitFor(() => {
         expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
           run: null,
+          as_run: null,
+          step: null,
         });
       });
 

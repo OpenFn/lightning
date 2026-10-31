@@ -11,12 +11,7 @@ defmodule LightningWeb.UserAuthTest do
   setup %{conn: conn} do
     conn =
       conn
-      |> Map.replace!(
-        :secret_key_base,
-        LightningWeb.Endpoint.config(:secret_key_base)
-      )
-      |> Plug.Conn.put_private(:phoenix_endpoint, @endpoint)
-      |> init_test_session(%{})
+      |> browser_conn()
       |> Phoenix.Controller.accepts(["html", "json"])
 
     %{user: user_fixture(), conn: conn}
@@ -91,14 +86,84 @@ defmodule LightningWeb.UserAuthTest do
     end
   end
 
+  describe "require_authenticated_api_resource/2" do
+    setup %{conn: conn} do
+      # The :api pipeline accepts JSON only, so the refusal renders as JSON.
+      %{conn: Phoenix.Controller.put_format(conn, "json")}
+    end
+
+    test "refuses a request with no resource", %{conn: conn} do
+      conn = UserAuth.require_authenticated_api_resource(conn, [])
+
+      assert conn.halted
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "refuses a user past their confirmation deadline", %{conn: conn} do
+      stub_email_verification(true)
+
+      conn =
+        conn
+        |> assign(:current_resource, unconfirmed_user(hours_old: 50))
+        |> UserAuth.require_authenticated_api_resource([])
+
+      assert conn.halted
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "passes a confirmed user, a user inside the grace period, and an unconfirmed user with the flag off",
+         %{conn: conn} do
+      stub_email_verification(true)
+
+      confirmed =
+        build(:user,
+          confirmed_at: DateTime.utc_now(),
+          inserted_at: hours_ago(50)
+        )
+
+      for resource <- [confirmed, unconfirmed_user(hours_old: 1)] do
+        assert %{halted: false, status: nil} =
+                 conn
+                 |> assign(:current_resource, resource)
+                 |> UserAuth.require_authenticated_api_resource([])
+      end
+
+      stub_email_verification(false)
+
+      assert %{halted: false, status: nil} =
+               conn
+               |> assign(
+                 :current_resource,
+                 unconfirmed_user(hours_old: 50)
+               )
+               |> UserAuth.require_authenticated_api_resource([])
+    end
+
+    # A repo connection has no email address to confirm. Handing one to
+    # Accounts.locked_out?/1 would raise, so this pins that it never gets there.
+    test "passes a repo connection with the email verification flag on", %{
+      conn: conn
+    } do
+      stub_email_verification(true)
+
+      conn =
+        conn
+        |> assign(
+          :current_resource,
+          build(:project_repo_connection)
+        )
+        |> UserAuth.require_authenticated_api_resource([])
+
+      refute conn.halted
+      refute conn.status
+    end
+  end
+
   describe "log_in_user/2" do
     test "stores the user token in the session", %{conn: conn, user: user} do
       conn = UserAuth.log_in_user(conn, user)
       assert token = get_session(conn, :user_token)
-
-      assert get_session(conn, :live_socket_id) ==
-               "users_sessions:#{Base.url_encode64(token)}"
-
+      refute get_session(conn, :live_socket_id)
       assert Accounts.get_user_by_session_token(token)
     end
 
@@ -182,6 +247,9 @@ defmodule LightningWeb.UserAuthTest do
     end
 
     test "broadcasts to the given live_socket_id", %{conn: conn} do
+      # The literal is the retired token-keyed format on purpose: sessions
+      # written before the per-user change still carry it, and logout has to
+      # keep reaching whatever topic the session holds.
       live_socket_id = "users_sessions:abcdef-token"
       LightningWeb.Endpoint.subscribe(live_socket_id)
 
@@ -195,25 +263,60 @@ defmodule LightningWeb.UserAuthTest do
       }
     end
 
-    test "does not disconnect the user's other devices", %{
+    test "broadcasts to a session revived from the remember me cookie", %{
       conn: conn,
       user: user
     } do
-      # Logout tears down only this session (via live_socket_id and the
-      # redirect). It must not broadcast to the per-user topic, which would
-      # disconnect the user's sockets on every other device.
-      user_token = Accounts.generate_user_session_token(user)
-      topic = "user_socket:#{user.id}"
+      logged_in_conn =
+        conn
+        |> fetch_cookies()
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_with_return_to(%{"remember_me" => "true"})
+
+      %{value: signed_token} = logged_in_conn.resp_cookies[@remember_me_cookie]
+
+      topic = UserAuth.live_socket_topic(user)
       LightningWeb.Endpoint.subscribe(topic)
 
-      conn
-      |> put_session(:user_token, user_token)
-      |> UserAuth.log_out_user()
+      revived =
+        conn
+        |> put_req_cookie(@remember_me_cookie, signed_token)
+        |> UserAuth.fetch_current_user([])
 
-      refute_receive %Phoenix.Socket.Broadcast{
+      assert get_session(revived, :live_socket_id) == topic
+
+      UserAuth.log_out_user(revived)
+
+      assert_receive %Phoenix.Socket.Broadcast{
         event: "disconnect",
         topic: ^topic
       }
+    end
+
+    test "bounces the account's LiveViews without signing its other devices out",
+         %{conn: conn, user: user} do
+      # A disconnect is not a sign-out: the other devices reconnect on their own
+      # surviving tokens. Their channels are left alone, because the /socket
+      # transport is not broadcast to.
+      other_device_token = Accounts.generate_user_session_token(user)
+      live_topic = UserAuth.live_socket_topic(user)
+      socket_topic = UserAuth.user_socket_topic(user)
+      LightningWeb.Endpoint.subscribe(live_topic)
+      LightningWeb.Endpoint.subscribe(socket_topic)
+
+      conn
+      |> put_session(:user_token, Accounts.generate_user_session_token(user))
+      |> UserAuth.fetch_current_user([])
+      |> UserAuth.log_out_user()
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        event: "disconnect",
+        topic: ^live_topic
+      }
+
+      refute_received %Phoenix.Socket.Broadcast{event: "disconnect"}
+
+      assert Accounts.get_user_by_session_token(other_device_token)
     end
 
     test "works even if user is already logged out", %{conn: conn} do
@@ -224,22 +327,46 @@ defmodule LightningWeb.UserAuthTest do
     end
   end
 
+  describe "socket topics" do
+    test "name the two transports a user's connections live on", %{user: user} do
+      assert UserAuth.user_socket_topic(user) == "user_socket:#{user.id}"
+      assert UserAuth.live_socket_topic(user) == "users_live:#{user.id}"
+    end
+
+    test "UserSocket identifies itself with the user socket topic", %{
+      user: user
+    } do
+      socket = %Phoenix.Socket{assigns: %{current_user: user}}
+
+      assert LightningWeb.UserSocket.id(socket) ==
+               UserAuth.user_socket_topic(user)
+    end
+  end
+
   describe "disconnect_user_sockets/1" do
-    test "broadcasts disconnect to the user's socket topic", %{user: user} do
-      topic = "user_socket:#{user.id}"
-      LightningWeb.Endpoint.subscribe(topic)
+    test "broadcasts disconnect on both of the user's transports", %{user: user} do
+      socket_topic = UserAuth.user_socket_topic(user)
+      live_topic = UserAuth.live_socket_topic(user)
+      LightningWeb.Endpoint.subscribe(socket_topic)
+      LightningWeb.Endpoint.subscribe(live_topic)
 
       UserAuth.disconnect_user_sockets(user)
 
       assert_receive %Phoenix.Socket.Broadcast{
         event: "disconnect",
-        topic: ^topic
+        topic: ^socket_topic
+      }
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        event: "disconnect",
+        topic: ^live_topic
       }
     end
   end
 
   describe "fetch_current_user/2" do
-    test "authenticates user from session", %{conn: conn, user: user} do
+    test "authenticates the user from the session and addresses their LiveView transport",
+         %{conn: conn, user: user} do
       user_token = Accounts.generate_user_session_token(user)
 
       conn =
@@ -248,6 +375,10 @@ defmodule LightningWeb.UserAuthTest do
         |> UserAuth.fetch_current_user([])
 
       assert conn.assigns.current_user.id == user.id
+      assert get_session(conn, :user_token) == user_token
+
+      assert get_session(conn, :live_socket_id) ==
+               UserAuth.live_socket_topic(user)
     end
 
     test "authenticates user from cookies", %{conn: conn, user: user} do
@@ -271,10 +402,57 @@ defmodule LightningWeb.UserAuthTest do
       assert conn.assigns.current_user.id == user.id
     end
 
+    test "revives from cookies into the session it was given", %{
+      conn: conn,
+      user: user
+    } do
+      logged_in_conn =
+        conn
+        |> fetch_cookies()
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_with_return_to(%{"remember_me" => "true"})
+
+      %{value: signed_token} = logged_in_conn.resp_cookies[@remember_me_cookie]
+
+      conn =
+        conn
+        |> put_req_cookie(@remember_me_cookie, signed_token)
+        |> put_session(:user_return_to, "/hello")
+        |> UserAuth.fetch_current_user([])
+
+      # Revival only runs on a session holding no :user_token, so there is no
+      # prior identity for a renewed session id to protect.
+      refute conn.private[:plug_session_info] == :renew
+      assert get_session(conn, :user_return_to) == "/hello"
+
+      assert get_session(conn, :live_socket_id) ==
+               UserAuth.live_socket_topic(user)
+    end
+
+    test "rewrites a session still carrying the old token-keyed id", %{
+      conn: conn,
+      user: user
+    } do
+      user_token = Accounts.generate_user_session_token(user)
+
+      conn =
+        conn
+        |> put_session(:user_token, user_token)
+        |> put_session(
+          :live_socket_id,
+          "users_sessions:#{Base.url_encode64(user_token)}"
+        )
+        |> UserAuth.fetch_current_user([])
+
+      assert get_session(conn, :live_socket_id) ==
+               UserAuth.live_socket_topic(user)
+    end
+
     test "does not authenticate if data is missing", %{conn: conn, user: user} do
       _ = Accounts.generate_user_session_token(user)
       conn = UserAuth.fetch_current_user(conn, [])
       refute get_session(conn, :user_token)
+      refute get_session(conn, :live_socket_id)
       refute conn.assigns.current_user
     end
   end
@@ -400,6 +578,146 @@ defmodule LightningWeb.UserAuthTest do
       assert conn.halted
       assert conn.status == 401
       assert conn.resp_body |> Jason.decode!() == %{"error" => "Unauthorized"}
+    end
+  end
+
+  describe "require_authenticated_user/2 — email confirmation lockout" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      %{
+        locked_out_user:
+          insert(:user,
+            confirmed_at: nil,
+            inserted_at: Timex.shift(DateTime.utc_now(), hours: -50)
+          )
+      }
+    end
+
+    test "redirects a locked-out account and mints no socket token",
+         %{conn: conn, locked_out_user: user} do
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> put_session(:user_token, Accounts.generate_user_session_token(user))
+        |> fetch_flash()
+        |> assign(:current_user, user)
+        |> UserAuth.require_authenticated_user([])
+
+      assert conn.halted
+      assert redirected_to(conn) == "/users/confirm-required"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "blocked pending email confirmation"
+
+      refute conn.assigns[:user_token]
+    end
+
+    test "returns 401 to a locked-out account on a json request", %{
+      conn: conn,
+      locked_out_user: user
+    } do
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> Phoenix.Controller.put_format("json")
+        |> assign(:current_user, user)
+        |> UserAuth.require_authenticated_user([])
+
+      assert conn.halted
+      assert conn.status == 401
+      assert Jason.decode!(conn.resp_body) == %{"error" => "Unauthorized"}
+    end
+
+    test "serves the paths a locked-out account still needs", %{
+      conn: conn,
+      locked_out_user: user
+    } do
+      user_token = Accounts.generate_user_session_token(user)
+
+      for path_info <- [
+            ["users", "confirm-required"],
+            ["users", "send-confirmation-email"],
+            ["users", "confirm", "sometoken"],
+            ["profile", "confirm_email", "sometoken"]
+          ] do
+        conn =
+          %{conn | path_info: path_info}
+          |> put_session(:user_token, user_token)
+          |> assign(:current_user, user)
+          |> UserAuth.require_authenticated_user([])
+
+        refute conn.halted, "#{Enum.join(path_info, "/")} was refused"
+
+        # Served, but without a socket token: these pages render authenticated,
+        # so one minted here would be a working 14-day socket credential.
+        refute conn.assigns[:user_token],
+               "#{Enum.join(path_info, "/")} minted a socket token"
+      end
+    end
+
+    test "leaves the grace period and a flag-off instance alone", %{
+      conn: conn,
+      user: fresh_user,
+      locked_out_user: user
+    } do
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> put_session(
+          :user_token,
+          Accounts.generate_user_session_token(fresh_user)
+        )
+        |> assign(:current_user, fresh_user)
+        |> UserAuth.require_authenticated_user([])
+
+      refute conn.halted
+      assert conn.assigns[:user_token]
+
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> false
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> put_session(:user_token, Accounts.generate_user_session_token(user))
+        |> assign(:current_user, user)
+        |> UserAuth.require_authenticated_user([])
+
+      refute conn.halted
+      assert conn.assigns[:user_token]
+    end
+
+    test "keeps an error the request is already carrying", %{
+      conn: conn,
+      locked_out_user: user
+    } do
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> fetch_flash()
+        |> put_flash(:error, "Email change link is invalid or it has expired.")
+        |> assign(:current_user, user)
+        |> UserAuth.require_authenticated_user([])
+
+      assert redirected_to(conn) == "/users/confirm-required"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Email change link is invalid or it has expired."
+    end
+
+    test "an expired email-change link still explains itself on the landing page",
+         %{locked_out_user: user} do
+      conn = build_conn() |> log_in_user(user)
+
+      conn = get(conn, ~p"/profile/confirm_email/expired-token")
+      assert redirected_to(conn) == "/projects"
+
+      conn = get(conn, ~p"/projects")
+      assert redirected_to(conn) == "/users/confirm-required"
+
+      html = conn |> get(~p"/users/confirm-required") |> html_response(200)
+      assert html =~ "Email change link is invalid or it has expired."
     end
   end
 
@@ -622,4 +940,18 @@ defmodule LightningWeb.UserAuthTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :nav) == nil
     end
   end
+
+  defp stub_email_verification(enabled?) do
+    Mox.stub(Lightning.MockConfig, :check_flag?, fn
+      :require_email_verification -> enabled?
+      flag -> Lightning.Config.API.check_flag?(flag)
+    end)
+  end
+
+  # Never inserted: require_authenticated_api_resource/2 only reads the struct.
+  defp unconfirmed_user(hours_old: hours) do
+    build(:user, confirmed_at: nil, inserted_at: hours_ago(hours))
+  end
+
+  defp hours_ago(hours), do: DateTime.add(DateTime.utc_now(), -hours, :hour)
 end

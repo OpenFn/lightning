@@ -21,7 +21,6 @@ import { SessionContext } from '../../../../js/collaborative-editor/contexts/Ses
 import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
-import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
@@ -39,7 +38,10 @@ import {
   getURLStateMockValue,
 } from '../../__helpers__';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
-import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
+import {
+  createMockSocket,
+  createTestSessionStore,
+} from '../../__helpers__/sessionStoreHelpers';
 
 // Mock useURLState hook
 const urlState = createMockURLState();
@@ -83,9 +85,10 @@ function createWrapper(
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   // Initialize session with proper mock socket so isSynced works
   const mockSocket = createMockSocket();
   sessionStore.initializeSession(
@@ -142,9 +145,9 @@ describe('JobInspector - Footer Button States', () => {
       },
     });
 
-    // Set workflow lock_version to match session context
     const workflowMap = ydoc.getMap('workflow');
     workflowMap.set('lock_version', 1);
+    workflowMap.set('deleted_at', null);
 
     // Create connected stores
     workflowStore = createConnectedWorkflowStore(ydoc);
@@ -174,22 +177,28 @@ describe('JobInspector - Footer Button States', () => {
     });
   });
 
-  test('footer is rendered in read-only mode', () => {
+  test('the footer keeps all three controls in read-only mode, with the flag on', () => {
     // Set read-only permissions
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: false,
           can_run_workflow: false,
           can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
         },
+        experimental_features_enabled: true,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
 
@@ -214,10 +223,52 @@ describe('JobInspector - Footer Button States', () => {
       }
     );
 
-    // Footer should be rendered with all three buttons
+    expect(screen.getByTestId('inspector-footer')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /code/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
+  });
+
+  test('Run and Delete stay put and disabled without the flag', () => {
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: false,
+          can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
+        },
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+        has_read_ai_disclaimer: false,
+      });
+    });
+
+    const job = workflowStore.getSnapshot().jobs[0];
+
+    render(
+      <JobInspector job={job} onClose={vi.fn()} onOpenRunPanel={vi.fn()} />,
+      {
+        wrapper: createWrapper(
+          workflowStore,
+          credentialStore,
+          sessionContextStore,
+          adaptorStore,
+          awarenessStore
+        ),
+      }
+    );
+
+    expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 
   test('Code button is enabled in read-only mode', () => {
@@ -226,16 +277,22 @@ describe('JobInspector - Footer Button States', () => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: false,
           can_run_workflow: false,
           can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
         },
+        experimental_features_enabled: true,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
 
@@ -264,22 +321,28 @@ describe('JobInspector - Footer Button States', () => {
     expect(codeButton).not.toBeDisabled();
   });
 
-  test('Run and Delete buttons are disabled in read-only mode', () => {
+  test('Run and Delete stay put and disabled in read-only mode, with the flag on', () => {
     // Set read-only permissions
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: false,
           can_run_workflow: false,
           can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
         },
+        experimental_features_enabled: true,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
 
@@ -304,11 +367,8 @@ describe('JobInspector - Footer Button States', () => {
       }
     );
 
-    const runButton = screen.getByRole('button', { name: /run/i });
-    const deleteButton = screen.getByRole('button', { name: /delete/i });
-
-    expect(runButton).toBeDisabled();
-    expect(deleteButton).toBeDisabled();
+    expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 
   test('Code button is clickable in read-only mode', async () => {
@@ -319,16 +379,22 @@ describe('JobInspector - Footer Button States', () => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: false,
           can_run_workflow: false,
           can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
         },
+        experimental_features_enabled: true,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
 
@@ -371,11 +437,15 @@ describe('JobInspector - Footer Button States', () => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 6,
         project_repo_connection: null,
@@ -442,6 +512,10 @@ describe('JobInspector - Footer Button States', () => {
       ],
     });
 
+    const depsWorkflowMap = ydocWithDeps.getMap('workflow');
+    depsWorkflowMap.set('lock_version', 1);
+    depsWorkflowMap.set('deleted_at', null);
+
     const workflowStoreWithDeps = createConnectedWorkflowStore(ydocWithDeps);
 
     // Set edit permissions
@@ -449,16 +523,21 @@ describe('JobInspector - Footer Button States', () => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
 
@@ -495,16 +574,21 @@ describe('JobInspector - Footer Button States', () => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
 
@@ -539,22 +623,28 @@ describe('JobInspector - Footer Button States', () => {
     expect(codeButton).not.toBeDisabled();
   });
 
-  test('Delete button is disabled for leaf node in read-only mode', () => {
+  test('Delete is disabled for a leaf node in read-only mode, with the flag on', () => {
     // Set read-only permissions
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: false,
           can_run_workflow: false,
           can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
         },
+        experimental_features_enabled: true,
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
 
@@ -580,10 +670,7 @@ describe('JobInspector - Footer Button States', () => {
       }
     );
 
-    const deleteButton = screen.getByRole('button', { name: /delete/i });
-
-    // Delete button should be disabled in read-only mode even for leaf nodes
-    expect(deleteButton).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 });
 
@@ -684,16 +771,21 @@ describe('JobInspector - Credential Selection', () => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
         project: null,
-        config: { require_email_verification: false },
+        config: {
+          require_email_verification: false,
+          kafka_triggers_enabled: false,
+        },
         permissions: {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
         webhook_auth_methods: [],
         workflow_template: null,
+        has_read_ai_disclaimer: false,
       });
     });
   });

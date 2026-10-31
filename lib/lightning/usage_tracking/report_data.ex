@@ -6,6 +6,7 @@ defmodule Lightning.UsageTracking.ReportData do
   """
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.DailyReportConfiguration
+  alias Lightning.UsageTracking.Identity
   alias Lightning.UsageTracking.ProjectMetricsService
   alias Lightning.UsageTracking.UserService
 
@@ -36,7 +37,7 @@ defmodule Lightning.UsageTracking.ReportData do
   defp instrument_identity(identity, false = _cleartext_enabled) do
     %{
       cleartext_uuid: nil,
-      hashed_uuid: identity |> build_hash()
+      hashed_uuid: Identity.hash(identity)
     }
   end
 
@@ -45,8 +46,6 @@ defmodule Lightning.UsageTracking.ReportData do
     |> instrument_identity(false)
     |> Map.merge(%{cleartext_uuid: identity})
   end
-
-  defp build_hash(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
 
   defp operating_system_name do
     {_os_family, os_name} = :os.type()

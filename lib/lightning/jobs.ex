@@ -164,6 +164,28 @@ defmodule Lightning.Jobs do
   end
 
   @doc """
+  Gets the name of a job in a project.
+
+  Returns `nil` when the id names no job in that project — including when it
+  is not a UUID at all, since it reaches here from a query string.
+  """
+  def get_job_name(project_id, job_id) do
+    case Ecto.UUID.cast(job_id) do
+      {:ok, id} ->
+        Repo.one(
+          from(j in Job,
+            join: w in assoc(j, :workflow),
+            where: j.id == ^id and w.project_id == ^project_id,
+            select: j.name
+          )
+        )
+
+      :error ->
+        nil
+    end
+  end
+
+  @doc """
   Creates a job.
 
   ## Examples

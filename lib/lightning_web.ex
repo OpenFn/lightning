@@ -128,11 +128,6 @@ defmodule LightningWeb do
 
       import LightningWeb.FormHelpers
 
-      import PetalComponents.Avatar
-      import PetalComponents.Card
-      import PetalComponents.Dropdown
-      import PetalComponents.Typography
-
       alias LightningWeb.Components
       alias LightningWeb.Components.Common
       alias LightningWeb.Components.Icon

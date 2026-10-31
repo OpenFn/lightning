@@ -3,6 +3,9 @@ defmodule LightningWeb.UserConfirmationController do
 
   alias Lightning.Accounts
   alias Lightning.Accounts.User
+  alias LightningWeb.ConfirmationLockout
+
+  require Logger
 
   plug :verify_confirmation_token when action in [:edit, :update]
 
@@ -46,13 +49,26 @@ defmodule LightningWeb.UserConfirmationController do
   end
 
   def send_email(
-        %{assigns: %{current_user: %{confirmed_at: nil}}} = conn,
+        %{assigns: %{current_user: %{confirmed_at: nil} = user}} = conn,
         _params
       ) do
-    Lightning.Accounts.remind_account_confirmation(conn.assigns.current_user)
+    {level, flash} =
+      case Accounts.remind_account_confirmation(user) do
+        {:error, :rate_limited} ->
+          {:info, ConfirmationLockout.resend_throttled_message()}
+
+        {:ok, _email} ->
+          {:info, "Confirmation email sent successfully"}
+
+        {:error, reason} ->
+          Logger.error("Failed to resend confirmation email #{inspect(reason)}")
+
+          {:error,
+           "We could not send that email just now. Please try again in a moment."}
+      end
 
     conn
-    |> put_flash(:info, "Confirmation email sent successfully")
+    |> put_flash(level, flash)
     |> redirect(to: get_referer(conn))
   end
 

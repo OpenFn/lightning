@@ -6,6 +6,37 @@ defmodule LightningWeb.Components.Menu do
 
   import LightningWeb.Components.Icons
 
+  attr :current_user, Lightning.Accounts.User, required: true
+
+  @doc """
+  Says that experimental features are on, on every page.
+
+  The account menu says the same thing, but only once it is opened, and the
+  setting people forget is the one they never open a menu to check. Links to
+  the profile, where the switch is.
+  """
+  def experimental_mode_item(assigns) do
+    ~H"""
+    <div
+      :if={Lightning.Accounts.experimental_features_enabled?(@current_user)}
+      class="flex-shrink-0 border-t border-white/10 mt-3 pt-3"
+    >
+      <div class="mx-3">
+        <LightningWeb.Components.Common.wrapper_tooltip
+          id="experimental-mode-indicator"
+          tooltip="You're using features that are still being built. Things may work differently for you than for your teammates."
+          placement="right"
+          class={~w[menu-item h-8 rounded-lg text-sm font-medium inline-flex
+               items-center text-amber-300]}
+        >
+          <.icon name="hero-wrench-screwdriver" class="h-5 w-5 shrink-0" />
+          <span class="menu-item-text truncate">Experimental</span>
+        </LightningWeb.Components.Common.wrapper_tooltip>
+      </div>
+    </div>
+    """
+  end
+
   attr :project_id, :string, required: true
   attr :current_user, :map, required: true
   attr :active_menu_item, :atom, required: true

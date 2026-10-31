@@ -87,6 +87,8 @@ defmodule LightningWeb.Components.Credentials do
   attr :current_body, :map, default: %{}
   attr :schema_changeset, :any, default: nil
   attr :raw_body_touched, :boolean, default: false
+  attr :target, :any, default: nil
+  attr :attempt, :integer, default: 0
   slot :inner_block
 
   def form_component(%{type: "raw"} = assigns) do
@@ -109,6 +111,8 @@ defmodule LightningWeb.Components.Credentials do
       form={@form}
       current_body={@current_body}
       schema_changeset={@schema_changeset}
+      target={@target}
+      attempt={@attempt}
     >
       {render_slot(@inner_block, l)}
     </JsonSchemaBodyComponent.fieldset>

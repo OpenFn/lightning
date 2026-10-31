@@ -30,8 +30,8 @@ Execute the following steps to run a benchmark on Lightning:
    `webhookURL` is already set to default to the webhook created in the demo
    data
 
-   If you would like to point at a different instance or webhook url you
-   can provide it via `WEBHOOK_URL`.
+   If you would like to point at a different instance or webhook url you can
+   provide it via `WEBHOOK_URL`.
 
 5. In another terminal (do not stop the Lightning server) run the
    `tooling/benchmarking/script.js` file using the following command
@@ -129,10 +129,10 @@ webhookRequests ✓ [======================================] 00/50 VUs  2m20s  0
 
 ## Run load tests for a hypothetical cold chain system
 
-`tooling/benchmarking/sample_cold_chain_monitoring_script.js` contains a k6 script that
-can be used to simulate data from a hypothetical cold chain system. It requires a
-custom job to be created (an example of which can be found at the top of the
-script file).
+`tooling/benchmarking/sample_cold_chain_monitoring_script.js` contains a k6
+script that can be used to simulate data from a hypothetical cold chain system.
+It requires a custom job to be created (an example of which can be found at the
+top of the script file).
 
 The test can be excuted as follows (`WEBHOOK_URL` is not optional):
 

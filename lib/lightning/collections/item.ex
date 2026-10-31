@@ -38,6 +38,15 @@ defmodule Lightning.Collections.Item do
     |> cast(attrs, [:collection_id, :key, :value])
     |> validate_required([:collection_id, :key, :value])
     |> validate_length(:value, max: 1_000_000)
+    |> Lightning.Validators.validate_name_fits_column(
+      :value,
+      "value is too long, please use a shorter one",
+      1_000_000
+    )
+    |> Lightning.Validators.validate_name_fits_column(
+      :key,
+      "key is too long, please use a shorter one"
+    )
     |> unique_constraint([:collection_id, :key])
     |> foreign_key_constraint(:collection_id)
   end

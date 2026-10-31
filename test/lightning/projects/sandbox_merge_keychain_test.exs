@@ -40,6 +40,62 @@ defmodule Lightning.Projects.SandboxMergeKeychainTest do
       refute merged_job.keychain_credential_id == sandbox_kc.id
     end
 
+    test "an editor's sandbox-only keychain does not follow the merge" do
+      # Creating a keychain in a project is an owner/admin action. Merging is
+      # not. Without the check the merge would carry the keychain into the
+      # parent for somebody who could never have made one there. The job comes
+      # across without it, the same way an editor's merge leaves collection
+      # deletions unperformed.
+      %{actor: owner, parent: parent} = parent_with_keychain_job!()
+
+      editor = insert(:user)
+      insert(:project_user, project: parent, user: editor, role: :editor)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, editor, %{name: "sb-ed"})
+
+      sandbox_only_kc =
+        insert(:keychain_credential,
+          project: sandbox,
+          created_by: editor,
+          name: "editors-own",
+          path: "$.org_id",
+          default_credential: nil
+        )
+
+      new_job = add_new_keychain_workflow!(sandbox, sandbox_only_kc, "EdFlow")
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, editor)
+
+      merged_job = merged_job!(parent, "EdFlow", new_job.name)
+
+      assert is_nil(merged_job.keychain_credential_id),
+             "the editor's keychain followed them into the parent"
+
+      refute Repo.get_by(KeychainCredential,
+               project_id: parent.id,
+               name: "editors-own"
+             )
+
+      # And the same merge run by somebody who may create one does carry it.
+      {:ok, sandbox2} = Sandboxes.provision(parent, owner, %{name: "sb-own"})
+
+      owner_kc =
+        insert(:keychain_credential,
+          project: sandbox2,
+          created_by: owner,
+          name: "owners-own",
+          path: "$.org_id",
+          default_credential: nil
+        )
+
+      job2 = add_new_keychain_workflow!(sandbox2, owner_kc, "OwnFlow")
+
+      assert {:ok, _} = Sandboxes.merge(sandbox2, parent, owner)
+
+      carried = merged_job!(parent, "OwnFlow", job2.name)
+      refute is_nil(carried.keychain_credential_id)
+    end
+
     test "matches the parent's existing keychain by name without duplicating it" do
       %{actor: actor, parent: parent, kc: parent_kc} =
         parent_with_keychain_job!()

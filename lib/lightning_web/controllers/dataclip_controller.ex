@@ -58,7 +58,7 @@ defmodule LightningWeb.DataclipController do
     dataclip = Invocation.get_dataclip_with_body!(dataclip_id)
 
     # Only scrub step_result dataclips (most don't need scrubbing)
-    # :http_request | :global | :step_result | :saved_input | :kafka
+    # :http_request | :global | :step_result | :saved_input
     body =
       case dataclip.type do
         # For some dataclips, we need to scrub credentials
@@ -143,7 +143,11 @@ defmodule LightningWeb.DataclipController do
                    project,
                    query_string,
                    limit,
-                   0
+                   0,
+                   named_dataclips:
+                     Lightning.Accounts.experimental_features_enabled?(
+                       conn.assigns.current_user
+                     )
                  ) do
               {:ok,
                %{

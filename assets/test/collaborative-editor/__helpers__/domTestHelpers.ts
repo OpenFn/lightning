@@ -21,9 +21,9 @@ import { screen } from '@testing-library/react';
  * @example
  * // Component renders both visible and invisible text for layout:
  * // <span aria-hidden="true">Processing</span>  <!-- invisible spacer -->
- * // <span>Run (Retry)</span>                    <!-- visible text -->
+ * // <span>Retry</span>                    <!-- visible text -->
  *
- * const visibleText = getVisibleButtonText('Run (Retry)');
+ * const visibleText = getVisibleButtonText('Retry');
  * expect(visibleText).toBeInTheDocument();
  */
 export function getVisibleButtonText(text: string | RegExp): HTMLElement {

@@ -1,9 +1,10 @@
 import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { Position } from '@xyflow/react';
-import cronstrue from 'cronstrue';
 import { memo } from 'react';
 
-import { kafkaIcon, lockClosedIcon } from '../components/trigger-icons';
+import { humanizeCron } from '#/utils/humanizeCron';
+
+import { lockClosedIcon } from '../components/trigger-icons';
 import type { Lightning } from '../types';
 
 import Node from './Node';
@@ -21,7 +22,7 @@ const TriggerNode = ({
   ...props
 }: t.DistributedOmit<React.ComponentPropsWithoutRef<typeof Node>, 'data'> & {
   data: Lightning.TriggerNode;
-}): JSX.Element => {
+}): React.JSX.Element => {
   // Do not remove yet, we might need this snippet of code when implementing issue #1121
   const { label, sublabel, tooltip, primaryIcon, secondaryIcon } =
     getTriggerMeta(props.data);
@@ -47,6 +48,11 @@ TriggerNode.displayName = 'TriggerWorkflowNode';
 export default memo(TriggerNode);
 
 function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
+  // Read before the switch narrows it away: a snapshot taken while a
+  // since-removed trigger type existed still reaches here, whatever the union
+  // says.
+  const declaredType: string = trigger.type;
+
   switch (trigger.type) {
     case 'webhook':
       return {
@@ -56,28 +62,15 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
         primaryIcon: <GlobeAltIcon />,
         secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
-    case 'kafka':
-      return {
-        label: 'Kafka trigger',
-        sublabel: `On each message consumed from the cluster`,
-        primaryIcon: kafkaIcon,
-        secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
-      };
     case 'cron':
-      let sublabel = 'Not configured';
-      try {
-        if (trigger.cron_expression) {
-          sublabel = cronstrue.toString(trigger.cron_expression);
-        }
-      } catch (_error) {
-        sublabel = 'Invalid cron expression';
-      }
       return {
         label: 'Cron trigger',
-        sublabel,
+        sublabel: trigger.cron_expression
+          ? (humanizeCron(trigger.cron_expression) ?? 'Invalid cron expression')
+          : 'Not configured',
         primaryIcon: <ClockIcon />,
         secondaryIcon: null,
       };
   }
-  return { label: '', sublabel: '' };
+  return { label: 'Unsupported trigger', sublabel: declaredType };
 }

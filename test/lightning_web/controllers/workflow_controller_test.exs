@@ -145,6 +145,38 @@ defmodule LightningWeb.WorkflowControllerTest do
       assert html_response(conn, 403) =~ "Forbidden"
     end
 
+    test "refuses a non-member support user when the project has not consented" do
+      support_user = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: false)
+      workflow = insert(:workflow, project: project) |> with_snapshot()
+      job = insert(:job, workflow: workflow)
+
+      conn =
+        build_conn()
+        |> log_in_user(support_user)
+        |> post(~p"/projects/#{project}/workflows/#{workflow}/runs", %{
+          job_id: job.id
+        })
+
+      assert html_response(conn, 403) =~ "Forbidden"
+    end
+
+    test "admits a non-member support user once the project consents to support access" do
+      support_user = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: true)
+      workflow = insert(:workflow, project: project) |> with_snapshot()
+      job = insert(:job, workflow: workflow)
+
+      conn =
+        build_conn()
+        |> log_in_user(support_user)
+        |> post(~p"/projects/#{project}/workflows/#{workflow}/runs", %{
+          job_id: job.id
+        })
+
+      assert %{"data" => %{"run_id" => _}} = json_response(conn, 201)
+    end
+
     test "requires workflow to be part of the specified project", %{
       conn: conn,
       project: user_project

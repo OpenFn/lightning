@@ -37,6 +37,8 @@ defmodule Lightning.Projects.Project do
 
     field :raw_name, :string, virtual: true
 
+    field :starting_dataclip_id, :binary_id, virtual: true
+
     belongs_to :parent, __MODULE__, type: :binary_id
 
     has_many :project_users, ProjectUser
@@ -303,7 +305,8 @@ defmodule Lightning.Projects.Project do
     changeset
     |> get_assoc(:project_users)
     |> Enum.count(fn project_user ->
-      get_field(project_user, :role) == :owner
+      project_user.action != :delete and
+        get_field(project_user, :role) == :owner
     end)
     |> case do
       1 ->

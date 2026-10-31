@@ -41,7 +41,7 @@ defmodule LightningWeb.CredentialLiveHelpers do
 
     assert html
            |> Floki.parse_fragment!()
-           |> Floki.find("input[type=radio][value=#{type}]")
+           |> Floki.find(~s(input[type=radio][value="#{type}"]))
            |> Enum.any?(),
            "Expected #{type} to be selected"
   end

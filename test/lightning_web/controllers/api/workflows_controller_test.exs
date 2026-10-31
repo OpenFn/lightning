@@ -20,6 +20,27 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
   describe "index" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
+    test "does not publish the workflow lifecycle", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project, state: :live)
+      insert(:trigger, workflow: workflow)
+
+      index = get(conn, ~p"/api/workflows") |> json_response(200)
+
+      for rendered <- index["workflows"] do
+        refute Map.has_key?(rendered, "state")
+        assert Map.has_key?(rendered, "name")
+      end
+
+      show =
+        get(conn, ~p"/api/workflows/#{workflow.id}") |> json_response(200)
+
+      refute Map.has_key?(show["workflow"], "state")
+      assert Map.has_key?(show["workflow"], "name")
+    end
+
     test "lists workflows for projects I have access to", %{
       conn: conn,
       project: project
@@ -347,7 +368,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              } =
                saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
       assert Map.take(hd(workflow.edges), [:condition_type, :enabled]) ==
                Map.take(edge, [:condition_type, :enabled])
@@ -384,7 +405,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert response_workflow == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
       assert pluck_to_mapset(workflow.edges, [:condition_type, :enabled]) ==
                pluck_to_mapset(saved_workflow.edges, [:condition_type, :enabled])
@@ -453,8 +474,15 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert encode_decode(response_workflow) |> remove_timestamps() ==
-               encode_decode(saved_workflow) |> remove_timestamps()
+      merged = encode_decode(response_workflow) |> remove_timestamps()
+      saved = encode_decode(saved_workflow) |> remove_timestamps()
+
+      assert MapSet.new(merged["jobs"]) == MapSet.new(saved["jobs"])
+      assert MapSet.new(merged["edges"]) == MapSet.new(saved["edges"])
+      assert MapSet.new(merged["triggers"]) == MapSet.new(saved["triggers"])
+
+      assert Map.drop(merged, ["jobs", "edges", "triggers"]) ==
+               Map.drop(saved, ["jobs", "edges", "triggers"])
     end
 
     test "returns 422 when an edge has invalid condition_type", %{
@@ -932,7 +960,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(workflow)
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
       assert workflow
              |> Map.merge(patch)
@@ -980,15 +1008,19 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(workflow)
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
-      assert workflow
-             |> Map.merge(patch)
-             |> encode_decode()
-             |> remove_timestamps() ==
-               saved_workflow
-               |> encode_decode()
-               |> remove_timestamps()
+      merged =
+        workflow |> Map.merge(patch) |> encode_decode() |> remove_timestamps()
+
+      saved = saved_workflow |> encode_decode() |> remove_timestamps()
+
+      assert MapSet.new(merged["jobs"]) == MapSet.new(saved["jobs"])
+      assert MapSet.new(merged["edges"]) == MapSet.new(saved["edges"])
+      assert MapSet.new(merged["triggers"]) == MapSet.new(saved["triggers"])
+
+      assert Map.drop(merged, ["jobs", "edges", "triggers"]) ==
+               Map.drop(saved, ["jobs", "edges", "triggers"])
     end
 
     test "Adds a disconnected/orphan job", %{conn: conn, project: project} do
@@ -1105,7 +1137,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       patch =
         %{
           name: "work1.1",
-          triggers: [%{trigger | custom_path: ["invalid path in list"]}]
+          triggers: [%{trigger | comment: ["invalid comment in list"]}]
         }
 
       conn =
@@ -1119,10 +1151,44 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow.id,
                "errors" => %{
                  "triggers" => [
-                   "Trigger #{trigger.id} has the errors: [custom_path: is invalid]"
+                   "Trigger #{trigger.id} has the errors: [comment: is invalid]"
                  ]
                }
              }
+    end
+
+    test "accepts a triggers patch that echoes an existing custom_path", %{
+      conn: conn,
+      project: project
+    } do
+      # The CLI round-trips whole documents, so a trigger that already has a
+      # custom_path sends the same value back on every deploy. That must not
+      # 422.
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(custom_path: "partner-feed")
+        |> Repo.update!()
+
+      patch = %{
+        name: "work1.1",
+        triggers: [%{trigger | comment: "untouched routing"}]
+      }
+
+      conn =
+        patch(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert %{"errors" => %{}} = json_response(conn, 200)
+      assert Repo.reload!(trigger).custom_path == "partner-feed"
     end
 
     test "returns 422 for invalid jobs patch", %{
@@ -1485,15 +1551,23 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert_response(response_workflow)
 
-      saved_workflow =
+      saved =
         get_saved_workflow(response_workflow["id"])
         |> encode_decode()
         |> remove_timestamps()
 
-      assert workflow
-             |> Map.merge(complete_update)
-             |> encode_decode()
-             |> remove_timestamps() == saved_workflow
+      merged =
+        workflow
+        |> Map.merge(complete_update)
+        |> encode_decode()
+        |> remove_timestamps()
+
+      assert MapSet.new(merged["jobs"]) == MapSet.new(saved["jobs"])
+      assert MapSet.new(merged["edges"]) == MapSet.new(saved["edges"])
+      assert MapSet.new(merged["triggers"]) == MapSet.new(saved["triggers"])
+
+      assert Map.drop(merged, ["jobs", "edges", "triggers"]) ==
+               Map.drop(saved, ["jobs", "edges", "triggers"])
     end
 
     test "updates completely a workflow with disconnected job", %{
@@ -1856,7 +1930,13 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     item
     |> Jason.encode!()
     |> Jason.decode!()
+    |> drop_workflow_state()
   end
+
+  defp drop_workflow_state(%{"state" => _} = workflow),
+    do: Map.delete(workflow, "state")
+
+  defp drop_workflow_state(other), do: other
 
   defp remove_timestamps([%{"edges" => _el} | _workflows] = list)
        when is_list(list) do

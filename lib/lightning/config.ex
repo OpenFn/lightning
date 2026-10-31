@@ -8,11 +8,6 @@ defmodule Lightning.Config do
     alias Lightning.Services.AdapterHelper
 
     @impl true
-    def adaptor_registry do
-      Application.get_env(:lightning, Lightning.AdaptorRegistry, [])
-    end
-
-    @impl true
     def token_signer do
       :persistent_term.get({__MODULE__, "token_signer"}, nil)
       |> case do
@@ -226,11 +221,6 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def kafka_triggers_enabled? do
-      kafka_trigger_config() |> Keyword.get(:enabled, false)
-    end
-
-    @impl true
     def max_dataclip_size_bytes do
       Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000)
     end
@@ -238,46 +228,6 @@ defmodule Lightning.Config do
     @impl true
     def max_sandbox_nesting_depth do
       Application.get_env(:lightning, :max_sandbox_nesting_depth, 5)
-    end
-
-    @impl true
-    def kafka_alternate_storage_enabled? do
-      kafka_trigger_config() |> Keyword.get(:alternate_storage_enabled)
-    end
-
-    @impl true
-    def kafka_alternate_storage_file_path do
-      kafka_trigger_config() |> Keyword.get(:alternate_storage_file_path)
-    end
-
-    @impl true
-    def kafka_duplicate_tracking_retention_seconds do
-      kafka_trigger_config()
-      |> Keyword.get(:duplicate_tracking_retention_seconds)
-    end
-
-    @impl true
-    def kafka_notification_embargo_seconds do
-      kafka_trigger_config() |> Keyword.get(:notification_embargo_seconds)
-    end
-
-    @impl true
-    def kafka_number_of_consumers do
-      kafka_trigger_config() |> Keyword.get(:number_of_consumers)
-    end
-
-    @impl true
-    def kafka_number_of_messages_per_second do
-      kafka_trigger_config() |> Keyword.get(:number_of_messages_per_second)
-    end
-
-    @impl true
-    def kafka_number_of_processors do
-      kafka_trigger_config() |> Keyword.get(:number_of_processors)
-    end
-
-    defp kafka_trigger_config do
-      Application.get_env(:lightning, :kafka_triggers, [])
     end
 
     @impl true
@@ -425,6 +375,11 @@ defmodule Lightning.Config do
       |> Keyword.get(:max_credential_sensitive_values, 50)
     end
 
+    @impl true
+    def service_account do
+      Application.get_env(:lightning, :service_account)
+    end
+
     defp default_webhook_retry do
       [
         max_attempts: 5,
@@ -466,14 +421,6 @@ defmodule Lightning.Config do
   @callback google(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
-  @callback kafka_alternate_storage_enabled?() :: boolean()
-  @callback kafka_alternate_storage_file_path() :: String.t()
-  @callback kafka_duplicate_tracking_retention_seconds() :: integer()
-  @callback kafka_notification_embargo_seconds() :: integer()
-  @callback kafka_number_of_consumers() :: integer()
-  @callback kafka_number_of_messages_per_second() :: float()
-  @callback kafka_number_of_processors() :: integer()
-  @callback kafka_triggers_enabled?() :: boolean()
   @callback max_dataclip_size_bytes() :: non_neg_integer()
   @callback max_sandbox_nesting_depth() :: non_neg_integer()
   @callback metrics_run_performance_age_seconds() :: integer()
@@ -506,7 +453,6 @@ defmodule Lightning.Config do
   @callback usage_tracking_run_chunk_size() :: integer()
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
-  @callback adaptor_registry() :: Keyword.t()
   @callback credential_transfer_token_validity_in_days() :: integer()
   @callback book_demo_banner_enabled?() :: boolean()
   @callback book_demo_calendly_url() :: String.t()
@@ -524,13 +470,7 @@ defmodule Lightning.Config do
   @callback webhook_response_timeout_ms() :: integer()
   @callback runtime_manager_port() :: integer()
   @callback max_credential_sensitive_values() :: pos_integer()
-
-  @doc """
-  Returns the configuration for the `Lightning.AdaptorRegistry` service
-  """
-  def adaptor_registry do
-    impl().adaptor_registry()
-  end
+  @callback service_account() :: Lightning.ServiceAccount.t() | nil
 
   @doc """
   Returns the Apollo server configuration.
@@ -679,10 +619,6 @@ defmodule Lightning.Config do
     impl().usage_tracking_run_chunk_size()
   end
 
-  def kafka_triggers_enabled? do
-    impl().kafka_triggers_enabled?()
-  end
-
   def max_dataclip_size_bytes do
     impl().max_dataclip_size_bytes()
   end
@@ -695,34 +631,6 @@ defmodule Lightning.Config do
   """
   def max_sandbox_nesting_depth do
     impl().max_sandbox_nesting_depth()
-  end
-
-  def kafka_alternate_storage_enabled? do
-    impl().kafka_alternate_storage_enabled?()
-  end
-
-  def kafka_alternate_storage_file_path do
-    impl().kafka_alternate_storage_file_path()
-  end
-
-  def kafka_duplicate_tracking_retention_seconds do
-    impl().kafka_duplicate_tracking_retention_seconds()
-  end
-
-  def kafka_number_of_consumers do
-    impl().kafka_number_of_consumers()
-  end
-
-  def kafka_notification_embargo_seconds do
-    impl().kafka_notification_embargo_seconds()
-  end
-
-  def kafka_number_of_messages_per_second do
-    impl().kafka_number_of_messages_per_second()
-  end
-
-  def kafka_number_of_processors do
-    impl().kafka_number_of_processors()
   end
 
   def promex_metrics_endpoint_authorization_required? do
@@ -833,6 +741,14 @@ defmodule Lightning.Config do
   """
   def max_credential_sensitive_values do
     impl().max_credential_sensitive_values()
+  end
+
+  @doc """
+  The service account registered at boot from `SERVICE_ACCOUNT_PUBLIC_KEY`, or
+  nil when none is.
+  """
+  def service_account do
+    impl().service_account()
   end
 
   defp impl do

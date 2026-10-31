@@ -3,11 +3,15 @@ defmodule Lightning.Workflows.QueryTest do
 
   alias Lightning.Workflows.Query
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowReleases
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.JobsFixtures
   import Lightning.AccountsFixtures
   import Lightning.ProjectsFixtures
   import Lightning.Factories
+
+  setup :isolated_adaptors
 
   test "jobs_for/1 with user" do
     user = user_fixture()
@@ -246,6 +250,38 @@ defmodule Lightning.Workflows.QueryTest do
 
       refute current_snapshot.id in unused_ids
       assert unused_ids == []
+    end
+
+    test "excludes snapshots held by a workflow release" do
+      workflow = insert(:workflow)
+
+      released_snapshot = insert(:snapshot, workflow: workflow, lock_version: 1)
+
+      unreleased_snapshot =
+        insert(:snapshot, workflow: workflow, lock_version: 2)
+
+      workflow
+      |> Ecto.Changeset.change(%{lock_version: 3})
+      |> Repo.update!()
+
+      insert(:snapshot, workflow: workflow, lock_version: 3)
+
+      unused_ids = Query.unused_snapshots() |> Repo.all()
+      assert released_snapshot.id in unused_ids
+      assert unreleased_snapshot.id in unused_ids
+
+      {:ok, _release} =
+        WorkflowReleases.insert_release(Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: released_snapshot.id,
+          published_by_id: nil,
+          source_project_id: nil
+        })
+
+      unused_ids = Query.unused_snapshots() |> Repo.all()
+      refute released_snapshot.id in unused_ids
+      assert unreleased_snapshot.id in unused_ids
     end
   end
 end

@@ -22,6 +22,7 @@ interface ActionProps {
   el: HTMLElement;
   containerEl: HTMLElement;
   navigate: (path: string, options?: { replace?: boolean }) => void;
+  redirect: (path: string, options?: { replace?: boolean }) => void;
 }
 
 export type WithActionProps<T = Record<string, unknown>> =
@@ -58,6 +59,7 @@ export const withProps = <const Props = object,>(
         pushEventTo={actions.pushEventTo}
         handleEvent={actions.handleEvent}
         navigate={actions.navigate}
+        redirect={actions.redirect}
         el={actions.el}
         containerEl={actions.containerEl}
       >

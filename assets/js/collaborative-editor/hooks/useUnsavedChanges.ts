@@ -101,10 +101,8 @@ function transformTrigger(trigger: Trigger) {
       output.cron_expression = trigger.cron_expression ?? '0 0 * * *'; // default cron expression
       output.cron_cursor_job_id = trigger.cron_cursor_job_id ?? null;
       break;
-    case 'kafka':
-      output.kafka_configuration = trigger.kafka_configuration;
-      break;
     case 'webhook':
+      output.custom_path = trigger.custom_path ?? null;
       output.webhook_reply = trigger.webhook_reply ?? 'before_start';
       output.webhook_response_config = trigger.webhook_response_config ?? null;
       break;

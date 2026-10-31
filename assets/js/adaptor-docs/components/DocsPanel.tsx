@@ -46,7 +46,7 @@ const EditorHelp = () => (
     <summary className="text-sm cursor-pointer">
       <h3 className="inline">Editor tips & shortcuts</h3>
     </summary>
-    <div className="text-sm border-solid border-grey-300 border-l-4 pl-2 mt-2">
+    <div className="text-sm border-solid border-gray-300 border-l-4 pl-2 mt-2">
       <p className="mb-2">
         Most adaptors provide intelligent code suggestions to the editor. Start
         typing and press TAB or ENTER to accept a suggestion, or ESC to cancel

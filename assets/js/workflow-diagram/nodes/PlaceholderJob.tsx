@@ -11,6 +11,17 @@ import React, {
   useState,
 } from 'react';
 
+import {
+  CONTROL_CHARS_MESSAGE,
+  NAME_TOO_LONG_MESSAGE,
+  NAME_TOO_WIDE_MESSAGE,
+  hasControlChars,
+  isInvisibleOnly,
+  isNameTooLong,
+  isNameTooWideForColumn,
+  normalizeName,
+} from '#/utils/nameValidation';
+
 type NodeData = any;
 
 type ValidationResult = {
@@ -69,20 +80,35 @@ const PlaceholderJobNode = ({ id, data, selected }: NodeProps<NodeData>) => {
     setValidationResult(validateName(evt.target.value));
   };
 
+  // Same rule and same counting as the server, via #/utils/nameValidation.
   const validateName = (name: string): ValidationResult => {
-    if (name.length > 100) {
+    const normalized = normalizeName(name);
+
+    if (isInvisibleOnly(normalized)) {
       return {
         isValid: false,
-        message: 'Name should not exceed 100 characters.',
+        message: 'Name cannot be empty.',
       };
     }
 
-    const regex = /^[a-zA-Z0-9_\- ]*$/;
-    if (!regex.test(name)) {
+    if (isNameTooLong(normalized)) {
       return {
         isValid: false,
-        message:
-          'Name can only contain alphanumeric characters, underscores, dashes, and spaces.',
+        message: NAME_TOO_LONG_MESSAGE,
+      };
+    }
+
+    if (isNameTooWideForColumn(normalized)) {
+      return {
+        isValid: false,
+        message: NAME_TOO_WIDE_MESSAGE,
+      };
+    }
+
+    if (hasControlChars(normalized)) {
+      return {
+        isValid: false,
+        message: CONTROL_CHARS_MESSAGE,
       };
     }
 

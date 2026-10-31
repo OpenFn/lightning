@@ -53,6 +53,7 @@ export {
 // Session store helpers
 export {
   createMockSocket,
+  createTestSessionStore,
   triggerProviderSync,
   triggerProviderStatus,
   applyProviderUpdate,

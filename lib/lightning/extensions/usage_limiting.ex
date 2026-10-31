@@ -11,7 +11,7 @@ defmodule Lightning.Extensions.UsageLimiting do
   @type error :: {:error, error_reason(), message()}
 
   defmodule Action do
-    @moduledoc false
+    @moduledoc "An action whose usage is being checked, and how many units it uses."
     @type t :: %__MODULE__{
             type:
               :activate_workflow
@@ -30,7 +30,7 @@ defmodule Lightning.Extensions.UsageLimiting do
   end
 
   defmodule Context do
-    @moduledoc false
+    @moduledoc "The project and user an action is checked against."
 
     @type t :: %Context{
             project_id: Ecto.UUID.t(),

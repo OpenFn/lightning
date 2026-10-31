@@ -64,7 +64,6 @@ function makeCronTrigger(
     has_auth_method: false,
     cron_expression: '0 9 * * *',
     cron_cursor_job_id: null,
-    kafka_configuration: null,
     webhook_reply: 'before_start',
     webhook_response_config: null,
     ...overrides,
@@ -112,7 +111,7 @@ describe('CronShowPanel', () => {
 
     expect(screen.getByText('Schedule / Cron')).toBeInTheDocument();
     expect(screen.getByText('Frequency')).toBeInTheDocument();
-    expect(screen.getByText('At 09:00 AM')).toBeInTheDocument();
+    expect(screen.getByText('At 09:00 AM UTC')).toBeInTheDocument();
   });
 
   describe('edit button gating', () => {

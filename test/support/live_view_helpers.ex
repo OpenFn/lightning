@@ -55,4 +55,19 @@ defmodule Lightning.LiveViewHelpers do
 
     {:ok, view, html}
   end
+
+  @doc """
+  Returns the index of a user's row in the rendered project form's member table,
+  as the string key the form's nested params use.
+  """
+  def find_user_index_in_list(view, user) do
+    Floki.parse_fragment!(render(view))
+    |> Floki.find("#project-form tbody tr")
+    |> Enum.find_index(fn el ->
+      el
+      |> Floki.find("td:first-child()")
+      |> Floki.text() =~ "#{user.first_name} #{user.last_name}"
+    end)
+    |> to_string()
+  end
 end

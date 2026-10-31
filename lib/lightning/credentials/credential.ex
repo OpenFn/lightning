@@ -8,6 +8,7 @@ defmodule Lightning.Credentials.Credential do
   alias Lightning.Accounts.User
   alias Lightning.Credentials.OauthClient
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Validators
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -69,6 +70,7 @@ defmodule Lightning.Credentials.Credential do
 
   defp shared_validations(changeset) do
     changeset
+    |> resolve_schema_name()
     |> normalize_external_id()
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :user_id])
@@ -80,8 +82,22 @@ defmodule Lightning.Credentials.Credential do
     )
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
-    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
-      message: "credential name has invalid format"
+    |> Validators.validate_name(
+      :name,
+      "credential name can't contain control characters"
+    )
+    |> Validators.validate_name_fits_column(
+      :name,
+      "credential name is too long, please use a shorter one"
+    )
+    |> Validators.validate_name_fits_column(
+      :schema,
+      "credential schema is too long, please use a shorter one",
+      100
+    )
+    |> Validators.validate_name_fits_column(
+      :external_id,
+      "credential external ID is too long, please use a shorter one"
     )
   end
 
@@ -90,5 +106,22 @@ defmodule Lightning.Credentials.Credential do
       "" -> put_change(changeset, :external_id, nil)
       _ -> changeset
     end
+  end
+
+  # Expanding a legacy short name needs a loaded catalogue. When it cannot
+  # answer, the name is stored as typed rather than failing the save. The
+  # short form is a supported legacy shape that `get_schema/1` resolves on
+  # read and `Credentials.reconcile_legacy_schema_names/1` rewrites later.
+  defp resolve_schema_name(changeset) do
+    update_change(changeset, :schema, fn
+      schema when is_binary(schema) ->
+        case Lightning.Adaptors.resolve_name(schema) do
+          {:ok, resolved} -> resolved
+          {:error, _catalogue_unavailable} -> schema
+        end
+
+      schema ->
+        schema
+    end)
   end
 end

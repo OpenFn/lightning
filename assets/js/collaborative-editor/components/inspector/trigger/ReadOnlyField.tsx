@@ -10,7 +10,7 @@ interface ReadOnlyFieldProps {
 /**
  * A labelled read-only value row used by the trigger show panels: a medium-weight
  * label above a bordered, muted value box. Keeps the "label + box" markup
- * identical across the cron and kafka resting panels.
+ * identical across the trigger resting panels.
  */
 export function ReadOnlyField({ label, children }: ReadOnlyFieldProps) {
   return (

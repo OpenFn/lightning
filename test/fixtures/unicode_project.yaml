@@ -1,0 +1,113 @@
+name: unicode-export-test
+description: |
+  Names that YAML would otherwise mangle
+collections:
+  off:
+    name: off
+channels:
+  "Flujo-1:-Registro":
+    name: 'Flujo 1: Registro'
+    destination_url: 'http://localhost'
+    enabled: true
+    destination_credential: 'unicode-user@lightning.com-MailChimp-June''24'
+credentials:
+  "unicode-user@lightning.com-MailChimp-June'24":
+    name: 'MailChimp June''24'
+    owner: unicode-user@lightning.com
+workflows:
+  "Flujo-1:-Registro-en-PS-y-gestión-de-perfiles":
+    name: 'Flujo 1: Registro en PS y gestión de perfiles'
+    jobs:
+      "Vérifier-l'état":
+        name: 'Vérifier l''état'
+        adaptor: '@openfn/language-common@latest'
+        credential: 'unicode-user@lightning.com-MailChimp-June''24'
+        body: |
+          fn(state => state)
+      "患者確認":
+        name: '患者確認'
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          console.log('hello!');
+    triggers:
+      webhook:
+        type: webhook
+        webhook_reply: before_start
+        enabled: true
+    edges:
+      "webhook->Vérifier-l'état":
+        source_trigger: webhook
+        target_job: 'Vérifier-l''état'
+        condition_type: always
+        enabled: true
+      "Vérifier-l'état->患者確認":
+        source_job: 'Vérifier-l''état'
+        target_job: '患者確認'
+        condition_type: on_job_success
+        enabled: true
+  "MailChimp-June'24":
+    name: 'MailChimp June''24'
+    jobs:
+      "a":
+        name: 'a'
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          console.log('hello!');
+      "trailing-space-":
+        name: 'trailing space '
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          console.log('hello!');
+    triggers:
+      webhook:
+        type: webhook
+        webhook_reply: before_start
+        enabled: true
+    edges:
+      webhook->a:
+        source_trigger: webhook
+        target_job: 'a'
+        condition_type: always
+        enabled: true
+      "a->trailing-space-":
+        source_job: 'a'
+        target_job: 'trailing-space-'
+        condition_type: js_expression
+        condition_label: 'évaluation "rechazada", ou pas'
+        condition_expression: |
+          state.data.ok === true
+        enabled: true
+  off:
+    name: off
+    jobs:
+      2026-08-27:
+        name: 2026-08-27
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          console.log('hello!');
+      "step-🎉":
+        name: 'step 🎉'
+        adaptor: '@openfn/language-common@latest'
+        credential: null
+        body: |
+          console.log('hello!');
+    triggers:
+      cron:
+        type: cron
+        cron_expression: '0 23 * * *'
+        enabled: true
+    edges:
+      cron->2026-08-27:
+        source_trigger: cron
+        target_job: 2026-08-27
+        condition_type: always
+        enabled: true
+      "2026-08-27->step-🎉":
+        source_job: 2026-08-27
+        target_job: 'step-🎉'
+        condition_type: on_job_failure
+        enabled: true

@@ -1,7 +1,7 @@
 ---
 name: context-locator
 description: Discovers relevant documents in .context/ directory - the context equivalent of codebase-locator for finding project documentation, notes, and historical context
-tools: Grep, Glob
+tools: Grep, Glob, Bash
 model: haiku
 effort: low
 ---
@@ -35,7 +35,9 @@ their contents in depth.
 3. **Return organized results**
    - Group by document type
    - Include brief one-line description from title/header
-   - Note document dates if visible in filename
+   - Date every hit from git, not the filename: run
+     `git -C .context log -1 --format=%cs -- <path>` (`.context` is its own
+     repo). Put the date on the line.
 
 ## Search Strategy
 
@@ -61,6 +63,12 @@ to best categorize the findings for the user.
 ├── saving/ security/    # Topic directories, at the root not under shared/
 └── *.md                 # Various root-level documentation files
 ```
+
+### Scope
+
+Start with `shared/` and the topic directory for the feature at hand. Widen to
+personal directories and root files only when that turns up nothing useful.
+Skip `archive/` unless the request asks for it by name.
 
 ### Search Patterns
 
@@ -102,14 +110,14 @@ Structure your findings like this:
 ## Context Documents about [Topic]
 
 ### GitHub Issues
-- `.context/shared/issues/issue-3635-save-button.md` - Save button implementation
-- `.context/shared/issues/issue-3624-workflow-editor-header.md` - Workflow editor header
+- `.context/shared/issues/issue-3635-save-button.md` (2024-09-30) - Save button implementation
+- `.context/shared/issues/issue-3624-workflow-editor-header.md` (2024-09-28) - Workflow editor header
 
 ### Research Documents
 - `.context/shared/research/2024-10-01-yjs-integration.md` - Research on Yjs collaborative editing
 
 ### Implementation Plans
-- `.context/shared/plans/save-implementation.md` - Detailed plan for save functionality
+- `.context/shared/plans/save-implementation.md` (2024-10-03) - Detailed plan for save functionality
 
 ### Architecture & Design
 - `.context/shared/architecture/store-structure.md` - Store architecture documentation
@@ -137,6 +145,8 @@ Total: 12 relevant documents found
 - **Check multiple locations** - Shared, personal, and root level
 - **Don't read full file contents** - Just scan for relevance
 - **Preserve exact paths** - Show where documents live
+- **Date every hit** - The reader ranks by age relative to the code; a hit
+  without a date is unranked
 - **Be thorough** - Check subdirectories AND root level
 - **Group logically** - Make categories meaningful
 - **Note patterns** - Help user understand naming conventions

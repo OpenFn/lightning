@@ -15,10 +15,13 @@ import type { Dataclip } from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { getCsrfToken } from '../lib/csrf';
 import { notifications } from '../lib/notifications';
+import { AS_RUN_PARAM, RELEASE_PARAM, SNAPSHOT_PARAM } from '../lib/pinnedView';
 import type { Workflow } from '../types/workflow';
 import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
 import { useActiveRun } from './useHistory';
+import { useSaveBeforeRun } from './useSaveBeforeRun';
+import { useExperimentalFeatures } from './useSessionContext';
 import type { SaveWorkflowOptions } from './useWorkflow';
 
 const logger = _logger.ns('useRunRetry').seal();
@@ -70,6 +73,8 @@ export interface UseRunRetryOptions {
   customBody: string;
   canRunWorkflow: boolean;
   workflowRunTooltipMessage: string;
+  canRetryWorkflow?: boolean;
+  retryTooltipMessage?: string;
   saveWorkflow: (
     options?: SaveWorkflowOptions
   ) => Promise<{ saved_at?: string; lock_version?: number }>;
@@ -86,6 +91,7 @@ export interface UseRunRetryReturn {
   isRetryable: boolean;
   runIsProcessing: boolean;
   canRun: boolean;
+  canRetry: boolean;
 }
 
 /**
@@ -117,12 +123,16 @@ export function useRunRetry({
   customBody,
   canRunWorkflow,
   workflowRunTooltipMessage,
+  canRetryWorkflow = canRunWorkflow,
+  retryTooltipMessage = workflowRunTooltipMessage,
   saveWorkflow,
   onRunSubmitted,
   edgeId,
   workflowEdges = [],
   maxDataclipSizeBytes,
 }: UseRunRetryOptions): UseRunRetryReturn {
+  const saveBeforeRun = useSaveBeforeRun(saveWorkflow);
+  const experimentalFeatures = useExperimentalFeatures();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRetryingRef = useRef(false);
   // Track the run ID we're waiting for WebSocket to connect to
@@ -164,7 +174,6 @@ export function useRunRetry({
   const runIsProcessing = currentRun ? isProcessing(currentRun.state) : false;
 
   // Effect to reset isSubmitting when the pending run is connected via WebSocket
-  // This prevents the "flash" where the button briefly shows "Run (Retry)" between
   // API success and WebSocket connection
   useEffect(() => {
     if (pendingRunId && currentRun?.id === pendingRunId) {
@@ -230,6 +239,8 @@ export function useRunRetry({
     (selectedTab === 'custom' && isValidCustomBody && !isCustomBodyTooLarge);
 
   const canRun = !edgeId && canRunWorkflow && hasValidInput;
+  const canRetry =
+    !edgeId && canRetryWorkflow && (experimentalFeatures || hasValidInput);
 
   /**
    * Handle run - Create new work order with selected input
@@ -253,8 +264,7 @@ export function useRunRetry({
     setIsSubmitting(true);
     try {
       // Save workflow first; user action is run, not save; run outcome
-      // toast covers it
-      await saveWorkflow({ notify: 'none' });
+      const saved = await saveBeforeRun();
 
       const params: dataclipApi.ManualRunParams = {
         workflowId,
@@ -280,7 +290,9 @@ export function useRunRetry({
 
       notifications.success({
         title: 'Run started',
-        description: 'Saved latest changes and created new work order',
+        description: saved
+          ? 'Saved latest changes and created new work order'
+          : 'Created new work order',
       });
 
       // Refresh limits after creating run
@@ -318,7 +330,7 @@ export function useRunRetry({
     selectedTab,
     selectedDataclip,
     customBody,
-    saveWorkflow,
+    saveBeforeRun,
     canRunWorkflow,
     workflowRunTooltipMessage,
     onRunSubmitted,
@@ -341,10 +353,10 @@ export function useRunRetry({
       return false;
     }
 
-    if (!canRunWorkflow) {
+    if (!canRetryWorkflow) {
       notifications.alert({
         title: 'Cannot run workflow',
-        description: workflowRunTooltipMessage,
+        description: retryTooltipMessage,
       });
       isRetryingRef.current = false;
       return false;
@@ -353,8 +365,7 @@ export function useRunRetry({
     setIsSubmitting(true);
     try {
       // Save workflow first; user action is run, not save; run outcome
-      // toast covers it
-      await saveWorkflow({ notify: 'none' });
+      const saved = await saveBeforeRun();
 
       // Call retry endpoint
       const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
@@ -382,7 +393,9 @@ export function useRunRetry({
 
       notifications.success({
         title: 'Retry started',
-        description: 'Saved latest changes and re-running with previous input',
+        description: saved
+          ? 'Saved latest changes and re-running with previous input'
+          : 'Re-running with previous input',
       });
 
       // Refresh limits after retry
@@ -390,15 +403,24 @@ export function useRunRetry({
         void getLimits('new_run');
       }
 
-      // Invoke callback with new run_id
+      updateSearchParams(
+        experimentalFeatures
+          ? {
+              [RELEASE_PARAM]: null,
+              [SNAPSHOT_PARAM]: null,
+              [AS_RUN_PARAM]: null,
+              step: null,
+              run: result.data.run_id,
+            }
+          : { run: result.data.run_id }
+      );
+
       if (onRunSubmitted) {
         // Set pending run ID - the effect will reset isSubmitting when the run is connected
         setPendingRunId(result.data.run_id);
         onRunSubmitted(result.data.run_id);
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {
-        // No callback - stay on the current page and track the run in the URL
-        updateSearchParams({ run: result.data.run_id });
         setIsSubmitting(false);
         isRetryingRef.current = false;
       }
@@ -417,9 +439,10 @@ export function useRunRetry({
   }, [
     followedRunId,
     followedRunStep,
-    canRunWorkflow,
-    workflowRunTooltipMessage,
-    saveWorkflow,
+    canRetryWorkflow,
+    retryTooltipMessage,
+    experimentalFeatures,
+    saveBeforeRun,
     projectId,
     onRunSubmitted,
     getLimits,
@@ -432,5 +455,6 @@ export function useRunRetry({
     isRetryable,
     runIsProcessing,
     canRun,
+    canRetry,
   };
 }

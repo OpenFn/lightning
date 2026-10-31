@@ -9,10 +9,19 @@ defmodule LightningWeb.RunChannel do
 
   alias Lightning.Credentials
   alias Lightning.Credentials.Resolver
+  alias Lightning.DataclipScrubber
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
+  alias Lightning.Projects.Events.ProjectDeletionScheduled
+  alias Lightning.Projects.Events.ProjectUserRemoved
+  alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
+  alias Lightning.Workflows.WebhookAuthMethod
+  alias LightningWeb.Observability
   alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
@@ -34,8 +43,7 @@ defmodule LightningWeb.RunChannel do
          run when is_map(run) <- Runs.get_for_worker(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
            Runs.get_project_id_for_run(run) do
-      Logger.metadata(run_id: id, project_id: project_id)
-      Sentry.Context.set_extra_context(%{run_id: id})
+      Observability.put_scope(run_id: id, project_id: project_id)
 
       {:ok,
        socket
@@ -44,8 +52,9 @@ defmodule LightningWeb.RunChannel do
          id: id,
          run: run,
          project_id: project_id,
-         scrubber: nil,
-         webhook_response: nil
+         scrubber: webhook_auth_scrubber(run),
+         webhook_response: nil,
+         keychain_selectors: nil
        })}
     else
       {:error, :not_found} ->
@@ -65,15 +74,10 @@ defmodule LightningWeb.RunChannel do
            Runs.get(run_id, include: [workflow: :project]) ||
              {:error, :not_found},
          project <- run.workflow.project,
-         :ok <-
-           Lightning.Policies.Permissions.can(
-             Lightning.Policies.ProjectUsers,
-             :access_project,
-             user,
-             project
-           ) do
+         :ok <- Permissions.can(ProjectUsers, :access_project, user, project) do
       # Subscribe to run events
       Runs.Events.subscribe(run)
+      Projects.Events.subscribe(project.id)
 
       {:ok,
        socket
@@ -97,18 +101,22 @@ defmodule LightningWeb.RunChannel do
 
   @impl true
   def handle_in("fetch:plan", _payload, socket) do
-    %{run: run} = socket.assigns
+    case RunWithOptions.render(socket.assigns.run) do
+      {:ok, plan} ->
+        reply_and_report(socket, {:ok, plan})
 
-    reply_with(socket, {:ok, RunWithOptions.render(run)})
+      {:error, reason} ->
+        reply_and_report(socket, {:error, %{reason: "adaptor_#{reason}"}})
+    end
   end
 
   def handle_in("run:start", payload, socket) do
     case Runs.start_run(socket.assigns.run, payload) do
       {:ok, run} ->
-        socket |> assign(run: run) |> reply_with({:ok, nil})
+        socket |> assign(run: run) |> reply_and_report({:ok, nil})
 
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
     end
   end
 
@@ -119,7 +127,7 @@ defmodule LightningWeb.RunChannel do
         # instead of blocking the channel.
         run_with_preloads =
           run
-          |> Repo.preload([:log_lines, work_order: [:workflow]])
+          |> Repo.preload(work_order: [:workflow])
 
         run_with_preloads
         |> Lightning.FailureAlerter.alert_on_failure()
@@ -127,10 +135,10 @@ defmodule LightningWeb.RunChannel do
         socket
         |> assign(run: run)
         |> maybe_send_after_completion_response(payload["final_state"])
-        |> reply_with({:ok, nil})
+        |> reply_and_report({:ok, nil})
 
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
     end
   end
 
@@ -139,15 +147,18 @@ defmodule LightningWeb.RunChannel do
 
     Logger.metadata(credential_id: id)
 
-    case Resolver.resolve_credential(run, id) do
+    case Resolver.resolve_credential(run, id, socket.assigns.keychain_selectors) do
       {:ok, nil} ->
-        reply_with(socket, {:ok, nil})
+        reply_and_report(socket, {:ok, nil})
 
       {:ok, resolved_credential} ->
         handle_resolved_credential(socket, resolved_credential)
 
       {:error, :not_found} ->
-        reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
+        reply_and_report(
+          socket,
+          {:error, %{errors: %{id: ["Credential not found!"]}}}
+        )
 
       {:error, error_tuple} ->
         handle_credential_error(socket, error_tuple, id, project_id, run.id)
@@ -155,7 +166,7 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("fetch:credential", _payload, socket) do
-    reply_with(
+    reply_and_report(
       socket,
       {:error, %{errors: %{id: ["This field can't be blank."]}}}
     )
@@ -172,12 +183,19 @@ defmodule LightningWeb.RunChannel do
   of those HTTP requests to the worker to use as initial state.
   """
   def handle_in("fetch:dataclip", _payload, socket) do
-    body = Runs.get_input(socket.assigns.run)
+    %{run: run} = socket.assigns
+    body = Runs.get_input(run)
 
-    if !socket.assigns.run.options.save_dataclips,
-      do: Runs.wipe_dataclips(socket.assigns.run)
+    socket =
+      if run.options.save_dataclips or socket.assigns.keychain_selectors do
+        socket
+      else
+        selectors = Resolver.keychain_selectors(run)
+        Runs.wipe_dataclips(run)
+        assign(socket, :keychain_selectors, selectors)
+      end
 
-    reply_with(socket, {:ok, {:binary, body || "null"}})
+    reply_and_report(socket, {:ok, {:binary, body || "null"}})
   end
 
   def handle_in("step:start", payload, socket) do
@@ -185,20 +203,23 @@ defmodule LightningWeb.RunChannel do
       job_id when is_binary(job_id) ->
         case Runs.start_step(socket.assigns.run, payload) do
           {:error, changeset} ->
-            reply_with(socket, {:error, changeset})
+            reply_and_report(socket, {:error, changeset})
 
           {:ok, step} ->
-            reply_with(socket, {:ok, %{step_id: step.id}})
+            reply_and_report(socket, {:ok, %{step_id: step.id}})
         end
 
       :missing_job_id ->
-        reply_with(
+        reply_and_report(
           socket,
           {:error, %{errors: %{job_id: ["This field can't be blank."]}}}
         )
 
       nil ->
-        reply_with(socket, {:error, %{errors: %{job_id: ["Job not found!"]}}})
+        reply_and_report(
+          socket,
+          {:error, %{errors: %{job_id: ["Job not found!"]}}}
+        )
     end
   end
 
@@ -211,12 +232,12 @@ defmodule LightningWeb.RunChannel do
     |> Runs.complete_step(socket.assigns.run.options)
     |> case do
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
 
       {:ok, step} ->
         socket
         |> put_webhook_response(payload)
-        |> reply_with({:ok, %{step_id: step.id}})
+        |> reply_and_report({:ok, %{step_id: step.id}})
     end
   end
 
@@ -225,10 +246,10 @@ defmodule LightningWeb.RunChannel do
 
     case Runs.append_run_log(run, payload, scrubber) do
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
 
       {:ok, log_line} ->
-        reply_with(socket, {:ok, %{log_line_id: log_line.id}})
+        reply_and_report(socket, {:ok, %{log_line_id: log_line.id}})
     end
   end
 
@@ -237,10 +258,10 @@ defmodule LightningWeb.RunChannel do
 
     case Runs.append_run_logs_batch(run, payload, scrubber) do
       {:error, changeset} ->
-        reply_with(socket, {:error, changeset})
+        reply_and_report(socket, {:error, changeset})
 
       {:ok, _} ->
-        reply_with(socket, :ok)
+        reply_and_report(socket, :ok)
     end
   end
 
@@ -258,7 +279,7 @@ defmodule LightningWeb.RunChannel do
         ]
       )
 
-    reply_with(socket, {:ok, %{run: run}})
+    reply_and_report(socket, {:ok, %{run: run}})
   end
 
   def handle_in("fetch:logs", _payload, socket) do
@@ -276,7 +297,7 @@ defmodule LightningWeb.RunChannel do
         {:error, _} -> []
       end
 
-    reply_with(socket, {:ok, %{logs: log_lines}})
+    reply_and_report(socket, {:ok, %{logs: log_lines}})
   end
 
   # Forward PubSub events to browser clients
@@ -309,8 +330,52 @@ defmodule LightningWeb.RunChannel do
     {:noreply, socket}
   end
 
+  # This run's project changed who may see it. Re-derive the permission instead
+  # of matching on the event: `Projects.Scope` re-reads the project, so one
+  # clause covers a membership being revoked and a support user losing the
+  # support access that was their only standing. A role change cannot take
+  # `:access_project` away, so it resolves to a no-op here.
+  #
+  # Only the browser join subscribes to project events; a worker's run token is
+  # not project membership, so it carries no `:current_user` to re-check.
+  def handle_info(%event{} = message, socket)
+      when event in [
+             ProjectDeletionScheduled,
+             ProjectUserRemoved,
+             SupportAccessUpdated
+           ] and is_map_key(socket.assigns, :current_user) do
+    if concerns_current_user?(message, socket.assigns.current_user) and
+         !can_access_project?(socket) do
+      {:stop, :normal, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
+
+  # The project is wound down, so nobody's standing on it survives — there is no
+  # user to compare against.
+  defp concerns_current_user?(%ProjectDeletionScheduled{}, _current_user),
+    do: true
+
+  defp concerns_current_user?(%SupportAccessUpdated{}, %{support_user: true}),
+    do: true
+
+  defp concerns_current_user?(%{user_id: user_id}, %{id: user_id}),
+    do: true
+
+  defp concerns_current_user?(_event, _current_user), do: false
+
+  defp can_access_project?(socket) do
+    Permissions.can?(
+      ProjectUsers,
+      :access_project,
+      socket.assigns.current_user,
+      socket.assigns.project_id
+    )
+  end
 
   defp put_webhook_response(socket, payload) do
     if already_sent?(socket.assigns.webhook_response) do
@@ -456,6 +521,27 @@ defmodule LightningWeb.RunChannel do
      %{message: "Run completed, but webhook_response was malformed: #{reason}"}}
   end
 
+  defp webhook_auth_scrubber(run) do
+    case DataclipScrubber.webhook_auth_methods_for_run(run.id) do
+      [] ->
+        nil
+
+      auth_methods ->
+        {:ok, scrubber} =
+          Scrubber.start_link(
+            samples:
+              Enum.flat_map(
+                auth_methods,
+                &WebhookAuthMethod.sensitive_values_for/1
+              ),
+            basic_auth:
+              Enum.flat_map(auth_methods, &WebhookAuthMethod.basic_auth_for/1)
+          )
+
+        scrubber
+    end
+  end
+
   defp update_scrubber(nil, samples, basic_auth) do
     Scrubber.start_link(samples: samples, basic_auth: basic_auth)
   end
@@ -474,7 +560,7 @@ defmodule LightningWeb.RunChannel do
 
     socket
     |> assign(scrubber: scrubber)
-    |> reply_with({:ok, resolved_credential.body})
+    |> reply_and_report({:ok, resolved_credential.body})
   end
 
   defp handle_credential_error(
@@ -546,6 +632,32 @@ defmodule LightningWeb.RunChannel do
        ) do
     {:reply, {:error, "Could not reach the OAuth provider. Try again later"},
      socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:keychain_input_unavailable, _credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    {:reply,
+     {:error,
+      "Could not select a keychain credential: " <>
+        "the run's input was erased before it could be read"}, socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:invalid_keychain_path, _credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    {:reply,
+     {:error,
+      "Could not select a keychain credential: " <>
+        "its path could not be evaluated against the run's input"}, socket}
   end
 
   # Fallback for unexpected error terms

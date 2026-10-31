@@ -8,6 +8,30 @@ defmodule LightningWeb.LayoutComponentsTest do
   alias LightningWeb.LayoutComponents
   alias LightningWeb.Components.Menu
 
+  describe "user_menu_dropdown/1" do
+    test "says what the experimental mode means and offers the way out" do
+      html =
+        render_component(&LayoutComponents.user_menu_dropdown/1, %{
+          current_user:
+            build(:user, preferences: %{"experimental_features" => true})
+        })
+
+      assert html =~ "Experimental features on"
+      assert html =~ "still being built"
+      assert html =~ "Turn off in your profile"
+      assert html =~ ~s(href="/profile")
+    end
+
+    test "says nothing about it when the mode is off" do
+      html =
+        render_component(&LayoutComponents.user_menu_dropdown/1, %{
+          current_user: build(:user, preferences: %{})
+        })
+
+      refute html =~ "Experimental"
+    end
+  end
+
   describe "user_avatar/1" do
     test "renders initials from first and last name" do
       html =

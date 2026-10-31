@@ -17,7 +17,7 @@ defmodule Lightning.Workflows.Job do
   """
   use Lightning.Schema
 
-  alias Lightning.AdaptorRegistry
+  alias Lightning.Adaptors
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
@@ -86,7 +86,6 @@ defmodule Lightning.Workflows.Job do
       :workflow_id
     ])
     |> validate()
-    |> update_change(:name, &String.trim/1)
     |> unique_constraint(:name,
       name: "jobs_name_workflow_id_index",
       message: "job name has already been taken"
@@ -96,8 +95,18 @@ defmodule Lightning.Workflows.Job do
 
   def validate(changeset) do
     changeset
+    # First, so the presence and length checks below see the normalised value.
+    |> Validators.validate_name(
+      :name,
+      "job name can't contain control characters"
+    )
     |> validate_required(:name, message: "job name can't be blank")
     |> validate_required(:body, message: "job body can't be blank")
+    # Only the NUL: a body is code and legitimately has newlines and tabs in it.
+    |> Validators.validate_no_null_bytes(
+      :body,
+      "job body can't contain a null byte"
+    )
     |> validate_required(:adaptor, message: "job adaptor can't be blank")
     |> Validators.validate_uuid([
       :id,
@@ -121,17 +130,20 @@ defmodule Lightning.Workflows.Job do
       max: 100,
       message: "job name should be at most %{count} character(s)"
     )
-    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
-      message: "job name has invalid format"
+    |> Validators.validate_name_fits_column(
+      :name,
+      "job name is too long, please use a shorter one"
     )
     |> validate_adaptor()
   end
 
   defp validate_adaptor(changeset) do
     changeset =
-      validate_format(changeset, :adaptor, AdaptorRegistry.adaptor_format(),
-        message: "adaptor has invalid format"
-      )
+      validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
+        if Adaptors.valid_format?(adaptor),
+          do: [],
+          else: [adaptor: "adaptor has invalid format"]
+      end)
 
     if changeset.valid? do
       validate_known_adaptor(changeset)
@@ -140,23 +152,24 @@ defmodule Lightning.Workflows.Job do
     end
   end
 
-  # Rejects an adaptor the registry doesn't know about, so an unknown package
-  # cannot be persisted on a job.
+  # Rejects an adaptor the catalogue doesn't know about, so an unknown
+  # package cannot be persisted on a job. `fetch_adaptor` returns
+  # `:not_found` once the catalogue has loaded and genuinely lacks the
+  # package, but any other error means the catalogue itself isn't ready
+  # yet, so that case gets its own, retry-able message.
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
-      if adaptor_known?(adaptor) do
+      with {:ok, {name, _version}} <- Adaptors.parse_spec(adaptor),
+           {:ok, _package} <- Adaptors.fetch_adaptor(name) do
         []
       else
-        [adaptor: "is not a recognised adaptor"]
+        {:error, reason} when reason in [:not_found, :invalid_format] ->
+          [adaptor: "is not a recognised adaptor"]
+
+        {:error, _reason} ->
+          [adaptor: "adaptor catalogue is not ready yet, try again shortly"]
       end
     end)
-  end
-
-  defp adaptor_known?(adaptor) do
-    case AdaptorRegistry.resolve_package_name(adaptor) do
-      {name, _version} when is_binary(name) -> AdaptorRegistry.exists?(name)
-      _ -> false
-    end
   end
 
   defp validate_keychain_credential_project_membership(changeset) do

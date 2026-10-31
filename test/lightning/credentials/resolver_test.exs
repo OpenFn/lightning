@@ -2,9 +2,11 @@ defmodule ResolverTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Credentials.Resolver
+  alias Lightning.Workflows.Snapshot
 
   require Logger
 
+  import Lightning.ApplicationHelpers, only: [capture_info_log: 1]
   import Lightning.Factories
   import ExUnit.CaptureLog
 
@@ -31,7 +33,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       credential = Repo.preload(credential, :credential_bodies)
@@ -62,7 +64,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
 
       # Empty strings should be removed
       expected_body = %{
@@ -108,7 +110,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should have all the data
@@ -143,7 +145,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should remove empty values
@@ -199,7 +201,7 @@ defmodule ResolverTest do
 
       credential = Repo.preload(credential, :oauth_client)
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should have refreshed token data merged with credential body
@@ -252,7 +254,9 @@ defmodule ResolverTest do
       credential = Repo.preload(credential, :oauth_client)
 
       {result, log} =
-        capture_info_log(fn -> Resolver.resolve_credential(credential) end)
+        capture_info_log(fn ->
+          Resolver.resolve_credential(credential, "main")
+        end)
 
       assert {:error, {:reauthorization_required, credential}} = result
       assert credential.name == "Test Googlesheets Credential"
@@ -290,7 +294,9 @@ defmodule ResolverTest do
       credential = Repo.preload(credential, :oauth_client)
 
       {result, log} =
-        capture_info_log(fn -> Resolver.resolve_credential(credential) end)
+        capture_info_log(fn ->
+          Resolver.resolve_credential(credential, "main")
+        end)
 
       assert {:error, {:temporary_failure, _credential}} = result
 
@@ -327,7 +333,7 @@ defmodule ResolverTest do
       credential = Repo.preload(credential, :oauth_client)
 
       assert {:error, {original_error, _credential}} =
-               Resolver.resolve_credential(credential)
+               Resolver.resolve_credential(credential, "main")
 
       # Should return the original error for generic failures
       assert original_error != :reauthorization_required
@@ -340,7 +346,7 @@ defmodule ResolverTest do
       credential = insert(:keychain_credential)
 
       assert_raise FunctionClauseError, fn ->
-        Resolver.resolve_credential(credential)
+        Resolver.resolve_credential(credential, "main")
       end
     end
   end
@@ -441,6 +447,7 @@ defmodule ResolverTest do
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
         |> with_run(%{
+          snapshot: snapshot_of(workflow),
           # Create dataclip with user_id = "alice_dhis2" that matches alice's external_id
           dataclip:
             build(:dataclip, %{
@@ -477,6 +484,7 @@ defmodule ResolverTest do
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
         |> with_run(%{
+          snapshot: snapshot_of(workflow),
           dataclip:
             build(:dataclip, %{
               body: %{
@@ -508,6 +516,7 @@ defmodule ResolverTest do
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
         |> with_run(%{
+          snapshot: snapshot_of(workflow),
           # Create dataclip with user_id that doesn't match any credential's external_id
           dataclip:
             build(:dataclip, %{
@@ -534,6 +543,112 @@ defmodule ResolverTest do
       assert resolved.credential.id == default_credential.id
     end
 
+    test "refuses a default credential the keychain's project cannot use", %{
+      default_credential: default_credential,
+      job: job,
+      keychain_credential: keychain_credential,
+      project: project,
+      workflow: workflow
+    } do
+      # The row stays as it is; only the sharing goes away. This is the state a
+      # keychain written before the changeset guard worked would be in, or one
+      # whose credential was later unshared from the project. Checking at write
+      # time cannot help here, so resolution has to check for itself.
+      Repo.delete_all(
+        from(pc in Lightning.Projects.ProjectCredential,
+          where:
+            pc.project_id == ^project.id and
+              pc.credential_id == ^default_credential.id
+        )
+      )
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip:
+            build(:dataclip, %{
+              body: %{"user_id" => "nobody_matches_this"}
+            }),
+          starting_job: job
+        })
+
+      assert {:ok, nil} =
+               Resolver.resolve_credential(run, keychain_credential.id)
+    end
+
+    test "resolves the keychain in the run's snapshot, not the live job", %{
+      credential_a: credential_a,
+      job: job,
+      keychain_credential: keychain_credential,
+      workflow: workflow
+    } do
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip: build(:dataclip, %{body: %{"user_id" => "alice_dhis2"}}),
+          starting_job: job
+        })
+
+      job
+      |> Ecto.Changeset.change(keychain_credential_id: nil)
+      |> Repo.update!()
+
+      assert {:ok, resolved} =
+               Resolver.resolve_credential(run, keychain_credential.id)
+
+      assert resolved.credential.id == credential_a.id
+    end
+
+    test "refuses a keychain belonging to another project entirely", %{
+      workflow: workflow,
+      job: job
+    } do
+      # A job holding a keychain from somewhere else. The keychain's own
+      # default really is shared with its own project, so anchoring the check
+      # on the keychain would pass it and hand this run a credential its
+      # project was never given. Every write path blocks this reference now, so
+      # it takes a row written before those guards existed, which is the case
+      # this half is here for.
+      other_user = insert(:user)
+      other_project = insert(:project)
+
+      other_credential =
+        insert(:credential, name: "Theirs", schema: "raw", user: other_user)
+        |> with_body(%{name: "main", body: %{"secret" => "not yours"}})
+
+      insert(:project_credential,
+        project: other_project,
+        credential: other_credential
+      )
+
+      foreign_keychain =
+        insert(:keychain_credential,
+          name: "Someone else's keychain",
+          path: "$.nothing",
+          default_credential: other_credential,
+          project: other_project,
+          created_by: other_user
+        )
+
+      # Point this project's job at it, the way a stale row would.
+      job
+      |> Ecto.Changeset.change(%{keychain_credential_id: foreign_keychain.id})
+      |> Repo.update!()
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip: build(:dataclip, %{body: %{"user_id" => "no match"}}),
+          starting_job: job
+        })
+
+      assert {:ok, nil} =
+               Resolver.resolve_credential(run, foreign_keychain.id)
+    end
+
     test "returns nil when there is no matching or default credential", %{
       project: project,
       user: user
@@ -556,6 +671,7 @@ defmodule ResolverTest do
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
         |> with_run(%{
+          snapshot: snapshot_of(workflow),
           dataclip:
             build(:dataclip, %{
               body: %{
@@ -609,6 +725,7 @@ defmodule ResolverTest do
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
         |> with_run(%{
+          snapshot: snapshot_of(workflow),
           dataclip:
             build(:dataclip, %{
               body: %{
@@ -686,12 +803,62 @@ defmodule ResolverTest do
 
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
-        |> with_run(%{dataclip: dataclip, starting_job: job})
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip: dataclip,
+          starting_job: job
+        })
 
       assert {:ok, resolved} = Resolver.resolve_credential(run, credential.id)
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
       assert resolved.body == %{"key" => "value"}
       assert resolved.credential.id == credential.id
+    end
+
+    test "resolves the credential in the run's snapshot, not the live job", %{
+      project: project,
+      user: user
+    } do
+      [snapshot_credential, live_credential] =
+        for value <- ["snapshot", "live"] do
+          insert(:credential, user: user)
+          |> with_body(%{name: "main", body: %{"key" => value}})
+        end
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{
+          project_credential: %{
+            credential: snapshot_credential,
+            project: project
+          }
+        })
+        |> insert()
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip: insert(:dataclip),
+          starting_job: job
+        })
+
+      live_project_credential =
+        insert(:project_credential,
+          project: project,
+          credential: live_credential
+        )
+
+      job
+      |> Ecto.Changeset.change(project_credential_id: live_project_credential.id)
+      |> Repo.update!()
+
+      assert {:ok, %{body: %{"key" => "snapshot"}}} =
+               Resolver.resolve_credential(run, snapshot_credential.id)
+
+      assert {:error, :not_found} =
+               Resolver.resolve_credential(run, live_credential.id)
     end
 
     test "returns not_found when credential doesn't exist", %{user: user} do
@@ -707,7 +874,11 @@ defmodule ResolverTest do
 
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
-        |> with_run(%{dataclip: dataclip, starting_job: job})
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip: dataclip,
+          starting_job: job
+        })
 
       fake_id = Ecto.UUID.generate()
       assert {:error, :not_found} = Resolver.resolve_credential(run, fake_id)
@@ -732,7 +903,11 @@ defmodule ResolverTest do
 
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
-        |> with_run(%{dataclip: dataclip, starting_job: job})
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip: dataclip,
+          starting_job: job
+        })
 
       assert {:error, :not_found} =
                Resolver.resolve_credential(run, other_credential.id)
@@ -759,7 +934,11 @@ defmodule ResolverTest do
 
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
-        |> with_run(%{dataclip: dataclip, starting_job: job})
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip: dataclip,
+          starting_job: job
+        })
 
       {result, log} =
         with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
@@ -797,7 +976,11 @@ defmodule ResolverTest do
 
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
-        |> with_run(%{dataclip: dataclip, starting_job: job})
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip: dataclip,
+          starting_job: job
+        })
 
       {result, log} =
         with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
@@ -823,7 +1006,11 @@ defmodule ResolverTest do
 
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
-        |> with_run(%{dataclip: dataclip, starting_job: job})
+        |> with_run(%{
+          snapshot: snapshot_of(workflow),
+          dataclip: dataclip,
+          starting_job: job
+        })
 
       # Remove the project so the run's in-memory struct resolves to a
       # missing project (workflow/workorder/run cascade-delete, but the
@@ -844,19 +1031,12 @@ defmodule ResolverTest do
     end
   end
 
-  # The test logger level is :warning (see config/test.exs), which gates
-  # :info messages at the primary :logger level before any capture handler
-  # sees them. Per-process levels (Logger.put_process_level/2) can only
-  # restrict below the primary level, not lift above it, so the primary level
-  # must be lowered for the duration of the capture and restored afterwards.
-  defp capture_info_log(fun) do
-    previous_level = Logger.level()
-    Logger.configure(level: :info)
+  # Runs from the factory get an unrelated snapshot; keychains are found
+  # through the run's snapshot, so give it the workflow's real one.
+  defp snapshot_of(workflow) do
+    workflow = Repo.reload!(workflow)
 
-    try do
-      with_log([level: :info], fun)
-    after
-      Logger.configure(level: previous_level)
-    end
+    Snapshot.get_current_for(workflow) ||
+      Snapshot.create(workflow) |> then(fn {:ok, snapshot} -> snapshot end)
   end
 end

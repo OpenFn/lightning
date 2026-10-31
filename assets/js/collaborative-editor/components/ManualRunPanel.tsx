@@ -108,6 +108,7 @@ export function ManualRunPanel({
   const [manuallyUnselected, setManuallyUnselected] = useState(false);
 
   // Ref to avoid stale closure in async fetch callback
+  const honouredDataclipRef = useRef(false);
   const selectedDataclipRef = useRef(selectedDataclip);
   selectedDataclipRef.current = selectedDataclip;
 
@@ -151,6 +152,8 @@ export function ManualRunPanel({
 
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
+  const { canRun: canRetryWorkflow, tooltipMessage: retryTooltipMessage } =
+    useCanRun({ forRetry: true });
 
   const { params, updateSearchParams } = useURLState();
   const followedRunId = params.run ?? null;
@@ -211,6 +214,7 @@ export function ManualRunPanel({
     isRetryable,
     runIsProcessing,
     canRun,
+    canRetry,
   } = useRunRetry({
     projectId,
     workflowId,
@@ -219,6 +223,8 @@ export function ManualRunPanel({
     selectedDataclip,
     customBody,
     canRunWorkflow,
+    canRetryWorkflow,
+    retryTooltipMessage,
     workflowRunTooltipMessage,
     saveWorkflow,
     onRunSubmitted: onRunSubmitted,
@@ -292,6 +298,8 @@ export function ManualRunPanel({
   useEffect(() => {
     if (!dataclipJobId) return;
 
+    let cancelled = false;
+
     const fetchDataclips = async () => {
       try {
         const response = await dataclipApi.searchDataclips(
@@ -300,9 +308,33 @@ export function ManualRunPanel({
           '',
           {}
         );
+        if (cancelled) return;
+
         setDataclips(response.data);
         setNextCronRunDataclipId(response.next_cron_run_dataclip_id);
         setCanEditDataclip(response.can_edit_dataclip);
+
+        const requestedId = params['dataclip'];
+
+        if (requestedId && !honouredDataclipRef.current) {
+          honouredDataclipRef.current = true;
+
+          updateSearchParams({ dataclip: null });
+
+          if (
+            !disableAutoSelection &&
+            !selectedDataclipRef.current &&
+            !manuallyUnselected
+          ) {
+            const requested = response.data.find(d => d.id === requestedId);
+
+            if (requested) {
+              setSelectedDataclip(requested);
+              setSelectedTab('existing');
+              return;
+            }
+          }
+        }
 
         // Auto-select next cron run dataclip only if:
         // - Auto-selection is not disabled by parent
@@ -331,7 +363,11 @@ export function ManualRunPanel({
     };
 
     void fetchDataclips();
-  }, [projectId, dataclipJobId, followedRunId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, dataclipJobId, followedRunId, params['dataclip']]);
 
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};
@@ -468,7 +504,7 @@ export function ManualRunPanel({
   useRunRetryShortcuts({
     onRun: () => void handleRun().then(ok => ok && closeAfterRun()),
     onRetry: () => void handleRetry().then(ok => ok && closeAfterRun()),
-    canRun,
+    canRun: isRetryable ? canRetry : canRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
     priority: 25, // RUN_PANEL priority
@@ -646,7 +682,7 @@ export function ManualRunPanel({
           rightButtons={
             <RunRetryButton
               isRetryable={isRetryable}
-              isDisabled={!canRun}
+              isDisabled={!(isRetryable ? canRetry : canRun)}
               isSubmitting={isSubmitting || runIsProcessing}
               onRun={() => {
                 void handleRun().then(ok => ok && closeAfterRun());
@@ -656,7 +692,7 @@ export function ManualRunPanel({
               }}
               buttonText={{
                 run: 'Run From Here',
-                retry: 'Run (Retry)',
+                retry: 'Retry',
                 processing: 'Processing',
               }}
               showKeyboardShortcuts={true}

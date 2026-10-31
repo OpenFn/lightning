@@ -28,6 +28,7 @@ export type StateWebhookTrigger = {
   id: string;
   enabled: boolean;
   type: 'webhook';
+  custom_path?: string | null;
   webhook_reply: 'before_start' | 'after_completion' | null | undefined;
   webhook_response_config?: {
     success_code?: number | null;
@@ -35,16 +36,7 @@ export type StateWebhookTrigger = {
   } | null;
 };
 
-export type StateKafkaTrigger = {
-  id: string;
-  enabled: boolean;
-  type: 'kafka';
-};
-
-export type StateTrigger =
-  | StateCronTrigger
-  | StateWebhookTrigger
-  | StateKafkaTrigger;
+export type StateTrigger = StateCronTrigger | StateWebhookTrigger;
 
 export type StateEdge = {
   id: string;
@@ -100,21 +92,14 @@ export type SpecWebhookTrigger = {
   id?: string;
   type: 'webhook';
   enabled: boolean;
+  /** Names the endpoint, so its URL is `/i/<project-id>/<custom_path>`. */
+  custom_path?: string | null;
   webhook_reply: string | null;
   webhook_response_config?: WebhookResponseConfig | null;
   pos: Position | undefined;
 };
 
-export type SpecKafkaTrigger = {
-  id?: string;
-  type: 'kafka';
-  enabled: boolean;
-};
-
-export type SpecTrigger =
-  | SpecCronTrigger
-  | SpecWebhookTrigger
-  | SpecKafkaTrigger;
+export type SpecTrigger = SpecCronTrigger | SpecWebhookTrigger;
 
 export type SpecEdge = {
   id?: string;

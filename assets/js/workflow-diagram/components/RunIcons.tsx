@@ -20,11 +20,11 @@ const STATE_COLORS = {
   success: 'text-green-500',
   fail: 'text-red-500',
   crash: 'text-orange-800',
-  cancel: 'text-grey-600',
+  cancel: 'text-gray-600',
   shield: 'text-yellow-800',
   clock: 'text-yellow-800',
   circle_ex: 'text-yellow-800',
-  triangle_ex: 'text-black-800',
+  triangle_ex: 'text-black',
 };
 
 export const renderIcon = (

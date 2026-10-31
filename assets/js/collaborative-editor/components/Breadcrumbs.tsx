@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { Tooltip } from '../../components/Tooltip';
 import { cn } from '../../utils/cn';
 
 export function Breadcrumbs({ children }: { children: React.ReactNode[] }) {
@@ -117,12 +118,28 @@ export function BreadcrumbText({
   icon?: string;
   children: React.ReactNode;
 }) {
+  const nameSpan = (
+    <span
+      className={cn(
+        'block max-w-[16rem] truncate font-medium text-gray-500',
+        icon ? 'ml-2' : ''
+      )}
+    >
+      {children}
+    </span>
+  );
+
   return (
-    <span className="flex items-center">
+    <span className="flex items-center min-w-0">
       {icon && <span className={cn(icon, 'w-5 h-5 text-secondary-500')}></span>}
-      <span className={cn('font-medium text-gray-500', icon ? 'ml-2' : '')}>
-        {children}
-      </span>
+      {/* The name truncates at max-w-[16rem]; when it is a plain string, wrap it
+          in a tooltip so the full name is still readable on hover. Non-string
+          children fall back to the bare span (no tooltip). */}
+      {typeof children === 'string' ? (
+        <Tooltip content={children}>{nameSpan}</Tooltip>
+      ) : (
+        nameSpan
+      )}
     </span>
   );
 }

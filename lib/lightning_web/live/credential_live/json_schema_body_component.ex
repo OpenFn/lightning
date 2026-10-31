@@ -12,14 +12,23 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
   attr :form, :map, required: true
   attr :current_body, :map, default: %{}
   attr :schema_changeset, :any, default: nil
+  attr :target, :any, default: nil
+  # Bumped on each retry so this component re-renders and re-reads the schema.
+  attr :attempt, :integer, default: 0
   slot :inner_block
 
   def fieldset(assigns) do
     changeset = assigns.form.source
 
-    schema =
-      changeset |> Ecto.Changeset.get_field(:schema) |> Credentials.get_schema()
+    case changeset
+         |> Ecto.Changeset.get_field(:schema)
+         |> Credentials.get_schema() do
+      {:ok, schema} -> loaded_fieldset(assigns, changeset, schema)
+      {:error, reason} -> unavailable_fieldset(assigns, reason)
+    end
+  end
 
+  defp loaded_fieldset(assigns, changeset, schema) do
     body = normalize_body(assigns.current_body)
 
     schema_changeset = assigns.schema_changeset || create_changeset(schema, body)
@@ -40,6 +49,47 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
        ), @valid?}
     )}
+    """
+  end
+
+  defp unavailable_fieldset(assigns, reason) do
+    assigns = assign(assigns, :reason, reason)
+
+    ~H"""
+    {render_slot(
+      @inner_block,
+      {Phoenix.LiveView.TagEngine.component(
+         &schema_unavailable/1,
+         [reason: @reason, target: @target],
+         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+       ), false}
+    )}
+    """
+  end
+
+  attr :reason, :any, required: true
+  attr :target, :any, default: nil
+
+  def schema_unavailable(assigns) do
+    ~H"""
+    <div
+      id="credential-schema-unavailable"
+      class="flex flex-col items-center gap-2 py-8 text-sm text-gray-500"
+    >
+      <p :if={@reason == :not_found}>
+        This adaptor isn't in the adaptor catalogue.
+      </p>
+      <p :if={@reason != :not_found}>Couldn't load adaptors. Please try again.</p>
+      <button
+        :if={@reason != :not_found}
+        type="button"
+        phx-click="retry_schema"
+        phx-target={@target}
+        class="text-primary-600 hover:text-primary-500 font-medium"
+      >
+        Retry
+      </button>
+    </div>
     """
   end
 

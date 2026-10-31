@@ -24,6 +24,92 @@ import type {
   MockPhoenixChannelProvider,
 } from '../mocks/phoenixChannel';
 
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+const runDetail = {
+  id: '11111111-1111-4111-8111-111111111111',
+  work_order_id: '22222222-2222-4222-8222-222222222222',
+  work_order: {
+    id: '22222222-2222-4222-8222-222222222222',
+    workflow_id: '33333333-3333-4333-8333-333333333333',
+  },
+  state: 'success' as const,
+  created_by: null,
+  starting_trigger: null,
+  started_at: null,
+  finished_at: null,
+  inserted_at: '2026-09-10T23:00:00Z',
+  steps: [],
+};
+
+function openRunChannels(store: HistoryStoreInstance) {
+  const opened: {
+    topic: string;
+    left: boolean;
+    replyToFetch: (response: unknown) => void;
+    failFetch: (error: Error) => void;
+  }[] = [];
+
+  const socket = {
+    channel(topic: string) {
+      const record = {
+        topic,
+        left: false,
+        replyToFetch: (_response: unknown) => {},
+        failFetch: (_error: Error) => {},
+      };
+
+      const channel = {
+        on: () => 1,
+        off: () => {},
+        join: () => ({
+          receive(status: string, callback: (response?: unknown) => void) {
+            if (status === 'ok')
+              setTimeout(() => {
+                callback({});
+              }, 0);
+            return this;
+          },
+        }),
+        leave: () => {
+          record.left = true;
+          return {
+            receive() {
+              return this;
+            },
+          };
+        },
+        push: (event: string) => {
+          const handlers = new Map<string, (response?: unknown) => void>();
+
+          if (event === 'fetch:run') {
+            record.replyToFetch = response => {
+              handlers.get('ok')?.(response);
+            };
+            record.failFetch = error => {
+              handlers.get('error')?.({ reason: error.message });
+            };
+          }
+
+          return {
+            receive(status: string, callback: (response?: unknown) => void) {
+              handlers.set(status, callback);
+              return this;
+            },
+          };
+        },
+      };
+
+      opened.push(record);
+      return channel;
+    },
+  };
+
+  store._connectChannel({ socket } as never);
+
+  return { opened };
+}
+
 describe('createHistoryStore', () => {
   let store: HistoryStoreInstance;
   let mockChannel: MockPhoenixChannel;
@@ -379,7 +465,6 @@ describe('createHistoryStore', () => {
       expect(state.isLoading).toBe(false);
     });
   });
-
   describe('real-time updates', () => {
     test('handles work order created event', () => {
       store._connectChannel(mockChannelProvider as any);
@@ -947,6 +1032,46 @@ describe('createHistoryStore', () => {
       expect(state.activeRun).toBeNull();
       expect(state.activeRunId).toBeNull();
       expect(state.selectedStepId).toBeNull();
+    });
+
+    test('a second look at the same run does not open a second channel', async () => {
+      const runChannels = openRunChannels(store);
+
+      store._viewRun('run-1');
+      store._viewRun('run-1');
+
+      await settle();
+
+      expect(runChannels.opened).toHaveLength(1);
+    });
+
+    test('an abandoned request cannot fail a run that has since loaded', async () => {
+      const runChannels = openRunChannels(store);
+
+      store._viewRun(runDetail.id);
+      const first = runChannels.opened[0]!;
+
+      await settle();
+
+      store._closeRunViewer();
+      store._viewRun(runDetail.id);
+
+      const second = runChannels.opened[1]!;
+      expect(second).toBeDefined();
+
+      await settle();
+
+      second.replyToFetch({ run: runDetail });
+
+      await waitForCondition(() => store.getSnapshot().activeRun !== null);
+      expect(store.getSnapshot().activeRun?.id).toBe(runDetail.id);
+
+      first.failFetch(new Error('Request timed out'));
+      await settle();
+
+      expect(store.getSnapshot().activeRunError).toBeNull();
+      expect(store.getSnapshot().activeRun?.id).toBe(runDetail.id);
+      expect(first.left).toBe(true);
     });
 
     test('_closeRunViewer clears activeRunError', () => {

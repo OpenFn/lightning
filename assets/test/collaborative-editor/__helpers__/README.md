@@ -26,7 +26,6 @@ patterns.
 import { createMockChannelWithResponses } from './__helpers__';
 
 const channel = createMockChannelWithResponses({
-  request_adaptors: { adaptors: mockAdaptorsList },
   get_context: { user: mockUser, project: mockProject },
 });
 ```

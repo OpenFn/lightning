@@ -12,6 +12,7 @@ x-lightning: &default-app
   tty: ${TTY:-false}
   volumes:
     - '${LIGHTNING_VOLUME:-./priv/static:/app/priv/static}'
+    - 'adaptor_icons:/app/priv/adaptor_icons'
 
 services:
   postgres:
@@ -39,6 +40,7 @@ services:
           memory: '${DOCKER_WEB_MEMORY:-0}'
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/lightning_dev
+      - ADAPTORS_ICONS_PATH=/app/priv/adaptor_icons
     depends_on:
       - postgres
     healthcheck:
@@ -69,3 +71,4 @@ services:
 
 volumes:
   postgres: {}
+  adaptor_icons: {}

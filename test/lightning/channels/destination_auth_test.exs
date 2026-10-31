@@ -6,7 +6,7 @@ defmodule Lightning.Channels.DestinationAuthTest do
   describe "build_auth_header/2 with http schema" do
     test "Bearer token from access_token" do
       assert {:ok, "Bearer tok-123"} =
-               DestinationAuth.build_auth_header("http", %{
+               DestinationAuth.build_auth_header("@openfn/language-http", %{
                  "access_token" => "tok-123"
                })
     end
@@ -15,7 +15,7 @@ defmodule Lightning.Channels.DestinationAuthTest do
       expected = "Basic #{Base.encode64("user:pass")}"
 
       assert {:ok, ^expected} =
-               DestinationAuth.build_auth_header("http", %{
+               DestinationAuth.build_auth_header("@openfn/language-http", %{
                  "username" => "user",
                  "password" => "pass"
                })
@@ -23,7 +23,7 @@ defmodule Lightning.Channels.DestinationAuthTest do
 
     test "access_token takes priority over username/password" do
       assert {:ok, "Bearer tok-priority"} =
-               DestinationAuth.build_auth_header("http", %{
+               DestinationAuth.build_auth_header("@openfn/language-http", %{
                  "access_token" => "tok-priority",
                  "username" => "user",
                  "password" => "pass"
@@ -32,28 +32,30 @@ defmodule Lightning.Channels.DestinationAuthTest do
 
     test "error when no auth fields present" do
       assert {:error, :no_auth_fields} =
-               DestinationAuth.build_auth_header("http", %{
+               DestinationAuth.build_auth_header("@openfn/language-http", %{
                  "baseUrl" => "https://example.com"
                })
     end
 
     test "error when body is empty" do
       assert {:error, :no_auth_fields} =
-               DestinationAuth.build_auth_header("http", %{})
+               DestinationAuth.build_auth_header("@openfn/language-http", %{})
     end
   end
 
   describe "build_auth_header/2 with dhis2 schema" do
     test "ApiToken from pat" do
       assert {:ok, "ApiToken d2pat_abc"} =
-               DestinationAuth.build_auth_header("dhis2", %{"pat" => "d2pat_abc"})
+               DestinationAuth.build_auth_header("@openfn/language-dhis2", %{
+                 "pat" => "d2pat_abc"
+               })
     end
 
     test "Basic auth from username and password" do
       expected = "Basic #{Base.encode64("admin:secret")}"
 
       assert {:ok, ^expected} =
-               DestinationAuth.build_auth_header("dhis2", %{
+               DestinationAuth.build_auth_header("@openfn/language-dhis2", %{
                  "username" => "admin",
                  "password" => "secret"
                })
@@ -61,7 +63,7 @@ defmodule Lightning.Channels.DestinationAuthTest do
 
     test "pat takes priority over username/password" do
       assert {:ok, "ApiToken my-pat"} =
-               DestinationAuth.build_auth_header("dhis2", %{
+               DestinationAuth.build_auth_header("@openfn/language-dhis2", %{
                  "pat" => "my-pat",
                  "username" => "admin",
                  "password" => "secret"
@@ -70,7 +72,7 @@ defmodule Lightning.Channels.DestinationAuthTest do
 
     test "error when no auth fields present" do
       assert {:error, :no_auth_fields} =
-               DestinationAuth.build_auth_header("dhis2", %{
+               DestinationAuth.build_auth_header("@openfn/language-dhis2", %{
                  "hostUrl" => "https://play.dhis2.org"
                })
     end

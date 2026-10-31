@@ -4,27 +4,39 @@ on:
     branches:
       - main
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: erlef/setup-elixir@v1
+      - uses: erlef/setup-beam@v1
         with:
-          otp-version: 26
-          elixir-version: '1.18.3'
+          version-file: .tool-versions
+          version-type: strict
       - run: sudo apt-get install -y libsodium-dev
-      - run: mix deps.get
-      - run: mix docs
 
       - name: Generate docs 🔧
         run: |
           mix deps.get
           mix docs
 
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@v4.7.6
+      - uses: actions/upload-pages-artifact@v5
         with:
-          branch: gh-pages # The branch the action should deploy to.
-          folder: doc # The folder the action should deploy.
+          path: doc
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy 🚀
+        id: deployment
+        uses: actions/deploy-pages@v5

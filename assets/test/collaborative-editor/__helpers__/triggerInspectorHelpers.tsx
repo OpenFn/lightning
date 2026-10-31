@@ -16,9 +16,10 @@
 
 import type React from 'react';
 import { act } from 'react';
-import { vi } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 
 import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard/KeyboardProvider';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
@@ -42,6 +43,8 @@ import { createMockSocket } from './sessionStoreHelpers';
 // ---------------------------------------------------------------------------
 
 export interface TriggerTestHarnessOptions {
+  /** Project on the session context. Defaults to none. */
+  project?: { id: string; name: string } | null;
   /** Whether the session-context emits can_edit_workflow=true (default: true). */
   canEdit?: boolean;
   /**
@@ -52,8 +55,6 @@ export interface TriggerTestHarnessOptions {
    * from general workflow-edit access.
    */
   canWriteWebhookAuthMethod?: boolean;
-  /** Whether the session-context emits kafka_triggers_enabled=true (default: false). */
-  kafkaEnabled?: boolean;
   /**
    * Project-level webhook auth methods emitted in the session_context event.
    * Defaults to an empty array.
@@ -115,8 +116,8 @@ export async function createTriggerTestHarness(
   const {
     canEdit = true,
     canWriteWebhookAuthMethod = canEdit,
-    kafkaEnabled = false,
     webhookAuthMethods = [],
+    project = null,
     workflowStore,
     liveViewActions,
   } = options;
@@ -129,6 +130,12 @@ export async function createTriggerTestHarness(
     { id: 'user-1', name: 'Test', email: 'test@example.com', color: '#000' },
     { connect: true }
   );
+
+  // PhoenixChannelProvider registers a process 'exit' handler that only
+  // destroy() removes, so an undestroyed session leaks one per test.
+  onTestFinished(() => {
+    sessionStore.destroy();
+  });
 
   // 2. Allow the mock PhoenixChannelProvider to create its channel.
   await new Promise(resolve => setTimeout(resolve, 50));
@@ -160,15 +167,15 @@ export async function createTriggerTestHarness(
       }
     )._test.emit('session_context', {
       user: null,
-      project: null,
+      project,
       config: {
         require_email_verification: false,
-        kafka_triggers_enabled: kafkaEnabled,
       },
       permissions: {
         can_edit_workflow: canEdit,
         can_run_workflow: canEdit,
         can_write_webhook_auth_method: canWriteWebhookAuthMethod,
+        can_provision_sandbox: canEdit,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -185,18 +192,20 @@ export async function createTriggerTestHarness(
   } as unknown as StoreContextValue;
 
   // 7. Wrapper component.
-  const resolvedLiveViewActions = liveViewActions ?? {
+  const resolvedLiveViewActions = {
     pushEvent: vi.fn(),
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
+    ...liveViewActions,
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
       <LiveViewActionsProvider actions={resolvedLiveViewActions}>
         <StoreContext.Provider value={storeValue}>
-          {children}
+          <KeyboardProvider>{children}</KeyboardProvider>
         </StoreContext.Provider>
       </LiveViewActionsProvider>
     </SessionContext.Provider>

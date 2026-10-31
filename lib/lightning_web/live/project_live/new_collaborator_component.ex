@@ -3,6 +3,7 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
   use LightningWeb, :live_component
 
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.ProjectLimiter
   alias LightningWeb.ProjectLive.Collaborators
@@ -35,7 +36,16 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
   end
 
   def handle_event("add_collaborators", %{"project" => params}, socket) do
-    with :ok <- limit_adding_users(socket, params),
+    %{current_user: current_user, project: project} = socket.assigns
+
+    with :ok <-
+           Permissions.can(
+             :project_users,
+             :add_project_user,
+             current_user,
+             project
+           ),
+         :ok <- limit_adding_users(socket, params),
          {:ok, project_users, new_project_users} <-
            prepare_for_insertion(socket, params),
          {:ok, _project} <- add_project_users(socket, project_users) do
@@ -54,6 +64,12 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
         end
 
       {:noreply, socket}
+    else
+      {:error, :unauthorized} ->
+        {:noreply, deny_collaborator_change(socket)}
+
+      {:noreply, _socket} = reply ->
+        reply
     end
   end
 
@@ -123,7 +139,8 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
     case Projects.add_project_users(
            socket.assigns.project,
-           project_users
+           project_users,
+           socket.assigns.current_user
          ) do
       {:ok, project} ->
         {:ok, project}

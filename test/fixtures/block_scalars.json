@@ -1,0 +1,157 @@
+[
+  {
+    "document": "root:\n  body: |\n    fn(state => state)\n",
+    "label": "plain",
+    "value": "fn(state => state)"
+  },
+  {
+    "document": "root:\n  body: |\n    line1\n    line2\n",
+    "label": "two lines",
+    "value": "line1\nline2"
+  },
+  {
+    "document": "root:\n  body: |\n    line1\n    line2\n    \n",
+    "label": "trailing newline",
+    "value": "line1\nline2\n"
+  },
+  {
+    "document": "root:\n  body: |\n    line1\n    \n    line2\n",
+    "label": "blank line inside",
+    "value": "line1\n\nline2"
+  },
+  {
+    "document": "root:\n  body: |2\n     leading space\n",
+    "label": "leading space",
+    "value": " leading space"
+  },
+  {
+    "document": "root:\n  body: |2\n      two leading\n    second\n",
+    "label": "two leading spaces",
+    "value": "  two leading\nsecond"
+  },
+  {
+    "document": "root:\n  body: |2\n    \n      indented first\n",
+    "label": "leading blank then space",
+    "value": "\n  indented first"
+  },
+  {
+    "document": "root:\n  body: |\n    \tleading tab\n",
+    "label": "leading tab",
+    "value": "\tleading tab"
+  },
+  {
+    "document": "root:\n  body: \"a\\r\\nb\"\n",
+    "label": "crlf",
+    "value": "a\r\nb"
+  },
+  {
+    "document": "root:\n  body: \"a\\rb\"\n",
+    "label": "lone cr",
+    "value": "a\rb"
+  },
+  {
+    "document": "root:\n  body: |\n    \n",
+    "label": "empty",
+    "value": ""
+  },
+  {
+    "document": "root:\n  body: |+\n    \n",
+    "label": "newline only",
+    "value": "\n"
+  },
+  {
+    "document": "root:\n  body: |+\n    a\n    \n",
+    "label": "two trailing newlines",
+    "value": "a\n\n"
+  },
+  {
+    "document": "root:\n  body: |+\n    a\n    \n    \n",
+    "label": "three trailing newlines",
+    "value": "a\n\n\n"
+  },
+  {
+    "document": "root:\n  body: |+\n    \n    \n",
+    "label": "only newlines",
+    "value": "\n\n"
+  },
+  {
+    "document": "root:\n  body: |\n    trailing space \n    b\n",
+    "label": "trailing space on content line",
+    "value": "trailing space \nb"
+  },
+  {
+    "document": "root:\n  body: |\n    a\n      indented\n",
+    "label": "indented second line",
+    "value": "a\n  indented"
+  },
+  {
+    "document": "root:\n  body: |\n    a: 'b'\n    c\n",
+    "label": "quote and colon",
+    "value": "a: 'b'\nc"
+  },
+  {
+    "document": "root:\n  body: |2+\n      indented\n    next\n    \n",
+    "label": "leading space and two trailing",
+    "value": "  indented\nnext\n\n"
+  },
+  {
+    "document": "root:\n  body: |2+\n     x\n    \n    \n",
+    "label": "leading space and three trailing",
+    "value": " x\n\n\n"
+  },
+  {
+    "document": "root:\n  body: |+\n    \tx\n    \n",
+    "label": "leading tab and two trailing",
+    "value": "\tx\n\n"
+  },
+  {
+    "document": "root:\n  body: |2+\n    \n      x\n    \n",
+    "label": "leading blank, space and trailing",
+    "value": "\n  x\n\n"
+  },
+  {
+    "document": "root:\n  body: '   '\n",
+    "label": "spaces only",
+    "value": "   "
+  },
+  {
+    "document": "root:\n  body: |\n    \t\n",
+    "label": "tab only",
+    "value": "\t"
+  },
+  {
+    "document": "root:\n  body: |\n     \n",
+    "label": "nbsp only",
+    "value": " "
+  },
+  {
+    "document": "root:\n  body: |\n    a\n       \n    \n",
+    "label": "trailing whitespace line",
+    "value": "a\n   \n"
+  },
+  {
+    "document": "root:\n  body: \"  if (a) {\\n    b();\\n  }\\n  \"\n",
+    "label": "indented block with trailing ws line",
+    "value": "  if (a) {\n    b();\n  }\n  "
+  },
+  {
+    "document": "root:\n  body: |\n    if (a) {\n      b();\n    }\n      \n",
+    "label": "plain with trailing ws line",
+    "value": "if (a) {\n  b();\n}\n  "
+  },
+  {
+    "document": "root:\n  body: \"  b\\n  \\n\"\n",
+    "label": "leading space, trailing ws, newline",
+    "value": "  b\n  \n"
+  },
+  {
+    "document": "root:\n  body: |2\n     a\n      \n    b\n",
+    "label": "interior whitespace line",
+    "value": " a\n  \nb"
+  },
+  {
+    "document": "root:\n  body: |\n    console.log('hi');\n    fn(state => state)\n    \n",
+    "label": "js body",
+    "value": "console.log('hi');\nfn(state => state)\n"
+  }
+]

@@ -182,6 +182,24 @@ defmodule Lightning.Collaboration.WorkflowResolverTest do
       }
     end
 
+    test "carries the workflow's current lifecycle state, not the snapshot's",
+         %{workflow: workflow, snapshot: snapshot, project: project} do
+      {:ok, _live} =
+        workflow
+        |> Lightning.Repo.preload(:triggers)
+        |> Lightning.Workflows.go_live(insert(:user))
+
+      assert {:ok, pinned, :version} =
+               WorkflowResolver.resolve_version(
+                 workflow.id,
+                 snapshot.lock_version,
+                 project: project
+               )
+
+      assert pinned.state == :live
+      assert pinned.lock_version == snapshot.lock_version
+    end
+
     test "returns {:error, :snapshot_not_found} when no snapshot exists" do
       assert {:error, :snapshot_not_found} =
                WorkflowResolver.resolve_version(Ecto.UUID.generate(), 0)
@@ -296,5 +314,21 @@ defmodule Lightning.Collaboration.WorkflowResolverTest do
       assert {:error, :invalid_action} =
                WorkflowResolver.resolve(Ecto.UUID.generate(), :delete)
     end
+  end
+
+  test "pinned version encodes and keeps the auth method's secrets out" do
+    workflow = insert(:simple_workflow)
+    trigger = hd(workflow.triggers)
+    insert(:webhook_auth_method, project: workflow.project, triggers: [trigger])
+    {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+    {:ok, resolved, _kind} =
+      WorkflowResolver.resolve_version(workflow.id, snapshot.lock_version, [])
+
+    t = hd(resolved.triggers)
+    assert t.has_auth_method
+    refute Map.has_key?(t, :webhook_auth_methods)
+    assert {:ok, json} = Jason.encode(t)
+    refute json =~ "password"
   end
 end

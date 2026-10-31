@@ -26,6 +26,8 @@ export const RunSummarySchema = z.object({
   started_at: isoDateTimeSchema.nullable(),
   finished_at: isoDateTimeSchema.nullable(),
   version: z.number(),
+  version_number: z.number().int().nullable().optional(),
+  snapshot_id: z.string().nullable().optional(),
 });
 
 /**
@@ -205,7 +207,7 @@ export interface HistoryState {
  */
 interface HistoryCommands {
   // Existing history commands
-  requestHistory: (runId?: string) => Promise<void>;
+  requestHistory: (runId?: string, versionNumber?: string) => Promise<void>;
   requestRunSteps: (runId: string) => Promise<RunStepsData | null>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;

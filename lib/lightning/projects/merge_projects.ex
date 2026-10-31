@@ -8,9 +8,17 @@ defmodule Lightning.Projects.MergeProjects do
 
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
   alias Lightning.WorkflowVersions
+
+  @trigger_fields [
+    :comment,
+    :custom_path,
+    :cron_expression,
+    :type
+  ]
 
   @doc """
   Merges a source project onto a target project using workflow name matching.
@@ -693,16 +701,11 @@ defmodule Lightning.Projects.MergeProjects do
             Map.get(trigger_mappings, source_trigger.id) || Ecto.UUID.generate()
 
           merged_trigger =
-            source_trigger
-            |> Map.take([
-              :comment,
-              :custom_path,
-              :cron_expression,
-              :type,
-              :kafka_configuration
-            ])
-            |> Map.put(:id, mapped_id)
-            |> stringify_keys()
+            build_trigger_attrs(
+              source_trigger,
+              mapped_id,
+              Enum.find(target_triggers, &(&1.id == mapped_id))
+            )
 
           {Map.put(new_mapping, source_trigger.id, mapped_id),
            [merged_trigger | merged_triggers]}
@@ -720,6 +723,21 @@ defmodule Lightning.Projects.MergeProjects do
       end)
 
     {new_mapping, merged_from_source ++ deleted_targets}
+  end
+
+  defp build_trigger_attrs(trigger, id) do
+    trigger
+    |> Map.take(@trigger_fields)
+    |> Map.put(:id, id)
+    |> stringify_keys()
+  end
+
+  defp build_trigger_attrs(trigger, id, target) do
+    trigger
+    |> Map.take(@trigger_fields)
+    |> drop_unusable_custom_path(target)
+    |> Map.put(:id, id)
+    |> stringify_keys()
   end
 
   defp build_merged_edges(
@@ -898,16 +916,7 @@ defmodule Lightning.Projects.MergeProjects do
 
     triggers =
       Enum.map(workflow.triggers, fn trigger ->
-        trigger
-        |> Map.take([
-          :comment,
-          :custom_path,
-          :cron_expression,
-          :type,
-          :kafka_configuration
-        ])
-        |> Map.put(:id, trigger.id)
-        |> stringify_keys()
+        build_trigger_attrs(trigger, trigger.id)
       end)
 
     edges =
@@ -969,16 +978,7 @@ defmodule Lightning.Projects.MergeProjects do
 
     triggers =
       Enum.map(source_workflow.triggers, fn trigger ->
-        trigger
-        |> Map.take([
-          :comment,
-          :custom_path,
-          :cron_expression,
-          :type,
-          :kafka_configuration
-        ])
-        |> Map.put(:id, Map.fetch!(node_mappings, trigger.id))
-        |> stringify_keys()
+        build_trigger_attrs(trigger, Map.fetch!(node_mappings, trigger.id), nil)
       end)
 
     edges =
@@ -1098,6 +1098,43 @@ defmodule Lightning.Projects.MergeProjects do
     )
   end
 
+  @doc """
+  Whether merging `workflow_name` from `source_project` into `target_project`
+  would overwrite work the target has done since the source forked.
+
+  Unlike `diverged_workflows/2`, a name the source has no history for counts as
+  divergence rather than being skipped, because a source workflow renamed onto a
+  name the target already holds has never seen that target workflow.
+  """
+  @spec workflow_diverged?(Project.t(), Project.t(), String.t()) :: boolean()
+  def workflow_diverged?(
+        %Project{} = source_project,
+        %Project{} = target_project,
+        workflow_name
+      )
+      when is_binary(workflow_name) do
+    case version_hashes(target_project.id, workflow_name) do
+      [] ->
+        false
+
+      [target_head | _] ->
+        target_head not in version_hashes(source_project.id, workflow_name)
+    end
+  end
+
+  defp version_hashes(project_id, workflow_name) do
+    from(version in WorkflowVersion,
+      join: workflow in Workflow,
+      on: workflow.id == version.workflow_id,
+      where:
+        workflow.project_id == ^project_id and workflow.name == ^workflow_name and
+          is_nil(workflow.deleted_at),
+      order_by: [desc: version.inserted_at, desc: version.id],
+      select: version.hash
+    )
+    |> Repo.all()
+  end
+
   defp get_workflow_version_hashes_by_name(workflows) do
     workflow_ids = Enum.map(workflows, & &1.id)
     workflow_name_map = Map.new(workflows, fn w -> {w.id, w.name} end)
@@ -1117,4 +1154,28 @@ defmodule Lightning.Projects.MergeProjects do
       fn {_workflow_id, hash} -> hash end
     )
   end
+
+  # A pre-migration path can fail the changeset and take the whole merge with
+  # it, so the merged trigger falls back to its generated URL. A name another
+  # workflow in the target already holds is left to fail on the unique index,
+  # rather than dropped, since dropping it discards the name the user chose.
+  defp drop_unusable_custom_path(%{custom_path: nil} = trigger, _target),
+    do: trigger
+
+  defp drop_unusable_custom_path(%{custom_path: path} = trigger, target) do
+    cond do
+      Trigger.valid_custom_path?(path) ->
+        trigger
+
+      # The target already holds this value, so sending it is not a change.
+      # Dropping it would be, and would take a live URL off the target.
+      target && Map.get(target, :custom_path) == path ->
+        trigger
+
+      true ->
+        %{trigger | custom_path: nil}
+    end
+  end
+
+  defp drop_unusable_custom_path(trigger, _target), do: trigger
 end

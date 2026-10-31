@@ -27,6 +27,14 @@ defmodule Lightning.VersionControl.GithubClient do
     |> handle_resp([204])
   end
 
+  def list_workflow_runs(client, repo_name, workflow_id, query) do
+    client
+    |> Tesla.get("/repos/#{repo_name}/actions/workflows/#{workflow_id}/runs",
+      query: query
+    )
+    |> handle_resp([200])
+  end
+
   def get_installations(client) do
     client |> Tesla.get("/user/installations") |> handle_resp([200])
   end
@@ -48,6 +56,12 @@ defmodule Lightning.VersionControl.GithubClient do
   def get_repo_content(client, repo, path, ref) do
     client
     |> Tesla.get("/repos/#{repo}/contents/#{path}", query: [ref: ref])
+    |> handle_resp([200])
+  end
+
+  def get_blob(client, repo, sha) do
+    client
+    |> Tesla.get("/repos/#{repo}/git/blobs/#{sha}")
     |> handle_resp([200])
   end
 
@@ -202,6 +216,9 @@ defmodule Lightning.VersionControl.GithubClient do
 
         {:ok, %{status: 403, body: %{"message" => message} = resp}} ->
           {:error, GithubError.api_error(message, resp)}
+
+        {:error, reason} ->
+          {:error, reason}
       end
     end
   end

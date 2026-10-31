@@ -20,6 +20,15 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
   useProject: vi.fn(),
 }));
 
@@ -108,7 +117,6 @@ describe('useAIMode', () => {
           project_id: 'project-123',
           workflow_id: 'workflow-123',
           job_id: 'job-456',
-          attach_code: false,
           attach_logs: false,
         },
         storageKey: 'ai-workflow-workflow-123',
@@ -137,7 +145,6 @@ describe('useAIMode', () => {
         project_id: 'project-123',
         workflow_id: 'workflow-123',
         job_id: 'job-456',
-        attach_code: false,
         attach_logs: false,
         job_name: 'Test Job',
         job_body: 'fn(state => state);',
@@ -160,7 +167,6 @@ describe('useAIMode', () => {
         project_id: 'project-123',
         workflow_id: 'workflow-123',
         job_id: 'job-456',
-        attach_code: false,
         attach_logs: false,
         // No job_name, job_body, job_adaptor for unsaved job
       });

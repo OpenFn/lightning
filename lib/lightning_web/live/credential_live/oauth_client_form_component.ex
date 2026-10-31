@@ -8,6 +8,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.Helpers
 
+  # Anything not listed here is dropped on the way in, silently, so a new assign
+  # the component reads has to be added in both places or it arrives missing.
   @valid_assigns [
     :id,
     :action,
@@ -16,6 +18,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     :projects,
     :button,
     :can_create_oauth_client,
+    :current_user,
     :return_to
   ]
 
@@ -302,7 +305,10 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   defp update_oauth_client(socket, params) do
-    OauthClients.update_client(socket.assigns.oauth_client, params,
+    OauthClients.update_client(
+      socket.assigns.oauth_client,
+      params,
+      socket.assigns.current_user,
       allow_global: socket.assigns.allow_global
     )
     |> handle_oauth_client_response(
@@ -312,7 +318,9 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   defp create_oauth_client(socket, params) do
-    OauthClients.create_client(params, allow_global: socket.assigns.allow_global)
+    OauthClients.create_client(params, socket.assigns.current_user,
+      allow_global: socket.assigns.allow_global
+    )
     |> handle_oauth_client_response(
       socket,
       {:info, "Oauth client created successfully"}
@@ -336,6 +344,13 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
          _flash_message
        ) do
     {:noreply, assign(socket, :changeset, changeset)}
+  end
+
+  # The context answers this now, and the button gate that would normally have
+  # stopped it can disagree with the context. It has to reach the user rather
+  # than the supervisor.
+  defp handle_oauth_client_response({:error, :unauthorized}, socket, _flash) do
+    {:noreply, put_flash(socket, :error, "You are not authorized to do that.")}
   end
 
   @impl true

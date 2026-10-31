@@ -15,6 +15,24 @@ defmodule LightningWeb.DownloadControllerTest do
       assert response.status == 200
     end
 
+    test "redirects with the reason when two names collide", %{
+      conn: conn,
+      project: project
+    } do
+      # Both hyphenate to `My-Flow`. `workflows` is unique on the raw name, so
+      # this is a state a user can reach by naming two workflows a hyphen apart.
+      for name <- ["My Flow", "My-Flow"] do
+        insert(:simple_workflow, name: name, project: project)
+      end
+
+      response = get(conn, ~p"/download/yaml?#{%{id: project.id}}")
+
+      assert redirected_to(response) == ~p"/projects/#{project.id}/settings"
+
+      assert Phoenix.Flash.get(response.assigns.flash, :error) =~
+               "two workflows in this project"
+    end
+
     test "renders a 404? when the user isn't authorized", %{conn: conn} do
       p = insert(:project)
 

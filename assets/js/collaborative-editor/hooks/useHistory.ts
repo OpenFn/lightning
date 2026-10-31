@@ -23,6 +23,7 @@ import type {
   WorkflowRunHistory,
   RunStepsData,
   RunDetail,
+  RunSummary,
   StepDetail,
 } from '../types/history';
 import { transformToRunInfo } from '../utils/runStepsTransformer';
@@ -58,6 +59,19 @@ export const useHistory = (): WorkflowRunHistory => {
   const historyStore = useHistoryStore();
   const selectHistory = historyStore.withSelector(state => state.history);
   return useSyncExternalStore(historyStore.subscribe, selectHistory);
+};
+
+export const useRunSummary = (runId: string | null): RunSummary | undefined => {
+  const history = useHistory();
+
+  if (runId === null) return undefined;
+
+  for (const workOrder of history) {
+    const run = workOrder.runs.find(candidate => candidate.id === runId);
+    if (run) return run;
+  }
+
+  return undefined;
 };
 
 /**

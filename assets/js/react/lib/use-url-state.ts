@@ -105,12 +105,18 @@ class URLStore {
     history.pushState({}, '', newURL);
   };
 
+  private replaceIfChanged = (newURL: URL) => {
+    if (this.urlsAreEquivalent(newURL, this.currentURL())) return;
+    history.replaceState({}, '', newURL);
+  };
+
   /**
    * Update URL search params (merges with existing params).
    * Accepts strings, numbers, booleans; null removes param.
    */
   updateSearchParams = (
-    updates: Record<string, string | number | boolean | null>
+    updates: Record<string, string | number | boolean | null>,
+    options: { replace?: boolean } = {}
   ) => {
     const newURL = this.currentURL();
 
@@ -121,6 +127,11 @@ class URLStore {
         newURL.searchParams.set(key, String(value));
       }
     });
+
+    if (options.replace) {
+      this.replaceIfChanged(newURL);
+      return;
+    }
 
     this.pushIfChanged(newURL);
   };

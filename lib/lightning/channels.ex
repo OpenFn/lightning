@@ -248,19 +248,72 @@ defmodule Lightning.Channels do
 
   defp credential_scope_check(changeset) do
     project_id = Ecto.Changeset.get_field(changeset, :project_id)
+    dest = Ecto.Changeset.get_change(changeset, :destination_auth_method)
+    clients = Ecto.Changeset.get_change(changeset, :client_auth_methods) || []
 
-    with %Ecto.Changeset{} = dest <-
-           Ecto.Changeset.get_change(changeset, :destination_auth_method),
-         pc_id when is_binary(pc_id) <-
-           Ecto.Changeset.get_field(dest, :project_credential_id),
-         true <- not is_nil(project_id),
-         [_ | _] <-
-           Scoping.out_of_project_references(project_id, [
-             %{key: :destination, project_credential_id: pc_id}
-           ]) do
-      {:error, apply_destination_violation(changeset, dest)}
+    with true <- not is_nil(project_id),
+         refs = destination_refs(dest) ++ client_refs(clients),
+         [_ | _] = violations <-
+           Scoping.out_of_project_references(project_id, refs) do
+      {:error, apply_violations(changeset, dest, clients, violations)}
     else
       _ -> {:ok, :ok}
+    end
+  end
+
+  defp destination_refs(%Ecto.Changeset{} = dest) do
+    case Ecto.Changeset.get_field(dest, :project_credential_id) do
+      pc_id when is_binary(pc_id) ->
+        [%{key: :destination, project_credential_id: pc_id}]
+
+      _ ->
+        []
+    end
+  end
+
+  defp destination_refs(_dest), do: []
+
+  # Rows being removed can't introduce a bad reference, and skipping them keeps
+  # a row that is already out of scope deletable rather than wedging the form.
+  defp client_refs(clients) do
+    Enum.flat_map(clients, fn
+      %Ecto.Changeset{action: :delete} ->
+        []
+
+      %Ecto.Changeset{} = client ->
+        case Ecto.Changeset.get_field(client, :webhook_auth_method_id) do
+          wam_id when is_binary(wam_id) ->
+            [%{key: {:client, wam_id}, webhook_auth_method_id: wam_id}]
+
+          _ ->
+            []
+        end
+    end)
+  end
+
+  defp apply_violations(changeset, dest, clients, violations) do
+    {clients, unattached} =
+      Scoping.attach_violations(clients, violations, fn client ->
+        {:client, Ecto.Changeset.get_field(client, :webhook_auth_method_id)}
+      end)
+
+    changeset
+    |> put_client_violations(clients)
+    |> put_destination_violation(dest, unattached)
+    |> Map.put(:valid?, false)
+  end
+
+  defp put_client_violations(changeset, []), do: changeset
+
+  defp put_client_violations(changeset, clients) do
+    Ecto.Changeset.put_change(changeset, :client_auth_methods, clients)
+  end
+
+  defp put_destination_violation(changeset, dest, unattached) do
+    if Enum.any?(unattached, &(&1.key == :destination)) do
+      apply_destination_violation(changeset, dest)
+    else
+      changeset
     end
   end
 

@@ -31,7 +31,7 @@ interface RunRetryButtonProps {
  *   - "Run" when idle
  *   - "Processing" when submitting
  * - Split button when retryable:
- *   - "Run (Retry)" + chevron when idle
+ *   - "Retry" + chevron when idle
  *   - "Processing" + disabled chevron when submitting (chevron stays for visual consistency)
  *
  * The chevron opens a dropdown with "Run (New Work Order)" option.
@@ -62,7 +62,7 @@ export function RunRetryButton({
 }: RunRetryButtonProps) {
   const {
     run = 'Run Workflow',
-    retry = 'Run (Retry)',
+    retry = 'Retry',
     processing = 'Processing',
   } = buttonText;
 
@@ -179,7 +179,7 @@ export function RunRetryButton({
       className={cn('inline-flex rounded-md shadow-xs', className)}
       ref={dropdownRef}
     >
-      {/* Main button - shows "Run (Retry)" or "Processing" */}
+      {/* Main button - shows "Retry" or "Processing" */}
       <Tooltip content={isSubmitting ? null : mainButtonTooltip} side="bottom">
         <button
           type="button"

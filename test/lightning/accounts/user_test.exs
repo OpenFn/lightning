@@ -401,6 +401,100 @@ defmodule Lightning.Accounts.UserTest do
     end
   end
 
+  describe "the rules changeset/2 and details_changeset/2 share" do
+    setup do
+      %{
+        attrs: %{
+          "email" => "shared@example.com",
+          "first_name" => "Ada",
+          "last_name" => "Lovelace",
+          "password" => "a long enough password"
+        }
+      }
+    end
+
+    for fun <- [:changeset, :details_changeset] do
+      test "#{fun} normalises names and refuses ones that can't be stored",
+           %{attrs: attrs} do
+        build = &apply(User, unquote(fun), [%User{}, Map.merge(attrs, &1)])
+
+        assert %{valid?: true, changes: %{first_name: "Ada", last_name: "Lo"}} =
+                 build.(%{"first_name" => " Ada ", "last_name" => "Lo\n"})
+
+        assert errors_on(
+                 build.(%{
+                   "first_name" => "a\0b",
+                   "last_name" => String.duplicate("é", 256)
+                 })
+               ) == %{
+                 first_name: ["can't contain control characters"],
+                 last_name: ["should be at most 255 character(s)"]
+               }
+
+        assert errors_on(build.(%{"first_name" => "\u200B", "last_name" => " "})) ==
+                 %{first_name: ["can't be blank"], last_name: ["can't be blank"]}
+      end
+
+      test "#{fun} marks a taken email as a uniqueness failure", %{attrs: attrs} do
+        insert(:user, email: "shared@example.com")
+
+        changeset = apply(User, unquote(fun), [%User{}, attrs])
+
+        assert changeset.errors[:email] ==
+                 {"has already been taken", validation: :unsafe_unique}
+
+        assert [%{field: :email, type: :unique}] = changeset.constraints
+      end
+
+      test "#{fun} confirms when asked and never unconfirms", %{attrs: attrs} do
+        build = &apply(User, unquote(fun), [&1, Map.merge(attrs, &2)])
+
+        assert %DateTime{} =
+                 build.(%User{}, %{"confirmed" => true}).changes.confirmed_at
+
+        for confirmed <- [false, nil] do
+          refute Map.has_key?(
+                   build.(%User{}, %{"confirmed" => confirmed}).changes,
+                   :confirmed_at
+                 )
+        end
+
+        confirmed = %User{confirmed_at: ~U[2020-01-01 00:00:00Z]}
+
+        for value <- [true, false] do
+          refute Map.has_key?(
+                   build.(confirmed, %{"confirmed" => value}).changes,
+                   :confirmed_at
+                 )
+        end
+
+        assert errors_on(build.(%User{}, %{"confirmed" => "perhaps"})) == %{
+                 confirmed: ["is invalid"]
+               }
+      end
+
+      test "#{fun} keeps the current password, unless bcrypt would misread it" do
+        user = insert(:user)
+
+        unchanged =
+          apply(User, unquote(fun), [user, %{"password" => "hello world!"}])
+
+        assert unchanged.valid?
+        refute Map.has_key?(unchanged.changes, :hashed_password)
+
+        nul =
+          apply(User, unquote(fun), [user, %{"password" => "hello world!\0x"}])
+
+        assert errors_on(nul).password == ["can't contain a NUL character"]
+
+        changed =
+          apply(User, unquote(fun), [user, %{"password" => "a new password"}])
+
+        assert %{valid?: true, changes: %{hashed_password: _}} = changed
+      end
+    end
+  end
+
   describe "password validation" do
     test "it allows passwords between 12 and 72 characters" do
       changeset =
@@ -473,6 +567,29 @@ defmodule Lightning.Accounts.UserTest do
       assert errors[:scheduled_deletion_email] == [
                "You can't delete a superuser account."
              ]
+    end
+  end
+
+  test "the registration changesets never cast hashed_password, disabled or scheduled_deletion" do
+    attrs = %{
+      email: "reg@example.com",
+      first_name: "Reg",
+      last_name: "Istered",
+      password: "a long enough password",
+      hashed_password: "not-a-hash",
+      disabled: true,
+      scheduled_deletion: "2026-10-09T00:00:00Z",
+      terms_accepted: true
+    }
+
+    for changeset <- [
+          User.user_registration_changeset(attrs, hash_password: false),
+          User.superuser_registration_changeset(attrs, hash_password: false)
+        ] do
+      assert changeset.valid?
+      refute Map.has_key?(changeset.changes, :hashed_password)
+      refute Map.has_key?(changeset.changes, :disabled)
+      refute Map.has_key?(changeset.changes, :scheduled_deletion)
     end
   end
 

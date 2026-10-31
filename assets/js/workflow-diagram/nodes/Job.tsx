@@ -1,8 +1,9 @@
 import { Position, type NodeProps } from '@xyflow/react';
 import { memo } from 'react';
 
+import { useAdaptorIconUrl } from '#/collaborative-editor/hooks/useAdaptors';
+
 import PathButton from '../components/PathButton';
-import useAdaptorIcons, { type AdaptorIconData } from '../useAdaptorIcons';
 import getAdaptorName from '../util/get-adaptor-name';
 
 import Node from './Node';
@@ -22,10 +23,9 @@ const JobNode = ({
     ],
   ];
 
-  const adaptorIconsData = useAdaptorIcons();
-
   const adaptor = getAdaptorName(props.data?.adaptor);
-  const icon = getAdaptorIcon(adaptor, adaptorIconsData);
+  const iconUrl = useAdaptorIconUrl(props.data?.adaptor);
+  const icon = iconUrl ? <img src={iconUrl} alt={adaptor} /> : adaptor;
 
   return (
     <Node
@@ -44,22 +44,5 @@ const JobNode = ({
 };
 
 JobNode.displayName = 'JobNode';
-
-function getAdaptorIcon(
-  adaptor: string,
-  adaptorIconsData: AdaptorIconData | null
-) {
-  try {
-    const iconData = adaptorIconsData?.[adaptor];
-    if (iconData?.square) {
-      const srcPath = iconData.square;
-      return <img src={srcPath} alt={adaptor} />;
-    } else {
-      return adaptor;
-    }
-  } catch {
-    return adaptor;
-  }
-}
 
 export default memo(JobNode);
