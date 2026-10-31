@@ -327,43 +327,49 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
-  attr :update, :atom, default: nil, values: [nil, :available, :current]
-
-  def version_chip(assigns) do
-    {display, message} =
-      Lightning.release()
-      |> case do
+  @doc """
+  The hover text for the sidebar's logo and version: the build it's running
+  and, once the update check has run, whether a newer version is available.
+  """
+  @spec version_message(:available | :current | nil) :: String.t()
+  def version_message(update \\ nil) do
+    message =
+      case Lightning.release() do
         %{image_tag: "edge"} = info ->
-          {info.commit,
-           "Unreleased build '#{info.image_tag}' from #{info.commit} on #{info.branch}"}
+          "Unreleased build '#{info.image_tag}' from #{info.commit} on #{info.branch}"
 
         %{image_tag: image} = info when not is_nil(image) ->
-          {info.label, "Build '#{info.image_tag}' from #{info.commit}"}
+          "Build '#{info.image_tag}' from #{info.commit}"
 
-        info ->
-          {info.label, "No image tag found."}
+        _info ->
+          "No image tag found."
       end
 
-    message =
-      case assigns.update do
-        :available -> "A new version is available. #{message}"
-        :current -> "Up to date. #{message}"
-        nil -> message
+    case update do
+      :available -> "A new version is available. #{message}"
+      :current -> "Up to date. #{message}"
+      nil -> message
+    end
+  end
+
+  attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
+
+  def version_chip(assigns) do
+    display =
+      case Lightning.release() do
+        %{image_tag: "edge"} = info -> info.commit
+        info -> info.label
       end
 
-    assigns = assign(assigns, display: display, message: message)
+    assigns = assign(assigns, display: display)
 
     ~H"""
     <div class="text-[8px] primary-light opacity-50 flex justify-center">
-      <code
-        class={[
-          "py-1 rounded-md",
-          "break-keep primary-light",
-          "inline-block align-middle text-center"
-        ]}
-        title={@message}
-      >
+      <code class={[
+        "py-1 rounded-md",
+        "break-keep primary-light",
+        "inline-block align-middle text-center"
+      ]}>
         {@display}
       </code>
     </div>
@@ -381,14 +387,12 @@ defmodule LightningWeb.Components.Common do
     <span
       :if={@update == :available}
       class="version-update-dot absolute top-0.5 right-0.5 block size-2 translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400"
-      title="A new version is available"
       aria-label="A new version is available"
     >
     </span>
     <span
       :if={@update == :current}
       class="version-current-dot absolute top-0 right-0 block size-2 translate-x-1/2 -translate-y-1/2 rounded-full bg-green-400"
-      title="Up to date"
       aria-label="Up to date"
     >
     </span>
