@@ -17,8 +17,16 @@ defmodule LightningWeb.WorkerChannel do
   @impl true
   def join("worker:queue", payload, %{assigns: %{claims: claims}} = socket)
       when not is_nil(claims) do
-    # Extract capacity from payload, default to 1 if not provided
-    capacity = Map.get(payload, "capacity", 1)
+    # Capacity is summed wherever it's shown, so default to 1 when it's
+    # missing or isn't a non-negative integer.
+    capacity =
+      case payload do
+        %{"capacity" => capacity} when is_integer(capacity) and capacity >= 0 ->
+          capacity
+
+        _ ->
+          1
+      end
 
     # Track this worker's presence with its capacity
     worker_id = "worker-#{inspect(self())}"

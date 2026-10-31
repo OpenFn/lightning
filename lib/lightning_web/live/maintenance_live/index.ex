@@ -168,7 +168,7 @@ defmodule LightningWeb.MaintenanceLive.Index do
   end
 
   defp update_flash(%{update_available?: true, latest: latest}, _outdated),
-    do: "v#{latest} is available."
+    do: "#{latest} is available."
 
   defp update_flash(_status, outdated) when outdated > 0,
     do: "A newer worker version is available."

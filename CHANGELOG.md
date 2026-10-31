@@ -23,7 +23,12 @@ and this project adheres to
   latest version. The repository is set with `UPDATE_CHECK_*` environment
   variables and defaults to `openfn/lightning` on Docker Hub. Worker releases
   are checked too, in `openfn/ws-worker`, and the sidebar callout says "New
-  version available" when either the app or any connected worker is behind.
+  version available" when either the app or any connected worker is behind. The
+  check is on by default: every node contacts Docker Hub about a minute after
+  boot and then every 6 hours (`UPDATE_CHECK_INTERVAL_HOURS`). The requests
+  carry no instance data, but the registry sees each node's IP address, and they
+  may count towards Docker Hub's anonymous pull limit. Set
+  `UPDATE_CHECK_ENABLED=false` to turn it off.
 - A "Workers" card on the Maintenance page lists the workers connected right
   now, grouped by the version and API version they report, flags outdated ones,
   and updates live as workers connect and disconnect.
