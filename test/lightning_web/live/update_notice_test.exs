@@ -145,7 +145,7 @@ defmodule LightningWeb.UpdateNoticeTest do
       assert has_element?(
                view,
                "#update-available-callout",
-               "v2.19.2 is available. Please upgrade."
+               "2.19.2 is available. Please upgrade."
              )
 
       assert has_element?(
@@ -153,7 +153,8 @@ defmodule LightningWeb.UpdateNoticeTest do
                ~s{#update-instructions-link[href="#{@behind.instructions_url}"]}
              )
 
-      assert has_element?(view, "#update-latest-version", "v2.19.2")
+      assert has_element?(view, "#update-latest-version", "2.19.2")
+      refute has_element?(view, "#update-latest-version", "v2.19.2")
     end
 
     test "the version card doesn't flag an app that's up to date", %{conn: conn} do
@@ -261,16 +262,17 @@ defmodule LightningWeb.UpdateNoticeTest do
       assert has_element?(
                view,
                "#worker-update-callout",
-               "ws-worker v1.30.0 is available. Please upgrade."
+               "ws-worker 1.30.0 is available. Please upgrade."
              )
 
       assert has_element?(view, "#worker-update-callout", "2 of 3")
-      assert has_element?(view, "#worker-group-0", "v1.30.0")
+      assert has_element?(view, "#worker-group-0", "1.30.0")
       refute has_element?(view, "#worker-group-0", "Outdated")
-      assert has_element?(view, "#worker-group-1", "v1.29.6")
+      assert has_element?(view, "#worker-group-1", "1.29.6")
       assert has_element?(view, "#worker-group-1", "Outdated")
       assert has_element?(view, "#worker-capacity", "9 concurrent runs")
-      assert has_element?(view, "#worker-latest-version", "v1.30.0")
+      assert has_element?(view, "#worker-latest-version", "1.30.0")
+      refute has_element?(view, "#worker-latest-version", "v1.30.0")
     end
 
     test "says when no workers are connected", %{conn: conn} do
@@ -313,8 +315,8 @@ defmodule LightningWeb.UpdateNoticeTest do
       {:ok, view, _html} = live(conn, ~p"/settings/maintenance")
 
       assert has_element?(view, "#workers-status", "Update available")
-      assert has_element?(view, "#worker-group-0", "v1.29.6")
-      refute has_element?(view, "#worker-group-0", "vv1.29.6")
+      assert has_element?(view, "#worker-group-0", "1.29.6")
+      refute has_element?(view, "#worker-group-0", "v1.29.6")
       assert has_element?(view, "#worker-group-0", "Outdated")
     end
 
@@ -342,7 +344,7 @@ defmodule LightningWeb.UpdateNoticeTest do
 
       pid = connect_worker("1.29.6")
       assert_receive %Phoenix.Socket.Broadcast{event: "presence_diff"}
-      assert has_element?(view, "#worker-group-0", "v1.29.6")
+      assert has_element?(view, "#worker-group-0", "1.29.6")
       assert has_element?(view, "#worker-update-callout")
 
       Process.exit(pid, :kill)

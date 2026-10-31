@@ -38,11 +38,11 @@
           :if={@update_status && @update_status.update_available?}
           id="update-available-callout"
           type="warning"
-          header={"v#{@update_status.latest} is available. Please upgrade."}
+          header={"#{@update_status.latest} is available. Please upgrade."}
         >
           <:message>
             <p>
-              This instance is running v{@update_status.current}. See the
+              This instance is running {@update_status.current}. See the
               <a
                 id="update-instructions-link"
                 href={@update_status.instructions_url}
@@ -71,14 +71,14 @@
             <span class="font-medium text-secondary-900">Running:</span>
             <.inline_code
               id="update-current-version"
-              value={"v#{Lightning.UpdateCheck.current_version()}"}
+              value={Lightning.UpdateCheck.current_version()}
             />
           </p>
           <p :if={@update_status && @update_status.latest}>
             <span class="font-medium text-secondary-900">Latest release:</span>
             <.inline_code
               id="update-latest-version"
-              value={"v#{@update_status.latest}"}
+              value={@update_status.latest}
             />
           </p>
           <p>
@@ -125,7 +125,7 @@
           :if={@outdated_worker_count > 0}
           id="worker-update-callout"
           type="warning"
-          header={"ws-worker v#{@update_status.worker.latest} is available. Please upgrade."}
+          header={"ws-worker #{@update_status.worker.latest} is available. Please upgrade."}
         >
           <:message>
             <p>
@@ -170,7 +170,7 @@
                 <span class="flex items-center gap-2">
                   <.inline_code value={
                     if group.version,
-                      do: "v#{String.trim_leading(group.version, "v")}",
+                      do: String.trim_leading(group.version, "v"),
                       else: "unknown"
                   } />
                   <.pill :if={group.outdated?} color="yellow">Outdated</.pill>
@@ -196,7 +196,7 @@
             <span class="font-medium text-secondary-900">Latest release:</span>
             <.inline_code
               id="worker-latest-version"
-              value={"v#{@update_status.worker.latest}"}
+              value={@update_status.worker.latest}
             />
           </p>
           <p :if={@update_check.worker_repository}>

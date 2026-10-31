@@ -69,6 +69,23 @@ defmodule LightningWeb.WorkerChannelTest do
 
       assert WorkerPresence.total_worker_capacity() == 10
     end
+
+    test "falls back to a capacity of 1 when it isn't a non-negative integer" do
+      bad_capacities = ["10", -1, 1.5, %{"a" => "b"}]
+
+      for capacity <- bad_capacities do
+        {:ok, _, _socket} =
+          ws_worker_socket()
+          |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue", %{
+            "capacity" => capacity
+          })
+      end
+
+      workers = WorkerPresence.list_workers()
+
+      assert length(workers) == length(bad_capacities)
+      assert Enum.all?(workers, &(&1.capacity == 1))
+    end
   end
 
   describe "worker:queue channel" do
