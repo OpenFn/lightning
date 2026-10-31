@@ -2,6 +2,7 @@ defmodule LightningWeb.LayoutComponents do
   @moduledoc false
   use LightningWeb, :html
 
+  alias LightningWeb.Components.Common
   alias LightningWeb.Components.Menu
   alias Phoenix.LiveView.JS
 
@@ -675,13 +676,13 @@ defmodule LightningWeb.LayoutComponents do
     label = Lightning.release()[:label]
     compact? = is_binary(label) and not String.contains?(label, " ")
 
-    update = LightningWeb.Components.Common.update_state(assigns.update_status)
+    update = Common.update_state(assigns.update_status)
 
     assigns =
       assign(assigns,
         compact_version?: compact?,
         update: update,
-        version_message: LightningWeb.Components.Common.version_message(update),
+        version_message: Common.version_message(update),
         superuser_update?:
           update == :available and
             match?(%{role: :superuser}, assigns.current_user)
