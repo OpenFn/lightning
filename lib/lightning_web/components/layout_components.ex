@@ -681,6 +681,7 @@ defmodule LightningWeb.LayoutComponents do
       assign(assigns,
         compact_version?: compact?,
         update: update,
+        version_message: LightningWeb.Components.Common.version_message(update),
         superuser_update?:
           update == :available and
             match?(%{role: :superuser}, assigns.current_user)
@@ -690,24 +691,30 @@ defmodule LightningWeb.LayoutComponents do
     <div class="flex-shrink-0 sidebar-footer flex flex-col border-t border-white/10 pt-3 mt-3">
       <.update_callout :if={@superuser_update?} />
       <%!-- Expanded branding: centered --%>
-      <div class="sidebar-branding-expanded h-14 text-center animate-[fade-in-keys_1s_ease-out_forwards]">
+      <div
+        class="sidebar-branding-expanded h-14 text-center animate-[fade-in-keys_1s_ease-out_forwards]"
+        title={@version_message}
+      >
         <div class="pt-2">
           <div class="relative mx-auto w-fit">
             <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light" />
             <LightningWeb.Components.Common.update_dot update={@update} />
           </div>
         </div>
-        <LightningWeb.Components.Common.version_chip update={@update} />
+        <LightningWeb.Components.Common.version_chip />
       </div>
       <%!-- Collapsed branding: centered --%>
-      <div class="sidebar-branding-collapsed hidden h-14 text-center animate-[fade-in-keys_1s_ease-out_forwards]">
+      <div
+        class="sidebar-branding-collapsed hidden h-14 text-center animate-[fade-in-keys_1s_ease-out_forwards]"
+        title={@version_message}
+      >
         <div class={if @compact_version?, do: "pt-2", else: "pt-0.5"}>
           <div class="relative mx-auto w-fit">
             <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light" />
             <LightningWeb.Components.Common.update_dot update={@update} />
           </div>
         </div>
-        <LightningWeb.Components.Common.version_chip update={@update} />
+        <LightningWeb.Components.Common.version_chip />
       </div>
       <div class="border-t border-white/10 mt-2">
         <button

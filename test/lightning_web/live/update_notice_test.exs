@@ -78,6 +78,11 @@ defmodule LightningWeb.UpdateNoticeTest do
 
       assert has_element?(view, ".version-update-dot")
       refute has_element?(view, "#update-callout")
+
+      assert has_element?(
+               view,
+               ~s{.sidebar-branding-expanded[title^="A new version is available. "]}
+             )
     end
 
     test "a superuser sees a callout linking to the maintenance page",
