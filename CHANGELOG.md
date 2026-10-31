@@ -100,10 +100,10 @@ and this project adheres to
   counts as unset. An env file Dotenvy can't parse stops the boot without
   printing the line. [#5272](https://github.com/OpenFn/lightning/pull/5272)
 - Versions are shown without a leading `v` (`2.21.0`, not `v2.21.0`) in the
-  sidebar version chip, to match how images are now tagged. Images carry their
-  version in the standard `org.opencontainers.image.version` label. Usage
-  tracking reports the version without the `v` too, and counts an image tag with
-  or without it as a match.
+  sidebar version chip and on the Maintenance page, to match how images are now
+  tagged. Images carry their version in the standard
+  `org.opencontainers.image.version` label. Usage tracking reports the version
+  without the `v` too, and counts an image tag with or without it as a match.
 - New GitHub Sync workflows are named in the repo's Actions tab: "Pull from
   OpenFn" and "Deploy to OpenFn (project id)".
   [#5275](https://github.com/OpenFn/lightning/pull/5275)
