@@ -34,6 +34,9 @@ defmodule Lightning.Invocation do
   # them, so a run of short messages costs far more than its text suggests.
   @logs_line_overhead 150
 
+  # So one console.log of a whole state can't crowd out the lines before it.
+  @log_line_max 8_000
+
   # On the scrubbed output as Apollo renders it, indented. The step that
   # crosses it is read whole.
   @io_byte_budget 50_000
@@ -1149,6 +1152,7 @@ defmodule Lightning.Invocation do
 
   # A job that logs per record produces hundreds of thousands of rows.
   defp take_until_over_budget(line, {lines, size}) do
+    line = cap_line(line)
     line_size = escaped_size(line.message || "") + @logs_line_overhead
 
     if size + line_size <= @logs_char_budget do
@@ -1157,6 +1161,13 @@ defmodule Lightning.Invocation do
       {:halt, {cut_line(line, @logs_char_budget - size, lines), :cut}}
     end
   end
+
+  defp cap_line(%{message: message} = line)
+       when is_binary(message) and byte_size(message) > @log_line_max do
+    %{line | message: take_escaped(message, @log_line_max, []) <> @log_line_cut}
+  end
+
+  defp cap_line(line), do: line
 
   # A single line can hold a whole state dump; the room left keeps its start.
   defp cut_line(line, room, lines) do

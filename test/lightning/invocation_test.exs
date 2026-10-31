@@ -2879,6 +2879,28 @@ defmodule Lightning.InvocationTest do
       assert byte_size(message) <= 120_000
     end
 
+    test "a huge line keeps its start without pushing out the lines before it",
+         %{project: project, run: run, step: step} do
+      for {message, n} <- [
+            {"Starting operation", 1},
+            {String.duplicate("x", 300_000), 2},
+            {"Error: 401 Unauthorized", 3}
+          ] do
+        insert(:log_line,
+          run: run,
+          step: step,
+          message: message,
+          timestamp: DateTime.add(~U[2026-08-25 10:00:00Z], n, :second)
+        )
+      end
+
+      assert [first, dump, error] = Invocation.logs_for_run(run.id, project.id)
+      assert first.message == "Starting operation"
+      assert dump.message =~ ~r/^x+ \[rest of this line cut/
+      assert byte_size(dump.message) < 9_000
+      assert error.message == "Error: 401 Unauthorized"
+    end
+
     test "measures non-Latin text as Apollo renders it, escaped", %{
       project: project,
       run: run,
