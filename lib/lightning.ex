@@ -42,18 +42,25 @@ defmodule Lightning do
     end
 
     @impl true
-    def release do
-      Application.get_env(:lightning, :release,
-        commit: nil,
-        image_tag: nil,
-        branch: nil
-      )
+    def release(config \\ Application.get_env(:lightning, :release, [])) do
+      [label: nil, commit: nil, image_tag: nil, branch: nil]
+      |> Keyword.merge(config)
+      |> Keyword.update!(:image_tag, &normalize_image_tag/1)
       |> Keyword.merge(vsn: Application.spec(:lightning, :vsn))
       |> Map.new()
     end
+
+    # Release builds set IMAGE_TAG to the git tag (`v2.19.2`), but images are
+    # tagged with the bare version (`2.19.2`). Stripping the `v` here, rather
+    # than where IMAGE_TAG is read, covers apps that set `:release` themselves.
+    defp normalize_image_tag(tag) when is_binary(tag),
+      do: String.trim_leading(tag, "v")
+
+    defp normalize_image_tag(tag), do: tag
   end
 
   @type release_info() :: %{
+          label: String.t() | nil,
           commit: String.t() | nil,
           image_tag: String.t() | nil,
           branch: String.t() | nil,

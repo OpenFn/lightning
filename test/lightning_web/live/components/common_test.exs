@@ -62,6 +62,7 @@ defmodule LightningWeb.Components.CommonTest do
     setup do
       Mox.stub(LightningMock, :release, fn ->
         %{
+          label: to_string(Application.spec(:lightning, :vsn)),
           commit: "abcdef7",
           image_tag: to_string(Application.spec(:lightning, :vsn)),
           branch: "main",
@@ -85,6 +86,7 @@ defmodule LightningWeb.Components.CommonTest do
     test "displays the SHA and a cube" do
       Mox.stub(LightningMock, :release, fn ->
         %{
+          label: to_string(Application.spec(:lightning, :vsn)),
           commit: "abcdef7",
           image_tag: "edge",
           branch: "main",
@@ -106,6 +108,7 @@ defmodule LightningWeb.Components.CommonTest do
     test "displays the Lightning version without an icon" do
       Mox.stub(LightningMock, :release, fn ->
         %{
+          label: to_string(Application.spec(:lightning, :vsn)),
           commit: "abcdef7",
           image_tag: nil,
           branch: "main",
