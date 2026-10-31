@@ -225,7 +225,9 @@ defmodule Lightning.UsageTracking do
   defp image_for_submission(tag, vsn) do
     cond do
       tag == "edge" -> "edge"
-      tag == "v#{vsn}" -> "match"
+      # Release builds set IMAGE_TAG to the git tag, `v2.19.2`, but accept the
+      # version alone too, since images are tagged `2.19.2`.
+      tag in ["v#{vsn}", to_string(vsn)] -> "match"
       true -> "other"
     end
   end
