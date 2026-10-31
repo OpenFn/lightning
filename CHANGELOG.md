@@ -29,6 +29,10 @@ and this project adheres to
 
 ### Fixed
 
+- GitHub Sync now refreshes and retries a rejected OAuth token once when loading
+  app installations, and directs users to reconnect their account when recovery
+  is not possible. [#4972](https://github.com/OpenFn/lightning/issues/4972)
+
 ### Security
 
 - The Docker image no longer trusts the emSign Root CA C1 and ECC Root CA C3
