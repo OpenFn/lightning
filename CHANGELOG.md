@@ -31,8 +31,8 @@ and this project adheres to
 
 - `step:complete` no longer crashes with an unhandled `Postgrex.Error` (code
   `22P05`) when an `output_dataclip` body contains a NUL byte. The dataclip
-  insert is rejected with a changeset error instead of raising, since
-  PostgreSQL cannot store the NUL byte (`\u0000`) in `text`/`jsonb`.
+  insert is rejected with a changeset error instead of raising, since PostgreSQL
+  cannot store the NUL byte (`\u0000`) in `text`/`jsonb`.
   [#4893](https://github.com/OpenFn/lightning/issues/4893)
 
 ### Security
