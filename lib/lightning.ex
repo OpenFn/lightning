@@ -43,8 +43,12 @@ defmodule Lightning do
 
     @impl true
     def release do
-      [label: nil, commit: nil, image_tag: nil, branch: nil]
-      |> Keyword.merge(Application.get_env(:lightning, :release, []))
+      Application.get_env(:lightning, :release,
+        label: nil,
+        commit: nil,
+        image_tag: nil,
+        branch: nil
+      )
       |> Keyword.update!(:image_tag, &normalize_image_tag/1)
       |> Keyword.merge(vsn: Application.spec(:lightning, :vsn))
       |> Map.new()
