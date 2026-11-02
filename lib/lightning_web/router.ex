@@ -201,6 +201,9 @@ defmodule LightningWeb.Router do
     # end-api-area:webhooks_channels
 
     # api-area:ai_assistant (routes for this area go between these markers)
+    get "/projects/:project_id/ai_sessions", API.AiSessionController, :index
+    post "/projects/:project_id/ai_sessions", API.AiSessionController, :create
+    get "/ai_sessions/:id", API.AiSessionController, :show
     # end-api-area:ai_assistant
   end
 
