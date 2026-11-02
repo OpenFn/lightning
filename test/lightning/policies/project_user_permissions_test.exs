@@ -497,7 +497,8 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
           delete_channel
         )a
 
-      refused = ~w(publish_template edit_digest_alerts edit_failure_alerts)a
+      refused =
+        ~w(publish_template edit_digest_alerts edit_failure_alerts invite_project_user)a
 
       assert Enum.sort(ProjectUsers.actions()) ==
                Enum.sort(expected ++ refused),

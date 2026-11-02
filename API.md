@@ -177,6 +177,7 @@ Settings, deletion and members:
 | `PUT`    | `/api/projects/:project_id/members/:user_id`               | Adds a member or changes their role           | `projects:write`                |
 | `DELETE` | `/api/projects/:project_id/members/:user_id`               | Removes a member                              | `projects:write`                |
 | `PUT`    | `/api/projects/:project_id/members/:user_id/notifications` | Sets your notifications for a project         | Not open to the service account |
+| `POST`   | `/api/projects/:project_id/invitations`                    | Invites someone new to a project              | Not open to the service account |
 
 ### Credentials
 

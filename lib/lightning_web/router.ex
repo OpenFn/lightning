@@ -209,6 +209,10 @@ defmodule LightningWeb.Router do
         API.ProjectMemberController,
         :notifications
 
+    post "/projects/:project_id/invitations",
+         API.ProjectInvitationController,
+         :create
+
     # end-api-area:projects
 
     # api-area:sandboxes_github (routes for this area go between these markers)

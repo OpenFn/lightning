@@ -888,6 +888,23 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  `result` unchanged, unless it is a refusal and `project` has been deleted
+  since it was read, in which case `{:error, :concurrent_edit}`. A membership
+  write on a deleted project fails on its missing owner or rows rather than
+  on the project, so this tells the two apart.
+  """
+  @spec unless_deleted(result, Project.t()) ::
+          result | {:error, :concurrent_edit}
+        when result: term()
+  def unless_deleted({:error, _reason} = refused, %Project{id: id}) do
+    if Repo.exists?(from(p in Project, where: p.id == ^id)),
+      do: refused,
+      else: {:error, :concurrent_edit}
+  end
+
+  def unless_deleted(result, _project), do: result
+
+  @doc """
   Sets both notification preferences on a project user in one write.
 
   Returns `:unchanged` when neither changes, and `{:error, :concurrent_edit}`

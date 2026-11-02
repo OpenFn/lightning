@@ -32,7 +32,8 @@ defmodule Lightning.Policies.ProjectUsers do
     :edit_data_retention,
     :add_project_user,
     :remove_project_user,
-    :edit_run_settings
+    :edit_run_settings,
+    :invite_project_user
   ]
 
   @editor_actions [
@@ -48,6 +49,10 @@ defmodule Lightning.Policies.ProjectUsers do
   ]
 
   @self_actions [:edit_digest_alerts, :edit_failure_alerts]
+
+  # Open to people only. Inviting someone emails them in the inviter's name,
+  # which the service account doesn't have.
+  @person_actions @self_actions ++ [:invite_project_user]
 
   @other_actions [
     :access_project,
@@ -83,6 +88,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :write_github_connection
           | :edit_digest_alerts
           | :edit_failure_alerts
+          | :invite_project_user
 
   @doc """
   Every action this policy decides. Read by the recurrence test, so a new action
@@ -101,12 +107,12 @@ defmodule Lightning.Policies.ProjectUsers do
   """
   @spec authorize(actions(), Scope.t() | Scope.actor(), Scope.subject()) ::
           Decision.answer()
-  # A member's own notifications are for the person, never the service account,
-  # whatever its grants. After the grant, so a token without it still hears
-  # which grant, but before the project, so the API refuses the service account
-  # before it looks anything up.
+  # A member's own notifications are for the person, and so is inviting
+  # someone, never the service account, whatever its grants. After the grant, so
+  # a token without it still hears which grant, but before the project, so the
+  # API refuses the service account before it looks anything up.
   def authorize(action, %Scope{} = scope, subject)
-      when action in @self_actions do
+      when action in @person_actions do
     case Decision.project(
            scope,
            subject,
