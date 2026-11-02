@@ -115,8 +115,11 @@ defmodule LightningWeb.UserAuth do
   def log_out_user(conn) do
     user_token = get_session(conn, :user_token)
     user_token && Accounts.delete_session_token(user_token)
-    sudo_token = get_session(conn, :sudo_token)
-    sudo_token && Accounts.delete_sudo_session_token(sudo_token)
+    # The session holds the sudo token Base64-encoded; the table holds it raw.
+    with encoded when is_binary(encoded) <- get_session(conn, :sudo_token),
+         {:ok, sudo_token} <- Base.decode64(encoded) do
+      Accounts.delete_sudo_session_token(sudo_token)
+    end
 
     # Read from the session rather than derived from the user: a session still
     # holding the old token-keyed id can only be reached at the id it was

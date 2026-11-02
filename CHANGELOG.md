@@ -95,6 +95,9 @@ and this project adheres to
 
 ### Fixed
 
+- Signing out now also ends the session's step-up (the sudo token from
+  re-entering a password or MFA code), which it left valid for up to five
+  minutes.
 - A form that loses a save race with another user, or saves a record someone
   else deleted, shows a message instead of crashing.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
