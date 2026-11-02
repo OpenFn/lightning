@@ -31,6 +31,7 @@ defmodule LightningWeb.API.WorkflowsController do
       GET /api/workflows/a1b2c3d4-...
       POST /api/projects/a1b2c3d4-.../workflows
       PATCH /api/projects/a1b2c3d4-.../workflows/e5f6a7b8-...
+      DELETE /api/projects/a1b2c3d4-.../workflows/e5f6a7b8-...
 
   ## Sample curl requests
 
@@ -98,6 +99,11 @@ defmodule LightningWeb.API.WorkflowsController do
 
   plug LightningWeb.Plugs.AuthorizeAction,
        {:project_users, :access_project}
+       when action != :delete
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:workflows, :delete_workflow}
+       when action == :delete
 
   @doc """
   Lists workflows, with their jobs, triggers and edges.
@@ -122,7 +128,8 @@ defmodule LightningWeb.API.WorkflowsController do
            ) do
       list =
         Workflows.list_project_workflows(project.id,
-          include: [:edges, :jobs, :triggers]
+          include: [:edges, :jobs, :triggers],
+          exclude_deleted: true
         )
 
       json(conn, %{workflows: Enum.map(list, &public_workflow/1)})
@@ -273,6 +280,35 @@ defmodule LightningWeb.API.WorkflowsController do
            |> Request.validate_matches_path(body, :id, workflow.id)
            |> save(conn.assigns.current_resource) do
       json(conn, %{workflow: public_workflow(workflow)})
+    end
+  end
+
+  @doc """
+  Marks a workflow deleted. Its triggers are disabled and unbound straight
+  away, and it leaves the lists and `GET`; its run history stays. Open to a
+  person who is an owner, admin or editor of the project, on either of their
+  tokens; the service account is refused 403. A workflow open in the editor
+  answers 409 `being_edited`, and one another request deletes first 409
+  `concurrent_edit`.
+
+  ## Examples
+
+      DELETE /api/projects/a1b2c3d4-.../workflows/e5f6a7b8-...
+  """
+  @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def delete(conn, _params) do
+    with {:ok, workflow} <-
+           Target.in_project(
+             conn.assigns.scope,
+             Request.param(conn, "project_id"),
+             {:workflows, :delete_workflow},
+             Request.param(conn, "id"),
+             &Workflows.get_workflow_for_project/2
+           ),
+         :ok <- refuse_being_edited(workflow),
+         {:ok, _changes} <-
+           Workflows.mark_for_deletion(workflow, conn.assigns.current_resource) do
+      send_resp(conn, :no_content, "")
     end
   end
 

@@ -226,6 +226,35 @@ defmodule Lightning.Workflows.Snapshot do
   end
 
   @doc """
+  A page of the workflow's snapshots, newest first, as
+  `Lightning.Repo.paginate/2` takes `page`.
+
+  `lock_version` only grows, so the newest snapshot has the highest; the
+  insertion time and id keep a page boundary stable between two that share
+  one.
+  """
+  @spec paginate_for(Workflow.t(), keyword()) :: Scrivener.Page.t()
+  def paginate_for(%Workflow{} = workflow, page) do
+    from(s in __MODULE__,
+      where: s.workflow_id == ^workflow.id,
+      order_by: [desc: s.lock_version, desc: s.inserted_at, desc: s.id]
+    )
+    |> Repo.paginate(page)
+  end
+
+  @doc """
+  The snapshot `id` of the workflow `workflow_id`, or `{:error, :not_found}`
+  when it has no snapshot with that id. A snapshot of another workflow is
+  missing too.
+  """
+  @spec get_for_workflow(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, t()} | {:error, :not_found}
+  def get_for_workflow(workflow_id, id) do
+    from(s in __MODULE__, where: s.id == ^id and s.workflow_id == ^workflow_id)
+    |> Repo.fetch_one()
+  end
+
+  @doc """
   Gets snapshots by id, scoped to a project via each snapshot's workflow.
 
   Only snapshots whose workflow belongs to `project_id` are returned, so this

@@ -180,4 +180,30 @@ defmodule LightningWeb.API.Filters do
         params
     end
   end
+
+  @workflow_template_params %{q: :string, tags: {:array, :string}}
+
+  @doc """
+  The workflow template filters in `params`, or a changeset with an error on
+  every bad parameter, none quoting its value.
+
+  `q` is a search of the name and description. `tags` is a comma-separated
+  list, every one of which a template must carry. An empty value, or one with
+  no tag in it, filters nothing and is left out.
+  """
+  @spec workflow_templates(map()) :: {:ok, map()} | {:error, Changeset.t()}
+  def workflow_templates(params) do
+    params = split_list(params, "tags")
+
+    {%{}, @workflow_template_params}
+    |> Changeset.cast(params, Map.keys(@workflow_template_params))
+    |> Changeset.apply_action(:validate)
+    |> case do
+      {:ok, filters} ->
+        {:ok, Map.reject(filters, fn {_key, value} -> value in [nil, []] end)}
+
+      refused ->
+        refused
+    end
+  end
 end

@@ -185,6 +185,50 @@ defmodule Lightning.WorkflowTemplatesTest do
     end
   end
 
+  describe "publish_workflow/2" do
+    test "refuses a workflow with two jobs that export under the same key, and publishes nothing" do
+      workflow = %Lightning.Workflows.Workflow{
+        id: Ecto.UUID.generate(),
+        name: "clash",
+        jobs: [
+          build(:job, id: Ecto.UUID.generate(), name: "Fetch data"),
+          build(:job, id: Ecto.UUID.generate(), name: "fetch data")
+        ],
+        triggers: [],
+        edges: []
+      }
+
+      assert WorkflowTemplates.publish_workflow(workflow, %{name: "clash"}) ==
+               {:error, :export_conflict}
+
+      refute Repo.exists?(WorkflowTemplate)
+    end
+
+    test "answers :updated and keeps one template when the workflow has one already" do
+      workflow =
+        insert(:simple_workflow)
+        |> Repo.preload([:jobs, :triggers, :edges])
+
+      assert {:ok, :created, %WorkflowTemplate{id: id}} =
+               WorkflowTemplates.publish_workflow(workflow, %{name: "first"})
+
+      assert {:ok, :updated, %WorkflowTemplate{id: ^id, name: "second"}} =
+               WorkflowTemplates.publish_workflow(workflow, %{name: "second"})
+
+      assert Repo.aggregate(WorkflowTemplate, :count) == 1
+    end
+
+    test "raises the serializer's exception for any other failure to serialize, and publishes nothing" do
+      workflow = %{insert(:simple_workflow) | jobs: [:not_a_job]}
+
+      assert_raise UndefinedFunctionError, fn ->
+        WorkflowTemplates.publish_workflow(workflow, %{name: "broken"})
+      end
+
+      refute Repo.exists?(WorkflowTemplate)
+    end
+  end
+
   describe "get_template_by_workflow_id/1" do
     test "returns template when it exists" do
       workflow = insert(:workflow)
