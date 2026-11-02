@@ -154,7 +154,8 @@ defmodule LightningWeb.API.RepoConnectionController do
   end
 
   defp replace(conn, existing, attrs, entries) do
-    if Map.take(existing, @identity) == Map.take(attrs, @identity) do
+    if identity(existing) ==
+         identity(struct(existing, Map.take(attrs, @identity))) do
       changeset = ProjectRepoConnection.reconfigure_changeset(existing, attrs)
 
       with :ok <- refuse(entries, changeset) do
@@ -190,6 +191,14 @@ defmodule LightningWeb.API.RepoConnectionController do
         |> written(conn, :ok)
       end
     end
+  end
+
+  # The config path as GET shows it, so a body that sends back what GET
+  # answered, or leaves out the default path, names the same connection.
+  defp identity(repo_connection) do
+    repo_connection
+    |> Map.take(@identity)
+    |> Map.put(:config_path, ProjectRepoConnection.config_path(repo_connection))
   end
 
   # A field the request refused for its type is missing from the changeset,
