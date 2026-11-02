@@ -183,31 +183,43 @@ The service account must send `project_id` to list credentials at
 The service account must send `project_id` to list work orders, runs or log
 lines at the top level.
 
-| Method  | Path                                        | What it does                        | Token grant                     |
-| ------- | ------------------------------------------- | ----------------------------------- | ------------------------------- |
-| `GET`   | `/api/projects/:project_id/workflows`       | Lists a project's workflows         | `projects:write`                |
-| `GET`   | `/api/projects/:project_id/workflows/:id`   | Reads a workflow                    | `projects:write`                |
-| `POST`  | `/api/projects/:project_id/workflows`       | Creates a workflow                  | `projects:write`                |
-| `PATCH` | `/api/projects/:project_id/workflows/:id`   | Changes a workflow                  | `projects:write`                |
-| `PUT`   | `/api/projects/:project_id/workflows/:id`   | Changes a workflow                  | `projects:write`                |
-| `GET`   | `/api/projects/:project_id/jobs`            | Lists a project's jobs              | `projects:write`                |
-| `GET`   | `/api/projects/:project_id/jobs/:id`        | Reads a job                         | `projects:write`                |
-| `GET`   | `/api/projects/:project_id/work_orders`     | Lists a project's work orders       | `projects:write`                |
-| `GET`   | `/api/projects/:project_id/work_orders/:id` | Reads a work order                  | `projects:write`                |
-| `GET`   | `/api/projects/:project_id/runs`            | Lists a project's runs              | `projects:write`                |
-| `GET`   | `/api/projects/:project_id/runs/:id`        | Reads a run                         | `projects:write`                |
-| `GET`   | `/api/workflows`                            | Lists workflows across projects     | `projects:write`                |
-| `GET`   | `/api/workflows/:id`                        | Reads a workflow                    | `projects:write`                |
-| `GET`   | `/api/jobs`                                 | Lists jobs across projects          | `projects:write`                |
-| `GET`   | `/api/jobs/:id`                             | Reads a job                         | `projects:write`                |
-| `GET`   | `/api/work_orders`                          | Lists work orders across projects   | `projects:write`                |
-| `GET`   | `/api/work_orders/:id`                      | Reads a work order                  | `projects:write`                |
-| `GET`   | `/api/runs`                                 | Lists runs across projects          | `projects:write`                |
-| `GET`   | `/api/runs/:id`                             | Reads a run                         | `projects:write`                |
-| `GET`   | `/api/log_lines`                            | Lists log lines                     | `projects:write`                |
-| `PATCH` | `/api/runs/:id`                             | Cancels a run no worker has claimed | Not open to the service account |
-| `POST`  | `/api/runs/:id/retries`                     | Retries a run from one of its steps | Not open to the service account |
-| `GET`   | `/api/runs/:id/steps`                       | Lists a run's steps                 | Not open to the service account |
+| Method  | Path                                        | What it does                      | Token grant      |
+| ------- | ------------------------------------------- | --------------------------------- | ---------------- |
+| `GET`   | `/api/projects/:project_id/workflows`       | Lists a project's workflows       | `projects:write` |
+| `GET`   | `/api/projects/:project_id/workflows/:id`   | Reads a workflow                  | `projects:write` |
+| `POST`  | `/api/projects/:project_id/workflows`       | Creates a workflow                | `projects:write` |
+| `PATCH` | `/api/projects/:project_id/workflows/:id`   | Changes a workflow                | `projects:write` |
+| `PUT`   | `/api/projects/:project_id/workflows/:id`   | Changes a workflow                | `projects:write` |
+| `GET`   | `/api/projects/:project_id/jobs`            | Lists a project's jobs            | `projects:write` |
+| `GET`   | `/api/projects/:project_id/jobs/:id`        | Reads a job                       | `projects:write` |
+| `GET`   | `/api/projects/:project_id/work_orders`     | Lists a project's work orders     | `projects:write` |
+| `GET`   | `/api/projects/:project_id/work_orders/:id` | Reads a work order                | `projects:write` |
+| `GET`   | `/api/projects/:project_id/runs`            | Lists a project's runs            | `projects:write` |
+| `GET`   | `/api/projects/:project_id/runs/:id`        | Reads a run                       | `projects:write` |
+| `GET`   | `/api/workflows`                            | Lists workflows across projects   | `projects:write` |
+| `GET`   | `/api/workflows/:id`                        | Reads a workflow                  | `projects:write` |
+| `GET`   | `/api/jobs`                                 | Lists jobs across projects        | `projects:write` |
+| `GET`   | `/api/jobs/:id`                             | Reads a job                       | `projects:write` |
+| `GET`   | `/api/work_orders`                          | Lists work orders across projects | `projects:write` |
+| `GET`   | `/api/work_orders/:id`                      | Reads a work order                | `projects:write` |
+| `GET`   | `/api/runs`                                 | Lists runs across projects        | `projects:write` |
+| `GET`   | `/api/runs/:id`                             | Reads a run                       | `projects:write` |
+| `GET`   | `/api/log_lines`                            | Lists log lines                   | `projects:write` |
+
+### Running workflows and history
+
+For people only: a personal access token or a session token. The service account
+and repo connections are refused 403 `forbidden`.
+
+| Method  | Path                                                           | What it does                           | Token grant                     |
+| ------- | -------------------------------------------------------------- | -------------------------------------- | ------------------------------- |
+| `POST`  | `/api/projects/:project_id/workflows/:workflow_id/work_orders` | Runs a workflow by hand                | Not open to the service account |
+| `POST`  | `/api/projects/:project_id/work_orders/retries`                | Retries many work orders               | Not open to the service account |
+| `POST`  | `/api/projects/:project_id/work_orders/cancellations`          | Cancels many work orders' waiting runs | Not open to the service account |
+| `PATCH` | `/api/work_orders/:id`                                         | Cancels a work order's waiting runs    | Not open to the service account |
+| `PATCH` | `/api/runs/:id`                                                | Cancels a run no worker has claimed    | Not open to the service account |
+| `POST`  | `/api/runs/:id/retries`                                        | Retries a run from one of its steps    | Not open to the service account |
+| `GET`   | `/api/runs/:id/steps`                                          | Lists a run's steps                    | Not open to the service account |
 
 ### Lightning's web app
 
