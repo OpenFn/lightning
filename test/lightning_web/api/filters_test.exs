@@ -170,6 +170,33 @@ defmodule LightningWeb.API.FiltersTest do
     end
   end
 
+  describe "workflow_templates/1" do
+    test "reads q and a comma-separated tags list, leaving out values that filter nothing" do
+      for {params, expected} <- [
+            {%{}, %{}},
+            {%{"q" => "dhis2"}, %{q: "dhis2"}},
+            {%{"q" => ""}, %{}},
+            {%{"tags" => "a,b"}, %{tags: ["a", "b"]}},
+            {%{"tags" => ["a", "b"]}, %{tags: ["a", "b"]}},
+            {%{"tags" => ",,"}, %{}},
+            {%{"q" => "x", "tags" => "a", "page" => "2"}, %{q: "x", tags: ["a"]}}
+          ] do
+        assert Filters.workflow_templates(params) == {:ok, expected},
+               inspect(params)
+      end
+    end
+
+    test "refuses a q or tags of the wrong type, one error per parameter" do
+      assert {:error, changeset} =
+               Filters.workflow_templates(%{
+                 "q" => ["a"],
+                 "tags" => %{"a" => "b"}
+               })
+
+      assert Keyword.keys(changeset.errors) |> Enum.sort() == [:q, :tags]
+    end
+  end
+
   defp scrivener(options) do
     config =
       Scrivener.Config.new(
