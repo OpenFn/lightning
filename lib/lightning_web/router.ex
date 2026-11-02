@@ -211,6 +211,14 @@ defmodule LightningWeb.Router do
            API.KeychainCredentialController,
            :delete
 
+    get "/oauth_clients", API.OauthClientController, :index
+
+    get "/projects/:project_id/oauth_clients",
+        API.OauthClientController,
+        :index_for_project
+
+    put "/oauth_clients/:id", API.OauthClientController, :update
+    delete "/oauth_clients/:id", API.OauthClientController, :delete
     # end-api-area:credential_extras
 
     # api-area:workflows (routes for this area go between these markers)

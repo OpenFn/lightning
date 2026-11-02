@@ -211,6 +211,10 @@ defmodule LightningWeb.API.SentinelSweepTest do
   defp refused_to_a_stranger?(%{verb: :put, path: "/api/credentials/:id"}),
     do: false
 
+  # Anyone holding the grant may create an OAuth client too.
+  defp refused_to_a_stranger?(%{verb: :put, path: "/api/oauth_clients/:id"}),
+    do: false
+
   defp refused_to_a_stranger?(%{pipeline: pipeline}),
     do: Map.has_key?(@pipelines, pipeline)
 
@@ -310,6 +314,11 @@ defmodule LightningWeb.API.SentinelSweepTest do
   # catalogue never loads, so a planted name can't be looked up.
   defp expected(%{path: "/api/credential_schemas/:name"}, :planted),
     do: {503, :not_ready, []}
+
+  # Only its owner may delete an OAuth client, and nobody may delete every
+  # one, so a person hears 403 for any id there.
+  defp expected(%{verb: :delete, path: "/api/oauth_clients/:id"}, :planted),
+    do: @forbidden
 
   defp expected(%{pipeline: [:session_api], verb: verb, path: path}, _attempt),
     do: Map.fetch!(@session_api, {verb, path})

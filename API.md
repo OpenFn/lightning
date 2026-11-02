@@ -190,11 +190,15 @@ The service account must send `project_id` to list credentials at
 
 ### Keychain credentials and OAuth clients
 
-| Method   | Path                                                 | What it does                              | Token grant         |
-| -------- | ---------------------------------------------------- | ----------------------------------------- | ------------------- |
-| `GET`    | `/api/projects/:project_id/keychain_credentials`     | Lists a project's keychain credentials    | `credentials:write` |
-| `PUT`    | `/api/projects/:project_id/keychain_credentials/:id` | Creates or replaces a keychain credential | `credentials:write` |
-| `DELETE` | `/api/projects/:project_id/keychain_credentials/:id` | Deletes a keychain credential             | `credentials:write` |
+| Method   | Path                                                 | What it does                                        | Token grant                     |
+| -------- | ---------------------------------------------------- | --------------------------------------------------- | ------------------------------- |
+| `GET`    | `/api/projects/:project_id/keychain_credentials`     | Lists a project's keychain credentials              | `credentials:write`             |
+| `PUT`    | `/api/projects/:project_id/keychain_credentials/:id` | Creates or replaces a keychain credential           | `credentials:write`             |
+| `DELETE` | `/api/projects/:project_id/keychain_credentials/:id` | Deletes a keychain credential                       | `credentials:write`             |
+| `GET`    | `/api/oauth_clients`                                 | Lists your OAuth clients and the global ones        | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/oauth_clients`            | Lists a project's OAuth clients and the global ones | `credentials:write`             |
+| `PUT`    | `/api/oauth_clients/:id`                             | Creates or replaces an OAuth client you own         | Not open to the service account |
+| `DELETE` | `/api/oauth_clients/:id`                             | Deletes an OAuth client you own                     | Not open to the service account |
 
 ### Workflows and runs
 
