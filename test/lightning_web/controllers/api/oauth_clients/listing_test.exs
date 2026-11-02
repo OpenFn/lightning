@@ -119,6 +119,29 @@ defmodule LightningWeb.API.OauthClients.ListingTest do
 
       assert {id, project_id} == {linked.id, project.id}
     end
+
+    test "pages them", %{conn: conn} do
+      viewer = insert(:user)
+      project = insert(:project, project_users: [%{user: viewer, role: :viewer}])
+
+      [_a, b, _c] =
+        for name <- ~w(a b c) do
+          client = insert(:oauth_client, name: name)
+          insert(:project_oauth_client, oauth_client: client, project: project)
+          client
+        end
+
+      conn =
+        conn
+        |> session_conn(viewer)
+        |> get(~p"/api/projects/#{project.id}/oauth_clients?page=2&page_size=1")
+
+      body = json_response(conn, 200)
+      assert Enum.map(body["data"], & &1["id"]) == [b.id]
+
+      assert body["links"]["next"] ==
+               "#{@url}/api/projects/#{project.id}/oauth_clients?page=3&page_size=1"
+    end
   end
 
   describe "who may reach a project's list" do
