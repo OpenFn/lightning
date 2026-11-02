@@ -85,6 +85,24 @@ defmodule LightningWeb.SessionToken do
     end
   end
 
+  @doc """
+  Whether a request `read/1` found no session for still names one: from
+  Lightning's own pages, its session (or remember-me cookie) holds a session
+  token that is revoked, expired, or whose account may no longer sign in.
+  Call it with the conn `read/1` returned.
+  """
+  @spec unusable_session?(Plug.Conn.t()) :: boolean()
+  def unusable_session?(conn),
+    do: from_own_page?(conn) and is_binary(get_session(conn, :user_token))
+
+  @doc """
+  Whether the session holds CSRF state, and so can check an `x-csrf-token`.
+  The session must already be fetched.
+  """
+  @spec holds_csrf_state?(Plug.Conn.t()) :: boolean()
+  def holds_csrf_state?(conn),
+    do: not is_nil(get_session(conn, @csrf_session_key))
+
   defp describe(conn, user) do
     state =
       cond do

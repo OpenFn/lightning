@@ -6,7 +6,10 @@ defmodule LightningWeb.API.Session.ReadingAndSigningOutTest do
   import Lightning.Factories
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.UserToken
   alias Lightning.Config.API, as: ConfigAPI
+  alias Lightning.Repo
+  alias LightningWeb.UserAuth
 
   describe "reading the session" do
     test "answers the session and a CSRF token that works for writes" do
@@ -81,17 +84,44 @@ defmodule LightningWeb.API.Session.ReadingAndSigningOutTest do
   end
 
   describe "signing out" do
-    test "ends the session and its step-up, and answers 204" do
+    test "ends the session and its step-up, hangs up the person's sockets, and answers 204" do
       user = insert(:user)
       conn = session_conn(build_conn(), user, stepped_up: true)
       session_token = get_session(conn, :user_token)
       sudo_token = conn |> get_session(:sudo_token) |> Base.decode64!()
+      sockets = UserAuth.user_socket_topic(user)
+      LightningWeb.Endpoint.subscribe(sockets)
 
       answer = delete(conn, ~p"/api/session")
 
       assert response(answer, 204) == ""
       refute Accounts.get_user_by_session_token(session_token)
       refute Accounts.sudo_session_token_valid?(user, sudo_token)
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        topic: ^sockets,
+        event: "disconnect"
+      }
+    end
+
+    test "ends a session whose account may no longer sign in, so it stays ended if the account is let back" do
+      user = insert(:user)
+      conn = session_conn(build_conn(), user, stepped_up: true)
+      sudo_token = conn |> get_session(:sudo_token) |> Base.decode64!()
+      # Disabled without revoking its sessions, so only signing out ends it.
+      Repo.update!(Ecto.Changeset.change(user, disabled: true))
+
+      answer = delete(conn, ~p"/api/session")
+
+      assert response(answer, 204) == ""
+
+      assert %{max_age: 0} =
+               answer.resp_cookies["_lightning_web_user_remember_me"]
+
+      refute Accounts.sudo_session_token_valid?(user, sudo_token)
+
+      Repo.update!(Ecto.Changeset.change(user, disabled: false))
+      conn |> get(~p"/api/session") |> assert_session_refused()
     end
 
     test "answers 204 when there is no session, or it comes from another site, and ends nothing" do
@@ -107,21 +137,34 @@ defmodule LightningWeb.API.Session.ReadingAndSigningOutTest do
              )
     end
 
-    test "needs the session's CSRF token, and ends nothing without it" do
-      user = insert(:user)
-      conn = session_conn(build_conn(), user, csrf: false)
+    test "needs the session's CSRF token, even once its account may no longer sign in, and ends nothing without it" do
+      live = insert(:user)
+      disabled = insert(:user)
 
-      conn
-      |> delete(~p"/api/session")
-      |> assert_problem(400, :invalid_header, [
-        %{
-          "header" => "x-csrf-token",
-          "code" => "required",
-          "detail" => "can't be blank"
-        }
-      ])
+      conns =
+        [live, disabled]
+        |> Enum.map(&session_conn(build_conn(), &1, csrf: false))
 
-      assert Accounts.get_user_by_session_token(get_session(conn, :user_token))
+      Repo.update!(Ecto.Changeset.change(disabled, disabled: true))
+
+      for conn <- conns do
+        conn
+        |> delete(~p"/api/session")
+        |> assert_problem(400, :invalid_header, [
+          %{
+            "header" => "x-csrf-token",
+            "code" => "required",
+            "detail" => "can't be blank"
+          }
+        ])
+
+        assert Repo.exists?(
+                 UserToken.token_and_context_query(
+                   get_session(conn, :user_token),
+                   "session"
+                 )
+               )
+      end
     end
   end
 end

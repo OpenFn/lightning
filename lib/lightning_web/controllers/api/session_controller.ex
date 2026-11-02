@@ -15,16 +15,30 @@ defmodule LightningWeb.API.SessionController do
   is disabled or scheduled for deletion. A `POST` that names another origin is
   403 `forbidden`, so another site can't sign a browser in.
 
+  Failed passwords and codes are limited per account
+  (`Lightning.Accounts.SignInAttempts`): once an account has failed too often,
+  every attempt on it, right or wrong, is 429 `too_many_requests` until the
+  window ends, and a pending MFA sign-in that fails five codes is ended, so the
+  password has to be entered again. A `POST` with only a password or a code
+  and no session to continue is 401 `unauthenticated`.
+
   `GET /api/session` reads the session, with a CSRF token for writes, and
   answers 401 without one. `DELETE /api/session` signs out and answers 204
-  whether or not there was a session.
+  whether or not there was a session. It ends whatever session the request
+  carries, even one whose account may no longer sign in, so the session stays
+  ended if the account is allowed back, and it hangs up the person's open
+  sockets on every device, as signing out of the LiveView pages hangs up their
+  pages; the other devices reconnect on their own sessions.
 
   A `POST` or `DELETE` that rides on an existing session needs its
   `x-csrf-token`; signing in with an email doesn't, since it starts a new one.
+  Signing out of a session that is no longer usable needs it only when the
+  session holds CSRF state, since without it the app has no way to get one.
   """
   use LightningWeb, :controller
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.SignInAttempts
   alias Lightning.Accounts.User
   alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
@@ -57,14 +71,34 @@ defmodule LightningWeb.API.SessionController do
 
   def delete(conn, _params) do
     case SessionToken.read(conn) do
-      {nil, conn} ->
-        send_resp(conn, 204, "")
-
-      {_session, conn} ->
+      {%{user: user}, conn} ->
         with :ok <- SessionToken.check_csrf(conn) do
-          conn |> UserAuth.end_session() |> send_resp(204, "")
+          conn = UserAuth.end_session(conn)
+          UserAuth.disconnect_user_sockets(user)
+          send_resp(conn, 204, "")
         end
+
+      {nil, conn} ->
+        if SessionToken.unusable_session?(conn),
+          do: end_unusable_session(conn),
+          else: send_resp(conn, 204, "")
     end
+  end
+
+  # The session names a token `read/1` found no person for: revoked, expired,
+  # or its account disabled or scheduled for deletion. Ending it still revokes
+  # the token and clears the cookies, so an account that is allowed back isn't
+  # signed in again on this browser.
+  defp end_unusable_session(conn) do
+    with :ok <- check_csrf_if_held(conn) do
+      conn |> UserAuth.end_session() |> send_resp(204, "")
+    end
+  end
+
+  defp check_csrf_if_held(conn) do
+    if SessionToken.holds_csrf_state?(conn),
+      do: SessionToken.check_csrf(conn),
+      else: :ok
   end
 
   defp own_page(conn) do
@@ -76,13 +110,14 @@ defmodule LightningWeb.API.SessionController do
   defp sign_in(conn, body) do
     with :ok <- Request.check_object(body),
          :ok <- check_body(body, required: [:email, :password]),
+         :ok <- SignInAttempts.check(body["email"]),
          {:ok, user} <- authenticate(body["email"], body["password"]) do
       cond do
         not user.mfa_enabled ->
           conn |> fetch_session() |> UserAuth.log_in_user(user) |> signed_in()
 
         code_sent?(body) ->
-          with :ok <- check_code(user, body) do
+          with :ok <- counted(valid_code?(user, body), user.email) do
             conn |> fetch_session() |> UserAuth.log_in_user(user) |> signed_in()
           end
 
@@ -104,7 +139,8 @@ defmodule LightningWeb.API.SessionController do
         with :ok <- SessionToken.check_csrf(conn),
              :ok <- Request.check_object(body),
              :ok <- check_step_up_body(body),
-             :ok <- check_step_up(user, body) do
+             :ok <- SignInAttempts.check(user.email),
+             :ok <- counted(valid_step_up?(user, body), user.email) do
           conn |> UserAuth.step_up(user) |> signed_in()
         end
 
@@ -112,14 +148,44 @@ defmodule LightningWeb.API.SessionController do
         with :ok <- SessionToken.check_csrf(conn),
              :ok <- Request.check_object(body),
              :ok <- check_code_body(body),
-             :ok <- check_code(user, body) do
-          conn |> UserAuth.totp_validated() |> signed_in()
+             :ok <- SignInAttempts.check(user.email) do
+          if valid_code?(user, body) do
+            conn |> UserAuth.totp_validated() |> signed_in()
+          else
+            SignInAttempts.failed(user.email)
+            failed_pending_code(conn)
+          end
         end
 
       {_none_or_shut_out, _conn} ->
-        with :ok <- Request.check_object(body) do
+        with :ok <- Request.check_object(body),
+             :ok <- refuse_continuation(body) do
           check_body(body, required: [:email, :password])
         end
+    end
+  end
+
+  # A password or code with no email continues a session, so without one it
+  # is missing its authentication, not a field: a client whose session lapsed
+  # mid-flow hears 401, as any route does.
+  defp refuse_continuation(body) do
+    if Enum.any?(~w(password mfa_code backup_code), &is_map_key(body, &1)),
+      do: {:error, Auth.session_problem(:unauthenticated)},
+      else: :ok
+  end
+
+  # A pending sign-in that has failed too many codes is ended, so the password
+  # has to be entered again. The session is cleared on this answer, so it is
+  # sent here rather than returned to the fallback.
+  defp failed_pending_code(conn) do
+    case SignInAttempts.failed_code(get_session(conn, :user_token)) do
+      :ok ->
+        invalid_credentials()
+
+      :spent ->
+        conn
+        |> UserAuth.end_session()
+        |> Problem.respond(Auth.session_problem(:invalid_credentials))
     end
   end
 
@@ -129,32 +195,30 @@ defmodule LightningWeb.API.SessionController do
          false <- Accounts.login_blocked?(user) do
       {:ok, user}
     else
-      _refused -> invalid_credentials()
+      _refused -> counted(false, email)
     end
   end
 
-  defp check_step_up(user, %{"password" => password}) do
-    if User.valid_password?(user, password), do: :ok, else: invalid_credentials()
+  defp counted(true, _email), do: :ok
+
+  defp counted(false, email) do
+    SignInAttempts.failed(email)
+    invalid_credentials()
   end
 
-  defp check_step_up(user, %{"mfa_code" => _code} = body),
-    do: check_code(user, body)
+  defp valid_step_up?(user, %{"password" => password}),
+    do: User.valid_password?(user, password)
 
-  defp check_code(%User{mfa_enabled: true} = user, %{"mfa_code" => code}),
-    do:
-      if(Accounts.valid_user_totp?(user, code),
-        do: :ok,
-        else: invalid_credentials()
-      )
+  defp valid_step_up?(user, %{"mfa_code" => _code} = body),
+    do: valid_code?(user, body)
 
-  defp check_code(%User{mfa_enabled: true} = user, %{"backup_code" => code}),
-    do:
-      if(Accounts.valid_user_backup_code?(user, code),
-        do: :ok,
-        else: invalid_credentials()
-      )
+  defp valid_code?(%User{mfa_enabled: true} = user, %{"mfa_code" => code}),
+    do: Accounts.valid_user_totp?(user, code)
 
-  defp check_code(_user, _body), do: invalid_credentials()
+  defp valid_code?(%User{mfa_enabled: true} = user, %{"backup_code" => code}),
+    do: Accounts.valid_user_backup_code?(user, code)
+
+  defp valid_code?(_user, _body), do: false
 
   defp invalid_credentials,
     do: {:error, Auth.session_problem(:invalid_credentials)}
