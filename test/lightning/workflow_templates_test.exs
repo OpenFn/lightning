@@ -217,6 +217,16 @@ defmodule Lightning.WorkflowTemplatesTest do
 
       assert Repo.aggregate(WorkflowTemplate, :count) == 1
     end
+
+    test "raises the serializer's exception for any other failure to serialize, and publishes nothing" do
+      workflow = %{insert(:simple_workflow) | jobs: [:not_a_job]}
+
+      assert_raise UndefinedFunctionError, fn ->
+        WorkflowTemplates.publish_workflow(workflow, %{name: "broken"})
+      end
+
+      refute Repo.exists?(WorkflowTemplate)
+    end
   end
 
   describe "get_template_by_workflow_id/1" do

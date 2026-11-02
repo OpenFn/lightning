@@ -260,41 +260,65 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
     end
   end
 
-  describe "the API's workflow history and delete routes on an MFA-required project" do
+  describe "the API's workflow history, template and delete routes on an MFA-required project" do
     setup [:unenrolled_member, :enrolled_member]
 
+    # Publishing a template is for support users, so both members are made
+    # one. That changes nothing for the other routes, which a member reaches
+    # by membership either way.
+    setup %{user: user, enrolled_user: enrolled_user} do
+      for member <- [user, enrolled_user] do
+        Repo.update!(Ecto.Changeset.change(member, support_user: true))
+      end
+
+      :ok
+    end
+
     # Each request is one an enrolled member makes successfully, so the 403
-    # below can only be the MFA requirement.
+    # below can only be the MFA requirement. The delete comes last, because
+    # it removes the workflow the others act on.
     defp workflow_requests(project) do
       workflow = insert(:simple_workflow, project: project) |> with_snapshot()
       [snapshot] = Lightning.Workflows.Snapshot.get_all_for(workflow)
 
       [
-        {:get, "/api/workflows/#{workflow.id}/snapshots", 200},
-        {:get, "/api/workflows/#{workflow.id}/snapshots/#{snapshot.id}", 200},
-        {:get, "/api/workflows/#{workflow.id}/versions", 200},
-        {:delete, "/api/projects/#{project.id}/workflows/#{workflow.id}", 204}
+        {:get, "/api/workflows/#{workflow.id}/snapshots", nil, 200},
+        {:get, "/api/workflows/#{workflow.id}/snapshots/#{snapshot.id}", nil,
+         200},
+        {:get, "/api/workflows/#{workflow.id}/versions", nil, 200},
+        {:put, "/api/workflows/#{workflow.id}/template",
+         Jason.encode!(%{name: "published"}), 201},
+        {:delete, "/api/projects/#{project.id}/workflows/#{workflow.id}", nil,
+         204}
       ]
+    end
+
+    defp request(user, verb, path, body) do
+      user
+      |> bearer_conn()
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> dispatch(@endpoint, verb, path, body)
     end
 
     test "are refused to a member who has not enrolled", %{
       user: user,
       project: project
     } do
-      for {verb, path, _status} <- workflow_requests(project) do
+      for {verb, path, body, _status} <- workflow_requests(project) do
         user
-        |> bearer_conn()
-        |> dispatch(@endpoint, verb, path)
+        |> request(verb, path, body)
         |> assert_problem(403, :forbidden, [])
       end
+
+      refute Repo.exists?(Lightning.Workflows.WorkflowTemplate)
     end
 
     test "still work for a member who has enrolled", %{
       enrolled_user: user,
       enrolled_project: project
     } do
-      for {verb, path, status} <- workflow_requests(project) do
-        conn = user |> bearer_conn() |> dispatch(@endpoint, verb, path)
+      for {verb, path, body, status} <- workflow_requests(project) do
+        conn = request(user, verb, path, body)
 
         assert conn.status == status,
                "#{verb} #{path} answered #{conn.status} to an enrolled member"
