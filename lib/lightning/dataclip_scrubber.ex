@@ -22,28 +22,75 @@ defmodule Lightning.DataclipScrubber do
   def scrub_dataclip_body!(%{body: nil}), do: nil
 
   def scrub_dataclip_body!(%{body: body} = dataclip) when is_binary(body) do
-    case dataclip.type do
-      :step_result ->
-        steps =
-          from(s in Step, where: s.output_dataclip_id == ^dataclip.id)
-          |> Repo.all()
-
-        scrub_body(
-          body,
-          Enum.flat_map(
-            steps,
-            &(&1.id |> credentials_for_step(&1.started_at) |> Repo.all())
-          ),
-          Enum.flat_map(steps, &webhook_auth_methods_for_step(&1.id))
-        )
-
-      :http_request ->
-        scrub_body(body, [], webhook_auth_methods_for_dataclip(dataclip.id))
-
-      _ ->
-        body
+    case scrub_state(dataclip) do
+      nil -> body
+      state -> Scrubber.scrub_string(state, body)
     end
   end
+
+  @doc """
+  Scrubs a dataclip body already decoded from JSON, finding what to scrub as
+  `scrub_dataclip_body!/1` does, and returns it still decoded.
+
+  The text scrubber replaces a secret wherever it appears in the JSON, so a
+  number holding one comes out as bare `***`, which is no longer JSON. This
+  scrubs each key and string in the body instead, and a number whose digits
+  hold a secret becomes the scrubbed string, so the result always encodes.
+  """
+  @spec scrub_dataclip_term!(%{body: term(), type: atom(), id: Ecto.UUID.t()}) ::
+          term()
+  def scrub_dataclip_term!(%{body: nil}), do: nil
+
+  def scrub_dataclip_term!(%{body: body} = dataclip) do
+    case scrub_state(dataclip) do
+      nil -> body
+      state -> scrub_term(state, body)
+    end
+  end
+
+  defp scrub_term(state, string) when is_binary(string),
+    do: Scrubber.State.scrub(state, string)
+
+  defp scrub_term(state, number) when is_number(number) do
+    digits = to_string(number)
+
+    case Scrubber.State.scrub(state, digits) do
+      ^digits -> number
+      scrubbed -> scrubbed
+    end
+  end
+
+  defp scrub_term(state, map) when is_map(map),
+    do:
+      Map.new(map, fn {key, value} ->
+        {scrub_term(state, key), scrub_term(state, value)}
+      end)
+
+  defp scrub_term(state, list) when is_list(list),
+    do: Enum.map(list, &scrub_term(state, &1))
+
+  defp scrub_term(_state, other), do: other
+
+  # The scrubber state for the secrets that could have reached the dataclip,
+  # or nil when none could.
+  defp scrub_state(%{type: :step_result, id: id}) do
+    steps =
+      from(s in Step, where: s.output_dataclip_id == ^id)
+      |> Repo.all()
+
+    build_scrub_state(
+      Enum.flat_map(
+        steps,
+        &(&1.id |> credentials_for_step(&1.started_at) |> Repo.all())
+      ),
+      Enum.flat_map(steps, &webhook_auth_methods_for_step(&1.id))
+    )
+  end
+
+  defp scrub_state(%{type: :http_request, id: id}),
+    do: build_scrub_state([], webhook_auth_methods_for_dataclip(id))
+
+  defp scrub_state(_dataclip), do: nil
 
   @doc """
   Scrubs a batch of dataclip bodies, resolving what to scrub with a fixed
@@ -108,9 +155,16 @@ defmodule Lightning.DataclipScrubber do
 
   defp scrub_in_context(%{body: body}, _context), do: body
 
-  defp scrub_body(body_str, [], []), do: body_str
-
   defp scrub_body(body_str, credentials_with_env, webhook_auth_methods) do
+    case build_scrub_state(credentials_with_env, webhook_auth_methods) do
+      nil -> body_str
+      state -> Scrubber.scrub_string(state, body_str)
+    end
+  end
+
+  defp build_scrub_state([], []), do: nil
+
+  defp build_scrub_state(credentials_with_env, webhook_auth_methods) do
     project_env =
       case credentials_with_env do
         [{_cred, env} | _] -> env || "main"
@@ -129,9 +183,7 @@ defmodule Lightning.DataclipScrubber do
          WebhookAuthMethod.basic_auth_for(auth_method)}
       end)
 
-    (credential_samples ++ auth_method_samples)
-    |> Scrubber.build_state()
-    |> Scrubber.scrub_string(body_str)
+    Scrubber.build_state(credential_samples ++ auth_method_samples)
   end
 
   defp steps_for_output_dataclips([]), do: %{}

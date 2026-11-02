@@ -366,6 +366,20 @@ defmodule LightningWeb.AuthTest do
         assert_session_refused(conn)
       end
     end
+
+    test "GET /api/dataclips/:id takes a person's tokens, and refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      dataclip = insert(:dataclip, project: project)
+
+      assert_each_kind(conn, tokens, ~p"/api/dataclips/#{dataclip.id}",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
   end
 
   defp assert_each_kind(conn, tokens, path, expected) do
