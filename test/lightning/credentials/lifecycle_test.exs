@@ -65,6 +65,40 @@ defmodule Lightning.Credentials.LifecycleTest do
                owner
              ) == {:error, :concurrent_edit}
     end
+
+    test "of two requests scheduling at once, only the first schedules and emails; the second waits, then is :scheduled_for_deletion" do
+      owner = insert(:user)
+      credential = insert(:credential, user: owner)
+
+      # The second request starts once the first has read the credential. It
+      # gets 300ms to run to the end before the first carries on; it can't
+      # while the first holds the row.
+      after_first_query("credentials", credential.id, fn _id ->
+        task =
+          Task.async(fn ->
+            Credentials.schedule_credential_deletion(credential, owner)
+          end)
+
+        Process.put(:second, Task.yield(task, 300) || task)
+      end)
+
+      assert {:ok, %Credential{scheduled_deletion: %DateTime{} = at}} =
+               Credentials.schedule_credential_deletion(credential, owner)
+
+      second =
+        case Process.get(:second) do
+          %Task{} = task -> Task.await(task)
+          {:ok, result} -> result
+        end
+
+      assert second == {:error, :scheduled_for_deletion}
+
+      assert DateTime.compare(Repo.reload!(credential).scheduled_deletion, at) ==
+               :eq
+
+      assert_received {:email, %Swoosh.Email{}}
+      refute_received {:email, %Swoosh.Email{}}
+    end
   end
 
   describe "environments" do
