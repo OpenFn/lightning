@@ -229,7 +229,9 @@ defmodule LightningWeb.API.SandboxController do
   Merges the sandbox's workflows into the target, which defaults to the
   sandbox's parent, answering 201 with the target in the shape of
   `GET /api/projects/:id`. `workflow_ids` limits the merge to those of the
-  sandbox's workflows; a workflow only the target has is never deleted.
+  sandbox's workflows; a workflow only the target has is never deleted. The
+  sandbox's credentials the target lacks are linked to it, so merged jobs keep
+  theirs.
   """
   @spec merge(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def merge(conn, _params) do
@@ -240,25 +242,43 @@ defmodule LightningWeb.API.SandboxController do
          {:ok, workflow_ids} <- selected_workflow_ids(sandbox, body),
          {:ok, target} <- merge_target(conn.assigns.scope, sandbox, body) do
       # An explicit selection, and no deletions listed, so the merge never
-      # deletes a workflow only the target has.
+      # deletes a workflow only the target has. Every credential linked to the
+      # sandbox is offered, as the sandboxes page preselects them all: merge/4
+      # links those the target lacks, and a job using one would otherwise
+      # arrive with no credential.
       opts = %{
         selected_workflow_ids: workflow_ids,
-        deleted_target_workflow_ids: []
+        deleted_target_workflow_ids: [],
+        selected_credential_ids: sandbox_credential_ids(sandbox)
       }
 
       case Sandboxes.merge(sandbox, target, conn.assigns.current_resource, opts) do
         {:ok, target} ->
           conn |> put_status(:created) |> render_project(target)
 
+        # merge/4 may answer a limiter's message. A person's merge doesn't
+        # reach one today: merged triggers keep the target's state, and
+        # collections are created outside the limiters.
         {:error, %Message{}} ->
           {:error, :exceeds_limit}
 
-        # The merge logged why it failed.
         {:error, :merge_failed} ->
-          {:error, Problem.new(:internal)}
+          merge_failed(sandbox, target)
       end
     end
   end
+
+  # A merge runs with allow_stale, so a change to the target's workflows is
+  # overwritten rather than refused. One that fails because the sandbox or the
+  # target was deleted meanwhile lost a race. Anything else the merge logged.
+  defp merge_failed(sandbox, target) do
+    if Projects.get_project(sandbox.id) && Projects.get_project(target.id),
+      do: {:error, Problem.new(:internal)},
+      else: {:error, :concurrent_edit}
+  end
+
+  defp sandbox_credential_ids(sandbox),
+    do: Enum.map(Projects.list_project_credentials(sandbox), & &1.id)
 
   # The sandbox in the path, once the caller may read its parent, then once
   # they may manage the sandbox itself: an owner or admin of it, or of the
@@ -313,8 +333,9 @@ defmodule LightningWeb.API.SandboxController do
   end
 
   # The target named in the body, or the sandbox's parent. One the caller
-  # can't see, may not merge into, that is being deleted, or that is the
-  # sandbox or one of its own sandboxes, is a 422 entry at the key.
+  # can't see, may not merge into, that is being deleted, that is the sandbox
+  # or one of its own sandboxes, or that is in another workspace, is a 422
+  # entry at the key.
   defp merge_target(scope, sandbox, body) do
     param =
       case Map.get(body, "target_project_id") do
@@ -324,12 +345,20 @@ defmodule LightningWeb.API.SandboxController do
 
     with {:ok, target_id} <- Request.id(param),
          {:ok, target} <- permitted_target(scope, target_id) do
-      if Sandboxes.mergeable_target?(sandbox, target),
-        do: {:ok, target},
-        else:
+      case Sandboxes.check_merge_target(sandbox, target) do
+        :ok ->
+          {:ok, target}
+
+        {:error, :own_sandbox} ->
           refuse_target(
             {"is the sandbox or one of its sandboxes", code: :not_allowed}
           )
+
+        {:error, :other_workspace} ->
+          refuse_target(
+            {"is outside the sandbox's workspace", code: :not_allowed}
+          )
+      end
     end
   end
 

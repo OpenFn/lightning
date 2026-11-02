@@ -320,7 +320,8 @@ defmodule Lightning.Projects.Sandboxes do
       # carried_source_workflows/2 calls use a non-forced preload and skip the query).
       source = Repo.preload(source, workflows: [:jobs, :triggers, :edges])
 
-      with :ok <-
+      with :ok <- hold_target(target),
+           :ok <-
              attach_selected_credentials(source, target, selected_credential_ids),
            :ok <- attach_sandbox_keychains(source, target, actor, opts),
            # Re-preload so the credential and keychain remaps see the
@@ -513,6 +514,23 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
+  # Holds the target's row until the merge commits, so a deletion waits for it
+  # rather than landing part way through. NO KEY UPDATE still lets rows that
+  # reference the project, such as a webhook's dataclip, be inserted meanwhile.
+  # A target already gone fails the merge.
+  defp hold_target(%Project{id: id}) do
+    from(p in Project,
+      where: p.id == ^id,
+      select: p.id,
+      lock: "FOR NO KEY UPDATE"
+    )
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :target_deleted}
+      _id -> :ok
+    end
+  end
+
   # Attaches the chosen sandbox-only credentials to the target so the merge
   # remap can match them. The credential diff is recomputed from the database
   # rather than trusting the caller's list verbatim: only sandbox
@@ -690,6 +708,9 @@ defmodule Lightning.Projects.Sandboxes do
 
     :merge_failed
   end
+
+  # Another request deleted the target first. The caller can tell by looking.
+  defp classify_merge_error(:target_deleted), do: :merge_failed
 
   defp classify_merge_error(%{text: _} = usage_limit_message),
     do: usage_limit_message
@@ -1524,15 +1545,29 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
-  Whether `target` may receive a merge of `source`: not the source itself and
-  not one of its own sandboxes, at any depth. Whether the target is scheduled
-  for deletion is the policy's question.
+  Whether `target` may receive a merge of `source`. It has to be in the same
+  workspace, under the same root project, as the sandboxes page only offers
+  those; and it can't be the source itself or one of its own sandboxes, at any
+  depth. Whether the target is scheduled for deletion is the policy's question.
   """
-  @spec mergeable_target?(Project.t(), Project.t()) :: boolean()
-  def mergeable_target?(%Project{id: id}, %Project{id: id}), do: false
+  @spec check_merge_target(Project.t(), Project.t()) ::
+          :ok | {:error, :own_sandbox | :other_workspace}
+  def check_merge_target(%Project{id: id}, %Project{id: id}),
+    do: {:error, :own_sandbox}
 
-  def mergeable_target?(%Project{} = source, %Project{} = target),
-    do: target.id not in Lightning.Projects.descendant_ids([source.id])
+  def check_merge_target(%Project{} = source, %Project{} = target) do
+    cond do
+      target.id in Lightning.Projects.descendant_ids([source.id]) ->
+        {:error, :own_sandbox}
+
+      Lightning.Projects.root_of(target).id !=
+          Lightning.Projects.root_of(source).id ->
+        {:error, :other_workspace}
+
+      true ->
+        :ok
+    end
+  end
 
   @doc """
   Computes the collections a merge from `source` into `target` would create,
