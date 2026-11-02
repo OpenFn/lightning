@@ -537,6 +537,41 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  A page of the project's memberships, each with its user, sorted by first
+  name.
+  """
+  @spec paginate_project_users(Ecto.UUID.t(), map() | keyword()) ::
+          Scrivener.Page.t()
+  def paginate_project_users(project_id, page) do
+    from(pu in ProjectUser,
+      join: u in assoc(pu, :user),
+      where: pu.project_id == ^project_id,
+      order_by: [asc: u.first_name, asc: u.id],
+      preload: [user: u]
+    )
+    |> Repo.paginate(page)
+  end
+
+  @doc """
+  The membership of the user `user_id` in the project `project_id`, with its
+  user.
+  """
+  @spec fetch_project_user(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, ProjectUser.t()} | {:error, :not_found}
+  def fetch_project_user(project_id, user_id) do
+    from(pu in ProjectUser,
+      join: u in assoc(pu, :user),
+      where: pu.project_id == ^project_id and pu.user_id == ^user_id,
+      preload: [user: u]
+    )
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      project_user -> {:ok, project_user}
+    end
+  end
+
+  @doc """
   Lists emails of users with `:owner` or `:admin` roles in the project
   """
   @spec list_project_admin_emails(Ecto.UUID.t()) :: [String.t(), ...] | []
@@ -648,12 +683,17 @@ defmodule Lightning.Projects do
     end
   end
 
-  @spec update_project_with_users(Project.t(), map(), User.t(), boolean()) ::
+  @spec update_project_with_users(
+          Project.t(),
+          map(),
+          Lightning.Actor.t(),
+          boolean()
+        ) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
   def update_project_with_users(
         %Project{} = project,
         attrs,
-        %User{} = actor,
+        actor,
         notify_users \\ true
       ) do
     project = Repo.preload(project, :project_users)
@@ -847,7 +887,64 @@ defmodule Lightning.Projects do
     end
   end
 
-  @spec add_project_users(Project.t(), [map(), ...], User.t(), boolean()) ::
+  @doc """
+  `result` unchanged, unless it is a refusal and `project` has been deleted
+  since it was read, in which case `{:error, :concurrent_edit}`. A membership
+  write on a deleted project fails on its missing owner or rows rather than
+  on the project, so this tells the two apart.
+  """
+  @spec unless_deleted(result, Project.t()) ::
+          result | {:error, :concurrent_edit}
+        when result: term()
+  def unless_deleted({:error, _reason} = refused, %Project{id: id}) do
+    if Repo.exists?(from(p in Project, where: p.id == ^id)),
+      do: refused,
+      else: {:error, :concurrent_edit}
+  end
+
+  def unless_deleted(result, _project), do: result
+
+  @doc """
+  Sets both notification preferences on a project user in one write.
+
+  Returns `:unchanged` when neither changes, and `{:error, :concurrent_edit}`
+  when another request removed the membership while this one ran.
+  """
+  @spec set_notification_prefs(ProjectUser.t(), map()) ::
+          {:ok, ProjectUser.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
+          | :unchanged
+  def set_notification_prefs(%ProjectUser{} = project_user, attrs) do
+    changeset =
+      ProjectUser.changeset(
+        project_user,
+        Map.take(attrs, @notification_pref_fields)
+      )
+
+    cond do
+      not changeset.valid? ->
+        {:error, changeset}
+
+      changeset.changes == %{} ->
+        :unchanged
+
+      true ->
+        case Repo.update(changeset, stale_error_field: :id) do
+          {:error, %Ecto.Changeset{errors: [id: {_, stale: true}]}} ->
+            {:error, :concurrent_edit}
+
+          result ->
+            result
+        end
+    end
+  end
+
+  @spec add_project_users(
+          Project.t(),
+          [map(), ...],
+          Lightning.Actor.t(),
+          boolean()
+        ) ::
           {:ok, [ProjectUser.t(), ...]} | {:error, Ecto.Changeset.t()}
   def add_project_users(project, project_users, actor, notify_users \\ true) do
     {project, params} = membership_params(project, project_users)
@@ -878,42 +975,75 @@ defmodule Lightning.Projects do
   Refuses to remove the project owner, or an admin of the parent project from a
   sandbox — neither is expressible through the project form, so both raise.
 
+  A member another request already removed, or whose project it deleted,
+  counts as removed.
+
   ## Parameters
     - `project_user`: The `ProjectUser` struct to be deleted
-    - `actor`: The `User` removing them, recorded on the audit event
+    - `actor`: The user or service account removing them, recorded on the
+      audit event
 
   ## Returns
     - The deleted `ProjectUser` struct
   """
-  @spec delete_project_user!(ProjectUser.t(), User.t()) :: ProjectUser.t()
-  def delete_project_user!(%ProjectUser{} = project_user, %User{} = actor) do
-    project_user = Repo.preload(project_user, [:user, :project])
-
-    if project_user.role == :owner do
-      raise ArgumentError,
-            "Cannot remove the owner of a project. Transfer ownership first."
+  @spec delete_project_user!(ProjectUser.t(), Lightning.Actor.t()) ::
+          ProjectUser.t()
+  def delete_project_user!(%ProjectUser{} = project_user, actor) do
+    case remove_project_user(project_user, actor) do
+      {:ok, project_user} -> project_user
+      {:error, :concurrent_edit} -> project_user
     end
+  end
 
-    if Project.sandbox?(project_user.project) and
-         Lightning.Projects.Sandboxes.parent_admin?(
-           project_user.project,
-           project_user.user
-         ) do
-      raise ArgumentError,
-            "Cannot remove a parent project admin from a sandbox"
+  @doc """
+  As `delete_project_user!/2`, but answers `{:error, :concurrent_edit}` when
+  another request removed the member, or deleted the project, after the caller
+  read `project_user`. It still raises for the owner and a sandbox's parent
+  admin, which the caller checks first.
+  """
+  @spec remove_project_user(ProjectUser.t(), Lightning.Actor.t()) ::
+          {:ok, ProjectUser.t()} | {:error, :concurrent_edit}
+  def remove_project_user(%ProjectUser{} = project_user, actor) do
+    case Repo.preload(project_user, [:user, :project], force: true) do
+      %ProjectUser{project: nil} ->
+        {:error, :concurrent_edit}
+
+      project_user ->
+        refuse_unremovable!(project_user)
+        remove_member(project_user, actor)
     end
+  end
 
+  defp refuse_unremovable!(%ProjectUser{role: :owner}) do
+    raise ArgumentError,
+          "Cannot remove the owner of a project. Transfer ownership first."
+  end
+
+  defp refuse_unremovable!(%ProjectUser{project: project, user: user}) do
+    if Project.sandbox?(project) and
+         Lightning.Projects.Sandboxes.parent_admin?(project, user) do
+      raise ArgumentError, "Cannot remove a parent project admin from a sandbox"
+    end
+  end
+
+  defp remove_member(project_user, actor) do
     {project, params} =
       membership_params(project_user.project, [
         %{id: project_user.id, delete: true}
       ])
 
-    case update_project_with_users(project, params, actor, false) do
-      {:ok, _project} ->
-        project_user
+    if Enum.any?(project.project_users, &(&1.id == project_user.id)) do
+      case update_project_with_users(project, params, actor, false) do
+        {:ok, _project} ->
+          {:ok, project_user}
 
-      {:error, changeset} ->
-        raise Ecto.InvalidChangesetError, action: :update, changeset: changeset
+        {:error, changeset} ->
+          raise Ecto.InvalidChangesetError,
+            action: :update,
+            changeset: changeset
+      end
+    else
+      {:error, :concurrent_edit}
     end
   end
 
@@ -1671,10 +1801,18 @@ defmodule Lightning.Projects do
   set, this date defaults to NOW but the automatic project purge cronjob will
   never run. (Note that subsequent logins will be blocked for projects pending
   deletion.)
+
+  Given an `actor`, records a `deletion_scheduled` audit event against them in
+  the same transaction. Returns `{:error, :concurrent_edit}` when another
+  request deleted the project while this one ran.
   """
-  def schedule_project_deletion(project) do
+  @spec schedule_project_deletion(Project.t(), Lightning.Actor.t() | nil) ::
+          {:ok, Project.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit | :audit_failed}
+  def schedule_project_deletion(project, actor \\ nil) do
     Multi.new()
     |> scheduled_project_deletion_changes(project: project)
+    |> audit_deletion_change(:project, "deletion_scheduled", project, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project}} ->
@@ -1682,9 +1820,29 @@ defmodule Lightning.Projects do
 
         {:ok, updated_project}
 
+      {:error, :project, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
+      {:error, :audit_deletion, _changeset, _changes} ->
+        {:error, :audit_failed}
+
       {:error, _op, changeset, _changes} ->
         {:error, changeset}
     end
+  end
+
+  defp audit_deletion_change(multi, _project_op, _event, _project, nil),
+    do: multi
+
+  defp audit_deletion_change(multi, project_op, event, project, actor) do
+    Multi.insert(multi, :audit_deletion, fn changes ->
+      Audit.event(event, project.id, actor, %{
+        before: %{scheduled_deletion: project.scheduled_deletion},
+        after: %{
+          scheduled_deletion: Map.fetch!(changes, project_op).scheduled_deletion
+        }
+      })
+    end)
   end
 
   def scheduled_project_deletion_changes(multi, [{project_op, project}]) do
@@ -1710,7 +1868,8 @@ defmodule Lightning.Projects do
       project_op,
       Ecto.Changeset.change(project, %{
         scheduled_deletion: DateTime.truncate(date, :second)
-      })
+      }),
+      stale_error_field: :id
     )
     |> Multi.run("notify_users#{project.id}", fn _repo, _changes ->
       :ok =
@@ -1765,6 +1924,39 @@ defmodule Lightning.Projects do
     get_project!(project_id)
     |> Ecto.Changeset.change(%{scheduled_deletion: nil})
     |> Repo.update()
+  end
+
+  @doc """
+  Cancels the scheduled deletion of `project`, recording a `deletion_cancelled`
+  audit event against `actor` in the same transaction. It checks nothing about
+  `actor`; the caller authorises first.
+
+  Triggers disabled when the deletion was scheduled stay disabled.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted the project
+  while this one ran.
+  """
+  @spec cancel_scheduled_deletion(Project.t(), Lightning.Actor.t()) ::
+          {:ok, Project.t()} | {:error, :concurrent_edit | :audit_failed}
+  def cancel_scheduled_deletion(%Project{} = project, actor) do
+    Multi.new()
+    |> Multi.update(
+      :project,
+      Ecto.Changeset.change(project, %{scheduled_deletion: nil}),
+      stale_error_field: :id
+    )
+    |> audit_deletion_change(:project, "deletion_cancelled", project, actor)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{project: project}} ->
+        {:ok, project}
+
+      {:error, :project, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
+      {:error, :audit_deletion, _changeset, _changes} ->
+        {:error, :audit_failed}
+    end
   end
 
   defp wipe_dataclips_for(%Project{dataclip_retention_period: period} = project)

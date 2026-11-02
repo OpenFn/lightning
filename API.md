@@ -199,6 +199,21 @@ their own account, and for a superuser setting up single sign-on.
 | `GET`  | `/api/projects/:project_id/collections/:id` | Reads a collection                                            | `collections:write`             |
 | `PUT`  | `/api/projects/:project_id/collections/:id` | Creates or replaces a collection                              | `collections:write`             |
 
+Settings, deletion and members:
+
+| Method   | Path                                                       | What it does                                  | Token grant                     |
+| -------- | ---------------------------------------------------------- | --------------------------------------------- | ------------------------------- |
+| `DELETE` | `/api/projects/:id`                                        | Schedules a project for deletion              | `projects:write`                |
+| `DELETE` | `/api/projects/:id/scheduled_deletion`                     | Cancels a project's deletion                  | `projects:write`                |
+| `PUT`    | `/api/projects/:id/data_retention`                         | Sets a project's data retention               | `projects:write`                |
+| `PUT`    | `/api/projects/:id/mfa_requirement`                        | Requires MFA on a project, or stops           | `projects:write`                |
+| `PUT`    | `/api/projects/:id/support_access`                         | Allows support users into a project, or stops | `projects:write`                |
+| `GET`    | `/api/projects/:project_id/members`                        | Lists a project's members                     | `projects:write`                |
+| `PUT`    | `/api/projects/:project_id/members/:user_id`               | Adds a member or changes their role           | `projects:write`                |
+| `DELETE` | `/api/projects/:project_id/members/:user_id`               | Removes a member                              | `projects:write`                |
+| `PUT`    | `/api/projects/:project_id/members/:user_id/notifications` | Sets your notifications for a project         | Not open to the service account |
+| `POST`   | `/api/projects/:project_id/invitations`                    | Invites someone new to a project              | Not open to the service account |
+
 ### Credentials
 
 The service account must send `project_id` to list credentials at
