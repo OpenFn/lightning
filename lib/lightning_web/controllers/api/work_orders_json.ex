@@ -7,7 +7,7 @@ defmodule LightningWeb.API.WorkOrdersJSON do
 
   @fields ~w(state last_activity inserted_at updated_at)a
 
-  def render("index.json", %{page: page, conn: conn}) do
+  def render("index.json", %{page: page, filters: filters, conn: conn}) do
     %{
       data: Enum.map(page.entries, &resource(conn, &1)),
       included: [],
@@ -17,11 +17,7 @@ defmodule LightningWeb.API.WorkOrdersJSON do
         page_number: page.page_number,
         page_size: page.page_size
       },
-      links:
-        %{
-          self: url_for(conn)
-        }
-        |> Map.merge(pagination_links(conn, page))
+      links: pagination_links(conn, page, filters)
     }
   end
 
@@ -30,7 +26,7 @@ defmodule LightningWeb.API.WorkOrdersJSON do
       data: resource(conn, work_order),
       included: [],
       links: %{
-        self: url_for(conn)
+        self: self_url(conn)
       }
     }
   end

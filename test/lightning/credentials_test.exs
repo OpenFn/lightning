@@ -71,6 +71,42 @@ defmodule Lightning.CredentialsTest do
              ]
     end
 
+    test "paginate_credentials_for/2 pages a project's credentials by name, counting each once" do
+      [project, other_project] = insert_list(2, :project)
+
+      insert(:credential,
+        name: "bbb",
+        project_credentials: [
+          %{project_id: project.id},
+          %{project_id: other_project.id}
+        ]
+      )
+
+      first =
+        insert(:credential,
+          name: "aaa",
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      insert(:credential, project_credentials: [%{project_id: other_project.id}])
+
+      page = Credentials.paginate_credentials_for(project, page_size: 1)
+
+      assert {Enum.map(page.entries, & &1.id), page.total_entries} ==
+               {[first.id], 2}
+    end
+
+    test "paginate_credentials_for/2 pages only the credentials a scope's user owns" do
+      [user, other_user] = insert_list(2, :user)
+      owned = insert(:credential, user: user)
+      insert(:credential, user: other_user)
+
+      page = Credentials.paginate_credentials_for(Lightning.Scope.new(user), [])
+
+      assert {Enum.map(page.entries, & &1.id), page.total_entries} ==
+               {[owned.id], 1}
+    end
+
     test "get_credential!/1 returns the credential with given id" do
       user = insert(:user)
       credential = insert(:credential, user_id: user.id)

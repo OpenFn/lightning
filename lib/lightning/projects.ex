@@ -1193,28 +1193,6 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Builds a query to retrieve projects associated with a user.
-
-  ## Parameters
-    - user: The user struct for which projects are being queried.
-    - opts: Keyword list of options including :include for associations to preload and :order_by for sorting.
-
-  ## Returns
-    - An Ecto queryable struct to fetch projects.
-  """
-  @spec projects_for_user_query(user :: User.t()) :: Ecto.Queryable.t()
-  def projects_for_user_query(%User{id: user_id}) do
-    from(p in Project,
-      join: pu in assoc(p, :project_users),
-      where:
-        pu.user_id == ^user_id and
-          is_nil(p.scheduled_deletion) and
-          is_nil(p.parent_id),
-      order_by: p.name
-    )
-  end
-
-  @doc """
   Fetches projects for a given user from the database.
 
   ## Parameters
@@ -1232,25 +1210,15 @@ defmodule Lightning.Projects do
           is_nil(p.scheduled_deletion) and
           is_nil(p.parent_id)
     )
-    |> union(^projects_for_user_query(user))
+    |> union(^live_top_level(member_project_ids_query(user)))
     |> Repo.all()
     |> Enum.uniq_by(& &1.id)
   end
 
   def get_projects_for_user(%User{} = user) do
     user
-    |> projects_for_user_query()
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns the ids of every project the user holds a membership on, at any
-  depth. Unlike `get_projects_for_user/1` (top-level roots only), this includes
-  sandboxes, so it matches the membership check used by `:access_project`.
-  """
-  @spec member_project_ids(User.t()) :: [Ecto.UUID.t()]
-  def member_project_ids(%User{id: user_id}) do
-    from(pu in ProjectUser, where: pu.user_id == ^user_id, select: pu.project_id)
+    |> member_project_ids_query()
+    |> live_top_level()
     |> Repo.all()
   end
 

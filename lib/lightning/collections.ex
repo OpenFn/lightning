@@ -61,19 +61,24 @@ defmodule Lightning.Collections do
     Repo.all(query)
   end
 
-  @doc """
-  Looks up a collection by name across all projects.
+  @doc "The collection with primary key `id`, or `nil`."
+  @spec get_collection_by_id(Ecto.UUID.t()) :: Collection.t() | nil
+  def get_collection_by_id(id), do: Repo.get(Collection, id)
 
-  Returns `{:error, :conflict}` when the name exists in more than one
-  project; the caller should then retry with `get_collection/2`.
+  @doc """
+  The collection with primary key `id` in the project `project_id`, or
+  `{:error, :not_found}` when the id is malformed or no collection in that
+  project has it.
   """
-  @spec get_collection(String.t()) ::
-          {:ok, Collection.t()} | {:error, :not_found} | {:error, :conflict}
-  def get_collection(name) do
-    case Repo.all(from c in Collection, where: c.name == ^name) do
-      [] -> {:error, :not_found}
-      [collection] -> {:ok, collection}
-      [_ | _] -> {:error, :conflict}
+  @spec get_collection_for_project(Ecto.UUID.t(), term()) ::
+          {:ok, Collection.t()} | {:error, :not_found}
+  def get_collection_for_project(project_id, id) do
+    if Lightning.Validators.valid_uuid?(id) do
+      Collection
+      |> where(id: ^id, project_id: ^project_id)
+      |> Repo.fetch_one()
+    else
+      {:error, :not_found}
     end
   end
 
@@ -248,7 +253,7 @@ defmodule Lightning.Collections do
           | {:error, Ecto.Changeset.t()}
           | {:error, :not_found}
   def delete_collection(collection_id) do
-    case Repo.get(Collection, collection_id) do
+    case get_collection_by_id(collection_id) do
       nil ->
         {:error, :not_found}
 
