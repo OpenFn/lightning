@@ -336,6 +336,25 @@ defmodule LightningWeb.API.Session.SigningInTest do
     end
   end
 
+  describe "continuing a session without one" do
+    test "is unauthenticated, whether there never was one or it has ended" do
+      user = mfa_user()
+      ended = session_conn(build_conn(), user, mfa_pending: true)
+      Accounts.delete_session_token(get_session(ended, :user_token))
+
+      for conn <- [from_own_page(build_conn()), ended],
+          body <- [
+            %{password: @password},
+            %{mfa_code: totp(user)},
+            %{backup_code: "NOTACODE1"}
+          ] do
+        conn
+        |> sign_in(body)
+        |> assert_unauthenticated(:unauthenticated, @session_challenge)
+      end
+    end
+  end
+
   describe "a body that isn't valid" do
     test "that isn't an object is malformed" do
       build_conn()
@@ -383,14 +402,6 @@ defmodule LightningWeb.API.Session.SigningInTest do
                  "pointer" => "#/backup_code",
                  "code" => "exclusive",
                  "detail" => "can't be sent with mfa_code"
-               }
-             ]},
-            {%{password: "x"},
-             [
-               %{
-                 "pointer" => "#/email",
-                 "code" => "required",
-                 "detail" => "can't be blank"
                }
              ]}
           ] do

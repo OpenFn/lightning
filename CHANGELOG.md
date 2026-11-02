@@ -61,7 +61,9 @@ and this project adheres to
   requests from Lightning's own pages, and writes also need the session's CSRF
   token from `GET /api/session` in `x-csrf-token`. `GET /api/instance` tells the
   app about the instance before anyone signs in, and `GET /api/me` reads the
-  person a token belongs to.
+  person a token belongs to. After ten failed passwords or MFA codes in 15
+  minutes, an account's sign-ins and step-ups answer 429 until the window ends,
+  and a sign-in waiting for its MFA code is ended after five wrong codes.
 
 ### Changed
 

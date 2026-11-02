@@ -67,6 +67,9 @@ defmodule LightningWeb.API.FallbackController do
            ],
       do: Problem.respond(conn, Problem.new(reason))
 
+  def call(conn, {:error, :rate_limited}),
+    do: Problem.respond(conn, Problem.new(:too_many_requests))
+
   def call(conn, {:error, :not_ready}),
     do: Problem.respond(conn, Problem.new(:not_ready, retry_after: 5))
 
