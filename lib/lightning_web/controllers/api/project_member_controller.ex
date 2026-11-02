@@ -15,9 +15,11 @@ defmodule LightningWeb.API.ProjectMemberController do
 
   `DELETE /api/projects/:project_id/members/:user_id` removes the member and
   revokes the project's access to the credentials they own, answering 204. A
-  user who isn't a member is 404. The owner is a `one_owner` entry and, in a
-  sandbox, an owner or admin of a project above it a `not_allowed` entry, both
-  at the `user_id` path segment.
+  user who isn't a member is 404. The owner is a `one_owner` entry; the caller
+  themself, and in a sandbox an owner or admin of a project above it, are
+  `not_allowed` entries; all at the `user_id` path segment. A member another
+  request removes meanwhile, or whose project it deletes, is 409
+  `concurrent_edit`.
 
   `PUT /api/projects/:project_id/members/:user_id/notifications` takes
   `failure_alert` and `digest`, both required, and sets them together. Only
@@ -31,6 +33,7 @@ defmodule LightningWeb.API.ProjectMemberController do
   import Ecto.Changeset
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.User
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
@@ -72,6 +75,8 @@ defmodule LightningWeb.API.ProjectMemberController do
   @owner_stays {"is the project's owner, who can't be removed", code: :one_owner}
   @parent_admin {"is an owner or admin of a project this sandbox is under",
                  code: :not_allowed}
+  @yourself {"is you, and you can't remove yourself from a project",
+             code: :not_allowed}
 
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
   def index(conn, params) do
@@ -102,8 +107,12 @@ defmodule LightningWeb.API.ProjectMemberController do
     with {:ok, project} <- project(conn, :remove_project_user),
          {:ok, user_id} <- Request.id(Request.param(conn, "user_id")),
          {:ok, project_user} <- Projects.fetch_project_user(project.id, user_id),
-         :ok <- removable(project, project_user) do
-      Projects.delete_project_user!(project_user, conn.assigns.current_resource)
+         :ok <- removable(project, project_user, conn.assigns.current_resource),
+         {:ok, _removed} <-
+           Projects.remove_project_user(
+             project_user,
+             conn.assigns.current_resource
+           ) do
       send_resp(conn, :no_content, "")
     end
   end
@@ -211,10 +220,13 @@ defmodule LightningWeb.API.ProjectMemberController do
     end
   end
 
-  defp removable(_project, %ProjectUser{role: :owner}),
+  defp removable(_project, %ProjectUser{role: :owner}, _actor),
     do: Errors.refuse([Errors.entry({:path, "user_id"}, @owner_stays)])
 
-  defp removable(%Project{} = project, %ProjectUser{user: user}) do
+  defp removable(_project, %ProjectUser{user_id: id}, %User{id: id}),
+    do: Errors.refuse([Errors.entry({:path, "user_id"}, @yourself)])
+
+  defp removable(%Project{} = project, %ProjectUser{user: user}, _actor) do
     if Project.sandbox?(project) and Sandboxes.parent_admin?(project, user),
       do: Errors.refuse([Errors.entry({:path, "user_id"}, @parent_admin)]),
       else: :ok

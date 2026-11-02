@@ -975,6 +975,9 @@ defmodule Lightning.Projects do
   Refuses to remove the project owner, or an admin of the parent project from a
   sandbox — neither is expressible through the project form, so both raise.
 
+  A member another request already removed, or whose project it deleted,
+  counts as removed.
+
   ## Parameters
     - `project_user`: The `ProjectUser` struct to be deleted
     - `actor`: The user or service account removing them, recorded on the
@@ -986,33 +989,61 @@ defmodule Lightning.Projects do
   @spec delete_project_user!(ProjectUser.t(), Lightning.Actor.t()) ::
           ProjectUser.t()
   def delete_project_user!(%ProjectUser{} = project_user, actor) do
-    project_user = Repo.preload(project_user, [:user, :project])
-
-    if project_user.role == :owner do
-      raise ArgumentError,
-            "Cannot remove the owner of a project. Transfer ownership first."
+    case remove_project_user(project_user, actor) do
+      {:ok, project_user} -> project_user
+      {:error, :concurrent_edit} -> project_user
     end
+  end
 
-    if Project.sandbox?(project_user.project) and
-         Lightning.Projects.Sandboxes.parent_admin?(
-           project_user.project,
-           project_user.user
-         ) do
-      raise ArgumentError,
-            "Cannot remove a parent project admin from a sandbox"
+  @doc """
+  As `delete_project_user!/2`, but answers `{:error, :concurrent_edit}` when
+  another request removed the member, or deleted the project, after the caller
+  read `project_user`. It still raises for the owner and a sandbox's parent
+  admin, which the caller checks first.
+  """
+  @spec remove_project_user(ProjectUser.t(), Lightning.Actor.t()) ::
+          {:ok, ProjectUser.t()} | {:error, :concurrent_edit}
+  def remove_project_user(%ProjectUser{} = project_user, actor) do
+    case Repo.preload(project_user, [:user, :project], force: true) do
+      %ProjectUser{project: nil} ->
+        {:error, :concurrent_edit}
+
+      project_user ->
+        refuse_unremovable!(project_user)
+        remove_member(project_user, actor)
     end
+  end
 
+  defp refuse_unremovable!(%ProjectUser{role: :owner}) do
+    raise ArgumentError,
+          "Cannot remove the owner of a project. Transfer ownership first."
+  end
+
+  defp refuse_unremovable!(%ProjectUser{project: project, user: user}) do
+    if Project.sandbox?(project) and
+         Lightning.Projects.Sandboxes.parent_admin?(project, user) do
+      raise ArgumentError, "Cannot remove a parent project admin from a sandbox"
+    end
+  end
+
+  defp remove_member(project_user, actor) do
     {project, params} =
       membership_params(project_user.project, [
         %{id: project_user.id, delete: true}
       ])
 
-    case update_project_with_users(project, params, actor, false) do
-      {:ok, _project} ->
-        project_user
+    if Enum.any?(project.project_users, &(&1.id == project_user.id)) do
+      case update_project_with_users(project, params, actor, false) do
+        {:ok, _project} ->
+          {:ok, project_user}
 
-      {:error, changeset} ->
-        raise Ecto.InvalidChangesetError, action: :update, changeset: changeset
+        {:error, changeset} ->
+          raise Ecto.InvalidChangesetError,
+            action: :update,
+            changeset: changeset
+      end
+    else
+      {:error, :concurrent_edit}
     end
   end
 
