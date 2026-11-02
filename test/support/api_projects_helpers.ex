@@ -47,4 +47,18 @@ defmodule LightningWeb.ApiProjectsHelpers do
       project_users: project_users
     )
   end
+
+  @doc """
+  The settings a project the factory builds carries among its attributes.
+  """
+  def default_settings do
+    %{
+      "retention_policy" => "retain_all",
+      "history_retention_period" => nil,
+      "dataclip_retention_period" => nil,
+      "requires_mfa" => false,
+      "allow_support_access" => false,
+      "scheduled_deletion" => nil
+    }
+  end
 end

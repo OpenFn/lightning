@@ -33,11 +33,12 @@ defmodule LightningWeb.API.Projects.CancellingDeletionTest do
                "data" => %{
                  "type" => "projects",
                  "id" => project.id,
-                 "attributes" => %{
-                   "name" => project.name,
-                   "description" => project.description,
-                   "members" => [%{"email" => owner.email, "role" => "owner"}]
-                 },
+                 "attributes" =>
+                   Map.merge(default_settings(), %{
+                     "name" => project.name,
+                     "description" => project.description,
+                     "members" => [%{"email" => owner.email, "role" => "owner"}]
+                   }),
                  "relationships" => %{},
                  "links" => %{"self" => self_link}
                },

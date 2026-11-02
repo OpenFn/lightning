@@ -14,6 +14,14 @@ defmodule Lightning.Projects.ProjectLimiter do
     })
   end
 
+  @spec limit_require_mfa(project_id :: Ecto.UUID.t()) ::
+          :ok | UsageLimiting.error()
+  def limit_require_mfa(project_id) do
+    UsageLimiter.limit_action(%Action{type: :require_mfa}, %Context{
+      project_id: project_id
+    })
+  end
+
   @spec limit_new_sandbox(project_id :: Ecto.UUID.t()) ::
           :ok | UsageLimiting.error()
   def limit_new_sandbox(project_id) do

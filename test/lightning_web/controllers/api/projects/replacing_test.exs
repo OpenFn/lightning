@@ -160,11 +160,12 @@ defmodule LightningWeb.API.Projects.ReplacingTest do
 
       response = json_response(conn, 200)
 
-      assert response["data"]["attributes"] == %{
-               "name" => "after",
-               "description" => "new",
-               "members" => [%{"email" => owner.email, "role" => "owner"}]
-             }
+      assert response["data"]["attributes"] ==
+               Map.merge(default_settings(), %{
+                 "name" => "after",
+                 "description" => "new",
+                 "members" => [%{"email" => owner.email, "role" => "owner"}]
+               })
 
       assert %{name: "after", description: "new"} =
                Lightning.Repo.reload!(project)
