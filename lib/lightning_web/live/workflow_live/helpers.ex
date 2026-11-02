@@ -8,23 +8,8 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
-
-  @spec save_workflow(Ecto.Changeset.t(), struct()) ::
-          {:ok, Workflows.Workflow.t()}
-          | {:error,
-             Ecto.Changeset.t() | UsageLimiting.message() | :workflow_deleted}
-  def save_workflow(changeset, actor) do
-    case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
-      :ok ->
-        Workflows.save_workflow(changeset, actor)
-
-      {:error, _reason, message} ->
-        {:error, message}
-    end
-  end
 
   @spec run_workflow(
           Ecto.Changeset.t(Workflows.Workflow.t()) | Workflows.Workflow.t(),

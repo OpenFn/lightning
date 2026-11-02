@@ -7683,7 +7683,7 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {{conn, _user}, index} <-
+      for {{conn, user}, index} <-
             setup_project_users(conn, project, [:owner, :admin])
             |> Enum.with_index() do
         {:ok, view, _html} =
@@ -7729,9 +7729,16 @@ defmodule LightningWeb.ProjectLiveTest do
         assert flash["info"] == "Collection created"
 
         # collection now exists
-        assert Lightning.Repo.get_by(Lightning.Collections.Collection,
-                 project_id: project.id,
-                 name: expected_collection_name
+        assert collection =
+                 Lightning.Repo.get_by(Lightning.Collections.Collection,
+                   project_id: project.id,
+                   name: expected_collection_name
+                 )
+
+        assert Lightning.Repo.get_by(Lightning.Collections.Audit.base_query(),
+                 item_id: collection.id,
+                 event: "created",
+                 actor_id: user.id
                )
       end
     end
@@ -7867,7 +7874,7 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {conn, _user} <-
+      for {conn, user} <-
             setup_project_users(conn, project, [:owner, :admin]) do
         collection = insert(:collection, project: project)
 
@@ -7920,7 +7927,45 @@ defmodule LightningWeb.ProjectLiveTest do
                  project_id: project.id,
                  name: new_collection_name
                )
+
+        assert Lightning.Repo.get_by(Lightning.Collections.Audit.base_query(),
+                 item_id: collection.id,
+                 event: "updated",
+                 actor_id: user.id
+               )
       end
+    end
+
+    test "saving a collection deleted since the modal opened flashes and closes it",
+         %{conn: conn} do
+      project = insert(:project)
+      [{conn, _user}] = setup_project_users(conn, project, [:admin])
+      collection = insert(:collection, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      view
+      |> element("#edit-collection-#{collection.id}-button")
+      |> render_click()
+
+      view
+      |> form("#edit-collection-#{collection.id}-modal form",
+        collection: %{raw_name: "renamed"}
+      )
+      |> render_change()
+
+      Repo.delete!(collection)
+
+      view
+      |> form("#edit-collection-#{collection.id}-modal form")
+      |> render_submit()
+
+      flash =
+        assert_redirected(view, ~p"/projects/#{project.id}/settings#collections")
+
+      assert flash["error"] ==
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
     end
 
     test "unauthorized users cannot delete a collection", %{

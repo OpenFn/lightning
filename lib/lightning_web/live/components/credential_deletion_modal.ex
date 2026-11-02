@@ -38,36 +38,36 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
   end
 
   defp delete_or_schedule(credential, socket) do
-    cond do
-      not socket.assigns.delete_now? ->
-        case Credentials.schedule_credential_deletion(
-               credential,
-               socket.assigns.current_user
-             ) do
-          {:ok, %Credential{}} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, "Credential scheduled for deletion")
-             |> push_navigate(to: socket.assigns.return_to)}
+    if socket.assigns.delete_now?,
+      do: delete_now(credential, socket),
+      else: schedule(credential, socket)
+  end
 
-          {:error, :unauthorized} ->
-            {:noreply, unauthorized(socket)}
+  defp schedule(credential, socket) do
+    case Credentials.schedule_credential_deletion(
+           credential,
+           socket.assigns.current_user
+         ) do
+      {:ok, %Credential{}} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Credential scheduled for deletion")
+         |> push_navigate(to: socket.assigns.return_to)}
 
-          {:error, %Ecto.Changeset{} = _changeset} ->
-            {:noreply, socket}
-        end
+      {:error, :unauthorized} ->
+        {:noreply, unauthorized(socket)}
 
-      socket.assigns.has_activity_in_projects? ->
+      {:error, :scheduled_for_deletion} ->
         {:noreply,
          socket
          |> put_flash(
            :error,
-           "Cannot delete a credential that has activities in projects"
+           "This credential is already scheduled for deletion"
          )
-         |> push_patch(to: socket.assigns.return_to)}
+         |> push_navigate(to: socket.assigns.return_to)}
 
-      true ->
-        delete_now(credential, socket)
+      {:error, %Ecto.Changeset{} = _changeset} ->
+        {:noreply, socket}
     end
   end
 
@@ -88,6 +88,15 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
 
       {:error, :unauthorized} ->
         {:noreply, unauthorized(socket)}
+
+      {:error, :in_use} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot delete a credential that has activities in projects"
+         )
+         |> push_patch(to: socket.assigns.return_to)}
 
       _error ->
         {:noreply,
