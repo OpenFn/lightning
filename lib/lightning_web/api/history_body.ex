@@ -72,14 +72,18 @@ defmodule LightningWeb.API.HistoryBody do
   keys the route accepts, which are returned as sent under `:extra`.
 
   With `required: false`, a body sending neither selects every work order.
+  With `ids: false`, only `filter` selects, and `work_order_ids` is an
+  unknown key.
   """
   @spec selection(map(), Lightning.Scope.t(), [atom()], keyword()) ::
           {:ok, selection(), map()} | {:error, Problem.t()}
   def selection(body, scope, extra, opts \\ []) do
     with :ok <- Request.check_object(body) do
-      accepted = [:filter, :work_order_ids | extra]
-      unknown = Request.unknown_keys(body, [], accepted)
+      ids? = Keyword.get(opts, :ids, true)
+      selectors = if ids?, do: [:filter, :work_order_ids], else: [:filter]
+      unknown = Request.unknown_keys(body, [], selectors ++ extra)
       required? = Keyword.get(opts, :required, true)
+      body = if ids?, do: body, else: Map.delete(body, "work_order_ids")
 
       {search, entries} =
         case body do

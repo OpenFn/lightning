@@ -368,6 +368,7 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
       pending = HistoryHelpers.pending_work_order(graph)
       waiting = HistoryHelpers.pending_work_order(graph)
       to_cancel = HistoryHelpers.pending_work_order(graph)
+      export = insert(:project_file, project: project)
 
       [
         {:get, "/api/runs/#{run.id}/steps", nil, 200},
@@ -380,7 +381,11 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
          %{work_order_ids: [run.work_order_id]}, 202},
         {:post, "/api/projects/#{project.id}/work_orders/cancellations",
          %{work_order_ids: [pending.id]}, 202},
-        {:patch, "/api/work_orders/#{to_cancel.id}", %{state: "cancelled"}, 200}
+        {:patch, "/api/work_orders/#{to_cancel.id}", %{state: "cancelled"}, 200},
+        {:post, "/api/projects/#{project.id}/history_exports", %{}, 202},
+        {:get, "/api/projects/#{project.id}/history_exports", nil, 200},
+        {:get, "/api/projects/#{project.id}/history_exports/#{export.id}", nil,
+         200}
       ]
     end
 
