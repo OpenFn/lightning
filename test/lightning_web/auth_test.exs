@@ -396,26 +396,42 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
-    test "starting, retrying and cancelling runs and work orders, and exporting history, refuse the service account and a repo connection with 403, whatever their grants",
+    test "one history export and its download take a person's tokens, and refuse the service account and a repo connection with 403",
          %{conn: conn, tokens: tokens, project: project} do
-      run = insert_history_run(project)
+      export =
+        insert(:project_file,
+          project: project,
+          status: :completed,
+          path: LightningWeb.API.HistoryHelpers.stored_export_zip()
+        )
 
-      for token <- [tokens[:service_account], tokens[:repo_connection]],
-          {verb, path} <- [
-            {:patch, ~p"/api/runs/#{run.id}"},
-            {:post, ~p"/api/runs/#{run.id}/retries"},
-            {:post,
-             ~p"/api/projects/#{project.id}/workflows/#{run.work_order.workflow_id}/work_orders"},
-            {:post, ~p"/api/projects/#{project.id}/work_orders/retries"},
-            {:post, ~p"/api/projects/#{project.id}/work_orders/cancellations"},
-            {:patch, ~p"/api/work_orders/#{run.work_order_id}"},
-            {:post, ~p"/api/projects/#{project.id}/history_exports"}
-          ] do
-        conn
-        |> with_token(token)
-        |> put_req_header("content-type", "application/json")
-        |> dispatch(@endpoint, verb, path, "{}")
-        |> assert_problem(403, :forbidden, [])
+      base = ~p"/api/projects/#{project.id}/history_exports/#{export.id}"
+
+      for path <- [base, base <> "/download"] do
+        assert_each_kind(conn, tokens, path,
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :logs_in,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: :logs_in
+        )
+      end
+    end
+
+    # Each request is built afresh for each kind, on records of its own, so
+    # one kind's write doesn't change what the next is answered.
+    test "starting, retrying and cancelling runs and work orders, and exporting history, take a person's tokens, and refuse the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      for request <- history_writes(project) do
+        assert_each_kind_acting_on_history(conn, tokens, request,
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :logs_in,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: :logs_in
+        )
       end
     end
   end
@@ -461,6 +477,83 @@ defmodule LightningWeb.AuthTest do
 
         {:insufficient_scope, grant} ->
           assert_refused_for_scope(conn, grant)
+      end
+    end
+  end
+
+  # Each write route of a project's history: a function that builds the
+  # records a request needs and answers its method, path, a body the route
+  # accepts, and the status it succeeds with.
+  defp history_writes(project) do
+    alias LightningWeb.API.HistoryHelpers
+
+    graph = fn -> HistoryHelpers.runnable_workflow(project) end
+    pending = fn -> HistoryHelpers.pending_work_order(graph.()) end
+    ran = fn -> HistoryHelpers.ran_work_order(graph.()) end
+
+    [
+      fn ->
+        run = hd(pending.().runs)
+        {:patch, ~p"/api/runs/#{run.id}", %{state: "cancelled"}, 200}
+      end,
+      fn ->
+        %{run: run, step_a: step} = ran.()
+        {:post, ~p"/api/runs/#{run.id}/retries", %{step_id: step.id}, 201}
+      end,
+      fn ->
+        %{workflow: workflow, job_a: job} = graph.()
+
+        {:post,
+         ~p"/api/projects/#{project.id}/workflows/#{workflow.id}/work_orders",
+         %{job_id: job.id}, 201}
+      end,
+      fn ->
+        {:post, ~p"/api/projects/#{project.id}/work_orders/retries",
+         %{work_order_ids: [ran.().work_order.id]}, 202}
+      end,
+      fn ->
+        {:post, ~p"/api/projects/#{project.id}/work_orders/cancellations",
+         %{work_order_ids: [pending.().id]}, 202}
+      end,
+      fn ->
+        {:patch, ~p"/api/work_orders/#{pending.().id}", %{state: "cancelled"},
+         200}
+      end,
+      fn ->
+        {:post, ~p"/api/projects/#{project.id}/history_exports", %{}, 202}
+      end
+    ]
+  end
+
+  # As assert_each_kind/4, for a write `request` (one of history_writes/1)
+  # built afresh for each kind. A kind that logs in is answered the route's
+  # success status.
+  defp assert_each_kind_acting_on_history(conn, tokens, request, expected) do
+    assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
+
+    for {kind, answer} <- expected do
+      {method, path, body, status} = request.()
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> with_token(tokens[kind])
+        |> dispatch(@endpoint, method, path, Jason.encode!(body))
+
+      case answer do
+        :logs_in ->
+          assert conn.status == status,
+                 "#{kind} on #{method} #{path} was answered #{conn.status}"
+
+        :invalid_token ->
+          assert_unauthenticated(conn, :invalid_token, @invalid_token)
+
+        :expired_token ->
+          assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+        :forbidden ->
+          assert_problem(conn, 403, :forbidden, [])
+          assert get_resp_header(conn, "www-authenticate") == []
       end
     end
   end
