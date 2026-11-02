@@ -647,27 +647,33 @@ defmodule Lightning.Projects.Provisioner do
     |> cast_assoc(:collections, with: &collection_changeset/2)
     |> cast_assoc(:channels, with: &channel_changeset/2)
     |> cast_assoc(:workflows, with: &workflow_changeset/2)
-    |> then(fn changeset ->
-      case WorkflowUsageLimiter.limit_workflows_activation(
-             project,
-             get_assoc(changeset, :workflows)
-           ) do
-        :ok ->
-          changeset
+  end
 
-        {:error, _reason, %{text: message}} ->
-          add_error(changeset, :id, message)
-      end
-    end)
-    |> then(fn changeset ->
-      case limit_collection_creation(changeset) do
-        :ok ->
-          changeset
+  # `:ok`, or the changeset refused for a plan limit. The limiters add what the
+  # document asks for to what is stored, so they are asked before the write.
+  # Their answer is matched only after the write and the credential check, so a
+  # document is refused for what is wrong with it before it is refused for a
+  # limit. The limiter's own message isn't passed on.
+  defp maybe_apply_limits(%Ecto.Changeset{valid?: false}), do: :ok
 
-        {:error, _reason, %{text: message}} ->
-          add_error(changeset, :id, message)
-      end
-    end)
+  defp maybe_apply_limits(changeset) do
+    with :ok <- limit_workflow_activation(changeset),
+         :ok <- limit_collection_creation(changeset) do
+      :ok
+    else
+      {:error, _reason, _message} ->
+        {:error,
+         add_error(changeset, :id, "would exceed a limit of your plan",
+           code: :exceeds_limit
+         )}
+    end
+  end
+
+  defp limit_workflow_activation(changeset) do
+    WorkflowUsageLimiter.limit_workflows_activation(
+      changeset.data,
+      get_assoc(changeset, :workflows)
+    )
   end
 
   defp limit_collection_creation(changeset) do

@@ -1458,10 +1458,11 @@ defmodule Lightning.Projects.ProvisionerTest do
              }
     end
 
-    test "adds error incase workflow limit action returns error", %{
-      project: %{id: project_id} = project,
-      user: user
-    } do
+    test "a refused workflow activation limit is an error on the id, without the limiter's message",
+         %{
+           project: %{id: project_id} = project,
+           user: user
+         } do
       %{body: body} = valid_document(project_id)
       error_msg = "Oopsie Doopsie"
 
@@ -1476,7 +1477,9 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert {:error, changeset} =
                Provisioner.import_document(project, user, body)
 
-      assert flatten_errors(changeset) == %{id: [error_msg]}
+      assert flatten_errors(changeset) == %{
+               id: ["would exceed a limit of your plan"]
+             }
     end
 
     test "sends workflow updated event", %{
@@ -2217,10 +2220,11 @@ defmodule Lightning.Projects.ProvisionerTest do
         Provisioner.import_document(project, user, body_with_collections)
     end
 
-    test "adds error incase create collection limiter returns error", %{
-      project: %{id: project_id} = project,
-      user: user
-    } do
+    test "a refused collection limit is an error on the id, without the limiter's message",
+         %{
+           project: %{id: project_id} = project,
+           user: user
+         } do
       error_msg = "Oopsie Doopsie"
 
       Lightning.Extensions.MockUsageLimiter
@@ -2247,7 +2251,9 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert {:error, changeset} =
                Provisioner.import_document(project, user, body_with_collections)
 
-      assert flatten_errors(changeset) == %{id: [error_msg]}
+      assert flatten_errors(changeset) == %{
+               id: ["would exceed a limit of your plan"]
+             }
     end
 
     test "collection hook is called when deleting a collection", %{
