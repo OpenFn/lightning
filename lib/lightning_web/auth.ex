@@ -108,13 +108,8 @@ defmodule LightningWeb.Auth do
     end
   end
 
-  # No `Session` scheme is registered; browsers don't prompt for one they don't
-  # know, which is the point (RFC 9110 §15.5.2 requires a challenge).
-  def refuse(conn, :session, nil) do
-    respond(conn, :unauthenticated, [
-      {"www-authenticate", ~s(Session realm="Lightning")}
-    ])
-  end
+  def refuse(conn, :session, nil),
+    do: Problem.halt(conn, session_problem(:unauthenticated))
 
   # A trigger or channel that its webhook auth methods didn't let in. It is
   # challenged for an API key when it takes one, and never for Basic: every
@@ -130,6 +125,21 @@ defmodule LightningWeb.Auth do
 
     respond(conn, :unauthenticated, challenges)
   end
+
+  @doc """
+  A 401 on a route that takes Lightning's session cookie: no session
+  (`:unauthenticated`), or a sign-in refused (`:invalid_credentials`,
+  `:mfa_required`), with the `Session` challenge.
+  """
+  @spec session_problem(:unauthenticated | :invalid_credentials | :mfa_required) ::
+          Problem.t()
+  # No `Session` scheme is registered; browsers don't prompt for one they don't
+  # know, which is the point (RFC 9110 §15.5.2 requires a challenge).
+  def session_problem(code),
+    do:
+      Problem.new(code,
+        headers: [{"www-authenticate", ~s(Session realm="Lightning")}]
+      )
 
   @doc """
   The 403 for a token that lacks `grant`, naming it in both the body's `scope`
