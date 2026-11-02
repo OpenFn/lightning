@@ -218,6 +218,8 @@ lines at the top level.
 | `GET`    | `/api/projects/:project_id/channels/:id`             | Reads a channel                              | Not open to the service account |
 | `PUT`    | `/api/projects/:project_id/channels/:id`             | Creates or replaces a channel                | Not open to the service account |
 | `DELETE` | `/api/projects/:project_id/channels/:id`             | Deletes a channel and its request history    | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/channel_requests`         | Lists a project's channel requests           | Not open to the service account |
+| `GET`    | `/api/channel_requests/:id`                          | Reads a channel request                      | Not open to the service account |
 
 ### Lightning's web app
 

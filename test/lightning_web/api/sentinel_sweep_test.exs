@@ -18,7 +18,8 @@ defmodule LightningWeb.API.SentinelSweepTest do
            "limit" => nil,
            "cursor" => nil,
            "email" => nil,
-           "snapshots" => nil
+           "snapshots" => nil,
+           "channel_id" => nil
          })
 
   @body plant_sentinel(%{
@@ -352,7 +353,8 @@ defmodule LightningWeb.API.SentinelSweepTest do
       "/api/workflows/:id",
       "/api/jobs/:id",
       "/api/runs/:id",
-      "/api/work_orders/:id"
+      "/api/work_orders/:id",
+      "/api/channel_requests/:id"
     ] or String.contains?(path, ":project_id")
   end
 
