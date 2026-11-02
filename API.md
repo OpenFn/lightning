@@ -150,6 +150,7 @@ route "not open to the service account" answers its token with 403 `forbidden`.
 | `POST`   | `/api/users`          | Creates a user                                      | `users:write`                   |
 | `PATCH`  | `/api/users/:id`      | Changes a user                                      | `users:write`                   |
 | `POST`   | `/api/users/register` | Signs up, where the instance offers it              | None                            |
+| `GET`    | `/api/audit_events`   | Lists audit events, newest first                    | `audit:read`                    |
 
 ### Projects
 

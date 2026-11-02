@@ -365,7 +365,8 @@ curl -s https://lightning.example.org/.well-known/oauth-authorization-server
     "users:write",
     "projects:write",
     "credentials:write",
-    "collections:write"
+    "collections:write",
+    "audit:read"
   ],
   "grant_types_supported": ["client_credentials"],
   "token_endpoint_auth_methods_supported": ["private_key_jwt"],
@@ -511,6 +512,7 @@ the access token carries only those. Ask for the fewest that do the job.
 | `projects:write`    | Reads and changes projects and what's in them: workflows, jobs, work orders, runs and logs. |
 | `credentials:write` | Reads and changes credentials, and which projects they are linked to.                       |
 | `collections:write` | Reads, creates and renames a project's collections.                                         |
+| `audit:read`        | Reads the instance's audit events.                                                          |
 
 To set up a new instance, ask for `users:write` and `projects:write`, and
 `users:read` if the automation looks users up before creating them.
