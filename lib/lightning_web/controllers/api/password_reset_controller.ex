@@ -13,7 +13,9 @@ defmodule LightningWeb.API.PasswordResetController do
   once, for a day; a used, expired or unknown one is 404 `not_found`. Setting
   the password revokes every token the person holds, sessions and personal
   access tokens alike, and hangs up their sockets, and it doesn't sign them in,
-  so a leaked link can't open the account. It answers 204 with no body.
+  so a leaked link can't open the account. It answers 204 with no body. Two
+  requests carrying one token can't both set a password: the one that loses
+  the race is 409 `concurrent_edit`.
 
   Each answers 400 `malformed` to a body that isn't a JSON object, and 422
   `invalid` naming every problem with one that is, an unknown key among them.
@@ -51,7 +53,7 @@ defmodule LightningWeb.API.PasswordResetController do
     with {:ok, user} <- fetch_user(token),
          :ok <- Request.check_object(body),
          :ok <- check_password(body, user, attrs),
-         {:ok, _user} <- Accounts.reset_user_password(user, attrs) do
+         {:ok, _user} <- Accounts.reset_user_password(user, attrs, token) do
       send_resp(conn, 204, "")
     end
   end

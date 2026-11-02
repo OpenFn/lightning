@@ -11,6 +11,7 @@ defmodule LightningWeb.API.ConfirmationsTest do
   alias Lightning.Accounts.UserToken
   alias Lightning.Config.API, as: ConfigAPI
   alias Lightning.Credentials
+  alias Lightning.RaceHelpers
   alias Lightning.Repo
 
   @session_challenge [~s(Session realm="Lightning")]
@@ -267,6 +268,27 @@ defmodule LightningWeb.API.ConfirmationsTest do
       ])
 
       refute confirmed?(user)
+    end
+  end
+
+  # A token works once, so one another request used first is a used token:
+  # 404, with the account as that request left it.
+  describe "stale writes" do
+    test "confirming with a token another request used meanwhile answers not_found" do
+      user = shut_out_user()
+      token = email_token(user, "confirm", user.email)
+
+      RaceHelpers.after_first_token_query(token, fn ->
+        {:ok, _user} = Accounts.confirm_user(token)
+      end)
+
+      build_conn()
+      |> session_conn(user)
+      |> put(~p"/api/confirmations/#{token}")
+      |> assert_problem(404, :not_found, [])
+
+      assert confirmed?(user)
+      refute Accounts.get_user_by_confirmation_token(token)
     end
   end
 end

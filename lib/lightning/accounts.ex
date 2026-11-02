@@ -1431,16 +1431,51 @@ defmodule Lightning.Accounts do
   """
   def reset_user_password(user, attrs) do
     Ecto.Multi.new()
+    |> reset_password_multi(user, attrs)
+    |> run_reset()
+  end
+
+  @doc """
+  Resets the password of `user` with the emailed reset `token`, using the
+  token up in the same transaction, so two requests carrying one token can't
+  both set a password.
+
+  Returns `{:error, :concurrent_edit}` when another request used the token
+  first, and keeps the token when the password is refused.
+  """
+  @spec reset_user_password(User.t(), map(), String.t()) ::
+          {:ok, User.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, :concurrent_edit}
+  def reset_user_password(%User{} = user, attrs, token) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:reset_token, fn repo, _changes ->
+      case repo.delete_all(UserToken.reset_password_token_query(user, token)) do
+        {1, _} -> {:ok, :used}
+        {0, _} -> {:error, :concurrent_edit}
+      end
+    end)
+    |> reset_password_multi(user, attrs)
+    |> run_reset()
+  end
+
+  defp reset_password_multi(multi, user, attrs) do
+    multi
     |> Ecto.Multi.update(:user, User.password_changeset(user, attrs))
     |> Ecto.Multi.delete_all(
       :tokens,
       UserToken.user_and_contexts_query(user, :all)
     )
-    |> Repo.transaction()
-    |> case do
+  end
+
+  defp run_reset(multi) do
+    case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
         LightningWeb.UserAuth.disconnect_user_sockets(user)
         {:ok, user}
+
+      {:error, :reset_token, :concurrent_edit, _} ->
+        {:error, :concurrent_edit}
 
       {:error, :user, changeset, _} ->
         {:error, changeset}

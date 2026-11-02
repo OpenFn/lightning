@@ -107,6 +107,31 @@ defmodule LightningWeb.API.Me.GithubTest do
       assert is_nil(Repo.reload!(user).github_oauth_token)
     end
 
+    # Another request disconnecting first leaves what this one asked for.
+    @tag :capture_log
+    test "answers 204 when another request disconnects while GitHub is asked" do
+      user = connected_user()
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{method: :delete, url: @github <> "/applications/abcd1234/grant"},
+        _opts ->
+          Repo.query!(
+            "UPDATE users SET github_oauth_token = NULL WHERE id = $1",
+            [Ecto.UUID.dump!(user.id)]
+          )
+
+          {:ok, %Tesla.Env{status: 404, body: %{}}}
+      end)
+
+      conn =
+        build_conn()
+        |> session_conn(user)
+        |> delete(~p"/api/me/github_connection")
+
+      assert conn.status == 204
+      assert is_nil(Repo.reload!(user).github_oauth_token)
+    end
+
     test "answers 204 when there was no connection, without asking GitHub" do
       Mox.expect(Lightning.Tesla.Mock, :call, 0, fn _env, _opts -> :unused end)
 

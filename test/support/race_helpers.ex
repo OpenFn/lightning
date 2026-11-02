@@ -74,4 +74,33 @@ defmodule Lightning.RaceHelpers do
       pid
     )
   end
+
+  @doc """
+  Calls `fun` the first time `pid` runs a query on `user_tokens` that reads
+  the emailed token `token` (as `Lightning.Accounts.UserToken` hashes
+  it), and never again.
+
+  Use it to have another request use a token after the code under test has
+  looked it up and before it writes.
+  """
+  def after_first_token_query(token, fun, pid \\ self()) do
+    handler = {__MODULE__, make_ref()}
+    hashed = :crypto.hash(:sha256, Base.url_decode64!(token, padding: false))
+
+    :telemetry.attach(
+      handler,
+      [:lightning, :repo, :query],
+      fn _event, _measurements, meta, _config ->
+        if self() == pid and meta.source == "user_tokens" and
+             hashed in List.flatten(meta.params) and
+             not Process.get(handler, false) do
+          Process.put(handler, true)
+          fun.()
+        end
+      end,
+      nil
+    )
+
+    ExUnit.Callbacks.on_exit(fn -> :telemetry.detach(handler) end)
+  end
 end

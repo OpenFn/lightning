@@ -10,6 +10,7 @@ defmodule LightningWeb.API.PasswordResetsTest do
   alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserToken
+  alias Lightning.RaceHelpers
   alias Lightning.Repo
 
   defp json_conn do
@@ -221,6 +222,38 @@ defmodule LightningWeb.API.PasswordResetsTest do
       end
 
       assert Accounts.get_user_by_reset_password_token(token)
+    end
+  end
+
+  describe "stale writes" do
+    test "a reset with a token another request used meanwhile answers concurrent_edit" do
+      user = insert(:user)
+      token = reset_token(user)
+
+      RaceHelpers.after_first_token_query(token, fn ->
+        {:ok, _user} =
+          Accounts.reset_user_password(
+            user,
+            %{"password" => "the other request's password"},
+            token
+          )
+      end)
+
+      json_conn()
+      |> put(~p"/api/password_resets/#{token}", %{
+        "password" => "a brand new password"
+      })
+      |> assert_problem(409, :concurrent_edit, [])
+
+      assert Accounts.get_user_by_email_and_password(
+               user.email,
+               "the other request's password"
+             )
+
+      refute Accounts.get_user_by_email_and_password(
+               user.email,
+               "a brand new password"
+             )
     end
   end
 end
