@@ -277,6 +277,12 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def allow_credential_transfer? do
+      Application.get_env(:lightning, LightningWeb, [])
+      |> Keyword.get(:allow_credential_transfer, false)
+    end
+
+    @impl true
     def book_demo_banner_enabled? do
       Keyword.get(book_demo_banner_config(), :enabled, false)
     end
@@ -468,6 +474,7 @@ defmodule Lightning.Config do
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
   @callback credential_transfer_token_validity_in_days() :: integer()
+  @callback allow_credential_transfer?() :: boolean()
   @callback book_demo_banner_enabled?() :: boolean()
   @callback book_demo_calendly_url() :: String.t()
   @callback book_demo_openfn_workflow_url() :: String.t()
@@ -677,6 +684,13 @@ defmodule Lightning.Config do
 
   def credential_transfer_token_validity_in_days do
     impl().credential_transfer_token_validity_in_days()
+  end
+
+  @doc """
+  Whether this instance lets an owner give a credential to another user.
+  """
+  def allow_credential_transfer? do
+    impl().allow_credential_transfer?()
   end
 
   def book_demo_banner_enabled? do

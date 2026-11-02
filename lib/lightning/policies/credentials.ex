@@ -34,6 +34,25 @@ defmodule Lightning.Policies.Credentials do
   Keychain actions take a project and decide through
   `Lightning.Policies.Decision.project/4`. They need an owner or admin, or a
   support user with no role on a project that allows support access.
+
+  Scheduling a credential's deletion, or cancelling it
+  (`:schedule_credential_deletion`), is open to the owner and an operator,
+  whether or not it is scheduled. Its environments
+  (`:edit_credential_environments`) and linking it to a project
+  (`:link_credential`) are open to them too, and refused with
+  `{:error, :scheduled_for_deletion}` for a scheduled credential, as editing
+  is. Asked with a nil credential, all three say whether the caller may act on
+  every credential, which only an operator may.
+
+  Unlinking a credential from a project (`:unlink_credential`) is asked of the
+  link, with the credential loaded, on the link's project. It is open to the
+  credential's owner, an owner or admin of the project, and an operator.
+
+  Transferring a credential (`:transfer_credential`) is only for its owner, on
+  a person's token, so the service account and a repo connection are refused
+  before any credential is read. A scheduled credential refuses it with
+  `{:error, :scheduled_for_deletion}`, and nobody may transfer every
+  credential.
   """
   @behaviour Bodyguard.Policy
 
@@ -43,6 +62,7 @@ defmodule Lightning.Policies.Credentials do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Scope
   require Logger
 
@@ -57,6 +77,11 @@ defmodule Lightning.Policies.Credentials do
           | :edit_keychain_credential
           | :delete_keychain_credential
           | :view_keychain_credential
+          | :schedule_credential_deletion
+          | :edit_credential_environments
+          | :link_credential
+          | :unlink_credential
+          | :transfer_credential
 
   @ownership_actions [
     :create_credential,
@@ -78,6 +103,7 @@ defmodule Lightning.Policies.Credentials do
           Scope.t() | Scope.actor(),
           Credential.t()
           | KeychainCredential.t()
+          | ProjectCredential.t()
           | Project.t()
           | nil
           | :before_target
@@ -113,6 +139,32 @@ defmodule Lightning.Policies.Credentials do
     end
   end
 
+  def authorize(:schedule_credential_deletion, %Scope{} = scope, subject),
+    do: owner_or_operator(scope, subject)
+
+  def authorize(action, %Scope{} = scope, subject)
+      when action in [:edit_credential_environments, :link_credential] do
+    scope |> owner_or_operator(subject) |> refuse_scheduled(subject)
+  end
+
+  def authorize(:unlink_credential, %Scope{} = scope, subject),
+    do:
+      Decision.project(
+        scope,
+        subject,
+        "credentials:write",
+        may_unlink?(scope, subject)
+      )
+
+  def authorize(:transfer_credential, %Scope{} = scope, subject) do
+    answer =
+      scope
+      |> Decision.instance(subject, "credentials:write", owner?(scope, subject))
+      |> refuse_scheduled(subject)
+
+    Decision.person(scope, answer)
+  end
+
   def authorize(action, %Scope{} = scope, subject)
       when action in @ownership_actions,
       do: ownership(action, scope, subject)
@@ -132,6 +184,23 @@ defmodule Lightning.Policies.Credentials do
              (is_struct(subject, Credential) or is_nil(subject)) do
     authorize(action, Scope.new(actor), subject)
   end
+
+  def authorize(action, actor, subject)
+      when action in [
+             :schedule_credential_deletion,
+             :edit_credential_environments,
+             :link_credential
+           ] and (is_struct(subject, Credential) or is_nil(subject)) do
+    authorize(action, Scope.new(actor), subject)
+  end
+
+  def authorize(:unlink_credential, actor, %ProjectCredential{} = link),
+    do:
+      Permissions.for_actor(
+        actor,
+        link,
+        &authorize(:unlink_credential, &1, link)
+      )
 
   # :create_keychain_credential can be asked with a project or a keychain
   # credential. The context function holds an unsaved keychain rather than a
@@ -187,6 +256,33 @@ defmodule Lightning.Policies.Credentials do
   defp owns?(:list_credentials, scope, nil), do: scope.can_own_credentials?
 
   defp owns?(_action, _scope, _subject), do: false
+
+  defp owner_or_operator(scope, subject),
+    do:
+      Decision.instance(
+        scope,
+        subject,
+        "credentials:write",
+        owner?(scope, subject) or Scope.operator?(scope)
+      )
+
+  defp owner?(scope, %Credential{user_id: owner_id}),
+    do: scope.actor.id == owner_id
+
+  defp owner?(_scope, _subject), do: false
+
+  defp refuse_scheduled(true, %Credential{scheduled_deletion: %DateTime{}}),
+    do: {:error, :scheduled_for_deletion}
+
+  defp refuse_scheduled(answer, _subject), do: answer
+
+  defp may_unlink?(scope, %ProjectCredential{
+         credential: %Credential{} = credential
+       }),
+       do:
+         Scope.holds_role?(scope, [:owner, :admin]) or owner?(scope, credential)
+
+  defp may_unlink?(_scope, _subject), do: false
 
   defp linked_to_listable_project?(scope, links) do
     scope
