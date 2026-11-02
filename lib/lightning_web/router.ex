@@ -9,6 +9,7 @@ defmodule LightningWeb.Router do
   import Phoenix.LiveDashboard.Router
 
   alias CredentialLive
+  alias LightningWeb.API.Problem
   alias ProjectLive
   alias UserLive
 
@@ -44,24 +45,50 @@ defmodule LightningWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug :refuse_unparsed
   end
 
-  pipeline :access_token_api do
+  pipeline :person_or_service_account_api do
     plug :accepts, ["json"]
-    plug LightningWeb.Plugs.AccessTokenAuth
+    plug :refuse_unparsed
+    plug LightningWeb.Plugs.PersonOrServiceAccountAuth
   end
 
   pipeline :authenticated_api do
     plug :accepts, ["json"]
+    plug :refuse_unparsed
     plug LightningWeb.Plugs.ApiAuth
+  end
+
+  # Webhooks answer a body they can't read themselves.
+  pipeline :webhook do
+    plug :accepts, ["json"]
   end
 
   pipeline :authenticated_json do
     plug :accepts, ["json"]
+    plug :refuse_unparsed
     plug :fetch_session
     plug :protect_from_forgery
     plug :fetch_current_user
   end
+
+  # Plug.Parsers passes every content type (`pass: ["*/*"]`), so a body no
+  # parser read arrives unfetched. The JSON pipelines answer it with 415. A
+  # request with no body has nothing to misread, so it passes whatever its
+  # content type says. Reading is the only reliable way to tell, because a
+  # chunked or HTTP/2 request needn't send a content-length.
+  defp refuse_unparsed(%Plug.Conn{body_params: %Plug.Conn.Unfetched{}} = conn, _) do
+    case Plug.Conn.read_body(conn, length: 1, read_length: 1) do
+      {:ok, "", conn} ->
+        %{conn | body_params: %{}}
+
+      {_ok_or_more, _data, conn} ->
+        Problem.halt(conn, Problem.new(:unsupported_media_type))
+    end
+  end
+
+  defp refuse_unparsed(conn, _opts), do: conn
 
   scope "/", LightningWeb do
     pipe_through [:browser]
@@ -93,30 +120,25 @@ defmodule LightningWeb.Router do
 
   ## JSON API
 
-  ## Service account access tokens only, never a personal access token
+  ## A service account's access token or a person's bearer token
   scope "/api", LightningWeb, as: :api do
-    pipe_through [:access_token_api]
+    pipe_through [:person_or_service_account_api]
 
     resources "/users", API.UserController, only: [:index, :show, :create]
     patch "/users/:id", API.UserController, :update
-  end
 
-  scope "/api", LightningWeb, as: :api do
-    pipe_through [:api]
-
-    post "/users/register", API.RegistrationController, :create
-
-    pipe_through [
-      :authenticate_bearer,
-      :require_authenticated_api_resource
-    ]
+    get "/projects/:id", API.ProjectController, :show
+    put "/projects/:id", API.ProjectController, :update
 
     get "/provision/yaml", API.ProvisioningController, :show_yaml
     resources "/provision", API.ProvisioningController, only: [:create, :show]
 
-    resources "/projects", API.ProjectController, only: [:index, :show] do
+    resources "/projects", API.ProjectController, only: [:index] do
       resources "/credentials", API.CredentialController, only: [:index]
-      resources "/workflows", API.WorkflowsController, except: [:delete]
+
+      resources "/workflows", API.WorkflowsController,
+        only: [:index, :show, :create, :update]
+
       resources "/jobs", API.JobController, only: [:index, :show]
       resources "/work_orders", API.WorkOrdersController, only: [:index, :show]
       resources "/runs", API.RunController, only: [:index, :show]
@@ -131,6 +153,12 @@ defmodule LightningWeb.Router do
     resources "/work_orders", API.WorkOrdersController, only: [:index, :show]
     resources "/runs", API.RunController, only: [:index, :show]
     resources "/log_lines", API.LogLinesController, only: [:index]
+  end
+
+  scope "/api", LightningWeb, as: :api do
+    pipe_through [:api]
+
+    post "/users/register", API.RegistrationController, :create
   end
 
   ## Cookie-authenticated JSON, for the app's own React components
@@ -342,7 +370,7 @@ defmodule LightningWeb.Router do
   end
 
   scope "/i", LightningWeb do
-    pipe_through :api
+    pipe_through :webhook
 
     post "/*path", WebhooksController, :create
     get "/*path", WebhooksController, :check

@@ -54,28 +54,51 @@ defmodule Lightning.ServiceAccount.AccessToken do
   end
 
   @doc """
-  Returns the claims of `token` when its `typ`, signature, `iss`, `aud` and
-  `exp` all check out.
+  Whether `token` declares itself an access token by its `typ`, without
+  checking anything else about it.
   """
-  @spec verify(String.t()) :: {:ok, map()} | {:error, :invalid}
+  @spec access_token?(String.t()) :: boolean()
+  def access_token?(token) do
+    match?(%{"typ" => @typ}, Jason.decode!(JOSE.JWS.peek_protected(token)))
+  rescue
+    _ -> false
+  end
+
+  @doc """
+  Returns the service account `token` was issued to, holding the token's scopes
+  as its `grants`.
+
+  A token is only good for the service account registered now, so registering
+  a new key, or unsetting it, cuts off tokens already issued.
+  `{:error, :expired}` is only for a token that would otherwise be good and
+  whose `exp` has passed. Anything else wrong is `{:error, :invalid}`.
+  """
+  @spec verify(String.t()) ::
+          {:ok, ServiceAccount.t()} | {:error, :expired | :invalid}
   def verify(token) do
     jwk = Lightning.Config.token_signer().jwk
     issuer = issuer()
     audience = audience()
-    now = System.system_time(:second)
 
-    case JOSE.JWT.verify_strict(jwk, ["RS256"], token) do
-      {true,
-       %JOSE.JWT{
-         fields: %{"iss" => ^issuer, "aud" => ^audience, "exp" => exp} = claims
-       }, %JOSE.JWS{fields: %{"typ" => @typ}}}
-      when is_integer(exp) and exp > now ->
-        {:ok, claims}
-
-      _other ->
-        {:error, :invalid}
+    with %ServiceAccount{id: id} = service_account <-
+           Lightning.Config.service_account(),
+         {true,
+          %JOSE.JWT{
+            fields:
+              %{"iss" => ^issuer, "aud" => ^audience, "sub" => ^id, "exp" => exp} =
+                claims
+          }, %JOSE.JWS{fields: %{"typ" => @typ}}}
+         when is_integer(exp) <- JOSE.JWT.verify_strict(jwk, ["RS256"], token) do
+      if exp > System.system_time(:second),
+        do: {:ok, %{service_account | grants: grants(claims)}},
+        else: {:error, :expired}
+    else
+      _other -> {:error, :invalid}
     end
   rescue
     _ -> {:error, :invalid}
   end
+
+  defp grants(claims),
+    do: claims |> Map.get("scope", "") |> String.split() |> MapSet.new()
 end
