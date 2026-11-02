@@ -92,6 +92,9 @@ defmodule LightningWeb.API.FallbackController do
     Problem.respond(conn, Problem.new(:internal))
   end
 
+  def call(conn, {:error, :not_retryable}),
+    do: Problem.respond(conn, Problem.new(:not_retryable))
+
   defp refuse_id(conn, code, location) do
     entry = Errors.entry(location, @not_a_uuid)
     Problem.respond(conn, Problem.new(code, errors: [entry]))
