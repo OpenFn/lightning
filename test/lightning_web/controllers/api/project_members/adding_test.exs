@@ -203,6 +203,20 @@ defmodule LightningWeb.API.ProjectMembers.AddingTest do
   end
 
   describe "stale writes" do
+    test "a project another request deletes mid-add answers 409 concurrent_edit",
+         %{conn: conn, admin: admin, project: project} do
+      user = insert(:user)
+      delete_project_mid_save(project.id)
+
+      conn
+      |> with_pat(admin)
+      |> send_json(:put, member_path(project.id, user.id), %{"role" => "editor"})
+      |> assert_problem(409, :concurrent_edit, [])
+
+      refute Lightning.Repo.reload(project)
+      refute role_of(project.id, user.id)
+    end
+
     test "a member another request removes mid-change answers 409 concurrent_edit",
          %{conn: conn, admin: admin, project: project} do
       editor = insert(:user)

@@ -175,12 +175,13 @@ defmodule LightningWeb.API.ProjectMemberController do
 
   defp put_member(conn, project, _user, {:ok, member}, request) do
     with {:ok, _members} <-
-           Projects.add_project_users(
-             project,
+           project
+           |> Projects.add_project_users(
              [%{id: member.id, role: request.role}],
              conn.assigns.current_resource,
              false
-           ),
+           )
+           |> Projects.unless_deleted(project),
          {:ok, member} <- changed(project, member) do
       render_member(conn, member)
     end
@@ -189,12 +190,13 @@ defmodule LightningWeb.API.ProjectMemberController do
   defp put_member(conn, project, user, {:error, :not_found}, request) do
     with :ok <- ProjectLimiter.request_new_user(project.id, 1),
          {:ok, _members} <-
-           Projects.add_project_users(
-             project,
+           project
+           |> Projects.add_project_users(
              [%{user_id: user.id, role: request.role}],
              conn.assigns.current_resource,
              request.notify
-           ),
+           )
+           |> Projects.unless_deleted(project),
          {:ok, member} <- Projects.fetch_project_user(project.id, user.id) do
       conn |> put_status(:created) |> render_member(member)
     end
