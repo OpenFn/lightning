@@ -157,6 +157,21 @@ defmodule LightningWeb.API.Collections.ListingTest do
                [large.id, small.id]
     end
 
+    test "pages them", %{conn: conn} do
+      [_a, b, _c] = for name <- ~w(a b c), do: insert(:collection, name: name)
+
+      conn =
+        conn
+        |> session_conn(insert(:user, role: :superuser))
+        |> get(~p"/api/collections?page=2&page_size=1")
+
+      body = json_response(conn, 200)
+      assert Enum.map(body["data"], & &1["id"]) == [b.id]
+
+      assert body["links"]["next"] ==
+               "#{@url}/api/collections?page=3&page_size=1"
+    end
+
     test "answers 400 invalid_parameter for a sort it doesn't know", %{
       conn: conn
     } do
