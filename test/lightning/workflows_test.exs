@@ -10,6 +10,7 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Project
+  alias Lightning.Scope
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -2580,6 +2581,44 @@ defmodule Lightning.WorkflowsTest do
     test "ignores empty search term", %{project: project} do
       workflows = Workflows.get_workflows_for(project, search: "")
       assert length(workflows) == 3
+    end
+  end
+
+  describe "list_workflows_for/2" do
+    test "lists the live workflows in the user's projects, newest first" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      older =
+        insert(:workflow,
+          project: project,
+          inserted_at: ~U[2024-01-01 00:00:00Z]
+        )
+
+      newer =
+        insert(:workflow,
+          project: project,
+          inserted_at: ~U[2024-02-01 00:00:00Z]
+        )
+
+      insert(:workflow, project: project, deleted_at: DateTime.utc_now())
+      insert(:workflow)
+
+      assert Workflows.list_workflows_for(Scope.new(user)) |> Enum.map(& &1.id) ==
+               [newer.id, older.id]
+    end
+
+    test "preloads the associations named in include:" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+
+      assert [%{jobs: [%{id: job_id}]} = listed] =
+               Workflows.list_workflows_for(Scope.new(user), include: [:jobs])
+
+      assert job_id == job.id
+      refute Ecto.assoc_loaded?(listed.edges)
     end
   end
 

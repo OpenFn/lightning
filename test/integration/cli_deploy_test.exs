@@ -73,8 +73,8 @@ defmodule Lightning.CliDeployTest do
           env: @required_env
         )
 
-      assert logs =~ "Failed to authorize request with endpoint"
-      assert logs =~ "403 Forbidden"
+      assert logs =~ "DEPLOY_ERROR: Failed to authorize request"
+      assert logs =~ "got 403 Forbidden"
 
       # state and spec files are not saved
       refute File.exists?(config.statePath)

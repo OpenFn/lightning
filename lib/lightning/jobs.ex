@@ -8,6 +8,7 @@ defmodule Lightning.Jobs do
   alias Ecto.Multi
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Scope
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -27,14 +28,20 @@ defmodule Lightning.Jobs do
     |> Enum.map(fn e -> e.target_job end)
   end
 
-  @spec jobs_for_project_query(Project.t()) :: Ecto.Queryable.t()
-  def jobs_for_project_query(%Project{} = project) do
-    Query.jobs_for(project)
+  @doc """
+  A page of the jobs of `project`, or of every project the caller may list.
+  """
+  @spec paginate_jobs_for(Project.t() | Scope.t(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_jobs_for(project_or_scope, page) do
+    project_or_scope
+    |> Query.jobs_for()
+    |> Repo.paginate(page)
   end
 
   @spec jobs_for_project(Project.t()) :: [Job.t()]
   def jobs_for_project(%Project{} = project) do
-    jobs_for_project_query(project) |> Repo.all()
+    Query.jobs_for(project) |> Repo.all()
   end
 
   @doc """
