@@ -234,7 +234,7 @@ defmodule LightningWeb.API.ChannelRequests.ReadingTest do
                        "connect_us" => 20,
                        "request_send_us" => 5000,
                        "ttfb_us" => 280_000,
-                       "response_duration_us" => 65000
+                       "response_duration_us" => 65_000
                      },
                      "wiped" => false
                    })
