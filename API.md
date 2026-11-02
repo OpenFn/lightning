@@ -236,6 +236,25 @@ lines at the top level.
 | `GET`  | `/api/workflow_templates`     | Lists workflow templates           | Not open to the service account |
 | `PUT`  | `/api/workflows/:id/template` | Publishes a workflow as a template | Not open to the service account |
 
+### Running workflows and history
+
+For people only: a personal access token or a session token. The service account
+and repo connections are refused 403 `forbidden`.
+
+| Method  | Path                                                           | What it does                           | Token grant                     |
+| ------- | -------------------------------------------------------------- | -------------------------------------- | ------------------------------- |
+| `POST`  | `/api/projects/:project_id/workflows/:workflow_id/work_orders` | Runs a workflow by hand                | Not open to the service account |
+| `POST`  | `/api/projects/:project_id/work_orders/retries`                | Retries many work orders               | Not open to the service account |
+| `POST`  | `/api/projects/:project_id/work_orders/cancellations`          | Cancels many work orders' waiting runs | Not open to the service account |
+| `PATCH` | `/api/work_orders/:id`                                         | Cancels a work order's waiting runs    | Not open to the service account |
+| `PATCH` | `/api/runs/:id`                                                | Cancels a run no worker has claimed    | Not open to the service account |
+| `POST`  | `/api/runs/:id/retries`                                        | Retries a run from one of its steps    | Not open to the service account |
+| `GET`   | `/api/runs/:id/steps`                                          | Lists a run's steps                    | Not open to the service account |
+| `POST`  | `/api/projects/:project_id/history_exports`                    | Exports work orders matching a filter  | Not open to the service account |
+| `GET`   | `/api/projects/:project_id/history_exports`                    | Lists a project's history exports      | Not open to the service account |
+| `GET`   | `/api/projects/:project_id/history_exports/:id`                | Reads a history export                 | Not open to the service account |
+| `GET`   | `/api/projects/:project_id/history_exports/:id/download`       | Downloads a completed history export   | Not open to the service account |
+
 ### Lightning's web app
 
 | Method | Path                                                               | What it does                  | Token grant  |

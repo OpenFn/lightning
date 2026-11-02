@@ -23,7 +23,10 @@ defmodule Lightning.WorkOrders.SearchParams do
     :sort_direction,
     :error_signature_exit_reason,
     :error_signature_error_type,
-    :error_signature_job_id
+    :error_signature_job_id,
+    :workorder_ids,
+    :updated_after,
+    :updated_before
   ]
 
   @derive {Jason.Encoder, only: @fields}
@@ -66,7 +69,10 @@ defmodule Lightning.WorkOrders.SearchParams do
           sort_direction: String.t(),
           error_signature_exit_reason: String.t(),
           error_signature_error_type: String.t(),
-          error_signature_job_id: Ecto.UUID.t()
+          error_signature_job_id: Ecto.UUID.t(),
+          workorder_ids: [Ecto.UUID.t()] | nil,
+          updated_after: DateTime.t(),
+          updated_before: DateTime.t()
         }
 
   @primary_key false
@@ -105,6 +111,32 @@ defmodule Lightning.WorkOrders.SearchParams do
     field(:error_signature_exit_reason, :string)
     field(:error_signature_error_type, :string)
     field(:error_signature_job_id, :binary_id)
+
+    # The API's list filters that the History page has no control for: a set
+    # of work order ids, and `updated_at`. See `from_filters/1`.
+    field(:workorder_ids, {:array, :binary_id})
+    field(:updated_after, :utc_datetime_usec)
+    field(:updated_before, :utc_datetime_usec)
+  end
+
+  @doc """
+  The search for the work orders the API's list filters name, keyed and typed
+  as `Lightning.Invocation.Query.work_order_filter_types/0` says, so a bulk
+  action or an export acts on the work orders the list would answer.
+
+  `project_id` is not read: the search always runs in one project.
+  """
+  @spec from_filters(map()) :: t()
+  def from_filters(filters) do
+    %__MODULE__{
+      workorder_ids: filters[:id],
+      workflow_id: filters[:workflow_id],
+      status: Enum.map(filters[:state] || [], &String.to_existing_atom/1),
+      wo_date_after: filters[:inserted_after],
+      wo_date_before: filters[:inserted_before],
+      updated_after: filters[:updated_after],
+      updated_before: filters[:updated_before]
+    }
   end
 
   # Raises on invalid input. A malformed filter is only reachable by hand-editing

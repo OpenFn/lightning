@@ -12,6 +12,7 @@ defmodule Lightning.WorkOrdersTest do
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
+  alias Lightning.WorkOrders.Manual
   alias Lightning.WorkOrders.RetryManyWorkOrdersJob
 
   describe "create_for/2" do
@@ -290,6 +291,26 @@ defmodule Lightning.WorkOrdersTest do
       assert_received %Events.WorkOrderCreated{
         work_order: %{id: ^workorder_id}
       }
+    end
+
+    test "a manual workorder for a workflow deleted after it was read is refused",
+         %{workflow: workflow, job: job} do
+      {:ok, manual} =
+        Manual.new(%{"body" => "{}"},
+          workflow: workflow,
+          project: workflow.project,
+          job: job,
+          created_by: insert(:user)
+        )
+        |> Ecto.Changeset.apply_action(:validate)
+
+      workflow
+      |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second))
+      |> Repo.update!()
+
+      assert WorkOrders.create_for(manual) == {:error, :workflow_deleted}
+
+      refute Repo.get_by(WorkOrder, workflow_id: workflow.id)
     end
   end
 

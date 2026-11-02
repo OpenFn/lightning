@@ -31,6 +31,14 @@ defmodule LightningWeb.API.WorkOrdersJSON do
     }
   end
 
+  def render("created.json", %{work_order: work_order, conn: conn}) do
+    %{
+      data: resource(conn, work_order),
+      included: [],
+      links: %{self: Routes.api_work_orders_url(conn, :show, work_order)}
+    }
+  end
+
   defp resource(conn, work_order) do
     %{
       type: "work_orders",
