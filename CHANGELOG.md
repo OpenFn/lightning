@@ -71,8 +71,9 @@ and this project adheres to
   (`/api/me/mfa`), and disconnect GitHub and list the repositories and branches
   it can reach (`/api/me/github_*`). A superuser can read, set and remove the
   single sign-on provider at `/api/auth_provider`. Creating a token, turning MFA
-  off and replacing backup codes need a session token stepped up in the last
-  five minutes, and answer 403 `step_up_required` otherwise.
+  on or off, replacing the authenticator and replacing backup codes need a
+  session token stepped up in the last five minutes, and answer 403
+  `step_up_required` otherwise.
 
 ### Changed
 

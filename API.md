@@ -176,7 +176,7 @@ their own account, and for a superuser setting up single sign-on.
 | `DELETE` | `/api/me/tokens/:id`                         | Revokes one of your personal access tokens                      | Not open to the service account |
 | `GET`    | `/api/me/mfa`                                | Reads your MFA settings                                         | Session token                   |
 | `POST`   | `/api/me/mfa`                                | Starts setting up an authenticator                              | Session token                   |
-| `PUT`    | `/api/me/mfa`                                | Turns MFA on, or replaces the authenticator                     | Session token                   |
+| `PUT`    | `/api/me/mfa`                                | Turns MFA on, or replaces the authenticator                     | Session token, stepped up       |
 | `DELETE` | `/api/me/mfa`                                | Turns MFA off                                                   | Session token, stepped up       |
 | `POST`   | `/api/me/mfa/backup_codes`                   | Replaces your backup codes                                      | Session token, stepped up       |
 | `DELETE` | `/api/me/github_connection`                  | Disconnects your GitHub account                                 | Session token                   |

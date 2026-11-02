@@ -36,9 +36,12 @@ defmodule Lightning.Policies.Account do
       when action in [:list_own_tokens, :revoke_own_token],
       do: Decision.person(scope, true)
 
-  # A new token is a new way into the account that outlives the session.
+  # A new token is a new way into the account that outlives the session. A new
+  # authenticator is one too: its codes step a session up, so saving one on a
+  # session that hasn't stepped up would hand step-up to anyone at an unlocked
+  # browser, and through it every route below.
   def authorize(action, %Scope{} = scope, _subject)
-      when action in [:create_own_token, :disable_mfa],
+      when action in [:create_own_token, :enable_mfa, :disable_mfa],
       do: Decision.session(scope, true, step_up: true)
 
   # Backup codes exist only alongside MFA.
@@ -49,7 +52,6 @@ defmodule Lightning.Policies.Account do
       when action in [
              :read_own_mfa,
              :start_mfa,
-             :enable_mfa,
              :disconnect_github,
              :list_github_repos
            ],
