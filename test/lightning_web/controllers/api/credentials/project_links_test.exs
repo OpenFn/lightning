@@ -299,6 +299,27 @@ defmodule LightningWeb.API.Credentials.ProjectLinksTest do
       refute Repo.get_by(ProjectCredential, project_id: project.id)
     end
 
+    test "a credential another request links mid-link answers 200 as already linked, adding no second link",
+         %{conn: conn} do
+      owner = insert(:user)
+      project = insert(:project, project_users: [%{user: owner, role: :owner}])
+      credential = unlinked_credential(owner)
+
+      after_first_query("project_credentials", credential.id, fn _id ->
+        insert(:project_credential, project: project, credential: credential)
+      end)
+
+      conn = conn |> with_pat(owner) |> link(project.id, credential.id)
+
+      assert json_response(conn, 200) == %{
+               "credential" => credential_json(credential),
+               "errors" => %{}
+             }
+
+      assert linked_project_ids_of(credential) == [project.id]
+      assert events(credential, "added_to_project") == []
+    end
+
     test "a link another request removes mid-unlink answers 409 concurrent_edit",
          %{conn: conn} do
       owner = insert(:user)
