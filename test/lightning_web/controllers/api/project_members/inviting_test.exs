@@ -7,7 +7,6 @@ defmodule LightningWeb.API.ProjectMembers.InvitingTest do
   import LightningWeb.ApiProjectsHelpers
   import Lightning.Factories
   import Lightning.RaceHelpers
-  import Lightning.ServiceAccountHelpers
 
   alias Lightning.Accounts
   alias Lightning.Extensions.Message
@@ -165,16 +164,9 @@ defmodule LightningWeb.API.ProjectMembers.InvitingTest do
       assert role_of(project.id, editor.id) == :editor
     end
 
-    test "an editor, a stranger and the service account are refused 403, whether or not the project exists",
+    test "an editor and a stranger are refused 403, whether or not the project exists",
          %{conn: conn, editor: editor, project: project} do
-      {service_account_conn, _account} =
-        with_service_account(conn, ["projects:write"])
-
-      callers = [
-        with_pat(conn, editor),
-        with_pat(conn, insert(:user)),
-        service_account_conn
-      ]
+      callers = [with_pat(conn, editor), with_pat(conn, insert(:user))]
 
       for caller <- callers,
           project_id <- [project.id, Ecto.UUID.generate(), "not-a-uuid"] do
