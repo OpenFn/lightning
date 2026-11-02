@@ -33,7 +33,8 @@ defmodule LightningWeb.API.WorkOrderRetryController do
   Without a `job_id` the runs are made in the background, as the History page
   makes them. A `job_id` outside the project is 422 with a `not_found` entry,
   and one whose workflow isn't every work order's a `mismatch` entry. The run
-  limits are asked last, on the work orders that can be retried.
+  limits are asked last, on the work orders that can be retried. Every problem
+  with the body, its selection and its `job_id`, is reported in one 422.
 
   ## Examples
 
@@ -53,9 +54,7 @@ defmodule LightningWeb.API.WorkOrderRetryController do
              Request.param(conn, "project_id"),
              {:history, :run_workflow}
            ),
-         {:ok, selection, extra} <-
-           HistoryBody.selection(conn.body_params, scope, [:job_id]),
-         {:ok, job} <- job(project, extra),
+         {:ok, selection, job} <- read_body(conn.body_params, scope, project),
          work_orders =
            Invocation.search_workorders_for_retry(project, selection.search),
          :ok <- refuse_mismatch(job, work_orders),
@@ -71,29 +70,32 @@ defmodule LightningWeb.API.WorkOrderRetryController do
     end
   end
 
-  defp job(_project, %{"job_id" => nil}), do: {:ok, nil}
+  # Every problem with the selection and with `job_id` goes in one 422.
+  defp read_body(body, scope, project) do
+    with {:ok, selection, entries, extra} <-
+           HistoryBody.selection_entries(body, scope, [:job_id]) do
+      {job, job_entries} = job(project, extra)
 
-  defp job(project, %{"job_id" => _} = extra) do
-    with {:ok, id} <- id(extra),
+      with :ok <- Errors.refuse(entries ++ job_entries),
+           do: {:ok, selection, job}
+    end
+  end
+
+  defp job(project, %{"job_id" => job_id} = extra) when not is_nil(job_id) do
+    with [] <- HistoryBody.id_entries(extra, "job_id"),
+         {:ok, id} = Request.id({["job_id"], job_id}),
          {:ok, job} <- Jobs.get_job_for_project(project.id, id) do
-      {:ok, job}
+      {job, []}
     else
       {:error, :not_found} ->
-        Errors.refuse([Errors.entry(["job_id"], Errors.not_visible())])
+        {nil, [Errors.entry(["job_id"], Errors.not_visible())]}
 
-      refused ->
-        refused
+      entries when is_list(entries) ->
+        {nil, entries}
     end
   end
 
-  defp job(_project, _no_job), do: {:ok, nil}
-
-  defp id(extra) do
-    case HistoryBody.id_entries(extra, "job_id") do
-      [] -> Request.id({["job_id"], extra["job_id"]})
-      entries -> Errors.refuse(entries)
-    end
-  end
+  defp job(_project, _no_job), do: {nil, []}
 
   defp refuse_mismatch(nil, _work_orders), do: :ok
 
