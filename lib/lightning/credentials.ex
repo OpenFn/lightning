@@ -759,6 +759,75 @@ defmodule Lightning.Credentials do
     end
   end
 
+  # These adaptors' credentials connect through OAuth, so the credential form
+  # doesn't offer them as a type.
+  @oauth_schema_packages [
+    "@openfn/language-googlesheets",
+    "@openfn/language-gmail"
+  ]
+
+  @doc """
+  The names of the credential types a credential can be given, as the
+  credential form offers them: `"raw"`, then every catalogue adaptor with a
+  schema, by name, except those whose credentials connect through OAuth.
+
+  `{:error, :not_ready}` while the adaptor catalogue can't answer.
+  """
+  @spec list_schema_names() :: {:ok, [String.t()]} | {:error, :not_ready}
+  def list_schema_names do
+    case Lightning.Adaptors.packages() do
+      {:ok, packages} ->
+        names =
+          for %{has_schema: true, name: name} <- packages,
+              name not in @oauth_schema_packages,
+              do: name
+
+        {:ok, ["raw" | Enum.sort(names)]}
+
+      {:error, _reason} ->
+        {:error, :not_ready}
+    end
+  end
+
+  @doc """
+  The JSON Schema a credential type's body is checked against, decoded with
+  its keys in order, and the type's full name. A short name such as `"dhis2"`
+  resolves to its package. `"raw"` takes any object, so it has no schema
+  (`nil`).
+
+  `{:error, :not_found}` for a name the catalogue doesn't hold, `"oauth"`
+  included, and `{:error, :not_ready}` while the catalogue can't answer.
+  """
+  @spec fetch_schema_document(String.t()) ::
+          {:ok, {String.t(), Jason.OrderedObject.t() | nil}}
+          | {:error, :not_found | :not_ready}
+  def fetch_schema_document(name) do
+    with {:ok, resolved} <- resolve_schema_name(name),
+         {:ok, document} <- schema_document(resolved) do
+      {:ok, {resolved, document}}
+    end
+  end
+
+  defp resolve_schema_name("oauth"), do: {:error, :not_found}
+
+  defp resolve_schema_name(name) do
+    case Lightning.Adaptors.resolve_name(name) do
+      {:ok, resolved} -> {:ok, resolved}
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, _reason} -> {:error, :not_ready}
+    end
+  end
+
+  defp schema_document("raw"), do: {:ok, nil}
+
+  defp schema_document(name) do
+    case Lightning.Adaptors.schema(name) do
+      {:ok, body} -> {:ok, Jason.decode!(body, objects: :ordered_objects)}
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, _reason} -> {:error, :not_ready}
+    end
+  end
+
   @doc """
   Resolves every credential's legacy short-form `schema` to its full npm
   package name, in place. Idempotent; safe to call repeatedly.

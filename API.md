@@ -177,6 +177,8 @@ The service account must send `project_id` to list credentials at
 | `PUT`    | `/api/credentials/:id`                  | Creates or replaces a credential                       | `credentials:write`             |
 | `POST`   | `/api/credentials`                      | Creates a credential you own                           | Not open to the service account |
 | `DELETE` | `/api/credentials/:id`                  | Deletes a credential you own                           | Not open to the service account |
+| `GET`    | `/api/credential_schemas`               | Lists the credential types                             | `credentials:write`             |
+| `GET`    | `/api/credential_schemas/:name`         | Reads a credential type's JSON Schema                  | `credentials:write`             |
 
 ### Workflows and runs
 
