@@ -222,6 +222,12 @@ defmodule LightningWeb.Router do
            API.ChannelController,
            :delete
 
+    get "/projects/:project_id/channel_requests",
+        API.ChannelRequestController,
+        :index
+
+    get "/channel_requests/:id", API.ChannelRequestController, :show
+
     # end-api-area:webhooks_channels
 
     # api-area:ai_assistant (routes for this area go between these markers)
