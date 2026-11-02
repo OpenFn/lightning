@@ -9,8 +9,9 @@ defmodule LightningWeb.API.WebhookAuthMethodController do
       PUT    /api/projects/:project_id/webhook_auth_methods/:id
       DELETE /api/projects/:project_id/webhook_auth_methods/:id
 
-  Any member lists them. Reading, writing and deleting one is for an owner or
-  admin. A method scheduled for deletion is left out of the list, and reading,
+  Any member lists them, but only an owner or admin sees each one's `username`
+  and `api_key_last_characters`, as only they reach the settings page's form.
+  Reading, writing and deleting one is for an owner or admin. A method scheduled for deletion is left out of the list, and reading,
   replacing or deleting it again answers 409 `scheduled_for_deletion`.
 
   Secrets go out only in the `201` that creates an `api` method (its
@@ -58,7 +59,13 @@ defmodule LightningWeb.API.WebhookAuthMethodController do
       page =
         WebhookAuthMethods.paginate_for_project(project, Filters.page(params))
 
-      json(conn, WebhookAuthMethodJSON.index(conn, project, page))
+      hints? =
+        match?(
+          {:ok, _project},
+          Target.project(conn.assigns.scope, project, @manage)
+        )
+
+      json(conn, WebhookAuthMethodJSON.index(conn, project, page, hints?))
     end
   end
 
@@ -206,18 +213,29 @@ defmodule LightningWeb.API.WebhookAuthMethodController do
 
   defp unchangeable(auth_method, body) do
     for {key, stored} <- [
-          {"auth_type", to_string(auth_method.auth_type)},
-          {"username", auth_method.username},
-          {"password", auth_method.password}
+          {"auth_type", to_string(auth_method.auth_type)}
+          | credentials(auth_method)
         ],
         Map.has_key?(body, key),
         not same?(body[key], stored),
         do: Errors.entry([key], @unchangeable)
   end
 
+  # Compared with what a read shows: an api method's username and password
+  # are null there, whatever the row holds.
+  defp credentials(%WebhookAuthMethod{auth_type: :basic} = auth_method),
+    do: [
+      {"username", auth_method.username},
+      {"password", auth_method.password}
+    ]
+
+  defp credentials(%WebhookAuthMethod{}),
+    do: [{"username", nil}, {"password", nil}]
+
   defp same?(sent, stored) when is_binary(sent) and is_binary(stored),
     do: Plug.Crypto.secure_compare(sent, stored)
 
+  defp same?(nil, nil), do: true
   defp same?(_sent, _stored), do: false
 
   defp render_method(conn, auth_method, secrets) do

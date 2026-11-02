@@ -5,17 +5,27 @@ defmodule LightningWeb.API.WebhookAuthMethodJSON do
   A method's secret goes out only when the controller asks: `:api_key` for the
   `201` that creates an `api` method, and `:secret` (the `api_key`, or the
   `password` of a `basic` method) for a stepped-up session token.
+
+  The list shows a method's `username` and `api_key_last_characters` only to a
+  caller who may manage it; anyone else gets them as null.
   """
   import LightningWeb.API.Helpers
 
+  alias Lightning.Projects.Project
   alias Lightning.Workflows.WebhookAuthMethod
   alias LightningWeb.Router.Helpers, as: Routes
 
   @type secrets :: nil | :api_key | :secret
 
-  def index(conn, project, page) do
+  @spec index(Plug.Conn.t(), Project.t(), Scrivener.Page.t(), boolean()) ::
+          map()
+  def index(conn, project, page, hints?) do
     %{
-      data: Enum.map(page.entries, &resource(conn, project.id, &1, nil)),
+      data:
+        Enum.map(
+          page.entries,
+          &(conn |> resource(project.id, &1, nil) |> hints(hints?))
+        ),
       links: pagination_links(conn, page, %{})
     }
   end
@@ -53,6 +63,15 @@ defmodule LightningWeb.API.WebhookAuthMethodJSON do
             "/api/projects/#{project_id}/webhook_auth_methods/#{auth_method.id}"
       }
     }
+  end
+
+  defp hints(resource, true), do: resource
+
+  defp hints(resource, false) do
+    update_in(
+      resource.attributes,
+      &%{&1 | username: nil, api_key_last_characters: nil}
+    )
   end
 
   defp username(%WebhookAuthMethod{auth_type: :basic, username: username}),
