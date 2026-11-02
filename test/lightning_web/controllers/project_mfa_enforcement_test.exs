@@ -260,6 +260,48 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
     end
   end
 
+  describe "the API's workflow history and delete routes on an MFA-required project" do
+    setup [:unenrolled_member, :enrolled_member]
+
+    # Each request is one an enrolled member makes successfully, so the 403
+    # below can only be the MFA requirement.
+    defp workflow_requests(project) do
+      workflow = insert(:simple_workflow, project: project) |> with_snapshot()
+      [snapshot] = Lightning.Workflows.Snapshot.get_all_for(workflow)
+
+      [
+        {:get, "/api/workflows/#{workflow.id}/snapshots", 200},
+        {:get, "/api/workflows/#{workflow.id}/snapshots/#{snapshot.id}", 200},
+        {:get, "/api/workflows/#{workflow.id}/versions", 200},
+        {:delete, "/api/projects/#{project.id}/workflows/#{workflow.id}", 204}
+      ]
+    end
+
+    test "are refused to a member who has not enrolled", %{
+      user: user,
+      project: project
+    } do
+      for {verb, path, _status} <- workflow_requests(project) do
+        user
+        |> bearer_conn()
+        |> dispatch(@endpoint, verb, path)
+        |> assert_problem(403, :forbidden, [])
+      end
+    end
+
+    test "still work for a member who has enrolled", %{
+      enrolled_user: user,
+      enrolled_project: project
+    } do
+      for {verb, path, status} <- workflow_requests(project) do
+        conn = user |> bearer_conn() |> dispatch(@endpoint, verb, path)
+
+        assert conn.status == status,
+               "#{verb} #{path} answered #{conn.status} to an enrolled member"
+      end
+    end
+  end
+
   describe "the bearer-token API on an MFA-required project" do
     # Decision: `requires_mfa` binds API tokens as well as browser sessions.
     # An unenrolled member's token is refused the same as their session,

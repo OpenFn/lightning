@@ -189,6 +189,18 @@ defmodule LightningWeb.Router do
     # end-api-area:credential_extras
 
     # api-area:workflows (routes for this area go between these markers)
+    delete "/projects/:project_id/workflows/:id",
+           API.WorkflowsController,
+           :delete
+
+    get "/workflows/:id/snapshots", API.WorkflowSnapshotController, :index
+
+    get "/workflows/:id/snapshots/:snapshot_id",
+        API.WorkflowSnapshotController,
+        :show
+
+    get "/workflows/:id/versions", API.WorkflowVersionController, :index
+
     # end-api-area:workflows
 
     # api-area:work_orders_runs (routes for this area go between these markers)

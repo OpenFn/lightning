@@ -353,6 +353,63 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "a workflow's snapshots and versions take a person's tokens, and refuse the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      workflow = insert(:simple_workflow, project: project) |> with_snapshot()
+
+      for path <- [
+            ~p"/api/workflows/#{workflow.id}/snapshots",
+            ~p"/api/workflows/#{workflow.id}/versions"
+          ] do
+        assert_each_kind(conn, tokens, path,
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :logs_in,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: :logs_in
+        )
+      end
+    end
+
+    # The route writes, so each person's token is shown let in by the answer
+    # the route gives once it reads the request: 404 for a workflow the
+    # project hasn't got.
+    test "deleting a workflow takes a person's tokens, and refuse the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      workflow = insert(:simple_workflow, project: project)
+
+      for {verb, path, let_in} <- [
+            {:delete,
+             ~p"/api/projects/#{project.id}/workflows/#{Ecto.UUID.generate()}",
+             {404, :not_found}}
+          ],
+          {kind, token} <- tokens do
+        conn =
+          conn
+          |> with_token(token)
+          |> put_req_header("content-type", "application/json")
+          |> dispatch(@endpoint, verb, path, "{}")
+
+        case kind do
+          kind when kind in [:personal, :session] ->
+            {status, code} = let_in
+            assert_problem(conn, status, code)
+
+          kind when kind in [:service_account, :repo_connection] ->
+            assert_problem(conn, 403, :forbidden, [])
+
+          :expired_service_account ->
+            assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+          :run ->
+            assert_unauthenticated(conn, :invalid_token, @invalid_token)
+        end
+      end
+
+      refute Repo.reload!(workflow).deleted_at
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens

@@ -5,8 +5,11 @@ defmodule Lightning.Policies.Workflows do
   @behaviour Bodyguard.Policy
 
   alias Lightning.Accounts.User
+  alias Lightning.Policies.Decision
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.Project
   alias Lightning.Run
+  alias Lightning.Scope
 
   @type actions :: :access_write | :access_read
   @spec authorize(actions(), User.t() | Run.t(), Project.t()) ::
@@ -25,4 +28,41 @@ defmodule Lightning.Policies.Workflows do
       when access in [:access_write, :access_read] do
     Lightning.Runs.get_project_id_for_run(run) == project.id
   end
+
+  # The API's actions on a workflow's lifecycle and history, open to a person
+  # on either of their tokens, a personal access token or a session token, and
+  # to nothing else (`Decision.person/2`): the service account and repo
+  # connections are refused 403 before anything is looked up. Within that, the
+  # rule is `Lightning.Policies.ProjectUsers`'s, so a project's roles, MFA
+  # requirement and scheduled deletion apply as they do in the app.
+  #
+  #   * `:delete_workflow` - owners, admins and editors.
+  #   * `:read_workflow_history` - any member, for snapshots and versions.
+  #   * `:publish_template` - support users who are members, or whose project
+  #     allows support access.
+  #   * `:list_templates` - anyone; templates are published instance-wide.
+  @type api_actions ::
+          :delete_workflow
+          | :read_workflow_history
+          | :publish_template
+          | :list_templates
+
+  @spec authorize(api_actions(), Scope.t(), term()) :: Decision.answer()
+  def authorize(action, %Scope{} = scope, subject)
+      when action in [:delete_workflow, :publish_template],
+      do: Decision.person(scope, ProjectUsers.authorize(action, scope, subject))
+
+  def authorize(:read_workflow_history, %Scope{} = scope, subject),
+    do:
+      Decision.person(
+        scope,
+        ProjectUsers.authorize(:access_project, scope, subject)
+      )
+
+  def authorize(:list_templates, %Scope{} = scope, subject),
+    do:
+      Decision.person(
+        scope,
+        Decision.instance(scope, subject, "projects:write", true)
+      )
 end

@@ -172,6 +172,20 @@ defmodule Lightning.WorkflowVersions do
   end
 
   @doc """
+  A page of the workflow's recorded versions, newest first, as
+  `Lightning.Repo.paginate/2` takes `page`. The order is `history_for/1`'s
+  reversed.
+  """
+  @spec paginate_for(Workflow.t(), keyword()) :: Scrivener.Page.t()
+  def paginate_for(%Workflow{id: id}, page) do
+    from(v in WorkflowVersion,
+      where: v.workflow_id == ^id,
+      order_by: [desc: v.inserted_at, desc: v.id]
+    )
+    |> Repo.paginate(page)
+  end
+
+  @doc """
   Returns the **latest** head for a workflow (or `nil` if none).
 
   Queries `workflow_versions` with `ORDER BY inserted_at DESC, id DESC LIMIT 1`
