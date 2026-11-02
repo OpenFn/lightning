@@ -15,9 +15,8 @@ defmodule LightningWeb.API.ProjectSettingsController do
 
   `PUT /api/projects/:id/mfa_requirement` takes `requires_mfa` and needs
   `:edit_project`. A sandbox copies it from the project it was created from,
-  so setting it there is a `not_allowed` entry. Turning it on is 402
-  `exceeds_limit` when the plan doesn't include requiring MFA; turning it off
-  never is.
+  so setting it there is a `not_allowed` entry. Changing it, on or off, is
+  402 `exceeds_limit` when the plan doesn't include requiring MFA.
 
   `PUT /api/projects/:id/support_access` takes `allow_support_access` and needs
   `:edit_project`.
@@ -75,8 +74,8 @@ defmodule LightningWeb.API.ProjectSettingsController do
           Plug.Conn.t() | {:error, term()}
   def mfa_requirement(conn, _params) do
     with {:ok, project} <- target(conn, :edit_project),
-         {:ok, requires_mfa} <- flag(conn.body_params, :requires_mfa),
-         :ok <- refuse_on_sandbox(project),
+         {:ok, requires_mfa} <-
+           flag(conn.body_params, :requires_mfa, on_sandbox(project)),
          :ok <- limit_mfa(project, requires_mfa) do
       update(conn, project, %{requires_mfa: requires_mfa})
     end
@@ -139,7 +138,9 @@ defmodule LightningWeb.API.ProjectSettingsController do
         do: Errors.entry([field], @not_in_plan)
   end
 
-  defp flag(body, field) do
+  # `entries` are the route's own problems with the body, reported with the
+  # flag's.
+  defp flag(body, field, entries \\ []) do
     with :ok <- Request.check_object(body) do
       request =
         {%{}, %{field => :boolean}}
@@ -147,22 +148,25 @@ defmodule LightningWeb.API.ProjectSettingsController do
         |> validate_required(field)
 
       entries =
-        Request.unknown_keys(body, [], [field]) ++ Errors.from_changeset(request)
+        Request.unknown_keys(body, [], [field]) ++
+          Errors.from_changeset(request) ++ entries
 
       with :ok <- Errors.refuse(entries), do: {:ok, get_field(request, field)}
     end
   end
 
-  defp refuse_on_sandbox(project) do
+  defp on_sandbox(project) do
     if Project.sandbox?(project),
-      do: Errors.refuse([Errors.entry([:requires_mfa], @on_sandbox)]),
-      else: :ok
+      do: [Errors.entry([:requires_mfa], @on_sandbox)],
+      else: []
   end
 
-  defp limit_mfa(%Project{requires_mfa: false} = project, true),
-    do: ProjectLimiter.limit_require_mfa(project.id)
+  # As the settings page's toggle, a plan without the feature refuses any
+  # change, off as well as on. Sending the current value back changes nothing.
+  defp limit_mfa(%Project{requires_mfa: same}, same), do: :ok
 
-  defp limit_mfa(_project, _requires_mfa), do: :ok
+  defp limit_mfa(project, _requires_mfa),
+    do: ProjectLimiter.limit_require_mfa(project.id)
 
   defp update(conn, project, attrs) do
     with {:ok, project} <-

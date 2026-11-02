@@ -46,7 +46,7 @@ defmodule LightningWeb.API.Projects.MfaAndSupportAccessTest do
       assert audit_events(project.id) == [{"requires_mfa_updated", owner.id}]
     end
 
-    test "turning it on when the plan doesn't include it answers 402, while turning it off is never refused",
+    test "changing it, on or off, when the plan doesn't include it answers 402, while sending the current value back changes nothing",
          %{conn: conn} do
       admin = insert(:user, mfa_enabled: true)
 
@@ -80,30 +80,50 @@ defmodule LightningWeb.API.Projects.MfaAndSupportAccessTest do
           ~p"/api/projects/#{on}/mfa_requirement",
           ~s({"requires_mfa": false})
         )
-        |> json_response(200)
+        |> assert_problem(402, :exceeds_limit, [])
 
-        refute Repo.reload!(on).requires_mfa
+        assert Repo.reload!(on).requires_mfa
+
+        assert conn
+               |> with_pat(admin)
+               |> put(
+                 ~p"/api/projects/#{on}/mfa_requirement",
+                 ~s({"requires_mfa": true})
+               )
+               |> json_response(200)
+
+        assert audit_events(on.id) == []
       end
     end
 
-    test "a sandbox answers 422, since it copies the setting from its parent",
+    test "a sandbox answers 422, since it copies the setting from its parent, alongside every other problem with the body",
          %{conn: conn} do
       {conn, _account} = with_service_account(conn, ["projects:write"])
       sandbox = insert(:sandbox, parent: insert(:project))
 
-      conn
-      |> put(
-        ~p"/api/projects/#{sandbox}/mfa_requirement",
-        ~s({"requires_mfa": true})
-      )
-      |> assert_problem(422, :invalid, [
-        %{
-          "pointer" => "#/requires_mfa",
-          "code" => "not_allowed",
-          "detail" =>
-            "can't be set on a sandbox, which copies it from the project it was created from"
-        }
-      ])
+      on_sandbox = %{
+        "pointer" => "#/requires_mfa",
+        "code" => "not_allowed",
+        "detail" =>
+          "can't be set on a sandbox, which copies it from the project it was created from"
+      }
+
+      for {body, entries} <- [
+            {%{"requires_mfa" => true}, [on_sandbox]},
+            {%{"requires_mfa" => true, "colour" => "red"},
+             [
+               %{
+                 "pointer" => "#/colour",
+                 "code" => "unknown_key",
+                 "detail" => "is not accepted"
+               },
+               on_sandbox
+             ]}
+          ] do
+        conn
+        |> put(~p"/api/projects/#{sandbox}/mfa_requirement", Jason.encode!(body))
+        |> assert_problem(422, :invalid, entries)
+      end
 
       refute Repo.reload!(sandbox).requires_mfa
     end
