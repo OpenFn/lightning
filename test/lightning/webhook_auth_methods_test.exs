@@ -210,6 +210,101 @@ defmodule Lightning.WebhookAuthMethodsTest do
                  actor: user
                )
     end
+
+    test "returns a taken error, not a raise, for a name another method in the project has",
+         %{auth_method: auth_method} do
+      insert(:webhook_auth_method,
+        project_id: auth_method.project_id,
+        project: nil,
+        name: "taken"
+      )
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               WebhookAuthMethods.update_auth_method(
+                 auth_method,
+                 %{name: "taken"},
+                 actor: insert(:user)
+               )
+
+      assert [{:name, {"must be unique within the project", opts}}] = errors
+      assert opts[:constraint] == :unique
+    end
+
+    test "returns :concurrent_edit for a method deleted since it was read", %{
+      auth_method: auth_method
+    } do
+      Repo.delete!(auth_method)
+
+      assert {:error, :concurrent_edit} =
+               WebhookAuthMethods.update_auth_method(
+                 auth_method,
+                 %{name: "new_name"},
+                 actor: insert(:user)
+               )
+    end
+  end
+
+  describe "create_auth_method/2 with an id" do
+    test "creates the method under the id given" do
+      project = insert(:project)
+      id = Ecto.UUID.generate()
+
+      assert {:ok, %{id: ^id}} =
+               WebhookAuthMethods.create_auth_method(
+                 %{name: "partner", auth_type: "api", project_id: project.id},
+                 actor: insert(:user),
+                 id: id
+               )
+    end
+
+    test "returns an error on the id, not a raise, for an id already held" do
+      held = insert(:webhook_auth_method)
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               WebhookAuthMethods.create_auth_method(
+                 %{
+                   name: "partner",
+                   auth_type: "api",
+                   project_id: insert(:project).id
+                 },
+                 actor: insert(:user),
+                 id: held.id
+               )
+
+      assert [{:id, {_message, opts}}] = errors
+      assert opts[:constraint] == :unique
+    end
+  end
+
+  describe "paginate_for_project/2" do
+    test "pages the project's methods by name with their triggers, leaving out those scheduled for deletion" do
+      project = insert(:project)
+      trigger = hd(insert(:simple_workflow, project: project).triggers)
+
+      insert(:webhook_auth_method,
+        project: project,
+        name: "b",
+        triggers: [trigger]
+      )
+
+      insert(:webhook_auth_method, project: project, name: "a")
+      insert(:webhook_auth_method, project: project, name: "c")
+
+      insert(:webhook_auth_method,
+        project: project,
+        name: "aa",
+        scheduled_deletion: DateTime.utc_now()
+      )
+
+      insert(:webhook_auth_method, name: "other")
+
+      page = WebhookAuthMethods.paginate_for_project(project, page_size: 2)
+
+      assert page.total_entries == 3
+      assert Enum.map(page.entries, & &1.name) == ["a", "b"]
+      assert [[], [%{id: trigger_id}]] = Enum.map(page.entries, & &1.triggers)
+      assert trigger_id == trigger.id
+    end
   end
 
   describe "update_trigger_auth_methods/3" do
@@ -649,5 +744,15 @@ defmodule Lightning.WebhookAuthMethodsTest do
       |> Lightning.Encrypted.Binary.load()
 
     val
+  end
+
+  test "schedule_for_deletion/2 returns :concurrent_edit for a method deleted since it was read" do
+    auth_method = insert(:webhook_auth_method)
+    Repo.delete!(auth_method)
+
+    assert {:error, :concurrent_edit} =
+             WebhookAuthMethods.schedule_for_deletion(auth_method,
+               actor: insert(:user)
+             )
   end
 end
