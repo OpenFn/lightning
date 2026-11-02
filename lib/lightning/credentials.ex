@@ -2239,6 +2239,34 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
+  A page of `project`'s keychain credentials by name, each with who created
+  it and its default credential loaded.
+  """
+  @spec paginate_keychain_credentials_for_project(Project.t(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_keychain_credentials_for_project(%Project{id: project_id}, page) do
+    from(kc in KeychainCredential,
+      where: kc.project_id == ^project_id,
+      order_by: [asc: fragment("lower(?)", kc.name), asc: kc.id],
+      preload: [:created_by, :default_credential]
+    )
+    |> Repo.paginate(page)
+  end
+
+  @doc """
+  The keychain credential `id` in the project `project_id`, with who created
+  it and its default credential loaded, or `{:error, :not_found}`.
+  """
+  @spec get_keychain_credential_for_project(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, KeychainCredential.t()} | {:error, :not_found}
+  def get_keychain_credential_for_project(project_id, id) do
+    KeychainCredential
+    |> where(id: ^id, project_id: ^project_id)
+    |> preload([:created_by, :default_credential])
+    |> Repo.fetch_one()
+  end
+
+  @doc """
   Gets a single keychain credential.
 
   Raises `Ecto.NoResultsError` if the KeychainCredential does not exist.
@@ -2291,9 +2319,11 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Updates a keychain credential on behalf of an actor.
+  Updates a keychain credential on behalf of an actor, a person or the
+  service account.
 
-  Returns `{:error, :unauthorized}` when the actor may not edit it.
+  Returns `{:error, :unauthorized}` when the actor may not edit it, and
+  `{:error, :concurrent_edit}` when another request deleted it meanwhile.
 
   ## Examples
 
@@ -2301,13 +2331,17 @@ defmodule Lightning.Credentials do
       {:ok, %KeychainCredential{}}
 
   """
-  @spec update_keychain_credential(KeychainCredential.t(), map(), User.t()) ::
+  @spec update_keychain_credential(
+          KeychainCredential.t(),
+          map(),
+          Lightning.Actor.t()
+        ) ::
           {:ok, KeychainCredential.t()}
-          | {:error, Ecto.Changeset.t() | :unauthorized}
+          | {:error, Ecto.Changeset.t() | :unauthorized | :concurrent_edit}
   def update_keychain_credential(
         %KeychainCredential{} = keychain_credential,
         attrs,
-        %User{} = actor
+        actor
       ) do
     with :ok <-
            authorize_keychain(
@@ -2317,14 +2351,17 @@ defmodule Lightning.Credentials do
            ) do
       keychain_credential
       |> KeychainCredential.changeset(attrs)
-      |> Repo.update()
+      |> Repo.update(stale_error_field: :id)
+      |> keychain_stale()
     end
   end
 
   @doc """
-  Deletes a keychain credential on behalf of an actor.
+  Deletes a keychain credential on behalf of an actor, a person or the
+  service account.
 
-  Returns `{:error, :unauthorized}` when the actor may not delete it.
+  Returns `{:error, :unauthorized}` when the actor may not delete it, and
+  `{:error, :concurrent_edit}` when another request deleted it meanwhile.
 
   ## Examples
 
@@ -2332,12 +2369,12 @@ defmodule Lightning.Credentials do
       {:ok, %KeychainCredential{}}
 
   """
-  @spec delete_keychain_credential(KeychainCredential.t(), User.t()) ::
+  @spec delete_keychain_credential(KeychainCredential.t(), Lightning.Actor.t()) ::
           {:ok, KeychainCredential.t()}
-          | {:error, Ecto.Changeset.t() | :unauthorized}
+          | {:error, Ecto.Changeset.t() | :unauthorized | :concurrent_edit}
   def delete_keychain_credential(
         %KeychainCredential{} = keychain_credential,
-        %User{} = actor
+        actor
       ) do
     with :ok <-
            authorize_keychain(
@@ -2345,11 +2382,21 @@ defmodule Lightning.Credentials do
              actor,
              keychain_credential
            ) do
-      Repo.delete(keychain_credential)
+      keychain_credential
+      |> Repo.delete(stale_error_field: :id)
+      |> keychain_stale()
     end
   end
 
-  defp authorize_keychain(action, %User{} = actor, %KeychainCredential{} = kc) do
+  # Another request deleted the keychain credential since it was read.
+  defp keychain_stale(
+         {:error, %Ecto.Changeset{errors: [id: {_message, stale: true}]}}
+       ),
+       do: {:error, :concurrent_edit}
+
+  defp keychain_stale(result), do: result
+
+  defp authorize_keychain(action, actor, %KeychainCredential{} = kc) do
     if Permissions.can?(:credentials, action, actor, kc) do
       :ok
     else
