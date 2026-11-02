@@ -16,6 +16,8 @@ defmodule Lightning.Policies.Collections do
     * `:manage_collection` (creating, renaming or deleting the collection
       itself) requires `:owner` or `:admin`. Creation is authorized against the
       `%Project{}`, since no collection exists yet.
+    * `:list_all_collections` (every project's collections at once) has no
+      project, and needs a superuser or the service account.
 
   Every action needs the `collections:write` grant.
 
@@ -36,6 +38,7 @@ defmodule Lightning.Policies.Collections do
           | :delete_collection_item
           | :delete_all_collection_items
           | :manage_collection
+          | :list_all_collections
 
   @editor_roles [:owner, :admin, :editor]
   @admin_roles [:owner, :admin]
@@ -43,8 +46,19 @@ defmodule Lightning.Policies.Collections do
   @spec authorize(
           actions(),
           Scope.t() | Scope.actor(),
-          Collection.t() | Project.t() | :before_target
+          Collection.t() | Project.t() | :before_target | nil
         ) :: Decision.answer()
+  # Who may see every project is a fact about the caller alone, so the check
+  # made before any target decides it.
+  def authorize(:list_all_collections, %Scope{} = scope, _subject),
+    do:
+      Decision.instance(
+        scope,
+        nil,
+        "collections:write",
+        Scope.instance_wide?(scope)
+      )
+
   def authorize(action, %Scope{} = scope, subject),
     do:
       Decision.project(scope, subject, "collections:write", judge(action, scope))

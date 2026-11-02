@@ -188,6 +188,17 @@ defmodule LightningWeb.Router do
     # api-area:credential_extras (routes for this area go between these markers)
     get "/credential_schemas", API.CredentialSchemaController, :index
     get "/credential_schemas/:name", API.CredentialSchemaController, :show
+
+    get "/collections", API.CollectionController, :list_all
+
+    get "/projects/:project_id/collections",
+        API.CollectionController,
+        :index
+
+    delete "/projects/:project_id/collections/:id",
+           API.CollectionController,
+           :delete
+
     # end-api-area:credential_extras
 
     # api-area:workflows (routes for this area go between these markers)
