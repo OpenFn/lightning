@@ -83,6 +83,11 @@ defmodule LightningWeb.API.ProjectCredentialController do
       conn
       |> put_status(:created)
       |> CredentialController.render_credential(credential)
+    else
+      # Another request linked it after the lookup. Rerun the request, which
+      # now finds the link and answers as for a repeat.
+      :link_taken -> update(conn, conn.params)
+      error -> error
     end
   end
 
@@ -109,11 +114,24 @@ defmodule LightningWeb.API.ProjectCredentialController do
            actor
          ) do
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:error, Errors.problem(changeset, %{external_id: :id}, path: [:id])}
+        if link_taken?(changeset),
+          do: :link_taken,
+          else:
+            {:error, Errors.problem(changeset, %{external_id: :id}, path: [:id])}
 
       result ->
         result
     end
+  end
+
+  defp link_taken?(changeset) do
+    changeset
+    |> Ecto.Changeset.get_change(:project_credentials, [])
+    |> Enum.any?(fn link ->
+      link.errors
+      |> Keyword.get_values(:project_id)
+      |> Enum.any?(fn {_message, opts} -> opts[:constraint] == :unique end)
+    end)
   end
 
   @doc """
