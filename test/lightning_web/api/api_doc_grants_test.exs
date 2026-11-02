@@ -55,14 +55,39 @@ defmodule LightningWeb.API.ApiDocGrantsTest do
           assert_problem(conn, 403, :forbidden, [])
         end
 
+      nil when cell in ["Session token", "Session token, stepped up"] ->
+        test "#{verb} #{path} refuses the service account and a personal access token, as API.md says",
+             %{conn: conn} do
+          {account_conn, _account} =
+            with_service_account(conn, AccessToken.scopes())
+
+          token =
+            Lightning.Factories.insert(:user)
+            |> Lightning.Accounts.generate_api_token()
+
+          personal_conn =
+            put_req_header(conn, "authorization", "Bearer " <> token)
+
+          for caller <- [account_conn, personal_conn] do
+            conn = request(caller, @verb, @path)
+
+            assert {conn.status, code(conn)} == {403, "forbidden"},
+                   "#{@verb} #{@path} answered #{answer(conn)} to a bearer " <>
+                     "token, though API.md says it takes only a session token"
+
+            assert_problem(conn, 403, :forbidden, [])
+          end
+        end
+
       nil ->
         @cell cell
 
         test "#{verb} #{path}'s grant cell names one grant or a fixed phrase" do
           flunk(
             "#{@verb} #{@path}'s grant cell holds #{inspect(@cell)}. Give " <>
-              "it one grant in backticks, \"Not open to the service " <>
-              "account\", \"None\" or \"Session only\"."
+              ~s(it one grant in backticks, "Not open to the service ) <>
+              ~s(account", "None", "Session only", "Session token" or ) <>
+              ~s("Session token, stepped up".)
           )
         end
     end

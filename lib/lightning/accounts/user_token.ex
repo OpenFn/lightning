@@ -245,6 +245,24 @@ defmodule Lightning.Accounts.UserToken do
   end
 
   @doc """
+  The `user`'s reset password token with the value emailed to them, or no row
+  for a value that isn't one.
+  """
+  def reset_password_token_query(%User{id: user_id}, token) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded_token} ->
+        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
+
+        from(t in token_and_context_query(hashed_token, "reset_password"),
+          where: t.user_id == ^user_id
+        )
+
+      :error ->
+        from(t in Lightning.Accounts.UserToken, where: false)
+    end
+  end
+
+  @doc """
   Returns the token struct for the given token value and context.
   """
   def token_and_context_query(token, context) do

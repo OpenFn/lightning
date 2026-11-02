@@ -112,8 +112,35 @@ defmodule LightningWeb.API.SentinelSweepTest do
     {:post, "/api/session"} => @forbidden,
     {:get, "/api/session"} => @session,
     {:delete, "/api/session"} => {204, nil, []},
-    {:get, "/api/instance"} => {200, nil, []}
+    {:get, "/api/instance"} => {200, nil, []},
+    # The planted body has no email and keys the route doesn't take, and an
+    # array isn't an object. A reset token that names nothing is not found
+    # before the body is read.
+    {:post, "/api/password_resets"} => %{
+      array: @malformed,
+      otherwise: {422, nil, []}
+    },
+    {:put, "/api/password_resets/:token"} => @not_found,
+    {:post, "/api/confirmations"} => %{
+      array: @malformed,
+      otherwise: {422, nil, []}
+    },
+    {:put, "/api/confirmations/:token"} => @session
   }
+
+  # Routes on the bearer pipeline that take only a session token, which the
+  # sweep never sends.
+  @session_token_only [
+    {:post, "/api/me/tokens"},
+    {:get, "/api/me/mfa"},
+    {:post, "/api/me/mfa"},
+    {:put, "/api/me/mfa"},
+    {:delete, "/api/me/mfa"},
+    {:post, "/api/me/mfa/backup_codes"},
+    {:delete, "/api/me/github_connection"},
+    {:get, "/api/me/github_repos"},
+    {:get, "/api/me/github_repos/:owner/:name/branches"}
+  ]
 
   setup do
     user = insert(:user)
@@ -211,6 +238,10 @@ defmodule LightningWeb.API.SentinelSweepTest do
   defp refused_to_a_stranger?(%{verb: :put, path: "/api/credentials/:id"}),
     do: false
 
+  # A person's own account has no stranger: the id is looked for among the
+  # caller's own records.
+  defp refused_to_a_stranger?(%{path: "/api/me/" <> _}), do: false
+
   defp refused_to_a_stranger?(%{pipeline: pipeline}),
     do: Map.has_key?(@pipelines, pipeline)
 
@@ -306,8 +337,25 @@ defmodule LightningWeb.API.SentinelSweepTest do
               attempt in [:planted, :array],
        do: @forbidden
 
-  defp expected(%{pipeline: [:session_api], verb: verb, path: path}, _attempt),
-    do: Map.fetch!(@session_api, {verb, path})
+  # Only a superuser may set the sign-in provider, so the member is refused
+  # before the body is read.
+  defp expected(%{path: "/api/auth_provider"}, :array), do: @forbidden
+
+  # A route that takes only a session token refuses the member's personal
+  # token before it reads an id or a body.
+  defp expected(%{verb: verb, path: path}, attempt)
+       when {verb, path} in @session_token_only and attempt in [:planted, :array],
+       do: @forbidden
+
+  defp expected(%{pipeline: [:session_api], verb: verb, path: path}, attempt) do
+    case Map.fetch!(@session_api, {verb, path}) do
+      %{otherwise: otherwise} = by_attempt ->
+        Map.get(by_attempt, attempt, otherwise)
+
+      answer ->
+        answer
+    end
+  end
 
   defp expected(%{pipeline: pipeline} = route, attempt) do
     row =

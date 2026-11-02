@@ -414,13 +414,25 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Updates or Inserts the user's TOTP
+  Updates or Inserts the user's TOTP, saving the secret on `totp`, which the
+  code in `attrs` must match.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted the TOTP
+  after it was read.
   """
   @spec upsert_user_totp(UserTOTP.t(), map()) ::
-          {:ok, UserTOTP.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, UserTOTP.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def upsert_user_totp(totp, attrs) do
+    # The changeset casts only the code, so a new secret put on an existing
+    # TOTP has to be written as a change of its own.
+    changeset =
+      totp
+      |> UserTOTP.changeset(attrs)
+      |> Ecto.Changeset.force_change(:secret, totp.secret)
+
     Multi.new()
-    |> Multi.insert_or_update(:totp, UserTOTP.changeset(totp, attrs))
+    |> Multi.insert_or_update(:totp, changeset, stale_error_field: :id)
     |> Multi.update(:user, fn %{totp: totp} ->
       totp = Repo.preload(totp, [:user])
 
@@ -438,15 +450,24 @@ defmodule Lightning.Accounts do
     |> Repo.transaction()
     |> case do
       {:ok, %{totp: totp}} -> {:ok, totp}
-      {:error, :totp, changeset, _} -> {:error, changeset}
+      {:error, :totp, changeset, _} -> stale_or(changeset)
     end
   end
 
+  defp stale_or(%Changeset{errors: errors} = changeset) do
+    if Enum.any?(errors, fn {_field, {_message, opts}} -> opts[:stale] end),
+      do: {:error, :concurrent_edit},
+      else: {:error, changeset}
+  end
+
   @doc """
-  Deletes the given user's TOTP
+  Deletes the given user's TOTP.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted it first.
   """
   @spec delete_user_totp(UserTOTP.t()) ::
-          {:ok, UserTOTP.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, UserTOTP.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def delete_user_totp(totp) do
     Multi.new()
     |> Multi.update(:user, fn _changes ->
@@ -454,10 +475,11 @@ defmodule Lightning.Accounts do
 
       Ecto.Changeset.change(totp.user, %{mfa_enabled: false})
     end)
-    |> Multi.delete(:totp, totp)
+    |> Multi.delete(:totp, totp, stale_error_field: :id)
     |> Repo.transaction()
     |> case do
       {:ok, %{totp: totp}} -> {:ok, totp}
+      {:error, :totp, changeset, _} -> stale_or(changeset)
       {:error, _key, changeset, _} -> {:error, changeset}
     end
   end
@@ -508,21 +530,44 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Regenerates the user backup codes
+  Replaces the user's backup codes with ten new ones, returning the user with
+  them.
+
+  Returns `{:error, :concurrent_edit}`, and changes nothing, when another
+  request replaced or used up the codes after they were read.
   """
   @spec regenerate_user_backup_codes(User.t()) ::
-          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, User.t()} | {:error, :concurrent_edit}
   def regenerate_user_backup_codes(user) do
-    new_backup_codes =
-      Enum.map(1..10, fn _n ->
-        %UserBackupCode{code: UserBackupCode.generate_backup_code()}
-      end)
+    old_ids =
+      user
+      |> list_user_backup_codes()
+      |> Enum.map(& &1.id)
 
-    user
-    |> Repo.preload([:backup_codes])
-    |> Ecto.Changeset.change(%{})
-    |> Ecto.Changeset.put_assoc(:backup_codes, new_backup_codes)
-    |> Repo.update()
+    Multi.new()
+    |> Multi.delete_all(
+      :old,
+      from(b in UserBackupCode, where: b.id in ^old_ids)
+    )
+    |> Multi.run(:unchanged, fn _repo, %{old: {deleted, _}} ->
+      if deleted == length(old_ids),
+        do: {:ok, deleted},
+        else: {:error, :concurrent_edit}
+    end)
+    |> Multi.run(:new, fn repo, _changes ->
+      {:ok,
+       for _n <- 1..10 do
+         repo.insert!(%UserBackupCode{
+           user_id: user.id,
+           code: UserBackupCode.generate_backup_code()
+         })
+       end}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{new: codes}} -> {:ok, %{user | backup_codes: codes}}
+      {:error, :unchanged, :concurrent_edit, _} -> {:error, :concurrent_edit}
+    end
   end
 
   @doc """
@@ -1170,6 +1215,35 @@ defmodule Lightning.Accounts do
     |> Repo.all()
   end
 
+  @doc """
+  Creates a personal access token for `user` and returns its stored entry,
+  whose `token` is the whole token.
+  """
+  @spec create_api_token(User.t()) ::
+          {:ok, UserToken.t()} | {:error, Ecto.Changeset.t()}
+  def create_api_token(%User{} = user) do
+    {_token, changeset} = UserToken.build_token(user, "api")
+    Repo.insert(changeset)
+  end
+
+  @doc """
+  Revokes `user`'s personal access token with the id `token_id`, in one
+  statement, so a token another request revoked first is simply not found.
+  Returns `{:error, :not_found}` when `user` holds no such personal access
+  token, including when the id names a token of another kind or person.
+  """
+  @spec revoke_api_token(User.t(), Ecto.UUID.t()) :: :ok | {:error, :not_found}
+  def revoke_api_token(%User{} = user, token_id) do
+    query =
+      from t in UserToken.user_and_contexts_query(user, ["api"]),
+        where: t.id == ^token_id
+
+    case Repo.delete_all(query) do
+      {1, _} -> :ok
+      {0, _} -> {:error, :not_found}
+    end
+  end
+
   ## Confirmation
 
   defp build_email_token(user) do
@@ -1357,16 +1431,51 @@ defmodule Lightning.Accounts do
   """
   def reset_user_password(user, attrs) do
     Ecto.Multi.new()
+    |> reset_password_multi(user, attrs)
+    |> run_reset()
+  end
+
+  @doc """
+  Resets the password of `user` with the emailed reset `token`, using the
+  token up in the same transaction, so two requests carrying one token can't
+  both set a password.
+
+  Returns `{:error, :concurrent_edit}` when another request used the token
+  first, and keeps the token when the password is refused.
+  """
+  @spec reset_user_password(User.t(), map(), String.t()) ::
+          {:ok, User.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, :concurrent_edit}
+  def reset_user_password(%User{} = user, attrs, token) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:reset_token, fn repo, _changes ->
+      case repo.delete_all(UserToken.reset_password_token_query(user, token)) do
+        {1, _} -> {:ok, :used}
+        {0, _} -> {:error, :concurrent_edit}
+      end
+    end)
+    |> reset_password_multi(user, attrs)
+    |> run_reset()
+  end
+
+  defp reset_password_multi(multi, user, attrs) do
+    multi
     |> Ecto.Multi.update(:user, User.password_changeset(user, attrs))
     |> Ecto.Multi.delete_all(
       :tokens,
       UserToken.user_and_contexts_query(user, :all)
     )
-    |> Repo.transaction()
-    |> case do
+  end
+
+  defp run_reset(multi) do
+    case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
         LightningWeb.UserAuth.disconnect_user_sockets(user)
         {:ok, user}
+
+      {:error, :reset_token, :concurrent_edit, _} ->
+        {:error, :concurrent_edit}
 
       {:error, :user, changeset, _} ->
         {:error, changeset}

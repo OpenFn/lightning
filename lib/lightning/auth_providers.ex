@@ -30,18 +30,59 @@ defmodule Lightning.AuthProviders do
     |> Repo.insert()
   end
 
-  def update(model, attrs) do
-    with {:ok, model} <- model |> AuthConfig.changeset(attrs) |> Repo.update() do
-      # Drop the handler from the cache, forcing it to be reinitialised
-      # next time it's requested.
-      create_handler(model)
+  @doc """
+  Updates the provider and rebuilds its cached handler.
 
-      {:ok, model}
+  Returns `{:error, :concurrent_edit}` when another request deleted the
+  provider after it was read.
+  """
+  @spec update(AuthConfig.t(), map()) ::
+          {:ok, AuthConfig.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
+  def update(model, attrs) do
+    model
+    |> AuthConfig.changeset(attrs)
+    |> Repo.update(stale_error_field: :id)
+    |> case do
+      {:ok, model} ->
+        # Drop the handler from the cache, forcing it to be reinitialised
+        # next time it's requested.
+        create_handler(model)
+
+        {:ok, model}
+
+      {:error, changeset} ->
+        stale_or(changeset)
     end
   end
 
   def delete!(model) do
     model |> Repo.delete!()
+  end
+
+  @doc """
+  Deletes the provider, then drops its cached handler, so a sign-in that
+  rebuilds the handler meanwhile can't cache it again.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted it first.
+  """
+  @spec delete(AuthConfig.t()) ::
+          {:ok, AuthConfig.t()} | {:error, Ecto.Changeset.t() | :concurrent_edit}
+  def delete(%AuthConfig{} = model) do
+    case Repo.delete(model, stale_error_field: :id) do
+      {:ok, model} ->
+        remove_handler(model.name)
+        {:ok, model}
+
+      {:error, changeset} ->
+        stale_or(changeset)
+    end
+  end
+
+  defp stale_or(%Ecto.Changeset{errors: errors} = changeset) do
+    if Enum.any?(errors, fn {_field, {_message, opts}} -> opts[:stale] end),
+      do: {:error, :concurrent_edit},
+      else: {:error, changeset}
   end
 
   @spec get_handler(name :: String.t()) ::

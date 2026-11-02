@@ -336,7 +336,7 @@ defmodule LightningWeb.AuthTest do
       path = ~p"/api/credentials/#{credential.id}/transfer"
 
       for {method, answered} <- [put: {422, :invalid}, delete: {404, :not_found}] do
-        assert_each_kind_on(conn, tokens, method, path,
+        assert_each_kind_on(conn, tokens, {method, path},
           service_account: :forbidden,
           expired_service_account: :expired_token,
           personal: {:answers, answered},
@@ -397,6 +397,69 @@ defmodule LightningWeb.AuthTest do
       end
     end
 
+    test "GET and DELETE /api/me/tokens take a person's tokens, and refuse the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens} do
+      people_only = [
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        repo_connection: :forbidden,
+        run: :invalid_token
+      ]
+
+      assert_each_kind_on(
+        conn,
+        tokens,
+        {:get, ~p"/api/me/tokens"},
+        people_only ++ [personal: :logs_in, session: :logs_in]
+      )
+
+      assert_each_kind_on(
+        conn,
+        tokens,
+        {:delete, ~p"/api/me/tokens/#{Ecto.UUID.generate()}"},
+        people_only ++ [personal: {:status, 404}, session: {:status, 404}]
+      )
+    end
+
+    test "POST /api/me/tokens takes only a stepped-up session token, and refuses every bearer token with 403",
+         %{conn: conn, tokens: tokens} do
+      assert_each_kind_on(conn, tokens, {:post, ~p"/api/me/tokens"},
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :forbidden,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :step_up_required
+      )
+    end
+
+    test "/api/me/mfa and the GitHub connection take only a session token, stepped up to change MFA or make backup codes, and refuse every bearer token with 403",
+         %{conn: conn, tokens: tokens} do
+      bearer_refused = [
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :forbidden,
+        repo_connection: :forbidden,
+        run: :invalid_token
+      ]
+
+      for {route, session} <- [
+            {{:get, ~p"/api/me/mfa"}, :logs_in},
+            {{:post, ~p"/api/me/mfa"}, {:status, 201}},
+            {{:put, ~p"/api/me/mfa"}, :step_up_required},
+            {{:delete, ~p"/api/me/mfa"}, :step_up_required},
+            {{:post, ~p"/api/me/mfa/backup_codes"}, :step_up_required},
+            {{:delete, ~p"/api/me/github_connection"}, {:status, 204}}
+          ] do
+        assert_each_kind_on(
+          conn,
+          tokens,
+          route,
+          bearer_refused ++ [session: session]
+        )
+      end
+    end
+
     # The routes write, so each person's token is shown let in by the answer
     # the route gives once it reads the request: 404 for a workflow the
     # project hasn't got, 422 for a template with no name.
@@ -436,6 +499,39 @@ defmodule LightningWeb.AuthTest do
       end
 
       refute Repo.reload!(workflow).deleted_at
+    end
+
+    # The session's person has no GitHub connection, which is 403 too.
+    test "the GitHub lists take only a session token, and refuse every bearer token with 403",
+         %{conn: conn, tokens: tokens} do
+      for route <- [
+            {:get, ~p"/api/me/github_repos"},
+            {:get, ~p"/api/me/github_repos/openfn/lightning/branches"}
+          ] do
+        assert_each_kind_on(conn, tokens, route,
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :forbidden,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: :forbidden
+        )
+      end
+    end
+
+    # The tokens' person isn't a superuser, so their tokens are refused too.
+    test "/api/auth_provider refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens} do
+      for method <- [:get, :put, :delete] do
+        assert_each_kind_on(conn, tokens, {method, ~p"/api/auth_provider"},
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :forbidden,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: :forbidden
+        )
+      end
     end
 
     test "authenticated_json takes no bearer token of any kind", %{
@@ -566,9 +662,12 @@ defmodule LightningWeb.AuthTest do
     end
   end
 
-  # For a route that writes: `{:answers, {status, code}}` is the problem the
-  # route itself gives once the token kind is let in.
-  defp assert_each_kind_on(conn, tokens, method, path, expected) do
+  # As assert_each_kind/4, for any method, with an empty JSON body. A route
+  # that answers a person without refusing them, such as a 404 for an id they
+  # hold no token under, is written `{:status, status}`; `{:answers, {status,
+  # code}}` is the problem a route that writes gives once the token kind is let
+  # in.
+  defp assert_each_kind_on(conn, tokens, {method, path}, expected) do
     assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
 
     for {kind, answer} <- expected do
@@ -579,6 +678,12 @@ defmodule LightningWeb.AuthTest do
         |> dispatch(@endpoint, method, path, "{}")
 
       case answer do
+        :logs_in ->
+          assert conn.status == 200, "#{kind} was answered #{conn.status}"
+
+        {:status, status} ->
+          assert conn.status == status, "#{kind} was answered #{conn.status}"
+
         {:answers, {status, code}} ->
           assert_problem(conn, status, code)
 
@@ -590,6 +695,10 @@ defmodule LightningWeb.AuthTest do
 
         :forbidden ->
           assert_problem(conn, 403, :forbidden, [])
+          assert get_resp_header(conn, "www-authenticate") == []
+
+        :step_up_required ->
+          assert_problem(conn, 403, :step_up_required, [])
       end
     end
   end
