@@ -31,7 +31,8 @@ defmodule LightningWeb.API.HistoryExportController do
   @doc """
   Asks for an export of the work orders `filter` matches, the list endpoint's
   filters, or of every work order when the body sends none. Answers 202 with
-  the export, `enqueued`; Lightning emails the person when it is ready.
+  the export, `enqueued`; Lightning emails the person when it is ready. A
+  project deleted after the lookup read it is 409 `concurrent_edit`.
 
   ## Examples
 
@@ -54,11 +55,21 @@ defmodule LightningWeb.API.HistoryExportController do
              ids: false,
              required: false
            ),
-         {:ok, %{project_file: export}} <-
-           Invocation.export_workorders(project, user, selection.search) do
+         {:ok, export} <- export(project, user, selection.search) do
       conn
       |> put_status(:accepted)
       |> render("show.json", export: export, conn: conn)
+    end
+  end
+
+  # A project deleted after the lookup read it.
+  defp export(project, user, search) do
+    case Invocation.export_workorders(project, user, search) do
+      {:ok, %{project_file: export}} ->
+        {:ok, export}
+
+      {:error, :project_file, %Ecto.Changeset{errors: [project_id: _]}, _} ->
+        {:error, :concurrent_edit}
     end
   end
 

@@ -6,6 +6,7 @@ defmodule LightningWeb.API.WorkOrders.RetryingManyTest do
   import LightningWeb.API.ProblemHelpers
   import LightningWeb.API.SessionHelpers
 
+  alias Lightning.RaceHelpers
   alias Lightning.Repo
   alias Lightning.Run
 
@@ -194,6 +195,35 @@ defmodule LightningWeb.API.WorkOrders.RetryingManyTest do
       end
 
       assert runs_of(first) == 1
+    end
+  end
+
+  describe "stale writes" do
+    test "a work order whose workflow another request deletes mid-request is discarded, with and without a job",
+         %{path: path, editor: editor, project: project} do
+      for job? <- [false, true] do
+        graph = runnable_workflow(project)
+        %{work_order: work_order} = ran_work_order(graph)
+
+        RaceHelpers.after_first_query("work_orders", work_order.id, fn _id ->
+          Repo.query!(
+            "UPDATE workflows SET deleted_at = now() WHERE id = $1",
+            [Ecto.UUID.dump!(graph.workflow.id)]
+          )
+        end)
+
+        body =
+          if job?,
+            do: %{work_order_ids: [work_order.id], job_id: graph.job_a.id},
+            else: %{work_order_ids: [work_order.id]}
+
+        assert editor |> post(path, body) |> json_response(202) == %{
+                 "enqueued" => 0,
+                 "discarded" => 1
+               }
+
+        assert runs_of(work_order) == 1
+      end
     end
   end
 

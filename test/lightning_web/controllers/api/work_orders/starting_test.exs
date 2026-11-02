@@ -8,6 +8,7 @@ defmodule LightningWeb.API.WorkOrders.StartingTest do
 
   import Ecto.Query
 
+  alias Lightning.RaceHelpers
   alias Lightning.Repo
   alias Lightning.WorkOrder
 
@@ -175,6 +176,22 @@ defmodule LightningWeb.API.WorkOrders.StartingTest do
       end
 
       assert Repo.aggregate(WorkOrder, :count) == 0
+    end
+  end
+
+  describe "stale writes" do
+    test "a workflow another request deletes mid-start answers 409 concurrent_edit, and no work order is made",
+         %{graph: graph, editor: editor} do
+      RaceHelpers.after_first_query("workflows", graph.workflow.id, fn id ->
+        Repo.query!("UPDATE workflows SET deleted_at = now() WHERE id = $1", [id])
+      end)
+
+      editor
+      |> post(path(graph), %{job_id: graph.job_a.id})
+      |> assert_problem(409, :concurrent_edit, [])
+
+      assert {Repo.aggregate(WorkOrder, :count),
+              not is_nil(Repo.reload(graph.workflow).deleted_at)} == {0, true}
     end
   end
 

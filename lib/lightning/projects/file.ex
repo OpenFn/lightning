@@ -42,6 +42,7 @@ defmodule Lightning.Projects.File do
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:project, attrs[:project])
     |> validate_required([:type, :created_by, :project])
+    |> foreign_key_constraint(:project_id)
   end
 
   @spec mark_failed(t()) :: Ecto.Changeset.t()

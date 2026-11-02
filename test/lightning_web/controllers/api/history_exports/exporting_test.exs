@@ -104,4 +104,18 @@ defmodule LightningWeb.API.HistoryExports.ExportingTest do
 
   defp entry(pointer, code, detail),
     do: %{"pointer" => "#" <> pointer, "code" => code, "detail" => detail}
+
+  describe "stale writes" do
+    test "a project another request deletes mid-request answers 409 concurrent_edit, and nothing is exported",
+         %{path: path, editor: editor, project: project} do
+      Lightning.RaceHelpers.delete_project_mid_save(project.id)
+
+      editor
+      |> post(path, %{})
+      |> assert_problem(409, :concurrent_edit, [])
+
+      assert {Repo.reload(project), Repo.aggregate(ProjectFile, :count)} ==
+               {nil, 0}
+    end
+  end
 end
