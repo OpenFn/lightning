@@ -1170,6 +1170,35 @@ defmodule Lightning.Accounts do
     |> Repo.all()
   end
 
+  @doc """
+  Creates a personal access token for `user` and returns its stored entry,
+  whose `token` is the whole token.
+  """
+  @spec create_api_token(User.t()) ::
+          {:ok, UserToken.t()} | {:error, Ecto.Changeset.t()}
+  def create_api_token(%User{} = user) do
+    {_token, changeset} = UserToken.build_token(user, "api")
+    Repo.insert(changeset)
+  end
+
+  @doc """
+  Revokes `user`'s personal access token with the id `token_id`, in one
+  statement, so a token another request revoked first is simply not found.
+  Returns `{:error, :not_found}` when `user` holds no such personal access
+  token, including when the id names a token of another kind or person.
+  """
+  @spec revoke_api_token(User.t(), Ecto.UUID.t()) :: :ok | {:error, :not_found}
+  def revoke_api_token(%User{} = user, token_id) do
+    query =
+      from t in UserToken.user_and_contexts_query(user, ["api"]),
+        where: t.id == ^token_id
+
+    case Repo.delete_all(query) do
+      {1, _} -> :ok
+      {0, _} -> {:error, :not_found}
+    end
+  end
+
   ## Confirmation
 
   defp build_email_token(user) do

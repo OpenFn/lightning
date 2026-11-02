@@ -353,6 +353,42 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "GET and DELETE /api/me/tokens take a person's tokens, and refuse the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens} do
+      people_only = [
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        repo_connection: :forbidden,
+        run: :invalid_token
+      ]
+
+      assert_each_kind_on(
+        conn,
+        tokens,
+        {:get, ~p"/api/me/tokens"},
+        people_only ++ [personal: :logs_in, session: :logs_in]
+      )
+
+      assert_each_kind_on(
+        conn,
+        tokens,
+        {:delete, ~p"/api/me/tokens/#{Ecto.UUID.generate()}"},
+        people_only ++ [personal: {:status, 404}, session: {:status, 404}]
+      )
+    end
+
+    test "POST /api/me/tokens takes only a stepped-up session token, and refuses every bearer token with 403",
+         %{conn: conn, tokens: tokens} do
+      assert_each_kind_on(conn, tokens, {:post, ~p"/api/me/tokens"},
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :forbidden,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :step_up_required
+      )
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens
@@ -396,6 +432,41 @@ defmodule LightningWeb.AuthTest do
 
         {:insufficient_scope, grant} ->
           assert_refused_for_scope(conn, grant)
+      end
+    end
+  end
+
+  # As assert_each_kind/4, for any method. A route that answers a person
+  # without refusing them, such as a 404 for an id they hold no token under,
+  # is written `{:status, status}`.
+  defp assert_each_kind_on(conn, tokens, {method, path}, expected) do
+    assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
+
+    for {kind, answer} <- expected do
+      conn =
+        conn
+        |> with_token(tokens[kind])
+        |> dispatch(@endpoint, method, path)
+
+      case answer do
+        :logs_in ->
+          assert conn.status == 200, "#{kind} was answered #{conn.status}"
+
+        {:status, status} ->
+          assert conn.status == status, "#{kind} was answered #{conn.status}"
+
+        :invalid_token ->
+          assert_unauthenticated(conn, :invalid_token, @invalid_token)
+
+        :expired_token ->
+          assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+        :forbidden ->
+          assert_problem(conn, 403, :forbidden, [])
+          assert get_resp_header(conn, "www-authenticate") == []
+
+        :step_up_required ->
+          assert_problem(conn, 403, :step_up_required, [])
       end
     end
   end
