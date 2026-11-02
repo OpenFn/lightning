@@ -15,18 +15,25 @@ defmodule LightningWeb.API.MeMfaController do
   `otpauth_uri` to show as a QR code.
 
   `PUT /api/me/mfa` takes that `secret` and a `code` from the authenticator,
-  saves the secret in place of any old one, and answers 200 with the settings.
-  When MFA was off, it turns it on, makes ten backup codes if the person has
-  none, and steps the session up so the app can show them. A code that doesn't
-  match the secret is 422 with a `mismatch` entry at `#/code`; a secret
-  `POST /api/me/mfa` couldn't have given is a `format` entry at `#/secret`.
+  saves the secret in place of any old one, and answers 200 with the settings,
+  backup codes included. When MFA was off, it turns it on and makes ten backup
+  codes if the person has none. A code that doesn't match the secret is 422
+  with a `mismatch` entry at `#/code`; a secret `POST /api/me/mfa` couldn't
+  have given is a `format` entry at `#/secret`.
+
+  `PUT /api/me/mfa` needs a stepped-up session, because an authenticator's
+  codes step a session up: on a session that hasn't, anyone at an unlocked
+  browser could save their own and then reach every stepped-up route. Its code
+  is not counted by `Lightning.Accounts.SignInAttempts`: it checks a secret
+  the caller has just chosen, so a wrong one proves nothing about who they
+  are, and counting typos would lock the person out of signing in.
 
   `DELETE /api/me/mfa` turns MFA off and answers 204, even when it was already
   off. It keeps the backup codes, so turning MFA on again makes no new ones.
-  It needs a stepped-up session, as `POST /api/me/mfa/backup_codes` does, which
-  replaces every backup code at once and answers 201 with the settings. A
-  session that hasn't stepped up is 403 `step_up_required`, and making backup
-  codes without MFA on is 403 `forbidden`.
+  It needs a stepped-up session too, as `POST /api/me/mfa/backup_codes` does,
+  which replaces every backup code at once and answers 201 with the settings.
+  A session that hasn't stepped up is 403 `step_up_required`, and making
+  backup codes without MFA on is 403 `forbidden`.
 
   A write that loses a race with another request turning MFA off, or making
   new backup codes, is 409 `concurrent_edit`.
@@ -41,7 +48,6 @@ defmodule LightningWeb.API.MeMfaController do
   alias LightningWeb.API.FallbackController
   alias LightningWeb.API.Request
   alias LightningWeb.Plugs.AuthorizeAction
-  alias LightningWeb.UserAuth
 
   action_fallback FallbackController
 
@@ -82,19 +88,13 @@ defmodule LightningWeb.API.MeMfaController do
   end
 
   def update(conn, _params) do
-    %Scope{actor: user} = scope = conn.assigns.scope
+    %Scope{actor: user} = conn.assigns.scope
     body = conn.body_params
 
     with :ok <- Request.check_object(body),
          {:ok, secret} <- check_body(body),
          {:ok, _totp} <- save_totp(user, secret, body["code"]) do
-      if user.mfa_enabled do
-        settings(conn, %{user | mfa_enabled: true}, Scope.stepped_up?(scope))
-      else
-        conn
-        |> UserAuth.step_up(user)
-        |> settings(%{user | mfa_enabled: true}, true)
-      end
+      settings(conn, %{user | mfa_enabled: true}, true)
     end
   end
 

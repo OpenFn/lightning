@@ -6,11 +6,10 @@ defmodule Lightning.Policies.AccountTest do
   alias Lightning.Policies.Permissions
   alias Lightning.Scope
 
-  @step_up_actions [:create_own_token, :disable_mfa]
+  @step_up_actions [:create_own_token, :enable_mfa, :disable_mfa]
   @session_actions [
     :read_own_mfa,
     :start_mfa,
-    :enable_mfa,
     :disconnect_github,
     :list_github_repos
   ]
@@ -58,7 +57,7 @@ defmodule Lightning.Policies.AccountTest do
     end
   end
 
-  test "creating a token and turning MFA off need a stepped-up session" do
+  test "creating a token and turning MFA on or off need a stepped-up session" do
     scopes = scopes(insert(:user))
 
     for action <- @step_up_actions do

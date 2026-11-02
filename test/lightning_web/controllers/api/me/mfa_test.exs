@@ -6,6 +6,7 @@ defmodule LightningWeb.API.Me.MfaTest do
   import LightningWeb.API.SessionHelpers
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.SignInAttempts
   alias Lightning.Accounts.UserBackupCode
   alias Lightning.Accounts.UserTOTP
   alias Lightning.RaceHelpers
@@ -83,10 +84,10 @@ defmodule LightningWeb.API.Me.MfaTest do
   end
 
   describe "turning on" do
-    test "turns MFA on, makes ten backup codes and steps the session up to show them" do
+    test "turns MFA on and makes ten backup codes, showing them to the stepped-up session" do
       user = insert(:user)
       secret = new_secret()
-      conn = session_conn(build_conn(), user)
+      conn = session_conn(build_conn(), user, stepped_up: true)
 
       answer =
         put(conn, ~p"/api/me/mfa", %{
@@ -102,28 +103,24 @@ defmodule LightningWeb.API.Me.MfaTest do
              }
 
       assert length(codes(user)) == 10
+      assert get_resp_header(answer, "cache-control") == ["no-store"]
 
       assert %UserTOTP{secret: saved} = Accounts.get_user_totp(user)
       assert saved == Base.decode32!(secret, padding: false)
-
-      assert {:ok, sudo_token} =
-               answer |> get_session(:sudo_token) |> Base.decode64()
-
-      assert Accounts.sudo_session_token_valid?(user, sudo_token)
     end
 
-    test "replaces the authenticator when MFA is on, keeping the backup codes, and doesn't step up" do
+    test "replaces the authenticator when MFA is on, keeping the backup codes" do
       user = mfa_user()
       before = codes(user)
       secret = new_secret()
 
       conn =
         build_conn()
-        |> session_conn(user)
+        |> session_conn(user, stepped_up: true)
         |> put(~p"/api/me/mfa", %{"secret" => secret, "code" => code_for(secret)})
 
       assert json_response(conn, 200) == %{
-               "data" => %{"enabled" => true, "backup_codes" => nil}
+               "data" => %{"enabled" => true, "backup_codes" => before}
              }
 
       assert Accounts.get_user_totp(user).secret ==
@@ -132,9 +129,36 @@ defmodule LightningWeb.API.Me.MfaTest do
       assert codes(user) == before
     end
 
+    # An authenticator's codes step a session up, so one saved on a session
+    # that hasn't would open every stepped-up route without the password.
+    test "refuses a session that hasn't stepped up, so its own authenticator can't step it up to create a token" do
+      user = insert(:user)
+      secret = new_secret()
+      conn = session_conn(build_conn(), user)
+
+      conn
+      |> put(~p"/api/me/mfa", %{"secret" => secret, "code" => code_for(secret)})
+      |> assert_problem(403, :step_up_required, [])
+
+      refute Accounts.get_user_totp(user)
+      refute Repo.reload!(user).mfa_enabled
+
+      conn
+      |> post(~p"/api/session", %{"mfa_code" => code_for(secret)})
+      |> assert_unauthenticated(:invalid_credentials, [
+        ~s(Session realm="Lightning")
+      ])
+
+      conn
+      |> post(~p"/api/me/tokens")
+      |> assert_problem(403, :step_up_required, [])
+
+      assert Accounts.list_api_tokens(user) == []
+    end
+
     test "refuses a body that isn't an object with malformed" do
       build_conn()
-      |> session_conn(insert(:user))
+      |> session_conn(insert(:user), stepped_up: true)
       |> put(~p"/api/me/mfa", "[1]")
       |> assert_problem(400, :malformed, [])
     end
@@ -145,7 +169,7 @@ defmodule LightningWeb.API.Me.MfaTest do
       other = code_for(new_secret())
 
       build_conn()
-      |> session_conn(user)
+      |> session_conn(user, stepped_up: true)
       |> put(~p"/api/me/mfa", %{"secret" => secret, "code" => other})
       |> assert_problem(422, :invalid, [
         %{
@@ -161,7 +185,7 @@ defmodule LightningWeb.API.Me.MfaTest do
 
     test "refuses a missing or bad secret, a missing or mistyped code, and any other key" do
       user = insert(:user)
-      conn = session_conn(build_conn(), user)
+      conn = session_conn(build_conn(), user, stepped_up: true)
 
       for {body, entries} <- [
             {%{},
@@ -210,6 +234,30 @@ defmodule LightningWeb.API.Me.MfaTest do
       end
 
       refute Accounts.get_user_totp(user)
+    end
+  end
+
+  describe "counting codes against signing in" do
+    test "doesn't count a set-up code that doesn't match, since the caller chose the secret" do
+      user = insert(:user)
+      conn = session_conn(build_conn(), user, stepped_up: true)
+
+      for _attempt <- 1..10 do
+        conn
+        |> put(~p"/api/me/mfa", %{
+          "secret" => new_secret(),
+          "code" => code_for(new_secret())
+        })
+        |> assert_problem(422, :invalid, [
+          %{
+            "pointer" => "#/code",
+            "code" => "mismatch",
+            "detail" => "invalid code"
+          }
+        ])
+      end
+
+      assert SignInAttempts.check(user.email) == :ok
     end
   end
 
@@ -303,7 +351,7 @@ defmodule LightningWeb.API.Me.MfaTest do
       end)
 
       build_conn()
-      |> session_conn(user)
+      |> session_conn(user, stepped_up: true)
       |> put(~p"/api/me/mfa", %{"secret" => secret, "code" => code_for(secret)})
       |> assert_problem(409, :concurrent_edit, [])
 
