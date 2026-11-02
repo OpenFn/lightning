@@ -15,19 +15,63 @@ and this project adheres to
 
 ## [Unreleased]
 
+> **Breaking changes to the API.** Every API error now comes back in one new
+> format, some refusals/errors have changed status. Anything that calls the API
+> directly needs checking before you upgrade, including scripts that use a
+> personal access token. Jobs using the collections adaptor are affected too:
+> writing an item that's too big, or has no value, now fails instead of quietly
+> succeeding. [API.md](API.md) describes the error format, every code and each
+> route.
+
 ### Added
 
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
   metrics are enabled, where they're sent, and the instance UUID and its hash.
   [#5262](https://github.com/OpenFn/lightning/issues/5262)
+- `GET` and `PUT` by id for projects, credentials and collections. A `PUT`
+  creates the record at the id you choose or replaces it, so sending the same
+  requests again sets up the same instance. The service account can use them,
+  and run history, through three new grants: `projects:write`,
+  `credentials:write` and `collections:write`. For now, reading needs the write
+  grant. [API.md](API.md) lists every route and the grant it needs, and
+  [SERVICE_ACCOUNTS.md](SERVICE_ACCOUNTS.md) walks through setting up the
+  service account and using it to create the first superuser and project on a
+  new instance. [#5272](https://github.com/OpenFn/lightning/pull/5272)
 
 ### Changed
 
 - The web app's interactive pages now run on React 19, up from React 18. They
   look and behave the same.
   [#5256](https://github.com/OpenFn/lightning/pull/5256)
+- **Breaking:** API errors are
+  [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem documents with a
+  stable `code`, on `/api` (except `/api/oauth/token`), `/collections`,
+  `/adaptors/catalogue`, webhooks and the channel proxy. Some statuses change
+  with it. A caller without access gets 403 whether or not the record exists,
+  401 means only a failed login, a value already in use is a 422, and plan
+  limits are 402 (webhooks keep 429). `PUT /collections/:name/:key` with a value
+  Lightning can't store answers 422, where it answered 200 `{"upserted": 0}`.
+  [API.md](API.md#errors) has every code and status.
+  [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- **Breaking:** `/api/users` refuses a personal access token with 403. The
+  service account must send `project_id` on `GET /api/runs`, `/api/work_orders`
+  and `/api/log_lines`. Both credential lists page like the other lists, 10 by
+  default, so a client that read the whole list must follow `links.next`.
+  `POST /api/provision` reads the project id from the body only.
+  [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- `SERVICE_ACCOUNT_PUBLIC_KEY`, `WORKER_RUNS_PRIVATE_KEY` and `GITHUB_CERT` take
+  raw PEM, PEM with literal `\n`, or base64, and a bad value now stops the boot
+  naming the variable instead of failing later. That includes a placeholder
+  `GITHUB_CERT` such as `changeme`, or one that holds the certificate as well as
+  the key; set it to the GitHub App's private key alone. An empty `GITHUB_CERT`
+  counts as unset. An env file Dotenvy can't parse stops the boot without
+  printing the line. [#5272](https://github.com/OpenFn/lightning/pull/5272)
 
 ### Fixed
+
+- A form that loses a save race with another user, or saves a record someone
+  else deleted, shows a message instead of crashing.
+  [#5272](https://github.com/OpenFn/lightning/pull/5272)
 
 ### Security
 
