@@ -164,6 +164,47 @@ defmodule LightningWeb.API.AiSessions.MessagesTest do
       assert Repo.aggregate(ChatMessage, :count) == 0
     end
 
+    test "answers 422 not_found for another project's run or step, writing nothing",
+         %{conn: conn, project: project, job: job, user: user} do
+      session =
+        insert(:chat_session,
+          session_type: "job_code",
+          job: job,
+          project: project,
+          user: user
+        )
+
+      other_workflow = insert(:simple_workflow, project: insert(:project))
+
+      {other_run, other_step} =
+        run_with_step(other_workflow, hd(other_workflow.jobs))
+
+      conn
+      |> send_message(session, %{
+        "content" => "What went wrong?",
+        "attach" => %{
+          "logs" => true,
+          "run_id" => other_run.id,
+          "io" => true,
+          "step_id" => other_step.id
+        }
+      })
+      |> assert_problem(422, :invalid, [
+        %{
+          "pointer" => "#/attach/run_id",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        },
+        %{
+          "pointer" => "#/attach/step_id",
+          "code" => "not_found",
+          "detail" => "names nothing you can see"
+        }
+      ])
+
+      assert Repo.aggregate(ChatMessage, :count) == 0
+    end
+
     test "answers 402 when the project has used its AI allowance, writing nothing",
          %{conn: conn, project: project, workflow: workflow, user: user} do
       session = workflow_session(project, workflow, user)

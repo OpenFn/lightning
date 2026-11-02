@@ -147,13 +147,22 @@ defmodule Lightning.AiAssistant do
     end
   end
 
-  defp project_id_for_job(%Job{workflow_id: nil}), do: nil
+  defp project_id_for_job(%Job{workflow_id: workflow_id}),
+    do: project_id_for_workflow(workflow_id)
 
-  defp project_id_for_job(%Job{workflow_id: workflow_id}) do
-    Workflow
-    |> where([w], w.id == ^workflow_id)
-    |> select([w], w.project_id)
-    |> Repo.one()
+  # The project a saved workflow belongs to, or nil when the id names no saved
+  # workflow (a job not yet saved may sit in a workflow not yet saved).
+  defp project_id_for_workflow(workflow_id) do
+    case Ecto.UUID.cast(workflow_id || "") do
+      {:ok, workflow_id} ->
+        Workflow
+        |> where([w], w.id == ^workflow_id)
+        |> select([w], w.project_id)
+        |> Repo.one()
+
+      :error ->
+        nil
+    end
   end
 
   @doc """
@@ -192,6 +201,7 @@ defmodule Lightning.AiAssistant do
       title: create_title(content),
       session_type: "job_code",
       workflow_id: unsaved_job["workflow_id"],
+      project_id: project_id_for_workflow(unsaved_job["workflow_id"]),
       meta: meta
     }
 

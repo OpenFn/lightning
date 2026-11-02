@@ -7,6 +7,10 @@ defmodule LightningWeb.API.AiMessageController do
   (`Lightning.Policies.AiAssistant`). Each answers 201 with the message,
   `pending` until the assistant answers it. The project's AI allowance is
   checked once the request is otherwise valid.
+
+  The disclaimer isn't checked yet, so there is no 422 `must_accept`: Lightning
+  keeps no record of a person accepting it (migration 20260707080205 removed
+  the last one), and recording it is `PATCH /api/users/:id`, which isn't here.
   """
   use LightningWeb, :controller
 
