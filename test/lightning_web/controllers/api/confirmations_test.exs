@@ -43,14 +43,14 @@ defmodule LightningWeb.API.ConfirmationsTest do
 
   describe "resending by email" do
     test "sends the confirmation email and answers 202 with no body" do
-      user = insert(:user, confirmed_at: nil)
+      %User{email: address} = user = insert(:user, confirmed_at: nil)
 
       conn =
         post(json_conn(), ~p"/api/confirmations", %{"email" => user.email})
 
       assert conn.status == 202
       assert conn.resp_body == ""
-      assert_email_sent(fn email -> assert [{_name, to}] = email.to end)
+      assert_email_sent(fn email -> assert [{_name, ^address}] = email.to end)
       assert [%UserToken{context: "confirm"}] = Repo.all(UserToken)
     end
 
@@ -108,13 +108,13 @@ defmodule LightningWeb.API.ConfirmationsTest do
 
   describe "resending to the signed-in person" do
     test "sends to an account shut out until it confirms, and answers 202" do
-      user = shut_out_user()
+      %User{email: address} = user = shut_out_user()
 
       conn = build_conn() |> session_conn(user) |> post(~p"/api/confirmations")
 
       assert conn.status == 202
       assert conn.resp_body == ""
-      assert_email_sent(fn email -> assert [{_name, to}] = email.to end)
+      assert_email_sent(fn email -> assert [{_name, ^address}] = email.to end)
     end
 
     test "answers 202 and sends nothing when the account is already confirmed" do
