@@ -2178,6 +2178,34 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  A page of the project's files, newest first, each with its `created_by`, as
+  `list_project_files/2` lists them.
+  """
+  @spec paginate_project_files(Project.t(), keyword()) :: Scrivener.Page.t()
+  def paginate_project_files(%Project{id: project_id}, page) do
+    from(pf in Projects.File,
+      where: pf.project_id == ^project_id,
+      order_by: [desc: pf.inserted_at, desc: pf.id],
+      preload: [:created_by]
+    )
+    |> Repo.paginate(page)
+  end
+
+  @doc """
+  The project file `id` in the project `project_id`, with its `created_by`, or
+  `{:error, :not_found}` when the project has no file with that id.
+  """
+  @spec get_project_file_for_project(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, Projects.File.t()} | {:error, :not_found}
+  def get_project_file_for_project(project_id, id) do
+    from(pf in Projects.File,
+      where: pf.id == ^id and pf.project_id == ^project_id,
+      preload: [:created_by]
+    )
+    |> Repo.fetch_one()
+  end
+
+  @doc """
   Returns the *direct* sandboxes (children) of a parent project, ordered by `name` (ASC).
 
   This is a flat view: only rows where `parent.id == child.parent_id` are returned.

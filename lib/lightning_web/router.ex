@@ -209,6 +209,23 @@ defmodule LightningWeb.Router do
          :create
 
     patch "/work_orders/:id", API.WorkOrdersController, :update
+
+    post "/projects/:project_id/history_exports",
+         API.HistoryExportController,
+         :create
+
+    get "/projects/:project_id/history_exports",
+        API.HistoryExportController,
+        :index
+
+    get "/projects/:project_id/history_exports/:id",
+        API.HistoryExportController,
+        :show
+
+    get "/projects/:project_id/history_exports/:id/download",
+        API.HistoryExportController,
+        :download
+
     # end-api-area:work_orders_runs
 
     # api-area:dataclips_audit (routes for this area go between these markers)

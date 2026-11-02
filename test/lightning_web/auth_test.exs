@@ -381,7 +381,22 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
-    test "starting, retrying and cancelling runs and work orders refuse the service account and a repo connection with 403, whatever their grants",
+    test "a project's history exports take a person's tokens, and refuse the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind(
+        conn,
+        tokens,
+        ~p"/api/projects/#{project.id}/history_exports",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
+    test "starting, retrying and cancelling runs and work orders, and exporting history, refuse the service account and a repo connection with 403, whatever their grants",
          %{conn: conn, tokens: tokens, project: project} do
       run = insert_history_run(project)
 
@@ -393,7 +408,8 @@ defmodule LightningWeb.AuthTest do
              ~p"/api/projects/#{project.id}/workflows/#{run.work_order.workflow_id}/work_orders"},
             {:post, ~p"/api/projects/#{project.id}/work_orders/retries"},
             {:post, ~p"/api/projects/#{project.id}/work_orders/cancellations"},
-            {:patch, ~p"/api/work_orders/#{run.work_order_id}"}
+            {:patch, ~p"/api/work_orders/#{run.work_order_id}"},
+            {:post, ~p"/api/projects/#{project.id}/history_exports"}
           ] do
         conn
         |> with_token(token)
