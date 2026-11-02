@@ -221,6 +221,55 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
+  The names of a credential's environments, with when each was created and
+  last changed, ordered by name. The bodies are neither read nor decrypted.
+  """
+  @spec list_environments(Credential.t()) :: [
+          %{
+            name: String.t(),
+            inserted_at: DateTime.t(),
+            updated_at: DateTime.t()
+          }
+        ]
+  def list_environments(%Credential{id: id}) do
+    from(cb in CredentialBody,
+      where: cb.credential_id == ^id,
+      order_by: cb.name,
+      select: %{
+        name: cb.name,
+        inserted_at: cb.inserted_at,
+        updated_at: cb.updated_at
+      }
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  The most environments a credential may have.
+  """
+  @spec max_environments() :: pos_integer()
+  def max_environments, do: 5
+
+  @doc """
+  The link between the project and the credential, with the credential
+  loaded, or `{:error, :not_found}` when the credential isn't linked to the
+  project.
+  """
+  @spec get_project_link(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, Lightning.Projects.ProjectCredential.t()} | {:error, :not_found}
+  def get_project_link(project_id, credential_id) do
+    from(pc in Lightning.Projects.ProjectCredential,
+      where: pc.project_id == ^project_id and pc.credential_id == ^credential_id,
+      preload: :credential
+    )
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      link -> {:ok, link}
+    end
+  end
+
+  @doc """
   Creates a new credential with its credential bodies.
 
   ## Parameters
@@ -383,9 +432,29 @@ defmodule Lightning.Credentials do
     delete_environments = Map.get(changeset.params, "delete_environments", [])
 
     Multi.new()
+    |> lock_credential(credential.id)
     |> Multi.update(:credential, changeset, stale_error_field: :id)
     |> add_environment_deletions(credential.id, delete_environments)
     |> add_credential_body_upserts(credential.id, credential_bodies, schema_name)
+  end
+
+  # An update that changes only bodies or links never writes the credential's
+  # row, so the stale check on it can't see another request deleting the
+  # credential. Locking the row first finds that, and holds the row until the
+  # bodies and links are written.
+  defp lock_credential(multi, credential_id) do
+    Multi.run(multi, :locked, fn repo, _changes ->
+      from(c in Credential,
+        where: c.id == ^credential_id,
+        select: c.id,
+        lock: "FOR NO KEY UPDATE"
+      )
+      |> repo.one()
+      |> case do
+        nil -> {:error, :concurrent_edit}
+        id -> {:ok, id}
+      end
+    end)
   end
 
   defp add_environment_deletions(multi, _credential_id, []), do: multi
@@ -1002,6 +1071,60 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
+  Unlinks a credential from one project, recording a `removed_from_project`
+  audit event in the same transaction. Jobs in the project that use the
+  credential lose it, through the foreign key. Links to the project's
+  sandboxes stay.
+
+  `link` must have its credential loaded. `actor` must be the credential's
+  owner, an owner or admin of the project, or a service account holding
+  `credentials:write` (`:unlink_credential` in
+  `Lightning.Policies.Credentials`).
+
+  Returns `{:error, :unauthorized}` when `actor` may not, and
+  `{:error, :concurrent_edit}` when another request removed the link while
+  this one ran.
+  """
+  @spec unlink_credential(
+          Lightning.Projects.ProjectCredential.t(),
+          Lightning.Actor.t()
+        ) ::
+          {:ok, Lightning.Projects.ProjectCredential.t()}
+          | {:error, :unauthorized | :concurrent_edit | Ecto.Changeset.t()}
+  def unlink_credential(
+        %Lightning.Projects.ProjectCredential{credential: %Credential{}} = link,
+        actor
+      ) do
+    with :ok <-
+           Permissions.can(:credentials, :unlink_credential, actor, link) do
+      Multi.new()
+      |> Multi.delete(:link, link, stale_error_field: :id)
+      |> Multi.insert(:audit, fn _changes ->
+        Audit.user_initiated_event(
+          "removed_from_project",
+          link.credential,
+          actor,
+          %{
+            before: %{project_id: link.project_id},
+            after: %{project_id: nil}
+          }
+        )
+      end)
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{link: link}} ->
+          {:ok, link}
+
+        {:error, :link, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
+          {:error, :concurrent_edit}
+
+        {:error, _op, changeset, _changes} ->
+          {:error, changeset}
+      end
+    end
+  end
+
+  @doc """
   Deletes a credential, recording an audit event in the same transaction.
 
   Returns `{:error, :unauthorized}` when `actor` doesn't own it,
@@ -1066,14 +1189,18 @@ defmodule Lightning.Credentials do
   ## Parameters
 
     - `credential`: A `Credential` struct that is to be scheduled for deletion.
-    - `actor`: The `User` asking, who must own the credential.
+    - `actor`: Who is asking: the owner, or a service account.
 
   ## Returns
 
     - `{:ok, credential}`: Returns an `:ok` tuple with the updated credential struct if the
       update was successful.
+    - `{:error, :unauthorized}`: `actor` is neither the owner nor a service
+      account holding `credentials:write`.
     - `{:error, :scheduled_for_deletion}`: The credential is already scheduled
       for deletion. Scheduling it again would move the date.
+    - `{:error, :concurrent_edit}`: another request deleted the credential
+      while this one ran.
     - `{:error, changeset}`: Returns an `:error` tuple with the changeset if the update failed.
 
   ## Examples
@@ -1085,8 +1212,16 @@ defmodule Lightning.Credentials do
       {:error, %Ecto.Changeset{}}
 
   """
-  def schedule_credential_deletion(%Credential{} = credential, %User{} = actor) do
-    with :ok <- authorize_credential(:delete_credential, actor, credential),
+  @spec schedule_credential_deletion(Credential.t(), Lightning.Actor.t()) ::
+          {:ok, Credential.t()}
+          | {:error,
+             :unauthorized
+             | :scheduled_for_deletion
+             | :concurrent_edit
+             | Ecto.Changeset.t()}
+  def schedule_credential_deletion(%Credential{} = credential, actor) do
+    with :ok <-
+           authorize_credential(:schedule_credential_deletion, actor, credential),
          :ok <- refuse_scheduled(credential) do
       do_schedule_credential_deletion(credential)
     end
@@ -1099,7 +1234,7 @@ defmodule Lightning.Credentials do
       })
 
     Multi.new()
-    |> Multi.update(:credential, changeset)
+    |> Multi.update(:credential, changeset, stale_error_field: :id)
     |> Multi.run(:preloaded, fn repo, %{credential: cred} ->
       {:ok, repo.preload(cred, [:credential_bodies, :oauth_client])}
     end)
@@ -1120,6 +1255,9 @@ defmodule Lightning.Credentials do
       {:ok, %{preloaded: updated_credential}} ->
         {:ok, updated_credential}
 
+      {:error, :credential, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
       {:error, _operation, changeset, _changes} ->
         {:error, changeset}
     end
@@ -1133,20 +1271,28 @@ defmodule Lightning.Credentials do
   @doc """
   Clears a credential's scheduled deletion, putting it back in normal use.
 
-  Takes an id rather than a struct because the screen that calls it has only the
-  id to hand. It loads the credential and asks the same ownership question as
-  deleting it, so the id being caller-supplied does not matter.
+  Takes the credential, or its id, because the screen that calls it has only
+  the id to hand. Given an id, it loads the credential, raising when there is
+  none. Either way it asks the same question as scheduling the deletion: the
+  owner, or a service account holding `credentials:write`, so the id being
+  caller-supplied does not matter. The project links removed by scheduling
+  are not restored.
   """
-  @spec cancel_scheduled_deletion(Ecto.UUID.t(), User.t()) ::
+  @spec cancel_scheduled_deletion(
+          Credential.t() | Ecto.UUID.t(),
+          Lightning.Actor.t()
+        ) ::
           {:ok, Credential.t()}
           | {:error, :unauthorized | Ecto.Changeset.t() | :concurrent_edit}
-  def cancel_scheduled_deletion(credential_id, %User{} = actor) do
-    credential = get_credential!(credential_id)
-
-    with :ok <- authorize_credential(:delete_credential, actor, credential) do
+  def cancel_scheduled_deletion(%Credential{} = credential, actor) do
+    with :ok <-
+           authorize_credential(:schedule_credential_deletion, actor, credential) do
       do_update_credential(credential, %{scheduled_deletion: nil}, actor)
     end
   end
+
+  def cancel_scheduled_deletion(credential_id, actor),
+    do: credential_id |> get_credential!() |> cancel_scheduled_deletion(actor)
 
   # Authorising here rather than in each caller means no caller can act on
   # someone else's credential by forgetting to check. Every caller has to say
@@ -1773,6 +1919,8 @@ defmodule Lightning.Credentials do
   ## Returns
 
     - `:ok` if the transfer process is successfully initiated.
+    - `{:error, :concurrent_edit}` if another request deleted the credential
+      while this one ran. No email is sent.
     - `{:error, reason}` if any validation or transaction step fails.
 
   ## Example
@@ -1785,7 +1933,12 @@ defmodule Lightning.Credentials do
   ```
   """
   @spec initiate_credential_transfer(User.t(), User.t(), Credential.t()) ::
-          :ok | {:error, :not_owner | transfer_error() | Ecto.Changeset.t()}
+          :ok
+          | {:error,
+             :not_owner
+             | :concurrent_edit
+             | transfer_error()
+             | Ecto.Changeset.t()}
   def initiate_credential_transfer(
         %User{} = owner,
         %User{} = receiver,
@@ -1808,7 +1961,7 @@ defmodule Lightning.Credentials do
 
     credential
     |> change_credential_transfer(%{transfer_status: :pending})
-    |> Repo.update()
+    |> Repo.update(stale_error_field: :id)
     |> case do
       {:ok, credential} ->
         UserNotifier.deliver_credential_transfer_confirmation_instructions(
@@ -1819,6 +1972,9 @@ defmodule Lightning.Credentials do
         )
 
         :ok
+
+      {:error, %Ecto.Changeset{errors: [id: {_, stale: true}]}} ->
+        {:error, :concurrent_edit}
 
       {:error, changeset} ->
         {:error, changeset}
@@ -1929,7 +2085,7 @@ defmodule Lightning.Credentials do
 
   ## Parameters
 
-    - `credential_id`: The ID of the `Credential` being revoked.
+    - `credential`: The `Credential` whose transfer is revoked, or its ID.
     - `owner`: The `User` who owns the credential and is revoking the transfer.
 
   ## Returns
@@ -1938,6 +2094,8 @@ defmodule Lightning.Credentials do
     - `{:error, :not_found}` if the credential does not exist.
     - `{:error, :not_owner}` if the user does not own the credential.
     - `{:error, :not_pending}` if the transfer is not in a pending state.
+    - `{:error, :concurrent_edit}` if another request deleted the credential
+      while this one ran.
     - `{:error, changeset}` if there is a validation or update issue.
 
   ## Example
@@ -1952,25 +2110,42 @@ defmodule Lightning.Credentials do
   end
   ```
   """
-  @spec revoke_transfer(String.t(), User.t()) ::
-          {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
-  def revoke_transfer(credential_id, %User{} = owner) do
-    with credential when not is_nil(credential) <- get_credential(credential_id),
-         true <- credential.user_id == owner.id || :not_owner,
+  @spec revoke_transfer(Credential.t() | String.t(), User.t()) ::
+          {:ok, Credential.t()}
+          | {:error, transfer_error() | :concurrent_edit | Ecto.Changeset.t()}
+  def revoke_transfer(%Credential{} = credential, %User{} = owner) do
+    with true <- credential.user_id == owner.id || :not_owner,
          true <- credential.transfer_status == :pending || :not_pending do
       Multi.new()
-      |> Multi.update(:credential, fn _changes ->
-        change_credential_transfer(credential, %{transfer_status: nil})
-      end)
+      |> Multi.update(
+        :credential,
+        fn _changes ->
+          change_credential_transfer(credential, %{transfer_status: nil})
+        end,
+        stale_error_field: :id
+      )
       |> Repo.transaction()
       |> case do
-        {:ok, %{credential: credential}} -> {:ok, credential}
-        {:error, _op, error, _changes} -> {:error, error}
+        {:ok, %{credential: credential}} ->
+          {:ok, credential}
+
+        {:error, :credential, %Ecto.Changeset{errors: [id: {_, stale: true}]},
+         _changes} ->
+          {:error, :concurrent_edit}
+
+        {:error, _op, error, _changes} ->
+          {:error, error}
       end
     else
-      nil -> {:error, :not_found}
       :not_owner -> {:error, :not_owner}
       :not_pending -> {:error, :not_pending}
+    end
+  end
+
+  def revoke_transfer(credential_id, %User{} = owner) do
+    case get_credential(credential_id) do
+      nil -> {:error, :not_found}
+      credential -> revoke_transfer(credential, owner)
     end
   end
 
