@@ -1,7 +1,9 @@
 defmodule LightningWeb.AuthTest do
   @moduledoc """
   One route per JSON pipeline, refused for no token, for a bad one and for a
-  `Bearer` header it can't read, which token kinds each pipeline takes, a
+  `Bearer` header it can't read, which token kinds each pipeline takes (the
+  session token among them), and the routes open only to people or only to a
+  session token, a
   locked-out account on a bearer pipeline, and the bearer scheme read without
   regard to case on one route per auth plug. Then the checks of a request
   against webhook auth methods.
@@ -9,6 +11,7 @@ defmodule LightningWeb.AuthTest do
   use LightningWeb.ConnCase, async: true
 
   import LightningWeb.API.ProblemHelpers
+  import LightningWeb.API.SessionHelpers
   import Lightning.Factories
   import Lightning.ServiceAccountHelpers
   import Plug.Test, only: [conn: 2]
@@ -282,7 +285,8 @@ defmodule LightningWeb.AuthTest do
           personal: Accounts.generate_api_token(user),
           repo_connection:
             insert(:project_repo_connection, project: project).access_token,
-          run: Lightning.Workers.generate_run_token(run)
+          run: Lightning.Workers.generate_run_token(run),
+          session: {:session, user}
         ]
       }
     end
@@ -294,7 +298,8 @@ defmodule LightningWeb.AuthTest do
         expired_service_account: :expired_token,
         personal: :forbidden,
         repo_connection: {:insufficient_scope, "users:read"},
-        run: :invalid_token
+        run: :invalid_token,
+        session: :forbidden
       )
     end
 
@@ -305,7 +310,22 @@ defmodule LightningWeb.AuthTest do
         expired_service_account: :expired_token,
         personal: :logs_in,
         repo_connection: {:insufficient_scope, "projects:write"},
-        run: :invalid_token
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
+    # A route open only to people answers the other kinds the pipeline takes
+    # with 403 forbidden: there is no scope that would let them in.
+    test "GET /api/me takes a person's tokens, and refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens} do
+      assert_each_kind(conn, tokens, ~p"/api/me",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :logs_in
       )
     end
 
@@ -316,7 +336,20 @@ defmodule LightningWeb.AuthTest do
         expired_service_account: :invalid_token,
         personal: :logs_in,
         repo_connection: :invalid_token,
-        run: :logs_in
+        run: :logs_in,
+        session: :unauthenticated
+      )
+    end
+
+    test "GET /api/session takes only a session token, and reads every bearer token as none",
+         %{conn: conn, tokens: tokens} do
+      assert_each_kind(conn, tokens, ~p"/api/session",
+        service_account: :session_refused,
+        expired_service_account: :session_refused,
+        personal: :session_refused,
+        repo_connection: :session_refused,
+        run: :session_refused,
+        session: :logs_in
       )
     end
 
@@ -324,7 +357,7 @@ defmodule LightningWeb.AuthTest do
       conn: conn,
       tokens: tokens
     } do
-      for {_kind, token} <- tokens do
+      for {_kind, token} <- tokens, is_binary(token) do
         conn =
           conn
           |> put_req_header("authorization", "Bearer " <> token)
@@ -339,14 +372,17 @@ defmodule LightningWeb.AuthTest do
     assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
 
     for {kind, answer} <- expected do
-      conn =
-        conn
-        |> put_req_header("authorization", "Bearer " <> tokens[kind])
-        |> get(path)
+      conn = conn |> with_token(tokens[kind]) |> get(path)
 
       case answer do
         :logs_in ->
           assert conn.status == 200, "#{kind} was answered #{conn.status}"
+
+        :unauthenticated ->
+          assert_unauthenticated(conn, :unauthenticated, ["Bearer"])
+
+        :session_refused ->
+          assert_session_refused(conn)
 
         :invalid_token ->
           assert_unauthenticated(conn, :invalid_token, @invalid_token)
@@ -363,6 +399,11 @@ defmodule LightningWeb.AuthTest do
       end
     end
   end
+
+  defp with_token(conn, {:session, user}), do: session_conn(conn, user)
+
+  defp with_token(conn, token),
+    do: put_req_header(conn, "authorization", "Bearer " <> token)
 
   defp assert_invalid_request(conn) do
     assert_problem(conn, 400, :invalid_request, [])

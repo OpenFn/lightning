@@ -1,13 +1,10 @@
 defmodule LightningWeb.API.MeControllerTest do
   use LightningWeb.ConnCase, async: true
 
-  import LightningWeb.API.ProblemHelpers
   import LightningWeb.API.SessionHelpers
   import Lightning.Factories
-  import Lightning.ServiceAccountHelpers
 
   alias Lightning.Accounts
-  alias Lightning.ServiceAccount.AccessToken
 
   defp bearer(token) do
     build_conn()
@@ -73,24 +70,12 @@ defmodule LightningWeb.API.MeControllerTest do
                    "github" => %{
                      "connected" => true,
                      "expires_at" => "2027-01-01T00:00:00Z"
-                   }
+                   },
+                   "identities" => [],
+                   "ai_disclaimer_accepted_at" => nil,
+                   "consent" => nil
                  })
                )
            }
-  end
-
-  test "the service account and a repo connection aren't people, and are refused" do
-    {account, _private_key} = service_account_with_key()
-    Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
-
-    for token <- [
-          AccessToken.issue(account, AccessToken.scopes()),
-          insert(:project_repo_connection).access_token
-        ] do
-      conn = token |> bearer() |> get(~p"/api/me")
-
-      assert_problem(conn, 403, :forbidden, [])
-      assert get_resp_header(conn, "www-authenticate") == []
-    end
   end
 end
