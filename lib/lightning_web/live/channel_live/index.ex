@@ -222,6 +222,11 @@ defmodule LightningWeb.ChannelLive.Index do
           |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/channels")
           |> noreply()
 
+        {:error, :concurrent_edit} ->
+          socket
+          |> put_flash(:error, "Failed to delete channel. Please try again.")
+          |> noreply()
+
         {:error, changeset} ->
           message =
             if Keyword.has_key?(changeset.errors, :channel_snapshots),

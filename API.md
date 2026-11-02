@@ -323,6 +323,21 @@ and repo connections are refused 403 `forbidden`.
 | `GET`   | `/api/projects/:project_id/history_exports/:id`                | Reads a history export                 | Not open to the service account |
 | `GET`   | `/api/projects/:project_id/history_exports/:id/download`       | Downloads a completed history export   | Not open to the service account |
 
+### Webhooks and channels
+
+| Method   | Path                                                 | What it does                                 | Token grant                     |
+| -------- | ---------------------------------------------------- | -------------------------------------------- | ------------------------------- |
+| `GET`    | `/api/projects/:project_id/webhook_auth_methods`     | Lists a project's webhook auth methods       | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/webhook_auth_methods/:id` | Reads a webhook auth method                  | Not open to the service account |
+| `PUT`    | `/api/projects/:project_id/webhook_auth_methods/:id` | Creates or replaces a webhook auth method    | Not open to the service account |
+| `DELETE` | `/api/projects/:project_id/webhook_auth_methods/:id` | Schedules a webhook auth method for deletion | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/channels`                 | Lists a project's channels                   | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/channels/:id`             | Reads a channel                              | Not open to the service account |
+| `PUT`    | `/api/projects/:project_id/channels/:id`             | Creates or replaces a channel                | Not open to the service account |
+| `DELETE` | `/api/projects/:project_id/channels/:id`             | Deletes a channel and its request history    | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/channel_requests`         | Lists a project's channel requests           | Not open to the service account |
+| `GET`    | `/api/channel_requests/:id`                          | Reads a channel request                      | Not open to the service account |
+
 ### Lightning's web app
 
 | Method | Path                                                               | What it does                  | Token grant  |

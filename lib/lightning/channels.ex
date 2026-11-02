@@ -42,19 +42,88 @@ defmodule Lightning.Channels do
     - `:last_activity` — datetime of most recent request, or nil
   """
   def list_channels_for_project_with_stats(project_id) do
+    project_id
+    |> channels_with_stats_query()
+    |> Repo.all()
+  end
+
+  @doc """
+  A page of the project's channels, by name, each as
+  `list_channels_for_project_with_stats/1` gives it, with the channel's
+  `client_auth_methods` and its `destination_auth_method` (with its
+  `project_credential`) preloaded. `page` is what `Lightning.Repo.paginate/2`
+  takes.
+  """
+  @spec paginate_channels_for_project_with_stats(
+          Ecto.UUID.t(),
+          keyword() | map()
+        ) ::
+          Scrivener.Page.t()
+  def paginate_channels_for_project_with_stats(project_id, page) do
+    page =
+      from(c in Channel,
+        where: c.project_id == ^project_id,
+        order_by: [asc: c.name, asc: c.id],
+        select: c.id
+      )
+      |> Repo.paginate(page)
+
+    entries =
+      project_id
+      |> channels_with_stats_query()
+      |> where([c], c.id in ^page.entries)
+      |> Repo.all()
+      |> preload_auth_methods()
+
+    %{page | entries: entries}
+  end
+
+  @doc """
+  The project's channel with `channel_id`, as
+  `paginate_channels_for_project_with_stats/2` gives each entry, or `nil` when
+  the project has no channel with that id.
+  """
+  @spec get_channel_with_stats_for_project(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          %{
+            channel: Channel.t(),
+            request_count: non_neg_integer(),
+            last_activity: DateTime.t() | nil
+          }
+          | nil
+  def get_channel_with_stats_for_project(project_id, channel_id) do
+    project_id
+    |> channels_with_stats_query()
+    |> where([c], c.id == ^channel_id)
+    |> Repo.all()
+    |> preload_auth_methods()
+    |> List.first()
+  end
+
+  defp channels_with_stats_query(project_id) do
     from(c in Channel,
       where: c.project_id == ^project_id,
       left_join: cr in ChannelRequest,
       on: cr.channel_id == c.id,
       group_by: c.id,
-      order_by: [asc: c.name],
+      order_by: [asc: c.name, asc: c.id],
       select: %{
         channel: c,
         request_count: count(cr.id),
         last_activity: max(cr.started_at)
       }
     )
-    |> Repo.all()
+  end
+
+  defp preload_auth_methods(entries) do
+    channels =
+      entries
+      |> Enum.map(& &1.channel)
+      |> Repo.preload([
+        :client_auth_methods,
+        destination_auth_method: :project_credential
+      ])
+
+    Enum.zip_with(entries, channels, &%{&1 | channel: &2})
   end
 
   @doc """
@@ -187,12 +256,17 @@ defmodule Lightning.Channels do
   end
 
   @doc """
-  Creates a channel.
+  Creates a channel, under `id:` when given.
   """
-  @spec create_channel(map(), actor: User.t()) ::
+  @spec create_channel(map(), actor: User.t(), id: Ecto.UUID.t()) ::
           {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
-  def create_channel(attrs, actor: %User{} = actor) do
-    changeset = Channel.changeset(%Channel{}, attrs)
+  def create_channel(attrs, opts) when is_list(opts) do
+    %User{} = actor = Keyword.fetch!(opts, :actor)
+
+    changeset =
+      %Channel{id: opts[:id]}
+      |> Channel.changeset(attrs)
+      |> Ecto.Changeset.unique_constraint(:id, name: :channels_pkey)
 
     Multi.new()
     |> Multi.run(:credential_scope_check, fn _repo, _changes ->
@@ -347,9 +421,13 @@ defmodule Lightning.Channels do
   `channel_requests.channel_id` uses `on_delete: :restrict`). Channel
   events cascade automatically, and channel snapshots cascade via
   `on_delete: :delete_all` on `channel_snapshots.channel_id`.
+
+  Returns `{:error, :concurrent_edit}` when a request was recorded after the
+  history was deleted, or another caller deleted the channel first. Nothing
+  is deleted from the channel itself then, so the delete can be sent again.
   """
   @spec delete_channel(Channel.t(), actor: User.t()) ::
-          {:ok, Channel.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Channel.t()} | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def delete_channel(%Channel{} = channel, actor: %User{} = actor) do
     from(cr in ChannelRequest,
       where: cr.channel_id == ^channel.id,
@@ -357,13 +435,26 @@ defmodule Lightning.Channels do
     )
     |> batch_delete_requests()
 
+    changeset =
+      channel
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.no_assoc_constraint(:channel_requests,
+        name: "channel_requests_channel_id_fkey"
+      )
+
     Multi.new()
     |> Multi.insert(:audit, Audit.event("deleted", channel.id, actor, %{}))
-    |> Multi.delete(:channel, channel)
+    |> Multi.delete(:channel, changeset, stale_error_field: :id)
     |> Repo.transaction()
     |> case do
-      {:ok, %{channel: channel}} -> {:ok, channel}
-      {:error, :channel, changeset, _} -> {:error, changeset}
+      {:ok, %{channel: channel}} ->
+        {:ok, channel}
+
+      {:error, :channel, %Ecto.Changeset{errors: errors} = changeset, _} ->
+        if Keyword.has_key?(errors, :channel_requests) or
+             match?({_, [stale: true]}, errors[:id]),
+           do: {:error, :concurrent_edit},
+           else: {:error, changeset}
     end
   end
 
@@ -554,6 +645,24 @@ defmodule Lightning.Channels do
     end
 
     {total, nil}
+  end
+
+  @doc """
+  The id of the project whose channel recorded the request `request_id`.
+  """
+  @spec get_channel_request_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_channel_request_project_id(request_id) do
+    from(cr in ChannelRequest,
+      join: c in assoc(cr, :channel),
+      where: cr.id == ^request_id,
+      select: c.project_id
+    )
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      project_id -> {:ok, project_id}
+    end
   end
 
   @doc """

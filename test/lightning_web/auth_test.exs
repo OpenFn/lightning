@@ -381,6 +381,48 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "GET /api/projects/:project_id/webhook_auth_methods takes a person's tokens, and refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind(
+        conn,
+        tokens,
+        ~p"/api/projects/#{project.id}/webhook_auth_methods",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
+    test "GET /api/projects/:project_id/channels takes a person's tokens, and refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind(conn, tokens, ~p"/api/projects/#{project.id}/channels",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
+    test "GET /api/projects/:project_id/channel_requests takes a person's tokens, and refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind(
+        conn,
+        tokens,
+        ~p"/api/projects/#{project.id}/channel_requests",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
     test "authenticated_api takes a personal or run token, and not a repo connection's or a service account's",
          %{conn: conn, tokens: tokens, collection: collection} do
       assert_each_kind(conn, tokens, ~p"/collections/#{collection.name}",
