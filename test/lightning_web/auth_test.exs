@@ -403,6 +403,26 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "scheduling a user's deletion and cancelling it take only the service account's token, and refuse a person's with 403",
+         %{conn: conn, tokens: tokens} do
+      unscheduled = insert(:user)
+      scheduled = insert(:user, scheduled_deletion: DateTime.utc_now())
+
+      for path <- [
+            ~p"/api/users/#{unscheduled.id}",
+            ~p"/api/users/#{scheduled.id}/scheduled_deletion"
+          ] do
+        assert_each_kind_deleting(conn, tokens, path,
+          service_account: :logs_in,
+          expired_service_account: :expired_token,
+          personal: :forbidden,
+          repo_connection: {:insufficient_scope, "users:write"},
+          run: :invalid_token,
+          session: :forbidden
+        )
+      end
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens
@@ -433,6 +453,35 @@ defmodule LightningWeb.AuthTest do
 
         :session_refused ->
           assert_session_refused(conn)
+
+        :invalid_token ->
+          assert_unauthenticated(conn, :invalid_token, @invalid_token)
+
+        :expired_token ->
+          assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+        :forbidden ->
+          assert_problem(conn, 403, :forbidden, [])
+          assert get_resp_header(conn, "www-authenticate") == []
+
+        {:insufficient_scope, grant} ->
+          assert_refused_for_scope(conn, grant)
+      end
+    end
+  end
+
+  # The same as assert_each_kind/4 for a DELETE, which succeeds with any 2xx.
+  # It sends the service account's token first, so the kinds refused after it
+  # find the record as it left it.
+  defp assert_each_kind_deleting(conn, tokens, path, expected) do
+    assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
+
+    for {kind, answer} <- expected do
+      conn = conn |> with_token(tokens[kind]) |> delete(path)
+
+      case answer do
+        :logs_in ->
+          assert conn.status in 200..299, "#{kind} was answered #{conn.status}"
 
         :invalid_token ->
           assert_unauthenticated(conn, :invalid_token, @invalid_token)

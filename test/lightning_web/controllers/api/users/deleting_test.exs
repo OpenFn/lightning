@@ -4,7 +4,6 @@ defmodule LightningWeb.API.Users.DeletingTest do
   import Ecto.Query
   import Lightning.Factories
   import LightningWeb.API.ProblemHelpers
-  import LightningWeb.API.SessionHelpers
   import LightningWeb.ApiUsersHelpers
   import Lightning.RaceHelpers
   import Lightning.ServiceAccountHelpers, only: [with_scopes: 3]
@@ -76,20 +75,19 @@ defmodule LightningWeb.API.Users.DeletingTest do
       assert audits(user.id) == []
     end
 
-    test "answers 422 for a superuser, who can't be deleted", %{conn: conn} do
+    test "answers 409 superuser for a superuser, who can't be deleted, changing nothing",
+         %{conn: conn} do
       superuser = insert(:user, role: :superuser)
 
       conn
       |> delete(~p"/api/users/#{superuser.id}")
-      |> assert_problem(422, :invalid, [
-        %{
-          "path" => "id",
-          "code" => "not_allowed",
-          "detail" => "names a superuser, who can't be deleted"
-        }
-      ])
+      |> assert_problem(409, :superuser, [])
 
-      assert Repo.reload!(superuser).scheduled_deletion == nil
+      assert %User{disabled: false, scheduled_deletion: nil} =
+               Repo.reload!(superuser)
+
+      assert audits(superuser.id) == []
+      refute_email_sent()
     end
   end
 
@@ -139,7 +137,7 @@ defmodule LightningWeb.API.Users.DeletingTest do
   end
 
   describe "who may reach it" do
-    test "the service account hears what is missing or malformed; a person's token, a superuser's or a session included, gets 403 for every id",
+    test "the service account hears what is missing or malformed; a person's token or a superuser's gets 403 for every id",
          %{conn: conn} do
       existing =
         insert(:user, scheduled_deletion: scheduled_at(), disabled: true)
@@ -153,12 +151,7 @@ defmodule LightningWeb.API.Users.DeletingTest do
       end
 
       people =
-        for user <- [insert(:user), superuser],
-            caller <- [
-              assign_bearer(conn, user),
-              session_conn(build_conn(), user)
-            ],
-            do: caller
+        for user <- [insert(:user), superuser], do: assign_bearer(conn, user)
 
       refused =
         for caller <- people,
