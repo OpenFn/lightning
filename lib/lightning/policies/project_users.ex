@@ -11,7 +11,7 @@ defmodule Lightning.Policies.ProjectUsers do
 
   `permitted?/2` makes the **judgement**: given that standing, is this action
   allowed. It decides on `role` and `mfa_satisfied?`, and never mentions
-  `Project.scheduled_deletion` or `Project.requires_mfa` — there is no
+  `Project.scheduled_deletion` or `Project.requires_mfa` -- there is no
   shut-down project left for it to see, and the MFA rule reaches it as a fact
   on the scope.
 
@@ -32,8 +32,10 @@ defmodule Lightning.Policies.ProjectUsers do
     :edit_project,
     :edit_data_retention,
     :add_project_user,
+    :edit_project_user_role,
     :remove_project_user,
-    :edit_run_settings
+    :edit_run_settings,
+    :create_collection
   ]
 
   @editor_actions [
@@ -69,7 +71,9 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_data_retention
           | :edit_run_settings
           | :add_project_user
+          | :edit_project_user_role
           | :remove_project_user
+          | :create_collection
           | :write_webhook_auth_method
           | :write_github_connection
           | :edit_digest_alerts
@@ -85,13 +89,13 @@ defmodule Lightning.Policies.ProjectUsers do
 
   @doc """
   Whether `user` may perform `action`, where the subject is anything that
-  identifies a project — see `t:Lightning.Projects.Scope.subject/0`.
+  identifies a project -- see `t:Lightning.Projects.Scope.subject/0`.
   """
   @spec authorize(actions(), User.t(), Scope.subject()) :: boolean()
 
   # These act on a specific membership row, not on project standing. The alert
   # handlers in `ProjectLive.Settings` pass a client-supplied "project_user_id",
-  # so dropping the `id == user_id` comparison is a privilege escalation —
+  # so dropping the `id == user_id` comparison is a privilege escalation --
   # pinned by two tests in project_live_test.exs.
   def authorize(
         action,
@@ -129,8 +133,8 @@ defmodule Lightning.Policies.ProjectUsers do
   """
   @spec permitted?(actions(), Scope.t()) :: boolean()
 
-  # First, so it denies every action this module decides — including ones added
-  # later — without anyone having to remember @admin_actions/@editor_actions.
+  # First, so it denies every action this module decides -- including ones added
+  # later -- without anyone having to remember @admin_actions/@editor_actions.
   def permitted?(_action, %Scope{mfa_satisfied?: false}), do: false
 
   def permitted?(:access_project, %Scope{} = scope), do: has_standing?(scope)
@@ -139,7 +143,7 @@ defmodule Lightning.Policies.ProjectUsers do
 
   # Support-staff-only: a project owner cannot publish, and staff can publish
   # without holding a membership row. Needs both support fields separately, so
-  # do not fold it into @editor_actions — that drops the support_user
+  # do not fold it into @editor_actions -- that drops the support_user
   # requirement silently.
   def permitted?(:publish_template, %Scope{
         support_user?: true,
@@ -150,7 +154,7 @@ defmodule Lightning.Policies.ProjectUsers do
 
   def permitted?(:publish_template, %Scope{}), do: false
 
-  # Reached only when the subject wasn't a %ProjectUser{} — Scope resolves the
+  # Reached only when the subject wasn't a %ProjectUser{} -- Scope resolves the
   # caller's own standing, so there is no "which row" ambiguity here.
   def permitted?(action, %Scope{role: role}) when action in @self_actions,
     do: not is_nil(role)
@@ -177,9 +181,9 @@ defmodule Lightning.Policies.ProjectUsers do
   Whether this actor would have standing on the project if not for the
   project's MFA requirement.
 
-  Lets a caller distinguish "no access at all" from "access except MFA" —
+  Lets a caller distinguish "no access at all" from "access except MFA" --
   `LightningWeb.Hooks` sends the first to not-found and the second to
-  `/mfa_required` — without duplicating what counts as standing. It cannot ask
+  `/mfa_required` -- without duplicating what counts as standing. It cannot ask
   `permitted?(:access_project, ...)` for that, since the guard above answers
   `false` for both cases.
   """
