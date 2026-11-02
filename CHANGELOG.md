@@ -75,6 +75,13 @@ and this project adheres to
 
 ### Security
 
+- Elixir moves from 1.18.4 to 1.19.7, picking up the 1.18.5 and 1.18.6 security
+  fixes (`URI.parse` port limits, decoding of oversized JSON integers and
+  `List.to_string/1`). The 1.18 line no longer ships an OTP 28 build upstream,
+  so staying on 1.18 would have meant downgrading to OTP 27. OTP moves from 28.5
+  to 28.5.0.8 and the Debian base snapshot from bookworm-20260421 to
+  bookworm-20261027, both still Debian 12.
+  [#5274](https://github.com/OpenFn/lightning/pull/5274)
 - The Docker image no longer trusts the emSign Root CA C1 and ECC Root CA C3
   certificates, which Mozilla removed after eMudhra issued intermediates with
   weak keys. Lightning trusts the OS certificate store for most outbound HTTPS,

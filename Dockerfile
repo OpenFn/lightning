@@ -12,9 +12,9 @@
 #   - https://pkgs.org/ - resource for finding needed packages
 #   - Ex: hexpm/elixir:1.16.2-erlang-26.2.5-debian-bookworm-20240513
 #
-ARG ELIXIR_VERSION=1.18.4
-ARG OTP_VERSION=28.5
-ARG DEBIAN_VERSION=bookworm-20260421
+ARG ELIXIR_VERSION=1.19.7
+ARG OTP_VERSION=28.5.0.8
+ARG DEBIAN_VERSION=bookworm-20261027
 ARG NODE_VERSION=24.22.1
 ARG ERL_FLAGS
 
