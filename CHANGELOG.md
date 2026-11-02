@@ -66,6 +66,11 @@ and this project adheres to
   the key; set it to the GitHub App's private key alone. An empty `GITHUB_CERT`
   counts as unset. An env file Dotenvy can't parse stops the boot without
   printing the line. [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Versions are shown without a leading `v` (`2.21.0`, not `v2.21.0`) in the
+  sidebar version chip, to match how images are now tagged. Images carry their
+  version in the standard `org.opencontainers.image.version` label. Usage
+  tracking reports the version without the `v` too, and counts an image tag with
+  or without it as a match.
 
 ### Fixed
 
