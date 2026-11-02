@@ -135,6 +135,8 @@ defmodule LightningWeb.Router do
     resources "/users", API.UserController, only: [:index, :show, :create]
     patch "/users/:id", API.UserController, :update
 
+    get "/me", API.MeController, :show
+
     get "/projects/:id", API.ProjectController, :show
     put "/projects/:id", API.ProjectController, :update
 

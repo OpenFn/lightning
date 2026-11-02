@@ -228,6 +228,23 @@ defmodule Lightning.Accounts.UserToken do
   def sudo_session_validity_in_seconds, do: @sudo_session_validity_in_seconds
 
   @doc """
+  The address of the user's newest change-of-email token that hasn't expired
+  (after @change_email_validity_in_days), or no row.
+  """
+  def pending_change_email_query(%User{id: user_id, email: email}) do
+    context = "change:" <> email
+
+    from(t in Lightning.Accounts.UserToken,
+      where: t.user_id == ^user_id,
+      where: t.context == ^context,
+      where: t.inserted_at > ago(@change_email_validity_in_days, "day"),
+      order_by: [desc: t.inserted_at],
+      limit: 1,
+      select: t.sent_to
+    )
+  end
+
+  @doc """
   Returns the token struct for the given token value and context.
   """
   def token_and_context_query(token, context) do

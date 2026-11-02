@@ -1064,6 +1064,17 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  The new email address waiting to be confirmed for the user, from the newest
+  change-of-email token that hasn't expired, or `nil`.
+  """
+  @spec pending_email(User.t()) :: String.t() | nil
+  def pending_email(%User{} = user) do
+    user
+    |> UserToken.pending_change_email_query()
+    |> Repo.one()
+  end
+
+  @doc """
   Deletes the signed token with the given context.
   """
   def delete_sudo_session_token(token) do

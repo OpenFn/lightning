@@ -55,6 +55,13 @@ and this project adheres to
   [SERVICE_ACCOUNTS.md](SERVICE_ACCOUNTS.md) walks through setting up the
   service account and using it to create the first superuser and project on a
   new instance. [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Lightning's own pages can call the API as the signed-in person with their
+  session cookie, which `POST /api/session` sets (with an MFA code when the
+  account has MFA) and `DELETE /api/session` ends. The cookie only counts on
+  requests from Lightning's own pages, and writes also need the session's CSRF
+  token from `GET /api/session` in `x-csrf-token`. `GET /api/instance` tells the
+  app about the instance before anyone signs in, and `GET /api/me` reads the
+  person a token belongs to.
 
 ### Changed
 

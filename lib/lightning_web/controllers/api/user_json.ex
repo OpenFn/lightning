@@ -18,6 +18,20 @@ defmodule LightningWeb.API.UserJSON do
     %{data: resource(conn, user)}
   end
 
+  # The person a token belongs to, in the shape above, with what the account
+  # page shows when the token is a session token.
+  def render("me.json", %{user: user, account: account, conn: conn}) do
+    resource = resource(conn, user)
+
+    %{
+      data:
+        if(account,
+          do: Map.update!(resource, :attributes, &Map.merge(&1, account)),
+          else: resource
+        )
+    }
+  end
+
   defp resource(conn, user) do
     %{
       type: "users",

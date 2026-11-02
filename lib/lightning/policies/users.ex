@@ -17,15 +17,20 @@ defmodule Lightning.Policies.Users do
           | :delete_account
           | :read_users
           | :write_users
+          | :read_own_account
 
-  @spec authorize(actions(), User.t() | Scope.t(), any()) ::
-          boolean() | {:error, Decision.insufficient_scope()}
+  @spec authorize(actions(), User.t() | Scope.t(), any()) :: Decision.answer()
 
   # `operator?` is a fact about the caller alone, so the check made before any
   # target decides it.
   def authorize(action, %Scope{} = scope, _subject)
       when action in [:read_users, :write_users],
       do: Decision.instance(scope, nil, grant(action), Scope.operator?(scope))
+
+  # A person reads their own account on either of their tokens. The service
+  # account isn't a user, so it has no account to read.
+  def authorize(:read_own_account, %Scope{} = scope, _subject),
+    do: Decision.person(scope, true)
 
   def authorize(:access_admin_space, %User{role: role}, _params) do
     role in [:superuser]

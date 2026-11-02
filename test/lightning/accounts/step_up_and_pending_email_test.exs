@@ -47,4 +47,36 @@ defmodule Lightning.Accounts.StepUpAndPendingEmailTest do
       end
     end
   end
+
+  describe "pending_email/1" do
+    test "is the newest address waiting to be confirmed" do
+      user = insert(:user)
+      {:ok, _email} = Accounts.request_email_update(user, "first@example.com")
+
+      age_token(
+        "change:#{user.email}",
+        UserToken.user_and_contexts_query(user, :all),
+        60
+      )
+
+      {:ok, _email} = Accounts.request_email_update(user, "second@example.com")
+
+      assert Accounts.pending_email(user) == "second@example.com"
+    end
+
+    test "is nil with no change waiting, or once the change has expired" do
+      user = insert(:user)
+      assert Accounts.pending_email(user) == nil
+
+      {:ok, _email} = Accounts.request_email_update(user, "new@example.com")
+
+      age_token(
+        "change:#{user.email}",
+        UserToken.user_and_contexts_query(user, :all),
+        7 * 24 * 60 * 60 + 1
+      )
+
+      assert Accounts.pending_email(user) == nil
+    end
+  end
 end
