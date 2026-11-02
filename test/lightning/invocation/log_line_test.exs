@@ -57,7 +57,7 @@ defmodule Lightning.Invocation.LogLineTest do
           nil
         )
 
-      assert {:message, {"can't be blank", []}} in log_line.errors
+      assert {:message, {"can't be blank", [code: :required]}} in log_line.errors
       refute log_line.valid?
     end
   end

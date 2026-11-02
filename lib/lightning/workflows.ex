@@ -546,7 +546,7 @@ defmodule Lightning.Workflows do
     Logger.log(level, log_message)
 
     changeset
-    |> Ecto.Changeset.add_error(:base, base_message)
+    |> Ecto.Changeset.add_error(:base, base_message, code: :invalid)
     |> Map.put(:action, derive_action(changeset))
   end
 

@@ -839,7 +839,7 @@ defmodule Lightning.Accounts do
   defp validate_email_changed(changeset, user) do
     Changeset.validate_change(changeset, :email, fn :email, email ->
       if user.email == email do
-        [email: "has not changed"]
+        [email: {"has not changed", code: :unchanged}]
       else
         []
       end
@@ -852,7 +852,7 @@ defmodule Lightning.Accounts do
       if User.valid_password?(user, password) do
         []
       else
-        [current_password: "does not match password"]
+        [current_password: {"does not match password", code: :mismatch}]
       end
     end)
   end

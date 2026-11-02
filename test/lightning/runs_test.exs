@@ -324,8 +324,9 @@ defmodule Lightning.RunsTest do
           "step_id" => Ecto.UUID.generate()
         })
 
-      assert {:job_id, {"does not exist", []}} in changeset.errors
-      refute {:run_id, {"does not exist", []}} in changeset.errors
+      assert {:job_id, {"does not exist", [code: :not_found]}} in changeset.errors
+
+      refute {:run_id, {"does not exist", [code: :not_found]}} in changeset.errors
 
       # both run_id and job_id doesn't exist
       {:error, changeset} =
@@ -335,8 +336,9 @@ defmodule Lightning.RunsTest do
           "step_id" => Ecto.UUID.generate()
         })
 
-      assert {:job_id, {"does not exist", []}} in changeset.errors
-      assert {:run_id, {"does not exist", []}} in changeset.errors
+      assert {:job_id, {"does not exist", [code: :not_found]}} in changeset.errors
+
+      assert {:run_id, {"does not exist", [code: :not_found]}} in changeset.errors
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
@@ -382,7 +384,7 @@ defmodule Lightning.RunsTest do
           "step_id" => Ecto.UUID.generate()
         })
 
-      assert {:job_id, {"does not exist", []}} in changeset.errors
+      assert {:job_id, {"does not exist", [code: :not_found]}} in changeset.errors
 
       {:ok, step} =
         Runs.start_step(run_1, %{
@@ -621,7 +623,10 @@ defmodule Lightning.RunsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      assert {:error, %Ecto.Changeset{errors: [step_id: {"not found", []}]}} =
+      assert {:error,
+              %Ecto.Changeset{
+                errors: [step_id: {"not found", [code: :not_found]}]
+              }} =
                Runs.complete_step(%{
                  step_id: Ecto.UUID.generate(),
                  reason: "success",
@@ -851,7 +856,7 @@ defmodule Lightning.RunsTest do
 
       assert {:state,
               {"cannot mark run success that has not been claimed by a worker",
-               []}} in changeset.errors
+               [code: :not_allowed]}} in changeset.errors
 
       {:ok, run} =
         Repo.update(run |> Ecto.Changeset.change(state: :claimed))
@@ -897,7 +902,7 @@ defmodule Lightning.RunsTest do
       assert changeset.errors == [
                state:
                  {"cannot mark run lost that has not been claimed by a worker",
-                  []}
+                  [code: :not_allowed]}
              ]
     end
 
@@ -988,7 +993,7 @@ defmodule Lightning.RunsTest do
               {"should be at most %{count} character(s)",
                [count: 8, validation: :length, kind: :max, type: :string]}} in changeset.errors
 
-      assert {:message, {"can't be blank", []}} in changeset.errors
+      assert {:message, {"can't be blank", [code: :required]}} in changeset.errors
 
       assert {:timestamp, {"can't be blank", [validation: :required]}} in changeset.errors
 
@@ -999,7 +1004,7 @@ defmodule Lightning.RunsTest do
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      assert {:step_id, {"must be associated with the run", []}} in changeset.errors
+      assert {:step_id, {"must be associated with the run", [code: :not_found]}} in changeset.errors
 
       {:ok, _log_line} =
         Runs.append_run_log(run, %{

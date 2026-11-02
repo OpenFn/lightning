@@ -300,7 +300,7 @@ defmodule Lightning.Runs do
         |> if do
           []
         else
-          [{:step_id, "must be associated with the run"}]
+          [{:step_id, {"must be associated with the run", code: :not_found}}]
         end
       end
     end)
@@ -364,7 +364,7 @@ defmodule Lightning.Runs do
     if step_id in valid_step_ids do
       []
     else
-      [{:step_id, "must be associated with the run"}]
+      [{:step_id, {"must be associated with the run", code: :not_found}}]
     end
   end
 

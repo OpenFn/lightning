@@ -83,7 +83,7 @@ defmodule Lightning.Invocation.Dataclip do
         changeset
 
       _other ->
-        add_error(changeset, :body, "must be a map")
+        add_error(changeset, :body, "must be a map", code: :type)
     end
   end
 
@@ -136,7 +136,9 @@ defmodule Lightning.Invocation.Dataclip do
         changeset
 
       {_, request} when not is_nil(request) ->
-        add_error(changeset, :request, "cannot be set for this type")
+        add_error(changeset, :request, "cannot be set for this type",
+          code: :not_allowed
+        )
 
       {_, _} ->
         changeset

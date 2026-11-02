@@ -127,7 +127,7 @@ defmodule Lightning.Projects.Project do
 
   defp disallow_self_parent(changeset) do
     if get_field(changeset, :parent_id) == changeset.data.id,
-      do: add_error(changeset, :parent_id, "cannot be self"),
+      do: add_error(changeset, :parent_id, "cannot be self", code: :not_allowed),
       else: changeset
   end
 
@@ -262,7 +262,8 @@ defmodule Lightning.Projects.Project do
       add_error(
         changeset,
         :dataclip_retention_period,
-        "dataclip retention period must be less or equal to the history retention period"
+        "dataclip retention period must be less or equal to the history retention period",
+        code: :out_of_range
       )
     else
       changeset

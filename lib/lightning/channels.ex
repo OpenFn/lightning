@@ -322,7 +322,8 @@ defmodule Lightning.Channels do
       Ecto.Changeset.add_error(
         dest,
         :project_credential_id,
-        Scoping.violation_message(:project_credential_id)
+        Scoping.violation_message(:project_credential_id),
+        code: :credential_not_allowed
       )
 
     changeset
