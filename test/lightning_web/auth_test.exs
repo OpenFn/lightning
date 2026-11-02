@@ -349,6 +349,38 @@ defmodule LightningWeb.AuthTest do
       assert Lightning.Repo.reload!(credential).transfer_status == nil
     end
 
+    test "GET /api/projects/:project_id/sandboxes takes a person's tokens or a service account's, and not a repo connection's",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind(conn, tokens, ~p"/api/projects/#{project.id}/sandboxes",
+        service_account: :logs_in,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: {:insufficient_scope, "projects:write"},
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
+    # GitHub isn't reachable here, which the route reports in its body.
+    test "GET /api/projects/:project_id/repo_connection takes a person's tokens, and refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      Mox.stub(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :econnrefused}
+      end)
+
+      assert_each_kind(
+        conn,
+        tokens,
+        ~p"/api/projects/#{project.id}/repo_connection",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
     test "authenticated_api takes a personal or run token, and not a repo connection's or a service account's",
          %{conn: conn, tokens: tokens, collection: collection} do
       assert_each_kind(conn, tokens, ~p"/collections/#{collection.name}",

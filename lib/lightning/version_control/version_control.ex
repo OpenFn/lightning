@@ -146,6 +146,67 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  @typedoc "Something `check_github_connection/1` found missing from the repo."
+  @type connection_problem ::
+          :missing_pull_yml
+          | :missing_deploy_yml
+          | :missing_config
+          | :missing_api_secret
+
+  @doc """
+  Checks the repo as `verify_github_connection/1` does, but looks at every
+  part rather than stopping at the first one missing, and answers which are
+  missing: the pull workflow on the default branch, the deploy workflow and
+  the config file on the connection's branch (a v2 connection has no config
+  file), and the repo secret. `{:ok, []}` means the connection is verified.
+
+  An error means GitHub couldn't be asked: the installation token or the repo
+  couldn't be read.
+  """
+  @spec check_github_connection(ProjectRepoConnection.t()) ::
+          {:ok, [connection_problem()]} | {:error, GithubError.t() | term()}
+  def check_github_connection(repo_connection) do
+    %{repo: repo, branch: branch} = repo_connection
+
+    with {:ok, client} <-
+           GithubClient.build_installation_client(
+             repo_connection.github_installation_id
+           ),
+         {:ok, %{status: 200, body: %{"default_branch" => default_branch}}} <-
+           GithubClient.get_repo(client, repo) do
+      checks = [
+        missing_pull_yml: fn ->
+          verify_file_exists(
+            client,
+            repo,
+            default_branch,
+            pull_yml_target_path()
+          )
+        end,
+        missing_deploy_yml: fn ->
+          verify_file_exists(
+            client,
+            repo,
+            branch,
+            deploy_yml_target_path(repo_connection)
+          )
+        end,
+        missing_config: fn ->
+          maybe_verify_config_exists(client, repo_connection)
+        end,
+        missing_api_secret: fn ->
+          verify_repo_secret_exists(
+            client,
+            repo_connection,
+            api_secret_name(repo_connection)
+          )
+        end
+      ]
+
+      {:ok, for({problem, check} <- checks, check.() != :ok, do: problem)}
+    end
+  end
+
   # v2 has no config file: the CLI owns the workspace, see get_sync_status/1
   defp maybe_verify_config_exists(_client, %{sync_version: true}), do: :ok
 
@@ -425,30 +486,105 @@ defmodule Lightning.VersionControl do
   end
 
   @doc """
-  Deletes a github connection, and the deploy workflow and API secret it set
-  up on GitHub.
+  Deletes a github connection, then tries to remove what connecting wrote to
+  the repo, ignoring the result: the deploy workflow and the API secret.
 
   With `delete_files: true`, a v2 connection also deletes this project's
   files from the branch in one commit: its copies under `.projects`, and the
   checkout when the branch tracks this project. Files other projects in the
   workspace use, `openfn.yaml` included, stay.
+
+  Returns `{:error, :concurrent_edit}` when another request removed the
+  connection first.
   """
   def remove_github_connection(repo_connection, user, opts \\ []) do
     Multi.new()
-    |> Multi.delete(:delete_repo_connection, repo_connection)
+    |> Multi.delete(:delete_repo_connection, repo_connection,
+      stale_error_field: :id
+    )
     |> Multi.insert(
       :audit,
       Audit.repo_connection(repo_connection, :removed, user)
     )
     |> Repo.transaction()
-    |> tap(fn
-      {:ok, %{delete_repo_connection: repo_connection}} ->
-        undo_repo_actions(repo_connection, user, opts[:delete_files] == true)
+    |> case do
+      {:ok, %{delete_repo_connection: repo_connection}} = result ->
+        undo_repo_actions(repo_connection, user,
+          delete_files: opts[:delete_files] == true
+        )
 
-      _other ->
+        result
+
+      {:error, :delete_repo_connection, %Ecto.Changeset{}, _changes} ->
+        {:error, :concurrent_edit}
+
+      other ->
+        other
+    end
+  end
+
+  @doc """
+  Replaces a project's connection with one to another repo, branch,
+  installation or config path, which `reconfigure_github_connection/3` can't
+  change: removes the old connection and creates the new one in one
+  transaction, so nothing is saved if creating fails, as with
+  `create_github_connection/2`.
+
+  Once both are saved it tries to remove what the old connection wrote to its
+  repo, ignoring the result, and only where the new one didn't write the same
+  place: the deploy workflow and config on the old branch when the branch or
+  repo changed, and the repo secret when the repo did.
+
+  Returns `{:error, :concurrent_edit}` when another request removed the old
+  connection first.
+  """
+  @spec replace_github_connection(ProjectRepoConnection.t(), map(), User.t()) ::
+          {:ok, ProjectRepoConnection.t()}
+          | {:error,
+             Ecto.Changeset.t()
+             | UsageLimiting.message()
+             | :branch_used_in_project_tree
+             | :concurrent_edit
+             | binary()
+             | term()}
+  def replace_github_connection(old_connection, attrs, user) do
+    Repo.transact(fn ->
+      with {:ok, _deleted} <- delete_for_replace(old_connection),
+           {:ok, _audit} <-
+             old_connection
+             |> Audit.repo_connection(:removed, user)
+             |> Repo.insert() do
+        create_github_connection(attrs, user)
+      end
+    end)
+    |> tap(fn
+      {:ok, new_connection} ->
+        undo_replaced_repo_actions(old_connection, new_connection, user)
+
+      _error ->
         :ok
     end)
   end
+
+  defp delete_for_replace(repo_connection) do
+    case Repo.delete(repo_connection, stale_error_field: :id) do
+      {:ok, deleted} -> {:ok, deleted}
+      {:error, %Ecto.Changeset{}} -> {:error, :concurrent_edit}
+    end
+  end
+
+  defp undo_replaced_repo_actions(
+         %{repo: repo, branch: branch},
+         %{repo: repo, branch: branch},
+         _user
+       ),
+       do: :ok
+
+  defp undo_replaced_repo_actions(%{repo: repo} = old, %{repo: repo}, user),
+    do: undo_repo_actions(old, user, keep_secret: true)
+
+  defp undo_replaced_repo_actions(old, _new, user),
+    do: undo_repo_actions(old, user)
 
   def get_repo_connection_for_project(project_id) do
     Repo.get_by(ProjectRepoConnection, project_id: project_id)
@@ -1107,7 +1243,9 @@ defmodule Lightning.VersionControl do
     "OPENFN_#{sanitized_id}_API_KEY"
   end
 
-  defp undo_repo_actions(repo_connection, user, delete_files?) do
+  defp undo_repo_actions(repo_connection, user, opts \\ []) do
+    delete_files? = opts[:delete_files] == true
+
     with {:ok, access_token} <- fetch_user_access_token(user),
          {:ok, client} <- GithubClient.build_bearer_client(access_token) do
       deleted_workspace? =
@@ -1131,11 +1269,13 @@ defmodule Lightning.VersionControl do
         )
       end
 
-      GithubClient.delete_repo_secret(
-        client,
-        repo_connection.repo,
-        api_secret_name(repo_connection)
-      )
+      if !opts[:keep_secret] do
+        GithubClient.delete_repo_secret(
+          client,
+          repo_connection.repo,
+          api_secret_name(repo_connection)
+        )
+      end
     end
   end
 
