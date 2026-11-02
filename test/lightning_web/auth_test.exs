@@ -373,6 +373,71 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "a workflow's snapshots, one snapshot, its versions, and the workflow templates take a person's tokens, and refuse the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      workflow = insert(:simple_workflow, project: project) |> with_snapshot()
+
+      snapshot =
+        Repo.get_by!(Lightning.Workflows.Snapshot, workflow_id: workflow.id)
+
+      for path <- [
+            ~p"/api/workflows/#{workflow.id}/snapshots",
+            ~p"/api/workflows/#{workflow.id}/snapshots/#{snapshot.id}",
+            ~p"/api/workflows/#{workflow.id}/versions",
+            ~p"/api/workflow_templates"
+          ] do
+        assert_each_kind(conn, tokens, path,
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :logs_in,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: :logs_in
+        )
+      end
+    end
+
+    # The routes write, so each person's token is shown let in by the answer
+    # the route gives once it reads the request: 404 for a workflow the
+    # project hasn't got, 422 for a template with no name.
+    test "deleting a workflow and publishing it as a template take a person's tokens, and refuse the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      {:session, user} = tokens[:session]
+      Repo.update!(Ecto.Changeset.change(user, support_user: true))
+      workflow = insert(:simple_workflow, project: project)
+
+      for {verb, path, let_in} <- [
+            {:delete,
+             ~p"/api/projects/#{project.id}/workflows/#{Ecto.UUID.generate()}",
+             {404, :not_found}},
+            {:put, ~p"/api/workflows/#{workflow.id}/template", {422, :invalid}}
+          ],
+          {kind, token} <- tokens do
+        conn =
+          conn
+          |> with_token(token)
+          |> put_req_header("content-type", "application/json")
+          |> dispatch(@endpoint, verb, path, "{}")
+
+        case kind do
+          kind when kind in [:personal, :session] ->
+            {status, code} = let_in
+            assert_problem(conn, status, code)
+
+          kind when kind in [:service_account, :repo_connection] ->
+            assert_problem(conn, 403, :forbidden, [])
+
+          :expired_service_account ->
+            assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+          :run ->
+            assert_unauthenticated(conn, :invalid_token, @invalid_token)
+        end
+      end
+
+      refute Repo.reload!(workflow).deleted_at
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens

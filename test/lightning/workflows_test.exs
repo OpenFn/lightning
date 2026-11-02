@@ -2445,8 +2445,33 @@ defmodule Lightning.WorkflowsTest do
       assert {:ok, %{workflow: deleted}} = Workflows.mark_for_deletion(w1, user)
       assert deleted.name == "water_gap_analysis_del1"
 
-      assert {:ok, %{workflow: deleted}} = Workflows.mark_for_deletion(w1, user)
+      w2 = insert(:workflow, project: project, name: "water_gap_analysis")
+
+      assert {:ok, %{workflow: deleted}} = Workflows.mark_for_deletion(w2, user)
       assert deleted.name == "water_gap_analysis_del2"
+    end
+
+    test "mark_for_deletion/3 refuses a workflow another request deleted after it was read, and writes nothing" do
+      project = insert(:project)
+      user = insert(:user)
+      workflow = insert(:simple_workflow, project: project, name: "read twice")
+
+      assert {:ok, %{workflow: deleted}} =
+               Workflows.mark_for_deletion(workflow, user)
+
+      assert Workflows.mark_for_deletion(workflow, user) ==
+               {:error, :concurrent_edit}
+
+      assert Repo.reload!(workflow).name == deleted.name
+
+      assert Repo.aggregate(
+               from(a in Audit,
+                 where:
+                   a.item_id == ^workflow.id and
+                     a.event == "marked_for_deletion"
+               ),
+               :count
+             ) == 1
     end
 
     test "allows reusing workflow name after marking for deletion, then validates error when using deleted workflow name" do

@@ -150,6 +150,138 @@ defmodule Lightning.WorkflowTemplates do
   end
 
   @doc """
+  A page of workflow templates by name, as `Lightning.Repo.paginate/2` takes
+  `page`.
+
+  Filters:
+
+    * `:q` - a case-insensitive search of the name and description.
+    * `:tags` - only templates carrying every one of these tags.
+  """
+  @spec paginate_templates(%{optional(:q | :tags) => term()}, keyword()) ::
+          Scrivener.Page.t()
+  def paginate_templates(filters, page) do
+    WorkflowTemplate
+    |> filter_search(filters[:q])
+    |> filter_tags(filters[:tags])
+    |> order_by([t], asc: t.name, asc: t.id)
+    |> Repo.paginate(page)
+  end
+
+  defp filter_search(query, q) when is_binary(q) and q != "" do
+    pattern = "%" <> escape_like(q) <> "%"
+
+    where(
+      query,
+      [t],
+      ilike(t.name, ^pattern) or ilike(coalesce(t.description, ""), ^pattern)
+    )
+  end
+
+  defp filter_search(query, _q), do: query
+
+  defp filter_tags(query, [_ | _] = tags),
+    do: where(query, [t], fragment("? @> ?", t.tags, ^tags))
+
+  defp filter_tags(query, _tags), do: query
+
+  defp escape_like(text),
+    do: String.replace(text, ["\\", "%", "_"], &("\\" <> &1))
+
+  @doc """
+  Publishes the workflow as it is saved now, as v2 YAML with its positions,
+  under the name, description and tags in `attrs`. A workflow has at most one
+  template, so publishing again replaces it.
+
+  `workflow` must have its jobs, triggers and edges loaded. Answers whether the
+  template was `:created` or `:updated`, a changeset for invalid `attrs`,
+  `{:error, :export_conflict}` when two of its jobs export under the same key,
+  or `{:error, :concurrent_edit}` when the workflow is deleted mid-publish.
+
+  Any other failure to serialize the workflow is a bug rather than an answer,
+  so it raises the serializer's exception.
+  """
+  @spec publish_workflow(Workflow.t(), map()) ::
+          {:ok, :created | :updated, WorkflowTemplate.t()}
+          | {:error, Ecto.Changeset.t() | :export_conflict | :concurrent_edit}
+  def publish_workflow(%Workflow{} = workflow, attrs) do
+    case Lightning.Workflows.YamlFormat.V2.serialize_workflow(workflow) do
+      {:ok, code} ->
+        attrs
+        |> Map.take([:name, :description, :tags])
+        |> Map.merge(%{
+          code: code,
+          positions: workflow.positions,
+          workflow_id: workflow.id
+        })
+        |> put_template(workflow.id)
+
+      {:error, message} when is_binary(message) ->
+        {:error, :export_conflict}
+
+      {:error, {:serialize_failed, exception}} ->
+        raise exception
+    end
+  end
+
+  # Another request may create the workflow's template between the lookup and
+  # the insert, which the unique index on `workflow_id` refuses, or delete it
+  # before the update, which then finds no row. Either way the request runs
+  # again from the lookup. A workflow deleted after it was read takes its
+  # template with it, so that is `:concurrent_edit`.
+  defp put_template(attrs, workflow_id) do
+    case get_template_by_workflow_id(workflow_id) do
+      nil -> insert_template(attrs, workflow_id)
+      template -> replace_template(template, attrs, workflow_id)
+    end
+  end
+
+  defp insert_template(attrs, workflow_id) do
+    %WorkflowTemplate{}
+    |> WorkflowTemplate.changeset(attrs)
+    |> Ecto.Changeset.unique_constraint(:workflow_id)
+    |> Repo.insert()
+    |> case do
+      {:ok, template} ->
+        {:ok, :created, template}
+
+      {:error, changeset} ->
+        cond do
+          constraint_on?(changeset, :workflow_id, :unique) ->
+            put_template(attrs, workflow_id)
+
+          constraint_on?(changeset, :workflow, :assoc) ->
+            {:error, :concurrent_edit}
+
+          true ->
+            {:error, changeset}
+        end
+    end
+  end
+
+  defp replace_template(template, attrs, workflow_id) do
+    template
+    |> WorkflowTemplate.changeset(attrs)
+    |> Repo.update(stale_error_field: :id)
+    |> case do
+      {:ok, template} ->
+        {:ok, :updated, template}
+
+      {:error, %{errors: [id: {_message, [stale: true]}]}} ->
+        put_template(attrs, workflow_id)
+
+      error ->
+        error
+    end
+  end
+
+  defp constraint_on?(changeset, field, constraint) do
+    changeset.errors
+    |> Keyword.get_values(field)
+    |> Enum.any?(fn {_message, opts} -> opts[:constraint] == constraint end)
+  end
+
+  @doc """
   Lists workflow templates for a specific workflow.
 
   ## Examples
