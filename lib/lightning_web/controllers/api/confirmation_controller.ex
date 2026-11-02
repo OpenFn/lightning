@@ -19,7 +19,8 @@ defmodule LightningWeb.API.ConfirmationController do
   a new email address (which then replaces the old one), or a credential
   transfer (which then moves the credential to its recipient). It answers 200
   with which it confirmed. Each token works once, and a used, expired or
-  unknown token, or one sent to someone else, is 404 `not_found`. Without a
+  unknown token, or one sent to someone else, is 404 `not_found`, as is one
+  another request used while this one was confirming with it. Without a
   session it is 401 `unauthenticated`. It takes no body, and ignores one.
 
   A write on a session needs the session's `x-csrf-token`.

@@ -1974,6 +1974,66 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "reset_user_password/3" do
+    setup do
+      user = insert(:user)
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_user_reset_password_instructions(user, url)
+        end)
+
+      %{user: user, token: token}
+    end
+
+    test "sets the password and uses the token up", %{user: user, token: token} do
+      assert {:ok, _user} =
+               Accounts.reset_user_password(
+                 user,
+                 %{password: "new valid password"},
+                 token
+               )
+
+      assert Accounts.get_user_by_email_and_password(
+               user.email,
+               "new valid password"
+             )
+
+      refute Accounts.get_user_by_reset_password_token(token)
+    end
+
+    test "keeps the token when the password is refused", %{
+      user: user,
+      token: token
+    } do
+      assert {:error, changeset} =
+               Accounts.reset_user_password(user, %{password: "short"}, token)
+
+      assert {:password, {_message, opts}} =
+               List.keyfind(changeset.errors, :password, 0)
+
+      assert opts[:validation] == :length
+      assert Accounts.get_user_by_reset_password_token(token)
+    end
+
+    test "returns concurrent_edit for a token already used, and changes nothing",
+         %{user: user, token: token} do
+      {:ok, _user} =
+        Accounts.reset_user_password(user, %{password: "first password!"}, token)
+
+      assert Accounts.reset_user_password(
+               user,
+               %{password: "second password!"},
+               token
+             ) == {:error, :concurrent_edit}
+
+      assert Accounts.get_user_by_email_and_password(
+               user.email,
+               "first password!"
+             )
+    end
+  end
+
   describe "delete_user/1" do
     test "delete_user/1 deletes the user" do
       user = insert(:user)
