@@ -172,6 +172,36 @@ defmodule LightningWeb.Router do
     resources "/work_orders", API.WorkOrdersController, only: [:index, :show]
     resources "/runs", API.RunController, only: [:index, :show]
     resources "/log_lines", API.LogLinesController, only: [:index]
+
+    # api-area:account (routes for this area go between these markers)
+    # end-api-area:account
+
+    # api-area:projects (routes for this area go between these markers)
+    # end-api-area:projects
+
+    # api-area:sandboxes_github (routes for this area go between these markers)
+    # end-api-area:sandboxes_github
+
+    # api-area:credentials (routes for this area go between these markers)
+    # end-api-area:credentials
+
+    # api-area:credential_extras (routes for this area go between these markers)
+    # end-api-area:credential_extras
+
+    # api-area:workflows (routes for this area go between these markers)
+    # end-api-area:workflows
+
+    # api-area:work_orders_runs (routes for this area go between these markers)
+    # end-api-area:work_orders_runs
+
+    # api-area:dataclips_audit (routes for this area go between these markers)
+    # end-api-area:dataclips_audit
+
+    # api-area:webhooks_channels (routes for this area go between these markers)
+    # end-api-area:webhooks_channels
+
+    # api-area:ai_assistant (routes for this area go between these markers)
+    # end-api-area:ai_assistant
   end
 
   scope "/api", LightningWeb, as: :api do
