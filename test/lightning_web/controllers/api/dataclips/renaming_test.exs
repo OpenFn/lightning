@@ -83,16 +83,16 @@ defmodule LightningWeb.API.Dataclips.RenamingTest do
       assert %Dataclip{name: "sample"} = Repo.reload(dataclip)
     end
 
-    test "null removes the name, and a body without one changes nothing", %{
-      conn: conn,
-      project: project
-    } do
+    test "null removes the name, and its current name or a body without one changes nothing",
+         %{conn: conn, project: project} do
       dataclip = insert(:dataclip, project: project, name: "sample")
 
-      assert %{"name" => "sample"} =
-               conn
-               |> patch(~p"/api/dataclips/#{dataclip.id}", %{})
-               |> attributes()
+      for body <- [%{}, %{name: "sample"}] do
+        assert %{"name" => "sample"} =
+                 conn
+                 |> patch(~p"/api/dataclips/#{dataclip.id}", body)
+                 |> attributes()
+      end
 
       assert %{"name" => nil} =
                conn

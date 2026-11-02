@@ -392,13 +392,31 @@ defmodule LightningWeb.AuthTest do
         session: :forbidden
       )
     end
+
+    test "PATCH /api/dataclips/:id takes a person's tokens, and refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      dataclip = insert(:dataclip, project: project)
+
+      rename = fn conn ->
+        patch(conn, ~p"/api/dataclips/#{dataclip.id}", %{name: "sample"})
+      end
+
+      assert_each_kind(conn, tokens, rename,
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
   end
 
   defp assert_each_kind(conn, tokens, path, expected) do
     assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
 
     for {kind, answer} <- expected do
-      conn = conn |> with_token(tokens[kind]) |> get(path)
+      conn = conn |> with_token(tokens[kind]) |> request(path)
 
       case answer do
         :logs_in ->
@@ -425,6 +443,10 @@ defmodule LightningWeb.AuthTest do
       end
     end
   end
+
+  # A path is read with GET; any other request is a function of the conn.
+  defp request(conn, path) when is_binary(path), do: get(conn, path)
+  defp request(conn, request), do: request.(conn)
 
   defp with_token(conn, {:session, user}), do: session_conn(conn, user)
 
