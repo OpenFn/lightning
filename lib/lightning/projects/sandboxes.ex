@@ -74,6 +74,8 @@ defmodule Lightning.Projects.Sandboxes do
   * `:name` - Sandbox name (must be unique within the parent project)
 
   ## Optional
+  * `:id` - The new sandbox's id, for a caller that picks it, such as the
+    API's `PUT`. Lightning generates one otherwise.
   * `:color` - UI color hex string (e.g. `"#336699"`)
   * `:env` - Environment identifier (e.g. `"staging"`, `"dev"`)
   * `:dataclip_ids` - UUIDs of dataclips to copy (only copies named dataclips
@@ -92,6 +94,7 @@ defmodule Lightning.Projects.Sandboxes do
   """
   @type provision_attrs :: %{
           required(:name) => String.t(),
+          optional(:id) => Ecto.UUID.t(),
           optional(:color) => String.t() | nil,
           optional(:env) => String.t() | nil,
           optional(:dataclip_ids) => [Ecto.UUID.t()],
@@ -1027,13 +1030,14 @@ defmodule Lightning.Projects.Sandboxes do
       parent_with_data = load_parent_associations(parent)
 
       sandbox_attrs =
-        build_sandbox_project_attributes(
-          parent_with_data,
+        parent_with_data
+        |> build_sandbox_project_attributes(
           actor,
           sandbox_name,
           sandbox_color,
           sandbox_env
         )
+        |> Map.merge(Map.take(attrs, [:id]))
 
       case Lightning.Projects.create_sandbox(
              parent_with_data,
@@ -1422,6 +1426,113 @@ defmodule Lightning.Projects.Sandboxes do
     insert_empty_collections(sandbox.id, parent_names)
     sandbox
   end
+
+  @typedoc """
+  One workflow a merge would touch, paired by name: `:new` only in the source,
+  `:changed` or `:unchanged` in both, `:deleted` only in the target and made
+  before the source was. `diverged?` is whether the target's workflow has
+  changed since the source was created.
+  """
+  @type merge_preview_workflow :: %{
+          name: String.t(),
+          source_workflow_id: Ecto.UUID.t() | nil,
+          target_workflow_id: Ecto.UUID.t() | nil,
+          change: :new | :changed | :unchanged | :deleted,
+          diverged?: boolean()
+        }
+
+  @doc """
+  What merging `source` into `target` would do, without writing anything: the
+  workflows it would touch, sorted by name, and the source's credentials the
+  target doesn't have, each `%{credential_id, name}` with the credential's own
+  id.
+
+  The same pairing the sandboxes page offers in its merge dialog. A workflow
+  only the target has and that was made after the source was never in the
+  source, so it is left out rather than offered as `:deleted`.
+  """
+  @spec merge_preview(Project.t(), Project.t()) :: %{
+          workflows: [merge_preview_workflow()],
+          credentials: [%{credential_id: Ecto.UUID.t(), name: String.t()}]
+        }
+  def merge_preview(%Project{} = source, %Project{} = target) do
+    source =
+      Repo.preload(source, [:workflows, project_credentials: :credential],
+        force: true
+      )
+
+    target =
+      Repo.preload(target, [:workflows, :project_credentials], force: true)
+
+    diverged = MapSet.new(MergeProjects.diverged_workflows(source, target))
+    changed = MapSet.new(MergeProjects.diverged_workflows(target, source))
+    target_by_name = Map.new(target.workflows, &{&1.name, &1})
+    source_names = MapSet.new(source.workflows, & &1.name)
+
+    from_source =
+      Enum.map(source.workflows, fn workflow ->
+        target_workflow = Map.get(target_by_name, workflow.name)
+
+        %{
+          name: workflow.name,
+          source_workflow_id: workflow.id,
+          target_workflow_id: target_workflow && target_workflow.id,
+          change:
+            change(target_workflow, MapSet.member?(changed, workflow.name)),
+          diverged?: MapSet.member?(diverged, workflow.name)
+        }
+      end)
+
+    deleted =
+      for workflow <- target.workflows,
+          not MapSet.member?(source_names, workflow.name),
+          DateTime.compare(workflow.inserted_at, source.inserted_at) != :gt do
+        %{
+          name: workflow.name,
+          source_workflow_id: nil,
+          target_workflow_id: workflow.id,
+          change: :deleted,
+          diverged?: false
+        }
+      end
+
+    %{
+      workflows: Enum.sort_by(from_source ++ deleted, & &1.name),
+      credentials: source_only_credentials(source, target)
+    }
+  end
+
+  defp change(nil, _changed?), do: :new
+  defp change(_target_workflow, true), do: :changed
+  defp change(_target_workflow, false), do: :unchanged
+
+  defp source_only_credentials(source, target) do
+    target_credential_ids =
+      MapSet.new(target.project_credentials, & &1.credential_id)
+
+    for project_credential <- source.project_credentials,
+        not MapSet.member?(
+          target_credential_ids,
+          project_credential.credential_id
+        ) do
+      %{
+        credential_id: project_credential.credential_id,
+        name: project_credential.credential.name || "Untitled credential"
+      }
+    end
+    |> Enum.sort_by(& &1.name)
+  end
+
+  @doc """
+  Whether `target` may receive a merge of `source`: not the source itself and
+  not one of its own sandboxes, at any depth. Whether the target is scheduled
+  for deletion is the policy's question.
+  """
+  @spec mergeable_target?(Project.t(), Project.t()) :: boolean()
+  def mergeable_target?(%Project{id: id}, %Project{id: id}), do: false
+
+  def mergeable_target?(%Project{} = source, %Project{} = target),
+    do: target.id not in Lightning.Projects.descendant_ids([source.id])
 
   @doc """
   Computes the collections a merge from `source` into `target` would create,

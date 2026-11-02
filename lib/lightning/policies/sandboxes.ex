@@ -27,6 +27,7 @@ defmodule Lightning.Policies.Sandboxes do
   @behaviour Bodyguard.Policy
 
   alias Lightning.Accounts.User
+  alias Lightning.Policies.Decision
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Scope
@@ -44,6 +45,10 @@ defmodule Lightning.Policies.Sandboxes do
   # exceptions rather than the rule means a new action that nobody classifies is
   # refused on a root instead of admitted.
   @parent_subject_actions [:provision_sandbox, :merge_sandbox]
+
+  @grant "projects:write"
+  @editor_roles [:owner, :admin, :editor]
+  @admin_roles [:owner, :admin]
 
   @doc """
   Authorize sandbox operations based on the user's role on the project
@@ -81,6 +86,28 @@ defmodule Lightning.Policies.Sandboxes do
     or target project (for merge)
   """
   @spec authorize(actions(), User.t(), Project.t()) :: boolean
+  @spec authorize(actions(), Scope.t(), term()) :: Decision.answer()
+
+  # The API asks with a `%Scope{}`, in the order `Decision` sets. Only a person
+  # may act, on a personal access or session token: `Sandboxes.provision/3` and
+  # `Sandboxes.merge/4` take a `%User{}`, and the caller becomes the new
+  # sandbox's owner, which the service account can't be.
+  def authorize(action, %Scope{} = scope, subject)
+      when action in @parent_subject_actions,
+      do:
+        Decision.person(
+          scope,
+          Decision.project(
+            scope,
+            subject,
+            @grant,
+            Scope.holds_role?(scope, @editor_roles)
+          )
+        )
+
+  def authorize(action, %Scope{} = scope, subject)
+      when action in [:delete_sandbox, :update_sandbox],
+      do: Decision.person(scope, on_sandbox(scope, subject))
 
   # Answered here rather than in each clause below, so no sandbox action can
   # forget it. A workspace root is not a sandbox, however the caller reached it.
@@ -174,6 +201,40 @@ defmodule Lightning.Policies.Sandboxes do
       project.project_users,
       &(&1.user_id == user_id and &1.role in [:owner, :admin])
     )
+  end
+
+  # The sandbox's own answer first. Only when its rule alone refused does the
+  # root cascade load the root project's facts, as `Decision` asks of a rule
+  # that needs another project's. The cascade still holds the caller to the
+  # sandbox's MFA requirement and its scheduled deletion.
+  defp on_sandbox(scope, subject) do
+    sandbox? = match?(%Project{parent_id: id} when not is_nil(id), scope.project)
+
+    own =
+      Decision.project(
+        scope,
+        subject,
+        @grant,
+        sandbox? and Scope.holds_role?(scope, @admin_roles)
+      )
+
+    if own in [false, {:error, :no_standing}] and sandbox? and
+         Scope.describes?(scope, subject) and root_admin?(scope),
+       do: by_root_admin(scope),
+       else: own
+  end
+
+  defp root_admin?(%Scope{actor: %User{} = user, project: sandbox}),
+    do: Scope.role_in?(user, Projects.root_of(sandbox), @admin_roles)
+
+  defp root_admin?(_scope), do: false
+
+  defp by_root_admin(scope) do
+    cond do
+      not scope.mfa_satisfied? -> false
+      scope.scheduled_for_deletion? -> {:error, :scheduled_for_deletion}
+      true -> true
+    end
   end
 
   defp has_root_project_permission?(%Project{} = sandbox, %User{} = user) do

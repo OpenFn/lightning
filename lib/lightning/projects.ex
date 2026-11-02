@@ -2204,6 +2204,20 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  A page of a parent project's *direct* sandboxes, ordered by `name`, leaving
+  out those scheduled for deletion. The API's list of a project's sandboxes;
+  `list_sandboxes/1` is the unfiltered walker the purge uses.
+  """
+  @spec paginate_sandboxes(Project.t(), map() | keyword()) :: Scrivener.Page.t()
+  def paginate_sandboxes(%Project{id: parent_id}, page) do
+    from(p in Project,
+      where: p.parent_id == ^parent_id and is_nil(p.scheduled_deletion),
+      order_by: [p.name, p.id]
+    )
+    |> Repo.paginate(page)
+  end
+
+  @doc """
   Lists a parent project's active sandboxes for the "Edit in sandbox" picker.
 
   Returns only the direct children of `parent_id` that are not scheduled for

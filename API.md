@@ -153,16 +153,20 @@ route "not open to the service account" answers its token with 403 `forbidden`.
 
 ### Projects
 
-| Method | Path                                        | What it does                                                  | Token grant                     |
-| ------ | ------------------------------------------- | ------------------------------------------------------------- | ------------------------------- |
-| `GET`  | `/api/projects`                             | Lists projects                                                | `projects:write`                |
-| `GET`  | `/api/projects/:id`                         | Reads a project                                               | `projects:write`                |
-| `PUT`  | `/api/projects/:id`                         | Creates or replaces a project                                 | `projects:write`                |
-| `GET`  | `/api/provision/:id`                        | Reads a project as a [provisioning](PROVISIONING.md) document | `projects:write`                |
-| `GET`  | `/api/provision/yaml`                       | Reads a project, named by `id`, as YAML                       | `projects:write`                |
-| `POST` | `/api/provision`                            | Applies a [provisioning](PROVISIONING.md) document            | Not open to the service account |
-| `GET`  | `/api/projects/:project_id/collections/:id` | Reads a collection                                            | `collections:write`             |
-| `PUT`  | `/api/projects/:project_id/collections/:id` | Creates or replaces a collection                              | `collections:write`             |
+| Method | Path                                                     | What it does                                                  | Token grant                     |
+| ------ | -------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------- |
+| `GET`  | `/api/projects`                                          | Lists projects                                                | `projects:write`                |
+| `GET`  | `/api/projects/:id`                                      | Reads a project                                               | `projects:write`                |
+| `PUT`  | `/api/projects/:id`                                      | Creates or replaces a project                                 | `projects:write`                |
+| `GET`  | `/api/provision/:id`                                     | Reads a project as a [provisioning](PROVISIONING.md) document | `projects:write`                |
+| `GET`  | `/api/provision/yaml`                                    | Reads a project, named by `id`, as YAML                       | `projects:write`                |
+| `POST` | `/api/provision`                                         | Applies a [provisioning](PROVISIONING.md) document            | Not open to the service account |
+| `GET`  | `/api/projects/:project_id/collections/:id`              | Reads a collection                                            | `collections:write`             |
+| `PUT`  | `/api/projects/:project_id/collections/:id`              | Creates or replaces a collection                              | `collections:write`             |
+| `GET`  | `/api/projects/:project_id/sandboxes`                    | Lists a project's sandboxes                                   | `projects:write`                |
+| `PUT`  | `/api/projects/:project_id/sandboxes/:id`                | Creates a sandbox of a project                                | Not open to the service account |
+| `POST` | `/api/projects/:project_id/sandboxes/:id/merge_previews` | Previews merging a sandbox                                    | Not open to the service account |
+| `POST` | `/api/projects/:project_id/sandboxes/:id/merges`         | Merges a sandbox into a project                               | Not open to the service account |
 
 ### Credentials
 

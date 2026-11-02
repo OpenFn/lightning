@@ -329,6 +329,18 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "GET /api/projects/:project_id/sandboxes takes a person's tokens or a service account's, and not a repo connection's",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind(conn, tokens, ~p"/api/projects/#{project.id}/sandboxes",
+        service_account: :logs_in,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: {:insufficient_scope, "projects:write"},
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
     test "authenticated_api takes a personal or run token, and not a repo connection's or a service account's",
          %{conn: conn, tokens: tokens, collection: collection} do
       assert_each_kind(conn, tokens, ~p"/collections/#{collection.name}",
