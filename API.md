@@ -214,6 +214,24 @@ Settings, deletion and members:
 | `PUT`    | `/api/projects/:project_id/members/:user_id/notifications` | Sets your notifications for a project         | Not open to the service account |
 | `POST`   | `/api/projects/:project_id/invitations`                    | Invites someone new to a project              | Not open to the service account |
 
+### Sandboxes
+
+| Method | Path                                                     | What it does                                     | Token grant                     |
+| ------ | -------------------------------------------------------- | ------------------------------------------------ | ------------------------------- |
+| `GET`  | `/api/projects/:project_id/sandboxes`                    | Lists a project's sandboxes                      | `projects:write`                |
+| `PUT`  | `/api/projects/:project_id/sandboxes/:id`                | Creates a sandbox of a project                   | Not open to the service account |
+| `POST` | `/api/projects/:project_id/sandboxes/:id/merge_previews` | Previews merging a sandbox                       | Not open to the service account |
+| `POST` | `/api/projects/:project_id/sandboxes/:id/merges`         | Merges a sandbox into a project in its workspace | Not open to the service account |
+
+### GitHub sync
+
+| Method   | Path                                              | What it does                                                    | Token grant                     |
+| -------- | ------------------------------------------------- | --------------------------------------------------------------- | ------------------------------- |
+| `GET`    | `/api/projects/:project_id/repo_connection`       | Reads a project's GitHub connection and checks the repo         | Not open to the service account |
+| `PUT`    | `/api/projects/:project_id/repo_connection`       | Connects a project to a GitHub repo, or replaces its connection | Not open to the service account |
+| `DELETE` | `/api/projects/:project_id/repo_connection`       | Disconnects a project from GitHub                               | Not open to the service account |
+| `POST`   | `/api/projects/:project_id/repo_connection/syncs` | Commits a project to its GitHub branch                          | Not open to the service account |
+
 ### Credentials
 
 The service account must send `project_id` to list credentials at
