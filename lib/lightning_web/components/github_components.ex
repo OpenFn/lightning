@@ -50,6 +50,17 @@ defmodule LightningWeb.Components.GithubComponents do
     """
   end
 
+  @doc """
+  Where to send the browser to connect, or reconnect, a person's GitHub
+  account. GitHub returns them to `/oauth/github/callback`. Needs the
+  `:github_app` configuration.
+  """
+  @spec connect_url() :: String.t()
+  def connect_url do
+    "https://github.com/login/oauth/authorize?" <>
+      Plug.Conn.Query.encode(build_query_params())
+  end
+
   defp build_query_params do
     config = Application.fetch_env!(:lightning, :github_app)
     client_id = Keyword.fetch!(config, :client_id)
