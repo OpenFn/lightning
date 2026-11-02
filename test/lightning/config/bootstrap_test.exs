@@ -32,6 +32,69 @@ defmodule Lightning.Config.BootstrapTest do
                  end
   end
 
+  describe "source_envs/1" do
+    @describetag :tmp_dir
+
+    test "a file it can't parse stops the boot without quoting it", %{
+      tmp_dir: tmp_dir
+    } do
+      {_, ec_pem} = JOSE.JWK.generate_key({:ec, "P-256"}) |> JOSE.JWK.to_pem()
+
+      key_lines =
+        ec_pem
+        |> String.split("\n", trim: true)
+        |> Enum.reject(&String.starts_with?(&1, "-----"))
+
+      for {contents, secrets} <- [
+            {"K=#{ec_pem}", key_lines},
+            {~s(SECRET_KEY_BASE=s3cr3tPart"rest"\n), ["s3cr3tPart"]}
+          ] do
+        file = Path.join(tmp_dir, ".env")
+        File.write!(file, contents)
+
+        error =
+          assert_raise RuntimeError, fn -> Bootstrap.source_envs([file]) end
+
+        assert error.message ==
+                 "Could not load #{file}: it is not a valid env file. " <>
+                   "The parser's own message is left out because it quotes " <>
+                   "the line it stopped at, which can be part of a secret. " <>
+                   "The usual cause is a value that runs over several lines " <>
+                   "without double quotes around it, such as a PEM key."
+
+        for secret <- secrets, do: refute(error.message =~ secret)
+      end
+    end
+
+    test "later files win, and the shell beats every file", %{
+      tmp_dir: tmp_dir
+    } do
+      first = Path.join(tmp_dir, ".env")
+      second = Path.join(tmp_dir, ".dev.env")
+
+      File.write!(first, """
+      SOURCE_ENVS_TEST_VAR=first
+      SOURCE_ENVS_TEST_BASE=base
+      PATH=from-a-file
+      """)
+
+      File.write!(second, """
+      SOURCE_ENVS_TEST_VAR=second
+      SOURCE_ENVS_TEST_REF=${SOURCE_ENVS_TEST_BASE}-ref
+      """)
+
+      Bootstrap.source_envs([first, second, Path.join(tmp_dir, "missing.env")])
+
+      assert %{
+               "SOURCE_ENVS_TEST_VAR" => "second",
+               "SOURCE_ENVS_TEST_REF" => "base-ref",
+               "PATH" => path
+             } = Process.get(:dotenvy_vars)
+
+      assert path == System.get_env("PATH")
+    end
+  end
+
   describe "prod" do
     setup do
       Process.put({Config, :opts}, {:prod, ""})
@@ -1286,136 +1349,128 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
-  describe "worker private key validation" do
-    test "accepts valid RSA keys" do
-      rsa_key = """
-      -----BEGIN RSA PRIVATE KEY-----
-      MIIEpQIBAAKCAQEAxGY6EPnNbNPmhaQ1O7ACAvqIO/V+qKjxpb10GjUIQVATfHJh
-      m4iuoRz7q+d9PUSksMJOI+1koRMvW2zBH6Bb7x7BDwNLjjEN0U5JZi6LfiKUxU1g
-      5FnqZB+NWj7BGNXQ+I4sNcibv/1zXPdVEcqGWy7fHfVyc8Cis6vglYqg6s5lsjIJ
-      bmmBwmpqtfyLHWLu/Dqb3TSVcxzqRVNIZCS2UToUJotiYUaG5oKftfY164hnwDH8
-      deXP7mEU3FTsv+jtsJoK4Bo5VyGABuN+gpaoLtYdcUS2VajHsGq8IZsxXhyCnCoq
-      2n/sd5pwVAE68Lv0fkuN86uX0nWzbUVwO74ulwIDAQABAoIBAQCzbn4QclkG21XZ
-      tRtZa8V6uS9sMC7GoosblEoVg2wGV8Vlxg59DdQVqCgadwTJzAP25Z6EXme4bZGv
-      ol2Sqmwzu9JACA+oWhK4riCK9W1GEQwAcmBaX/ev/8+hqoG6UeZ4n1Ou05fQQRt7
-      zQ/wkCpN9jWr5knpjQ5YvmgR17SKr+kC3ZixtZ5aKtA+daz0q6AxA/E/9iG++LJ4
-      g5wV0fb6f2L11sQIKfrK2zBSEI+hL7VdC6EoBbx4jkxqfZbCodZNYQ8/Q/OoFO+d
-      BQzUTzBHUSVjz65814tPVgBYRMnATsbrCoeBu6IxNVhtpvRBKH/69hNaRpgUBILk
-      nXwb6SwJAoGBAPh1NE5rmeSVah6VeP1c4D5tDbT0+Pxhsun5t7lWTvOIxMWR/4da
-      HORn8Fl0AsNco5UqmYHF13P0B7NMt5VCpyVMqCcnvvtskpp51lA9b1v0Ab+Izdm7
-      Udlvx3wbagK/5vDP8aiCYIRXxXDMUTbbc88LmF80N/uS/v6aOb42yQQzAoGBAMpc
-      eDb63Zp3SvbYYYotFysLDijS9/+BjUtL619mo3Jf5tsOvB5qZPZ517nimhXEN6Rz
-      tANZcSTyHYk3xMY4r+EL9efoqB8M/KKG+0rZznzASi+Qt2VeIpRz/7PDSHiX9MOA
-      h0EcVRu3WyeHLVikA604oPwDLDK8qJXoPPOAmygNAoGADpDAakCAmxfvSq+0khXZ
-      x48ZGJyr5A/OL01GagUXR8uizXpLoqGzw+gb/QKCDvXlWR9QNH1mrhOGSAqdUJDB
-      v7wIt5Lq7U5mIcw2timD174sRBA/ER6cI8UbyrjItDSP01o9boWGJvwGRSCVOkQP
-      O/oQCrTC+2qYrFBaRj5r9mUCgYEAgyejkp7NegvPPmXH8jJ/TZqAttzld2iUFzVB
-      fDedv8eAbIIEUwJKJaWauBOyImFmXuPOzEzwFC4IDqNimcar14RVANW+AUH9i6lI
-      vZ6lQh2u910oQD7e0rDMDcqH8gEq1ns7LmwajTgtkFUAgu7qox6M2EmGH+w+p8o5
-      lujHpxECgYEAw9mV+W6EC9Bq07KGDI8ar8Ugnm3Jqo127lPiSsWiEIr9KOLiOilK
-      fzPupZ4bQo5LVtYp85xcf64oyiAiPlWc7K+ecPh/FEDQtTvDbfhicd57OKv5ThT6
-      otkxgXHLEBs9GZZZz+MyVsY8ricBmcFfYEb8wybE5opAOct08Xbrzec=
-      -----END RSA PRIVATE KEY-----
-      """
+  @rsa_private_key """
+  -----BEGIN RSA PRIVATE KEY-----
+  MIIEpQIBAAKCAQEAxGY6EPnNbNPmhaQ1O7ACAvqIO/V+qKjxpb10GjUIQVATfHJh
+  m4iuoRz7q+d9PUSksMJOI+1koRMvW2zBH6Bb7x7BDwNLjjEN0U5JZi6LfiKUxU1g
+  5FnqZB+NWj7BGNXQ+I4sNcibv/1zXPdVEcqGWy7fHfVyc8Cis6vglYqg6s5lsjIJ
+  bmmBwmpqtfyLHWLu/Dqb3TSVcxzqRVNIZCS2UToUJotiYUaG5oKftfY164hnwDH8
+  deXP7mEU3FTsv+jtsJoK4Bo5VyGABuN+gpaoLtYdcUS2VajHsGq8IZsxXhyCnCoq
+  2n/sd5pwVAE68Lv0fkuN86uX0nWzbUVwO74ulwIDAQABAoIBAQCzbn4QclkG21XZ
+  tRtZa8V6uS9sMC7GoosblEoVg2wGV8Vlxg59DdQVqCgadwTJzAP25Z6EXme4bZGv
+  ol2Sqmwzu9JACA+oWhK4riCK9W1GEQwAcmBaX/ev/8+hqoG6UeZ4n1Ou05fQQRt7
+  zQ/wkCpN9jWr5knpjQ5YvmgR17SKr+kC3ZixtZ5aKtA+daz0q6AxA/E/9iG++LJ4
+  g5wV0fb6f2L11sQIKfrK2zBSEI+hL7VdC6EoBbx4jkxqfZbCodZNYQ8/Q/OoFO+d
+  BQzUTzBHUSVjz65814tPVgBYRMnATsbrCoeBu6IxNVhtpvRBKH/69hNaRpgUBILk
+  nXwb6SwJAoGBAPh1NE5rmeSVah6VeP1c4D5tDbT0+Pxhsun5t7lWTvOIxMWR/4da
+  HORn8Fl0AsNco5UqmYHF13P0B7NMt5VCpyVMqCcnvvtskpp51lA9b1v0Ab+Izdm7
+  Udlvx3wbagK/5vDP8aiCYIRXxXDMUTbbc88LmF80N/uS/v6aOb42yQQzAoGBAMpc
+  eDb63Zp3SvbYYYotFysLDijS9/+BjUtL619mo3Jf5tsOvB5qZPZ517nimhXEN6Rz
+  tANZcSTyHYk3xMY4r+EL9efoqB8M/KKG+0rZznzASi+Qt2VeIpRz/7PDSHiX9MOA
+  h0EcVRu3WyeHLVikA604oPwDLDK8qJXoPPOAmygNAoGADpDAakCAmxfvSq+0khXZ
+  x48ZGJyr5A/OL01GagUXR8uizXpLoqGzw+gb/QKCDvXlWR9QNH1mrhOGSAqdUJDB
+  v7wIt5Lq7U5mIcw2timD174sRBA/ER6cI8UbyrjItDSP01o9boWGJvwGRSCVOkQP
+  O/oQCrTC+2qYrFBaRj5r9mUCgYEAgyejkp7NegvPPmXH8jJ/TZqAttzld2iUFzVB
+  fDedv8eAbIIEUwJKJaWauBOyImFmXuPOzEzwFC4IDqNimcar14RVANW+AUH9i6lI
+  vZ6lQh2u910oQD7e0rDMDcqH8gEq1ns7LmwajTgtkFUAgu7qox6M2EmGH+w+p8o5
+  lujHpxECgYEAw9mV+W6EC9Bq07KGDI8ar8Ugnm3Jqo127lPiSsWiEIr9KOLiOilK
+  fzPupZ4bQo5LVtYp85xcf64oyiAiPlWc7K+ecPh/FEDQtTvDbfhicd57OKv5ThT6
+  otkxgXHLEBs9GZZZz+MyVsY8ricBmcFfYEb8wybE5opAOct08Xbrzec=
+  -----END RSA PRIVATE KEY-----
+  """
 
-      encoded_key = Base.encode64(rsa_key, padding: false)
+  describe "worker private key" do
+    test "accepts the private key in the forms operators deliver" do
+      for value <- operator_forms(@rsa_private_key) do
+        reconfigure(%{"WORKER_RUNS_PRIVATE_KEY" => value})
 
-      Dotenvy.source([%{"WORKER_RUNS_PRIVATE_KEY" => encoded_key}])
-
-      assert :ok = Bootstrap.configure()
-
-      # Verify the key was actually set
-      private_key = get_env(:lightning, :workers) |> Keyword.get(:private_key)
-      assert is_binary(private_key)
-      assert private_key =~ "BEGIN RSA PRIVATE KEY"
+        assert get_env(:lightning, :workers)[:private_key] == @rsa_private_key
+      end
     end
 
-    test "rejects non-RSA keys (Ed25519 / OKP)" do
-      # Ed25519 key - OKP (Octet Key Pair) type
-      ed25519_key = """
-      -----BEGIN PRIVATE KEY-----
-      MC4CAQAwBQYDK2VwBCIEIGCa7P/7SXCoLXsmDPoRcfqU4aGVWkgFb8pWNVSPUNzR
-      -----END PRIVATE KEY-----
-      """
+    for {refusal, value_name, message} <- [
+          {:empty, "an empty value",
+           "WORKER_RUNS_PRIVATE_KEY is empty. Set it to the RSA private key that signs run tokens."},
+          {:quoted, "a value in quotes",
+           "WORKER_RUNS_PRIVATE_KEY starts and ends with a quote character. docker run --env-file and Compose's env_file with format: raw keep quotes as part of the value; remove them."},
+          {:not_pem, "a value that is not a PEM",
+           "WORKER_RUNS_PRIVATE_KEY is not a PEM key. Set it to the contents of the private key file, BEGIN and END lines included, or to that file base64-encoded."},
+          {:truncated, "a PEM cut off before its END line",
+           "WORKER_RUNS_PRIVATE_KEY has a BEGIN RSA PRIVATE KEY line but no END line, so only part of the key arrived. A file that holds one variable per line keeps only the first line of a multi-line value; base64-encode the PEM file on one line instead: openssl base64 -A -in FILE"},
+          {:damaged, "a PEM whose body is not base64",
+           "WORKER_RUNS_PRIVATE_KEY holds a PEM block whose body is not valid base64. Copy the private key file again."},
+          {:several_blocks, "more than one PEM block",
+           "WORKER_RUNS_PRIVATE_KEY holds more than one PEM block. Set it to the private key alone."},
+          {:unknown_label, "a BEGIN line that lost its closing dashes",
+           "WORKER_RUNS_PRIVATE_KEY has a BEGIN line that names no key type Lightning reads. Copy the private key file again, BEGIN and END lines included."},
+          {:public_key, "an RSA public key",
+           "WORKER_RUNS_PRIVATE_KEY holds a public key. Set it to the RSA private key that signs run tokens; its public key goes in the worker's WORKER_LIGHTNING_PUBLIC_KEY."},
+          {:not_rsa, "a key that is not RSA",
+           "WORKER_RUNS_PRIVATE_KEY is not an RSA key. Run tokens are signed with RS256, which needs an RSA private key."},
+          {:not_a_key, "a PEM block that holds no key",
+           "WORKER_RUNS_PRIVATE_KEY holds a PEM block that is not a key Lightning can read. Set it to the RSA private key that signs run tokens."}
+        ] do
+      test "stops the boot on #{value_name} and says what to set instead" do
+        for value <- refused_pem_values(unquote(refusal)) do
+          error =
+            assert_raise RuntimeError, fn ->
+              reconfigure(%{"WORKER_RUNS_PRIVATE_KEY" => value})
+            end
 
-      encoded_key = Base.encode64(ed25519_key, padding: false)
+          refute_quotes_key(error.message, value)
 
-      Dotenvy.source([%{"WORKER_RUNS_PRIVATE_KEY" => encoded_key}])
+          assert error.message == """
+                 #{unquote(message)}
 
-      error =
-        assert_raise RuntimeError, fn ->
-          Bootstrap.configure()
+                 You can generate new worker keys using: mix lightning.gen_worker_keys
+                 """
         end
+      end
+    end
+  end
 
-      assert error.message =~ "WORKER_RUNS_PRIVATE_KEY has wrong key type:"
-      assert error.message =~ "Lightning requires an RSA key for RS256 signing"
-      assert error.message =~ "mix lightning.gen_worker_keys"
+  describe "GitHub App private key" do
+    test "accepts the private key in the forms operators deliver" do
+      for value <- operator_forms(@rsa_private_key) do
+        reconfigure(%{"GITHUB_CERT" => value})
+
+        assert get_env(:lightning, :github_app)[:cert] == @rsa_private_key
+      end
     end
 
-    test "rejects EC (Elliptic Curve) keys" do
-      # EC P-256 key for testing
-      ec_key = """
-      -----BEGIN EC PRIVATE KEY-----
-      MHcCAQEEIIGlRHKQphLqMvj/+/P5wXDqQj8u1fJzJqNQKJvqPRq9oAoGCCqGSM49
-      AwEHoUQDQgAEgTyTZ5fzGh4x4L3KXqjJLLQI4j3TqvLUqh3ScxqL5qJqvLUqh3Sc
-      xqL5qJqvLUqh3ScxqL5qJqvLUqh3ScxqLw==
-      -----END EC PRIVATE KEY-----
-      """
+    test "turns GitHub sync off on an empty value, even when config holds a cert" do
+      for value <- ["", "   "] do
+        reconfigure(%{"GITHUB_CERT" => value})
 
-      encoded_key = Base.encode64(ec_key, padding: false)
-
-      Dotenvy.source([%{"WORKER_RUNS_PRIVATE_KEY" => encoded_key}])
-
-      error =
-        assert_raise RuntimeError, fn ->
-          Bootstrap.configure()
-        end
-
-      assert error.message =~ "WORKER_RUNS_PRIVATE_KEY has wrong key type:"
-      assert error.message =~ "Lightning requires an RSA key for RS256 signing"
-      assert error.message =~ "mix lightning.gen_worker_keys"
+        assert get_env(:lightning, :github_app)[:cert] == nil
+      end
     end
 
-    test "handles malformed PEM data" do
-      # Invalid PEM structure - should trigger rescue path
-      malformed_pem = """
-      -----BEGIN PRIVATE KEY-----
-      This is not valid base64 encoded key data!!!
-      -----END PRIVATE KEY-----
-      """
+    for {refusal, value_name, message} <- [
+          {:quoted, "a value in quotes",
+           "GITHUB_CERT starts and ends with a quote character. docker run --env-file and Compose's env_file with format: raw keep quotes as part of the value; remove them."},
+          {:not_pem, "a value that is not a PEM",
+           "GITHUB_CERT is not a PEM key. Set it to the contents of the GitHub App's private key file, BEGIN and END lines included, or to that file base64-encoded."},
+          {:truncated, "a PEM cut off before its END line",
+           "GITHUB_CERT has a BEGIN RSA PRIVATE KEY line but no END line, so only part of the key arrived. A file that holds one variable per line keeps only the first line of a multi-line value; base64-encode the PEM file on one line instead: openssl base64 -A -in private-key.pem"},
+          {:damaged, "a PEM whose body is not base64",
+           "GITHUB_CERT holds a PEM block whose body is not valid base64. Copy the GitHub App's private key file again."},
+          {:several_blocks, "more than one PEM block",
+           "GITHUB_CERT holds more than one PEM block. Set it to the GitHub App's private key alone."},
+          {:unknown_label, "a BEGIN line that lost its closing dashes",
+           "GITHUB_CERT has a BEGIN line that names no key type Lightning reads. Copy the GitHub App's private key file again, BEGIN and END lines included."}
+        ] do
+      test "stops the boot on #{value_name} and says what to set instead" do
+        for value <- refused_pem_values(unquote(refusal)) do
+          error =
+            assert_raise RuntimeError, fn ->
+              reconfigure(%{"GITHUB_CERT" => value})
+            end
 
-      encoded_key = Base.encode64(malformed_pem, padding: false)
-
-      Dotenvy.source([%{"WORKER_RUNS_PRIVATE_KEY" => encoded_key}])
-
-      error =
-        assert_raise RuntimeError, fn ->
-          Bootstrap.configure()
+          refute_quotes_key(error.message, value)
+          assert error.message == unquote(message)
         end
-
-      assert error.message =~
-               "WORKER_RUNS_PRIVATE_KEY could not be parsed:"
-
-      assert error.message =~ "mix lightning.gen_worker_keys"
-    end
-
-    test "handles completely invalid PEM format" do
-      # Not even PEM format - should trigger rescue path
-      invalid_data = "not-a-pem-key-at-all"
-
-      encoded_key = Base.encode64(invalid_data, padding: false)
-
-      Dotenvy.source([%{"WORKER_RUNS_PRIVATE_KEY" => encoded_key}])
-
-      error =
-        assert_raise RuntimeError, fn ->
-          Bootstrap.configure()
-        end
-
-      assert error.message =~
-               "WORKER_RUNS_PRIVATE_KEY could not be parsed as a valid key"
-
-      assert error.message =~ "mix lightning.gen_worker_keys"
+      end
     end
   end
 
@@ -1463,30 +1518,14 @@ defmodule Lightning.Config.BootstrapTest do
       assert get_env(:lightning, :allow_first_setup) == true
     end
 
-    test "stops the boot on a value that is not base64" do
-      value = "not base64!"
+    test "accepts the public key in the forms operators deliver" do
+      for value <- operator_forms(@service_account_pem) do
+        reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
 
-      error =
-        assert_raise RuntimeError, fn ->
-          reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
-        end
-
-      assert error.message =~
-               "SERVICE_ACCOUNT_PUBLIC_KEY is not unpadded base64"
-
-      refute error.message =~ value
-    end
-
-    test "stops the boot on an RSA key shorter than 2048 bits" do
-      error =
-        assert_raise RuntimeError, fn ->
-          reconfigure(%{
-            "SERVICE_ACCOUNT_PUBLIC_KEY" => encoded_public_key(1024)
-          })
-        end
-
-      assert error.message ==
-               "SERVICE_ACCOUNT_PUBLIC_KEY is a 1024-bit RSA key; it must be at least 2048 bits"
+        assert %Lightning.ServiceAccount{
+                 id: "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
+               } = get_env(:lightning, :service_account)
+      end
     end
 
     for bits <- [2048, 4096] do
@@ -1500,18 +1539,41 @@ defmodule Lightning.Config.BootstrapTest do
       end
     end
 
-    test "stops the boot on a value that holds no RSA public key" do
-      value = Base.encode64("not a key", padding: false)
+    for {refusal, value_name, message} <- [
+          {:empty, "an empty value",
+           "SERVICE_ACCOUNT_PUBLIC_KEY is empty. Set it to the service account's public key, or unset it to run without a service account."},
+          {:quoted, "a value in quotes",
+           "SERVICE_ACCOUNT_PUBLIC_KEY starts and ends with a quote character. docker run --env-file and Compose's env_file with format: raw keep quotes as part of the value; remove them."},
+          {:not_pem, "a value that is not a PEM",
+           "SERVICE_ACCOUNT_PUBLIC_KEY is not a PEM key. Set it to the contents of the public key file, BEGIN and END lines included, or to that file base64-encoded."},
+          {:truncated, "a PEM cut off before its END line",
+           "SERVICE_ACCOUNT_PUBLIC_KEY has a BEGIN PUBLIC KEY line but no END line, so only part of the key arrived. A file that holds one variable per line keeps only the first line of a multi-line value; base64-encode the PEM file on one line instead: openssl base64 -A -in sa_public.pem"},
+          {:damaged, "a PEM whose body is not base64",
+           "SERVICE_ACCOUNT_PUBLIC_KEY holds a PEM block whose body is not valid base64. Copy the public key file again."},
+          {:several_blocks, "more than one PEM block",
+           "SERVICE_ACCOUNT_PUBLIC_KEY holds more than one PEM block. Set it to the public key alone."},
+          {:unknown_label, "a BEGIN line that lost its closing dashes",
+           "SERVICE_ACCOUNT_PUBLIC_KEY has a BEGIN line that names no key type Lightning reads. Copy the public key file again, BEGIN and END lines included."},
+          {:private_key, "a private key",
+           "SERVICE_ACCOUNT_PUBLIC_KEY holds a private key. Set it to the public key instead: openssl pkey -in sa_private.pem -pubout"},
+          {:not_rsa, "a key that is not RSA",
+           "SERVICE_ACCOUNT_PUBLIC_KEY is not an RSA key. It must be an RSA public key of at least 2048 bits."},
+          {:too_small, "an RSA key shorter than 2048 bits",
+           "SERVICE_ACCOUNT_PUBLIC_KEY is a 1024-bit RSA key. Generate an RSA key pair of at least 2048 bits."},
+          {:not_a_key, "a PEM block that holds no key",
+           "SERVICE_ACCOUNT_PUBLIC_KEY holds a PEM block that is not a key Lightning can read. It must be an RSA public key of at least 2048 bits."}
+        ] do
+      test "stops the boot on #{value_name} and says what to set instead" do
+        for value <- refused_service_account_keys(unquote(refusal)) do
+          error =
+            assert_raise RuntimeError, fn ->
+              reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
+            end
 
-      error =
-        assert_raise RuntimeError, fn ->
-          reconfigure(%{"SERVICE_ACCOUNT_PUBLIC_KEY" => value})
+          refute_quotes_key(error.message, value)
+          assert error.message == unquote(message)
         end
-
-      assert error.message =~
-               "SERVICE_ACCOUNT_PUBLIC_KEY is not an RSA public key"
-
-      refute error.message =~ value
+      end
     end
   end
 
@@ -1596,13 +1658,165 @@ defmodule Lightning.Config.BootstrapTest do
   end
 
   defp encoded_public_key(bits) do
+    bits |> public_pem() |> Base.encode64(padding: false)
+  end
+
+  defp public_pem(bits) do
     {_, pem} =
       {:rsa, bits}
       |> JOSE.JWK.generate_key()
       |> JOSE.JWK.to_public()
       |> JOSE.JWK.to_pem()
 
-    Base.encode64(pem, padding: false)
+    pem
+  end
+
+  defp operator_forms(pem) do
+    encoded = Base.encode64(pem)
+
+    wrapped =
+      encoded
+      |> String.graphemes()
+      |> Enum.chunk_every(76)
+      |> Enum.map_join("\n", &Enum.join/1)
+
+    [
+      pem,
+      String.replace(pem, "\n", "\r\n"),
+      String.replace(pem, "\n", "\\n"),
+      wrapped,
+      encoded,
+      Base.encode64(pem, padding: false)
+    ]
+  end
+
+  defp refused_pem_values(:empty), do: ["", "   "]
+
+  defp refused_pem_values(:quoted),
+    do: [~s("#{Base.encode64(@rsa_private_key)}")]
+
+  defp refused_pem_values(:not_pem),
+    do: ["garbage", Base.encode64("not-a-pem-key-at-all", padding: false)]
+
+  defp refused_pem_values(:truncated),
+    do: [@rsa_private_key |> Base.encode64() |> String.slice(0, 76)]
+
+  defp refused_pem_values(:damaged) do
+    pem = """
+    -----BEGIN PRIVATE KEY-----
+    This is not valid base64 encoded key data!!!
+    -----END PRIVATE KEY-----
+    """
+
+    [pem, Base.encode64(pem, padding: false)]
+  end
+
+  defp refused_pem_values(:several_blocks),
+    do: [@rsa_private_key <> @rsa_private_key]
+
+  defp refused_pem_values(:unknown_label),
+    do: begin_line_without_closing_dashes(@rsa_private_key)
+
+  defp refused_pem_values(:public_key) do
+    {_, pkcs1} = @service_account_pem |> JOSE.JWK.from_pem() |> JOSE.JWK.to_pem()
+    [@service_account_pem, Base.encode64(@service_account_pem), pkcs1]
+  end
+
+  defp refused_pem_values(:not_rsa) do
+    ed25519 = """
+    -----BEGIN PRIVATE KEY-----
+    MC4CAQAwBQYDK2VwBCIEIGCa7P/7SXCoLXsmDPoRcfqU4aGVWkgFb8pWNVSPUNzR
+    -----END PRIVATE KEY-----
+    """
+
+    ec = """
+    -----BEGIN EC PRIVATE KEY-----
+    MHcCAQEEIIGlRHKQphLqMvj/+/P5wXDqQj8u1fJzJqNQKJvqPRq9oAoGCCqGSM49
+    AwEHoUQDQgAEgTyTZ5fzGh4x4L3KXqjJLLQI4j3TqvLUqh3ScxqL5qJqvLUqh3Sc
+    xqL5qJqvLUqh3ScxqL5qJqvLUqh3ScxqLw==
+    -----END EC PRIVATE KEY-----
+    """
+
+    [Base.encode64(ed25519, padding: false), ec]
+  end
+
+  defp refused_pem_values(:not_a_key) do
+    body = Base.encode64(:crypto.strong_rand_bytes(64))
+    pem = "-----BEGIN PRIVATE KEY-----\n#{body}\n-----END PRIVATE KEY-----\n"
+    [pem, Base.encode64(pem)]
+  end
+
+  defp refused_service_account_keys(:empty), do: ["", "   "]
+
+  defp refused_service_account_keys(:quoted),
+    do: [~s("#{Base.encode64(@service_account_pem)}")]
+
+  defp refused_service_account_keys(:not_pem),
+    do: ["garbage", Base.encode64("not a key", padding: false)]
+
+  defp refused_service_account_keys(:truncated),
+    do: [@service_account_pem |> Base.encode64() |> String.slice(0, 76)]
+
+  defp refused_service_account_keys(:damaged),
+    do: [String.replace(@service_account_pem, "\nMIIB", "\n!IIB")]
+
+  defp refused_service_account_keys(:several_blocks),
+    do: [@service_account_pem <> @service_account_pem]
+
+  defp refused_service_account_keys(:unknown_label),
+    do: begin_line_without_closing_dashes(@service_account_pem)
+
+  defp refused_service_account_keys(:private_key) do
+    {_, pem} = JOSE.JWK.generate_key({:rsa, 2048}) |> JOSE.JWK.to_pem()
+    [pem]
+  end
+
+  defp refused_service_account_keys(:not_rsa) do
+    [
+      """
+      -----BEGIN PUBLIC KEY-----
+      MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7aBIw3Zoq85rGk4EC+MBrElUg/Ym
+      rmZUyENZbakktntXDTlHKCREjMuHitBVcQg2xZJL+9zNCbL2Uaj3AkzIxQ==
+      -----END PUBLIC KEY-----
+      """
+    ]
+  end
+
+  defp refused_service_account_keys(:too_small), do: [encoded_public_key(1024)]
+
+  defp refused_service_account_keys(:not_a_key) do
+    body = Base.encode64(:crypto.strong_rand_bytes(64))
+    ["-----BEGIN PUBLIC KEY-----\n#{body}\n-----END PUBLIC KEY-----\n"]
+  end
+
+  defp begin_line_without_closing_dashes(pem) do
+    [begin_line | rest] = String.split(pem, "\n", trim: true)
+    lines = [String.trim_trailing(begin_line, "-") | rest]
+    on_one_line = Enum.join(lines, " ")
+
+    [
+      on_one_line,
+      Enum.join(lines, "\t"),
+      Enum.join(lines, "\\n"),
+      Base.encode64(on_one_line)
+    ]
+  end
+
+  # Checks 16-character slices rather than the whole value, so a message that
+  # quotes part of a key fails too, whether the key arrived as text or base64.
+  defp refute_quotes_key(message, value) do
+    texts =
+      case Base.decode64(value, ignore: :whitespace, padding: false) do
+        {:ok, decoded} -> [value, decoded]
+        :error -> [value]
+      end
+
+    for text <- texts,
+        [run] <- Regex.scan(~r/[A-Za-z0-9+\/=]{16,}/, text),
+        offset <- 0..(byte_size(run) - 16) do
+      slice = binary_part(run, offset, 16)
+      refute String.contains?(message, slice), "message quotes #{slice}"
+    end
   end
 
   defp reconfigure(envs) do
