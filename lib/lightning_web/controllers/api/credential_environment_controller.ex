@@ -68,6 +68,9 @@ defmodule LightningWeb.API.CredentialEnvironmentController do
       conn
       |> put_status(if creating?, do: :created, else: :ok)
       |> render(:show, environment: environment)
+    else
+      {:rerun, conn} -> update(conn, conn.params)
+      error -> error
     end
   end
 
@@ -85,6 +88,9 @@ defmodule LightningWeb.API.CredentialEnvironmentController do
          {:ok, _credential} <-
            write(credential, %{"delete_environments" => [name]}, conn) do
       send_resp(conn, :no_content, "")
+    else
+      {:rerun, conn} -> delete(conn, conn.params)
+      error -> error
     end
   end
 
@@ -144,12 +150,27 @@ defmodule LightningWeb.API.CredentialEnvironmentController do
            conn.assigns.current_resource
          ) do
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:error, Errors.problem(as_environment(changeset), %{}, path: [:name])}
+        if count_refused?(changeset),
+          do: {:rerun, conn},
+          else:
+            {:error,
+             Errors.problem(as_environment(changeset), %{}, path: [:name])}
 
       result ->
         result
     end
   end
+
+  # The context counts environments with the credential locked. When it
+  # refuses, another request added or deleted one since this one listed them,
+  # so the request runs again from the lookup, and the checks above refuse it
+  # with the entries they always give.
+  defp count_refused?(changeset),
+    do:
+      Enum.any?(changeset.errors, fn {field, {_message, opts}} ->
+        field == :credential_bodies and opts[:key] == [:credential_bodies] and
+          opts[:code] in [:required, :too_long]
+      end)
 
   # The context places an error in a body at its position in the credential's
   # list of bodies. This route sends one body, named by the path, so an error

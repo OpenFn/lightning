@@ -127,6 +127,63 @@ defmodule Lightning.Credentials.LifecycleTest do
 
       refute Repo.reload(credential)
     end
+
+    test "update_credential/3 refuses deleting every environment, deleting none" do
+      owner = insert(:user)
+      credential = credential_with_bodies(owner)
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               Credentials.update_credential(
+                 credential,
+                 %{"delete_environments" => ["main", "staging"]},
+                 owner
+               )
+
+      assert errors == [
+               credential_bodies:
+                 {"a credential needs at least one environment",
+                  [code: :required, key: [:credential_bodies]]}
+             ]
+
+      assert Credentials.list_environments(credential) |> Enum.map(& &1.name) ==
+               ["main", "staging"]
+    end
+
+    test "update_credential/3 refuses an environment past the limit, but edits one already past it that adds none" do
+      owner = insert(:user)
+      credential = credential_with_bodies(owner)
+
+      for name <- ~w(a b c),
+          do: insert(:credential_body, credential: credential, name: name)
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               Credentials.update_credential(
+                 credential,
+                 %{"credential_bodies" => [%{"name" => "sixth", "body" => %{}}]},
+                 owner
+               )
+
+      assert errors == [
+               credential_bodies:
+                 {"a credential may have at most %{count} environments",
+                  [code: :too_long, count: 5, key: [:credential_bodies]]}
+             ]
+
+      insert(:credential_body, credential: credential, name: "d")
+
+      assert {:ok, _credential} =
+               Credentials.update_credential(
+                 credential,
+                 %{
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"a" => "new"}}
+                   ]
+                 },
+                 owner
+               )
+
+      assert length(Credentials.list_environments(credential)) == 6
+    end
   end
 
   describe "project links" do

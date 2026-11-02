@@ -360,7 +360,10 @@ defmodule Lightning.Credentials do
     * `{:error, changeset}` - With an error on `project_credentials` if the
       owner has no access to a project a new link points to. Links the
       credential already holds are not checked. A refused body is placed as
-      `create_credential/3` places it
+      `create_credential/3` places it. An error on `credential_bodies` keyed
+      `[:credential_bodies]` refuses an edit that would leave the credential
+      with no environments (`required`), or add one past
+      `max_environments/0` (`too_long`)
     * `{:error, :unauthorized}` - `actor` may not edit it
     * `{:error, :concurrent_edit}` - another request deleted the credential
       while this one ran
@@ -431,12 +434,72 @@ defmodule Lightning.Credentials do
     schema_name = Ecto.Changeset.get_field(changeset, :schema)
     delete_environments = Map.get(changeset.params, "delete_environments", [])
 
+    count_environments? = credential_bodies != [] or delete_environments != []
+
     Multi.new()
     |> lock_credential(credential.id)
     |> Multi.update(:credential, changeset, stale_error_field: :id)
+    |> count_environments(count_environments?, credential.id)
     |> add_environment_deletions(credential.id, delete_environments)
     |> add_credential_body_upserts(credential.id, credential_bodies, schema_name)
+    |> check_environment_count(count_environments?, credential.id, changeset)
   end
+
+  # A credential has between one and max_environments/0 environments. They
+  # are counted while the credential's row is locked, so two requests adding
+  # or deleting environments at once can't take it past the limit, or leave it
+  # with none. A credential already past the limit may still be edited, as
+  # long as the edit doesn't add to it.
+  defp count_environments(multi, false, _credential_id), do: multi
+
+  defp count_environments(multi, true, credential_id) do
+    Multi.run(multi, :environments_before, fn repo, _changes ->
+      {:ok, count_bodies(repo, credential_id)}
+    end)
+  end
+
+  defp check_environment_count(multi, false, _credential_id, _changeset),
+    do: multi
+
+  defp check_environment_count(multi, true, credential_id, changeset) do
+    Multi.run(multi, :environments_after, fn repo, changes ->
+      before = changes.environments_before
+      max = max_environments()
+
+      case count_bodies(repo, credential_id) do
+        0 ->
+          changeset
+          |> Ecto.Changeset.add_error(
+            :credential_bodies,
+            "a credential needs at least one environment",
+            code: :required,
+            key: [:credential_bodies]
+          )
+          |> refused()
+
+        count when count > max and count > before ->
+          changeset
+          |> Ecto.Changeset.add_error(
+            :credential_bodies,
+            "a credential may have at most %{count} environments",
+            code: :too_long,
+            count: max,
+            key: [:credential_bodies]
+          )
+          |> refused()
+
+        count ->
+          {:ok, count}
+      end
+    end)
+  end
+
+  defp count_bodies(repo, credential_id),
+    do:
+      repo.aggregate(
+        from(cb in CredentialBody, where: cb.credential_id == ^credential_id),
+        :count
+      )
 
   # An update that changes only bodies or links never writes the credential's
   # row, so the stale check on it can't see another request deleting the

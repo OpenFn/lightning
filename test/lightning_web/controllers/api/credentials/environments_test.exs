@@ -337,6 +337,58 @@ defmodule LightningWeb.API.Credentials.EnvironmentsTest do
 
       refute Repo.reload(credential)
     end
+
+    test "deleting one of two environments while another request deletes the other refuses the last one 422 required",
+         %{conn: conn} do
+      owner = insert(:user)
+      credential = existing_credential(owner, insert(:project))
+
+      after_first_query("credential_bodies", credential.id, fn id ->
+        Repo.query!(
+          "DELETE FROM credential_bodies WHERE credential_id = $1 AND name = 'staging'",
+          [id]
+        )
+      end)
+
+      conn
+      |> with_pat(owner)
+      |> delete_environment(credential.id, "main")
+      |> assert_problem(422, :invalid, [
+        %{
+          "path" => "name",
+          "code" => "required",
+          "detail" => "a credential needs at least one environment"
+        }
+      ])
+
+      assert names(credential.id) == ["main"]
+    end
+
+    test "creating a fifth environment while another request creates one refuses the sixth 422 exceeds_limit",
+         %{conn: conn} do
+      owner = insert(:user)
+      credential = existing_credential(owner, insert(:project))
+
+      for name <- ~w(a b),
+          do: insert(:credential_body, credential: credential, name: name)
+
+      after_first_query("credential_bodies", credential.id, fn _id ->
+        insert(:credential_body, credential: credential, name: "c")
+      end)
+
+      conn
+      |> with_pat(owner)
+      |> put_environment(credential.id, "sixth", %{"body" => %{"a" => "b"}})
+      |> assert_problem(422, :invalid, [
+        %{
+          "path" => "name",
+          "code" => "exceeds_limit",
+          "detail" => "a credential may have at most 5 environments"
+        }
+      ])
+
+      assert names(credential.id) == ["a", "b", "c", "main", "staging"]
+    end
   end
 
   describe "who may reach it" do
