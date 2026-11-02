@@ -191,6 +191,14 @@ defmodule LightningWeb.Router do
            API.CredentialScheduledDeletionController,
            :delete
 
+    put "/projects/:project_id/credentials/:id",
+        API.ProjectCredentialController,
+        :update
+
+    delete "/projects/:project_id/credentials/:id",
+           API.ProjectCredentialController,
+           :delete
+
     # end-api-area:credentials
 
     # api-area:credential_extras (routes for this area go between these markers)
