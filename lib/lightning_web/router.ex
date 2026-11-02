@@ -358,6 +358,36 @@ defmodule LightningWeb.Router do
     # end-api-area:dataclips_audit
 
     # api-area:webhooks_channels (routes for this area go between these markers)
+    get "/projects/:project_id/webhook_auth_methods",
+        API.WebhookAuthMethodController,
+        :index
+
+    get "/projects/:project_id/webhook_auth_methods/:id",
+        API.WebhookAuthMethodController,
+        :show
+
+    put "/projects/:project_id/webhook_auth_methods/:id",
+        API.WebhookAuthMethodController,
+        :update
+
+    delete "/projects/:project_id/webhook_auth_methods/:id",
+           API.WebhookAuthMethodController,
+           :delete
+
+    get "/projects/:project_id/channels", API.ChannelController, :index
+    get "/projects/:project_id/channels/:id", API.ChannelController, :show
+    put "/projects/:project_id/channels/:id", API.ChannelController, :update
+
+    delete "/projects/:project_id/channels/:id",
+           API.ChannelController,
+           :delete
+
+    get "/projects/:project_id/channel_requests",
+        API.ChannelRequestController,
+        :index
+
+    get "/channel_requests/:id", API.ChannelRequestController, :show
+
     # end-api-area:webhooks_channels
 
     # api-area:ai_assistant (routes for this area go between these markers)

@@ -545,6 +545,133 @@ defmodule Lightning.ChannelsTest do
 
       assert audit.actor_id == user.id
     end
+
+    test "returns :concurrent_edit for a channel another caller deleted first",
+         %{user: user} do
+      channel = insert(:channel)
+      Repo.delete!(channel)
+
+      assert {:error, :concurrent_edit} =
+               Channels.delete_channel(channel, actor: user)
+    end
+  end
+
+  describe "create_channel/2 with an id" do
+    test "creates the channel under the id, and returns an error on the id for one already held" do
+      project = insert(:project)
+      user = insert(:user)
+      id = Ecto.UUID.generate()
+
+      attrs = %{
+        name: "proxy",
+        destination_url: "https://example.com",
+        project_id: project.id
+      }
+
+      assert {:ok, %Channel{id: ^id}} =
+               Channels.create_channel(attrs, actor: user, id: id)
+
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               Channels.create_channel(%{attrs | name: "other"},
+                 actor: user,
+                 id: id
+               )
+
+      assert [{:id, {_message, opts}}] = errors
+      assert opts[:constraint] == :unique
+    end
+  end
+
+  describe "paginate_channels_for_project_with_stats/2" do
+    test "pages the project's channels by name, each with its stats and auth methods" do
+      project = insert(:project)
+
+      [alpha, bravo, _charlie] =
+        for name <- ~w(alpha bravo charlie),
+            do: insert(:channel, project: project, name: name)
+
+      insert(:channel, name: "other")
+      auth_method = insert(:webhook_auth_method, project: project)
+
+      insert(:channel_auth_method,
+        channel: bravo,
+        webhook_auth_method: auth_method
+      )
+
+      snapshot = insert(:channel_snapshot, channel: alpha)
+      started_at = ~U[2026-01-01 00:00:00.000000Z]
+
+      insert(:channel_request,
+        channel: alpha,
+        channel_snapshot: snapshot,
+        started_at: started_at
+      )
+
+      page =
+        Channels.paginate_channels_for_project_with_stats(project.id,
+          page_size: 2
+        )
+
+      assert page.total_entries == 3
+
+      assert [
+               %{
+                 channel: %{id: alpha_id},
+                 request_count: 1,
+                 last_activity: ^started_at
+               },
+               %{
+                 channel: %{id: bravo_id} = with_auth,
+                 request_count: 0,
+                 last_activity: nil
+               }
+             ] = page.entries
+
+      assert {alpha_id, bravo_id} == {alpha.id, bravo.id}
+      assert [%{webhook_auth_method_id: wam_id}] = with_auth.client_auth_methods
+      assert wam_id == auth_method.id
+      assert with_auth.destination_auth_method == nil
+    end
+  end
+
+  describe "get_channel_with_stats_for_project/2" do
+    test "returns the project's channel with its stats, and nil for another project's" do
+      project = insert(:project)
+      channel = insert(:channel, project: project)
+      elsewhere = insert(:channel)
+
+      assert %{channel: %{id: id}, request_count: 0, last_activity: nil} =
+               Channels.get_channel_with_stats_for_project(
+                 project.id,
+                 channel.id
+               )
+
+      assert id == channel.id
+
+      assert Channels.get_channel_with_stats_for_project(
+               project.id,
+               elsewhere.id
+             ) ==
+               nil
+    end
+  end
+
+  describe "get_channel_request_project_id/1" do
+    test "returns the project of the request's channel, or :not_found" do
+      channel = insert(:channel)
+      snapshot = insert(:channel_snapshot, channel: channel)
+
+      request =
+        insert(:channel_request, channel: channel, channel_snapshot: snapshot)
+
+      project_id = channel.project_id
+
+      assert {:ok, ^project_id} =
+               Channels.get_channel_request_project_id(request.id)
+
+      assert {:error, :not_found} =
+               Channels.get_channel_request_project_id(Ecto.UUID.generate())
+    end
   end
 
   describe "get_channel_with_auth/1" do
