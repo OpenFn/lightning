@@ -306,6 +306,11 @@ defmodule LightningWeb.API.SentinelSweepTest do
               attempt in [:planted, :array],
        do: @forbidden
 
+  # A credential type is named by its adaptor, and the sweep's adaptor
+  # catalogue never loads, so a planted name can't be looked up.
+  defp expected(%{path: "/api/credential_schemas/:name"}, :planted),
+    do: {503, :not_ready, []}
+
   defp expected(%{pipeline: [:session_api], verb: verb, path: path}, _attempt),
     do: Map.fetch!(@session_api, {verb, path})
 

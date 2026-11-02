@@ -57,6 +57,7 @@ defmodule Lightning.Policies.Credentials do
           | :edit_keychain_credential
           | :delete_keychain_credential
           | :view_keychain_credential
+          | :read_credential_schemas
 
   @ownership_actions [
     :create_credential,
@@ -126,6 +127,10 @@ defmodule Lightning.Policies.Credentials do
           "credentials:write",
           admin_or_support?(scope)
         )
+
+  # The credential types are the same for everyone holding the grant.
+  def authorize(:read_credential_schemas, %Scope{} = scope, _subject),
+    do: Decision.instance(scope, nil, "credentials:write", true)
 
   def authorize(action, actor, subject)
       when action in @ownership_actions and
