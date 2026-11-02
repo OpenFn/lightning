@@ -107,6 +107,22 @@ defmodule LightningWeb.API.ProjectMembers.RemovingTest do
       assert role_of(project.id, owner.id) == :owner
     end
 
+    test "an admin removing themself answers 422 and stays",
+         %{conn: conn, admin: admin, project: project} do
+      conn
+      |> with_pat(admin)
+      |> delete(member_path(project.id, admin.id))
+      |> assert_problem(422, :invalid, [
+        %{
+          "path" => "user_id",
+          "code" => "not_allowed",
+          "detail" => "is you, and you can't remove yourself from a project"
+        }
+      ])
+
+      assert role_of(project.id, admin.id) == :admin
+    end
+
     test "an admin of the project a sandbox is under answers 422 and stays in the sandbox",
          %{conn: conn, admin: admin, project: project} do
       sandbox_owner = insert(:user)
@@ -136,27 +152,50 @@ defmodule LightningWeb.API.ProjectMembers.RemovingTest do
   end
 
   describe "stale writes" do
-    # The removal re-reads the members before it writes, so a member already
-    # gone is left out of the write and the removal still holds.
-    test "a member another request removes mid-removal answers 204 and stays removed, with one audit event",
-         %{conn: conn, admin: admin, editor: editor, project: project} do
+    test "a member another request removes mid-removal answers 409 concurrent_edit and stays removed, with the other request's audit event",
+         %{
+           conn: conn,
+           owner: owner,
+           admin: admin,
+           editor: editor,
+           project: project
+         } do
+      # After the route reads the membership, before it writes.
       after_first_query("project_users", editor.id, fn _user_id ->
         Lightning.Projects.delete_project_user!(
           Repo.get_by!(Lightning.Projects.ProjectUser,
             project_id: project.id,
             user_id: editor.id
           ),
-          admin
+          owner
         )
       end)
 
-      assert conn
-             |> with_pat(admin)
-             |> delete(member_path(project.id, editor.id))
-             |> response(204)
+      conn
+      |> with_pat(admin)
+      |> delete(member_path(project.id, editor.id))
+      |> assert_problem(409, :concurrent_edit, [])
 
       refute role_of(project.id, editor.id)
-      assert audit_events(project.id) == [{"collaborator_removed", admin.id}]
+      assert audit_events(project.id) == [{"collaborator_removed", owner.id}]
+    end
+
+    test "a project another request deletes mid-removal answers 409 concurrent_edit",
+         %{conn: conn, admin: admin, editor: editor, project: project} do
+      after_first_query("project_users", editor.id, fn _user_id ->
+        Repo.query!("DELETE FROM project_users WHERE project_id = $1", [
+          Ecto.UUID.dump!(project.id)
+        ])
+
+        Repo.delete!(project)
+      end)
+
+      conn
+      |> with_pat(admin)
+      |> delete(member_path(project.id, editor.id))
+      |> assert_problem(409, :concurrent_edit, [])
+
+      refute Repo.reload(project)
     end
   end
 end
