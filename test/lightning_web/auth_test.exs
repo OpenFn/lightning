@@ -353,13 +353,14 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
-    test "a workflow's snapshots and versions take a person's tokens, and refuse the service account and a repo connection with 403",
+    test "a workflow's snapshots and versions, and the workflow templates, take a person's tokens, and refuse the service account and a repo connection with 403",
          %{conn: conn, tokens: tokens, project: project} do
       workflow = insert(:simple_workflow, project: project) |> with_snapshot()
 
       for path <- [
             ~p"/api/workflows/#{workflow.id}/snapshots",
-            ~p"/api/workflows/#{workflow.id}/versions"
+            ~p"/api/workflows/#{workflow.id}/versions",
+            ~p"/api/workflow_templates"
           ] do
         assert_each_kind(conn, tokens, path,
           service_account: :forbidden,
@@ -372,17 +373,20 @@ defmodule LightningWeb.AuthTest do
       end
     end
 
-    # The route writes, so each person's token is shown let in by the answer
+    # The routes write, so each person's token is shown let in by the answer
     # the route gives once it reads the request: 404 for a workflow the
-    # project hasn't got.
-    test "deleting a workflow takes a person's tokens, and refuse the service account and a repo connection with 403",
+    # project hasn't got, 422 for a template with no name.
+    test "deleting a workflow and publishing it as a template take a person's tokens, and refuse the service account and a repo connection with 403",
          %{conn: conn, tokens: tokens, project: project} do
+      {:session, user} = tokens[:session]
+      Repo.update!(Ecto.Changeset.change(user, support_user: true))
       workflow = insert(:simple_workflow, project: project)
 
       for {verb, path, let_in} <- [
             {:delete,
              ~p"/api/projects/#{project.id}/workflows/#{Ecto.UUID.generate()}",
-             {404, :not_found}}
+             {404, :not_found}},
+            {:put, ~p"/api/workflows/#{workflow.id}/template", {422, :invalid}}
           ],
           {kind, token} <- tokens do
         conn =

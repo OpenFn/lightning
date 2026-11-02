@@ -200,6 +200,8 @@ defmodule LightningWeb.Router do
         :show
 
     get "/workflows/:id/versions", API.WorkflowVersionController, :index
+    get "/workflow_templates", API.WorkflowTemplateController, :index
+    put "/workflows/:id/template", API.WorkflowTemplateController, :update
 
     # end-api-area:workflows
 
