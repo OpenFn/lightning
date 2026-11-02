@@ -174,6 +174,25 @@ defmodule LightningWeb.Router do
     resources "/log_lines", API.LogLinesController, only: [:index]
 
     # api-area:account (routes for this area go between these markers)
+    get "/me/tokens", API.MeTokenController, :index
+    post "/me/tokens", API.MeTokenController, :create
+    delete "/me/tokens/:id", API.MeTokenController, :delete
+    get "/me/mfa", API.MeMfaController, :show
+    post "/me/mfa", API.MeMfaController, :create
+    put "/me/mfa", API.MeMfaController, :update
+    delete "/me/mfa", API.MeMfaController, :delete
+    post "/me/mfa/backup_codes", API.MeMfaController, :create_backup_codes
+    delete "/me/github_connection", API.MeGithubController, :delete_connection
+    get "/me/github_repos", API.MeGithubController, :repos
+
+    get "/me/github_repos/:owner/:name/branches",
+        API.MeGithubController,
+        :branches
+
+    get "/auth_provider", API.AuthProviderController, :show
+    put "/auth_provider", API.AuthProviderController, :update
+    delete "/auth_provider", API.AuthProviderController, :delete
+
     # end-api-area:account
 
     # api-area:projects (routes for this area go between these markers)
@@ -297,6 +316,14 @@ defmodule LightningWeb.Router do
     resources "/session", API.SessionController,
       singleton: true,
       only: [:create, :show, :delete]
+
+    # api-area:account (routes that take no token, or a session that may be
+    # shut out pending confirmation)
+    post "/password_resets", API.PasswordResetController, :create
+    put "/password_resets/:token", API.PasswordResetController, :update
+    post "/confirmations", API.ConfirmationController, :create
+    put "/confirmations/:token", API.ConfirmationController, :update
+    # end-api-area:account
   end
 
   ## Cookie-authenticated JSON, for the app's own React components
