@@ -512,6 +512,21 @@ defmodule Lightning.Invocation do
   def get_step!(id), do: Repo.get!(Step, id)
 
   @doc """
+  The step `id` names, when its job is in the project `project_id`, or
+  `{:error, :not_found}`.
+  """
+  @spec get_step_for_project(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, Step.t()} | {:error, :not_found}
+  def get_step_for_project(project_id, id) do
+    from(s in Step,
+      join: j in assoc(s, :job),
+      join: w in assoc(j, :workflow),
+      where: s.id == ^id and w.project_id == ^project_id
+    )
+    |> Repo.fetch_one()
+  end
+
+  @doc """
   Gets a step by ID with its input and output dataclips preloaded.
   Returns nil if step not found.
 

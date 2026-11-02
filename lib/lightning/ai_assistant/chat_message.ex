@@ -246,6 +246,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> maybe_put_job_assoc(attrs[:job] || attrs["job"])
     |> maybe_require_user()
     |> set_default_status_by_role()
+    |> foreign_key_constraint(:chat_session_id)
+    |> foreign_key_constraint(:job_id)
   end
 
   @doc "Maximum number of segments accepted on a message."
