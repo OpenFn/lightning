@@ -78,6 +78,22 @@ defmodule LightningWeb.API.HistoryBody do
   @spec selection(map(), Lightning.Scope.t(), [atom()], keyword()) ::
           {:ok, selection(), map()} | {:error, Problem.t()}
   def selection(body, scope, extra, opts \\ []) do
+    with {:ok, selection, entries, extra} <-
+           selection_entries(body, scope, extra, opts),
+         :ok <- Errors.refuse(entries) do
+      {:ok, selection, extra}
+    end
+  end
+
+  @doc """
+  As `selection/4`, but answers the 422's entries rather than refusing, so a
+  route can add the entries for its `extra` keys and report them together.
+  The selection is `nil` when there are entries.
+  """
+  @spec selection_entries(map(), Lightning.Scope.t(), [atom()], keyword()) ::
+          {:ok, selection() | nil, [Errors.entry()], map()}
+          | {:error, Problem.t()}
+  def selection_entries(body, scope, extra, opts \\ []) do
     with :ok <- Request.check_object(body) do
       ids? = Keyword.get(opts, :ids, true)
       selectors = if ids?, do: [:filter, :work_order_ids], else: [:filter]
@@ -109,10 +125,14 @@ defmodule LightningWeb.API.HistoryBody do
             filter(%{}, scope)
         end
 
-      with :ok <- Errors.refuse(unknown ++ entries) do
-        {:ok, %{search: search, by_id?: Map.has_key?(body, "work_order_ids")},
-         Map.take(body, Enum.map(extra, &Atom.to_string/1))}
-      end
+      entries = unknown ++ entries
+
+      selection =
+        if entries == [],
+          do: %{search: search, by_id?: Map.has_key?(body, "work_order_ids")}
+
+      {:ok, selection, entries,
+       Map.take(body, Enum.map(extra, &Atom.to_string/1))}
     end
   end
 

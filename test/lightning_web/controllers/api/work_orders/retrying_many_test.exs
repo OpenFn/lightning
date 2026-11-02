@@ -132,7 +132,17 @@ defmodule LightningWeb.API.WorkOrders.RetryingManyTest do
             {%{work_order_ids: [first.id], job_id: "x"},
              [entry("/job_id", "type", "is not a UUID")]},
             {%{work_order_ids: [first.id], job_id: insert(:job).id},
-             [entry("/job_id", "not_found", "names nothing you can see")]}
+             [entry("/job_id", "not_found", "names nothing you can see")]},
+            {%{filter: %{state: "bogus"}, job_id: "nope"},
+             [
+               entry("/filter/state", "not_allowed", "has an invalid entry"),
+               entry("/job_id", "type", "is not a UUID")
+             ]},
+            {%{work_order_ids: ["x"], job_id: insert(:job).id},
+             [
+               entry("/work_order_ids/0", "type", "is not a UUID"),
+               entry("/job_id", "not_found", "names nothing you can see")
+             ]}
           ] do
         editor
         |> post(path, body)
