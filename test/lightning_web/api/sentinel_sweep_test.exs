@@ -128,6 +128,12 @@ defmodule LightningWeb.API.SentinelSweepTest do
     {:put, "/api/confirmations/:token"} => @session
   }
 
+  # Routes on the bearer pipeline that take only a session token, which the
+  # sweep never sends.
+  @session_token_only [
+    {:post, "/api/me/tokens"}
+  ]
+
   setup do
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
@@ -224,6 +230,10 @@ defmodule LightningWeb.API.SentinelSweepTest do
   defp refused_to_a_stranger?(%{verb: :put, path: "/api/credentials/:id"}),
     do: false
 
+  # A person's own account has no stranger: the id is looked for among the
+  # caller's own records.
+  defp refused_to_a_stranger?(%{path: "/api/me/" <> _}), do: false
+
   defp refused_to_a_stranger?(%{pipeline: pipeline}),
     do: Map.has_key?(@pipelines, pipeline)
 
@@ -317,6 +327,12 @@ defmodule LightningWeb.API.SentinelSweepTest do
   defp expected(%{path: path}, attempt)
        when path in ["/api/users", "/api/users/:id"] and
               attempt in [:planted, :array],
+       do: @forbidden
+
+  # A route that takes only a session token refuses the member's personal
+  # token before it reads an id or a body.
+  defp expected(%{verb: verb, path: path}, attempt)
+       when {verb, path} in @session_token_only and attempt in [:planted, :array],
        do: @forbidden
 
   defp expected(%{pipeline: [:session_api], verb: verb, path: path}, attempt) do

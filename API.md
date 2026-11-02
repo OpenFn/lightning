@@ -39,6 +39,11 @@ CSRF token, from `GET /api/session`, in the `x-csrf-token` header; without it
 the answer is 400 `invalid_header`. A session token acts as the person, with
 their project roles, wherever a personal access token does.
 
+Some routes take only a session token, and answer any other token with 403
+`forbidden`. A few of those also need the person to have entered their password
+or an MFA code in the last five minutes, which they do by posting it to
+`POST /api/session`; until then the answer is 403 `step_up_required`.
+
 ## Conventions
 
 - Send request bodies as JSON with `Content-Type: application/json`. Responses
@@ -95,6 +100,7 @@ in `LightningWeb.API.Codes`.
 | 401    | `invalid_token`          | The token is unknown, revoked or expired, or the route doesn't take that kind of token. An expired service account token says so in `WWW-Authenticate`: `error_description="The access token expired"`. |
 | 403    | `insufficient_scope`     | The token lacks the token grant the route needs. `scope` in the body and in `WWW-Authenticate` names it.                                                                                                |
 | 403    | `forbidden`              | You may not do this, or the record might not exist.                                                                                                                                                     |
+| 403    | `step_up_required`       | The route needs the person to enter their password or an MFA code again, at `POST /api/session`.                                                                                                        |
 | 404    | `not_found`              | The record doesn't exist, or the route doesn't.                                                                                                                                                         |
 | 409    | `id_taken`               | The id belongs to a record elsewhere.                                                                                                                                                                   |
 | 409    | `scheduled_for_deletion` | The record is scheduled for deletion.                                                                                                                                                                   |
@@ -134,6 +140,9 @@ be allowed.
 "Session only" routes serve Lightning's own web app and take only a session
 token; a bearer token counts as none, so the answer is 401 `unauthenticated`. A
 route "not open to the service account" answers its token with 403 `forbidden`.
+"Session token" routes take only a session token and answer any other token with
+403 `forbidden`; "stepped up" ones also answer a session that hasn't been
+stepped up with 403 `step_up_required`.
 
 ### Accounts
 
@@ -156,12 +165,15 @@ route "not open to the service account" answers its token with 403 `forbidden`.
 Routes for signing in, resetting a password and confirming an email, and for a
 person managing their own account.
 
-| Method | Path                          | What it does                                      | Token grant  |
-| ------ | ----------------------------- | ------------------------------------------------- | ------------ |
-| `POST` | `/api/password_resets`        | Emails a link to reset a forgotten password       | None         |
-| `PUT`  | `/api/password_resets/:token` | Resets a password with the emailed token          | None         |
-| `POST` | `/api/confirmations`          | Sends the account confirmation email again        | None         |
-| `PUT`  | `/api/confirmations/:token`   | Confirms an account, email or credential transfer | Session only |
+| Method   | Path                          | What it does                                      | Token grant                     |
+| -------- | ----------------------------- | ------------------------------------------------- | ------------------------------- |
+| `POST`   | `/api/password_resets`        | Emails a link to reset a forgotten password       | None                            |
+| `PUT`    | `/api/password_resets/:token` | Resets a password with the emailed token          | None                            |
+| `POST`   | `/api/confirmations`          | Sends the account confirmation email again        | None                            |
+| `PUT`    | `/api/confirmations/:token`   | Confirms an account, email or credential transfer | Session only                    |
+| `GET`    | `/api/me/tokens`              | Lists your personal access tokens, masked         | Not open to the service account |
+| `POST`   | `/api/me/tokens`              | Creates a personal access token                   | Session token, stepped up       |
+| `DELETE` | `/api/me/tokens/:id`          | Revokes one of your personal access tokens        | Not open to the service account |
 
 ### Projects
 

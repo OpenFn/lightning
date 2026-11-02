@@ -174,6 +174,9 @@ defmodule LightningWeb.Router do
     resources "/log_lines", API.LogLinesController, only: [:index]
 
     # api-area:account (routes for this area go between these markers)
+    get "/me/tokens", API.MeTokenController, :index
+    post "/me/tokens", API.MeTokenController, :create
+    delete "/me/tokens/:id", API.MeTokenController, :delete
     # end-api-area:account
 
     # api-area:projects (routes for this area go between these markers)
