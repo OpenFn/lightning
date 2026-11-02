@@ -82,10 +82,28 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       |> Repo.get!(message_id)
       |> update_message_status(:processing)
 
-    session = update_session_with_job_context(session, message)
+    session =
+      session
+      |> put_project_id()
+      |> update_session_with_job_context(message)
+
     result = dispatch_message_processing(session, message)
     handle_processing_result(message, result)
   end
+
+  # Run and step lookups are scoped to session.project_id. Sessions about a job
+  # not yet saved were stored without one, so reach the project through the
+  # session's workflow or job, as AiAssistant.get_project_id/1 does.
+  @spec put_project_id(AiAssistant.ChatSession.t()) ::
+          AiAssistant.ChatSession.t()
+  defp put_project_id(%{project_id: nil, id: id} = session) do
+    case AiAssistant.get_project_id(id) do
+      {:ok, project_id} -> %{session | project_id: project_id}
+      {:error, :not_found} -> session
+    end
+  end
+
+  defp put_project_id(session), do: session
 
   @spec update_session_with_job_context(
           AiAssistant.ChatSession.t(),

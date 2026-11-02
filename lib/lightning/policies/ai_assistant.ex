@@ -5,7 +5,8 @@ defmodule Lightning.Policies.AiAssistant do
   Only a session token of Lightning's own app may use the assistant, since a
   person has to accept its disclaimer before anything is sent to it, so every
   other token is refused before the project is consulted. Step-up isn't
-  needed.
+  needed. Nothing checks the disclaimer itself yet; see
+  `LightningWeb.API.AiSessionController`.
 
   On the project, any member may read the project's sessions and chat in them,
   viewers included, as the app's channel lets them. That is the project's

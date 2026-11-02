@@ -46,4 +46,20 @@ defmodule LightningWeb.API.AiSessionHelpers do
   @doc "The URL a session's `self` link holds."
   def ai_session_url(id),
     do: "#{LightningWeb.Endpoint.url()}/api/ai_sessions/#{id}"
+
+  @doc "A run of `job` in `workflow`, and the step it ran: `{run, step}`."
+  def run_with_step(workflow, job) do
+    work_order =
+      insert(:workorder, workflow: workflow, dataclip: insert(:dataclip))
+
+    run =
+      insert(:run,
+        work_order: work_order,
+        dataclip: work_order.dataclip,
+        starting_job: job
+      )
+
+    step = insert(:step, job: job, runs: [run])
+    {run, step}
+  end
 end

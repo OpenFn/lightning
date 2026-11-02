@@ -268,7 +268,7 @@ defmodule LightningWeb.API.AiSessions.StartingTest do
       other_project = insert(:project)
       other_workflow = insert(:simple_workflow, project: other_project)
 
-      {other_run, _other_step} =
+      {other_run, other_step} =
         run_with_step(other_workflow, hd(other_workflow.jobs))
 
       message = %{"content" => "Hi"}
@@ -362,12 +362,19 @@ defmodule LightningWeb.API.AiSessions.StartingTest do
                "message" =>
                  Map.put(message, "attach", %{
                    "logs" => true,
-                   "run_id" => other_run.id
+                   "run_id" => other_run.id,
+                   "io" => true,
+                   "step_id" => other_step.id
                  })
              },
              [
                %{
                  "pointer" => "#/message/attach/run_id",
+                 "code" => "not_found",
+                 "detail" => "names nothing you can see"
+               },
+               %{
+                 "pointer" => "#/message/attach/step_id",
                  "code" => "not_found",
                  "detail" => "names nothing you can see"
                }
@@ -451,20 +458,5 @@ defmodule LightningWeb.API.AiSessions.StartingTest do
       refute Repo.reload(project)
       assert Repo.aggregate(ChatSession, :count) == 0
     end
-  end
-
-  defp run_with_step(workflow, job) do
-    work_order =
-      insert(:workorder, workflow: workflow, dataclip: insert(:dataclip))
-
-    run =
-      insert(:run,
-        work_order: work_order,
-        dataclip: work_order.dataclip,
-        starting_job: job
-      )
-
-    step = insert(:step, job: job, runs: [run])
-    {run, step}
   end
 end

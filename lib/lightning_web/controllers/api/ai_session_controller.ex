@@ -8,6 +8,10 @@ defmodule LightningWeb.API.AiSessionController do
   (`Lightning.Policies.AiAssistant`). A session's `kind` is `job_code` (about
   one job, saved or not yet saved) or `workflow` (about a workflow, saved, not
   yet saved, or none yet), which Lightning stores as `workflow_template`.
+
+  The disclaimer isn't checked yet, so there is no 422 `must_accept`: Lightning
+  keeps no record of a person accepting it (migration 20260707080205 removed
+  the last one), and recording it is `PATCH /api/users/:id`, which isn't here.
   """
   use LightningWeb, :controller
 

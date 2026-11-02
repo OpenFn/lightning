@@ -59,7 +59,13 @@ defmodule Lightning.AiAssistant.MessageContextTest do
         }
       )
 
-    %{user: user, session: session, job: job}
+    %{
+      user: user,
+      project: project,
+      workflow: workflow,
+      session: session,
+      job: job
+    }
   end
 
   defp ask(session, user, meta) do
@@ -126,5 +132,75 @@ defmodule Lightning.AiAssistant.MessageContextTest do
 
     assert_receive {:apollo, _url,
                     %{"context" => %{"expression" => "first body"}}}
+  end
+
+  describe "a session about a job not yet saved" do
+    setup %{project: project, workflow: workflow, job: job} do
+      step =
+        insert(:step,
+          job: job,
+          input_dataclip:
+            build(:dataclip, project: project, body: %{"patient" => "Ada"}),
+          output_dataclip: build(:dataclip, project: project, body: %{"ok" => 1})
+        )
+
+      unsaved_job = %{
+        "id" => Ecto.UUID.generate(),
+        "name" => "Draft",
+        "body" => "fn(s => s)",
+        "adaptor" => "@openfn/language-common@latest",
+        "workflow_id" => workflow.id
+      }
+
+      %{step: step, unsaved_job: unsaved_job}
+    end
+
+    test "is started in its workflow's project, and sends a step's input and output",
+         %{user: user, project: project, step: step, unsaved_job: unsaved_job} do
+      {:ok, session} =
+        AiAssistant.create_session_for_unsaved_job(
+          user,
+          "Help",
+          %{"unsaved_job" => unsaved_job},
+          message_meta: %{
+            "unsaved_job" => unsaved_job,
+            "message_options" => %{
+              "attach_io_data" => true,
+              "step_id" => step.id
+            }
+          }
+        )
+
+      assert session.project_id == project.id
+
+      [message] = session.messages
+      :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+
+      assert_receive {:apollo, _url, %{"context" => context}}
+
+      assert {context["input"], context["output"]} ==
+               {%{"patient" => "string"}, %{"ok" => "number"}}
+    end
+
+    test "stored without a project still sends a step's input and output",
+         %{user: user, workflow: workflow, step: step, unsaved_job: unsaved_job} do
+      session =
+        insert(:chat_session,
+          session_type: "job_code",
+          workflow: workflow,
+          project: nil,
+          user: user,
+          meta: %{"unsaved_job" => unsaved_job}
+        )
+
+      context =
+        ask(session, user, %{
+          "unsaved_job" => unsaved_job,
+          "message_options" => %{"attach_io_data" => true, "step_id" => step.id}
+        })
+
+      assert {context["input"], context["output"]} ==
+               {%{"patient" => "string"}, %{"ok" => "number"}}
+    end
   end
 end
