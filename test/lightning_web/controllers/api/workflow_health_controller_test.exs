@@ -2,6 +2,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
 
   alias Lightning.Workflows.Snapshot
 
@@ -38,19 +39,19 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
          user,
          project_id,
          workflow_id,
-         params \\ %{},
+         params,
          headers \\ []
        ) do
-    Enum.reduce(headers, log_in_user(conn, user), fn {name, value}, conn ->
-      put_req_header(conn, name, value)
-    end)
+    conn
+    |> log_in_user(user)
+    |> Map.update!(:req_headers, &(headers ++ &1))
     |> get(
       ~p"/api/projects/#{project_id}/workflows/#{workflow_id}/health/runs",
       params
     )
   end
 
-  describe "authorization" do
+  describe "who may reach it" do
     test "a project member is served", %{
       conn: conn,
       user: user,
@@ -60,62 +61,65 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       assert %{status: 200} = get_outcomes(conn, user, project.id, workflow.id)
     end
 
-    test "an anonymous request is refused", %{
-      conn: conn,
-      project: project,
-      workflow: workflow
-    } do
-      conn =
-        get(
-          conn,
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}/health/outcomes"
-        )
-
-      assert conn.status == 401
-    end
-
-    test "a non-member is refused", %{
-      conn: conn,
-      project: project,
-      workflow: workflow
-    } do
-      assert %{status: 404} =
-               get_outcomes(conn, insert(:user), project.id, workflow.id)
-    end
-
-    # :validate_days runs after :authorize_workflow, so a bad `days` value
-    # never gets the chance to produce a 400 for someone who can't see the
-    # workflow in the first place.
-    test "a non-member is refused with 404, not 400, even with an invalid days value",
-         %{
-           conn: conn,
-           project: project,
-           workflow: workflow
-         } do
-      assert %{status: 404} =
-               get_outcomes(conn, insert(:user), project.id, workflow.id, %{
-                 "days" => "banana"
-               })
-    end
-
-    test "a member of another project cannot read this workflow", %{
-      conn: conn,
-      user: user,
-      project: project
-    } do
+    # `days` is read only once the caller is authorised, so a bad value never
+    # gets the chance to produce a 400 for someone who can't see the workflow.
+    # The slices share one authorisation, so the id rows read one of them.
+    test "a refused caller gets the same 403 for an existing, unknown and malformed id on every slice, even with a bad days, and a member or superuser 404 for an unknown id and 400 for a malformed one",
+         %{conn: conn, user: member, project: project, workflow: workflow} do
+      stranger = insert(:user)
+      superuser = insert(:user, role: :superuser)
+      short_of_mfa = insert(:user, mfa_enabled: false)
       other_workflow = insert(:simple_workflow)
 
-      assert %{status: 404} =
-               get_outcomes(conn, user, project.id, other_workflow.id)
+      mfa_project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: short_of_mfa, role: :owner}]
+        )
 
-      # Nor by naming the other workflow's own project, which they aren't in.
-      assert %{status: 404} =
-               get_outcomes(
-                 conn,
-                 user,
-                 other_workflow.project_id,
-                 other_workflow.id
-               )
+      unknown = Ecto.UUID.generate()
+      refused = {403, :forbidden, []}
+      not_found = {404, :not_found, []}
+
+      malformed = fn location ->
+        {400, :invalid_parameter, [not_a_uuid_entry(%{"path" => location})]}
+      end
+
+      rows =
+        [
+          {&get_outcomes/5, stranger, project.id, workflow.id,
+           %{"days" => "banana"}, refused},
+          {&get_failures/5, stranger, project.id, workflow.id, %{}, refused},
+          {&get_runs(&1, &2, &3, &4, &5), stranger, project.id, workflow.id, %{},
+           refused}
+        ] ++
+          for {caller, project_id, workflow_id, expected} <- [
+                {stranger, project.id, workflow.id, refused},
+                {stranger, project.id, unknown, refused},
+                {stranger, project.id, "not-a-uuid", refused},
+                {stranger, unknown, unknown, refused},
+                {stranger, "not-a-uuid", unknown, refused},
+                {short_of_mfa, mfa_project.id, unknown, refused},
+                {short_of_mfa, mfa_project.id, "not-a-uuid", refused},
+                {member, other_workflow.project_id, other_workflow.id, refused},
+                {member, project.id, other_workflow.id, not_found},
+                {member, project.id, unknown, not_found},
+                {member, project.id, "not-a-uuid", malformed.("workflow_id")},
+                {superuser, project.id, workflow.id, refused},
+                {superuser, project.id, unknown, refused},
+                {superuser, project.id, "not-a-uuid", refused},
+                {superuser, unknown, unknown, not_found},
+                {superuser, "not-a-uuid", unknown, malformed.("project_id")}
+              ] do
+            {&get_outcomes/5, caller, project_id, workflow_id, %{}, expected}
+          end
+
+      for {get_slice, caller, project_id, workflow_id, params,
+           {status, code, entries}} <- rows do
+        conn
+        |> get_slice.(caller, project_id, workflow_id, params)
+        |> assert_problem(status, code, entries)
+      end
     end
 
     # Support users have no `project_users` row, so a membership check alone
@@ -137,13 +141,15 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
                )
 
       # Not a blanket pass: a project that hasn't opted in still refuses them.
-      assert %{status: 404} =
-               get_outcomes(
-                 conn,
-                 support_user,
-                 workflow.project_id,
-                 workflow.id
-               )
+      refused =
+        get_outcomes(
+          conn,
+          support_user,
+          workflow.project_id,
+          workflow.id
+        )
+
+      assert_problem(refused, 403, :forbidden, [])
     end
 
     test "a member cannot read a project scheduled for deletion", %{
@@ -156,11 +162,14 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       |> Ecto.Changeset.change(scheduled_deletion: ~U[2026-01-01 00:00:00Z])
       |> Lightning.Repo.update!()
 
-      assert %{status: 404} = get_outcomes(conn, user, project.id, workflow.id)
+      refused =
+        get_outcomes(conn, user, project.id, workflow.id)
+
+      assert_problem(refused, 409, :scheduled_for_deletion, [])
     end
 
-    # The LiveView redirects this person to `/mfa_required`; a JSON client has
-    # nothing to do with that, and 404 doesn't confirm the project exists.
+    # The LiveView redirects this person to `/mfa_required`. A JSON client gets
+    # 403 forbidden: it can see the project but hasn't met its MFA requirement.
     test "a member who has not enrolled is refused a project requiring MFA", %{
       conn: conn
     } do
@@ -178,8 +187,10 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
 
       workflow = insert(:simple_workflow, project: project)
 
-      assert %{status: 404} =
-               get_outcomes(conn, unenrolled, project.id, workflow.id)
+      refused =
+        get_outcomes(conn, unenrolled, project.id, workflow.id)
+
+      assert_problem(refused, 403, :forbidden, [])
 
       # Not unreadable in general: an enrolled member is still served.
       assert %{status: 200} =
@@ -198,34 +209,15 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       |> Ecto.Changeset.change(deleted_at: ~U[2026-01-01 00:00:00Z])
       |> Lightning.Repo.update!()
 
-      assert %{status: 404} = get_outcomes(conn, user, project.id, workflow.id)
-      assert %{status: 404} = get_failures(conn, user, project.id, workflow.id)
-    end
+      refused =
+        get_outcomes(conn, user, project.id, workflow.id)
 
-    test "a malformed id is refused rather than crashing the request", %{
-      conn: conn,
-      user: user,
-      project: project,
-      workflow: workflow
-    } do
-      assert %{status: 404} = get_outcomes(conn, user, "not-a-uuid", workflow.id)
+      assert_problem(refused, 404, :not_found, [])
 
-      assert %{status: 404} = get_outcomes(conn, user, project.id, "not-a-uuid")
-    end
+      refused =
+        get_failures(conn, user, project.id, workflow.id)
 
-    # Every action shares one plug, so this only has to prove the plug runs on
-    # the others too.
-    test "the other slices are guarded by the same check", %{
-      conn: conn,
-      project: project,
-      workflow: workflow
-    } do
-      stranger = insert(:user)
-
-      assert %{status: 404} =
-               get_failures(conn, stranger, project.id, workflow.id)
-
-      assert %{status: 404} = get_runs(conn, stranger, project.id, workflow.id)
+      assert_problem(refused, 404, :not_found, [])
     end
   end
 
@@ -471,26 +463,52 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       assert get_resp_header(conn, "vary") == ["x-timezone"]
     end
 
-    # Unknown, empty, and long — the cache key has to stay bounded to the tz
-    # database whatever arrives.
+    # Unknown, empty, long and repeated: the cache key has to stay bounded to
+    # the tz database whatever arrives.
     test "rejects a value it cannot use", %{
       conn: conn,
       user: user,
       project: project,
       workflow: workflow
     } do
-      for value <- ["Mars/Olympus", "", String.duplicate("x", 5_000)] do
-        response =
-          conn
-          |> get_runs(user, project.id, workflow.id, %{"days" => "1"}, [
-            {"x-timezone", value}
-          ])
-          |> json_response(400)
-
-        assert response == %{
-                 "error" => "x-timezone must be an IANA timezone name"
-               }
+      for headers <- [
+            [{"x-timezone", "Mars/Olympus"}],
+            [{"x-timezone", ""}],
+            [{"x-timezone", String.duplicate("x", 5_000)}],
+            [{"x-timezone", "Etc/UTC"}, {"x-timezone", "Etc/UTC"}],
+            [{"x-timezone", plant_sentinel("tz")}]
+          ] do
+        conn
+        |> get_runs(user, project.id, workflow.id, %{"days" => "1"}, headers)
+        |> refute_sentinel()
+        |> assert_problem(400, :invalid_header, [
+          %{
+            "header" => "x-timezone",
+            "code" => "not_allowed",
+            "detail" => "is invalid"
+          }
+        ])
       end
+    end
+
+    test "a bad days is reported before a bad x-timezone", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      conn =
+        get_runs(conn, user, project.id, workflow.id, %{"days" => "2"}, [
+          {"x-timezone", "Mars/Olympus"}
+        ])
+
+      assert_problem(conn, 400, :invalid_parameter, [
+        %{
+          "parameter" => "days",
+          "code" => "not_allowed",
+          "detail" => "is invalid"
+        }
+      ])
     end
   end
 
@@ -536,16 +554,17 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       project: project,
       workflow: workflow
     } do
-      for bad_days <- ["banana", "36500", "0", "7.5", "007"] do
-        assert %{status: 400} =
-                 get_outcomes(conn, user, project.id, workflow.id, %{
-                   "days" => bad_days
-                 })
-
-        assert %{status: 400} =
-                 get_failures(conn, user, project.id, workflow.id, %{
-                   "days" => bad_days
-                 })
+      for bad_days <- ["banana", "36500", "0", "7.5", "007", plant_sentinel("d")] do
+        conn
+        |> get_outcomes(user, project.id, workflow.id, %{"days" => bad_days})
+        |> refute_sentinel()
+        |> assert_problem(400, :invalid_parameter, [
+          %{
+            "parameter" => "days",
+            "code" => "not_allowed",
+            "detail" => "is invalid"
+          }
+        ])
       end
     end
   end
