@@ -64,6 +64,15 @@ and this project adheres to
   person a token belongs to. After ten failed passwords or MFA codes in 15
   minutes, an account's sign-ins and step-ups answer 429 until the window ends,
   and a sign-in waiting for its MFA code is ended after five wrong codes.
+- Lightning's own app can manage a person's account through the API: reset a
+  forgotten password (`/api/password_resets`), resend and confirm emailed
+  confirmations (`/api/confirmations`), list, create and revoke personal access
+  tokens (`/api/me/tokens`), set up and turn off MFA and replace backup codes
+  (`/api/me/mfa`), and disconnect GitHub and list the repositories and branches
+  it can reach (`/api/me/github_*`). A superuser can read, set and remove the
+  single sign-on provider at `/api/auth_provider`. Creating a token, turning MFA
+  off and replacing backup codes need a session token stepped up in the last
+  five minutes, and answer 403 `step_up_required` otherwise.
 
 ### Changed
 
@@ -104,6 +113,8 @@ and this project adheres to
 
 ### Fixed
 
+- Setting up a new authenticator while MFA was already on kept the old secret,
+  so codes from the new authenticator were refused at the next sign-in.
 - Signing out now also ends the session's step-up (the sudo token from
   re-entering a password or MFA code), which it left valid for up to five
   minutes.
