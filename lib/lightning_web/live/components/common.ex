@@ -353,6 +353,8 @@ defmodule LightningWeb.Components.Common do
   end
 
   attr :icon_classes, :string, default: "size-4 flex-none my-auto align-middle"
+  attr :update, :atom, default: nil, values: [nil, :available, :current]
+  attr :dot, :atom, default: :left, values: [:left, :below]
 
   def version_chip(assigns) do
     display =
@@ -364,40 +366,52 @@ defmodule LightningWeb.Components.Common do
     assigns = assign(assigns, display: display)
 
     ~H"""
-    <div class="text-[8px] primary-light opacity-50 flex justify-center">
-      <code class={[
-        "py-1 rounded-md",
-        "break-keep primary-light",
-        "inline-block align-middle text-center"
-      ]}>
-        {@display}
-      </code>
+    <div class="text-[8px] primary-light flex justify-center">
+      <span class="relative">
+        <code class={[
+          "py-1 rounded-md opacity-50",
+          "break-keep primary-light",
+          "inline-block align-middle text-center"
+        ]}>
+          {@display}
+        </code>
+        <.update_dot update={@update} position={@dot} />
+      </span>
     </div>
     """
   end
 
   attr :update, :atom, default: nil, values: [nil, :available, :current]
+  attr :position, :atom, default: :left, values: [:left, :below]
 
   @doc """
-  A small amber or green dot centred on the top-right corner of its
-  positioned parent, which is the logo's box in the sidebar.
+  A tiny amber or green dot beside its positioned parent: to the left and
+  vertically centred, or below and horizontally centred. It's absolutely
+  positioned, so the version text stays centred and the layout doesn't move.
   """
   def update_dot(assigns) do
     ~H"""
     <span
       :if={@update == :available}
-      class="version-update-dot absolute top-0.5 right-0.5 block size-2 translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400"
+      class={["version-update-dot bg-amber-400", update_dot_classes(@position)]}
       aria-label="A new version is available"
     >
     </span>
     <span
       :if={@update == :current}
-      class="version-current-dot absolute top-0 right-0 block size-2 translate-x-1/2 -translate-y-1/2 rounded-full bg-green-400"
+      class={["version-current-dot bg-green-400", update_dot_classes(@position)]}
       aria-label="Up to date"
     >
     </span>
     """
   end
+
+  defp update_dot_classes(:left),
+    do:
+      "absolute right-full top-1/2 mr-0.5 block size-1 -translate-y-1/2 rounded-full"
+
+  defp update_dot_classes(:below),
+    do: "absolute top-full left-1/2 block size-1 -translate-x-1/2 rounded-full"
 
   @doc """
   Whether anything needs upgrading, the app or any connected worker:

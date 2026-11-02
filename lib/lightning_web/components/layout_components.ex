@@ -699,10 +699,9 @@ defmodule LightningWeb.LayoutComponents do
         <div class="pt-2">
           <div class="relative mx-auto w-fit">
             <LightningWeb.Components.Common.openfn_logo class="h-6 primary-light" />
-            <LightningWeb.Components.Common.update_dot update={@update} />
           </div>
         </div>
-        <LightningWeb.Components.Common.version_chip />
+        <LightningWeb.Components.Common.version_chip update={@update} />
       </div>
       <%!-- Collapsed branding: centered --%>
       <div
@@ -712,10 +711,9 @@ defmodule LightningWeb.LayoutComponents do
         <div class={if @compact_version?, do: "pt-2", else: "pt-0.5"}>
           <div class="relative mx-auto w-fit">
             <LightningWeb.Components.Common.openfn_logo_collapsed class="h-6 primary-light" />
-            <LightningWeb.Components.Common.update_dot update={@update} />
           </div>
         </div>
-        <LightningWeb.Components.Common.version_chip />
+        <LightningWeb.Components.Common.version_chip update={@update} dot={:below} />
       </div>
       <div class="border-t border-white/10 mt-2">
         <button
