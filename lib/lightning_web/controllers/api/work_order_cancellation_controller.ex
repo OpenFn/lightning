@@ -11,6 +11,7 @@ defmodule LightningWeb.API.WorkOrderCancellationController do
   use LightningWeb, :controller
 
   alias Lightning.Invocation
+  alias Lightning.Runs
   alias Lightning.WorkOrders
   alias LightningWeb.API.FallbackController
   alias LightningWeb.API.HistoryBody
@@ -22,10 +23,12 @@ defmodule LightningWeb.API.WorkOrderCancellationController do
   plug LightningWeb.Plugs.AuthorizeAction, {:history, :run_workflow}
 
   @doc """
-  Answers 202 with `cancelled`, the number of selected work orders that had a
-  run no worker had claimed. Work orders listed by id are cancelled in the
-  request; a filter's are cancelled in the background, in batches of 100
-  runs.
+  Answers 202 with `cancelled`, a number of work orders. Work orders listed by
+  id are cancelled in the request, and `cancelled` counts those whose runs it
+  cancelled: one whose run a worker claims mid-request isn't counted. A
+  filter's are cancelled in the background, in batches of 100 runs, and
+  `cancelled` counts the matching work orders that had a run no worker had
+  claimed when the request arrived.
 
   ## Examples
 
@@ -46,24 +49,29 @@ defmodule LightningWeb.API.WorkOrderCancellationController do
            HistoryBody.selection(conn.body_params, scope, []),
          work_orders =
            Invocation.search_workorders_for_cancel(project, selection.search),
-         :ok <- cancel(work_orders, selection.by_id?, project.id) do
+         {:ok, cancelled} <- cancel(work_orders, selection.by_id?, project.id) do
       conn
       |> put_status(:accepted)
-      |> json(%{cancelled: length(work_orders)})
+      |> json(%{cancelled: cancelled})
     end
   end
 
-  defp cancel([], _by_id?, _project_id), do: :ok
+  defp cancel([], _by_id?, _project_id), do: {:ok, 0}
 
+  # Counts the work orders whose runs this request cancelled, so one whose
+  # run a worker claimed after the search isn't counted.
   defp cancel(work_orders, true, project_id) do
-    with {:ok, _runs} <-
-           WorkOrders.cancel_many(work_orders, project_id: project_id),
-         do: :ok
+    with {:ok, %{runs: {_count, runs}}} <-
+           work_orders
+           |> Enum.map(& &1.id)
+           |> Runs.cancel_available_for_work_orders(project_id) do
+      {:ok, runs |> Enum.uniq_by(& &1.work_order_id) |> length()}
+    end
   end
 
   defp cancel(work_orders, false, project_id) do
     with {:ok, _job} <-
            WorkOrders.cancel_many_async(work_orders, project_id: project_id),
-         do: :ok
+         do: {:ok, length(work_orders)}
   end
 end

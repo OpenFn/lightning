@@ -169,7 +169,8 @@ defmodule LightningWeb.API.WorkOrdersController do
   The body names where to start, `job_id` or `trigger_id` (the job the
   trigger leads to), and the input, an existing `dataclip_id` or a new `body`,
   `{}` when neither is sent. Every problem with it is reported in one 422; the
-  run limits are asked once it is valid.
+  run limits are asked once it is valid. A workflow deleted after the lookup
+  read it is 409 `concurrent_edit`, and no work order is made.
 
   ## Examples
 
@@ -203,7 +204,7 @@ defmodule LightningWeb.API.WorkOrdersController do
              created_by: user
            )
            |> Ecto.Changeset.apply_action(:validate),
-         {:ok, work_order} <- WorkOrders.create_for(manual) do
+         {:ok, work_order} <- create_for(manual) do
       [run | _] = work_order.runs
 
       conn
@@ -211,6 +212,14 @@ defmodule LightningWeb.API.WorkOrdersController do
       |> put_resp_header("x-meta-work-order-id", work_order.id)
       |> put_resp_header("x-meta-run-id", run.id)
       |> render("created.json", work_order: work_order, conn: conn)
+    end
+  end
+
+  # A workflow deleted after the lookup read it.
+  defp create_for(manual) do
+    case WorkOrders.create_for(manual) do
+      {:error, :workflow_deleted} -> {:error, :concurrent_edit}
+      created -> created
     end
   end
 

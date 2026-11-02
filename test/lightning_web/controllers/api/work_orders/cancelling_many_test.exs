@@ -6,6 +6,7 @@ defmodule LightningWeb.API.WorkOrders.CancellingManyTest do
   import LightningWeb.API.ProblemHelpers
   import LightningWeb.API.SessionHelpers
 
+  alias Lightning.RaceHelpers
   alias Lightning.Repo
 
   setup %{conn: conn} do
@@ -78,6 +79,23 @@ defmodule LightningWeb.API.WorkOrders.CancellingManyTest do
       |> assert_problem(400, :malformed, [])
 
       assert run_state(first) == :available
+    end
+  end
+
+  describe "stale writes" do
+    test "a listed work order whose run a worker claims mid-request is neither cancelled nor counted",
+         %{path: path, editor: editor, first: first, second: second} do
+      RaceHelpers.after_first_query("work_orders", first.id, fn id ->
+        Repo.query!(
+          "UPDATE runs SET state = 'claimed' WHERE work_order_id = $1",
+          [id]
+        )
+      end)
+
+      conn = post(editor, path, %{work_order_ids: [first.id, second.id]})
+
+      assert json_response(conn, 202) == %{"cancelled" => 1}
+      assert Enum.map([first, second], &run_state/1) == [:claimed, :cancelled]
     end
   end
 

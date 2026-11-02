@@ -128,8 +128,8 @@ defmodule Lightning.WorkOrders do
 
   def create_for(%Manual{} = manual) do
     Multi.new()
-    |> Multi.run(:workflow_deleted?, fn _repo, _changes ->
-      if manual.workflow.deleted_at do
+    |> Multi.run(:workflow_deleted?, fn repo, _changes ->
+      if manual.workflow.deleted_at || workflow_gone?(repo, manual.workflow) do
         {:error, :workflow_deleted}
       else
         {:ok, false}
@@ -148,6 +148,19 @@ defmodule Lightning.WorkOrders do
     end)
     |> Runs.enqueue()
     |> emit_and_return_work_order()
+  end
+
+  # Reads the workflow again in the transaction, holding its row until the
+  # work order is written, so a delete that lands after the caller read the
+  # workflow is seen rather than missed.
+  defp workflow_gone?(repo, %Workflow{id: id}) do
+    from(w in Workflow,
+      where: w.id == ^id and is_nil(w.deleted_at),
+      select: w.id,
+      lock: "FOR SHARE"
+    )
+    |> repo.one()
+    |> is_nil()
   end
 
   defp emit_and_return_work_order(
