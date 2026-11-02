@@ -106,6 +106,20 @@ defmodule LightningWeb.API.Filters do
   end
 
   @doc """
+  The audit event filters in `params`, or a changeset with an error on every
+  bad parameter, none quoting its value. See
+  `Lightning.Auditing.filter_types/0`.
+  """
+  @spec audit_events(map()) :: {:ok, map()} | {:error, Changeset.t()}
+  def audit_events(params) do
+    types = Lightning.Auditing.filter_types()
+
+    {%{}, types}
+    |> Changeset.cast(params, Map.keys(types))
+    |> Changeset.apply_action(:validate)
+  end
+
+  @doc """
   The collection item filters in `params`, or a changeset with an error on
   every bad parameter, none quoting its value.
 

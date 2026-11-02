@@ -380,6 +380,18 @@ defmodule LightningWeb.AuthTest do
         session: :logs_in
       )
     end
+
+    test "GET /api/audit_events takes the service account's token with audit:read, and refuses a person who isn't a superuser with 403",
+         %{conn: conn, tokens: tokens} do
+      assert_each_kind(conn, tokens, ~p"/api/audit_events",
+        service_account: :logs_in,
+        expired_service_account: :expired_token,
+        personal: :forbidden,
+        repo_connection: {:insufficient_scope, "audit:read"},
+        run: :invalid_token,
+        session: :forbidden
+      )
+    end
   end
 
   defp assert_each_kind(conn, tokens, path, expected) do
