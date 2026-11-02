@@ -665,12 +665,15 @@ defmodule Lightning.Invocation do
 
     query
     |> filter_by_workorder_id(search_params.workorder_id)
+    |> filter_by_workorder_ids(search_params.workorder_ids)
     |> filter_by_workflow_id(search_params.workflow_id)
     |> filter_by_statuses(status_filter)
     |> filter_by_wo_date_after(search_params.wo_date_after)
     |> filter_by_wo_date_before(search_params.wo_date_before)
     |> filter_by_date_after(search_params.date_after)
     |> filter_by_date_before(search_params.date_before)
+    |> filter_by_updated_after(search_params.updated_after)
+    |> filter_by_updated_before(search_params.updated_before)
     |> filter_by_runs(search_params)
     |> filter_by_error_signature(search_params)
     |> filter_by_body_or_log_or_id(
@@ -724,6 +727,15 @@ defmodule Lightning.Invocation do
     from([workorder: workorder] in query, where: workorder.id == ^workorder_id)
   end
 
+  defp filter_by_workorder_ids(query, nil), do: query
+
+  defp filter_by_workorder_ids(query, workorder_ids)
+       when is_list(workorder_ids) do
+    from([workorder: workorder] in query,
+      where: workorder.id in ^workorder_ids
+    )
+  end
+
   defp filter_by_workflow_id(query, nil), do: query
 
   defp filter_by_workflow_id(query, workflow_id) when is_binary(workflow_id) do
@@ -765,6 +777,22 @@ defmodule Lightning.Invocation do
   defp filter_by_date_before(query, date_before) do
     from([workorder: workorder] in query,
       where: workorder.last_activity <= ^date_before
+    )
+  end
+
+  defp filter_by_updated_after(query, nil), do: query
+
+  defp filter_by_updated_after(query, updated_after) do
+    from([workorder: workorder] in query,
+      where: workorder.updated_at >= ^updated_after
+    )
+  end
+
+  defp filter_by_updated_before(query, nil), do: query
+
+  defp filter_by_updated_before(query, updated_before) do
+    from([workorder: workorder] in query,
+      where: workorder.updated_at <= ^updated_before
     )
   end
 

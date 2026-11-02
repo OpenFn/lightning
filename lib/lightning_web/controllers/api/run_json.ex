@@ -31,6 +31,14 @@ defmodule LightningWeb.API.RunJSON do
     }
   end
 
+  def render("created.json", %{run: run, conn: conn}) do
+    %{
+      data: resource(conn, run),
+      included: [],
+      links: %{self: Routes.api_run_url(conn, :show, run)}
+    }
+  end
+
   defp resource(conn, run) do
     %{
       type: "runs",

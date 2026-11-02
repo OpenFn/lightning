@@ -343,14 +343,19 @@ defmodule LightningWeb.API.SentinelSweepTest do
   defp by_parent(answer, _route, _attempt), do: answer
 
   # A top-level workflow's snapshots, versions and template are open only to
-  # people, and only the service account learns which workflows exist, so a
-  # person hears 403 for any workflow id there, with any body.
+  # people, and acting on a top-level run or work order needs permission in its
+  # project. Only the service account learns which of these exist, so a person
+  # hears 403 for any id there, with any body.
   defp no_standing_on_parent?(%{path: path}, _attempt)
        when path in [
               "/api/workflows/:id/snapshots",
               "/api/workflows/:id/snapshots/:snapshot_id",
               "/api/workflows/:id/versions",
-              "/api/workflows/:id/template"
+              "/api/workflows/:id/template",
+              "/api/runs/:id",
+              "/api/runs/:id/retries",
+              "/api/runs/:id/steps",
+              "/api/work_orders/:id"
             ],
        do: true
 

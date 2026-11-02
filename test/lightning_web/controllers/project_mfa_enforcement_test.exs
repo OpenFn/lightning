@@ -39,6 +39,8 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
   import Lightning.Factories
   import LightningWeb.API.ProblemHelpers
 
+  alias LightningWeb.API.HistoryHelpers
+
   # The member the policy is aimed at: a real member of an MFA-required
   # project who has never set up a second factor.
   defp unenrolled_member(%{conn: conn}) do
@@ -448,6 +450,71 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
 
       assert delete(enrolled, path).status == 204,
              "an enrolled member was refused unlinking a credential"
+    end
+  end
+
+  describe "the API's history routes on an MFA-required project" do
+    setup [:unenrolled_member, :enrolled_member]
+
+    # Each request is one an enrolled member makes successfully, so the 403
+    # below can only be the MFA requirement.
+    defp history_requests(project) do
+      graph = HistoryHelpers.runnable_workflow(project)
+
+      %{run: run, step_a: step} =
+        HistoryHelpers.ran_work_order(graph)
+
+      pending = HistoryHelpers.pending_work_order(graph)
+      waiting = HistoryHelpers.pending_work_order(graph)
+      to_cancel = HistoryHelpers.pending_work_order(graph)
+      export = insert(:project_file, project: project)
+
+      [
+        {:get, "/api/runs/#{run.id}/steps", nil, 200},
+        {:post, "/api/runs/#{run.id}/retries", %{step_id: step.id}, 201},
+        {:patch, "/api/runs/#{hd(waiting.runs).id}", %{state: "cancelled"}, 200},
+        {:post,
+         "/api/projects/#{project.id}/workflows/#{graph.workflow.id}/work_orders",
+         %{job_id: graph.job_a.id}, 201},
+        {:post, "/api/projects/#{project.id}/work_orders/retries",
+         %{work_order_ids: [run.work_order_id]}, 202},
+        {:post, "/api/projects/#{project.id}/work_orders/cancellations",
+         %{work_order_ids: [pending.id]}, 202},
+        {:patch, "/api/work_orders/#{to_cancel.id}", %{state: "cancelled"}, 200},
+        {:post, "/api/projects/#{project.id}/history_exports", %{}, 202},
+        {:get, "/api/projects/#{project.id}/history_exports", nil, 200},
+        {:get, "/api/projects/#{project.id}/history_exports/#{export.id}", nil,
+         200}
+      ]
+    end
+
+    test "are refused to a member who has not enrolled", %{
+      user: user,
+      project: project
+    } do
+      for {verb, path, body, _status} <- history_requests(project) do
+        user
+        |> bearer_conn()
+        |> Plug.Conn.put_req_header("content-type", "application/json")
+        |> dispatch(@endpoint, verb, path, body && Jason.encode!(body))
+        |> assert_problem(403, :forbidden, [])
+      end
+    end
+
+    test "still work for a member who has enrolled", %{
+      enrolled_user: user,
+      enrolled_project: project
+    } do
+      for {verb, path, body, status} <- history_requests(project) do
+        conn =
+          user
+          |> bearer_conn()
+          |> Plug.Conn.put_req_header("content-type", "application/json")
+          |> dispatch(@endpoint, verb, path, body && Jason.encode!(body))
+
+        assert conn.status == status,
+               "#{verb} #{path} answered #{conn.status} to an enrolled member"
+      end
     end
   end
 
