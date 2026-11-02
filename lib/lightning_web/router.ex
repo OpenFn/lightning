@@ -195,6 +195,20 @@ defmodule LightningWeb.Router do
     patch "/runs/:id", API.RunController, :update
     post "/runs/:id/retries", API.RunRetryController, :create
     get "/runs/:id/steps", API.RunStepController, :index
+
+    post "/projects/:project_id/workflows/:workflow_id/work_orders",
+         API.WorkOrdersController,
+         :create
+
+    post "/projects/:project_id/work_orders/retries",
+         API.WorkOrderRetryController,
+         :create
+
+    post "/projects/:project_id/work_orders/cancellations",
+         API.WorkOrderCancellationController,
+         :create
+
+    patch "/work_orders/:id", API.WorkOrdersController, :update
     # end-api-area:work_orders_runs
 
     # api-area:dataclips_audit (routes for this area go between these markers)

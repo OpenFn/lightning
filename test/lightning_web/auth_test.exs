@@ -388,7 +388,12 @@ defmodule LightningWeb.AuthTest do
       for token <- [tokens[:service_account], tokens[:repo_connection]],
           {verb, path} <- [
             {:patch, ~p"/api/runs/#{run.id}"},
-            {:post, ~p"/api/runs/#{run.id}/retries"}
+            {:post, ~p"/api/runs/#{run.id}/retries"},
+            {:post,
+             ~p"/api/projects/#{project.id}/workflows/#{run.work_order.workflow_id}/work_orders"},
+            {:post, ~p"/api/projects/#{project.id}/work_orders/retries"},
+            {:post, ~p"/api/projects/#{project.id}/work_orders/cancellations"},
+            {:patch, ~p"/api/work_orders/#{run.work_order_id}"}
           ] do
         conn
         |> with_token(token)
