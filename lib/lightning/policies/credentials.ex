@@ -33,7 +33,9 @@ defmodule Lightning.Policies.Credentials do
 
   Keychain actions take a project and decide through
   `Lightning.Policies.Decision.project/4`. They need an owner or admin, or a
-  support user with no role on a project that allows support access.
+  support user with no role on a project that allows support access. Creating
+  one also needs a person, since it records who created it, so the service
+  account may edit and delete keychain credentials but not create them.
   """
   @behaviour Bodyguard.Policy
 
@@ -117,6 +119,17 @@ defmodule Lightning.Policies.Credentials do
   def authorize(action, %Scope{} = scope, subject)
       when action in @ownership_actions,
       do: ownership(action, scope, subject)
+
+  # A keychain credential records the person who created it, so only a
+  # person may create one.
+  def authorize(:create_keychain_credential, %Scope{} = scope, subject),
+    do:
+      Decision.project(
+        scope,
+        subject,
+        "credentials:write",
+        admin_or_support?(scope) and Scope.person?(scope)
+      )
 
   def authorize(action, %Scope{} = scope, subject)
       when action in @keychain_actions,

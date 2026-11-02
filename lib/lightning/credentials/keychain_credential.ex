@@ -53,6 +53,7 @@ defmodule Lightning.Credentials.KeychainCredential do
     |> validate_length(:path, min: 1, max: 500)
     |> validate_jsonpath(:path)
     |> unique_constraint([:name, :project_id])
+    |> unique_constraint(:id, name: :keychain_credentials_pkey)
     |> foreign_key_constraint(:project_id)
     |> foreign_key_constraint(:created_by_id)
     |> foreign_key_constraint(:default_credential_id)

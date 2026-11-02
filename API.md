@@ -153,19 +153,24 @@ route "not open to the service account" answers its token with 403 `forbidden`.
 
 ### Projects
 
-| Method   | Path                                        | What it does                                                  | Token grant                     |
-| -------- | ------------------------------------------- | ------------------------------------------------------------- | ------------------------------- |
-| `GET`    | `/api/projects`                             | Lists projects                                                | `projects:write`                |
-| `GET`    | `/api/projects/:id`                         | Reads a project                                               | `projects:write`                |
-| `PUT`    | `/api/projects/:id`                         | Creates or replaces a project                                 | `projects:write`                |
-| `GET`    | `/api/provision/:id`                        | Reads a project as a [provisioning](PROVISIONING.md) document | `projects:write`                |
-| `GET`    | `/api/provision/yaml`                       | Reads a project, named by `id`, as YAML                       | `projects:write`                |
-| `POST`   | `/api/provision`                            | Applies a [provisioning](PROVISIONING.md) document            | Not open to the service account |
-| `GET`    | `/api/projects/:project_id/collections/:id` | Reads a collection                                            | `collections:write`             |
-| `PUT`    | `/api/projects/:project_id/collections/:id` | Creates or replaces a collection                              | `collections:write`             |
-| `GET`    | `/api/projects/:project_id/collections`     | Lists a project's collections                                 | `collections:write`             |
-| `GET`    | `/api/collections`                          | Lists every project's collections                             | `collections:write`             |
-| `DELETE` | `/api/projects/:project_id/collections/:id` | Deletes a collection and its items                            | `collections:write`             |
+| Method | Path                                        | What it does                                                  | Token grant                     |
+| ------ | ------------------------------------------- | ------------------------------------------------------------- | ------------------------------- |
+| `GET`  | `/api/projects`                             | Lists projects                                                | `projects:write`                |
+| `GET`  | `/api/projects/:id`                         | Reads a project                                               | `projects:write`                |
+| `PUT`  | `/api/projects/:id`                         | Creates or replaces a project                                 | `projects:write`                |
+| `GET`  | `/api/provision/:id`                        | Reads a project as a [provisioning](PROVISIONING.md) document | `projects:write`                |
+| `GET`  | `/api/provision/yaml`                       | Reads a project, named by `id`, as YAML                       | `projects:write`                |
+| `POST` | `/api/provision`                            | Applies a [provisioning](PROVISIONING.md) document            | Not open to the service account |
+| `GET`  | `/api/projects/:project_id/collections/:id` | Reads a collection                                            | `collections:write`             |
+| `PUT`  | `/api/projects/:project_id/collections/:id` | Creates or replaces a collection                              | `collections:write`             |
+
+### Collections
+
+| Method   | Path                                        | What it does                       | Token grant         |
+| -------- | ------------------------------------------- | ---------------------------------- | ------------------- |
+| `GET`    | `/api/projects/:project_id/collections`     | Lists a project's collections      | `collections:write` |
+| `GET`    | `/api/collections`                          | Lists every project's collections  | `collections:write` |
+| `DELETE` | `/api/projects/:project_id/collections/:id` | Deletes a collection and its items | `collections:write` |
 
 ### Credentials
 
@@ -182,6 +187,14 @@ The service account must send `project_id` to list credentials at
 | `DELETE` | `/api/credentials/:id`                  | Deletes a credential you own                           | Not open to the service account |
 | `GET`    | `/api/credential_schemas`               | Lists the credential types                             | `credentials:write`             |
 | `GET`    | `/api/credential_schemas/:name`         | Reads a credential type's JSON Schema                  | `credentials:write`             |
+
+### Keychain credentials and OAuth clients
+
+| Method   | Path                                                 | What it does                              | Token grant         |
+| -------- | ---------------------------------------------------- | ----------------------------------------- | ------------------- |
+| `GET`    | `/api/projects/:project_id/keychain_credentials`     | Lists a project's keychain credentials    | `credentials:write` |
+| `PUT`    | `/api/projects/:project_id/keychain_credentials/:id` | Creates or replaces a keychain credential | `credentials:write` |
+| `DELETE` | `/api/projects/:project_id/keychain_credentials/:id` | Deletes a keychain credential             | `credentials:write` |
 
 ### Workflows and runs
 

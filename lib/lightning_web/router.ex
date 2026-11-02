@@ -199,6 +199,18 @@ defmodule LightningWeb.Router do
            API.CollectionController,
            :delete
 
+    get "/projects/:project_id/keychain_credentials",
+        API.KeychainCredentialController,
+        :index
+
+    put "/projects/:project_id/keychain_credentials/:id",
+        API.KeychainCredentialController,
+        :update
+
+    delete "/projects/:project_id/keychain_credentials/:id",
+           API.KeychainCredentialController,
+           :delete
+
     # end-api-area:credential_extras
 
     # api-area:workflows (routes for this area go between these markers)
