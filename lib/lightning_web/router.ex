@@ -189,6 +189,10 @@ defmodule LightningWeb.Router do
         API.MeGithubController,
         :branches
 
+    get "/auth_provider", API.AuthProviderController, :show
+    put "/auth_provider", API.AuthProviderController, :update
+    delete "/auth_provider", API.AuthProviderController, :delete
+
     # end-api-area:account
 
     # api-area:projects (routes for this area go between these markers)
