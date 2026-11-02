@@ -206,6 +206,15 @@ lines at the top level.
 | `GET`   | `/api/runs/:id`                             | Reads a run                       | `projects:write` |
 | `GET`   | `/api/log_lines`                            | Lists log lines                   | `projects:write` |
 
+### A workflow's history and lifecycle
+
+| Method   | Path                                        | What it does                           | Token grant                     |
+| -------- | ------------------------------------------- | -------------------------------------- | ------------------------------- |
+| `DELETE` | `/api/projects/:project_id/workflows/:id`   | Marks a workflow deleted               | Not open to the service account |
+| `GET`    | `/api/workflows/:id/snapshots`              | Lists a workflow's snapshots           | Not open to the service account |
+| `GET`    | `/api/workflows/:id/snapshots/:snapshot_id` | Reads a workflow as a snapshot kept it | Not open to the service account |
+| `GET`    | `/api/workflows/:id/versions`               | Lists a workflow's version hashes      | Not open to the service account |
+
 ### Lightning's web app
 
 | Method | Path                                                               | What it does                  | Token grant  |

@@ -51,11 +51,16 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Returns the list of workflows for a project.
+  Returns the list of workflows for a project, by name.
+
+  Workflows marked for deletion are included unless `exclude_deleted: true`.
 
   ## Examples
 
       iex> list_project_workflows(project_id)
+      [%Workflow{}, ...]
+
+      iex> list_project_workflows(project_id, exclude_deleted: true)
       [%Workflow{}, ...]
 
   """
@@ -67,6 +72,11 @@ defmodule Lightning.Workflows do
       preload: ^include,
       order_by: :name
     )
+    |> then(fn query ->
+      if Keyword.get(opts, :exclude_deleted, false),
+        do: where(query, [w], is_nil(w.deleted_at)),
+        else: query
+    end)
     |> Repo.all()
   end
 
@@ -924,12 +934,19 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Returns an `%Ecto.Changeset{}` for changing the workflow request_deletion.
+  Marks a workflow deleted, disables and unbinds its triggers, and records the
+  audit event, in one transaction.
+
+  Answers `{:error, :concurrent_edit}`, writing nothing, when another request
+  deleted the workflow, or marked it deleted, after it was read.
 
   ## Examples
 
-      iex> change_request_deletion(workflow)
-      %Ecto.Changeset{data: %Workflow{}}
+      iex> mark_for_deletion(workflow, user)
+      {:ok, %{workflow: %Workflow{}, audit: %Audit{}, disable_triggers: {1, nil}}}
+
+      iex> mark_for_deletion(already_deleted_elsewhere, user)
+      {:error, :concurrent_edit}
 
   """
   def mark_for_deletion(workflow, actor, _attrs \\ %{}) do
@@ -939,6 +956,9 @@ defmodule Lightning.Workflows do
       )
 
     Multi.new()
+    |> Multi.run(:not_deleted, fn repo, _changes ->
+      lock_not_deleted(repo, workflow.id)
+    end)
     |> Multi.update(
       :workflow,
       soft_delete_changeset(Ecto.Changeset.change(workflow))
@@ -963,6 +983,29 @@ defmodule Lightning.Workflows do
         Lightning.Projects.Events.workflow_deleted(preloaded)
       end
     end)
+    |> case do
+      {:error, :not_deleted, :concurrent_edit, _changes} ->
+        {:error, :concurrent_edit}
+
+      result ->
+        result
+    end
+  end
+
+  # Locks the row for the rest of the transaction, so a deletion that lands
+  # between reading the workflow and writing is refused rather than written
+  # over by a second one.
+  defp lock_not_deleted(repo, workflow_id) do
+    from(w in Workflow,
+      where: w.id == ^workflow_id and is_nil(w.deleted_at),
+      lock: "FOR UPDATE",
+      select: w.id
+    )
+    |> repo.one()
+    |> case do
+      nil -> {:error, :concurrent_edit}
+      id -> {:ok, id}
+    end
   end
 
   @doc """
