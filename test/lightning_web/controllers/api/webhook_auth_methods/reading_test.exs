@@ -52,10 +52,21 @@ defmodule LightningWeb.API.WebhookAuthMethods.ReadingTest do
       )
 
   describe "listing" do
-    test "a viewer on a session token lists the project's methods by name, with their triggers, leaving out those scheduled for deletion",
+    test "any member lists the project's methods by name, with their triggers, leaving out those scheduled for deletion, and only an owner or admin sees the username and the key's last characters",
          %{conn: conn} do
       viewer = insert(:user)
-      project = insert(:project, project_users: [%{user: viewer, role: :viewer}])
+      editor = insert(:user)
+      admin = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: viewer, role: :viewer},
+            %{user: editor, role: :editor},
+            %{user: admin, role: :admin}
+          ]
+        )
+
       workflow = insert(:simple_workflow, project: project)
       trigger = hd(workflow.triggers)
 
@@ -82,34 +93,44 @@ defmodule LightningWeb.API.WebhookAuthMethods.ReadingTest do
 
       insert(:webhook_auth_method, name: "elsewhere")
 
-      conn =
-        conn
-        |> session_conn(viewer)
-        |> get(~p"/api/projects/#{project.id}/webhook_auth_methods")
-
       page = "?page=1&page_size=10"
+      hidden = %{"username" => nil, "api_key_last_characters" => nil}
 
-      assert json_response(conn, 200) == %{
-               "data" => [
-                 resource(project, alpha, api(alpha)),
-                 resource(
-                   project,
-                   zeta,
-                   basic(zeta, %{
-                     "triggers" => [
-                       %{"id" => trigger.id, "workflow_id" => workflow.id}
-                     ]
-                   })
-                 )
-               ],
-               "links" => %{
-                 "self" => link(project, page),
-                 "first" => link(project, page),
-                 "last" => link(project, page),
-                 "next" => nil,
-                 "prev" => nil
+      for {authenticate, hints} <- [
+            {&session_conn(&1, viewer), hidden},
+            {&with_pat(&1, editor), hidden},
+            {&with_pat(&1, admin), %{}},
+            {&session_conn(&1, admin), %{}}
+          ] do
+        conn =
+          conn
+          |> authenticate.()
+          |> get(~p"/api/projects/#{project.id}/webhook_auth_methods")
+
+        assert json_response(conn, 200) == %{
+                 "data" => [
+                   resource(project, alpha, alpha |> api() |> Map.merge(hints)),
+                   resource(
+                     project,
+                     zeta,
+                     zeta
+                     |> basic(%{
+                       "triggers" => [
+                         %{"id" => trigger.id, "workflow_id" => workflow.id}
+                       ]
+                     })
+                     |> Map.merge(hints)
+                   )
+                 ],
+                 "links" => %{
+                   "self" => link(project, page),
+                   "first" => link(project, page),
+                   "last" => link(project, page),
+                   "next" => nil,
+                   "prev" => nil
+                 }
                }
-             }
+      end
     end
 
     test "pages the list", %{conn: conn} do

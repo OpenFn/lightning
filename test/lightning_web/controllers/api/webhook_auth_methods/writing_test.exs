@@ -229,6 +229,36 @@ defmodule LightningWeb.API.WebhookAuthMethods.WritingTest do
       assert audits(auth_method.id) == []
     end
 
+    test "sending back what a read returned answers 200, nulls included", %{
+      conn: conn,
+      project: project
+    } do
+      for {attrs, extra} <- [
+            {[auth_type: :api, api_key: "0123456789abcdef"],
+             %{"password" => nil}},
+            {[auth_type: :basic], %{}}
+          ] do
+        auth_method =
+          insert(:webhook_auth_method, [project: project] ++ attrs)
+
+        path =
+          "/api/projects/#{project.id}/webhook_auth_methods/#{auth_method.id}"
+
+        read = json_response(get(conn, path), 200)["data"]["attributes"]
+        body = Map.take(read, ~w(name auth_type username))
+
+        assert Map.has_key?(body, "username")
+
+        response =
+          conn
+          |> put_method(project, auth_method.id, Map.merge(body, extra))
+          |> json_response(200)
+
+        assert response["data"]["attributes"] == read
+        assert audits(auth_method.id) == []
+      end
+    end
+
     test "refuses a type, username or password other than the stored one with not_allowed",
          %{conn: conn, project: project} do
       basic = insert(:webhook_auth_method, project: project, name: "basic")
