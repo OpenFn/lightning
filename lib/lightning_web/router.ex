@@ -219,6 +219,12 @@ defmodule LightningWeb.Router do
     resources "/session", API.SessionController,
       singleton: true,
       only: [:create, :show, :delete]
+
+    # api-area:account (routes that take no token, or a session that may be
+    # shut out pending confirmation)
+    post "/password_resets", API.PasswordResetController, :create
+    put "/password_resets/:token", API.PasswordResetController, :update
+    # end-api-area:account
   end
 
   ## Cookie-authenticated JSON, for the app's own React components

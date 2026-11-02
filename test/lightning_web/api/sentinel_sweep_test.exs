@@ -112,7 +112,15 @@ defmodule LightningWeb.API.SentinelSweepTest do
     {:post, "/api/session"} => @forbidden,
     {:get, "/api/session"} => @session,
     {:delete, "/api/session"} => {204, nil, []},
-    {:get, "/api/instance"} => {200, nil, []}
+    {:get, "/api/instance"} => {200, nil, []},
+    # The planted body has no email and keys the route doesn't take, and an
+    # array isn't an object. A reset token that names nothing is not found
+    # before the body is read.
+    {:post, "/api/password_resets"} => %{
+      array: @malformed,
+      otherwise: {422, nil, []}
+    },
+    {:put, "/api/password_resets/:token"} => @not_found
   }
 
   setup do
@@ -306,8 +314,15 @@ defmodule LightningWeb.API.SentinelSweepTest do
               attempt in [:planted, :array],
        do: @forbidden
 
-  defp expected(%{pipeline: [:session_api], verb: verb, path: path}, _attempt),
-    do: Map.fetch!(@session_api, {verb, path})
+  defp expected(%{pipeline: [:session_api], verb: verb, path: path}, attempt) do
+    case Map.fetch!(@session_api, {verb, path}) do
+      %{otherwise: otherwise} = by_attempt ->
+        Map.get(by_attempt, attempt, otherwise)
+
+      answer ->
+        answer
+    end
+  end
 
   defp expected(%{pipeline: pipeline} = route, attempt) do
     row =
