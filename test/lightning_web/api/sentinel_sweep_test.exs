@@ -342,6 +342,18 @@ defmodule LightningWeb.API.SentinelSweepTest do
 
   defp by_parent(answer, _route, _attempt), do: answer
 
+  # Acting on a top-level run or work order needs permission in its project,
+  # and only the service account learns which exist, so a person hears 403 for
+  # any id there, with any body.
+  defp no_standing_on_parent?(%{path: path}, _attempt)
+       when path in [
+              "/api/runs/:id",
+              "/api/runs/:id/retries",
+              "/api/runs/:id/steps",
+              "/api/work_orders/:id"
+            ],
+       do: true
+
   defp no_standing_on_parent?(%{path: path}, :array),
     do: path in ["/api/projects/:id", "/api/provision"]
 
