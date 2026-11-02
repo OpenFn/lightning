@@ -6,6 +6,7 @@ defmodule Lightning.Invocation do
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
   alias Lightning.Accounts.User
+  alias Lightning.DataclipScrubber
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.DataclipAudit
   alias Lightning.Invocation.LogLine
@@ -218,6 +219,57 @@ defmodule Lightning.Invocation do
   def get_dataclip!(id), do: Repo.get!(Dataclip, id)
 
   @doc """
+  The id of the project the dataclip `id` belongs to, or `{:error, :not_found}`
+  when no dataclip in a project has that id.
+  """
+  @spec get_dataclip_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_dataclip_project_id(id) do
+    from(d in Dataclip,
+      where: d.id == ^id and not is_nil(d.project_id),
+      select: d.project_id
+    )
+    |> Repo.fetch_one()
+  end
+
+  @doc """
+  The dataclip `id` in the project `project_id`, without its body, or
+  `{:error, :not_found}` when the project has no dataclip with that id.
+  """
+  @spec get_dataclip_for_project(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, Dataclip.t()} | {:error, :not_found}
+  def get_dataclip_for_project(project_id, id) do
+    from(d in Dataclip, where: d.id == ^id and d.project_id == ^project_id)
+    |> Repo.fetch_one()
+  end
+
+  @doc """
+  The body of `dataclip` as a job would get it as input, decoded, with the
+  values of every credential and webhook auth method that could have reached
+  it scrubbed out (see `Lightning.DataclipScrubber.scrub_dataclip_term!/1`).
+
+  `http_request` and `kafka` bodies come as `%{"data" => ..., "request" => ...}`.
+  `nil` when the dataclip has no body or no longer exists.
+  """
+  @spec get_scrubbed_dataclip_body(Dataclip.t()) :: term()
+  def get_scrubbed_dataclip_body(%Dataclip{id: id, type: type}) do
+    from(d in Dataclip, where: d.id == ^id)
+    |> Query.select_as_input_text()
+    |> Repo.one()
+    |> case do
+      %Dataclip{body: text} when is_binary(text) ->
+        DataclipScrubber.scrub_dataclip_term!(%{
+          body: Jason.decode!(text),
+          type: type,
+          id: id
+        })
+
+      _missing_or_empty ->
+        nil
+    end
+  end
+
+  @doc """
   Returns whether a dataclip with the given id belongs to the given project.
 
   `false` for a malformed id or a dataclip in another project.
@@ -399,21 +451,46 @@ defmodule Lightning.Invocation do
     |> Repo.update()
   end
 
+  @doc """
+  A changeset naming `dataclip` `name`, or removing its name when `name` is
+  `nil`. A name is unique within the dataclip's project.
+  """
+  @spec change_dataclip_name(Dataclip.t(), term()) :: Ecto.Changeset.t()
+  def change_dataclip_name(%Dataclip{} = dataclip, name) do
+    dataclip
+    |> Ecto.Changeset.cast(%{name: name}, [:name])
+    |> Ecto.Changeset.validate_length(:name, max: 255)
+    |> Ecto.Changeset.unique_constraint([:name, :project_id])
+  end
+
+  @doc """
+  Names `dataclip` `name`, or removes its name when `name` is `nil`, and
+  records the change as an audit event by `acting_user`.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted the
+  dataclip while this one ran.
+  """
   @spec update_dataclip_name(Dataclip.t(), String.t() | nil, User.t()) ::
-          {:ok, Dataclip.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Dataclip.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def update_dataclip_name(%Dataclip{} = dataclip, name, acting_user) do
-    changeset =
-      dataclip
-      |> Ecto.Changeset.cast(%{name: name}, [:name])
-      |> Ecto.Changeset.unique_constraint([:name, :project_id])
+    changeset = change_dataclip_name(dataclip, name)
 
     Repo.transact(fn ->
-      with {:ok, updated_dataclip} <- Repo.update(changeset),
+      with {:ok, updated_dataclip} <-
+             Repo.update(changeset, stale_error_field: :id),
            {:ok, _} <-
              DataclipAudit.save_name_updated(dataclip, changeset, acting_user) do
         {:ok, updated_dataclip}
       end
     end)
+    |> case do
+      {:error, %Ecto.Changeset{errors: [id: {_message, stale: true}]}} ->
+        {:error, :concurrent_edit}
+
+      result ->
+        result
+    end
   end
 
   @doc """

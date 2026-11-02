@@ -195,6 +195,8 @@ defmodule LightningWeb.Router do
     # end-api-area:work_orders_runs
 
     # api-area:dataclips_audit (routes for this area go between these markers)
+    get "/dataclips/:id", API.DataclipController, :show
+    patch "/dataclips/:id", API.DataclipController, :update
     # end-api-area:dataclips_audit
 
     # api-area:webhooks_channels (routes for this area go between these markers)
