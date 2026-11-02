@@ -113,6 +113,17 @@ defmodule LightningWeb.UserAuth do
   signed in.
   """
   def log_out_user(conn) do
+    conn
+    |> end_session()
+    |> redirect(to: "/users/log_in")
+  end
+
+  @doc """
+  Ends the session as `log_out_user/1` does, without the redirect: revokes its
+  session and sudo tokens, hangs up the account's LiveView connections, clears
+  the session and drops the remember-me cookie. For the API's sign-out.
+  """
+  def end_session(conn) do
     user_token = get_session(conn, :user_token)
     user_token && Accounts.delete_session_token(user_token)
     # The session holds the sudo token Base64-encoded; the table holds it raw.
@@ -132,7 +143,6 @@ defmodule LightningWeb.UserAuth do
     conn
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
-    |> redirect(to: "/users/log_in")
   end
 
   @doc """
@@ -203,6 +213,21 @@ defmodule LightningWeb.UserAuth do
   """
   @spec session_user_token(Plug.Conn.t()) :: {binary() | nil, Plug.Conn.t()}
   def session_user_token(conn), do: ensure_user_token(conn)
+
+  @doc """
+  Steps the session up for five minutes, as confirming access with a password
+  or MFA code does on the sudo pages, replacing any sudo token it held.
+  """
+  @spec step_up(Plug.Conn.t(), User.t()) :: Plug.Conn.t()
+  def step_up(conn, %User{} = user) do
+    with encoded when is_binary(encoded) <- get_session(conn, :sudo_token),
+         {:ok, old_token} <- Base.decode64(encoded) do
+      Accounts.delete_sudo_session_token(old_token)
+    end
+
+    token = Accounts.generate_sudo_session_token(user)
+    put_session(conn, :sudo_token, Base.encode64(token))
+  end
 
   @doc """
   When the session's step-up ends, or `nil` if it isn't stepped up for `user`.
