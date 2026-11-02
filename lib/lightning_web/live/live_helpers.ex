@@ -211,6 +211,17 @@ defmodule LightningWeb.LiveHelpers do
   end
 
   @doc """
+  Why a form's save failed when the reason isn't the user's input.
+  """
+  @spec save_error_message(:concurrent_edit | :audit_failed) :: String.t()
+  def save_error_message(:concurrent_edit),
+    do:
+      "Someone else changed or deleted this record while you were editing it. Reload and try again."
+
+  def save_error_message(:audit_failed),
+    do: "Changes couldn't be saved, please try again"
+
+  @doc """
   Refuses a collaborator change the current user is not allowed to make.
 
   Navigates as well as flashes: a LiveComponent's flash is only rendered by its

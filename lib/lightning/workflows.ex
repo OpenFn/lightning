@@ -194,7 +194,8 @@ defmodule Lightning.Workflows do
           | {:error,
              Ecto.Changeset.t(Workflow.t())
              | :workflow_deleted
-             | :snapshot_failed}
+             | :snapshot_failed
+             | :concurrent_edit}
   def save_workflow(changeset_or_attrs, actor, opts \\ [])
 
   def save_workflow(
@@ -212,11 +213,6 @@ defmodule Lightning.Workflows do
         changeset
         |> build_save_multi(actor, opts)
         |> Repo.transaction()
-
-        # NOTE: Ecto.StaleEntryError is deliberately NOT caught — optimistic
-        # lock conflicts have their own reload UX and workflows_test.exs asserts
-        # it raises. Anything off this allow-list re-raises automatically with
-        # the original stacktrace.
       rescue
         e in Ecto.ChangeError ->
           # Malformed values that pass cast but fail at dump (e.g. a 16-byte
@@ -333,7 +329,9 @@ defmodule Lightning.Workflows do
     |> Multi.run(:orphan_deleted_jobs, fn repo, _changes ->
       orphan_jobs_being_deleted(repo, changeset)
     end)
-    |> Multi.insert_or_update(:workflow, changeset)
+    |> Multi.insert_or_update(:workflow, changeset,
+      stale_error_field: :lock_version
+    )
     |> Multi.run(:credential_scope_check, fn _repo, %{workflow: workflow} ->
       credential_scope_check(workflow, changeset)
     end)
@@ -474,6 +472,14 @@ defmodule Lightning.Workflows do
 
   defp handle_save_result({:error, :rescued, changeset}, _changeset, _skip),
     do: {:error, changeset}
+
+  defp handle_save_result(
+         {:error, :workflow,
+          %Ecto.Changeset{errors: [lock_version: {_, stale: true}]}, _changes},
+         _changeset,
+         _skip
+       ),
+       do: {:error, :concurrent_edit}
 
   defp handle_save_result(
          {:error, :workflow, changeset, _changes},
@@ -1433,7 +1439,8 @@ defmodule Lightning.Workflows do
   and saves in one transaction (capturing a snapshot and recording a version).
   """
   @spec go_live(Workflow.t(), struct()) ::
-          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+          {:ok, Workflow.t()}
+          | {:error, Ecto.Changeset.t(Workflow.t()) | :concurrent_edit}
   def go_live(%Workflow{} = workflow, actor) do
     workflow
     |> Repo.preload(:triggers)
@@ -1456,7 +1463,8 @@ defmodule Lightning.Workflows do
   replacement is more than the incremental reconciler can express.
   """
   @spec restore_version(Workflow.t(), WorkflowRelease.t(), struct()) ::
-          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+          {:ok, Workflow.t()}
+          | {:error, Ecto.Changeset.t(Workflow.t()) | :concurrent_edit}
   def restore_version(
         %Workflow{} = workflow,
         %WorkflowRelease{snapshot: %Snapshot{} = snapshot} = release,
@@ -1476,7 +1484,8 @@ defmodule Lightning.Workflows do
   disables its triggers, saved in one transaction.
   """
   @spec switch_to_draft(Workflow.t(), struct()) ::
-          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+          {:ok, Workflow.t()}
+          | {:error, Ecto.Changeset.t(Workflow.t()) | :concurrent_edit}
   def switch_to_draft(%Workflow{} = workflow, actor) do
     workflow
     |> Repo.preload(:triggers)
