@@ -196,7 +196,7 @@ defmodule LightningWeb.Endpoint do
 
   # The same check Phoenix.Endpoint.RenderErrors makes: send_resp/3 tells the
   # owner process, so a response a plug sent before raising is left alone.
-  defp respond_unless_sent(conn, respond) do
+  defp respond_unless_sent(%Plug.Conn{} = conn, respond) do
     receive do
       {:plug_conn, :sent} ->
         send(self(), {:plug_conn, :sent})
