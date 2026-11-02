@@ -182,6 +182,13 @@ defmodule LightningWeb.Router do
     put "/me/mfa", API.MeMfaController, :update
     delete "/me/mfa", API.MeMfaController, :delete
     post "/me/mfa/backup_codes", API.MeMfaController, :create_backup_codes
+    delete "/me/github_connection", API.MeGithubController, :delete_connection
+    get "/me/github_repos", API.MeGithubController, :repos
+
+    get "/me/github_repos/:owner/:name/branches",
+        API.MeGithubController,
+        :branches
+
     # end-api-area:account
 
     # api-area:projects (routes for this area go between these markers)

@@ -136,7 +136,10 @@ defmodule LightningWeb.API.SentinelSweepTest do
     {:post, "/api/me/mfa"},
     {:put, "/api/me/mfa"},
     {:delete, "/api/me/mfa"},
-    {:post, "/api/me/mfa/backup_codes"}
+    {:post, "/api/me/mfa/backup_codes"},
+    {:delete, "/api/me/github_connection"},
+    {:get, "/api/me/github_repos"},
+    {:get, "/api/me/github_repos/:owner/:name/branches"}
   ]
 
   setup do

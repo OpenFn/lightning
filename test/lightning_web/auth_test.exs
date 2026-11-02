@@ -389,7 +389,7 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
-    test "/api/me/mfa takes only a session token, stepped up to turn MFA off or make backup codes, and refuses every bearer token with 403",
+    test "/api/me/mfa and the GitHub connection take only a session token, stepped up to turn MFA off or make backup codes, and refuse every bearer token with 403",
          %{conn: conn, tokens: tokens} do
       bearer_refused = [
         service_account: :forbidden,
@@ -404,7 +404,8 @@ defmodule LightningWeb.AuthTest do
             {{:post, ~p"/api/me/mfa"}, {:status, 201}},
             {{:put, ~p"/api/me/mfa"}, {:status, 422}},
             {{:delete, ~p"/api/me/mfa"}, :step_up_required},
-            {{:post, ~p"/api/me/mfa/backup_codes"}, :step_up_required}
+            {{:post, ~p"/api/me/mfa/backup_codes"}, :step_up_required},
+            {{:delete, ~p"/api/me/github_connection"}, {:status, 204}}
           ] do
         assert_each_kind_on(
           conn,
