@@ -20,7 +20,7 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Projects.Events.WorkflowDeleted
   alias Lightning.Projects.ProjectLimiter
-  alias Lightning.Projects.Scope
+  alias Lightning.Scope
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias LightningWeb.LiveHelpers
@@ -124,8 +124,8 @@ defmodule LightningWeb.Hooks do
              redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
         end
 
-      # No such project, or one scheduled for deletion. Both were already the
-      # not-found redirect before Scope answered them here.
+      # No such project. A project scheduled for deletion loads instead, and
+      # ends in the same not-found redirect above.
       {:error, _reason} ->
         {:halt, redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
     end
@@ -287,10 +287,9 @@ defmodule LightningWeb.Hooks do
   end
 
   # The project is wound down. Every socket on it is in scope, whatever standing
-  # it holds, and no later change can bring the project back — `Scope` refuses
-  # it for good — so there is nothing to re-mount into. Leave the project
-  # rather than bouncing through a mount that would only redirect again with a
-  # less useful message.
+  # it holds. The policies refuse it while it stays scheduled, so there is
+  # nothing to re-mount into. Leave the project rather than bouncing through a
+  # mount that would only redirect again with a less useful message.
   defp handle_project_user_event(%ProjectDeletionScheduled{} = event, socket) do
     destination =
       if Lightning.Accounts.experimental_features_enabled?(

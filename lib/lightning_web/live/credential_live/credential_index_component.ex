@@ -3,7 +3,9 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Credentials.OauthClient
   alias Lightning.OauthClients
   alias Lightning.Policies
 
@@ -389,9 +391,9 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     )
   end
 
-  defp can_delete_credential(current_user, credential) do
+  defp can_delete_credential(current_user, %Credential{} = credential) do
     Policies.Permissions.can?(
-      :users,
+      :credentials,
       :delete_credential,
       current_user,
       credential
@@ -407,12 +409,21 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     )
   end
 
-  defp can_edit_credential(current_user, credential) do
+  defp can_edit_credential(current_user, %Credential{} = credential) do
+    Policies.Permissions.can?(
+      :credentials,
+      :edit_credential,
+      current_user,
+      credential
+    )
+  end
+
+  defp can_edit_credential(current_user, %OauthClient{} = client) do
     Policies.Permissions.can?(
       :users,
       :edit_credential,
       current_user,
-      credential
+      client
     )
   end
 

@@ -6,21 +6,37 @@ defmodule Lightning.ServiceAccount do
   service account. Its `uuid`, for places that need one such as an audit
   event's actor, is a UUIDv5 of the thumbprint's RFC 9278 URI in the RFC 4122
   URL namespace, which any stock `uuid5` implementation reproduces.
+
+  `grants` are the scopes of the access token the request came in with. The
+  account registered at boot holds none, so it is refused every action that
+  needs a grant.
   """
 
   @enforce_keys [:id, :uuid, :public_key]
-  defstruct @enforce_keys
+  defstruct @enforce_keys ++ [grants: MapSet.new()]
 
   @type t :: %__MODULE__{
           id: String.t(),
           uuid: Ecto.UUID.t(),
-          public_key: JOSE.JWK.t()
+          public_key: JOSE.JWK.t(),
+          grants: MapSet.t(String.t())
         }
 
   @url_namespace <<0x6BA7B8119DAD11D180B400C04FD430C8::128>>
   @min_modulus_bits 2048
 
-  @spec from_pem(String.t()) :: {:ok, t()} | {:error, String.t()}
+  @doc """
+  Reads the service account from its public key's PEM text.
+
+  Refuses anything but an RSA public key of at least 2048 bits:
+  `{:too_small, bits}` for a shorter RSA key, `:private_key` for an RSA private
+  key, `:not_rsa` for any other kind of key, and `:not_a_key` for text JOSE
+  can't read as a key.
+  """
+  @spec from_pem(String.t()) ::
+          {:ok, t()}
+          | {:error,
+             :private_key | :not_rsa | {:too_small, pos_integer()} | :not_a_key}
   def from_pem(pem) do
     case JOSE.JWK.from_pem(pem) do
       %JOSE.JWK{kty: {:jose_jwk_kty_rsa, {:RSAPublicKey, n, _}}} = jwk ->
