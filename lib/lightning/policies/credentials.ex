@@ -31,6 +31,10 @@ defmodule Lightning.Policies.Credentials do
   deleting it are still allowed, so the deletion can be cancelled or brought
   forward.
 
+  OAuth client actions (`:create_oauth_client`, `:edit_oauth_client`,
+  `:delete_oauth_client`) follow ownership as credentials do: a person may
+  create one, and only its owner may change or delete it.
+
   Keychain actions take a project and decide through
   `Lightning.Policies.Decision.project/4`. They need an owner or admin, or a
   support user with no role on a project that allows support access. Creating
@@ -39,8 +43,10 @@ defmodule Lightning.Policies.Credentials do
   """
   @behaviour Bodyguard.Policy
 
+  alias Lightning.Accounts.User
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Credentials.OauthClient
   alias Lightning.Policies.Decision
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -60,6 +66,9 @@ defmodule Lightning.Policies.Credentials do
           | :delete_keychain_credential
           | :view_keychain_credential
           | :read_credential_schemas
+          | :create_oauth_client
+          | :edit_oauth_client
+          | :delete_oauth_client
 
   @ownership_actions [
     :create_credential,
@@ -141,6 +150,29 @@ defmodule Lightning.Policies.Credentials do
           admin_or_support?(scope)
         )
 
+  # An OAuth client belongs to the person who created it, as a credential
+  # does, and only they may change or delete it. Only a person can own one.
+  # Asked with a nil client, editing and deleting answer for every client,
+  # which nobody may touch.
+  def authorize(:create_oauth_client, %Scope{} = scope, subject),
+    do:
+      Decision.instance(
+        scope,
+        subject,
+        "credentials:write",
+        scope.can_own_credentials?
+      )
+
+  def authorize(action, %Scope{} = scope, subject)
+      when action in [:edit_oauth_client, :delete_oauth_client],
+      do:
+        Decision.instance(
+          scope,
+          subject,
+          "credentials:write",
+          owns_oauth_client?(scope, subject)
+        )
+
   # The credential types are the same for everyone holding the grant.
   def authorize(:read_credential_schemas, %Scope{} = scope, _subject),
     do: Decision.instance(scope, nil, "credentials:write", true)
@@ -205,6 +237,11 @@ defmodule Lightning.Policies.Credentials do
   defp owns?(:list_credentials, scope, nil), do: scope.can_own_credentials?
 
   defp owns?(_action, _scope, _subject), do: false
+
+  defp owns_oauth_client?(%Scope{actor: %User{id: id}}, %OauthClient{user_id: id}),
+       do: true
+
+  defp owns_oauth_client?(_scope, _subject), do: false
 
   defp linked_to_listable_project?(scope, links) do
     scope
