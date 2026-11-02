@@ -366,6 +366,50 @@ defmodule LightningWeb.AuthTest do
         assert_session_refused(conn)
       end
     end
+
+    test "a run's steps take a person's tokens, and refuse the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      run = insert_history_run(project)
+
+      assert_each_kind(conn, tokens, ~p"/api/runs/#{run.id}/steps",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: :forbidden,
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
+    test "starting, retrying and cancelling runs and work orders refuse the service account and a repo connection with 403, whatever their grants",
+         %{conn: conn, tokens: tokens, project: project} do
+      run = insert_history_run(project)
+
+      for token <- [tokens[:service_account], tokens[:repo_connection]],
+          {verb, path} <- [
+            {:patch, ~p"/api/runs/#{run.id}"},
+            {:post, ~p"/api/runs/#{run.id}/retries"}
+          ] do
+        conn
+        |> with_token(token)
+        |> put_req_header("content-type", "application/json")
+        |> dispatch(@endpoint, verb, path, "{}")
+        |> assert_problem(403, :forbidden, [])
+      end
+    end
+  end
+
+  defp insert_history_run(project) do
+    workflow = insert(:simple_workflow, project: project)
+
+    work_order =
+      insert(:workorder, dataclip: insert(:dataclip), workflow: workflow)
+
+    insert(:run,
+      work_order: work_order,
+      dataclip: work_order.dataclip,
+      starting_trigger: hd(workflow.triggers)
+    )
   end
 
   defp assert_each_kind(conn, tokens, path, expected) do

@@ -60,6 +60,7 @@ defmodule LightningWeb.API.RunController do
   alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
   alias LightningWeb.API.Filters
+  alias LightningWeb.API.HistoryBody
   alias LightningWeb.API.Request
   alias LightningWeb.API.Target
 
@@ -67,6 +68,11 @@ defmodule LightningWeb.API.RunController do
 
   plug LightningWeb.Plugs.AuthorizeAction,
        {:project_users, :access_project}
+       when action in [:index, :show]
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:history, :run_workflow}
+       when action == :update
 
   @doc """
   Lists the runs of the projects the caller may access, or of one project on the
@@ -142,6 +148,47 @@ defmodule LightningWeb.API.RunController do
              &Runs.get_for_project(&1, &2, include: [work_order: :workflow])
            ) do
       render(conn, "show.json", run: run, conn: conn)
+    end
+  end
+
+  @doc """
+  Cancels a run no worker has claimed yet, for a person who may run the
+  project's workflows. The body is `{"state": "cancelled"}`.
+
+  Any other run is 422 `invalid` with a `not_allowed` entry at `#/state`. A run
+  a worker claims between the lookup and the write is 409 `concurrent_edit`.
+
+  ## Examples
+
+      PATCH /api/runs/a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+      {"state": "cancelled"}
+  """
+  @spec update(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def update(conn, _params) do
+    with {:ok, run} <-
+           Target.in_project_of(
+             conn.assigns.scope,
+             Request.param(conn, "id"),
+             {:history, :run_workflow},
+             &Runs.get_project_id/1,
+             &Runs.get_for_project/2
+           ),
+         :ok <- HistoryBody.cancel(conn.body_params),
+         :ok <- refuse_claimed(run),
+         {:ok, run} <- cancel(run) do
+      render(conn, "show.json", run: run, conn: conn)
+    end
+  end
+
+  defp refuse_claimed(%{state: :available}), do: :ok
+
+  defp refuse_claimed(_run),
+    do: HistoryBody.not_cancellable("can't be set once a worker claims the run")
+
+  defp cancel(run) do
+    case Runs.cancel_run(run) do
+      {:error, :not_available} -> {:error, :concurrent_edit}
+      cancelled_or_failed -> cancelled_or_failed
     end
   end
 
