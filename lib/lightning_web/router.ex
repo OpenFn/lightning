@@ -183,6 +183,14 @@ defmodule LightningWeb.Router do
     # end-api-area:sandboxes_github
 
     # api-area:credentials (routes for this area go between these markers)
+    put "/credentials/:id/scheduled_deletion",
+        API.CredentialScheduledDeletionController,
+        :update
+
+    delete "/credentials/:id/scheduled_deletion",
+           API.CredentialScheduledDeletionController,
+           :delete
+
     # end-api-area:credentials
 
     # api-area:credential_extras (routes for this area go between these markers)

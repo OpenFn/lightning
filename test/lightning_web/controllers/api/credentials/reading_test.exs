@@ -248,6 +248,8 @@ defmodule LightningWeb.API.Credentials.ReadingTest do
                        "description" => "Acme's data"
                      }
                    ],
+                   "scheduled_deletion" => nil,
+                   "transfer_status" => nil,
                    "inserted_at" => DateTime.to_iso8601(credential.inserted_at),
                    "updated_at" => DateTime.to_iso8601(credential.updated_at)
                  }

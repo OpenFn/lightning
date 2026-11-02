@@ -359,6 +359,17 @@ defmodule LightningWeb.API.SentinelSweepTest do
   # Only the service account may read every credential, and nobody may delete
   # every one, so a person hears 403 for any id there. A `PUT` may create, so a
   # malformed id there stays 400.
+  # Every route under a credential is open only to its owner and the service
+  # account, so a person hears 403 for any id there too. Linking one names a
+  # credential that isn't in the project yet, so the same holds there.
+  defp unseen_credential?(%{path: "/api/credentials/:id/" <> _rest}), do: true
+
+  defp unseen_credential?(%{
+         verb: :put,
+         path: "/api/projects/:project_id/credentials/:id"
+       }),
+       do: true
+
   defp unseen_credential?(%{verb: verb, path: path}),
     do: path == "/api/credentials/:id" and verb in [:get, :delete]
 

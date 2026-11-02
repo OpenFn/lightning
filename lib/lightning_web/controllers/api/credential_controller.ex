@@ -512,7 +512,14 @@ defmodule LightningWeb.API.CredentialController do
     })
   end
 
-  defp fetch_credential(id) do
+  @doc """
+  The credential with the id, its project links loaded, for
+  `LightningWeb.API.Target.record/4` on any route under
+  `/api/credentials/:id`.
+  """
+  @spec fetch_credential(Ecto.UUID.t()) ::
+          {:ok, Credential.t()} | {:error, :not_found}
+  def fetch_credential(id) do
     case Credentials.get_credential(id) do
       nil -> {:error, :not_found}
       credential -> {:ok, Credentials.preload_links(credential)}
@@ -526,12 +533,19 @@ defmodule LightningWeb.API.CredentialController do
         do: id
   end
 
-  defp render_credential(conn, credential) do
+  @doc """
+  Renders `{"credential": …}`, without its body, leaving out links to projects
+  the caller may not see, for any action that answers with a credential.
+  """
+  @spec render_credential(Plug.Conn.t(), Credential.t()) :: Plug.Conn.t()
+  def render_credential(conn, credential) do
     [credential] =
       [Credentials.preload_links_and_projects(credential)]
       |> hide_unseen_links(conn.assigns.scope)
 
-    render(conn, "create.json", credential: credential)
+    conn
+    |> put_view(json: LightningWeb.API.CredentialJSON)
+    |> render("create.json", credential: credential)
   end
 
   defp list(project_or_scope, conn, params, filters) do
