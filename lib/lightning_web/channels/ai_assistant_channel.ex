@@ -754,11 +754,9 @@ defmodule LightningWeb.AiAssistantChannel do
   # Keep a follow_run_id only when it names a run in the given project.
   defp run_in_project(project_id, run_id)
        when is_binary(project_id) and is_binary(run_id) do
-    with {:ok, uuid} <- Ecto.UUID.cast(run_id),
-         %Lightning.Run{} <- Runs.get_for_project(uuid, project_id) do
-      run_id
-    else
-      _ -> nil
+    case Runs.get_for_project(project_id, run_id) do
+      {:ok, _run} -> run_id
+      {:error, :not_found} -> nil
     end
   end
 
