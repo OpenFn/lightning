@@ -36,7 +36,10 @@ defmodule Lightning.Policies.Decision do
   @type answer ::
           boolean()
           | {:error,
-             insufficient_scope() | :no_standing | :scheduled_for_deletion}
+             insufficient_scope()
+             | :no_standing
+             | :scheduled_for_deletion
+             | :step_up_required}
 
   @doc """
   Decides an action on a project. `grants` is one token grant or a list, any
@@ -78,6 +81,40 @@ defmodule Lightning.Policies.Decision do
       true -> allowed?
     end
   end
+
+  @doc """
+  Decides an action only a person at the keyboard may take, on the session
+  token of Lightning's own app, such as signing in, managing MFA or tokens, or
+  using the AI assistant. `answer` is the decision the action takes otherwise,
+  from `project/4` or `instance/4`, or a bare boolean when it has no other
+  rule.
+
+  Any other token is refused with `false`, which the API answers 403
+  `forbidden`, before `answer` is consulted. With `step_up: true`, a session
+  whose person hasn't entered their password or an MFA code in the last five
+  minutes hears `{:error, :step_up_required}`, also before `answer`: both are
+  facts about the caller alone, so a `:before_target` check settles them.
+  """
+  @spec session(Scope.t(), answer(), keyword()) :: answer()
+  def session(%Scope{} = scope, answer, opts \\ []) do
+    cond do
+      not Scope.session?(scope) -> false
+      opts[:step_up] == true and not Scope.stepped_up?(scope) -> step_up()
+      true -> answer
+    end
+  end
+
+  @doc """
+  Decides an action open to a person on any of their tokens, a personal access
+  token or a session token, and to nothing else: not the service account and
+  not a repo connection. Anything else is refused with `false` before `answer`
+  is consulted.
+  """
+  @spec person(Scope.t(), answer()) :: answer()
+  def person(%Scope{} = scope, answer),
+    do: if(Scope.person?(scope), do: answer, else: false)
+
+  defp step_up, do: {:error, :step_up_required}
 
   defp holds_any?(scope, grants),
     do: grants |> List.wrap() |> Enum.any?(&Scope.allows?(scope, &1))

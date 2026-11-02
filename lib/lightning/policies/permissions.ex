@@ -93,7 +93,8 @@ defmodule Lightning.Policies.Permissions do
   The one entry point for API callers. Unlike `can/4`, a refusal is
   `{:error, :forbidden}`, so it renders as 403 rather than 401, and a policy's
   more specific answer (`{:insufficient_scope, grant}`, `:no_standing`,
-  `:scheduled_for_deletion`) reaches the caller unchanged.
+  `:scheduled_for_deletion`, `:step_up_required`) reaches the caller
+  unchanged.
   """
   @spec permit(atom(), atom(), Lightning.Scope.t(), term()) ::
           :ok
@@ -101,7 +102,8 @@ defmodule Lightning.Policies.Permissions do
              :forbidden
              | Lightning.Policies.Decision.insufficient_scope()
              | :no_standing
-             | :scheduled_for_deletion}
+             | :scheduled_for_deletion
+             | :step_up_required}
   def permit(policy, action, %Lightning.Scope{} = scope, subject) do
     case can(policy, action, scope, subject) do
       {:error, :unauthorized} -> {:error, :forbidden}
@@ -120,7 +122,8 @@ defmodule Lightning.Policies.Permissions do
              :forbidden
              | Lightning.Policies.Decision.insufficient_scope()
              | :no_standing
-             | :scheduled_for_deletion}
+             | :scheduled_for_deletion
+             | :step_up_required}
   def permit(policy, action, %Lightning.Scope{} = scope),
     do: permit(policy, action, scope, :before_target)
 

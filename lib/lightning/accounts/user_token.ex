@@ -223,6 +223,10 @@ defmodule Lightning.Accounts.UserToken do
     end
   end
 
+  @doc "How long a sudo session token lasts, in seconds."
+  @spec sudo_session_validity_in_seconds() :: pos_integer()
+  def sudo_session_validity_in_seconds, do: @sudo_session_validity_in_seconds
+
   @doc """
   Returns the token struct for the given token value and context.
   """

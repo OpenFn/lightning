@@ -191,6 +191,85 @@ defmodule Lightning.Policies.DecisionTest do
     end
   end
 
+  describe "an action only a session token may take" do
+    setup do
+      {account, _key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      user = insert(:user)
+      in_five_minutes = DateTime.add(DateTime.utc_now(), 300)
+
+      %{
+        user: user,
+        others: [
+          Scope.new(user),
+          Scope.new(user, token_kind: :personal_access_token),
+          Scope.new(
+            %{account | grants: MapSet.new(AccessToken.scopes())},
+            token_kind: :access_token
+          ),
+          Scope.new(insert(:project_repo_connection),
+            token_kind: :repo_connection
+          )
+        ],
+        session: Scope.new(user, token_kind: :session),
+        stepped_up:
+          Scope.new(user,
+            token_kind: :session,
+            stepped_up_until: in_five_minutes
+          )
+      }
+    end
+
+    test "is refused to every other token kind, before its own answer",
+         %{others: others} do
+      for scope <- others, step_up <- [false, true] do
+        assert Decision.session(scope, {:error, :no_standing}, step_up: step_up) ==
+                 false
+      end
+    end
+
+    test "gives a session token its own answer", %{session: session} do
+      for answer <- [true, false, {:error, :no_standing}] do
+        assert Decision.session(session, answer) == answer
+      end
+    end
+
+    test "that needs step-up asks a session for it before its own answer, until it passes",
+         %{user: user, session: session, stepped_up: stepped_up} do
+      a_second_ago = DateTime.add(DateTime.utc_now(), -1)
+
+      lapsed =
+        Scope.new(user, token_kind: :session, stepped_up_until: a_second_ago)
+
+      for scope <- [session, lapsed] do
+        assert Decision.session(scope, false, step_up: true) ==
+                 {:error, :step_up_required}
+      end
+
+      assert Decision.session(stepped_up, false, step_up: true) == false
+      assert Decision.session(stepped_up, true, step_up: true) == true
+    end
+  end
+
+  test "an action open to a person takes either of their tokens and refuses the rest" do
+    {account, _key} = Lightning.ServiceAccountHelpers.service_account_with_key()
+    user = insert(:user)
+
+    for kind <- [:session, :personal_access_token] do
+      assert Decision.person(Scope.new(user, token_kind: kind), true) == true
+    end
+
+    for scope <- [
+          Scope.new(account, token_kind: :access_token),
+          Scope.new(insert(:project_repo_connection),
+            token_kind: :repo_connection
+          )
+        ] do
+      assert Decision.person(scope, true) == false
+    end
+  end
+
   defp grant(ProjectUsers, action)
        when action in [:create_project_credential, :list_project_credentials],
        do: "credentials:write"

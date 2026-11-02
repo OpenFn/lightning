@@ -195,6 +195,28 @@ defmodule LightningWeb.UserAuth do
       else: put_session(conn, :live_socket_id, topic)
   end
 
+  @doc """
+  The session token the request carries, from the session or else the
+  remember-me cookie, which it copies into the session as
+  `fetch_current_user/2` does. `nil` when there is neither. The session must
+  already be fetched.
+  """
+  @spec session_user_token(Plug.Conn.t()) :: {binary() | nil, Plug.Conn.t()}
+  def session_user_token(conn), do: ensure_user_token(conn)
+
+  @doc """
+  When the session's step-up ends, or `nil` if it isn't stepped up for `user`.
+  """
+  @spec stepped_up_until(Plug.Conn.t(), User.t()) :: DateTime.t() | nil
+  def stepped_up_until(conn, %User{} = user) do
+    with encoded when is_binary(encoded) <- get_session(conn, :sudo_token),
+         {:ok, token} <- Base.decode64(encoded) do
+      Accounts.sudo_session_expires_at(user, token)
+    else
+      _no_sudo_token -> nil
+    end
+  end
+
   defp ensure_user_token(conn) do
     if user_token = get_session(conn, :user_token) do
       {user_token, conn}
