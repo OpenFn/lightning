@@ -124,6 +124,30 @@ defmodule LightningWeb.API.RepoConnection.ConnectingTest do
       assert connection_of(project).id == existing.id
     end
 
+    test "sending back the default config path GET answers reconnects too, keeping the connection and its repo token",
+         %{conn: conn, admin: admin, project: project} do
+      existing = existing_connection(project)
+      expect_connecting(project.id, "somebranch")
+
+      # What GET answers for a connection with the default config.
+      read_back =
+        Map.put(
+          @body,
+          "config_path",
+          ProjectRepoConnection.config_path(existing)
+        )
+
+      conn
+      |> with_pat(admin)
+      |> put_repo_connection(project.id, read_back)
+      |> json_response(200)
+
+      reconnected = connection_of(project)
+      assert reconnected.id == existing.id
+      assert reconnected.access_token == existing.access_token
+      assert is_nil(reconnected.config_path)
+    end
+
     test "another branch replaces the connection, answering 200, and cleans up the old branch but keeps the shared secret",
          %{conn: conn, admin: admin, project: project} do
       existing = existing_connection(project, branch: "oldbranch")
