@@ -196,6 +196,42 @@ defmodule LightningWeb.Router do
     # end-api-area:account
 
     # api-area:projects (routes for this area go between these markers)
+    delete "/projects/:id", API.ProjectDeletionController, :delete
+
+    delete "/projects/:id/scheduled_deletion",
+           API.ProjectDeletionController,
+           :cancel
+
+    put "/projects/:id/data_retention",
+        API.ProjectSettingsController,
+        :data_retention
+
+    put "/projects/:id/mfa_requirement",
+        API.ProjectSettingsController,
+        :mfa_requirement
+
+    put "/projects/:id/support_access",
+        API.ProjectSettingsController,
+        :support_access
+
+    get "/projects/:project_id/members", API.ProjectMemberController, :index
+
+    put "/projects/:project_id/members/:user_id",
+        API.ProjectMemberController,
+        :update
+
+    delete "/projects/:project_id/members/:user_id",
+           API.ProjectMemberController,
+           :delete
+
+    put "/projects/:project_id/members/:user_id/notifications",
+        API.ProjectMemberController,
+        :notifications
+
+    post "/projects/:project_id/invitations",
+         API.ProjectInvitationController,
+         :create
+
     # end-api-area:projects
 
     # api-area:sandboxes_github (routes for this area go between these markers)
