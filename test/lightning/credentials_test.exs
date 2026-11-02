@@ -1517,7 +1517,9 @@ defmodule Lightning.CredentialsTest do
       result =
         Credentials.validate_credential_transfer(changeset, sender, credential)
 
-      assert {:email, {"You cannot transfer a credential to yourself", []}} in result.errors
+      assert {:email,
+              {"You cannot transfer a credential to yourself",
+               [code: :not_allowed]}} in result.errors
     end
 
     test "adds error when recipient does not exist" do
@@ -1530,7 +1532,7 @@ defmodule Lightning.CredentialsTest do
       result =
         Credentials.validate_credential_transfer(changeset, sender, credential)
 
-      assert {:email, {"User does not exist", []}} in result.errors
+      assert {:email, {"User does not exist", [code: :not_found]}} in result.errors
     end
 
     test "adds error when recipient lacks access to required projects" do

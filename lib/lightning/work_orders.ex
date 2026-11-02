@@ -348,7 +348,8 @@ defmodule Lightning.WorkOrders do
          |> Ecto.Changeset.change()
          |> Ecto.Changeset.add_error(
            :input_dataclip_id,
-           "cannot retry run using a wiped dataclip"
+           "cannot retry run using a wiped dataclip",
+           code: :dataclip_wiped
          )}
     end)
     |> Multi.run(:steps, &get_workflow_steps_from/2)

@@ -186,7 +186,7 @@ defmodule Lightning.Credentials.Schema do
   defp handle_error(%{expected: format}, changeset, field)
        when format in @expected_formats do
     error_msg = Map.fetch!(@error_messages, format)
-    Changeset.add_error(changeset, field, error_msg)
+    Changeset.add_error(changeset, field, error_msg, code: :format)
   end
 
   defp handle_error(%{any_of: formats}, changeset, field) do
@@ -197,37 +197,45 @@ defmodule Lightning.Credentials.Schema do
         <<"ipv", char>> -> "an IPv#{char - ?0} address"
       end)
 
-    Changeset.add_error(changeset, field, "expected to be #{formatted_types}")
+    Changeset.add_error(changeset, field, "expected to be #{formatted_types}",
+      code: :type
+    )
   end
 
   defp handle_error(%{missing: fields}, changeset, _field) do
     Enum.reduce(fields, changeset, fn field, changeset ->
       # Convert string field name to atom to match schema.fields
       field_atom = String.to_existing_atom(field)
-      Changeset.add_error(changeset, field_atom, "can't be blank")
+
+      Changeset.add_error(changeset, field_atom, "can't be blank",
+        code: :required
+      )
     end)
   end
 
   defp handle_error(%{actual: 0, expected: _}, changeset, field) do
-    Changeset.add_error(changeset, field, "can't be blank")
+    Changeset.add_error(changeset, field, "can't be blank", code: :required)
   end
 
   defp handle_error(%{actual: "null", expected: expected}, changeset, field)
        when is_list(expected) do
-    Changeset.add_error(changeset, field, "can't be blank")
+    Changeset.add_error(changeset, field, "can't be blank", code: :required)
   end
 
   defp handle_error(%{expected: ["object"], actual: "string"}, changeset, field) do
     value = Changeset.get_field(changeset, field)
 
     case validate_json_object(value) do
-      :ok -> changeset
-      :error -> Changeset.add_error(changeset, field, "invalid JSON")
+      :ok ->
+        changeset
+
+      :error ->
+        Changeset.add_error(changeset, field, "invalid JSON", code: :type)
     end
   end
 
   defp handle_error(%{expected: ["object"], actual: _}, changeset, field) do
-    Changeset.add_error(changeset, field, "must be an object")
+    Changeset.add_error(changeset, field, "must be an object", code: :type)
   end
 
   defp get_types(root) do

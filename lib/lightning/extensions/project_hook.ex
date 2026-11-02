@@ -61,7 +61,8 @@ defmodule Lightning.Extensions.ProjectHook do
          |> Changeset.change()
          |> Changeset.add_error(
            :project_files,
-           "#{length(remaining)} stored file(s) could not be deleted from storage"
+           "#{length(remaining)} stored file(s) could not be deleted from storage",
+           code: :storage_failed
          )}
     end
   end

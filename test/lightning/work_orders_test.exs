@@ -482,7 +482,8 @@ defmodule Lightning.WorkOrdersTest do
 
       assert changeset.errors == [
                {:input_dataclip_id,
-                {"cannot retry run using a wiped dataclip", []}}
+                {"cannot retry run using a wiped dataclip",
+                 [code: :dataclip_wiped]}}
              ]
     end
 
@@ -527,7 +528,8 @@ defmodule Lightning.WorkOrdersTest do
 
       assert changeset.errors == [
                {:input_dataclip_id,
-                {"cannot retry run using a wiped dataclip", []}}
+                {"cannot retry run using a wiped dataclip",
+                 [code: :dataclip_wiped]}}
              ]
     end
 

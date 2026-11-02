@@ -1864,11 +1864,14 @@ defmodule Lightning.Credentials do
         Ecto.Changeset.add_error(
           changeset,
           :email,
-          "You cannot transfer a credential to yourself"
+          "You cannot transfer a credential to yourself",
+          code: :not_allowed
         )
 
       !Lightning.Repo.exists?(User |> where(email: ^recipient_email)) ->
-        Ecto.Changeset.add_error(changeset, :email, "User does not exist")
+        Ecto.Changeset.add_error(changeset, :email, "User does not exist",
+          code: :not_found
+        )
 
       true ->
         changeset
