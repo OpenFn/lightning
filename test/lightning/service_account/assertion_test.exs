@@ -13,11 +13,13 @@ defmodule Lightning.ServiceAccount.AssertionTest do
     %{account: account, private_key: private_key}
   end
 
-  defp verify(private_key, claims) do
-    private_key |> sign_assertion(claims) |> Assertion.verify(@audience)
+  defp verify(private_key, claims, client_id \\ nil) do
+    private_key
+    |> sign_assertion(claims)
+    |> Assertion.verify(@audience, client_id)
   end
 
-  describe "verify/2" do
+  describe "verify/3" do
     test "accepts an assertion from the registered service account", %{
       account: account,
       private_key: private_key
@@ -154,17 +156,17 @@ defmodule Lightning.ServiceAccount.AssertionTest do
       hmac_key = JOSE.JWK.from_oct(public_pem)
 
       assert {:error, :bad_signature} =
-               claims |> unsigned_assertion() |> Assertion.verify(@audience)
+               claims |> unsigned_assertion() |> Assertion.verify(@audience, nil)
 
       assert {:error, :bad_signature} =
                hmac_key
                |> sign_assertion(claims, %{"alg" => "HS256"})
-               |> Assertion.verify(@audience)
+               |> Assertion.verify(@audience, nil)
     end
 
     test "refuses something that is not a JWT" do
-      assert {:error, :malformed} = Assertion.verify("not.a.jwt", @audience)
-      assert {:error, :malformed} = Assertion.verify("", @audience)
+      assert {:error, :malformed} = Assertion.verify("not.a.jwt", @audience, nil)
+      assert {:error, :malformed} = Assertion.verify("", @audience, nil)
     end
 
     test "records a jti only once the assertion checks out", %{
@@ -176,6 +178,16 @@ defmodule Lightning.ServiceAccount.AssertionTest do
 
       claims = Map.put(claims, "aud", @audience)
       assert {:ok, _} = verify(private_key, claims)
+    end
+
+    test "refuses a client_id other than the account without recording the jti",
+         %{account: account, private_key: private_key} do
+      claims = assertion_claims(account, @audience)
+
+      assert {:error, :wrong_client_id} =
+               verify(private_key, claims, "someone-else")
+
+      assert {:ok, ^account} = verify(private_key, claims, account.id)
     end
   end
 

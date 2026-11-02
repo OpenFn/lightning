@@ -10,6 +10,7 @@ defmodule LightningWeb.TokenExchangeController do
   alias Lightning.ServiceAccount.AccessToken
   alias Lightning.ServiceAccount.Assertion
   alias Lightning.ServiceAccount.Audit
+  alias LightningWeb.TokenEndpointError
 
   require Logger
 
@@ -48,18 +49,17 @@ defmodule LightningWeb.TokenExchangeController do
         scope: Enum.join(scopes, " ")
       })
     else
-      {:error, :invalid_client} ->
-        conn |> put_status(:unauthorized) |> json(%{error: "invalid_client"})
-
-      {:error, error} ->
-        conn |> put_status(:bad_request) |> json(%{error: error})
+      {:error, reason} -> TokenEndpointError.respond(conn, reason)
     end
   end
 
   defp form_encoded(conn) do
-    case get_req_header(conn, "content-type") do
-      ["application/x-www-form-urlencoded" <> _] -> :ok
-      _other -> {:error, :invalid_request}
+    with [content_type] <- get_req_header(conn, "content-type"),
+         {:ok, "application", "x-www-form-urlencoded", _params} <-
+           Plug.Conn.Utils.content_type(content_type) do
+      :ok
+    else
+      _other -> {:error, :not_form_encoded}
     end
   end
 
@@ -69,7 +69,7 @@ defmodule LightningWeb.TokenExchangeController do
        when is_binary(grant_type),
        do: {:error, :unsupported_grant_type}
 
-  defp client_credentials(_params), do: {:error, :invalid_request}
+  defp client_credentials(_params), do: {:error, :no_grant_type}
 
   defp client_assertion(%{
          "client_assertion_type" => @assertion_type,
@@ -78,32 +78,31 @@ defmodule LightningWeb.TokenExchangeController do
        when is_binary(assertion),
        do: {:ok, assertion}
 
-  defp client_assertion(_params), do: {:error, :invalid_request}
+  defp client_assertion(_params), do: {:error, :no_client_assertion}
 
   defp requested_scopes(%{"scope" => scope}) when is_binary(scope) do
     case String.split(scope) do
       [] ->
-        {:ok, AccessToken.scopes()}
+        {:error, :no_scope}
 
       scopes ->
         if Enum.all?(scopes, &(&1 in AccessToken.scopes())),
           do: {:ok, Enum.uniq(scopes)},
-          else: {:error, :invalid_scope}
+          else: {:error, :unknown_scope}
     end
   end
 
-  defp requested_scopes(%{"scope" => _}), do: {:error, :invalid_request}
-  defp requested_scopes(_params), do: {:ok, AccessToken.scopes()}
+  defp requested_scopes(%{"scope" => _}), do: {:error, :scope_not_a_string}
+  defp requested_scopes(_params), do: {:error, :no_scope}
 
   defp authenticate(assertion, params) do
-    case Assertion.verify(assertion, url(~p"/api/oauth/token")) do
-      {:ok, account} ->
-        if params["client_id"] in [nil, account.id],
-          do: {:ok, account},
-          else: refuse(:wrong_client_id)
-
-      {:error, reason} ->
-        refuse(reason)
+    case Assertion.verify(
+           assertion,
+           url(~p"/api/oauth/token"),
+           params["client_id"]
+         ) do
+      {:ok, account} -> {:ok, account}
+      {:error, reason} -> refuse(reason)
     end
   end
 
@@ -124,7 +123,7 @@ defmodule LightningWeb.TokenExchangeController do
         :ok
     end
 
-    {:error, :invalid_client}
+    {:error, reason}
   end
 
   @doc false
