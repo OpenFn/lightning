@@ -9,12 +9,14 @@ defmodule Lightning.Runs do
   alias Ecto.Multi
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.LogLine
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Runs.Events
   alias Lightning.Runs.Handlers
   alias Lightning.Runs.PromExPlugin
   alias Lightning.Runs.RunOptions
+  alias Lightning.Scope
   alias Lightning.Services.RunQueue
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Workflow
@@ -560,21 +562,16 @@ defmodule Lightning.Runs do
   defdelegate subscribe(run), to: Events
 
   @doc """
-  Returns a query for runs belonging to a specific project
+  A page of the runs of `project`, or of every project the caller may list,
+  narrowed by `filters` (see `Lightning.Invocation.Query.filter_runs/2`).
   """
-  @spec runs_for_project_query(Lightning.Projects.Project.t()) ::
-          Ecto.Queryable.t()
-  def runs_for_project_query(%Lightning.Projects.Project{} = project) do
-    Lightning.Invocation.Query.runs_for(project)
-  end
-
-  @doc """
-  Returns a query for runs accessible to a user
-  """
-  @spec runs_for_user_query(Lightning.Accounts.User.t()) ::
-          Ecto.Queryable.t()
-  def runs_for_user_query(%Lightning.Accounts.User{} = user) do
-    Lightning.Invocation.Query.runs_for(user)
+  @spec paginate_runs_for(Project.t() | Scope.t(), map(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_runs_for(project_or_scope, filters, page) do
+    project_or_scope
+    |> Lightning.Invocation.Query.runs_for()
+    |> Lightning.Invocation.Query.filter_runs(filters)
+    |> Repo.paginate(page)
   end
 
   @spec get_project_id_for_run(Run.t()) :: Ecto.UUID.t() | nil
