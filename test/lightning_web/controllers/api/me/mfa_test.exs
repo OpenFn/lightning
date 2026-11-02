@@ -8,8 +8,8 @@ defmodule LightningWeb.API.Me.MfaTest do
   alias Lightning.Accounts
   alias Lightning.Accounts.UserBackupCode
   alias Lightning.Accounts.UserTOTP
-  alias Lightning.Repo
   alias Lightning.RaceHelpers
+  alias Lightning.Repo
 
   defp mfa_user do
     user = insert(:user, mfa_enabled: true)
