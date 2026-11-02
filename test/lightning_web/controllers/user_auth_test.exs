@@ -246,6 +246,16 @@ defmodule LightningWeb.UserAuthTest do
       refute Accounts.get_user_by_session_token(user_token)
     end
 
+    test "revokes the session's sudo token", %{conn: conn, user: user} do
+      sudo_token = Accounts.generate_sudo_session_token(user)
+
+      conn
+      |> put_session(:sudo_token, Base.encode64(sudo_token))
+      |> UserAuth.log_out_user()
+
+      refute Accounts.sudo_session_token_valid?(user, sudo_token)
+    end
+
     test "broadcasts to the given live_socket_id", %{conn: conn} do
       # The literal is the retired token-keyed format on purpose: sessions
       # written before the per-user change still carry it, and logout has to
