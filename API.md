@@ -16,7 +16,7 @@ Send a token in the `Authorization` header on every request:
 Authorization: Bearer <token>
 ```
 
-Two kinds of token work:
+Two kinds of bearer token work:
 
 - The service account's access token, for automation that sets up an instance.
   [Service accounts](SERVICE_ACCOUNTS.md) explains how to get one. It carries
@@ -28,6 +28,21 @@ Two kinds of token work:
   token. It answers a personal access token with 403 `forbidden`, and a project
   repo connection's token with 403 `insufficient_scope` naming `users:read` or
   `users:write`.
+
+Lightning's own web app calls the API with a session token instead: the session
+cookie that signing in sets, whether through the sign-in page, a single sign-on
+provider or `POST /api/session`. A request with no `Authorization` header is
+authenticated by that cookie, but only when the request comes from Lightning's
+own pages, as the browser says in `Sec-Fetch-Site` (or `Origin`). A request from
+another site is treated as sending no token. A write also needs the session's
+CSRF token, from `GET /api/session`, in the `x-csrf-token` header; without it
+the answer is 400 `invalid_header`. A session token acts as the person, with
+their project roles, wherever a personal access token does.
+
+Some routes take only a session token, and answer any other token with 403
+`forbidden`. A few of those also need the person to have entered their password
+or an MFA code in the last five minutes, which they do by posting it to
+`POST /api/session`; until then the answer is 403 `step_up_required`.
 
 ## Conventions
 
@@ -80,10 +95,12 @@ in `LightningWeb.API.Codes`.
 | 400    | `invalid_request`        | The `Authorization: Bearer` header is malformed.                                                                                                                                                        |
 | 400    | `invalid_parameter`      | A path or query parameter isn't valid. See `errors`.                                                                                                                                                    |
 | 400    | `malformed`              | The body isn't a JSON object.                                                                                                                                                                           |
-| 401    | `unauthenticated`        | The request has no bearer token.                                                                                                                                                                        |
+| 400    | `invalid_header`         | A header isn't valid. See `errors`. A write on a session token without the session's `x-csrf-token` gets this.                                                                                          |
+| 401    | `unauthenticated`        | The request has no bearer token, or no session token from Lightning's own pages.                                                                                                                        |
 | 401    | `invalid_token`          | The token is unknown, revoked or expired, or the route doesn't take that kind of token. An expired service account token says so in `WWW-Authenticate`: `error_description="The access token expired"`. |
 | 403    | `insufficient_scope`     | The token lacks the token grant the route needs. `scope` in the body and in `WWW-Authenticate` names it.                                                                                                |
 | 403    | `forbidden`              | You may not do this, or the record might not exist.                                                                                                                                                     |
+| 403    | `step_up_required`       | The route needs the person to enter their password or an MFA code again, at `POST /api/session`.                                                                                                        |
 | 404    | `not_found`              | The record doesn't exist, or the route doesn't.                                                                                                                                                         |
 | 409    | `id_taken`               | The id belongs to a record elsewhere.                                                                                                                                                                   |
 | 409    | `scheduled_for_deletion` | The record is scheduled for deletion.                                                                                                                                                                   |
@@ -120,8 +137,9 @@ be allowed.
 
 ## Routes
 
-"Session only" routes serve Lightning's own web app and take no token. A route
-"not open to the service account" answers its token with 403 `forbidden`.
+"Session only" routes serve Lightning's own web app and take only a session
+token. A route "not open to the service account" answers its token with 403
+`forbidden`.
 
 ### Accounts
 

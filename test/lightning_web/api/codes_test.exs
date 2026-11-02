@@ -43,6 +43,8 @@ defmodule LightningWeb.API.CodesTest do
       exceeds_limit: {402, "This would exceed a limit of your plan."},
       forbidden: {403, "You may not do this (or it might not exist)."},
       insufficient_scope: {403, "The token lacks the token grant this needs."},
+      step_up_required:
+        {403, "Enter your password or an MFA code again to do this."},
       trigger_disabled: {403, "This trigger is disabled."},
       not_found: {404, "Not found."},
       not_acceptable:

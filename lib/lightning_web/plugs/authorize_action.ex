@@ -6,8 +6,11 @@ defmodule LightningWeb.Plugs.AuthorizeAction do
       plug AuthorizeAction, {:project_users, :access_project} when action == :show
 
   It runs after the pipeline has authenticated the caller. It builds the
-  caller's `Lightning.Scope` and asks `Lightning.Policies.Permissions.permit/3`,
-  which checks only the token grant. A refusal is answered by
+  caller's `Lightning.Scope`, with the token kind the pipeline assigned, and
+  asks `Lightning.Policies.Permissions.permit/3`, which checks only facts about
+  the caller: the token grant, and for a rule built on
+  `Lightning.Policies.Decision.session/3` or `person/2`, the token kind and
+  step-up. A refusal is answered by
   `LightningWeb.API.FallbackController`. A pass assigns the scope as `:scope`
   for the action to reuse. Passing is not permission: an action with a target
   still asks about it through `LightningWeb.API.Target`.
@@ -19,7 +22,11 @@ defmodule LightningWeb.Plugs.AuthorizeAction do
   def init({_policy, _action} = permission), do: permission
 
   def call(conn, {policy, action}) do
-    scope = Scope.new(conn.assigns.current_resource)
+    scope =
+      Scope.new(conn.assigns.current_resource,
+        token_kind: conn.assigns[:token_kind],
+        stepped_up_until: conn.assigns[:stepped_up_until]
+      )
 
     case Permissions.permit(policy, action, scope) do
       :ok ->

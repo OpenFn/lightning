@@ -1041,6 +1041,29 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  When the given sudo token for the user stops being valid, or `nil` if it
+  isn't valid now. A sudo token lasts five minutes from when it was made.
+  """
+  @spec sudo_session_expires_at(User.t(), binary()) :: DateTime.t() | nil
+  def sudo_session_expires_at(%User{id: user_id}, token) do
+    from(t in UserToken.token_and_context_query(token, "sudo_session"),
+      where: t.user_id == ^user_id,
+      select: t.inserted_at
+    )
+    |> Repo.one()
+    |> case do
+      nil ->
+        nil
+
+      inserted_at ->
+        expires_at =
+          DateTime.add(inserted_at, UserToken.sudo_session_validity_in_seconds())
+
+        if DateTime.after?(expires_at, DateTime.utc_now()), do: expires_at
+    end
+  end
+
+  @doc """
   Deletes the signed token with the given context.
   """
   def delete_sudo_session_token(token) do

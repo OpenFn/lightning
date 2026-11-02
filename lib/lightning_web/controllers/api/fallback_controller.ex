@@ -49,6 +49,9 @@ defmodule LightningWeb.API.FallbackController do
   def call(conn, {:error, reason}) when reason in [:forbidden, :no_standing],
     do: Problem.respond(conn, Problem.new(:forbidden))
 
+  def call(conn, {:error, :step_up_required}),
+    do: Problem.respond(conn, Problem.new(:step_up_required))
+
   def call(conn, {:error, {:insufficient_scope, grant}}),
     do: Problem.respond(conn, Auth.insufficient_scope(grant))
 

@@ -39,6 +39,13 @@ defmodule Lightning.Scope do
   project, so its `role` is always `nil`. Its `instance_role` is `:operator`,
   which `holds_role?/2` treats as holding every project role.
 
+  Two facts describe the token the caller sent rather than the caller:
+  `token_kind`, and for a session token `stepped_up_until`, when the person last
+  entered their password or an MFA code plus five minutes. A Scope built with
+  `new/1` alone has no `token_kind`, so a rule asking for a session token
+  refuses it. `session?/1`, `stepped_up?/1` and `person?/1` read them, and
+  `Lightning.Policies.Decision.session/3` and `person/2` decide on them.
+
   Two support fields, deliberately. `support_user?` is the account flag.
   `support?` also requires the project's `allow_support_access`. Anything
   granting access to a customer's project wants `support?`.
@@ -78,7 +85,9 @@ defmodule Lightning.Scope do
     project_user: nil,
     role: nil,
     support?: false,
-    scheduled_for_deletion?: false
+    scheduled_for_deletion?: false,
+    token_kind: nil,
+    stepped_up_until: nil
   ]
 
   @type t :: %__MODULE__{
@@ -92,8 +101,18 @@ defmodule Lightning.Scope do
           project_user: ProjectUser.t() | nil,
           role: :owner | :admin | :editor | :viewer | nil,
           support?: boolean(),
-          scheduled_for_deletion?: boolean()
+          scheduled_for_deletion?: boolean(),
+          token_kind: token_kind() | nil,
+          stepped_up_until: DateTime.t() | nil
         }
+
+  @typedoc """
+  How the caller authenticated: the session cookie of Lightning's own app, a
+  personal access token, a service account's access token, or a repo
+  connection's token.
+  """
+  @type token_kind ::
+          :session | :personal_access_token | :access_token | :repo_connection
 
   @typedoc """
   Whoever is asking. A `%User{}` may hold a role; a `%ProjectRepoConnection{}`
@@ -149,6 +168,19 @@ defmodule Lightning.Scope do
       actor: repo_connection,
       grants: MapSet.new(["projects:provision"]),
       mfa_satisfied?: true
+    }
+  end
+
+  @doc """
+  The facts `new/1` gives, and the facts about the token the caller sent:
+  `:token_kind` and `:stepped_up_until`, each `nil` unless given.
+  """
+  @spec new(actor(), keyword()) :: t()
+  def new(actor, token) when is_list(token) do
+    %{
+      new(actor)
+      | token_kind: Keyword.get(token, :token_kind),
+        stepped_up_until: Keyword.get(token, :stepped_up_until)
     }
   end
 
@@ -223,6 +255,32 @@ defmodule Lightning.Scope do
   @spec has_standing?(t()) :: boolean()
   def has_standing?(%__MODULE__{} = scope),
     do: holds_role?(scope, [:owner, :admin, :editor, :viewer]) or scope.support?
+
+  @doc """
+  Whether the caller is a person signed in to Lightning's own app, through its
+  session cookie.
+  """
+  @spec session?(t()) :: boolean()
+  def session?(%__MODULE__{actor: %User{}, token_kind: :session}), do: true
+  def session?(%__MODULE__{}), do: false
+
+  @doc """
+  Whether the caller is on a session token whose person entered their
+  password or an MFA code in the last five minutes.
+  """
+  @spec stepped_up?(t()) :: boolean()
+  def stepped_up?(%__MODULE__{stepped_up_until: %DateTime{} = until} = scope),
+    do: session?(scope) and DateTime.after?(until, DateTime.utc_now())
+
+  def stepped_up?(%__MODULE__{}), do: false
+
+  @doc """
+  Whether the caller is a person, on a personal access token or a session
+  token, rather than the service account or a repo connection.
+  """
+  @spec person?(t()) :: boolean()
+  def person?(%__MODULE__{actor: %User{}}), do: true
+  def person?(%__MODULE__{}), do: false
 
   @doc "Whether the caller acts for the instance on every project."
   @spec operator?(t()) :: boolean()
