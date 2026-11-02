@@ -180,6 +180,17 @@ defmodule LightningWeb.Router do
     # end-api-area:projects
 
     # api-area:sandboxes_github (routes for this area go between these markers)
+    get "/projects/:project_id/sandboxes", API.SandboxController, :index
+    put "/projects/:project_id/sandboxes/:id", API.SandboxController, :update
+
+    post "/projects/:project_id/sandboxes/:id/merge_previews",
+         API.SandboxController,
+         :merge_preview
+
+    post "/projects/:project_id/sandboxes/:id/merges",
+         API.SandboxController,
+         :merge
+
     # end-api-area:sandboxes_github
 
     # api-area:credentials (routes for this area go between these markers)
