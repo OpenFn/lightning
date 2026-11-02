@@ -33,7 +33,7 @@ defmodule Lightning.Workflows.JobTest do
         })
 
       refute changeset.valid?
-      assert changeset.errors[:id] == {"is not a valid UUID", []}
+      assert changeset.errors[:id] == {"is not a valid UUID", [code: :format]}
     end
 
     test "malformed FK ids are changeset errors, not Ecto.ChangeError on save" do
@@ -49,10 +49,12 @@ defmodule Lightning.Workflows.JobTest do
         })
 
       refute changeset.valid?
-      assert changeset.errors[:workflow_id] == {"is not a valid UUID", []}
+
+      assert changeset.errors[:workflow_id] ==
+               {"is not a valid UUID", [code: :format]}
 
       assert changeset.errors[:keychain_credential_id] ==
-               {"is not a valid UUID", []}
+               {"is not a valid UUID", [code: :format]}
 
       # project_credential_id in isolation (no keychain set).
       project_changeset =
@@ -66,7 +68,7 @@ defmodule Lightning.Workflows.JobTest do
       refute project_changeset.valid?
 
       assert project_changeset.errors[:project_credential_id] ==
-               {"is not a valid UUID", []}
+               {"is not a valid UUID", [code: :format]}
     end
 
     test "FKs left unset stay valid" do
@@ -125,7 +127,8 @@ defmodule Lightning.Workflows.JobTest do
 
       # The validate_exclusive function adds the error to the field that was changed
       assert changeset.errors[:project_credential_id] ==
-               {"cannot be set when the other credential type is also set", []}
+               {"cannot be set when the other credential type is also set",
+                [code: :exclusive]}
     end
 
     test "validates that keychain credential belongs to the same project as the job" do
@@ -150,7 +153,8 @@ defmodule Lightning.Workflows.JobTest do
       refute changeset.valid?
 
       assert changeset.errors[:keychain_credential_id] ==
-               {"must belong to the same project as the job", []}
+               {"must belong to the same project as the job",
+                [code: :credential_not_allowed]}
     end
 
     test "allows both credential fields to be null" do
@@ -587,6 +591,41 @@ defmodule Lightning.Workflows.JobTest do
         assert errors[:adaptor] == ["adaptor has invalid format"],
                "expected #{inspect(adaptor)} to be rejected"
       end)
+    end
+  end
+
+  describe "changeset/2 while the catalogue's first load is running" do
+    setup :isolated_adaptors
+
+    test "refuses the adaptor as not ready instead of waiting for the load", %{
+      sup: sup
+    } do
+      {:global, scheduler} =
+        Lightning.Adaptors.Supervisor.global_scheduler_name(sup)
+
+      scheduler = :global.whereis_name(scheduler)
+      Mox.allow(Lightning.Adaptors.StrategyMock, self(), scheduler)
+      Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), scheduler)
+
+      Mox.stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        Process.sleep(2_000)
+        {:ok, []}
+      end)
+
+      Mox.stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: "job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-http@1.0.0"
+        })
+
+      assert errors_on(changeset).adaptor == [
+               "adaptor catalogue is not ready yet, try again shortly"
+             ]
     end
   end
 end
