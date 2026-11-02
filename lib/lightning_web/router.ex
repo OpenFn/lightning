@@ -214,6 +214,14 @@ defmodule LightningWeb.Router do
            API.WebhookAuthMethodController,
            :delete
 
+    get "/projects/:project_id/channels", API.ChannelController, :index
+    get "/projects/:project_id/channels/:id", API.ChannelController, :show
+    put "/projects/:project_id/channels/:id", API.ChannelController, :update
+
+    delete "/projects/:project_id/channels/:id",
+           API.ChannelController,
+           :delete
+
     # end-api-area:webhooks_channels
 
     # api-area:ai_assistant (routes for this area go between these markers)

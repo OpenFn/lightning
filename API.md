@@ -214,6 +214,10 @@ lines at the top level.
 | `GET`    | `/api/projects/:project_id/webhook_auth_methods/:id` | Reads a webhook auth method                  | Not open to the service account |
 | `PUT`    | `/api/projects/:project_id/webhook_auth_methods/:id` | Creates or replaces a webhook auth method    | Not open to the service account |
 | `DELETE` | `/api/projects/:project_id/webhook_auth_methods/:id` | Schedules a webhook auth method for deletion | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/channels`                 | Lists a project's channels                   | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/channels/:id`             | Reads a channel                              | Not open to the service account |
+| `PUT`    | `/api/projects/:project_id/channels/:id`             | Creates or replaces a channel                | Not open to the service account |
+| `DELETE` | `/api/projects/:project_id/channels/:id`             | Deletes a channel and its request history    | Not open to the service account |
 
 ### Lightning's web app
 
