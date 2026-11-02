@@ -100,6 +100,32 @@ defmodule LightningWeb.API.Credentials.ScheduledDeletionTest do
       refute_email_sent()
     end
 
+    test "one another request schedules after the lookup answers 200 with that schedule, and nothing else changes",
+         %{conn: conn} do
+      owner = insert(:user)
+      credential = existing_credential(owner, insert(:project))
+      at = ~U[2030-01-01 00:00:00Z]
+
+      after_first_query("credentials", credential.id, fn id ->
+        Repo.query!(
+          "UPDATE credentials SET scheduled_deletion = $2 WHERE id = $1",
+          [id, at]
+        )
+      end)
+
+      conn = conn |> with_pat(owner) |> schedule(credential.id)
+
+      assert %{
+               "credential" => %{
+                 "scheduled_deletion" => "2030-01-01T00:00:00" <> _
+               }
+             } =
+               json_response(conn, 200)
+
+      assert Repo.reload!(credential).scheduled_deletion == at
+      refute_email_sent()
+    end
+
     test "a body with keys is refused 422 unknown_key, and one that isn't an object 400 malformed, scheduling nothing",
          %{conn: conn} do
       owner = insert(:user)

@@ -1221,8 +1221,7 @@ defmodule Lightning.Credentials do
              | Ecto.Changeset.t()}
   def schedule_credential_deletion(%Credential{} = credential, actor) do
     with :ok <-
-           authorize_credential(:schedule_credential_deletion, actor, credential),
-         :ok <- refuse_scheduled(credential) do
+           authorize_credential(:schedule_credential_deletion, actor, credential) do
       do_schedule_credential_deletion(credential)
     end
   end
@@ -1234,6 +1233,9 @@ defmodule Lightning.Credentials do
       })
 
     Multi.new()
+    |> Multi.run(:unscheduled, fn repo, _changes ->
+      lock_unscheduled(repo, credential.id)
+    end)
     |> Multi.update(:credential, changeset, stale_error_field: :id)
     |> Multi.run(:preloaded, fn repo, %{credential: cred} ->
       {:ok, repo.preload(cred, [:credential_bodies, :oauth_client])}
@@ -1254,6 +1256,9 @@ defmodule Lightning.Credentials do
     |> case do
       {:ok, %{preloaded: updated_credential}} ->
         {:ok, updated_credential}
+
+      {:error, :unscheduled, reason, _changes} ->
+        {:error, reason}
 
       {:error, :credential, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
         {:error, :concurrent_edit}
@@ -1302,16 +1307,23 @@ defmodule Lightning.Credentials do
 
   # Refused for every caller, so it lives here rather than in the policy. It
   # runs after the policy so a caller without rights learns nothing about the
-  # credential. It reads the database because a screen may hand in a struct
-  # loaded before the deletion was scheduled.
-  defp refuse_scheduled(%Credential{id: id}) do
-    scheduled? =
-      Repo.exists?(
-        from c in Credential,
-          where: c.id == ^id and not is_nil(c.scheduled_deletion)
-      )
-
-    if scheduled?, do: {:error, :scheduled_for_deletion}, else: :ok
+  # credential. It reads the stored row, locked until the transaction ends,
+  # because a screen may hand in a struct loaded before the deletion was
+  # scheduled, and because two requests scheduling at once must not both
+  # revoke the tokens and email the owner: the second waits here, then finds
+  # the deletion scheduled.
+  defp lock_unscheduled(repo, credential_id) do
+    from(c in Credential,
+      where: c.id == ^credential_id,
+      select: %{scheduled_deletion: c.scheduled_deletion},
+      lock: "FOR NO KEY UPDATE"
+    )
+    |> repo.one()
+    |> case do
+      nil -> {:error, :concurrent_edit}
+      %{scheduled_deletion: nil} -> {:ok, :unscheduled}
+      %{scheduled_deletion: _at} -> {:error, :scheduled_for_deletion}
+    end
   end
 
   defp maybe_revoke_oauth_tokens(%Credential{schema: "oauth"} = credential) do
