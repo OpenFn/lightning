@@ -11,6 +11,7 @@ defmodule LightningWeb.UserAuth do
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserToken
   alias Lightning.VersionControl.ProjectRepoConnection
+  alias LightningWeb.Auth
   alias LightningWeb.Router.Helpers, as: Routes
 
   # Make the remember me cookie valid for 60 days.
@@ -239,7 +240,7 @@ defmodule LightningWeb.UserAuth do
   end
 
   def authenticate_bearer(conn, _opts) do
-    with {:ok, bearer_token} <- get_bearer(conn),
+    with {:ok, bearer_token} <- Auth.bearer_token(conn),
          %{__struct__: type} = resource <- get_current_resource(bearer_token) do
       if type == User do
         update_last_used(bearer_token)
@@ -248,15 +249,6 @@ defmodule LightningWeb.UserAuth do
       assign(conn, :current_resource, resource)
     else
       _ -> conn
-    end
-  end
-
-  def get_bearer(conn) do
-    conn
-    |> get_req_header("authorization")
-    |> case do
-      ["Bearer " <> bearer_token] -> {:ok, bearer_token}
-      _ -> {:error, "Bearer Token not found"}
     end
   end
 
@@ -290,7 +282,7 @@ defmodule LightningWeb.UserAuth do
       is_nil(conn.assigns[:current_user]) ->
         case get_format(conn) do
           "json" ->
-            render_unauthorized(conn)
+            Auth.refuse(conn, :session)
 
           _ ->
             conn
@@ -313,7 +305,7 @@ defmodule LightningWeb.UserAuth do
   defp refuse_totp_pending(conn) do
     case get_format(conn) do
       "json" ->
-        render_unauthorized(conn)
+        Auth.refuse(conn, :session)
 
       _ ->
         conn
@@ -332,7 +324,7 @@ defmodule LightningWeb.UserAuth do
   defp refuse_locked_out(conn) do
     case get_format(conn) do
       "json" ->
-        render_unauthorized(conn)
+        Auth.refuse(conn, :session)
 
       _ ->
         conn
@@ -357,22 +349,16 @@ defmodule LightningWeb.UserAuth do
   def require_authenticated_api_resource(conn, _opts) do
     case conn.assigns[:current_resource] do
       nil ->
-        render_unauthorized(conn)
+        Auth.refuse(conn, :bearer)
 
       %User{} = user ->
-        if Accounts.locked_out?(user), do: render_unauthorized(conn), else: conn
+        if Accounts.locked_out?(user),
+          do: Auth.refuse(conn, :bearer),
+          else: conn
 
       %ProjectRepoConnection{} ->
         conn
     end
-  end
-
-  defp render_unauthorized(conn) do
-    conn
-    |> put_status(:unauthorized)
-    |> put_view(LightningWeb.ErrorView)
-    |> render(:"401")
-    |> halt()
   end
 
   defp put_user_token(conn, _ \\ nil) do
@@ -419,21 +405,9 @@ defmodule LightningWeb.UserAuth do
 
       _ ->
         conn
-        |> get_format()
-        |> case do
-          "json" ->
-            conn
-            |> put_status(:forbidden)
-            |> put_view(LightningWeb.ErrorView)
-            |> render(:"403")
-            |> halt()
-
-          _ ->
-            conn
-            |> put_flash(:nav, :no_access_no_back)
-            |> redirect(to: signed_in_path(conn))
-            |> halt()
-        end
+        |> put_flash(:nav, :no_access_no_back)
+        |> redirect(to: signed_in_path(conn))
+        |> halt()
     end
   end
 

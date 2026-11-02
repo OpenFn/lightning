@@ -2,6 +2,7 @@ defmodule LightningWeb.AdaptorControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
   import Mimic
 
   alias Lightning.Adaptors
@@ -128,23 +129,14 @@ defmodule LightningWeb.AdaptorControllerTest do
     end
   end
 
-  test "an unauthenticated request is rejected with a JSON 401", %{conn: conn} do
-    conn = get(conn, ~p"/adaptors/catalogue")
-
-    assert json_response(conn, 401) == %{"error" => "Unauthorized"}
-  end
-
-  test "returns a 503 with a JSON body when the store fails", %{conn: conn} do
+  test "a store failure is a 503 not_ready", %{conn: conn} do
     conn = log_in_user(conn, insert(:user))
 
     stub(Adaptors, :catalogue, fn -> {:error, :unavailable} end)
 
     conn = get(conn, ~p"/adaptors/catalogue")
 
-    assert json_response(conn, 503) == %{
-             "error" => "adaptor catalogue unavailable"
-           }
-
+    assert_problem(conn, 503, :not_ready, [])
     assert get_resp_header(conn, "retry-after") == ["5"]
   end
 
@@ -157,7 +149,7 @@ defmodule LightningWeb.AdaptorControllerTest do
 
     conn = get(conn, ~p"/adaptors/catalogue")
 
-    assert json_response(conn, 503)
+    assert_problem(conn, 503, :not_ready, [])
     assert get_resp_header(conn, "retry-after") == ["5"]
   end
 

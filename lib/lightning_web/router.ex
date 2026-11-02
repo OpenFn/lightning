@@ -152,6 +152,13 @@ defmodule LightningWeb.Router do
         :runs
   end
 
+  # An unmatched route is answered before authentication, so the catch-alls
+  # take no pipeline. The /api scopes share one prefix, so theirs follows the
+  # last of them.
+  scope "/api" do
+    match :*, "/*path", LightningWeb.API.NoRoute, :not_found
+  end
+
   ## Adaptor catalogue (cookie-authenticated JSON)
   scope "/", LightningWeb do
     pipe_through [:authenticated_json, :require_authenticated_user]
@@ -169,6 +176,10 @@ defmodule LightningWeb.Router do
     post "/:name", CollectionsController, :put_all
     delete "/:name/:key", CollectionsController, :delete
     delete "/:name", CollectionsController, :delete_all
+  end
+
+  scope "/collections" do
+    match :*, "/*path", LightningWeb.API.NoRoute, :not_found
   end
 
   ## Authentication routes

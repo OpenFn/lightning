@@ -2,46 +2,30 @@ defmodule LightningWeb.Plugs.ApiAuth do
   @moduledoc """
   Authenticates api calls based on JWT bearer token.
   """
-  use Phoenix.Controller
   import Plug.Conn
+
+  alias LightningWeb.Auth
 
   def init(opts) do
     opts
   end
 
   def call(conn, _opts) do
-    with {:ok, bearer_token} <- get_bearer_token(conn),
+    with {:ok, bearer_token} <- Auth.bearer_token(conn),
          {:ok, claims} <- Lightning.Tokens.verify(bearer_token) do
       conn
       |> assign(:claims, claims)
       |> put_subject()
     else
       {:error, _reason} ->
-        deny_access(conn)
-    end
-  end
-
-  defp get_bearer_token(conn) do
-    conn
-    |> get_req_header("authorization")
-    |> case do
-      ["Bearer " <> bearer] -> {:ok, bearer}
-      _none_or_many -> {:error, :token_not_found}
+        Auth.refuse(conn, :bearer)
     end
   end
 
   defp put_subject(conn) do
     case Lightning.Tokens.get_subject(conn.assigns.claims) do
-      nil -> deny_access(conn)
+      nil -> Auth.refuse(conn, :bearer)
       subject -> assign(conn, :subject, subject)
     end
-  end
-
-  defp deny_access(conn) do
-    conn
-    |> put_status(:unauthorized)
-    |> put_view(LightningWeb.ErrorView)
-    |> render(:"401")
-    |> halt()
   end
 end
