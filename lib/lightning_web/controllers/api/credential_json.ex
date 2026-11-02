@@ -36,6 +36,8 @@ defmodule LightningWeb.API.CredentialJSON do
       project_credentials:
         render_project_credentials(credential.project_credentials),
       projects: render_projects(credential.projects),
+      scheduled_deletion: credential.scheduled_deletion,
+      transfer_status: credential.transfer_status,
       inserted_at: credential.inserted_at,
       updated_at: credential.updated_at
     }

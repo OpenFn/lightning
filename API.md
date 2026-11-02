@@ -169,14 +169,16 @@ route "not open to the service account" answers its token with 403 `forbidden`.
 The service account must send `project_id` to list credentials at
 `/api/credentials`.
 
-| Method   | Path                                    | What it does                                           | Token grant                     |
-| -------- | --------------------------------------- | ------------------------------------------------------ | ------------------------------- |
-| `GET`    | `/api/credentials`                      | Lists your credentials, or a project's by `project_id` | `credentials:write`             |
-| `GET`    | `/api/projects/:project_id/credentials` | Lists a project's credentials                          | `credentials:write`             |
-| `GET`    | `/api/credentials/:id`                  | Reads a credential, without its secrets                | `credentials:write`             |
-| `PUT`    | `/api/credentials/:id`                  | Creates or replaces a credential                       | `credentials:write`             |
-| `POST`   | `/api/credentials`                      | Creates a credential you own                           | Not open to the service account |
-| `DELETE` | `/api/credentials/:id`                  | Deletes a credential you own                           | Not open to the service account |
+| Method   | Path                                      | What it does                                           | Token grant                     |
+| -------- | ----------------------------------------- | ------------------------------------------------------ | ------------------------------- |
+| `GET`    | `/api/credentials`                        | Lists your credentials, or a project's by `project_id` | `credentials:write`             |
+| `GET`    | `/api/projects/:project_id/credentials`   | Lists a project's credentials                          | `credentials:write`             |
+| `GET`    | `/api/credentials/:id`                    | Reads a credential, without its secrets                | `credentials:write`             |
+| `PUT`    | `/api/credentials/:id`                    | Creates or replaces a credential                       | `credentials:write`             |
+| `POST`   | `/api/credentials`                        | Creates a credential you own                           | Not open to the service account |
+| `DELETE` | `/api/credentials/:id`                    | Deletes a credential you own                           | Not open to the service account |
+| `PUT`    | `/api/credentials/:id/scheduled_deletion` | Schedules a credential's deletion                      | `credentials:write`             |
+| `DELETE` | `/api/credentials/:id/scheduled_deletion` | Cancels a credential's scheduled deletion              | `credentials:write`             |
 
 ### Workflows and runs
 

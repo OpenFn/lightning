@@ -74,6 +74,48 @@ defmodule LightningWeb.ApiCredentialsHelpers do
     |> Repo.update!()
   end
 
+  @doc """
+  The credential as the API renders it to a caller who may see every link and
+  project, read from the database now.
+  """
+  def credential_json(credential) do
+    credential =
+      Lightning.Credentials.Credential
+      |> Repo.get!(credential.id)
+      |> Repo.preload([:project_credentials, :projects])
+
+    %{
+      "id" => credential.id,
+      "name" => credential.name,
+      "schema" => credential.schema,
+      "external_id" => credential.external_id,
+      "user_id" => credential.user_id,
+      "project_credentials" =>
+        Enum.map(credential.project_credentials, fn link ->
+          %{
+            "id" => link.id,
+            "project_id" => link.project_id,
+            "credential_id" => link.credential_id,
+            "inserted_at" => iso8601(link.inserted_at),
+            "updated_at" => iso8601(link.updated_at)
+          }
+        end),
+      "projects" =>
+        Enum.map(
+          credential.projects,
+          &%{"id" => &1.id, "name" => &1.name, "description" => &1.description}
+        ),
+      "scheduled_deletion" => iso8601(credential.scheduled_deletion),
+      "transfer_status" =>
+        credential.transfer_status && to_string(credential.transfer_status),
+      "inserted_at" => iso8601(credential.inserted_at),
+      "updated_at" => iso8601(credential.updated_at)
+    }
+  end
+
+  defp iso8601(nil), do: nil
+  defp iso8601(%DateTime{} = at), do: DateTime.to_iso8601(at)
+
   def audit_ids(credential_id) do
     Repo.all(
       from a in Lightning.Credentials.Audit.base_query(),
