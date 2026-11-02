@@ -8,6 +8,7 @@ defmodule Lightning.Workflows.WebhookLookupQueriesTest do
   use Lightning.DataCase, async: false
 
   import Lightning.Factories
+  import Lightning.QueryCountHelpers
 
   alias Lightning.Workflows
   alias Lightning.Workflows.Trigger
@@ -25,48 +26,26 @@ defmodule Lightning.Workflows.WebhookLookupQueriesTest do
     {project, trigger}
   end
 
-  defp count_queries(fun) do
-    ref = make_ref()
-    parent = self()
-    name = "count-#{System.unique_integer([:positive])}"
-
-    :telemetry.attach(
-      name,
-      [:lightning, :repo, :query],
-      fn _event, _measures, meta, _config ->
-        if meta[:source] == "triggers", do: send(parent, {ref, :query})
-      end,
-      nil
-    )
-
-    fun.()
-    :telemetry.detach(name)
-
-    drain(ref, 0)
-  end
-
-  defp drain(ref, acc) do
-    receive do
-      {^ref, :query} -> drain(ref, acc + 1)
-    after
-      0 -> acc
-    end
-  end
-
   test "the namespaced URL is one query" do
     {project, _trigger} = webhook_trigger(custom_path: "facility-001")
 
-    assert count_queries(fn ->
-             Workflows.get_webhook_trigger([project.id, "facility-001"])
-           end) == 1
+    assert {_, 1} =
+             count_queries(
+               fn ->
+                 Workflows.get_webhook_trigger([project.id, "facility-001"])
+               end,
+               "triggers"
+             )
   end
 
   test "the generated URL is one query" do
     {_project, trigger} = webhook_trigger()
 
-    assert count_queries(fn ->
-             Workflows.get_webhook_trigger([trigger.id])
-           end) == 1
+    assert {_, 1} =
+             count_queries(
+               fn -> Workflows.get_webhook_trigger([trigger.id]) end,
+               "triggers"
+             )
   end
 
   test "the generated URL with a trailing segment costs one more" do
@@ -74,15 +53,21 @@ defmodule Lightning.Workflows.WebhookLookupQueriesTest do
     # being tried first, which is the shape this feature creates.
     {_project, trigger} = webhook_trigger()
 
-    assert count_queries(fn ->
-             Workflows.get_webhook_trigger([trigger.id, "Patient"])
-           end) == 2
+    assert {_, 2} =
+             count_queries(
+               fn -> Workflows.get_webhook_trigger([trigger.id, "Patient"]) end,
+               "triggers"
+             )
   end
 
   test "a miss costs no more than three" do
-    assert count_queries(fn ->
-             Workflows.get_webhook_trigger([Ecto.UUID.generate(), "nope"])
-           end) <= 3
+    {_, queries} =
+      count_queries(
+        fn -> Workflows.get_webhook_trigger([Ecto.UUID.generate(), "nope"]) end,
+        "triggers"
+      )
+
+    assert queries <= 3
 
     assert Trigger
   end

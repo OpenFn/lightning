@@ -106,9 +106,9 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        when is_binary(run_id) do
     %{project: project} = socket.assigns
 
-    case Lightning.Runs.get_for_project(run_id, project.id, include: [:steps]) do
-      nil -> socket
-      run -> assign(socket, initial_run_data: build_run_data(run))
+    case Lightning.Runs.get_for_project(project.id, run_id, include: [:steps]) do
+      {:ok, run} -> assign(socket, initial_run_data: build_run_data(run))
+      {:error, :not_found} -> socket
     end
   end
 

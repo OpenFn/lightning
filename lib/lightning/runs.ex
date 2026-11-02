@@ -63,24 +63,42 @@ defmodule Lightning.Runs do
   Get a run by id, scoped to a specific project.
 
   Joins through `work_order -> workflow` to verify the run belongs to the
-  given project. Returns `nil` if the run doesn't exist or belongs to a
-  different project.
+  given project. Returns `{:error, :not_found}` if the id is malformed, or the
+  run doesn't exist or belongs to a different project.
 
   Accepts an `:include` option to preload associations, e.g.
-  `get_for_project(id, project_id, include: [:steps])`.
+  `get_for_project(project_id, id, include: [:steps])`.
   """
-  @spec get_for_project(Ecto.UUID.t(), Ecto.UUID.t(), keyword()) ::
-          Run.t() | nil
-  def get_for_project(id, project_id, opts \\ []) do
-    preloads = Keyword.get(opts, :include, [])
+  @spec get_for_project(Ecto.UUID.t(), term(), keyword()) ::
+          {:ok, Run.t()} | {:error, :not_found}
+  def get_for_project(project_id, id, opts \\ []) do
+    if Lightning.Validators.valid_uuid?(id) do
+      from(r in Run,
+        join: wo in assoc(r, :work_order),
+        join: w in assoc(wo, :workflow),
+        where: r.id == ^id and w.project_id == ^project_id,
+        preload: ^Keyword.get(opts, :include, [])
+      )
+      |> Repo.fetch_one()
+    else
+      {:error, :not_found}
+    end
+  end
 
+  @doc """
+  The id of the project the run `id` sits in, or `{:error, :not_found}` when
+  no run has that id.
+  """
+  @spec get_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_project_id(id) do
     from(r in Run,
       join: wo in assoc(r, :work_order),
       join: w in assoc(wo, :workflow),
-      where: r.id == ^id and w.project_id == ^project_id,
-      preload: ^preloads
+      where: r.id == ^id,
+      select: w.project_id
     )
-    |> Repo.one()
+    |> Repo.fetch_one()
   end
 
   @doc """

@@ -144,16 +144,37 @@ defmodule Lightning.Workflows do
   @doc """
   Gets a workflow by id, scoped to the given project.
 
-  Returns `nil` when the id is malformed, missing, belongs to another project,
-  or is marked for deletion, so it can't be used to read or mutate a workflow
-  across projects or one on its way out.
+  Returns `{:error, :not_found}` when the id is malformed, missing, belongs to
+  another project, or is marked for deletion, so it can't be used to read or
+  mutate a workflow across projects or one on its way out.
   """
-  def get_workflow_for_project(%Project{} = project, id, opts \\ []) do
+  @spec get_workflow_for_project(Ecto.UUID.t(), term(), keyword()) ::
+          {:ok, Workflow.t()} | {:error, :not_found}
+  def get_workflow_for_project(project_id, id, opts \\ []) do
     if Lightning.Validators.valid_uuid?(id) do
-      from(w in Query.workflows_for(project), where: w.id == ^id)
-      |> preload(^Keyword.get(opts, :include, []))
-      |> Repo.one()
+      from(w in Workflow,
+        where:
+          w.id == ^id and w.project_id == ^project_id and is_nil(w.deleted_at),
+        preload: ^Keyword.get(opts, :include, [])
+      )
+      |> Repo.fetch_one()
+    else
+      {:error, :not_found}
     end
+  end
+
+  @doc """
+  The id of the project the workflow `id` sits in, or `{:error, :not_found}`
+  when no workflow has that id.
+
+  A workflow marked for deletion still answers its project, so that
+  `get_workflow_for_project/3` in that project is what finds it missing.
+  """
+  @spec get_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_project_id(id) do
+    from(w in Workflow, where: w.id == ^id, select: w.project_id)
+    |> Repo.fetch_one()
   end
 
   @doc """
