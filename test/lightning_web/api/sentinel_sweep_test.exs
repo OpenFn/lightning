@@ -120,7 +120,12 @@ defmodule LightningWeb.API.SentinelSweepTest do
       array: @malformed,
       otherwise: {422, nil, []}
     },
-    {:put, "/api/password_resets/:token"} => @not_found
+    {:put, "/api/password_resets/:token"} => @not_found,
+    {:post, "/api/confirmations"} => %{
+      array: @malformed,
+      otherwise: {422, nil, []}
+    },
+    {:put, "/api/confirmations/:token"} => @session
   }
 
   setup do
