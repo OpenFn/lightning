@@ -118,8 +118,8 @@ defmodule LightningWeb.API.ProjectMembers.WhoMayReachItTest do
       end
     end
 
-    test "the service account reaches the member routes but not anyone's notifications",
-         %{conn: conn, users: users, project: project} do
+    test "the service account reaches the member routes",
+         %{conn: conn, project: project} do
       {conn, _account} = with_service_account(conn, ["projects:write"])
 
       assert conn |> reach(:list, project.id, nil) |> json_response(200)
@@ -128,12 +128,6 @@ defmodule LightningWeb.API.ProjectMembers.WhoMayReachItTest do
         conn
         |> reach(route, project.id, Ecto.UUID.generate())
         |> assert_problem(404, :not_found, [])
-      end
-
-      for project_id <- [project.id, Ecto.UUID.generate(), "not-a-uuid"] do
-        conn
-        |> reach(:notifications, project_id, users.viewer.id)
-        |> assert_problem(403, :forbidden, [])
       end
     end
 

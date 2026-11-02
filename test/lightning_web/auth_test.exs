@@ -383,6 +383,27 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "POST /api/projects/:project_id/invitations takes a person's tokens, refuses the service account with 403 and a repo connection for its grant",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind_posting(
+        conn,
+        tokens,
+        ~p"/api/projects/#{project.id}/invitations",
+        &%{
+          "email" => "invited.#{&1}@example.com",
+          "first_name" => "Invited",
+          "last_name" => "Person",
+          "role" => "editor"
+        },
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: {:insufficient_scope, "projects:write"},
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens
@@ -444,6 +465,38 @@ defmodule LightningWeb.AuthTest do
       case answer do
         :logs_in ->
           assert conn.status == 200, "#{kind} was answered #{conn.status}"
+
+        :invalid_token ->
+          assert_unauthenticated(conn, :invalid_token, @invalid_token)
+
+        :expired_token ->
+          assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+        :forbidden ->
+          assert_problem(conn, 403, :forbidden, [])
+          assert get_resp_header(conn, "www-authenticate") == []
+
+        {:insufficient_scope, grant} ->
+          assert_refused_for_scope(conn, grant)
+      end
+    end
+  end
+
+  # As assert_each_kind_writing/5, for a POST that creates, of the body
+  # `body_for` gives each kind.
+  defp assert_each_kind_posting(conn, tokens, path, body_for, expected) do
+    assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
+
+    for {kind, answer} <- expected do
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> with_token(tokens[kind])
+        |> post(path, Jason.encode!(body_for.(kind)))
+
+      case answer do
+        :logs_in ->
+          assert conn.status == 201, "#{kind} was answered #{conn.status}"
 
         :invalid_token ->
           assert_unauthenticated(conn, :invalid_token, @invalid_token)
