@@ -153,20 +153,16 @@ route "not open to the service account" answers its token with 403 `forbidden`.
 
 ### Projects
 
-| Method   | Path                                                 | What it does                                                  | Token grant                     |
-| -------- | ---------------------------------------------------- | ------------------------------------------------------------- | ------------------------------- |
-| `GET`    | `/api/projects`                                      | Lists projects                                                | `projects:write`                |
-| `GET`    | `/api/projects/:id`                                  | Reads a project                                               | `projects:write`                |
-| `PUT`    | `/api/projects/:id`                                  | Creates or replaces a project                                 | `projects:write`                |
-| `GET`    | `/api/provision/:id`                                 | Reads a project as a [provisioning](PROVISIONING.md) document | `projects:write`                |
-| `GET`    | `/api/provision/yaml`                                | Reads a project, named by `id`, as YAML                       | `projects:write`                |
-| `POST`   | `/api/provision`                                     | Applies a [provisioning](PROVISIONING.md) document            | Not open to the service account |
-| `GET`    | `/api/projects/:project_id/collections/:id`          | Reads a collection                                            | `collections:write`             |
-| `PUT`    | `/api/projects/:project_id/collections/:id`          | Creates or replaces a collection                              | `collections:write`             |
-| `GET`    | `/api/projects/:project_id/webhook_auth_methods`     | Lists a project's webhook auth methods                        | Not open to the service account |
-| `GET`    | `/api/projects/:project_id/webhook_auth_methods/:id` | Reads a webhook auth method                                   | Not open to the service account |
-| `PUT`    | `/api/projects/:project_id/webhook_auth_methods/:id` | Creates or replaces a webhook auth method                     | Not open to the service account |
-| `DELETE` | `/api/projects/:project_id/webhook_auth_methods/:id` | Schedules a webhook auth method for deletion                  | Not open to the service account |
+| Method | Path                                        | What it does                                                  | Token grant                     |
+| ------ | ------------------------------------------- | ------------------------------------------------------------- | ------------------------------- |
+| `GET`  | `/api/projects`                             | Lists projects                                                | `projects:write`                |
+| `GET`  | `/api/projects/:id`                         | Reads a project                                               | `projects:write`                |
+| `PUT`  | `/api/projects/:id`                         | Creates or replaces a project                                 | `projects:write`                |
+| `GET`  | `/api/provision/:id`                        | Reads a project as a [provisioning](PROVISIONING.md) document | `projects:write`                |
+| `GET`  | `/api/provision/yaml`                       | Reads a project, named by `id`, as YAML                       | `projects:write`                |
+| `POST` | `/api/provision`                            | Applies a [provisioning](PROVISIONING.md) document            | Not open to the service account |
+| `GET`  | `/api/projects/:project_id/collections/:id` | Reads a collection                                            | `collections:write`             |
+| `PUT`  | `/api/projects/:project_id/collections/:id` | Creates or replaces a collection                              | `collections:write`             |
 
 ### Credentials
 
@@ -209,6 +205,15 @@ lines at the top level.
 | `GET`   | `/api/runs`                                 | Lists runs across projects        | `projects:write` |
 | `GET`   | `/api/runs/:id`                             | Reads a run                       | `projects:write` |
 | `GET`   | `/api/log_lines`                            | Lists log lines                   | `projects:write` |
+
+### Webhooks and channels
+
+| Method   | Path                                                 | What it does                                 | Token grant                     |
+| -------- | ---------------------------------------------------- | -------------------------------------------- | ------------------------------- |
+| `GET`    | `/api/projects/:project_id/webhook_auth_methods`     | Lists a project's webhook auth methods       | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/webhook_auth_methods/:id` | Reads a webhook auth method                  | Not open to the service account |
+| `PUT`    | `/api/projects/:project_id/webhook_auth_methods/:id` | Creates or replaces a webhook auth method    | Not open to the service account |
+| `DELETE` | `/api/projects/:project_id/webhook_auth_methods/:id` | Schedules a webhook auth method for deletion | Not open to the service account |
 
 ### Lightning's web app
 
