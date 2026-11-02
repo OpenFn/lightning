@@ -1169,11 +1169,62 @@ defmodule Lightning.ProjectsTest do
       # A project that is already gone cannot be stamped.
       Repo.delete!(project)
 
-      assert_raise Ecto.StaleEntryError, fn ->
-        Projects.schedule_project_deletion(project)
-      end
+      assert Projects.schedule_project_deletion(project) ==
+               {:error, :concurrent_edit}
 
       refute_received %Projects.Events.ProjectDeletionScheduled{}
+    end
+
+    test "schedule_project_deletion/2 records a deletion_scheduled event against the actor" do
+      project = insert(:project)
+      actor = insert(:user)
+
+      {:ok, scheduled} = Projects.schedule_project_deletion(project, actor)
+
+      assert [event] =
+               Repo.all(
+                 from a in Audit,
+                   where: a.item_id == ^project.id
+               )
+
+      assert {event.event, event.actor_id} == {"deletion_scheduled", actor.id}
+      assert event.changes.before == %{"scheduled_deletion" => nil}
+
+      assert event.changes.after == %{
+               "scheduled_deletion" =>
+                 DateTime.to_iso8601(scheduled.scheduled_deletion)
+             }
+    end
+
+    test "cancel_scheduled_deletion/2 clears the date and records a deletion_cancelled event against the actor" do
+      date = DateTime.utc_now() |> DateTime.truncate(:second)
+      project = insert(:project, scheduled_deletion: date)
+      actor = insert(:user)
+
+      assert {:ok, %{scheduled_deletion: nil}} =
+               Projects.cancel_scheduled_deletion(project, actor)
+
+      assert [event] =
+               Repo.all(
+                 from a in Audit,
+                   where: a.item_id == ^project.id
+               )
+
+      assert {event.event, event.actor_id} == {"deletion_cancelled", actor.id}
+
+      assert event.changes.before == %{
+               "scheduled_deletion" => DateTime.to_iso8601(date)
+             }
+
+      assert event.changes.after == %{"scheduled_deletion" => nil}
+    end
+
+    test "cancel_scheduled_deletion/2 answers a project another request deleted with concurrent_edit" do
+      project = insert(:project, scheduled_deletion: DateTime.utc_now())
+      Repo.delete!(project)
+
+      assert Projects.cancel_scheduled_deletion(project, insert(:user)) ==
+               {:error, :concurrent_edit}
     end
 
     test "cancel_scheduled_deletion/2" do

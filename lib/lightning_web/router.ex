@@ -177,6 +177,12 @@ defmodule LightningWeb.Router do
     # end-api-area:account
 
     # api-area:projects (routes for this area go between these markers)
+    delete "/projects/:id", API.ProjectDeletionController, :delete
+
+    delete "/projects/:id/scheduled_deletion",
+           API.ProjectDeletionController,
+           :cancel
+
     # end-api-area:projects
 
     # api-area:sandboxes_github (routes for this area go between these markers)

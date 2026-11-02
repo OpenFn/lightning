@@ -343,7 +343,9 @@ defmodule LightningWeb.API.SentinelSweepTest do
   defp by_parent(answer, _route, _attempt), do: answer
 
   defp no_standing_on_parent?(%{path: path}, :array),
-    do: path in ["/api/projects/:id", "/api/provision"]
+    do:
+      path in ["/api/projects/:id", "/api/provision"] or
+        String.starts_with?(path, "/api/projects/:id/")
 
   defp no_standing_on_parent?(%{path: path}, :planted) do
     path in [
@@ -353,7 +355,8 @@ defmodule LightningWeb.API.SentinelSweepTest do
       "/api/jobs/:id",
       "/api/runs/:id",
       "/api/work_orders/:id"
-    ] or String.contains?(path, ":project_id")
+    ] or String.contains?(path, ":project_id") or
+      String.starts_with?(path, "/api/projects/:id/")
   end
 
   # Only the service account may read every credential, and nobody may delete
