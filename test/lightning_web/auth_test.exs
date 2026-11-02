@@ -416,6 +416,39 @@ defmodule LightningWeb.AuthTest do
       end
     end
 
+    # The session's person has no GitHub connection, which is 403 too.
+    test "the GitHub lists take only a session token, and refuse every bearer token with 403",
+         %{conn: conn, tokens: tokens} do
+      for route <- [
+            {:get, ~p"/api/me/github_repos"},
+            {:get, ~p"/api/me/github_repos/openfn/lightning/branches"}
+          ] do
+        assert_each_kind_on(conn, tokens, route,
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :forbidden,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: :forbidden
+        )
+      end
+    end
+
+    # The tokens' person isn't a superuser, so their tokens are refused too.
+    test "/api/auth_provider refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens} do
+      for method <- [:get, :put, :delete] do
+        assert_each_kind_on(conn, tokens, {method, ~p"/api/auth_provider"},
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :forbidden,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: :forbidden
+        )
+      end
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens
