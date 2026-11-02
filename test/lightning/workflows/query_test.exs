@@ -13,14 +13,14 @@ defmodule Lightning.Workflows.QueryTest do
 
   setup :isolated_adaptors
 
-  test "jobs_for/1 with user" do
+  test "jobs_for/1 with a person's scope" do
     user = user_fixture()
     project = project_fixture(project_users: [%{user_id: user.id}])
 
     job = job_fixture(project_id: project.id)
     _other_job = job_fixture()
 
-    assert Query.jobs_for(user) |> Repo.all() == [
+    assert Query.jobs_for(Lightning.Scope.new(user)) |> Repo.all() == [
              job |> unload_relation(:trigger)
            ]
   end

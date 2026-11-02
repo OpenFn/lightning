@@ -10,6 +10,7 @@ defmodule Lightning.Workflows do
   import Ecto.Query
 
   alias Ecto.Multi
+  alias Lightning.Scope
 
   alias Lightning.Config
   alias Lightning.Credentials.Scoping
@@ -888,12 +889,17 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Returns a query for workflows accessible to a user
+  Lists the live workflows of every project the caller may list, newest first,
+  preloading the associations named in `include:`.
   """
-  @spec workflows_for_user_query(Lightning.Accounts.User.t()) ::
-          Ecto.Queryable.t()
-  def workflows_for_user_query(%Lightning.Accounts.User{} = user) do
-    Query.workflows_for(user)
+  @spec list_workflows_for(Scope.t(), keyword()) :: [Workflow.t()]
+  def list_workflows_for(%Scope{} = scope, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+
+    scope
+    |> Query.workflows_for()
+    |> preload(^include)
+    |> Repo.all()
   end
 
   @spec to_project_space([Workflow.t()]) :: %{}
