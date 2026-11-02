@@ -189,6 +189,22 @@ defmodule LightningWeb.API.Sandboxes.WhoMayReachItTest do
       end
     end
 
+    test "a sandbox scheduled for deletion is 409 to its owner, who can neither preview nor make a merge of it",
+         %{conn: conn, owner: owner, parent: parent, sandbox: sandbox} do
+      sandbox
+      |> Ecto.Changeset.change(
+        scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+      |> Repo.update!()
+
+      for action <- [:merge_preview, :merge] do
+        conn
+        |> with_pat(owner)
+        |> reach(action, parent.id, sandbox.id)
+        |> assert_problem(409, :scheduled_for_deletion, [])
+      end
+    end
+
     test "a superuser who isn't a member is refused, and hears 404 or 400 for a project id that names nothing",
          %{conn: conn, parent: parent, sandbox: sandbox} do
       superuser = with_pat(conn, insert(:user, role: :superuser))
