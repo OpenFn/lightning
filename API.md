@@ -137,19 +137,21 @@ route "not open to the service account" answers its token with 403 `forbidden`.
 
 ### Accounts
 
-| Method   | Path                  | What it does                                        | Token grant                     |
-| -------- | --------------------- | --------------------------------------------------- | ------------------------------- |
-| `POST`   | `/api/oauth/token`    | Exchanges a service account's assertion for a token | None                            |
-| `GET`    | `/api/instance`       | Reads what the app needs before anyone signs in     | None                            |
-| `POST`   | `/api/session`        | Signs in, or steps the session up                   | None                            |
-| `GET`    | `/api/session`        | Reads the session and its CSRF token                | Session only                    |
-| `DELETE` | `/api/session`        | Signs out                                           | Session only                    |
-| `GET`    | `/api/me`             | Reads the person the token belongs to               | Not open to the service account |
-| `GET`    | `/api/users`          | Lists users, or finds one by `email`                | `users:read`                    |
-| `GET`    | `/api/users/:id`      | Reads a user                                        | `users:read`                    |
-| `POST`   | `/api/users`          | Creates a user                                      | `users:write`                   |
-| `PATCH`  | `/api/users/:id`      | Changes a user                                      | `users:write`                   |
-| `POST`   | `/api/users/register` | Signs up, where the instance offers it              | None                            |
+| Method   | Path                          | What it does                                        | Token grant                     |
+| -------- | ----------------------------- | --------------------------------------------------- | ------------------------------- |
+| `POST`   | `/api/oauth/token`            | Exchanges a service account's assertion for a token | None                            |
+| `GET`    | `/api/instance`               | Reads what the app needs before anyone signs in     | None                            |
+| `POST`   | `/api/session`                | Signs in, or steps the session up                   | None                            |
+| `GET`    | `/api/session`                | Reads the session and its CSRF token                | Session only                    |
+| `DELETE` | `/api/session`                | Signs out                                           | Session only                    |
+| `POST`   | `/api/password_resets`        | Emails a link to reset a forgotten password         | None                            |
+| `PUT`    | `/api/password_resets/:token` | Resets a password with the emailed token            | None                            |
+| `GET`    | `/api/me`                     | Reads the person the token belongs to               | Not open to the service account |
+| `GET`    | `/api/users`                  | Lists users, or finds one by `email`                | `users:read`                    |
+| `GET`    | `/api/users/:id`              | Reads a user                                        | `users:read`                    |
+| `POST`   | `/api/users`                  | Creates a user                                      | `users:write`                   |
+| `PATCH`  | `/api/users/:id`              | Changes a user                                      | `users:write`                   |
+| `POST`   | `/api/users/register`         | Signs up, where the instance offers it              | None                            |
 
 ### Projects
 
