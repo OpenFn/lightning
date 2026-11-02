@@ -184,6 +184,8 @@ The service account must send `project_id` to list credentials at
 | `GET`    | `/api/credentials/:id/environments`         | Lists a credential's environments                      | `credentials:write`             |
 | `PUT`    | `/api/credentials/:id/environments/:name`   | Creates or replaces an environment's body              | `credentials:write`             |
 | `DELETE` | `/api/credentials/:id/environments/:name`   | Deletes an environment                                 | `credentials:write`             |
+| `PUT`    | `/api/credentials/:id/transfer`             | Starts giving a credential you own to another user     | Not open to the service account |
+| `DELETE` | `/api/credentials/:id/transfer`             | Cancels a credential's pending transfer                | Not open to the service account |
 
 ### Workflows and runs
 

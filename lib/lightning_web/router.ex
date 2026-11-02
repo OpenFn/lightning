@@ -211,6 +211,8 @@ defmodule LightningWeb.Router do
            API.CredentialEnvironmentController,
            :delete
 
+    put "/credentials/:id/transfer", API.CredentialTransferController, :update
+    delete "/credentials/:id/transfer", API.CredentialTransferController, :delete
     # end-api-area:credentials
 
     # api-area:credential_extras (routes for this area go between these markers)

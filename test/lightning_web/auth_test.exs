@@ -329,6 +329,26 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "starting or cancelling a credential's transfer takes a person's tokens, and refuses the service account and a repo connection with 403",
+         %{conn: conn, tokens: tokens} do
+      {:session, user} = tokens[:session]
+      credential = insert(:credential, user: user)
+      path = ~p"/api/credentials/#{credential.id}/transfer"
+
+      for {method, answered} <- [put: {422, :invalid}, delete: {404, :not_found}] do
+        assert_each_kind_on(conn, tokens, method, path,
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: {:answers, answered},
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: {:answers, answered}
+        )
+      end
+
+      assert Lightning.Repo.reload!(credential).transfer_status == nil
+    end
+
     test "authenticated_api takes a personal or run token, and not a repo connection's or a service account's",
          %{conn: conn, tokens: tokens, collection: collection} do
       assert_each_kind(conn, tokens, ~p"/collections/#{collection.name}",
@@ -396,6 +416,34 @@ defmodule LightningWeb.AuthTest do
 
         {:insufficient_scope, grant} ->
           assert_refused_for_scope(conn, grant)
+      end
+    end
+  end
+
+  # For a route that writes: `{:answers, {status, code}}` is the problem the
+  # route itself gives once the token kind is let in.
+  defp assert_each_kind_on(conn, tokens, method, path, expected) do
+    assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
+
+    for {kind, answer} <- expected do
+      conn =
+        conn
+        |> with_token(tokens[kind])
+        |> put_req_header("content-type", "application/json")
+        |> dispatch(@endpoint, method, path, "{}")
+
+      case answer do
+        {:answers, {status, code}} ->
+          assert_problem(conn, status, code)
+
+        :invalid_token ->
+          assert_unauthenticated(conn, :invalid_token, @invalid_token)
+
+        :expired_token ->
+          assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+        :forbidden ->
+          assert_problem(conn, 403, :forbidden, [])
       end
     end
   end
