@@ -353,6 +353,36 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "GET /api/projects/:project_id/members takes a service account's or a person's token",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind(conn, tokens, ~p"/api/projects/#{project.id}/members",
+        service_account: :logs_in,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: {:insufficient_scope, "projects:write"},
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
+    test "PUT /api/projects/:project_id/members/:user_id/notifications takes a person's tokens, refuses the service account with 403 and a repo connection for its grant",
+         %{conn: conn, tokens: tokens, project: project} do
+      {:session, user} = tokens[:session]
+
+      assert_each_kind_writing(
+        conn,
+        tokens,
+        ~p"/api/projects/#{project.id}/members/#{user.id}/notifications",
+        %{"failure_alert" => true, "digest" => "daily"},
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: {:insufficient_scope, "projects:write"},
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens
@@ -383,6 +413,37 @@ defmodule LightningWeb.AuthTest do
 
         :session_refused ->
           assert_session_refused(conn)
+
+        :invalid_token ->
+          assert_unauthenticated(conn, :invalid_token, @invalid_token)
+
+        :expired_token ->
+          assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+        :forbidden ->
+          assert_problem(conn, 403, :forbidden, [])
+          assert get_resp_header(conn, "www-authenticate") == []
+
+        {:insufficient_scope, grant} ->
+          assert_refused_for_scope(conn, grant)
+      end
+    end
+  end
+
+  # As assert_each_kind/4, for a PUT of `body`.
+  defp assert_each_kind_writing(conn, tokens, path, body, expected) do
+    assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
+
+    for {kind, answer} <- expected do
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> with_token(tokens[kind])
+        |> put(path, Jason.encode!(body))
+
+      case answer do
+        :logs_in ->
+          assert conn.status == 200, "#{kind} was answered #{conn.status}"
 
         :invalid_token ->
           assert_unauthenticated(conn, :invalid_token, @invalid_token)

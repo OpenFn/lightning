@@ -300,7 +300,8 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
             ~p"/api/projects/#{project.id}/jobs",
             ~p"/api/projects/#{project.id}/runs",
             ~p"/api/provision/#{project.id}",
-            ~p"/api/provision/yaml?#{%{id: project.id}}"
+            ~p"/api/provision/yaml?#{%{id: project.id}}",
+            ~p"/api/projects/#{project.id}/members"
           ] do
         conn = get(conn, path)
 
@@ -324,7 +325,8 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
             ~p"/api/projects/#{project.id}/jobs",
             ~p"/api/projects/#{project.id}/runs",
             ~p"/api/provision/#{project.id}",
-            ~p"/api/provision/yaml?#{%{id: project.id}}"
+            ~p"/api/provision/yaml?#{%{id: project.id}}",
+            ~p"/api/projects/#{project.id}/members"
           ] do
         assert get(conn, path).status == 200,
                "#{path} was refused to an enrolled member"
