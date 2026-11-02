@@ -160,28 +160,31 @@ stepped up with 403 `step_up_required`.
 | `PATCH`  | `/api/users/:id`      | Changes a user                                      | `users:write`                   |
 | `POST`   | `/api/users/register` | Signs up, where the instance offers it              | None                            |
 
-### Your account
+### Your account and signing in
 
-Routes for signing in, resetting a password and confirming an email, and for a
-person managing their own account.
+Routes for resetting a password and confirming an email, for a person managing
+their own account, and for a superuser setting up single sign-on.
 
-| Method   | Path                                         | What it does                                      | Token grant                     |
-| -------- | -------------------------------------------- | ------------------------------------------------- | ------------------------------- |
-| `POST`   | `/api/password_resets`                       | Emails a link to reset a forgotten password       | None                            |
-| `PUT`    | `/api/password_resets/:token`                | Resets a password with the emailed token          | None                            |
-| `POST`   | `/api/confirmations`                         | Sends the account confirmation email again        | None                            |
-| `PUT`    | `/api/confirmations/:token`                  | Confirms an account, email or credential transfer | Session only                    |
-| `GET`    | `/api/me/tokens`                             | Lists your personal access tokens, masked         | Not open to the service account |
-| `POST`   | `/api/me/tokens`                             | Creates a personal access token                   | Session token, stepped up       |
-| `DELETE` | `/api/me/tokens/:id`                         | Revokes one of your personal access tokens        | Not open to the service account |
-| `GET`    | `/api/me/mfa`                                | Reads your MFA settings                           | Session token                   |
-| `POST`   | `/api/me/mfa`                                | Starts setting up an authenticator                | Session token                   |
-| `PUT`    | `/api/me/mfa`                                | Turns MFA on, or replaces the authenticator       | Session token                   |
-| `DELETE` | `/api/me/mfa`                                | Turns MFA off                                     | Session token, stepped up       |
-| `POST`   | `/api/me/mfa/backup_codes`                   | Replaces your backup codes                        | Session token, stepped up       |
-| `DELETE` | `/api/me/github_connection`                  | Disconnects your GitHub account                   | Session token                   |
-| `GET`    | `/api/me/github_repos`                       | Lists the GitHub repositories you can connect     | Session token                   |
-| `GET`    | `/api/me/github_repos/:owner/:name/branches` | Lists a GitHub repository's branches              | Session token                   |
+| Method   | Path                                         | What it does                                                    | Token grant                     |
+| -------- | -------------------------------------------- | --------------------------------------------------------------- | ------------------------------- |
+| `POST`   | `/api/password_resets`                       | Emails a link to reset a forgotten password                     | None                            |
+| `PUT`    | `/api/password_resets/:token`                | Resets a password with the emailed token                        | None                            |
+| `POST`   | `/api/confirmations`                         | Sends the account confirmation email again                      | None                            |
+| `PUT`    | `/api/confirmations/:token`                  | Confirms an account, email or credential transfer               | Session only                    |
+| `GET`    | `/api/me/tokens`                             | Lists your personal access tokens, masked                       | Not open to the service account |
+| `POST`   | `/api/me/tokens`                             | Creates a personal access token                                 | Session token, stepped up       |
+| `DELETE` | `/api/me/tokens/:id`                         | Revokes one of your personal access tokens                      | Not open to the service account |
+| `GET`    | `/api/me/mfa`                                | Reads your MFA settings                                         | Session token                   |
+| `POST`   | `/api/me/mfa`                                | Starts setting up an authenticator                              | Session token                   |
+| `PUT`    | `/api/me/mfa`                                | Turns MFA on, or replaces the authenticator                     | Session token                   |
+| `DELETE` | `/api/me/mfa`                                | Turns MFA off                                                   | Session token, stepped up       |
+| `POST`   | `/api/me/mfa/backup_codes`                   | Replaces your backup codes                                      | Session token, stepped up       |
+| `DELETE` | `/api/me/github_connection`                  | Disconnects your GitHub account                                 | Session token                   |
+| `GET`    | `/api/me/github_repos`                       | Lists the GitHub repositories you can connect                   | Session token                   |
+| `GET`    | `/api/me/github_repos/:owner/:name/branches` | Lists a GitHub repository's branches                            | Session token                   |
+| `GET`    | `/api/auth_provider`                         | Reads the single sign-on provider, as a superuser               | Not open to the service account |
+| `PUT`    | `/api/auth_provider`                         | Sets up or replaces the single sign-on provider, as a superuser | Not open to the service account |
+| `DELETE` | `/api/auth_provider`                         | Removes the single sign-on provider, as a superuser             | Not open to the service account |
 
 ### Projects
 

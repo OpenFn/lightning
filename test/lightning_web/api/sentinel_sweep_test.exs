@@ -337,6 +337,10 @@ defmodule LightningWeb.API.SentinelSweepTest do
               attempt in [:planted, :array],
        do: @forbidden
 
+  # Only a superuser may set the sign-in provider, so the member is refused
+  # before the body is read.
+  defp expected(%{path: "/api/auth_provider"}, :array), do: @forbidden
+
   # A route that takes only a session token refuses the member's personal
   # token before it reads an id or a body.
   defp expected(%{verb: verb, path: path}, attempt)
