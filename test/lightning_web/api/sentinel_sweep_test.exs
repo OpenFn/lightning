@@ -131,7 +131,12 @@ defmodule LightningWeb.API.SentinelSweepTest do
   # Routes on the bearer pipeline that take only a session token, which the
   # sweep never sends.
   @session_token_only [
-    {:post, "/api/me/tokens"}
+    {:post, "/api/me/tokens"},
+    {:get, "/api/me/mfa"},
+    {:post, "/api/me/mfa"},
+    {:put, "/api/me/mfa"},
+    {:delete, "/api/me/mfa"},
+    {:post, "/api/me/mfa/backup_codes"}
   ]
 
   setup do

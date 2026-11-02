@@ -177,6 +177,11 @@ defmodule LightningWeb.Router do
     get "/me/tokens", API.MeTokenController, :index
     post "/me/tokens", API.MeTokenController, :create
     delete "/me/tokens/:id", API.MeTokenController, :delete
+    get "/me/mfa", API.MeMfaController, :show
+    post "/me/mfa", API.MeMfaController, :create
+    put "/me/mfa", API.MeMfaController, :update
+    delete "/me/mfa", API.MeMfaController, :delete
+    post "/me/mfa/backup_codes", API.MeMfaController, :create_backup_codes
     # end-api-area:account
 
     # api-area:projects (routes for this area go between these markers)

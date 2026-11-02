@@ -389,6 +389,32 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "/api/me/mfa takes only a session token, stepped up to turn MFA off or make backup codes, and refuses every bearer token with 403",
+         %{conn: conn, tokens: tokens} do
+      bearer_refused = [
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :forbidden,
+        repo_connection: :forbidden,
+        run: :invalid_token
+      ]
+
+      for {route, session} <- [
+            {{:get, ~p"/api/me/mfa"}, :logs_in},
+            {{:post, ~p"/api/me/mfa"}, {:status, 201}},
+            {{:put, ~p"/api/me/mfa"}, {:status, 422}},
+            {{:delete, ~p"/api/me/mfa"}, :step_up_required},
+            {{:post, ~p"/api/me/mfa/backup_codes"}, :step_up_required}
+          ] do
+        assert_each_kind_on(
+          conn,
+          tokens,
+          route,
+          bearer_refused ++ [session: session]
+        )
+      end
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens

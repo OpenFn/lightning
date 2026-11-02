@@ -174,6 +174,11 @@ person managing their own account.
 | `GET`    | `/api/me/tokens`              | Lists your personal access tokens, masked         | Not open to the service account |
 | `POST`   | `/api/me/tokens`              | Creates a personal access token                   | Session token, stepped up       |
 | `DELETE` | `/api/me/tokens/:id`          | Revokes one of your personal access tokens        | Not open to the service account |
+| `GET`    | `/api/me/mfa`                 | Reads your MFA settings                           | Session token                   |
+| `POST`   | `/api/me/mfa`                 | Starts setting up an authenticator                | Session token                   |
+| `PUT`    | `/api/me/mfa`                 | Turns MFA on, or replaces the authenticator       | Session token                   |
+| `DELETE` | `/api/me/mfa`                 | Turns MFA off                                     | Session token, stepped up       |
+| `POST`   | `/api/me/mfa/backup_codes`    | Replaces your backup codes                        | Session token, stepped up       |
 
 ### Projects
 

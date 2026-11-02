@@ -414,13 +414,25 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Updates or Inserts the user's TOTP
+  Updates or Inserts the user's TOTP, saving the secret on `totp`, which the
+  code in `attrs` must match.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted the TOTP
+  after it was read.
   """
   @spec upsert_user_totp(UserTOTP.t(), map()) ::
-          {:ok, UserTOTP.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, UserTOTP.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def upsert_user_totp(totp, attrs) do
+    # The changeset casts only the code, so a new secret put on an existing
+    # TOTP has to be written as a change of its own.
+    changeset =
+      totp
+      |> UserTOTP.changeset(attrs)
+      |> Ecto.Changeset.force_change(:secret, totp.secret)
+
     Multi.new()
-    |> Multi.insert_or_update(:totp, UserTOTP.changeset(totp, attrs))
+    |> Multi.insert_or_update(:totp, changeset, stale_error_field: :id)
     |> Multi.update(:user, fn %{totp: totp} ->
       totp = Repo.preload(totp, [:user])
 
@@ -438,15 +450,24 @@ defmodule Lightning.Accounts do
     |> Repo.transaction()
     |> case do
       {:ok, %{totp: totp}} -> {:ok, totp}
-      {:error, :totp, changeset, _} -> {:error, changeset}
+      {:error, :totp, changeset, _} -> stale_or(changeset)
     end
   end
 
+  defp stale_or(%Changeset{errors: errors} = changeset) do
+    if Enum.any?(errors, fn {_field, {_message, opts}} -> opts[:stale] end),
+      do: {:error, :concurrent_edit},
+      else: {:error, changeset}
+  end
+
   @doc """
-  Deletes the given user's TOTP
+  Deletes the given user's TOTP.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted it first.
   """
   @spec delete_user_totp(UserTOTP.t()) ::
-          {:ok, UserTOTP.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, UserTOTP.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def delete_user_totp(totp) do
     Multi.new()
     |> Multi.update(:user, fn _changes ->
@@ -454,10 +475,11 @@ defmodule Lightning.Accounts do
 
       Ecto.Changeset.change(totp.user, %{mfa_enabled: false})
     end)
-    |> Multi.delete(:totp, totp)
+    |> Multi.delete(:totp, totp, stale_error_field: :id)
     |> Repo.transaction()
     |> case do
       {:ok, %{totp: totp}} -> {:ok, totp}
+      {:error, :totp, changeset, _} -> stale_or(changeset)
       {:error, _key, changeset, _} -> {:error, changeset}
     end
   end
@@ -508,21 +530,44 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Regenerates the user backup codes
+  Replaces the user's backup codes with ten new ones, returning the user with
+  them.
+
+  Returns `{:error, :concurrent_edit}`, and changes nothing, when another
+  request replaced or used up the codes after they were read.
   """
   @spec regenerate_user_backup_codes(User.t()) ::
-          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, User.t()} | {:error, :concurrent_edit}
   def regenerate_user_backup_codes(user) do
-    new_backup_codes =
-      Enum.map(1..10, fn _n ->
-        %UserBackupCode{code: UserBackupCode.generate_backup_code()}
-      end)
+    old_ids =
+      user
+      |> list_user_backup_codes()
+      |> Enum.map(& &1.id)
 
-    user
-    |> Repo.preload([:backup_codes])
-    |> Ecto.Changeset.change(%{})
-    |> Ecto.Changeset.put_assoc(:backup_codes, new_backup_codes)
-    |> Repo.update()
+    Multi.new()
+    |> Multi.delete_all(
+      :old,
+      from(b in UserBackupCode, where: b.id in ^old_ids)
+    )
+    |> Multi.run(:unchanged, fn _repo, %{old: {deleted, _}} ->
+      if deleted == length(old_ids),
+        do: {:ok, deleted},
+        else: {:error, :concurrent_edit}
+    end)
+    |> Multi.run(:new, fn repo, _changes ->
+      {:ok,
+       for _n <- 1..10 do
+         repo.insert!(%UserBackupCode{
+           user_id: user.id,
+           code: UserBackupCode.generate_backup_code()
+         })
+       end}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{new: codes}} -> {:ok, %{user | backup_codes: codes}}
+      {:error, :unchanged, :concurrent_edit, _} -> {:error, :concurrent_edit}
+    end
   end
 
   @doc """
