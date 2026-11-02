@@ -16,7 +16,7 @@ defmodule LightningWeb.API.HistoryExports.ReadingTest do
         project: project,
         created_by: author,
         status: :completed,
-        path: stored_zip(),
+        path: stored_export_zip(),
         inserted_at: ~U[2026-01-02 00:00:00Z],
         updated_at: ~U[2026-01-02 00:05:00Z]
       )
@@ -138,16 +138,5 @@ defmodule LightningWeb.API.HistoryExports.ReadingTest do
       )
       |> assert_problem(404, :not_found, [])
     end
-  end
-
-  defp stored_zip do
-    source = Path.join(System.tmp_dir!(), "export-#{Ecto.UUID.generate()}")
-    File.write!(source, "the-export-archive")
-    on_exit(fn -> File.rm(source) end)
-
-    {:ok, path} =
-      Lightning.Storage.store(source, "exports/#{Ecto.UUID.generate()}.zip")
-
-    path
   end
 end

@@ -198,4 +198,19 @@ defmodule LightningWeb.API.HistoryHelpers do
       {:over_the_plan, 402, :exceeds_limit}
     ]
   end
+
+  @doc """
+  Stores a small zip as an export's file and returns its storage path. The
+  local copy it is stored from is deleted when the test exits.
+  """
+  def stored_export_zip do
+    source = Path.join(System.tmp_dir!(), "export-#{Ecto.UUID.generate()}")
+    File.write!(source, "the-export-archive")
+    ExUnit.Callbacks.on_exit(fn -> File.rm(source) end)
+
+    {:ok, path} =
+      Lightning.Storage.store(source, "exports/#{Ecto.UUID.generate()}.zip")
+
+    path
+  end
 end
