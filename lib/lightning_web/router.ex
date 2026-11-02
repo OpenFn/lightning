@@ -148,6 +148,15 @@ defmodule LightningWeb.Router do
     resources "/credentials", API.CredentialController,
       only: [:index, :create, :delete]
 
+    get "/credentials/:id", API.CredentialController, :show
+    put "/credentials/:id", API.CredentialController, :update
+
+    get "/projects/:project_id/collections/:id", API.CollectionController, :show
+
+    put "/projects/:project_id/collections/:id",
+        API.CollectionController,
+        :update
+
     resources "/workflows", API.WorkflowsController, only: [:index, :show]
     resources "/jobs", API.JobController, only: [:index, :show]
     resources "/work_orders", API.WorkOrdersController, only: [:index, :show]
@@ -234,7 +243,7 @@ defmodule LightningWeb.Router do
     get "/download/yaml", DownloadsController, :download_project_yaml
 
     get "/download/collections/:project_id/:name",
-        CollectionsController,
+        CollectionDownloadController,
         :download
 
     get "/dataclip/body/:id", DataclipController, :show

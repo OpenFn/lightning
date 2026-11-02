@@ -27,6 +27,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Scope
   alias Lightning.Tokens.CredentialTransferToken
 
   require Logger
@@ -104,21 +105,9 @@ defmodule Lightning.Credentials do
   """
   @spec list_credentials(Project.t()) :: [Credential.t()]
   def list_credentials(%Project{} = project) do
-    query =
-      from c in Credential,
-        join: pc in assoc(c, :project_credentials),
-        on: pc.project_id == ^project.id,
-        preload: [
-          :user,
-          :project_credentials,
-          :projects,
-          :credential_bodies,
-          :oauth_client
-        ],
-        order_by: [asc: fragment("lower(?)", c.name)],
-        group_by: c.id
-
-    Repo.all(query)
+    project_credentials_query(project)
+    |> order_by([c], asc: fragment("lower(?)", c.name))
+    |> Repo.all()
   end
 
   @spec list_credentials(User.t()) :: [Credential.t()]
@@ -133,6 +122,48 @@ defmodule Lightning.Credentials do
       where: c.user_id == ^user_id,
       preload: [:projects, :user, :credential_bodies, :oauth_client]
     )
+  end
+
+  @doc """
+  A page of the credentials linked to `project`, or of those the scope's user
+  owns, ordered by name. Each carries all its links and projects.
+  """
+  @spec paginate_credentials_for(Project.t() | Scope.t(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_credentials_for(%Project{} = project, page) do
+    project
+    |> project_credentials_query()
+    |> paginate_by_name(page)
+  end
+
+  def paginate_credentials_for(%Scope{actor: %User{id: user_id}}, page) do
+    user_id
+    |> list_credentials_query()
+    |> paginate_by_name(page)
+  end
+
+  # Two owners may give a project's credentials the same name, so the id keeps
+  # a page boundary between them stable.
+  defp paginate_by_name(query, page) do
+    query
+    |> order_by([c], asc: fragment("lower(?)", c.name), asc: c.id)
+    |> Repo.paginate(page)
+  end
+
+  # `project_credentials` holds each credential and project pair once (a unique
+  # index), so the join gives one row per credential without grouping. Grouping
+  # would break the page count.
+  defp project_credentials_query(project) do
+    from c in Credential,
+      join: pc in assoc(c, :project_credentials),
+      on: pc.project_id == ^project.id,
+      preload: [
+        :user,
+        :project_credentials,
+        :projects,
+        :credential_bodies,
+        :oauth_client
+      ]
   end
 
   @doc """

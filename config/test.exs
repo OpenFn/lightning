@@ -188,10 +188,6 @@ config :lightning, :github_app,
   -----END RSA PRIVATE KEY-----
   """
 
-config :lightning, LightningWeb.CollectionsController,
-  default_stream_limit: 25,
-  max_database_limit: 15
-
 # The OIDC test suite serves discovery/JWKS/userinfo/token over http on
 # localhost via Bypass; allow those loopback endpoints to skip TLS verification.
 config :lightning, :auth_providers_allow_insecure_loopback, true
