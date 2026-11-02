@@ -7,6 +7,13 @@ defmodule LightningWeb.API.CollectionController do
       PUT /api/projects/:project_id/collections/:id  {"name": "patients"}
 
   Both answer `{"data": {"id", "project_id", "name"}}`.
+
+      GET /api/projects/:project_id/collections
+      GET /api/collections
+      DELETE /api/projects/:project_id/collections/:id
+
+  The lists are paged and take `sort`, and each collection in them carries
+  `byte_size_sum`. Every project's list adds `project_name`.
   """
   use LightningWeb, :controller
 
@@ -15,6 +22,7 @@ defmodule LightningWeb.API.CollectionController do
   alias Lightning.Projects.Project
   alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Filters
   alias LightningWeb.API.Request
   alias LightningWeb.API.Target
   alias LightningWeb.Plugs.AuthorizeAction
@@ -23,7 +31,11 @@ defmodule LightningWeb.API.CollectionController do
 
   plug AuthorizeAction,
        {:collections, :manage_collection}
-       when action in [:show, :update]
+       when action in [:show, :update, :index, :delete]
+
+  plug AuthorizeAction,
+       {:collections, :list_all_collections}
+       when action == :list_all
 
   @accepted [:id, :name]
   @manage_collection {:collections, :manage_collection}
@@ -126,4 +138,68 @@ defmodule LightningWeb.API.CollectionController do
   defp render_collection(conn, collection) do
     json(conn, %{data: Map.take(collection, [:id, :project_id, :name])})
   end
+
+  @doc """
+  A page of the project's collections, by `sort`.
+  """
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def index(conn, params) do
+    with {:ok, project} <-
+           Target.project(
+             conn.assigns.scope,
+             Request.param(conn, "project_id"),
+             @manage_collection
+           ),
+         {:ok, order_by} <-
+           params |> Filters.collection_sort() |> Errors.refuse_parameters() do
+      page =
+        Collections.paginate_project_collections(
+          project,
+          order_by,
+          Filters.page(params)
+        )
+
+      render(conn, :index, page: page, filters: sort_filter(params))
+    end
+  end
+
+  @doc """
+  A page of every project's collections, by `sort`, for a superuser or the
+  service account.
+  """
+  @spec list_all(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def list_all(conn, params) do
+    with {:ok, order_by} <-
+           params |> Filters.collection_sort() |> Errors.refuse_parameters() do
+      page = Collections.paginate_collections(order_by, Filters.page(params))
+      render(conn, :index_all, page: page, filters: sort_filter(params))
+    end
+  end
+
+  @doc """
+  Deletes the project's collection and every item in it, recording the
+  caller as having deleted it.
+  """
+  @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def delete(conn, _params) do
+    with {:ok, collection} <-
+           Target.in_project(
+             conn.assigns.scope,
+             Request.param(conn, "project_id"),
+             @manage_collection,
+             Request.param(conn, "id"),
+             &Collections.get_collection_for_project/2
+           ),
+         {:ok, _deleted} <-
+           Collections.delete_collection(
+             collection,
+             conn.assigns.current_resource
+           ) do
+      send_resp(conn, :no_content, "")
+    end
+  end
+
+  # Reached only once `collection_sort/1` has accepted the sort.
+  defp sort_filter(%{"sort" => sort}), do: %{sort: sort}
+  defp sort_filter(_params), do: %{}
 end

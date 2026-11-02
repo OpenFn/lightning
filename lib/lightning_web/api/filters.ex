@@ -129,6 +129,32 @@ defmodule LightningWeb.API.Filters do
   @spec collection_item_parameters() :: [String.t()]
   def collection_item_parameters, do: @collection_item_parameters
 
+  @collection_sorts %{
+    "name" => [asc: :name],
+    "-name" => [desc: :name],
+    "byte_size_sum" => [asc: :byte_size_sum],
+    "-byte_size_sum" => [desc: :byte_size_sum]
+  }
+
+  @doc """
+  The order `params` asks a collection list for, as `order_by` takes it, or a
+  changeset with an error on `sort`, which doesn't quote its value.
+
+  `sort` is `name` (the default) or `byte_size_sum`, with a `-` prefix for
+  descending.
+  """
+  @spec collection_sort(map()) :: {:ok, keyword()} | {:error, Changeset.t()}
+  def collection_sort(params) do
+    {%{sort: "name"}, %{sort: :string}}
+    |> Changeset.cast(params, [:sort])
+    |> Changeset.validate_inclusion(:sort, Map.keys(@collection_sorts))
+    |> Changeset.apply_action(:validate)
+    |> case do
+      {:ok, %{sort: sort}} -> {:ok, Map.fetch!(@collection_sorts, sort)}
+      error -> error
+    end
+  end
+
   @doc """
   The page `params` asks for, as `Lightning.Repo.paginate/2` takes it.
 
