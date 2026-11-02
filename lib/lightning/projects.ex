@@ -1671,10 +1671,18 @@ defmodule Lightning.Projects do
   set, this date defaults to NOW but the automatic project purge cronjob will
   never run. (Note that subsequent logins will be blocked for projects pending
   deletion.)
+
+  Given an `actor`, records a `deletion_scheduled` audit event against them in
+  the same transaction. Returns `{:error, :concurrent_edit}` when another
+  request deleted the project while this one ran.
   """
-  def schedule_project_deletion(project) do
+  @spec schedule_project_deletion(Project.t(), Lightning.Actor.t() | nil) ::
+          {:ok, Project.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit | :audit_failed}
+  def schedule_project_deletion(project, actor \\ nil) do
     Multi.new()
     |> scheduled_project_deletion_changes(project: project)
+    |> audit_deletion_change(:project, "deletion_scheduled", project, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project}} ->
@@ -1682,9 +1690,29 @@ defmodule Lightning.Projects do
 
         {:ok, updated_project}
 
+      {:error, :project, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
+      {:error, :audit_deletion, _changeset, _changes} ->
+        {:error, :audit_failed}
+
       {:error, _op, changeset, _changes} ->
         {:error, changeset}
     end
+  end
+
+  defp audit_deletion_change(multi, _project_op, _event, _project, nil),
+    do: multi
+
+  defp audit_deletion_change(multi, project_op, event, project, actor) do
+    Multi.insert(multi, :audit_deletion, fn changes ->
+      Audit.event(event, project.id, actor, %{
+        before: %{scheduled_deletion: project.scheduled_deletion},
+        after: %{
+          scheduled_deletion: Map.fetch!(changes, project_op).scheduled_deletion
+        }
+      })
+    end)
   end
 
   def scheduled_project_deletion_changes(multi, [{project_op, project}]) do
@@ -1710,7 +1738,8 @@ defmodule Lightning.Projects do
       project_op,
       Ecto.Changeset.change(project, %{
         scheduled_deletion: DateTime.truncate(date, :second)
-      })
+      }),
+      stale_error_field: :id
     )
     |> Multi.run("notify_users#{project.id}", fn _repo, _changes ->
       :ok =
@@ -1765,6 +1794,39 @@ defmodule Lightning.Projects do
     get_project!(project_id)
     |> Ecto.Changeset.change(%{scheduled_deletion: nil})
     |> Repo.update()
+  end
+
+  @doc """
+  Cancels the scheduled deletion of `project`, recording a `deletion_cancelled`
+  audit event against `actor` in the same transaction. It checks nothing about
+  `actor`; the caller authorises first.
+
+  Triggers disabled when the deletion was scheduled stay disabled.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted the project
+  while this one ran.
+  """
+  @spec cancel_scheduled_deletion(Project.t(), Lightning.Actor.t()) ::
+          {:ok, Project.t()} | {:error, :concurrent_edit | :audit_failed}
+  def cancel_scheduled_deletion(%Project{} = project, actor) do
+    Multi.new()
+    |> Multi.update(
+      :project,
+      Ecto.Changeset.change(project, %{scheduled_deletion: nil}),
+      stale_error_field: :id
+    )
+    |> audit_deletion_change(:project, "deletion_cancelled", project, actor)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{project: project}} ->
+        {:ok, project}
+
+      {:error, :project, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
+      {:error, :audit_deletion, _changeset, _changes} ->
+        {:error, :audit_failed}
+    end
   end
 
   defp wipe_dataclips_for(%Project{dataclip_retention_period: period} = project)

@@ -12,6 +12,8 @@ defmodule Lightning.Projects.Audit do
       "collaborator_role_changed",
       "created",
       "dataclip_retention_period_updated",
+      "deletion_cancelled",
+      "deletion_scheduled",
       "description_updated",
       "history_retention_period_updated",
       "name_updated",

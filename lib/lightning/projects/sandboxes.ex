@@ -57,6 +57,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
+  alias Lightning.ServiceAccount
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -867,7 +868,10 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
   * `{:error, reason}` - Database or other failure
   """
-  @spec schedule_sandbox_deletion(Project.t() | Ecto.UUID.t(), User.t()) ::
+  @spec schedule_sandbox_deletion(
+          Project.t() | Ecto.UUID.t(),
+          User.t() | ServiceAccount.t()
+        ) ::
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
   def schedule_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
     if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
@@ -876,6 +880,12 @@ defmodule Lightning.Projects.Sandboxes do
       {:error, :unauthorized}
     end
   end
+
+  # The service account acts on every project as if it held every role, so it
+  # is an admin of any sandbox. Only its token grant limits it, which the API
+  # checks through `Lightning.Policies.ProjectDeletion` before calling this.
+  def schedule_sandbox_deletion(%Project{} = sandbox, %ServiceAccount{}),
+    do: do_schedule_sandbox_deletion(sandbox)
 
   def schedule_sandbox_deletion(sandbox_id, %User{} = actor)
       when is_binary(sandbox_id) do
@@ -930,20 +940,29 @@ defmodule Lightning.Projects.Sandboxes do
           | Lightning.Extensions.UsageLimiting.error()
   def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
     if Permissions.can?(:sandboxes, :cancel_scheduled_deletion, actor, sandbox) do
-      case ProjectLimiter.limit_new_sandbox(sandbox.id) do
-        :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
-        {:error, _reason, _message} = error -> error
-      end
+      restore_within_limit(sandbox)
     else
       {:error, :unauthorized}
     end
   end
+
+  # As for scheduling: the service account is an admin of any sandbox, and the
+  # API checks its grant first.
+  def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %ServiceAccount{}),
+    do: restore_within_limit(sandbox)
 
   def cancel_scheduled_sandbox_deletion(sandbox_id, %User{} = actor)
       when is_binary(sandbox_id) do
     case Lightning.Projects.get_project(sandbox_id) do
       %Project{} = sandbox -> cancel_scheduled_sandbox_deletion(sandbox, actor)
       nil -> {:error, :not_found}
+    end
+  end
+
+  defp restore_within_limit(%Project{} = sandbox) do
+    case ProjectLimiter.limit_new_sandbox(sandbox.id) do
+      :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
+      {:error, _reason, _message} = error -> error
     end
   end
 
