@@ -154,6 +154,82 @@ defmodule LightningWeb.API.AuditEvents.ListingTest do
              }
     end
 
+    test "OAuth client secrets and webhook auth method credentials are left out of changes",
+         %{conn: conn, superuser: superuser} do
+      project = insert(:project)
+
+      {:ok, client} =
+        Lightning.OauthClients.create_client(
+          %{
+            name: "DHIS2 client",
+            client_id: "dhis2-client-id",
+            client_secret: "first-client-secret",
+            authorization_endpoint: "https://www.example.com",
+            token_endpoint: "https://www.example.com/token",
+            user_id: superuser.id
+          },
+          superuser
+        )
+
+      {:ok, _client} =
+        Lightning.OauthClients.update_client(
+          client,
+          %{name: "DHIS2", client_secret: "second-client-secret"},
+          superuser
+        )
+
+      for attrs <- [
+            %{
+              auth_type: "basic",
+              username: "ada",
+              password: "correct horse battery"
+            },
+            %{auth_type: "api"}
+          ] do
+        {:ok, _auth_method} =
+          attrs
+          |> Map.merge(%{
+            name: "auth #{attrs.auth_type}",
+            project_id: project.id
+          })
+          |> Lightning.WebhookAuthMethods.create_auth_method(actor: superuser)
+      end
+
+      changes =
+        for item_type <- ["oauth_client", "webhook_auth_method"],
+            event <-
+              json_response(
+                get(conn, ~p"/api/audit_events?item_type=#{item_type}"),
+                200
+              )["data"],
+            into: %{} do
+          %{"attributes" => %{"event" => name, "changes" => changes}} = event
+          {{item_type, name, changes["after"]["name"]}, changes}
+        end
+
+      assert changes[{"oauth_client", "updated", "DHIS2"}] == %{
+               "before" => %{"name" => "DHIS2 client"},
+               "after" => %{"name" => "DHIS2"}
+             }
+
+      assert %{"before" => nil, "after" => created} =
+               changes[{"oauth_client", "created", "DHIS2 client"}]
+
+      refute Map.has_key?(created, "client_secret")
+
+      for auth_type <- ["basic", "api"] do
+        assert %{"before" => nil, "after" => after_change} =
+                 changes[{"webhook_auth_method", "created", "auth #{auth_type}"}]
+
+        assert after_change["auth_type"] == auth_type
+
+        refute Enum.any?(
+                 ~w(username password api_key),
+                 &Map.has_key?(after_change, &1)
+               )
+      end
+    end
+
     test "a superuser's session token and the service account with audit:read list them too",
          %{conn: conn, superuser: superuser} do
       audit = insert(:audit, actor_type: :user, actor_id: superuser.id)
