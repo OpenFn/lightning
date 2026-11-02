@@ -166,10 +166,13 @@ defmodule Lightning.WebhookAuthMethods do
     - Audit events are created for both the creation of the `WebhookAuthMethod` and its association with a trigger, if applicable.
 
   """
-  @spec create_auth_method(map(), actor: User.t()) ::
+  @spec create_auth_method(map(), actor: User.t(), id: Ecto.UUID.t()) ::
           {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
-  def create_auth_method(attrs, actor: %User{} = user) do
-    changeset = WebhookAuthMethod.changeset(%WebhookAuthMethod{}, attrs)
+  def create_auth_method(attrs, opts) when is_list(opts) do
+    %User{} = user = Keyword.fetch!(opts, :actor)
+
+    changeset =
+      WebhookAuthMethod.changeset(%WebhookAuthMethod{id: opts[:id]}, attrs)
 
     Multi.new()
     |> Multi.insert(:auth_method, changeset)
@@ -232,6 +235,7 @@ defmodule Lightning.WebhookAuthMethods do
 
     - `{:ok, %WebhookAuthMethod{}}`: A tuple containing `:ok` and the updated `WebhookAuthMethod` struct if the update is successful.
     - `{:error, %Ecto.Changeset{}}`: A tuple containing `:error` and the changeset with errors if the update fails.
+    - `{:error, :concurrent_edit}`: another request deleted the method since it was read.
 
   ## Examples
 
@@ -256,7 +260,8 @@ defmodule Lightning.WebhookAuthMethods do
 
   """
   @spec update_auth_method(WebhookAuthMethod.t(), map(), actor: User.t()) ::
-          {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, WebhookAuthMethod.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def update_auth_method(
         %WebhookAuthMethod{} = webhook_auth_method,
         attrs,
@@ -265,7 +270,7 @@ defmodule Lightning.WebhookAuthMethods do
     changeset = WebhookAuthMethod.update_changeset(webhook_auth_method, attrs)
 
     Multi.new()
-    |> Multi.update(:auth_method, changeset)
+    |> Multi.update(:auth_method, changeset, stale_error_field: :id)
     |> Multi.insert(
       :audit,
       fn %{auth_method: auth_method} ->
@@ -281,6 +286,10 @@ defmodule Lightning.WebhookAuthMethods do
     |> case do
       {:ok, %{auth_method: auth_method}} ->
         {:ok, auth_method}
+
+      {:error, :auth_method, %Ecto.Changeset{errors: [id: {_, stale: true}]},
+       _changes} ->
+        {:error, :concurrent_edit}
 
       {:error, :auth_method, changeset, _changes} ->
         {:error, changeset}
@@ -472,6 +481,22 @@ defmodule Lightning.WebhookAuthMethods do
   end
 
   @doc """
+  A page of the project's webhook auth methods, as `list_for_project/1` lists
+  them (leaving out those scheduled for deletion, ordered by name), each with
+  its `triggers` preloaded. `page` is what `Lightning.Repo.paginate/2` takes.
+  """
+  @spec paginate_for_project(Project.t(), keyword() | map()) ::
+          Scrivener.Page.t()
+  def paginate_for_project(%Project{id: project_id}, page) do
+    WebhookAuthMethod
+    |> where(project_id: ^project_id)
+    |> where([wam], is_nil(wam.scheduled_deletion))
+    |> order_by([:name, :id])
+    |> preload(:triggers)
+    |> Repo.paginate(page)
+  end
+
+  @doc """
   Retrieves a list of `WebhookAuthMethod`s associated with the specified `Trigger`.
 
   This function filters out `WebhookAuthMethod`s that are scheduled for deletion, ensuring that only active methods are returned.
@@ -618,6 +643,16 @@ defmodule Lightning.WebhookAuthMethods do
   end
 
   @doc """
+  The `WebhookAuthMethod` with `id` in any project, with `triggers` preloaded,
+  or `nil`. For telling a free id from one held in another project; reach a
+  project's own methods through `find_for_project/3`.
+  """
+  @spec get(Ecto.UUID.t()) :: WebhookAuthMethod.t() | nil
+  def get(id) do
+    WebhookAuthMethod |> Repo.get(id) |> Repo.preload(:triggers)
+  end
+
+  @doc """
   Schedules a `WebhookAuthMethod` for deletion by setting its `scheduled_deletion` date.
 
   This function does not delete the record immediately. Instead, it sets the `scheduled_deletion` field to a date in the future as defined by the application's environment settings.
@@ -651,6 +686,7 @@ defmodule Lightning.WebhookAuthMethods do
     - `{:ok, webhook_auth_method}`: Returns an `:ok` tuple with the updated webhook auth method struct if the
         update was successful.
     - `{:error, changeset}`: Returns an `:error` tuple with the changeset if the update failed.
+    - `{:error, :concurrent_edit}`: another request deleted the method since it was read.
 
   ## Examples
 
@@ -670,7 +706,8 @@ defmodule Lightning.WebhookAuthMethods do
   """
 
   @spec schedule_for_deletion(WebhookAuthMethod.t(), actor: User.t()) ::
-          {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, WebhookAuthMethod.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def schedule_for_deletion(%WebhookAuthMethod{} = webhook_auth_method,
         actor: %User{} = user
       ) do
@@ -692,7 +729,8 @@ defmodule Lightning.WebhookAuthMethods do
         :auth_method,
         WebhookAuthMethod.changeset(webhook_auth_method, %{
           "scheduled_deletion" => deletion_date
-        })
+        }),
+        stale_error_field: :id
       )
       |> Multi.delete_all(
         :trigger_associations,
@@ -726,6 +764,10 @@ defmodule Lightning.WebhookAuthMethods do
       |> case do
         {:ok, %{auth_method: auth_method}} ->
           {:ok, auth_method}
+
+        {:error, :auth_method, %Ecto.Changeset{errors: [id: {_, stale: true}]},
+         _changes} ->
+          {:error, :concurrent_edit}
 
         {:error, _step, changeset, _changes} ->
           {:error, changeset}

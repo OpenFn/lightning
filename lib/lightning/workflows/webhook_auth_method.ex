@@ -64,17 +64,22 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
     ])
     |> validate_required([:name, :auth_type, :project_id])
     |> validate_auth_fields()
-    |> unique_constraint(
-      :name,
-      name: "webhook_auth_methods_name_project_id_index",
-      message: "must be unique within the project"
-    )
+    |> unique_constraint_on_name()
+    |> unique_constraint(:id, name: :webhook_auth_methods_pkey)
   end
 
   def update_changeset(struct, params) do
     struct
     |> cast(params, [:name])
     |> validate_required([:name])
+    |> unique_constraint_on_name()
+  end
+
+  defp unique_constraint_on_name(changeset) do
+    unique_constraint(changeset, :name,
+      name: "webhook_auth_methods_name_project_id_index",
+      message: "must be unique within the project"
+    )
   end
 
   defp validate_auth_fields(changeset) do
