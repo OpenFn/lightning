@@ -3,20 +3,19 @@ defmodule LightningWeb.SessionTokenTest do
   The session token on the bearer API pipeline: which requests it
   authenticates, how a write without its CSRF token is refused, that it acts
   as the person like a personal access token, and how a route that takes only
-  a session token, or a stepped-up one, refuses everything else. Bearer token
-  kinds are in `LightningWeb.AuthTest`.
+  a stepped-up session token refuses one that isn't. Which token kinds each
+  route takes, the session token among them, is in `LightningWeb.AuthTest`;
+  `Decision.session/3` refusing every other kind is in its unit test.
   """
   use LightningWeb.ConnCase, async: true
 
   import LightningWeb.API.ProblemHelpers
   import LightningWeb.API.SessionHelpers
   import Lightning.Factories
-  import Lightning.ServiceAccountHelpers
 
   alias Lightning.Accounts
   alias Lightning.Config.API, as: ConfigAPI
   alias Lightning.Policies.Decision
-  alias Lightning.ServiceAccount.AccessToken
   alias LightningWeb.Plugs.AuthorizeAction
   alias LightningWeb.Plugs.PersonOrServiceAccountAuth
 
@@ -184,27 +183,6 @@ defmodule LightningWeb.SessionTokenTest do
   end
 
   describe "a route that takes only a session token" do
-    setup %{user: user, project: project} do
-      {account, _private_key} = service_account_with_key()
-      Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
-
-      bearer = fn token ->
-        build_conn()
-        |> put_req_header("accept", "application/json")
-        |> put_req_header("authorization", "Bearer " <> token)
-      end
-
-      %{
-        bearers: [
-          bearer.(Accounts.generate_api_token(user)),
-          bearer.(AccessToken.issue(account, AccessToken.scopes())),
-          bearer.(
-            insert(:project_repo_connection, project: project).access_token
-          )
-        ]
-      }
-    end
-
     test "lets a session token through, with its kind on the scope", %{
       user: user
     } do
@@ -212,16 +190,6 @@ defmodule LightningWeb.SessionTokenTest do
 
       refute conn.halted
       assert %{token_kind: :session, stepped_up_until: nil} = conn.assigns.scope
-    end
-
-    test "refuses every bearer token kind with forbidden", %{bearers: bearers} do
-      for conn <- bearers, action <- [:manage_account, :turn_off_mfa] do
-        conn = authorize(conn, action)
-
-        assert conn.halted
-        assert_problem(conn, 403, :forbidden, [])
-        assert get_resp_header(conn, "www-authenticate") == []
-      end
     end
 
     test "that needs step-up refuses a session that hasn't stepped up in the last five minutes",

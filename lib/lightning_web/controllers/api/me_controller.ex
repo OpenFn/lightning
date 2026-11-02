@@ -4,7 +4,8 @@ defmodule LightningWeb.API.MeController do
   `GET /api/users/:id` gives. A personal access token or a session token may
   read it; the service account and repo connections are not people and are
   refused 403 `forbidden`. A session token also gets what the account page
-  shows.
+  shows; `identities`, `ai_disclaimer_accepted_at` and `consent` aren't stored
+  yet, so they are always `[]`, `null` and `null`.
   """
   use LightningWeb, :controller
 
@@ -31,7 +32,11 @@ defmodule LightningWeb.API.MeController do
           experimental_features: Accounts.experimental_features_enabled?(user),
           has_activity_in_projects: Accounts.has_activity_in_projects?(user),
           pending_email: Accounts.pending_email(user),
-          github: github(user.github_oauth_token)
+          github: github(user.github_oauth_token),
+          # Not stored yet: sent empty so a client finds every key.
+          identities: [],
+          ai_disclaimer_accepted_at: nil,
+          consent: nil
         }
       end
 
