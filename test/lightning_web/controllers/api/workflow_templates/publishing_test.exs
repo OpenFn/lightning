@@ -137,6 +137,45 @@ defmodule LightningWeb.API.WorkflowTemplates.PublishingTest do
 
       refute Repo.exists?(WorkflowTemplate)
     end
+
+    test "a body that isn't a JSON object answers 400 and publishes nothing",
+         %{conn: conn, support: support, workflow: workflow} do
+      conn
+      |> session_conn(support)
+      |> put(~p"/api/workflows/#{workflow.id}/template", "[1, 2]")
+      |> assert_problem(400, :malformed, [])
+
+      refute Repo.exists?(WorkflowTemplate)
+    end
+
+    test "publishing the same body again answers 200 and writes nothing",
+         %{conn: conn, support: support, workflow: workflow} do
+      body = %{name: "same", description: "unchanged", tags: ["dhis2"]}
+
+      conn |> assign_bearer(support) |> publish(workflow.id, body)
+      first = Repo.get_by!(WorkflowTemplate, workflow_id: workflow.id)
+
+      # Any write would move updated_at off this mark.
+      first =
+        Repo.update!(
+          Ecto.Changeset.change(first, updated_at: ~N[2000-01-01 00:00:00])
+        )
+
+      conn = conn |> assign_bearer(support) |> publish(workflow.id, body)
+
+      assert json_response(conn, 200) == %{
+               "template" => %{
+                 "id" => first.id,
+                 "name" => "same",
+                 "description" => "unchanged",
+                 "tags" => ["dhis2"],
+                 "workflow_id" => workflow.id,
+                 "code" => saved_code(workflow)
+               }
+             }
+
+      assert Repo.reload!(first) == first
+    end
   end
 
   describe "who may reach it" do

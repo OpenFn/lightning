@@ -353,12 +353,16 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
-    test "a workflow's snapshots and versions, and the workflow templates, take a person's tokens, and refuse the service account and a repo connection with 403",
+    test "a workflow's snapshots, one snapshot, its versions, and the workflow templates take a person's tokens, and refuse the service account and a repo connection with 403",
          %{conn: conn, tokens: tokens, project: project} do
       workflow = insert(:simple_workflow, project: project) |> with_snapshot()
 
+      snapshot =
+        Repo.get_by!(Lightning.Workflows.Snapshot, workflow_id: workflow.id)
+
       for path <- [
             ~p"/api/workflows/#{workflow.id}/snapshots",
+            ~p"/api/workflows/#{workflow.id}/snapshots/#{snapshot.id}",
             ~p"/api/workflows/#{workflow.id}/versions",
             ~p"/api/workflow_templates"
           ] do

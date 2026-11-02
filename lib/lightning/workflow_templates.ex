@@ -194,12 +194,16 @@ defmodule Lightning.WorkflowTemplates do
   template, so publishing again replaces it.
 
   `workflow` must have its jobs, triggers and edges loaded. Answers whether the
-  template was `:created` or `:updated`, a changeset for invalid `attrs`, or
-  `{:error, :export_conflict}` when two of its jobs export under the same key.
+  template was `:created` or `:updated`, a changeset for invalid `attrs`,
+  `{:error, :export_conflict}` when two of its jobs export under the same key,
+  or `{:error, :concurrent_edit}` when the workflow is deleted mid-publish.
+
+  Any other failure to serialize the workflow is a bug rather than an answer,
+  so it raises the serializer's exception.
   """
   @spec publish_workflow(Workflow.t(), map()) ::
           {:ok, :created | :updated, WorkflowTemplate.t()}
-          | {:error, Ecto.Changeset.t() | :export_conflict}
+          | {:error, Ecto.Changeset.t() | :export_conflict | :concurrent_edit}
   def publish_workflow(%Workflow{} = workflow, attrs) do
     case Lightning.Workflows.YamlFormat.V2.serialize_workflow(workflow) do
       {:ok, code} ->
@@ -214,6 +218,9 @@ defmodule Lightning.WorkflowTemplates do
 
       {:error, message} when is_binary(message) ->
         {:error, :export_conflict}
+
+      {:error, {:serialize_failed, exception}} ->
+        raise exception
     end
   end
 
