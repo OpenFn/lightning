@@ -224,6 +224,8 @@ defmodule LightningWeb.Router do
     # shut out pending confirmation)
     post "/password_resets", API.PasswordResetController, :create
     put "/password_resets/:token", API.PasswordResetController, :update
+    post "/confirmations", API.ConfirmationController, :create
+    put "/confirmations/:token", API.ConfirmationController, :update
     # end-api-area:account
   end
 
