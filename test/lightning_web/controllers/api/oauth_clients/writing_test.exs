@@ -147,6 +147,67 @@ defmodule LightningWeb.API.OauthClients.WritingTest do
       assert json_response(conn, 200)["data"]["name"] == client.name
       assert events(client.id) == []
     end
+
+    test "putting back what GET returned keeps the links to projects the owner can't see, and records nothing",
+         %{conn: conn, user: user, project: project} do
+      left = insert(:project)
+
+      short_of_mfa =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :editor}]
+        )
+
+      client = insert(:oauth_client, user: user)
+
+      for linked <- [project, left, short_of_mfa],
+          do:
+            insert(:project_oauth_client, oauth_client: client, project: linked)
+
+      conn = session_conn(conn, user)
+
+      [shown] =
+        conn
+        |> get(~p"/api/oauth_clients")
+        |> json_response(200)
+        |> Map.fetch!("data")
+
+      assert shown["project_ids"] == [project.id]
+
+      body = Map.drop(shown, ["id", "user_id", "inserted_at", "updated_at"])
+
+      assert conn
+             |> put_client(client.id, body)
+             |> json_response(200)
+             |> get_in(["data", "project_ids"]) == [project.id]
+
+      assert linked_project_ids(client.id) ==
+               Enum.sort([project.id, left.id, short_of_mfa.id])
+
+      assert events(client.id) == []
+    end
+
+    test "dropping every link it was shown keeps the ones it wasn't", %{
+      conn: conn,
+      user: user,
+      project: project
+    } do
+      left = insert(:project)
+      client = insert(:oauth_client, user: user)
+
+      for linked <- [project, left],
+          do:
+            insert(:project_oauth_client, oauth_client: client, project: linked)
+
+      conn =
+        conn
+        |> session_conn(user)
+        |> put_client(client.id, client_body(%{"project_ids" => []}))
+
+      assert json_response(conn, 200)["data"]["project_ids"] == []
+      assert linked_project_ids(client.id) == [left.id]
+      assert "removed_from_project" in events(client.id)
+    end
   end
 
   describe "refusing a body" do

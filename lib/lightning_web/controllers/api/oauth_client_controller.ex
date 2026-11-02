@@ -88,7 +88,9 @@ defmodule LightningWeb.API.OauthClientController do
   Creates the client under the path's id, owned by the caller, or replaces the
   one that has it, which only its owner may. A replace sets every field the
   body leaves out to empty, except `client_secret`, which it keeps, and
-  `global`. `project_ids` is the client's whole list of project links.
+  `global`. `project_ids` is the client's whole list of links among the
+  projects the caller can see. A link to a project they can't see, which the
+  client's JSON leaves out, is kept whatever the body says.
 
   Only a superuser may change `global`, and linking a project needs editor or
   above in it. A refused body answers one 422 with every error together.
@@ -211,9 +213,11 @@ defmodule LightningWeb.API.OauthClientController do
 
   # The links the client keeps, each with its id so `cast_assoc` keeps it, the
   # ones it loses, marked for deletion, and the new ones, each refused unless
-  # the caller may link a credential in that project.
+  # the caller may link a credential in that project. A held link to a project
+  # the caller can't see was never shown to them, so it is kept.
   defp links(%{"project_ids" => ids}, current, scope) when is_list(ids) do
     held = held_links(current)
+    shown = shown_project_ids(scope, Map.keys(held))
 
     checked =
       ids
@@ -244,7 +248,7 @@ defmodule LightningWeb.API.OauthClientController do
 
     links =
       Enum.map(held, fn {project_id, link_id} ->
-        if project_id in wanted,
+        if project_id in wanted or project_id not in shown,
           do: %{"id" => link_id, "project_id" => project_id},
           else: %{"id" => link_id, "delete" => "true"}
       end) ++
@@ -360,20 +364,14 @@ defmodule LightningWeb.API.OauthClientController do
   # a global client someone else linked to their own projects. Those links are
   # left out.
   defp hide_unseen_links(clients, scope) do
-    scopes =
-      Scope.fetch_all(
+    shown =
+      shown_project_ids(
         scope,
         clients
         |> Enum.flat_map(& &1.project_oauth_clients)
         |> Enum.map(& &1.project_id)
         |> Enum.uniq()
       )
-
-    shown =
-      for {id, project_scope} <- scopes,
-          ProjectUsers.permitted?(:list_project_credentials, project_scope),
-          into: MapSet.new(),
-          do: id
 
     Enum.map(clients, fn client ->
       %{
@@ -382,5 +380,14 @@ defmodule LightningWeb.API.OauthClientController do
             Enum.filter(client.project_oauth_clients, &(&1.project_id in shown))
       }
     end)
+  end
+
+  # The projects among `project_ids` whose links the caller is shown: those
+  # whose credentials they may list.
+  defp shown_project_ids(scope, project_ids) do
+    for {id, project_scope} <- Scope.fetch_all(scope, project_ids),
+        ProjectUsers.permitted?(:list_project_credentials, project_scope),
+        into: MapSet.new(),
+        do: id
   end
 end
