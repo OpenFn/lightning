@@ -182,6 +182,8 @@ defmodule LightningWeb.Router do
   scope "/api", LightningWeb, as: :api do
     pipe_through [:session_api]
 
+    get "/instance", API.InstanceController, :show
+
     resources "/session", API.SessionController,
       singleton: true,
       only: [:create, :show, :delete]

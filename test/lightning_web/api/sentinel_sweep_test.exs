@@ -111,7 +111,8 @@ defmodule LightningWeb.API.SentinelSweepTest do
   @session_api %{
     {:post, "/api/session"} => @forbidden,
     {:get, "/api/session"} => @session,
-    {:delete, "/api/session"} => {204, nil, []}
+    {:delete, "/api/session"} => {204, nil, []},
+    {:get, "/api/instance"} => {200, nil, []}
   }
 
   setup do
