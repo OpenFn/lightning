@@ -181,6 +181,9 @@ The service account must send `project_id` to list credentials at
 | `DELETE` | `/api/credentials/:id/scheduled_deletion`   | Cancels a credential's scheduled deletion              | `credentials:write`             |
 | `PUT`    | `/api/projects/:project_id/credentials/:id` | Links a credential to a project                        | `credentials:write`             |
 | `DELETE` | `/api/projects/:project_id/credentials/:id` | Unlinks a credential from a project                    | `credentials:write`             |
+| `GET`    | `/api/credentials/:id/environments`         | Lists a credential's environments                      | `credentials:write`             |
+| `PUT`    | `/api/credentials/:id/environments/:name`   | Creates or replaces an environment's body              | `credentials:write`             |
+| `DELETE` | `/api/credentials/:id/environments/:name`   | Deletes an environment                                 | `credentials:write`             |
 
 ### Workflows and runs
 
