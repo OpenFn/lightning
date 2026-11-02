@@ -284,7 +284,7 @@ defmodule Lightning.Scope do
   # project is refused like a missing one: the connection has no standing on
   # it, and a distinct refusal would confirm it exists.
   defp connection_owns?(%ProjectRepoConnection{project_id: id}, %Project{id: id}),
-    do: :ok
+       do: :ok
 
   defp connection_owns?(%ProjectRepoConnection{}, %Project{}),
     do: {:error, :no_standing}
@@ -368,7 +368,7 @@ defmodule Lightning.Scope do
   # A support user is a human reading project data, so the rule binds them as
   # much as a member and nothing here consults `support_user`.
   defp mfa_satisfied?(%Project{requires_mfa: true}, %User{mfa_enabled: enrolled}),
-    do: enrolled == true
+       do: enrolled == true
 
   defp mfa_satisfied?(%Project{}, %User{}), do: true
 end
