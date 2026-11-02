@@ -219,6 +219,13 @@ defmodule LightningWeb.Router do
 
     put "/oauth_clients/:id", API.OauthClientController, :update
     delete "/oauth_clients/:id", API.OauthClientController, :delete
+
+    delete "/users/:id", API.UserDeletionController, :delete
+
+    delete "/users/:id/scheduled_deletion",
+           API.UserDeletionController,
+           :cancel
+
     # end-api-area:credential_extras
 
     # api-area:workflows (routes for this area go between these markers)

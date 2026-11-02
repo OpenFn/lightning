@@ -320,6 +320,10 @@ defmodule LightningWeb.API.SentinelSweepTest do
   defp expected(%{verb: :delete, path: "/api/oauth_clients/:id"}, :planted),
     do: @forbidden
 
+  defp expected(%{path: "/api/users/:id/scheduled_deletion"}, attempt)
+       when attempt in [:planted, :array],
+       do: @forbidden
+
   defp expected(%{pipeline: [:session_api], verb: verb, path: path}, _attempt),
     do: Map.fetch!(@session_api, {verb, path})
 

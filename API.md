@@ -151,6 +151,13 @@ route "not open to the service account" answers its token with 403 `forbidden`.
 | `PATCH`  | `/api/users/:id`      | Changes a user                                      | `users:write`                   |
 | `POST`   | `/api/users/register` | Signs up, where the instance offers it              | None                            |
 
+### Deleting users
+
+| Method   | Path                                | What it does                        | Token grant   |
+| -------- | ----------------------------------- | ----------------------------------- | ------------- |
+| `DELETE` | `/api/users/:id`                    | Schedules a user's deletion         | `users:write` |
+| `DELETE` | `/api/users/:id/scheduled_deletion` | Cancels a user's scheduled deletion | `users:write` |
+
 ### Projects
 
 | Method | Path                                        | What it does                                                  | Token grant                     |
