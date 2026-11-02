@@ -9,7 +9,9 @@ defmodule LightningWeb.API.UserDeletionController do
   straight away, and emails them. Lightning removes them after the instance's
   retention period, unless they have created runs. A user already scheduled
   answers 409 `scheduled_for_deletion`, so a retry never turns into anything
-  more, and a superuser can't be scheduled.
+  more. A superuser can't be scheduled and answers 409 `superuser`, since the
+  refusal is about the user the path names; changing their role first clears
+  it.
 
   Cancelling re-enables the user and answers 200 with them. A user who isn't
   scheduled answers 404 `not_found`.
@@ -18,7 +20,6 @@ defmodule LightningWeb.API.UserDeletionController do
 
   alias Lightning.Accounts
   alias Lightning.Accounts.User
-  alias LightningWeb.API.Errors
   alias LightningWeb.API.FallbackController
   alias LightningWeb.API.Request
   alias LightningWeb.Plugs.AuthorizeAction
@@ -61,18 +62,13 @@ defmodule LightningWeb.API.UserDeletionController do
   defp not_scheduled(%User{}), do: {:error, :scheduled_for_deletion}
 
   # The app asks for the user's email as a confirmation. The route names the
-  # user by id, so it confirms with their own.
+  # user by id, so it confirms with their own. The context refuses a
+  # superuser with a `not_allowed` error.
   defp schedule(user, actor) do
     case Accounts.schedule_user_deletion(user, user.email, actor) do
       {:error, %Ecto.Changeset{errors: errors} = changeset} ->
         if Enum.any?(errors, &match?({_, {_, [code: :not_allowed]}}, &1)),
-          do:
-            Errors.refuse([
-              Errors.entry(
-                {:path, "id"},
-                {"names a superuser, who can't be deleted", code: :not_allowed}
-              )
-            ]),
+          do: {:error, :superuser},
           else: {:error, changeset}
 
       result ->
