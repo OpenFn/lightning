@@ -846,7 +846,11 @@ defmodule Lightning.AccountsTest do
 
     test "purging a user sets all project credentials that use their credentials to nil" do
       user = insert(:user)
-      project = Lightning.ProjectsFixtures.project_fixture()
+
+      project =
+        Lightning.ProjectsFixtures.project_fixture(
+          project_users: [%{user_id: user.id}]
+        )
 
       project_credential_1 =
         CredentialsFixtures.project_credential_fixture(
@@ -1419,6 +1423,14 @@ defmodule Lightning.AccountsTest do
       refute Accounts.get_user_by_session_token(session_token)
       assert UserToken.user_and_contexts_query(user, :all) |> Repo.all() == []
       assert_transports_disconnected(user)
+    end
+
+    test "a user another request deleted is a concurrent edit, not a raise" do
+      user = insert(:user)
+      Repo.delete!(user)
+
+      assert Accounts.update_user(user, %{"first_name" => "Renamed"}) ==
+               {:error, :concurrent_edit}
     end
 
     test "editing other fields leaves the user's sessions untouched" do
