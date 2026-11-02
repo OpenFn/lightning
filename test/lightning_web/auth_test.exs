@@ -353,6 +353,56 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "GET /api/oauth_clients takes a person's tokens, and refuses the service account, which owns no client, with 403",
+         %{conn: conn, tokens: tokens} do
+      assert_each_kind(conn, tokens, ~p"/api/oauth_clients",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: {:insufficient_scope, "credentials:write"},
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
+    test "a project's keychain credentials and OAuth clients take a member's tokens and the service account's",
+         %{conn: conn, tokens: tokens, project: project} do
+      for path <- [
+            ~p"/api/projects/#{project.id}/keychain_credentials",
+            ~p"/api/projects/#{project.id}/oauth_clients"
+          ] do
+        assert_each_kind(conn, tokens, path,
+          service_account: :logs_in,
+          expired_service_account: :expired_token,
+          personal: :logs_in,
+          repo_connection: {:insufficient_scope, "credentials:write"},
+          run: :invalid_token,
+          session: :logs_in
+        )
+      end
+    end
+
+    test "a project's collections take an owner's tokens, and every collection only the service account's or a superuser's",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind(conn, tokens, ~p"/api/projects/#{project.id}/collections",
+        service_account: :logs_in,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: {:insufficient_scope, "collections:write"},
+        run: :invalid_token,
+        session: :logs_in
+      )
+
+      assert_each_kind(conn, tokens, ~p"/api/collections",
+        service_account: :logs_in,
+        expired_service_account: :expired_token,
+        personal: :forbidden,
+        repo_connection: {:insufficient_scope, "collections:write"},
+        run: :invalid_token,
+        session: :forbidden
+      )
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens

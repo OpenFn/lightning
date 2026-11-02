@@ -331,6 +331,33 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
       end
     end
 
+    test "refuses a project's keychain credentials, OAuth clients and collections, and serves them to an enrolled member",
+         %{
+           conn: conn,
+           project: project,
+           enrolled_user: user,
+           enrolled_project: enrolled_project
+         } do
+      paths = fn project ->
+        [
+          ~p"/api/projects/#{project.id}/keychain_credentials",
+          ~p"/api/projects/#{project.id}/oauth_clients",
+          ~p"/api/projects/#{project.id}/collections"
+        ]
+      end
+
+      for path <- paths.(project) do
+        conn |> get(path) |> assert_problem(403, :forbidden, [])
+      end
+
+      enrolled = bearer_conn(user)
+
+      for path <- paths.(enrolled_project) do
+        assert get(enrolled, path).status == 200,
+               "#{path} was refused to an enrolled member"
+      end
+    end
+
     # The unfiltered lists don't apply a project's MFA requirement yet (SEC-440).
     test "does not yet filter the un-nested list endpoints", %{
       conn: conn,

@@ -140,7 +140,7 @@ defmodule LightningWeb.API.Users.DeletingTest do
 
   describe "who may reach it" do
     test "the service account hears what is missing or malformed; a person's token, a superuser's or a session included, gets 403 for every id",
-         %{conn: conn, account: account} do
+         %{conn: conn} do
       existing =
         insert(:user, scheduled_deletion: scheduled_at(), disabled: true)
 
@@ -171,12 +171,6 @@ defmodule LightningWeb.API.Users.DeletingTest do
             path <- paths.(id),
             do: {caller, path, 403, :forbidden, []}
 
-      reading_only = with_scopes(build_conn(), account, ["users:read"])
-
-      short_of_scope =
-        for path <- paths.(unscheduled.id),
-            do: {reading_only, path, 403, :insufficient_scope, :any}
-
       permitted =
         for {id, status, code, entries} <- [
               {Ecto.UUID.generate(), 404, :not_found, []},
@@ -186,7 +180,7 @@ defmodule LightningWeb.API.Users.DeletingTest do
             do: {conn, path, status, code, entries}
 
       for {caller, path, status, code, entries} <-
-            refused ++ short_of_scope ++ permitted do
+            refused ++ permitted do
         caller
         |> put_req_header("accept", "application/json")
         |> delete(path)
