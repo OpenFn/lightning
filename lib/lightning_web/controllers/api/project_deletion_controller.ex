@@ -76,7 +76,11 @@ defmodule LightningWeb.API.ProjectDeletionController do
     do: Projects.schedule_project_deletion(project, actor)
 
   defp schedule(sandbox, actor),
-    do: sandbox |> Sandboxes.schedule_sandbox_deletion(actor) |> as_forbidden()
+    do:
+      sandbox
+      |> Sandboxes.schedule_sandbox_deletion(actor)
+      |> as_forbidden()
+      |> unless_gone(sandbox)
 
   defp restore(%Project{parent_id: nil} = project, actor),
     do: Projects.cancel_scheduled_deletion(project, actor)
@@ -86,10 +90,18 @@ defmodule LightningWeb.API.ProjectDeletionController do
       sandbox
       |> Sandboxes.cancel_scheduled_sandbox_deletion(actor)
       |> as_forbidden()
+      |> unless_gone(sandbox)
 
   # The sandbox functions ask their own policy again. It agrees with
   # `ProjectDeletion`, so this only answers a disagreement as a refusal rather
   # than a crash.
   defp as_forbidden({:error, :unauthorized}), do: {:error, :forbidden}
   defp as_forbidden(result), do: result
+
+  # The sandbox functions write with `update_all` and re-read the sandbox for
+  # their policy, so one another request deleted meanwhile comes back as a
+  # refusal, or as a success that wrote nothing. Either way it is gone.
+  defp unless_gone(result, %Project{id: id}) do
+    if Projects.get_project(id), do: result, else: {:error, :concurrent_edit}
+  end
 end
