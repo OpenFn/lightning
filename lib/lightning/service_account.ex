@@ -30,18 +30,20 @@ defmodule Lightning.ServiceAccount do
           id = JOSE.JWK.thumbprint(jwk)
           {:ok, %__MODULE__{id: id, uuid: uuid(id), public_key: jwk}}
         else
-          {:error,
-           "is a #{bits}-bit RSA key; it must be at least #{@min_modulus_bits} bits"}
+          {:error, {:too_small, bits}}
         end
 
       %JOSE.JWK{kty: {:jose_jwk_kty_rsa, _}} ->
-        {:error, "holds a private key, not a public one"}
+        {:error, :private_key}
+
+      %JOSE.JWK{} ->
+        {:error, :not_rsa}
 
       _other ->
-        {:error, "is not an RSA public key"}
+        {:error, :not_a_key}
     end
   rescue
-    _ -> {:error, "is not an RSA public key"}
+    _ -> {:error, :not_a_key}
   end
 
   defp uuid(thumbprint) do

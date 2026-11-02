@@ -145,6 +145,39 @@ defmodule Lightning.ApplicationTest do
     end
   end
 
+  describe "log_service_account/0" do
+    setup do
+      level = Logger.level()
+      Logger.configure(level: :info)
+      on_exit(fn -> Logger.configure(level: level) end)
+    end
+
+    test "names the service account registered at boot" do
+      {account, _private_key} =
+        Lightning.ServiceAccountHelpers.service_account_with_key()
+
+      Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
+
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          Lightning.Application.log_service_account()
+        end)
+
+      assert logs =~ "Service account enabled, id #{account.id}"
+    end
+
+    test "stays quiet when none is registered" do
+      Mox.stub(Lightning.MockConfig, :service_account, fn -> nil end)
+
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          Lightning.Application.log_service_account()
+        end)
+
+      refute logs =~ "Service account enabled"
+    end
+  end
+
   describe "boot warnings" do
     test "says so when APOLLO_TIMEOUT is still set" do
       put_temporary_env(:lightning, :apollo_timeout_env_still_set, true)

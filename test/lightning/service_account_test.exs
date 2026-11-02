@@ -57,33 +57,46 @@ defmodule Lightning.ServiceAccountTest do
     test "refuses a private key" do
       {_, pem} = JOSE.JWK.generate_key({:rsa, 2048}) |> JOSE.JWK.to_pem()
 
-      assert {:error, "holds a private key, not a public one"} =
-               ServiceAccount.from_pem(pem)
+      assert ServiceAccount.from_pem(pem) == {:error, :private_key}
+    end
+
+    test "refuses an RSA key shorter than 2048 bits" do
+      {_, pem} =
+        JOSE.JWK.generate_key({:rsa, 1024})
+        |> JOSE.JWK.to_public()
+        |> JOSE.JWK.to_pem()
+
+      assert ServiceAccount.from_pem(pem) == {:error, {:too_small, 1024}}
     end
 
     test "refuses a key that is not RSA" do
-      pem = """
+      ec = """
       -----BEGIN PUBLIC KEY-----
       MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7aBIw3Zoq85rGk4EC+MBrElUg/Ym
       rmZUyENZbakktntXDTlHKCREjMuHitBVcQg2xZJL+9zNCbL2Uaj3AkzIxQ==
       -----END PUBLIC KEY-----
       """
 
-      assert {:error, "is not an RSA public key"} = ServiceAccount.from_pem(pem)
+      {_, ed25519} =
+        JOSE.JWK.generate_key({:okp, :Ed25519})
+        |> JOSE.JWK.to_public()
+        |> JOSE.JWK.to_pem()
+
+      for pem <- [ec, ed25519] do
+        assert ServiceAccount.from_pem(pem) == {:error, :not_rsa}
+      end
     end
 
-    test "refuses text that is not a PEM" do
-      assert {:error, "is not an RSA public key"} =
-               ServiceAccount.from_pem("not a key")
-
+    test "refuses text that is not a PEM key" do
       truncated = """
       -----BEGIN PUBLIC KEY-----
       MFkwEwYHKoZIzj0CAQYIKoZIzj0D
       -----END PUBLIC KEY-----
       """
 
-      assert {:error, "is not an RSA public key"} =
-               ServiceAccount.from_pem(truncated)
+      for pem <- ["not a key", truncated] do
+        assert ServiceAccount.from_pem(pem) == {:error, :not_a_key}
+      end
     end
   end
 end

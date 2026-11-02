@@ -62,9 +62,10 @@ There are three environment variables required to make everything work.
 
 _Lightning only_
 
-A Base64 encoded private key in PEM format, used to generate JWTs granting
-workers permission to access a specific Run, the related Workflow and
-credentials.
+A private key in PEM format, as the file's contents or that file base64-encoded,
+used to generate JWTs granting workers permission to access a specific Run, the
+related Workflow and credentials. See
+[PEM keys in environment variables](DEPLOYMENT.md#pem-keys-in-environment-variables).
 
 > #### Never share this key {: .warning}
 >
