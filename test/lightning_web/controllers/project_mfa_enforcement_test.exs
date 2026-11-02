@@ -350,6 +350,39 @@ defmodule LightningWeb.ProjectMFAEnforcementControllerTest do
         assert get(conn, path).status == 200
       end
     end
+
+    test "refuses linking and unlinking a credential the member owns, and lets an enrolled member do both",
+         %{
+           conn: conn,
+           user: user,
+           project: project,
+           enrolled_user: enrolled_user,
+           enrolled_project: enrolled_project
+         } do
+      unlinked = insert(:credential, user: user)
+      linked = insert(:credential, user: user)
+      insert(:project_credential, project: project, credential: linked)
+
+      conn
+      |> put(~p"/api/projects/#{project.id}/credentials/#{unlinked.id}")
+      |> assert_problem(403, :forbidden, [])
+
+      conn
+      |> delete(~p"/api/projects/#{project.id}/credentials/#{linked.id}")
+      |> assert_problem(403, :forbidden, [])
+
+      enrolled = bearer_conn(enrolled_user)
+      credential = insert(:credential, user: enrolled_user)
+
+      path =
+        ~p"/api/projects/#{enrolled_project.id}/credentials/#{credential.id}"
+
+      assert put(enrolled, path).status == 201,
+             "an enrolled member was refused linking a credential"
+
+      assert delete(enrolled, path).status == 204,
+             "an enrolled member was refused unlinking a credential"
+    end
   end
 
   # A run that has actually executed a step, so the endpoints under test reach
