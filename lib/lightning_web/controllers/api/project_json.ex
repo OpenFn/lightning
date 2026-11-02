@@ -7,6 +7,10 @@ defmodule LightningWeb.API.ProjectJSON do
 
   @fields ~w(name description)a
 
+  # The settings each have their own route under the project.
+  @settings ~w(retention_policy history_retention_period dataclip_retention_period
+               requires_mfa allow_support_access scheduled_deletion)a
+
   def render("index.json", %{page: page, conn: conn}) do
     %{
       data: Enum.map(page.entries, &resource(conn, &1)),
@@ -40,7 +44,7 @@ defmodule LightningWeb.API.ProjectJSON do
       relationships: %{},
       links: %{self: Routes.api_project_url(conn, :show, project)},
       id: project.id,
-      attributes: Map.take(project, @fields)
+      attributes: Map.take(project, @fields ++ @settings)
     }
   end
 end

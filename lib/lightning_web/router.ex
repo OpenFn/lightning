@@ -183,6 +183,18 @@ defmodule LightningWeb.Router do
            API.ProjectDeletionController,
            :cancel
 
+    put "/projects/:id/data_retention",
+        API.ProjectSettingsController,
+        :data_retention
+
+    put "/projects/:id/mfa_requirement",
+        API.ProjectSettingsController,
+        :mfa_requirement
+
+    put "/projects/:id/support_access",
+        API.ProjectSettingsController,
+        :support_access
+
     # end-api-area:projects
 
     # api-area:sandboxes_github (routes for this area go between these markers)

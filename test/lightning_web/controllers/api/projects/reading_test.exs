@@ -2,6 +2,7 @@ defmodule LightningWeb.API.Projects.ReadingTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import LightningWeb.ApiProjectsHelpers, only: [default_settings: 0]
   import Lightning.ServiceAccountHelpers
 
   setup %{conn: conn} do
@@ -24,10 +25,11 @@ defmodule LightningWeb.API.Projects.ReadingTest do
       assert page == %{
                "data" => [
                  %{
-                   "attributes" => %{
-                     "name" => project.name,
-                     "description" => nil
-                   },
+                   "attributes" =>
+                     Map.merge(default_settings(), %{
+                       "name" => project.name,
+                       "description" => nil
+                     }),
                    "id" => project.id,
                    "links" => %{
                      "self" =>
@@ -101,11 +103,12 @@ defmodule LightningWeb.API.Projects.ReadingTest do
 
       assert response == %{
                "data" => %{
-                 "attributes" => %{
-                   "name" => project.name,
-                   "description" => nil,
-                   "members" => [%{"email" => user.email, "role" => "editor"}]
-                 },
+                 "attributes" =>
+                   Map.merge(default_settings(), %{
+                     "name" => project.name,
+                     "description" => nil,
+                     "members" => [%{"email" => user.email, "role" => "editor"}]
+                   }),
                  "id" => project.id,
                  "links" => %{"self" => url},
                  "relationships" => %{},
@@ -136,11 +139,12 @@ defmodule LightningWeb.API.Projects.ReadingTest do
 
       assert id == project.id
 
-      assert attributes == %{
-               "name" => project.name,
-               "description" => project.description,
-               "members" => [%{"email" => owner.email, "role" => "owner"}]
-             }
+      assert attributes ==
+               Map.merge(default_settings(), %{
+                 "name" => project.name,
+                 "description" => project.description,
+                 "members" => [%{"email" => owner.email, "role" => "owner"}]
+               })
     end
   end
 end
