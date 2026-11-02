@@ -100,6 +100,7 @@ defmodule Lightning.AiAssistant do
   - `opts` - Keyword list of options:
     - `:meta` - Optional metadata for the session
     - `:code` - Optional workflow code for the initial message
+    - `:message_meta` - Optional metadata for the initial message
 
   ## Returns
 
@@ -107,7 +108,8 @@ defmodule Lightning.AiAssistant do
   - `{:error, changeset}` - Validation errors during creation
   """
   @spec create_session(Job.t(), User.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, ChatSession.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def create_session(job, user, content, opts \\ []) do
     meta = Keyword.get(opts, :meta, %{})
 
@@ -129,10 +131,20 @@ defmodule Lightning.AiAssistant do
       session
       |> repo.preload(:messages)
       |> put_expression_and_adaptor(job.body, job.adaptor)
-      |> save_message(%{role: :user, content: content, user: user}, opts)
+      |> save_message(
+        put_message_meta(%{role: :user, content: content, user: user}, opts),
+        opts
+      )
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
+  end
+
+  defp put_message_meta(attrs, opts) do
+    case Keyword.get(opts, :message_meta) do
+      nil -> attrs
+      meta -> Map.put(attrs, :meta, meta)
+    end
   end
 
   defp project_id_for_job(%Job{workflow_id: nil}), do: nil
@@ -161,15 +173,18 @@ defmodule Lightning.AiAssistant do
       - `"body"` - Job expression code
       - `"adaptor"` - Job adaptor
       - `"workflow_id"` - Workflow the job belongs to
+  - `opts` - Keyword list of options:
+    - `:message_meta` - Optional metadata for the initial message
 
   ## Returns
 
   - `{:ok, session}` - Successfully created session with initial message
   - `{:error, changeset}` - Validation errors during creation
   """
-  @spec create_session_for_unsaved_job(User.t(), String.t(), map()) ::
-          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def create_session_for_unsaved_job(user, content, meta) do
+  @spec create_session_for_unsaved_job(User.t(), String.t(), map(), opts()) ::
+          {:ok, ChatSession.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
+  def create_session_for_unsaved_job(user, content, meta, opts \\ []) do
     unsaved_job = meta["unsaved_job"]
 
     session_attrs = %{
@@ -192,7 +207,10 @@ defmodule Lightning.AiAssistant do
         unsaved_job["body"],
         unsaved_job["adaptor"]
       )
-      |> save_message(%{role: :user, content: content, user: user}, [])
+      |> save_message(
+        put_message_meta(%{role: :user, content: content, user: user}, opts),
+        []
+      )
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
@@ -215,6 +233,7 @@ defmodule Lightning.AiAssistant do
   - `opts` - Keyword list of options:
     - `:meta` - Optional metadata for the session
     - `:code` - Optional workflow code for the initial message
+    - `:message_meta` - Optional metadata for the initial message
 
   ## Returns
 
@@ -229,7 +248,8 @@ defmodule Lightning.AiAssistant do
           String.t(),
           opts()
         ) ::
-          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, ChatSession.t()}
+          | {:error, Ecto.Changeset.t() | :concurrent_edit}
   def create_workflow_session(project, job, workflow, user, content, opts \\ []) do
     meta = Keyword.get(opts, :meta, %{})
 
@@ -264,7 +284,7 @@ defmodule Lightning.AiAssistant do
           %{role: :user, content: content, user: user}
         end
 
-      save_message(session, message_attrs, opts)
+      save_message(session, put_message_meta(message_attrs, opts), opts)
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
@@ -682,6 +702,38 @@ defmodule Lightning.AiAssistant do
   @spec save_message(ChatSession.t(), map(), opts()) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
   def save_message(session, message_attrs, opts \\ []) do
+    session
+    |> save_message_multi(message_attrs, opts)
+    |> Repo.transaction()
+    |> handle_save_message_result()
+  end
+
+  @doc """
+  Adds a person's message to a session and queues it for the assistant, as
+  `save_message/3` does, answering the message saved rather than the session.
+
+  `message_attrs` takes `:content`, `:user`, and optionally `:job` and `:meta`
+  for the message's own metadata. A session deleted while this runs is
+  `{:error, :concurrent_edit}`.
+  """
+  @spec add_message(ChatSession.t(), map()) ::
+          {:ok, ChatMessage.t()}
+          | {:error, :concurrent_edit}
+          | {:error, Ecto.Changeset.t()}
+  def add_message(session, message_attrs) do
+    session
+    |> save_message_multi(Map.put(message_attrs, :role, :user), [])
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{message: message}} ->
+        {:ok, message}
+
+      {:error, _operation, changeset, _changes} ->
+        refused_create(changeset)
+    end
+  end
+
+  defp save_message_multi(session, message_attrs, opts) do
     usage = Keyword.get(opts, :usage, %{})
     meta = Keyword.get(opts, :meta)
     code = Keyword.get(opts, :code)
@@ -700,8 +752,6 @@ defmodule Lightning.AiAssistant do
     end)
     |> Multi.merge(&maybe_increment_ai_usage/1)
     |> Multi.run(:enqueue_if_user_message, &enqueue_user_message/2)
-    |> Repo.transaction()
-    |> handle_save_message_result()
   end
 
   defp maybe_put_job_id_from_session(attrs, session) do
@@ -922,6 +972,12 @@ defmodule Lightning.AiAssistant do
         {:output, output} when not is_nil(output) ->
           Map.put(acc, :output, output)
 
+        # Only a message sent through the API carries this, and says it. The
+        # old `code` option is ignored, since stale values of it sit in old
+        # sessions' meta.
+        {:send_code, false} ->
+          Map.drop(acc, [:expression])
+
         _ ->
           acc
       end
@@ -1048,6 +1104,177 @@ defmodule Lightning.AiAssistant do
       {:error, _op, changeset, _changes} ->
         {:error, changeset}
     end
+  end
+
+  @doc """
+  Sets a person's failed message back to `pending` and queues it again, in one
+  transaction.
+
+  Only a user message in `error` can be retried; any other is
+  `{:error, :not_retryable}`. The update only applies while the message is
+  still in `error`, so a message another request retried or changed first is
+  `{:error, :concurrent_edit}` and is queued once.
+  """
+  @spec retry_failed_message(ChatMessage.t()) ::
+          {:ok, ChatMessage.t()} | {:error, :not_retryable | :concurrent_edit}
+  def retry_failed_message(%ChatMessage{} = message) do
+    if retryable?(message),
+      do: requeue_failed(message),
+      else: {:error, :not_retryable}
+  end
+
+  @doc """
+  Whether `message` may be asked again: a person's message that failed.
+  """
+  @spec retryable?(ChatMessage.t()) :: boolean()
+  def retryable?(%ChatMessage{role: role, status: status}),
+    do: role == :user and status == :error
+
+  defp requeue_failed(message) do
+    still_failed =
+      from(m in ChatMessage,
+        where: m.id == ^message.id and m.status == :error,
+        select: m
+      )
+
+    Multi.new()
+    |> Multi.update_all(:message, still_failed,
+      set: [status: :pending, updated_at: DateTime.utc_now(:second)]
+    )
+    |> Multi.run(:retried, fn _repo, %{message: updated} ->
+      case updated do
+        {1, [retried]} -> {:ok, retried}
+        {0, []} -> {:error, :concurrent_edit}
+      end
+    end)
+    |> Multi.insert(:oban_job, MessageProcessor.new(%{message_id: message.id}))
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{retried: retried}} -> {:ok, retried}
+      {:error, :retried, reason, _changes} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  The id of the project a session belongs to: its own, or else that of its
+  workflow or its job's workflow. `{:error, :not_found}` when there is no such
+  session, or it is left with no project.
+  """
+  @spec get_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_project_id(id) do
+    sessions_with_project()
+    |> where([session: s], s.id == ^id)
+    |> select(
+      [session: s, workflow: w, job_workflow: jw],
+      coalesce(s.project_id, coalesce(w.project_id, jw.project_id))
+    )
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      project_id -> {:ok, project_id}
+    end
+  end
+
+  @doc """
+  The session `id` names, with its messages as `get_session/1` loads them, when
+  it belongs to the project `project_id`, or `{:error, :not_found}`.
+  """
+  @spec get_session_for_project(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, ChatSession.t()} | {:error, :not_found}
+  def get_session_for_project(project_id, id) do
+    case get_project_id(id) do
+      {:ok, ^project_id} -> get_session(id)
+      _other -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  The message `message_id` names in the session `session_id`, unless it was
+  cancelled, or `{:error, :not_found}`.
+  """
+  @spec get_message_for_session(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, ChatMessage.t()} | {:error, :not_found}
+  def get_message_for_session(session_id, message_id) do
+    from(m in ChatMessage,
+      where:
+        m.id == ^message_id and m.chat_session_id == ^session_id and
+          m.status != :cancelled
+    )
+    |> Repo.fetch_one()
+  end
+
+  @doc """
+  A page of a project's sessions about one job or one workflow, newest
+  activity first, each with its `message_count` and without its messages.
+
+  `{:job_id, id}` matches sessions about the job, saved or not yet saved.
+  `{:workflow_id, id}` matches workflow sessions about the workflow, saved or
+  not yet saved. Only sessions that belong to the project are listed, so an id
+  from another project lists nothing. `page_opts` is what
+  `Lightning.Repo.paginate/2` takes.
+  """
+  @spec page_sessions(
+          Ecto.UUID.t(),
+          {:job_id | :workflow_id, Ecto.UUID.t()},
+          keyword()
+        ) :: Scrivener.Page.t()
+  def page_sessions(project_id, about, page_opts) do
+    message_count =
+      from(m in ChatMessage,
+        where:
+          m.chat_session_id == parent_as(:session).id and
+            m.status != :cancelled,
+        select: count(m.id)
+      )
+
+    sessions_with_project()
+    |> where(
+      [session: s, workflow: w, job_workflow: jw],
+      coalesce(s.project_id, coalesce(w.project_id, jw.project_id)) ==
+        type(^project_id, :binary_id)
+    )
+    |> sessions_about(about)
+    |> select_merge([session: s], %{message_count: subquery(message_count)})
+    |> order_by([session: s], desc: s.updated_at, desc: s.id)
+    |> Repo.paginate(page_opts)
+  end
+
+  defp sessions_with_project do
+    from(s in ChatSession,
+      as: :session,
+      left_join: w in assoc(s, :workflow),
+      as: :workflow,
+      left_join: j in assoc(s, :job),
+      left_join: jw in Workflow,
+      as: :job_workflow,
+      on: jw.id == j.workflow_id
+    )
+  end
+
+  defp sessions_about(query, {:job_id, job_id}) do
+    where(
+      query,
+      [session: s],
+      s.job_id == ^job_id or
+        (s.session_type == "job_code" and is_nil(s.job_id) and
+           fragment("? -> 'unsaved_job' ->> 'id' = ?", s.meta, ^job_id))
+    )
+  end
+
+  defp sessions_about(query, {:workflow_id, workflow_id}) do
+    where(
+      query,
+      [session: s],
+      s.session_type == "workflow_template" and
+        (s.workflow_id == ^workflow_id or
+           (is_nil(s.workflow_id) and
+              fragment(
+                "? -> 'unsaved_workflow' ->> 'id' = ?",
+                s.meta,
+                ^workflow_id
+              )))
+    )
   end
 
   defp get_workflow_sessions_with_count(
@@ -1932,8 +2159,18 @@ defmodule Lightning.AiAssistant do
   defp handle_transaction_result(result, success_key \\ :session_with_message) do
     case result do
       {:ok, %{^success_key => session}} -> {:ok, session}
-      {:error, :session, changeset, _changes} -> {:error, changeset}
-      {:error, ^success_key, changeset, _changes} -> {:error, changeset}
+      {:error, :session, changeset, _changes} -> refused_create(changeset)
+      {:error, ^success_key, changeset, _changes} -> refused_create(changeset)
     end
+  end
+
+  # The project, job, workflow or session a new session or message names was
+  # deleted while it was being saved.
+  defp refused_create(%Changeset{errors: errors} = changeset) do
+    if Enum.any?(errors, fn {_field, {_message, opts}} ->
+         opts[:constraint] == :foreign
+       end),
+       do: {:error, :concurrent_edit},
+       else: {:error, changeset}
   end
 end

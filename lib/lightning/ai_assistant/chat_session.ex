@@ -77,6 +77,9 @@ defmodule Lightning.AiAssistant.ChatSession do
     |> validate_required([:title, :user_id])
     |> validate_inclusion(:session_type, @valid_session_types)
     |> validate_session_type_requirements()
+    |> foreign_key_constraint(:project_id)
+    |> foreign_key_constraint(:job_id)
+    |> foreign_key_constraint(:workflow_id)
     |> cast_assoc(:messages)
   end
 
