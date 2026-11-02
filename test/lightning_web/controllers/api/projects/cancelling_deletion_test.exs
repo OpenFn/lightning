@@ -140,6 +140,31 @@ defmodule LightningWeb.API.Projects.CancellingDeletionTest do
 
       refute Repo.reload(project)
     end
+
+    test "a sandbox another request deletes mid-cancel answers 409 concurrent_edit, to its admin or the service account",
+         %{conn: conn} do
+      admin = insert(:user)
+
+      {service_account_conn, _account} =
+        with_service_account(conn, ["projects:write"])
+
+      for caller <- [with_pat(conn, admin), service_account_conn] do
+        sandbox =
+          insert(:sandbox,
+            parent: insert(:project),
+            scheduled_deletion: now(),
+            project_users: [%{user: admin, role: :admin}]
+          )
+
+        delete_project_mid_save(sandbox.id)
+
+        caller
+        |> delete(~p"/api/projects/#{sandbox}/scheduled_deletion")
+        |> assert_problem(409, :concurrent_edit, [])
+
+        refute Repo.reload(sandbox)
+      end
+    end
   end
 
   describe "who may reach it" do
