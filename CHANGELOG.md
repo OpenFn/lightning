@@ -23,6 +23,24 @@ and this project adheres to
 > succeeding. [API.md](API.md) describes the error format, every code and each
 > route.
 
+> **Breaking for self-hosters: TLS certificates need a subjectAltName.**
+> Lightning now runs on Erlang/OTP 28.5.0.8, which no longer falls back to a
+> certificate's Common Name (CN) when checking the hostname. A server whose
+> certificate names its host only in the CN, with no subjectAltName (SAN), fails
+> to connect when verification is on. Most likely that is your database, since
+> Postgres connections are verified unless `DISABLE_DB_SSL_CERT_VERIFY=true`.
+> OAuth client endpoints and channel destinations are checked the same way.
+> Before you upgrade, look at the database's certificate:
+>
+> ```sh
+> openssl s_client -connect HOST:5432 -starttls postgres </dev/null \
+>   | openssl x509 -noout -ext subjectAltName
+> ```
+>
+> If the output doesn't list the hostname from `DATABASE_URL`, reissue the
+> certificate with that hostname as a SAN.
+> [#5274](https://github.com/OpenFn/lightning/pull/5274)
+
 ### Added
 
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
@@ -72,6 +90,10 @@ and this project adheres to
 - A form that loses a save race with another user, or saves a record someone
   else deleted, shows a message instead of crashing.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- URLs with a port above 65535 are now rejected on save, for OAuth client
+  endpoints and channel destinations. On Elixir 1.19.7 such a URL would
+  otherwise be sent to the scheme's default port.
+  [#5274](https://github.com/OpenFn/lightning/pull/5274)
 
 ### Security
 
