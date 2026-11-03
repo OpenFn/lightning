@@ -621,7 +621,7 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
-    test "PUT /api/projects/:project_id/members/:user_id/notifications takes a person's tokens, refuses the service account with 403 and a repo connection for its grant",
+    test "PUT /api/projects/:project_id/members/:user_id/notifications takes a person's tokens, and refuses the service account and a repo connection with 403",
          %{conn: conn, tokens: tokens, project: project} do
       {:session, user} = tokens[:session]
 
@@ -633,13 +633,13 @@ defmodule LightningWeb.AuthTest do
         service_account: :forbidden,
         expired_service_account: :expired_token,
         personal: :logs_in,
-        repo_connection: {:insufficient_scope, "projects:write"},
+        repo_connection: :forbidden,
         run: :invalid_token,
         session: :logs_in
       )
     end
 
-    test "POST /api/projects/:project_id/invitations takes a person's tokens, refuses the service account with 403 and a repo connection for its grant",
+    test "POST /api/projects/:project_id/invitations takes a person's tokens, and refuses the service account and a repo connection with 403",
          %{conn: conn, tokens: tokens, project: project} do
       assert_each_kind_posting(
         conn,
@@ -654,7 +654,7 @@ defmodule LightningWeb.AuthTest do
         service_account: :forbidden,
         expired_service_account: :expired_token,
         personal: :logs_in,
-        repo_connection: {:insufficient_scope, "projects:write"},
+        repo_connection: :forbidden,
         run: :invalid_token,
         session: :logs_in
       )
