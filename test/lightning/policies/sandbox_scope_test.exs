@@ -77,7 +77,7 @@ defmodule Lightning.Policies.SandboxScopeTest do
   end
 
   describe "managing a sandbox" do
-    test "its owner or admin may, and so may the root's owner or admin, but never on the root itself" do
+    test "its owner or admin may change it, and so may the root's owner or admin, but never the root itself" do
       [root_owner, sandbox_admin, sandbox_editor, root_admin_only] =
         insert_list(4, :user)
 
@@ -100,29 +100,27 @@ defmodule Lightning.Policies.SandboxScopeTest do
 
       nested = insert(:project, parent: sandbox)
 
-      for action <- [:update_sandbox, :delete_sandbox] do
-        answers =
-          for {actor, subject} <- [
-                {sandbox_admin, sandbox},
-                {sandbox_editor, sandbox},
-                {root_admin_only, sandbox},
-                {root_owner, nested},
-                {sandbox_admin, nested},
-                {root_owner, root},
-                {service_account(["projects:write"]), sandbox}
-              ],
-              do: decide(Sandboxes, action, actor, subject)
+      answers =
+        for {actor, subject} <- [
+              {sandbox_admin, sandbox},
+              {sandbox_editor, sandbox},
+              {root_admin_only, sandbox},
+              {root_owner, nested},
+              {sandbox_admin, nested},
+              {root_owner, root},
+              {service_account(["projects:write"]), sandbox}
+            ],
+            do: decide(Sandboxes, :update_sandbox, actor, subject)
 
-        assert answers == [
-                 true,
-                 false,
-                 true,
-                 true,
-                 {:error, :no_standing},
-                 false,
-                 false
-               ]
-      end
+      assert answers == [
+               true,
+               false,
+               true,
+               true,
+               {:error, :no_standing},
+               false,
+               false
+             ]
     end
 
     test "the root's admin is still held to the sandbox's MFA requirement and its scheduled deletion" do

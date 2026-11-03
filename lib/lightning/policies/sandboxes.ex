@@ -105,9 +105,11 @@ defmodule Lightning.Policies.Sandboxes do
           )
         )
 
-  def authorize(action, %Scope{} = scope, subject)
-      when action in [:delete_sandbox, :update_sandbox],
-      do: Decision.person(scope, on_sandbox(scope, subject))
+  # Deleting a sandbox through the API is `Lightning.Policies.ProjectDeletion`'s
+  # to decide, for any project named by id, and it lets the service account in.
+  # `:delete_sandbox` is asked only with a `%User{}`, by the app.
+  def authorize(:update_sandbox, %Scope{} = scope, subject),
+    do: Decision.person(scope, on_sandbox(scope, subject))
 
   # Answered here rather than in each clause below, so no sandbox action can
   # forget it. A workspace root is not a sandbox, however the caller reached it.
