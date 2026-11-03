@@ -188,8 +188,8 @@ their own account, and for a superuser setting up single sign-on.
 | `DELETE` | `/api/me/mfa`                                | Turns MFA off                                                   | Session token, stepped up       |
 | `POST`   | `/api/me/mfa/backup_codes`                   | Replaces your backup codes                                      | Session token, stepped up       |
 | `DELETE` | `/api/me/github_connection`                  | Disconnects your GitHub account                                 | Session token                   |
-| `GET`    | `/api/me/github_repos`                       | Lists the GitHub repositories you can connect                   | Session token                   |
-| `GET`    | `/api/me/github_repos/:owner/:name/branches` | Lists a GitHub repository's branches                            | Session token                   |
+| `GET`    | `/api/me/github_repos`                       | Lists the GitHub repositories you can connect                   | Not open to the service account |
+| `GET`    | `/api/me/github_repos/:owner/:name/branches` | Lists a GitHub repository's branches                            | Not open to the service account |
 | `GET`    | `/api/auth_provider`                         | Reads the single sign-on provider, as a superuser               | Not open to the service account |
 | `PUT`    | `/api/auth_provider`                         | Sets up or replaces the single sign-on provider, as a superuser | Not open to the service account |
 | `DELETE` | `/api/auth_provider`                         | Removes the single sign-on provider, as a superuser             | Not open to the service account |

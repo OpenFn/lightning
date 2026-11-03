@@ -183,6 +183,28 @@ defmodule LightningWeb.API.Me.GithubTest do
              }
     end
 
+    # The same token may connect a repository to a project, so it may find
+    # one to connect.
+    test "takes a personal access token, for the repositories and their branches" do
+      stub_github(
+        installations: %{1 => ["openfn/Alpha"]},
+        branches: %{"openfn/Alpha" => ["main"]}
+      )
+
+      conn = assign_bearer(build_conn(), connected_user())
+
+      assert [%{"full_name" => "openfn/Alpha"}] =
+               conn
+               |> get(~p"/api/me/github_repos")
+               |> json_response(200)
+               |> Map.fetch!("data")
+
+      assert %{"data" => [%{"name" => "main"}]} =
+               conn
+               |> get(~p"/api/me/github_repos/openfn/alpha/branches")
+               |> json_response(200)
+    end
+
     test "lists none for an installation whose repositories can't be read" do
       stub_github(installations: %{1 => :fails, 2 => ["ada/beta"]})
 

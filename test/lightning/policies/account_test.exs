@@ -7,13 +7,8 @@ defmodule Lightning.Policies.AccountTest do
   alias Lightning.Scope
 
   @step_up_actions [:create_own_token, :enable_mfa, :disable_mfa]
-  @session_actions [
-    :read_own_mfa,
-    :start_mfa,
-    :disconnect_github,
-    :list_github_repos
-  ]
-  @people_actions [:list_own_tokens, :revoke_own_token]
+  @session_actions [:read_own_mfa, :start_mfa, :disconnect_github]
+  @people_actions [:list_own_tokens, :revoke_own_token, :list_github_repos]
 
   defp scopes(user) do
     {account, _key} = Lightning.ServiceAccountHelpers.service_account_with_key()
@@ -33,7 +28,7 @@ defmodule Lightning.Policies.AccountTest do
 
   defp permit(action, scope), do: Permissions.permit(:account, action, scope)
 
-  test "a person's tokens are listed and revoked on either of their tokens, and by nothing else" do
+  test "a person's tokens and GitHub repositories are listed on either of their tokens, and by nothing else" do
     scopes = scopes(insert(:user))
 
     for action <- @people_actions do
@@ -45,7 +40,7 @@ defmodule Lightning.Policies.AccountTest do
     end
   end
 
-  test "MFA and GitHub need a session token" do
+  test "MFA and disconnecting GitHub need a session token" do
     scopes = scopes(insert(:user))
 
     for action <- @session_actions do

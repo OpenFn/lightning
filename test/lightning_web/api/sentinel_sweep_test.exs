@@ -138,9 +138,7 @@ defmodule LightningWeb.API.SentinelSweepTest do
     {:put, "/api/me/mfa"},
     {:delete, "/api/me/mfa"},
     {:post, "/api/me/mfa/backup_codes"},
-    {:delete, "/api/me/github_connection"},
-    {:get, "/api/me/github_repos"},
-    {:get, "/api/me/github_repos/:owner/:name/branches"}
+    {:delete, "/api/me/github_connection"}
   ]
 
   setup do
@@ -351,6 +349,11 @@ defmodule LightningWeb.API.SentinelSweepTest do
   defp expected(%{verb: verb, path: path}, attempt)
        when {verb, path} in @session_token_only and attempt in [:planted, :array],
        do: @forbidden
+
+  # The member has no GitHub connection, so a repository's branches are refused
+  # before its owner and name are looked up.
+  defp expected(%{path: "/api/me/github_repos/:owner/:name/branches"}, :planted),
+    do: @forbidden
 
   # The AI assistant takes only a session token, so a member's personal token
   # is refused before the action reads an id or a body.

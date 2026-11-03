@@ -1,8 +1,9 @@
 defmodule LightningWeb.API.MeGithubController do
   @moduledoc """
   The signed-in person's GitHub connection, which GitHub sync uses to set up a
-  project's repository. On a session token only; any other token is 403
-  `forbidden`.
+  project's repository. Disconnecting takes a session token only. The lists
+  take a personal access token as well, since that token may connect a
+  repository to a project. Any other token is 403 `forbidden`.
 
   `DELETE /api/me/github_connection` forgets the person's GitHub token and asks
   GitHub to revoke it, answering 204 even when GitHub can't be reached or
