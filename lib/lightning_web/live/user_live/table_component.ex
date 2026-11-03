@@ -16,6 +16,7 @@ defmodule LightningWeb.UserLive.TableComponent do
         target={@myself}
         live_action={@live_action}
         delete_user={assigns[:delete_user]}
+        current_user={assigns[:current_user]}
         users={@users}
         sort_key={@sort_key}
         sort_direction={@sort_direction}

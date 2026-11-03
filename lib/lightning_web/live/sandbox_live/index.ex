@@ -904,6 +904,10 @@ defmodule LightningWeb.SandboxLive.Index do
     put_flash(socket, :error, text)
   end
 
+  defp handle_cancel_deletion_result({:error, :audit_failed}, _sandbox, socket) do
+    put_flash(socket, :error, save_error_message(:audit_failed))
+  end
+
   defp get_merge_target_options(socket, source_sandbox, descendant_ids) do
     current_user = socket.assigns.current_user
 

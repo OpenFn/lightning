@@ -1,13 +1,14 @@
 defmodule LightningWeb.UserLiveTest do
   use LightningWeb.ConnCase, async: true
 
-  alias Lightning.Accounts.User
-  alias Lightning.AccountsFixtures
-
+  import Ecto.Query
   import Lightning.AccountsFixtures
   import Lightning.Factories
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
+
+  alias Lightning.Accounts.User
+  alias Lightning.AccountsFixtures
 
   @create_attrs %{
     email: "test@example.com",
@@ -317,10 +318,8 @@ defmodule LightningWeb.UserLiveTest do
       )
     end
 
-    test "allows a superuser to schedule users for deletion in the users list",
-         %{
-           conn: conn
-         } do
+    test "allows a superuser to schedule users for deletion in the users list, recording them as the one who did",
+         %{conn: conn, user: superuser} do
       user = user_fixture()
 
       {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
@@ -363,6 +362,36 @@ defmodule LightningWeb.UserLiveTest do
       )
 
       assert html =~ formated_deletion_date
+
+      assert [%{actor_id: actor_id, changes: %{after: after_changes}}] =
+               Repo.all(
+                 from a in Lightning.Auditing.Audit,
+                   where: a.item_id == ^user.id and a.event == "updated"
+               )
+
+      assert actor_id == superuser.id
+      assert Map.has_key?(after_changes, "scheduled_deletion")
+    end
+
+    test "scheduling the deletion of a user deleted since the modal opened flashes and returns to the list",
+         %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, form_live, _html} =
+        live(conn, Routes.user_index_path(conn, :delete, user))
+
+      Repo.delete!(user)
+
+      {:ok, _index_live, html} =
+        form_live
+        |> form("#scheduled_deletion_form",
+          user: %{"scheduled_deletion_email" => user.email}
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/settings/users")
+
+      assert html =~
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
     end
 
     test "disables the delete link for listed superusers", %{
