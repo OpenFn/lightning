@@ -36,7 +36,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
       |> Map.put(:action, :validate)
 
     if changeset.valid? do
-      case delete_project(socket.assigns.project) do
+      case delete_project(socket.assigns.project, socket.assigns[:current_user]) do
         {:ok, %Oban.Job{}} ->
           {:noreply,
            socket
@@ -52,6 +52,12 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
            |> put_flash(:info, "Project scheduled for deletion")
            |> push_navigate(to: socket.assigns.save_return_to)}
 
+        {:error, reason} when reason in [:concurrent_edit, :audit_failed] ->
+          {:noreply,
+           socket
+           |> put_flash(:error, save_error_message(reason))
+           |> push_navigate(to: socket.assigns.cancel_return_to)}
+
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :deletion_changeset, changeset)}
       end
@@ -65,11 +71,11 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
     {:noreply, push_navigate(socket, to: socket.assigns.cancel_return_to)}
   end
 
-  defp delete_project(project) do
+  defp delete_project(project, actor) do
     if project.scheduled_deletion do
       Projects.delete_project_async(project)
     else
-      Projects.schedule_project_deletion(project)
+      Projects.schedule_project_deletion(project, actor)
     end
   end
 

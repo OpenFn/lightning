@@ -13,6 +13,7 @@ defmodule LightningWeb.UserLive.Components do
     default: LightningWeb.Components.UserDeletionModal
 
   attr :delete_user, Lightning.Accounts.User, default: nil
+  attr :current_user, Lightning.Accounts.User, default: nil
 
   def users_table(assigns) do
     ~H"""
@@ -21,6 +22,7 @@ defmodule LightningWeb.UserLive.Components do
       module={@user_deletion_modal}
       id={"user-details-#{@delete_user.id}"}
       user={@delete_user}
+      current_user={@current_user}
       is_current_user={false}
       logout={false}
       return_to={Routes.user_index_path(@socket, :index)}

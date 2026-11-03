@@ -43,6 +43,7 @@ defmodule LightningWeb.ProfileLive.Components do
         module={@user_deletion_modal}
         id={@current_user.id}
         user={@current_user}
+        current_user={@current_user}
         logout={true}
         return_to={~p"/profile"}
       />

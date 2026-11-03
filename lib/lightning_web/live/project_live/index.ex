@@ -98,12 +98,22 @@ defmodule LightningWeb.ProjectLive.Index do
         %{"id" => project_id},
         socket
       ) do
-    Projects.cancel_scheduled_deletion(project_id)
+    project_id
+    |> Projects.get_project!()
+    |> Projects.cancel_scheduled_deletion(socket.assigns.current_user)
+    |> case do
+      {:ok, _project} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Project deletion canceled")
+         |> push_patch(to: ~p"/settings/projects")}
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "Project deletion canceled")
-     |> push_patch(to: ~p"/settings/projects")}
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, save_error_message(reason))
+         |> push_patch(to: ~p"/settings/projects")}
+    end
   end
 
   def handle_event("sort", %{"by" => sort_key}, socket) do

@@ -49,6 +49,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Credentials.Scoping
   alias Lightning.Invocation.Dataclip
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.Audit
   alias Lightning.Projects.Events
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
@@ -871,7 +872,8 @@ defmodule Lightning.Projects.Sandboxes do
   All triggers in the subtree are disabled so that scheduled work stops
   immediately. The scheduled timestamp is applied to the target and every
   descendant in a single transaction so the entire subtree shares a grace
-  period and gets purged together.
+  period and gets purged together. The same transaction records a
+  `deletion_scheduled` audit event against the sandbox and `actor`.
 
   ## Cascade semantics
 
@@ -890,6 +892,7 @@ defmodule Lightning.Projects.Sandboxes do
   * `{:ok, scheduled_sandbox}` - Sandbox subtree scheduled for deletion
   * `{:error, :unauthorized}` - Actor lacks permission on the sandbox
   * `{:error, :not_found}` - Sandbox ID not found (when using a string ID)
+  * `{:error, :audit_failed}` - The audit event was refused; nothing changed
   * `{:error, reason}` - Database or other failure
   """
   @spec schedule_sandbox_deletion(
@@ -899,7 +902,7 @@ defmodule Lightning.Projects.Sandboxes do
           {:ok, Project.t()} | {:error, :unauthorized | :not_found | term()}
   def schedule_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
     if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
-      do_schedule_sandbox_deletion(sandbox)
+      do_schedule_sandbox_deletion(sandbox, actor)
     else
       {:error, :unauthorized}
     end
@@ -908,8 +911,11 @@ defmodule Lightning.Projects.Sandboxes do
   # The service account acts on every project as if it held every role, so it
   # is an admin of any sandbox. Only its token grant limits it, which the API
   # checks through `Lightning.Policies.ProjectDeletion` before calling this.
-  def schedule_sandbox_deletion(%Project{} = sandbox, %ServiceAccount{}),
-    do: do_schedule_sandbox_deletion(sandbox)
+  def schedule_sandbox_deletion(
+        %Project{} = sandbox,
+        %ServiceAccount{} = actor
+      ),
+      do: do_schedule_sandbox_deletion(sandbox, actor)
 
   def schedule_sandbox_deletion(sandbox_id, %User{} = actor)
       when is_binary(sandbox_id) do
@@ -925,7 +931,8 @@ defmodule Lightning.Projects.Sandboxes do
   Walks every descendant of `sandbox` and clears `scheduled_deletion` on any
   row that has it set. Triggers are not automatically re-enabled: this is an
   admin recovery path and the operator decides whether the subtree should
-  resume firing triggers.
+  resume firing triggers. A `deletion_cancelled` audit event is recorded
+  against the sandbox and `actor` in the same transaction.
 
   ## Cascade semantics
 
@@ -964,7 +971,7 @@ defmodule Lightning.Projects.Sandboxes do
           | Lightning.Extensions.UsageLimiting.error()
   def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
     if Permissions.can?(:sandboxes, :cancel_scheduled_deletion, actor, sandbox) do
-      restore_within_limit(sandbox)
+      restore_within_limit(sandbox, actor)
     else
       {:error, :unauthorized}
     end
@@ -972,8 +979,11 @@ defmodule Lightning.Projects.Sandboxes do
 
   # As for scheduling: the service account is an admin of any sandbox, and the
   # API checks its grant first.
-  def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %ServiceAccount{}),
-    do: restore_within_limit(sandbox)
+  def cancel_scheduled_sandbox_deletion(
+        %Project{} = sandbox,
+        %ServiceAccount{} = actor
+      ),
+      do: restore_within_limit(sandbox, actor)
 
   def cancel_scheduled_sandbox_deletion(sandbox_id, %User{} = actor)
       when is_binary(sandbox_id) do
@@ -983,14 +993,17 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
-  defp restore_within_limit(%Project{} = sandbox) do
+  defp restore_within_limit(%Project{} = sandbox, actor) do
     case ProjectLimiter.limit_new_sandbox(sandbox.id) do
-      :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
+      :ok -> do_cancel_scheduled_sandbox_deletion(sandbox, actor)
       {:error, _reason, _message} = error -> error
     end
   end
 
-  defp do_schedule_sandbox_deletion(%Project{} = sandbox) do
+  # The audit event is recorded against the sandbox named, as
+  # `Lightning.Projects.schedule_project_deletion/2` records one against the
+  # project, not against each descendant the deletion reaches.
+  defp do_schedule_sandbox_deletion(%Project{} = sandbox, actor) do
     date = scheduled_deletion_date()
     subtree_ids = subtree_ids(sandbox)
 
@@ -1010,9 +1023,12 @@ defmodule Lightning.Projects.Sandboxes do
           set: [enabled: false]
         )
 
-      SandboxPromExPlugin.fire_sandbox_scheduled_for_deletion_event()
+      with {:ok, _audit} <-
+             audit_deletion_change(sandbox, "deletion_scheduled", date, actor) do
+        SandboxPromExPlugin.fire_sandbox_scheduled_for_deletion_event()
 
-      {:ok, %{sandbox | scheduled_deletion: date}}
+        {:ok, %{sandbox | scheduled_deletion: date}}
+      end
     end)
     # Every descendant was wound down too, so every descendant's sessions have
     # to hear about it. After the commit, not inside it: a subscriber that
@@ -1024,20 +1040,39 @@ defmodule Lightning.Projects.Sandboxes do
     end)
   end
 
-  defp do_cancel_scheduled_sandbox_deletion(%Project{} = sandbox) do
+  defp do_cancel_scheduled_sandbox_deletion(%Project{} = sandbox, actor) do
     subtree_ids = subtree_ids(sandbox)
 
-    {_count, _} =
-      Repo.update_all(
-        from(p in Project,
-          where: p.id in ^subtree_ids and not is_nil(p.scheduled_deletion)
-        ),
-        set: [scheduled_deletion: nil]
-      )
+    Repo.transact(fn ->
+      {_count, _} =
+        Repo.update_all(
+          from(p in Project,
+            where: p.id in ^subtree_ids and not is_nil(p.scheduled_deletion)
+          ),
+          set: [scheduled_deletion: nil]
+        )
 
-    SandboxPromExPlugin.fire_sandbox_deletion_cancelled_event()
+      with {:ok, _audit} <-
+             audit_deletion_change(sandbox, "deletion_cancelled", nil, actor),
+           do: {:ok, %{sandbox | scheduled_deletion: nil}}
+    end)
+    |> tap(fn result ->
+      with {:ok, _sandbox} <- result,
+           do: SandboxPromExPlugin.fire_sandbox_deletion_cancelled_event()
+    end)
+  end
 
-    {:ok, %{sandbox | scheduled_deletion: nil}}
+  defp audit_deletion_change(%Project{} = sandbox, event, date, actor) do
+    event
+    |> Audit.event(sandbox.id, actor, %{
+      before: %{scheduled_deletion: sandbox.scheduled_deletion},
+      after: %{scheduled_deletion: date}
+    })
+    |> Repo.insert()
+    |> case do
+      {:ok, audit} -> {:ok, audit}
+      {:error, _changeset} -> {:error, :audit_failed}
+    end
   end
 
   defp subtree_ids(%Project{id: id}) do

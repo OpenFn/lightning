@@ -16,6 +16,7 @@
     <%= if @live_action == :delete do %>
       <.live_component
         module={LightningWeb.Components.ProjectDeletionModal}
+        current_user={@current_user}
         id={@project.id}
         project={@project}
         save_return_to={~p"/settings/projects"}

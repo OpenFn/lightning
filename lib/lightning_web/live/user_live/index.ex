@@ -37,7 +37,10 @@ defmodule LightningWeb.UserLive.Index do
         %{"id" => user_id},
         socket
       ) do
-    case Accounts.cancel_scheduled_deletion(user_id) do
+    case Accounts.cancel_scheduled_deletion(
+           user_id,
+           socket.assigns.current_user
+         ) do
       {:ok, _change} ->
         {:noreply,
          socket

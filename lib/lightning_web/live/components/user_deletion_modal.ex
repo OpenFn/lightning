@@ -40,13 +40,20 @@ defmodule LightningWeb.Components.UserDeletionModal do
       not socket.assigns.delete_now? ->
         case Accounts.schedule_user_deletion(
                socket.assigns.user,
-               user_params["scheduled_deletion_email"]
+               user_params["scheduled_deletion_email"],
+               socket.assigns[:current_user]
              ) do
           {:ok, %User{}} ->
             {:noreply,
              socket
              |> put_flash(:info, "User scheduled for deletion")
              |> logout_after_deletion()}
+
+          {:error, :concurrent_edit} ->
+            {:noreply,
+             socket
+             |> put_flash(:error, save_error_message(:concurrent_edit))
+             |> push_navigate(to: ~p"/settings/users")}
 
           {:error, %Ecto.Changeset{} = changeset} ->
             {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
