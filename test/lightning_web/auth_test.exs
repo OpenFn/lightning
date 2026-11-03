@@ -797,15 +797,16 @@ defmodule LightningWeb.AuthTest do
       end
     end
 
-    test "a run's steps take a person's tokens, and refuse the service account and a repo connection with 403",
+    # Read as the run is, so the service account is let in too.
+    test "a run's steps take a person's tokens or the service account's, and not a repo connection's",
          %{conn: conn, tokens: tokens, project: project} do
       run = insert_history_run(project)
 
       assert_each_kind(conn, tokens, ~p"/api/runs/#{run.id}/steps",
-        service_account: :forbidden,
+        service_account: :logs_in,
         expired_service_account: :expired_token,
         personal: :logs_in,
-        repo_connection: :forbidden,
+        repo_connection: {:insufficient_scope, "projects:write"},
         run: :invalid_token,
         session: :logs_in
       )

@@ -316,6 +316,7 @@ lines at the top level.
 | `GET`   | `/api/work_orders/:id`                      | Reads a work order                | `projects:write` |
 | `GET`   | `/api/runs`                                 | Lists runs across projects        | `projects:write` |
 | `GET`   | `/api/runs/:id`                             | Reads a run                       | `projects:write` |
+| `GET`   | `/api/runs/:id/steps`                       | Lists a run's steps               | `projects:write` |
 | `GET`   | `/api/log_lines`                            | Lists log lines                   | `projects:write` |
 
 ### A workflow's history and lifecycle
@@ -347,7 +348,6 @@ and repo connections are refused 403 `forbidden`.
 | `PATCH` | `/api/work_orders/:id`                                         | Cancels a work order's waiting runs    | Not open to the service account |
 | `PATCH` | `/api/runs/:id`                                                | Cancels a run no worker has claimed    | Not open to the service account |
 | `POST`  | `/api/runs/:id/retries`                                        | Retries a run from one of its steps    | Not open to the service account |
-| `GET`   | `/api/runs/:id/steps`                                          | Lists a run's steps                    | Not open to the service account |
 | `POST`  | `/api/projects/:project_id/history_exports`                    | Exports work orders matching a filter  | Not open to the service account |
 | `GET`   | `/api/projects/:project_id/history_exports`                    | Lists a project's history exports      | Not open to the service account |
 | `GET`   | `/api/projects/:project_id/history_exports/:id`                | Reads a history export                 | Not open to the service account |

@@ -1,8 +1,8 @@
 defmodule Lightning.Policies.History do
   @moduledoc """
   The Bodyguard Policy module for what the API does with a project's history:
-  starting, retrying and cancelling work orders and runs, reading a run's
-  steps, and exporting history.
+  starting, retrying and cancelling work orders and runs, and exporting
+  history. A run's steps are read as the run is, under `:access_project`.
 
   Each action is open to a person on either of their tokens, a personal access
   token or a session token, and to nothing else (`Decision.person/2`): the
@@ -13,7 +13,7 @@ defmodule Lightning.Policies.History do
 
     * `:run_workflow` - owners, admins and editors, as the History page's Run,
       retry, cancel and export buttons need.
-    * `:read_history` - any member, viewers included.
+    * `:read_history` - any member, viewers included, for history exports.
   """
   @behaviour Bodyguard.Policy
 
