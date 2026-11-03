@@ -850,7 +850,7 @@ defmodule Lightning.UsageTrackingTest do
       }
     ]) do
       commit = "abc123"
-      spec_version = "v#{Application.spec(:lightning, :vsn)}"
+      spec_version = to_string(Application.spec(:lightning, :vsn))
 
       %{
         commit: commit,
@@ -903,7 +903,7 @@ defmodule Lightning.UsageTrackingTest do
       }
     ]) do
       commit = "abc123"
-      spec_version = "v#{Application.spec(:lightning, :vsn)}"
+      spec_version = to_string(Application.spec(:lightning, :vsn))
 
       %{
         commit: commit,

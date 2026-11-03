@@ -8,6 +8,8 @@ defmodule Lightning.WorkOrdersTest do
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.Message
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Scope
+  alias Lightning.WorkOrder
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.RetryManyWorkOrdersJob
@@ -482,7 +484,8 @@ defmodule Lightning.WorkOrdersTest do
 
       assert changeset.errors == [
                {:input_dataclip_id,
-                {"cannot retry run using a wiped dataclip", []}}
+                {"cannot retry run using a wiped dataclip",
+                 [code: :dataclip_wiped]}}
              ]
     end
 
@@ -527,7 +530,8 @@ defmodule Lightning.WorkOrdersTest do
 
       assert changeset.errors == [
                {:input_dataclip_id,
-                {"cannot retry run using a wiped dataclip", []}}
+                {"cannot retry run using a wiped dataclip",
+                 [code: :dataclip_wiped]}}
              ]
     end
 
@@ -3326,6 +3330,112 @@ defmodule Lightning.WorkOrdersTest do
         updated_wo = Repo.get(Lightning.WorkOrder, wo.id)
         assert updated_wo.state == :cancelled
       end
+    end
+  end
+
+  describe "get_for_project/3" do
+    test "finds a work order only in the project its workflow belongs to" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      workflow_id = workflow.id
+
+      assert {:ok, %WorkOrder{workflow: %{id: ^workflow_id}}} =
+               WorkOrders.get_for_project(workflow.project_id, work_order.id,
+                 include: [:workflow]
+               )
+
+      for {project_id, id} <- [
+            {insert(:project).id, work_order.id},
+            {workflow.project_id, Ecto.UUID.generate()},
+            {workflow.project_id, "not-a-uuid"}
+          ] do
+        assert WorkOrders.get_for_project(project_id, id) == {:error, :not_found}
+      end
+    end
+  end
+
+  describe "get_project_id/1" do
+    test "finds the project a work order's workflow belongs to" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip)
+        )
+
+      assert WorkOrders.get_project_id(work_order.id) ==
+               {:ok, workflow.project_id}
+
+      assert WorkOrders.get_project_id(Ecto.UUID.generate()) ==
+               {:error, :not_found}
+    end
+  end
+
+  describe "paginate_work_orders_for/3" do
+    setup do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user_id: user.id}])
+      workflow = insert(:simple_workflow, project: project)
+
+      [failed, success] =
+        for state <- [:failed, :success] do
+          insert(:workorder,
+            workflow: workflow,
+            state: state,
+            dataclip: build(:dataclip)
+          )
+        end
+
+      insert(:workorder, state: :failed, dataclip: build(:dataclip))
+
+      %{user: user, project: project, failed: failed, success: success}
+    end
+
+    test "narrows a project's work orders by the filters", %{
+      project: project,
+      failed: failed
+    } do
+      assert %Scrivener.Page{entries: [%{id: id}], total_entries: 1} =
+               WorkOrders.paginate_work_orders_for(
+                 project,
+                 %{state: ["failed"]},
+                 []
+               )
+
+      assert id == failed.id
+    end
+
+    test "pages the work orders of every project a user may access", %{
+      user: user,
+      failed: failed,
+      success: success
+    } do
+      page =
+        WorkOrders.paginate_work_orders_for(Scope.new(user), %{},
+          page: 2,
+          page_size: 1
+        )
+
+      assert %Scrivener.Page{
+               page_number: 2,
+               page_size: 1,
+               total_entries: 2,
+               total_pages: 2
+             } = page
+
+      assert MapSet.new(
+               WorkOrders.paginate_work_orders_for(Scope.new(user), %{}, []).entries,
+               & &1.id
+             ) == MapSet.new([failed.id, success.id])
     end
   end
 

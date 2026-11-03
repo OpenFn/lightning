@@ -135,6 +135,18 @@ defmodule LightningWeb.SandboxLive.FormComponent do
          |> put_flash(:info, "Sandbox updated")
          |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")}
 
+      {:error, reason} when reason in [:concurrent_edit, :audit_failed] ->
+        {:noreply,
+         socket
+         |> put_flash(:error, save_error_message(reason))
+         |> push_navigate(to: return_path(socket))}
+
+      {:error, :unauthorized} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")
+         |> push_navigate(to: return_path(socket))}
+
       {:error, %Ecto.Changeset{}} ->
         changeset =
           socket.assigns

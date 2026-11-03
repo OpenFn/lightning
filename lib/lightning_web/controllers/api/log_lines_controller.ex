@@ -8,12 +8,16 @@ defmodule LightningWeb.API.LogLinesController do
   - `page_size` - Number of items per page (default: 10, at most 100)
   - `timestamp_after` - Filter logs after this ISO8601 datetime
   - `timestamp_before` - Filter logs before this ISO8601 datetime
-  - `project_id` - Filter by project UUID
+  - `project_id` - The project the lines come from, which the caller must be
+    able to access
   - `workflow_id` - Filter by workflow UUID
   - `job_id` - Filter by job UUID
   - `work_order_id` - Filter by work order UUID
   - `run_id` - Filter by run UUID
   - `level` - Filter by log level (success, always, info, warn, error, debug)
+
+  The service account must send `project_id` on the list, as these tables grow
+  with every run; leaving it out is 400 `invalid_parameter`.
 
   ## Examples
 
@@ -26,41 +30,62 @@ defmodule LightningWeb.API.LogLinesController do
   use LightningWeb, :controller
 
   alias Lightning.Invocation
+  alias LightningWeb.API.Errors
+  alias LightningWeb.API.FallbackController
+  alias LightningWeb.API.Filters
+  alias LightningWeb.API.Request
+  alias LightningWeb.API.Target
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback FallbackController
+
+  plug LightningWeb.Plugs.AuthorizeAction,
+       {:project_users, :access_project}
 
   @doc """
-  Lists log lines with pagination and filtering.
+  Lists the log lines of the projects the caller may access, or of the one
+  project `project_id` names, narrowed by the query's filters.
 
-  Returns a paginated list of log lines filtered by the query parameters.
-  Validates datetime parameters before applying filters and enforces
-  authorization based on the current resource (user or API token).
-
-  ## Parameters
-
-  - `conn` - The Plug connection struct with the current resource assigned
-  - `params` - Map of query parameters for filtering and pagination
-
-  ## Returns
-
-  - Renders JSON with paginated log lines on success
-  - Returns error via fallback controller if datetime validation fails
+  The caller is authorised on `project_id` before the query is read, so a
+  caller who may not see the project learns nothing from its filters. Every
+  bad filter is reported in one 400 `invalid_parameter`.
   """
-  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def index(conn, params) do
-    with :ok <-
-           Invocation.Query.validate_datetime_params(params, [
-             "timestamp_after",
-             "timestamp_before"
-           ]) do
-      pagination_attrs = Map.take(params, ["page_size", "page"])
-
-      page =
-        Invocation.Query.log_lines_for(conn.assigns.current_resource)
-        |> Invocation.Query.filter_log_lines(params)
-        |> Lightning.Repo.paginate(pagination_attrs)
-
-      render(conn, "index.json", page: page, conn: conn)
+  @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, term()}
+  def index(conn, %{"project_id" => _} = params) do
+    with {:ok, project} <-
+           Target.project(
+             conn.assigns.scope,
+             Request.param(conn, "project_id"),
+             {:project_users, :access_project}
+           ),
+         {:ok, filters} <-
+           params
+           |> Filters.log_lines(conn.assigns.scope)
+           |> Errors.refuse_parameters() do
+      list(project, conn, params, filters, %{project_id: project.id})
     end
+  end
+
+  def index(conn, params) do
+    with {:ok, filters} <-
+           params
+           |> Filters.log_lines(conn.assigns.scope)
+           |> Errors.refuse_parameters() do
+      list(conn.assigns.scope, conn, params, filters, %{})
+    end
+  end
+
+  defp list(project_or_scope, conn, params, filters, target) do
+    page =
+      Invocation.paginate_log_lines_for(
+        project_or_scope,
+        filters,
+        Filters.page(params)
+      )
+
+    render(conn, "index.json",
+      page: page,
+      filters: Map.merge(filters, target),
+      conn: conn
+    )
   end
 end

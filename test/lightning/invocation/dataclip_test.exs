@@ -57,7 +57,8 @@ defmodule Lightning.Invocation.DataclipTest do
         |> Dataclip.new()
 
       refute changeset.valid?
-      assert {:request, {"cannot be set for this type", []}} in changeset.errors
+
+      assert {:request, {"cannot be set for this type", [code: :not_allowed]}} in changeset.errors
     end
   end
 end

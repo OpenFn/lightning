@@ -189,7 +189,11 @@ source at the citation instead of trusting a transcription.
   - `.claude/guidelines/e2e/collaborative-testing.md` - multi-user collaborative
     features
 
-`.claude/rules/logging.md` (Logger levels, Sentry noise) and
-`.claude/rules/ui-patterns.md` (button variants, Tailwind conventions) are not in
-that list because they are not read on request: each declares a `paths:` glob and
-loads by itself when you work on a file it matches.
+`.claude/rules/logging.md` (Logger levels, Sentry noise),
+`.claude/rules/ui-patterns.md` (button variants, Tailwind conventions),
+`.claude/rules/api.md` (API controllers: order of checks, statuses, error
+codes, new endpoints), `.claude/rules/api-tests.md` (API error tests: where
+each promise to a client is tested) and `.claude/rules/policies.md` (policies,
+`Lightning.Scope`, `Decision`) are not in that list because they are not read
+on request: each declares a `paths:` glob and loads by itself when you work on
+a file it matches.

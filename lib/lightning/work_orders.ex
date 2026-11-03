@@ -41,10 +41,12 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Runs
   alias Lightning.RunStep
+  alias Lightning.Scope
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -348,7 +350,8 @@ defmodule Lightning.WorkOrders do
          |> Ecto.Changeset.change()
          |> Ecto.Changeset.add_error(
            :input_dataclip_id,
-           "cannot retry run using a wiped dataclip"
+           "cannot retry run using a wiped dataclip",
+           code: :dataclip_wiped
          )}
     end)
     |> Multi.run(:steps, &get_workflow_steps_from/2)
@@ -859,12 +862,54 @@ defmodule Lightning.WorkOrders do
   end
 
   @doc """
-  Returns a query for work orders belonging to a specific project
+  Get a Work Order by id, scoped to a project.
+
+  Returns `{:error, :not_found}` when the id is malformed, or the work order
+  doesn't exist or belongs to a workflow in another project. Takes the same
+  `:include` option as `get/2`.
   """
-  @spec work_orders_for_project_query(Lightning.Projects.Project.t()) ::
-          Ecto.Queryable.t()
-  def work_orders_for_project_query(%Lightning.Projects.Project{} = project) do
-    Lightning.Invocation.Query.work_orders_for(project)
+  @spec get_for_project(Ecto.UUID.t(), term(), [{:include, list()}]) ::
+          {:ok, WorkOrder.t()} | {:error, :not_found}
+  def get_for_project(project_id, id, opts \\ []) do
+    if Lightning.Validators.valid_uuid?(id) do
+      from(wo in WorkOrder,
+        join: w in assoc(wo, :workflow),
+        where: wo.id == ^id and w.project_id == ^project_id,
+        preload: ^Keyword.get(opts, :include, [])
+      )
+      |> Repo.fetch_one()
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
+  The id of the project the work order `id` sits in, or `{:error, :not_found}`
+  when no work order has that id.
+  """
+  @spec get_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_project_id(id) do
+    from(wo in WorkOrder,
+      join: w in assoc(wo, :workflow),
+      where: wo.id == ^id,
+      select: w.project_id
+    )
+    |> Repo.fetch_one()
+  end
+
+  @doc """
+  A page of the work orders of `project`, or of every project the caller may
+  list, narrowed by `filters` (see
+  `Lightning.Invocation.Query.filter_work_orders/2`).
+  """
+  @spec paginate_work_orders_for(Project.t() | Scope.t(), map(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_work_orders_for(project_or_scope, filters, page) do
+    project_or_scope
+    |> Lightning.Invocation.Query.work_orders_for()
+    |> Lightning.Invocation.Query.filter_work_orders(filters)
+    |> Repo.paginate(page)
   end
 
   defp new_retry_run(

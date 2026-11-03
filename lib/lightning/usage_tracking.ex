@@ -215,7 +215,7 @@ defmodule Lightning.UsageTracking do
   def lightning_version do
     info = Lightning.release()
 
-    "v#{info.vsn}:#{image_for_submission(info.image_tag, info.vsn)}:#{commit_for_submission(info.commit)}"
+    "#{info.vsn}:#{image_for_submission(info.image_tag, info.vsn)}:#{commit_for_submission(info.commit)}"
   end
 
   defp commit_for_submission(commit) do
@@ -225,7 +225,7 @@ defmodule Lightning.UsageTracking do
   defp image_for_submission(tag, vsn) do
     cond do
       tag == "edge" -> "edge"
-      tag == "v#{vsn}" -> "match"
+      tag == to_string(vsn) -> "match"
       true -> "other"
     end
   end

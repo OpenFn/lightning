@@ -44,7 +44,7 @@ export interface ChannelError {
    * - deserialization_error: Failed to extract workflow data from Y.Doc
    * - internal_error: Unexpected server error
    * - validation_error: Ecto changeset validation failed
-   * - optimistic_lock_error: Concurrent modification conflict (stale lock_version)
+   * - concurrent_edit: Someone else saved the workflow first
    * - limit_error: Usage limit exceeded (AI assistant, runs, etc.)
    * - nesting_too_deep: Sandbox nesting depth limit exceeded
    * - adaptor_catalogue_unavailable: Adaptor catalogue hasn't loaded yet, retry shortly
@@ -57,7 +57,7 @@ export interface ChannelError {
     | 'deserialization_error'
     | 'internal_error'
     | 'validation_error'
-    | 'optimistic_lock_error'
+    | 'concurrent_edit'
     | 'limit_error'
     | 'nesting_too_deep'
     | 'adaptor_catalogue_unavailable'

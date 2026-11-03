@@ -27,26 +27,29 @@ defmodule Lightning.Collections.Collection do
     timestamps()
   end
 
-  @doc false
+  @doc """
+  Builds a new collection from its project and name. The id is never cast, so
+  a caller that wants a particular id puts it on the struct.
+  """
   def changeset(entry, attrs) do
     entry
     |> cast(attrs, [:project_id, :name])
     |> validate_required([:project_id, :name])
     |> validate()
+    |> unique_constraint(:id, name: :collections_pkey)
+  end
+
+  @doc """
+  Changes a collection's name. Only the name is cast, so it never moves project.
+  """
+  def rename_changeset(collection, attrs) do
+    collection
+    |> cast(attrs, [:name])
+    |> validate_required([:name])
+    |> validate()
   end
 
   def validate(changeset) do
-    changeset
-    |> validate_format(:name, ~r/^[a-z0-9]+([\-_.][a-z0-9]+)*$/,
-      message: "Collection name must be URL safe"
-    )
-    |> unique_constraint(:name,
-      name: :collections_project_id_name_index,
-      message: "A collection with this name already exists"
-    )
-  end
-
-  defp validate_changeset(changeset) do
     changeset
     |> validate_format(:name, ~r/^[a-z0-9]+([\-_.][a-z0-9]+)*$/,
       message: "Collection name must be URL safe"
@@ -71,6 +74,6 @@ defmodule Lightning.Collections.Collection do
           |> put_change(:name, Lightning.Helpers.url_safe_name(raw_name))
       end
     end)
-    |> validate_changeset()
+    |> validate()
   end
 end

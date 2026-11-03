@@ -198,6 +198,11 @@ defmodule LightningWeb.ChannelLive.Index do
           |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/channels")
           |> noreply()
 
+        {:error, :concurrent_edit} ->
+          socket
+          |> put_flash(:error, save_error_message(:concurrent_edit))
+          |> noreply()
+
         {:error, _changeset} ->
           socket
           |> put_flash(:error, "Failed to update channel. Please try again.")

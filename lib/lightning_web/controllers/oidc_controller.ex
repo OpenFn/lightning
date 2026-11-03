@@ -7,7 +7,7 @@ defmodule LightningWeb.OidcController do
   alias LightningWeb.OauthCredentialHelper
   alias LightningWeb.UserAuth
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback LightningWeb.BrowserFallbackController
 
   plug :fetch_current_user
 
