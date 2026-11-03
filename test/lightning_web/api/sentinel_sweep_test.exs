@@ -243,6 +243,10 @@ defmodule LightningWeb.API.SentinelSweepTest do
   # caller's own records.
   defp refused_to_a_stranger?(%{path: "/api/me/" <> _}), do: false
 
+  # Anyone holding the grant may create an OAuth client too.
+  defp refused_to_a_stranger?(%{verb: :put, path: "/api/oauth_clients/:id"}),
+    do: false
+
   defp refused_to_a_stranger?(%{pipeline: pipeline}),
     do: Map.has_key?(@pipelines, pipeline)
 
@@ -358,6 +362,20 @@ defmodule LightningWeb.API.SentinelSweepTest do
                 "/api/ai_sessions/:id/messages",
                 "/api/ai_sessions/:id/messages/:message_id/retries"
               ],
+       do: @forbidden
+
+  # A credential type is named by its adaptor, and the sweep's adaptor
+  # catalogue never loads, so a planted name can't be looked up.
+  defp expected(%{path: "/api/credential_schemas/:name"}, :planted),
+    do: {503, :not_ready, []}
+
+  # Only its owner may delete an OAuth client, and nobody may delete every
+  # one, so a person hears 403 for any id there.
+  defp expected(%{verb: :delete, path: "/api/oauth_clients/:id"}, :planted),
+    do: @forbidden
+
+  defp expected(%{path: "/api/users/:id/scheduled_deletion"}, attempt)
+       when attempt in [:planted, :array],
        do: @forbidden
 
   defp expected(%{pipeline: [:session_api], verb: verb, path: path}, attempt) do

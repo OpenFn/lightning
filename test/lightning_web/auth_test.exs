@@ -712,6 +712,76 @@ defmodule LightningWeb.AuthTest do
       end
     end
 
+    test "GET /api/oauth_clients takes a person's tokens, and refuses the service account, which owns no client, with 403",
+         %{conn: conn, tokens: tokens} do
+      assert_each_kind(conn, tokens, ~p"/api/oauth_clients",
+        service_account: :forbidden,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: {:insufficient_scope, "credentials:write"},
+        run: :invalid_token,
+        session: :logs_in
+      )
+    end
+
+    test "a project's keychain credentials and OAuth clients take a member's tokens and the service account's",
+         %{conn: conn, tokens: tokens, project: project} do
+      for path <- [
+            ~p"/api/projects/#{project.id}/keychain_credentials",
+            ~p"/api/projects/#{project.id}/oauth_clients"
+          ] do
+        assert_each_kind(conn, tokens, path,
+          service_account: :logs_in,
+          expired_service_account: :expired_token,
+          personal: :logs_in,
+          repo_connection: {:insufficient_scope, "credentials:write"},
+          run: :invalid_token,
+          session: :logs_in
+        )
+      end
+    end
+
+    test "a project's collections take an owner's tokens, and every collection only the service account's or a superuser's",
+         %{conn: conn, tokens: tokens, project: project} do
+      assert_each_kind(conn, tokens, ~p"/api/projects/#{project.id}/collections",
+        service_account: :logs_in,
+        expired_service_account: :expired_token,
+        personal: :logs_in,
+        repo_connection: {:insufficient_scope, "collections:write"},
+        run: :invalid_token,
+        session: :logs_in
+      )
+
+      assert_each_kind(conn, tokens, ~p"/api/collections",
+        service_account: :logs_in,
+        expired_service_account: :expired_token,
+        personal: :forbidden,
+        repo_connection: {:insufficient_scope, "collections:write"},
+        run: :invalid_token,
+        session: :forbidden
+      )
+    end
+
+    test "scheduling a user's deletion and cancelling it take only the service account's token, and refuse a person's with 403",
+         %{conn: conn, tokens: tokens} do
+      unscheduled = insert(:user)
+      scheduled = insert(:user, scheduled_deletion: DateTime.utc_now())
+
+      for path <- [
+            ~p"/api/users/#{unscheduled.id}",
+            ~p"/api/users/#{scheduled.id}/scheduled_deletion"
+          ] do
+        assert_each_kind_deleting(conn, tokens, path,
+          service_account: :logs_in,
+          expired_service_account: :expired_token,
+          personal: :forbidden,
+          repo_connection: {:insufficient_scope, "users:write"},
+          run: :invalid_token,
+          session: :forbidden
+        )
+      end
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens
@@ -1042,6 +1112,35 @@ defmodule LightningWeb.AuthTest do
         :forbidden ->
           assert_problem(conn, 403, :forbidden, [])
           assert get_resp_header(conn, "www-authenticate") == []
+      end
+    end
+  end
+
+  # The same as assert_each_kind/4 for a DELETE, which succeeds with any 2xx.
+  # It sends the service account's token first, so the kinds refused after it
+  # find the record as it left it.
+  defp assert_each_kind_deleting(conn, tokens, path, expected) do
+    assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
+
+    for {kind, answer} <- expected do
+      conn = conn |> with_token(tokens[kind]) |> delete(path)
+
+      case answer do
+        :logs_in ->
+          assert conn.status in 200..299, "#{kind} was answered #{conn.status}"
+
+        :invalid_token ->
+          assert_unauthenticated(conn, :invalid_token, @invalid_token)
+
+        :expired_token ->
+          assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+        :forbidden ->
+          assert_problem(conn, 403, :forbidden, [])
+          assert get_resp_header(conn, "www-authenticate") == []
+
+        {:insufficient_scope, grant} ->
+          assert_refused_for_scope(conn, grant)
       end
     end
   end

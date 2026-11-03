@@ -74,6 +74,33 @@ defmodule LightningWeb.API.FiltersTest do
     end
   end
 
+  describe "collection_sort/1" do
+    test "answers the order each sort asks for, by name when none is given" do
+      for {params, order_by} <- [
+            {%{}, [asc: :name]},
+            {%{"sort" => "name"}, [asc: :name]},
+            {%{"sort" => "-name"}, [desc: :name]},
+            {%{"sort" => "byte_size_sum"}, [asc: :byte_size_sum]},
+            {%{"sort" => "-byte_size_sum"}, [desc: :byte_size_sum]}
+          ] do
+        assert Filters.collection_sort(params) == {:ok, order_by}
+      end
+    end
+
+    test "refuses a sort it doesn't know, or one that isn't a string" do
+      for {value, entry} <- [
+            {"inserted_at",
+             %{parameter: "sort", code: :not_allowed, detail: "is invalid"}},
+            {"+name",
+             %{parameter: "sort", code: :not_allowed, detail: "is invalid"}},
+            {["name"], %{parameter: "sort", code: :type, detail: "is invalid"}}
+          ] do
+        assert {:error, changeset} = Filters.collection_sort(%{"sort" => value})
+        assert Errors.parameters(changeset).errors == [entry]
+      end
+    end
+  end
+
   describe "project_id" do
     test "is required from the service account, after any other bad filter" do
       {account, _key} =

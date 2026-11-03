@@ -1,9 +1,10 @@
 defmodule Lightning.Collections.Audit do
   @moduledoc """
-  Audit events for collections: who created one, and who renamed it.
+  Audit events for collections: who created one, who renamed it, and who
+  deleted it.
   """
   use Lightning.Auditing.Audit,
     repo: Lightning.Repo,
     item: "collection",
-    events: ["created", "updated"]
+    events: ["created", "updated", "deleted"]
 end

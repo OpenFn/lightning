@@ -261,6 +261,85 @@ defmodule LightningWeb.API.RouteGrantsTest do
     end
   end
 
+  describe "a token without the grant a credential or collection extra needs" do
+    test "credentials:write is needed for credential types, keychain credentials and OAuth clients",
+         %{project: project} = ctx do
+      keychain = insert(:keychain_credential, project: project)
+      client = insert(:oauth_client)
+      missing = Ecto.UUID.generate()
+
+      for caller <- [
+            bearer(ctx.conn, ctx.repo_connection.access_token),
+            bearer(ctx.conn, issue(ctx, ["projects:write", "collections:write"]))
+          ] do
+        assert_refused_for_scope(
+          [
+            get(caller, ~p"/api/credential_schemas"),
+            get(caller, ~p"/api/credential_schemas/raw"),
+            get(caller, ~p"/api/projects/#{project.id}/keychain_credentials"),
+            put(
+              caller,
+              ~p"/api/projects/#{project.id}/keychain_credentials/#{missing}",
+              "[1]"
+            ),
+            delete(
+              caller,
+              ~p"/api/projects/#{project.id}/keychain_credentials/#{keychain.id}"
+            ),
+            get(caller, ~p"/api/oauth_clients"),
+            get(caller, ~p"/api/projects/#{project.id}/oauth_clients"),
+            put(caller, ~p"/api/oauth_clients/#{missing}", "[1]"),
+            delete(caller, ~p"/api/oauth_clients/#{client.id}")
+          ],
+          "credentials:write"
+        )
+      end
+
+      assert Lightning.Repo.reload(keychain)
+      assert Lightning.Repo.reload(client)
+    end
+
+    test "collections:write is needed to list collections or delete one",
+         %{project: project} = ctx do
+      collection = insert(:collection, project: project)
+
+      for caller <- [
+            bearer(ctx.conn, ctx.repo_connection.access_token),
+            bearer(ctx.conn, issue(ctx, ["projects:write"]))
+          ] do
+        assert_refused_for_scope(
+          [
+            get(caller, ~p"/api/collections"),
+            get(caller, ~p"/api/projects/#{project.id}/collections"),
+            delete(
+              caller,
+              ~p"/api/projects/#{project.id}/collections/#{collection.id}"
+            )
+          ],
+          "collections:write"
+        )
+      end
+
+      assert Lightning.Repo.reload(collection)
+    end
+
+    test "users:write is needed to schedule or cancel a user's deletion", ctx do
+      user = insert(:user, scheduled_deletion: DateTime.utc_now())
+      short_account = bearer(ctx.conn, issue(ctx, ["users:read"]))
+
+      assert_refused_for_scope(
+        for(
+          id <- [user.id, Ecto.UUID.generate(), "not-a-uuid"],
+          path <- [~p"/api/users/#{id}", ~p"/api/users/#{id}/scheduled_deletion"],
+          do: delete(short_account, path)
+        ),
+        "users:write"
+      )
+
+      assert Lightning.Repo.reload!(user).scheduled_deletion
+    end
+  end
+
   defp issue(%{account: account}, grants), do: AccessToken.issue(account, grants)
 
   defp bearer(conn, token),

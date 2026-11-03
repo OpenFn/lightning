@@ -298,6 +298,46 @@ defmodule LightningWeb.Router do
     # end-api-area:credentials
 
     # api-area:credential_extras (routes for this area go between these markers)
+    get "/credential_schemas", API.CredentialSchemaController, :index
+    get "/credential_schemas/:name", API.CredentialSchemaController, :show
+
+    get "/collections", API.CollectionController, :list_all
+
+    get "/projects/:project_id/collections",
+        API.CollectionController,
+        :index
+
+    delete "/projects/:project_id/collections/:id",
+           API.CollectionController,
+           :delete
+
+    get "/projects/:project_id/keychain_credentials",
+        API.KeychainCredentialController,
+        :index
+
+    put "/projects/:project_id/keychain_credentials/:id",
+        API.KeychainCredentialController,
+        :update
+
+    delete "/projects/:project_id/keychain_credentials/:id",
+           API.KeychainCredentialController,
+           :delete
+
+    get "/oauth_clients", API.OauthClientController, :index
+
+    get "/projects/:project_id/oauth_clients",
+        API.OauthClientController,
+        :index_for_project
+
+    put "/oauth_clients/:id", API.OauthClientController, :update
+    delete "/oauth_clients/:id", API.OauthClientController, :delete
+
+    delete "/users/:id", API.UserDeletionController, :delete
+
+    delete "/users/:id/scheduled_deletion",
+           API.UserDeletionController,
+           :cancel
+
     # end-api-area:credential_extras
 
     # api-area:workflows (routes for this area go between these markers)

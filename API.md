@@ -160,6 +160,13 @@ stepped up with 403 `step_up_required`.
 | `PATCH`  | `/api/users/:id`      | Changes a user                                      | `users:write`                   |
 | `POST`   | `/api/users/register` | Signs up, where the instance offers it              | None                            |
 
+### Deleting users
+
+| Method   | Path                                | What it does                        | Token grant   |
+| -------- | ----------------------------------- | ----------------------------------- | ------------- |
+| `DELETE` | `/api/users/:id`                    | Schedules a user's deletion         | `users:write` |
+| `DELETE` | `/api/users/:id/scheduled_deletion` | Cancels a user's scheduled deletion | `users:write` |
+
 ### Your account and signing in
 
 Routes for resetting a password and confirming an email, for a person managing
@@ -232,6 +239,14 @@ Settings, deletion and members:
 | `DELETE` | `/api/projects/:project_id/repo_connection`       | Disconnects a project from GitHub                               | Not open to the service account |
 | `POST`   | `/api/projects/:project_id/repo_connection/syncs` | Commits a project to its GitHub branch                          | Not open to the service account |
 
+### Collections
+
+| Method   | Path                                        | What it does                       | Token grant         |
+| -------- | ------------------------------------------- | ---------------------------------- | ------------------- |
+| `GET`    | `/api/projects/:project_id/collections`     | Lists a project's collections      | `collections:write` |
+| `GET`    | `/api/collections`                          | Lists every project's collections  | `collections:write` |
+| `DELETE` | `/api/projects/:project_id/collections/:id` | Deletes a collection and its items | `collections:write` |
+
 ### Credentials
 
 The service account must send `project_id` to list credentials at
@@ -245,6 +260,20 @@ The service account must send `project_id` to list credentials at
 | `PUT`    | `/api/credentials/:id`                  | Creates or replaces a credential                       | `credentials:write`             |
 | `POST`   | `/api/credentials`                      | Creates a credential you own                           | Not open to the service account |
 | `DELETE` | `/api/credentials/:id`                  | Deletes a credential you own                           | Not open to the service account |
+| `GET`    | `/api/credential_schemas`               | Lists the credential types                             | `credentials:write`             |
+| `GET`    | `/api/credential_schemas/:name`         | Reads a credential type's JSON Schema                  | `credentials:write`             |
+
+### Keychain credentials and OAuth clients
+
+| Method   | Path                                                 | What it does                                        | Token grant                     |
+| -------- | ---------------------------------------------------- | --------------------------------------------------- | ------------------------------- |
+| `GET`    | `/api/projects/:project_id/keychain_credentials`     | Lists a project's keychain credentials              | `credentials:write`             |
+| `PUT`    | `/api/projects/:project_id/keychain_credentials/:id` | Creates or replaces a keychain credential           | `credentials:write`             |
+| `DELETE` | `/api/projects/:project_id/keychain_credentials/:id` | Deletes a keychain credential                       | `credentials:write`             |
+| `GET`    | `/api/oauth_clients`                                 | Lists your OAuth clients and the global ones        | Not open to the service account |
+| `GET`    | `/api/projects/:project_id/oauth_clients`            | Lists a project's OAuth clients and the global ones | `credentials:write`             |
+| `PUT`    | `/api/oauth_clients/:id`                             | Creates or replaces an OAuth client you own         | Not open to the service account |
+| `DELETE` | `/api/oauth_clients/:id`                             | Deletes an OAuth client you own                     | Not open to the service account |
 
 ### Credential deletion, links, environments and transfers
 

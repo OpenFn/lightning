@@ -891,6 +891,75 @@ defmodule Lightning.Credentials do
     end
   end
 
+  # These adaptors' credentials connect through OAuth, so the credential form
+  # doesn't offer them as a type.
+  @oauth_schema_packages [
+    "@openfn/language-googlesheets",
+    "@openfn/language-gmail"
+  ]
+
+  @doc """
+  The names of the credential types a credential can be given, as the
+  credential form offers them: `"raw"`, then every catalogue adaptor with a
+  schema, by name, except those whose credentials connect through OAuth.
+
+  `{:error, :not_ready}` while the adaptor catalogue can't answer.
+  """
+  @spec list_schema_names() :: {:ok, [String.t()]} | {:error, :not_ready}
+  def list_schema_names do
+    case Lightning.Adaptors.packages() do
+      {:ok, packages} ->
+        names =
+          for %{has_schema: true, name: name} <- packages,
+              name not in @oauth_schema_packages,
+              do: name
+
+        {:ok, ["raw" | Enum.sort(names)]}
+
+      {:error, _reason} ->
+        {:error, :not_ready}
+    end
+  end
+
+  @doc """
+  The JSON Schema a credential type's body is checked against, decoded with
+  its keys in order, and the type's full name. A short name such as `"dhis2"`
+  resolves to its package. `"raw"` takes any object, so it has no schema
+  (`nil`).
+
+  `{:error, :not_found}` for a name the catalogue doesn't hold, `"oauth"`
+  included, and `{:error, :not_ready}` while the catalogue can't answer.
+  """
+  @spec fetch_schema_document(String.t()) ::
+          {:ok, {String.t(), Jason.OrderedObject.t() | nil}}
+          | {:error, :not_found | :not_ready}
+  def fetch_schema_document(name) do
+    with {:ok, resolved} <- resolve_schema_name(name),
+         {:ok, document} <- schema_document(resolved) do
+      {:ok, {resolved, document}}
+    end
+  end
+
+  defp resolve_schema_name("oauth"), do: {:error, :not_found}
+
+  defp resolve_schema_name(name) do
+    case Lightning.Adaptors.resolve_name(name) do
+      {:ok, resolved} -> {:ok, resolved}
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, _reason} -> {:error, :not_ready}
+    end
+  end
+
+  defp schema_document("raw"), do: {:ok, nil}
+
+  defp schema_document(name) do
+    case Lightning.Adaptors.schema(name) do
+      {:ok, body} -> {:ok, Jason.decode!(body, objects: :ordered_objects)}
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, _reason} -> {:error, :not_ready}
+    end
+  end
+
   @doc """
   Resolves every credential's legacy short-form `schema` to its full npm
   package name, in place. Idempotent; safe to call repeatedly.
@@ -2420,6 +2489,34 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
+  A page of `project`'s keychain credentials by name, each with who created
+  it and its default credential loaded.
+  """
+  @spec paginate_keychain_credentials_for_project(Project.t(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_keychain_credentials_for_project(%Project{id: project_id}, page) do
+    from(kc in KeychainCredential,
+      where: kc.project_id == ^project_id,
+      order_by: [asc: fragment("lower(?)", kc.name), asc: kc.id],
+      preload: [:created_by, :default_credential]
+    )
+    |> Repo.paginate(page)
+  end
+
+  @doc """
+  The keychain credential `id` in the project `project_id`, with who created
+  it and its default credential loaded, or `{:error, :not_found}`.
+  """
+  @spec get_keychain_credential_for_project(Ecto.UUID.t(), Ecto.UUID.t()) ::
+          {:ok, KeychainCredential.t()} | {:error, :not_found}
+  def get_keychain_credential_for_project(project_id, id) do
+    KeychainCredential
+    |> where(id: ^id, project_id: ^project_id)
+    |> preload([:created_by, :default_credential])
+    |> Repo.fetch_one()
+  end
+
+  @doc """
   Gets a single keychain credential.
 
   Raises `Ecto.NoResultsError` if the KeychainCredential does not exist.
@@ -2472,9 +2569,11 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Updates a keychain credential on behalf of an actor.
+  Updates a keychain credential on behalf of an actor, a person or the
+  service account.
 
-  Returns `{:error, :unauthorized}` when the actor may not edit it.
+  Returns `{:error, :unauthorized}` when the actor may not edit it, and
+  `{:error, :concurrent_edit}` when another request deleted it meanwhile.
 
   ## Examples
 
@@ -2482,13 +2581,17 @@ defmodule Lightning.Credentials do
       {:ok, %KeychainCredential{}}
 
   """
-  @spec update_keychain_credential(KeychainCredential.t(), map(), User.t()) ::
+  @spec update_keychain_credential(
+          KeychainCredential.t(),
+          map(),
+          Lightning.Actor.t()
+        ) ::
           {:ok, KeychainCredential.t()}
-          | {:error, Ecto.Changeset.t() | :unauthorized}
+          | {:error, Ecto.Changeset.t() | :unauthorized | :concurrent_edit}
   def update_keychain_credential(
         %KeychainCredential{} = keychain_credential,
         attrs,
-        %User{} = actor
+        actor
       ) do
     with :ok <-
            authorize_keychain(
@@ -2498,14 +2601,17 @@ defmodule Lightning.Credentials do
            ) do
       keychain_credential
       |> KeychainCredential.changeset(attrs)
-      |> Repo.update()
+      |> Repo.update(stale_error_field: :id)
+      |> keychain_stale()
     end
   end
 
   @doc """
-  Deletes a keychain credential on behalf of an actor.
+  Deletes a keychain credential on behalf of an actor, a person or the
+  service account.
 
-  Returns `{:error, :unauthorized}` when the actor may not delete it.
+  Returns `{:error, :unauthorized}` when the actor may not delete it, and
+  `{:error, :concurrent_edit}` when another request deleted it meanwhile.
 
   ## Examples
 
@@ -2513,12 +2619,12 @@ defmodule Lightning.Credentials do
       {:ok, %KeychainCredential{}}
 
   """
-  @spec delete_keychain_credential(KeychainCredential.t(), User.t()) ::
+  @spec delete_keychain_credential(KeychainCredential.t(), Lightning.Actor.t()) ::
           {:ok, KeychainCredential.t()}
-          | {:error, Ecto.Changeset.t() | :unauthorized}
+          | {:error, Ecto.Changeset.t() | :unauthorized | :concurrent_edit}
   def delete_keychain_credential(
         %KeychainCredential{} = keychain_credential,
-        %User{} = actor
+        actor
       ) do
     with :ok <-
            authorize_keychain(
@@ -2526,11 +2632,21 @@ defmodule Lightning.Credentials do
              actor,
              keychain_credential
            ) do
-      Repo.delete(keychain_credential)
+      keychain_credential
+      |> Repo.delete(stale_error_field: :id)
+      |> keychain_stale()
     end
   end
 
-  defp authorize_keychain(action, %User{} = actor, %KeychainCredential{} = kc) do
+  # Another request deleted the keychain credential since it was read.
+  defp keychain_stale(
+         {:error, %Ecto.Changeset{errors: [id: {_message, stale: true}]}}
+       ),
+       do: {:error, :concurrent_edit}
+
+  defp keychain_stale(result), do: result
+
+  defp authorize_keychain(action, actor, %KeychainCredential{} = kc) do
     if Permissions.can?(:credentials, action, actor, kc) do
       :ok
     else
