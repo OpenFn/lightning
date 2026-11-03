@@ -115,6 +115,8 @@ config :esbuild,
          --alias:@monaco-editor/react=./node_modules/@monaco-editor/react
          --external:path
          --jsx=automatic
+         --define:import.meta.env.DEV=false
+         --define:import.meta.env.MODE="production"
          --tsconfig=tsconfig.browser.json
          --target=es2020
          --outdir=../priv/static/assets

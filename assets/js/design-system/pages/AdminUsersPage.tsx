@@ -6,7 +6,10 @@ import {
 import { designSystemPage } from '../page';
 
 /** What UserLive.Index puts in `data-props`. */
-export type Props = Pick<AdminUsersPageProps, 'users' | 'deleteUser'>;
+export type Props = Pick<
+  AdminUsersPageProps,
+  'users' | 'deleteUser' | 'newUserHref'
+>;
 
 /** The design system's users admin page, fed by UserLive.Index. */
 export const AdminUsersPage = designSystemPage(

@@ -17,9 +17,12 @@
           "type": "null"
         }
       ]
+    },
+    "newUserHref": {
+      "type": "string"
     }
   },
-  "required": ["users", "deleteUser"],
+  "required": ["users", "deleteUser", "newUserHref"],
   "additionalProperties": false,
   "definitions": {
     "AdminUserRow": {

@@ -3,7 +3,8 @@
   props={
     %{
       users: Enum.map(@users, &user_json/1),
-      deleteUser: delete_user_json(@delete_user)
+      deleteUser: delete_user_json(@delete_user),
+      newUserHref: ~p"/settings/users/new"
     }
   }
   current_user={@current_user}

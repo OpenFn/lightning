@@ -12,7 +12,11 @@ import { renderIsland } from './renderIsland';
 const renderPage = (reply: Record<string, unknown> = {}) =>
   renderIsland<Props>(
     BackupCodesPage,
-    { codes: [{ code: 'aaaa1111', usedAt: null }], mfaEnabled: true },
+    {
+      codes: [{ code: 'aaaa1111', usedAt: null }],
+      mfaEnabled: true,
+      profileHref: '/profile',
+    },
     { reply }
   );
 

@@ -29,6 +29,8 @@ const renderPage = (props: Partial<Props>) =>
     form: null,
     deleteProject: null,
     gracePeriodDays: 7,
+    newProjectHref: '/settings/projects/new',
+    cancelHref: '/settings/projects',
     ...props,
   });
 

@@ -21,7 +21,10 @@ const user: Props['user'] = {
 
 describe('AdminUserEditPage', () => {
   test('saves with the event and the camelCase values the LiveView reads', async () => {
-    const { pushEvent } = renderIsland<Props>(AdminUserEditPage, { user });
+    const { pushEvent } = renderIsland<Props>(AdminUserEditPage, {
+      user,
+      cancelHref: '/settings/users',
+    });
 
     fireEvent.change(screen.getByLabelText('First Name'), {
       target: { value: 'Ama' },

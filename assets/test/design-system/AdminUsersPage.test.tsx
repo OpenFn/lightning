@@ -10,6 +10,7 @@ import {
 import { renderIsland } from './renderIsland';
 
 const props: Props = {
+  newUserHref: '/settings/users/new',
   users: [
     {
       id: 'u1',
