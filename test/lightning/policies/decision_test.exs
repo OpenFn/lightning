@@ -82,11 +82,23 @@ defmodule Lightning.Policies.DecisionTest do
     end
   end
 
-  test "a caller without the grant hears which grant, never the deletion",
+  # A person-only action refuses the service account with `false` whatever its
+  # grants, since no grant would let it in.
+  @person_actions [
+    :edit_digest_alerts,
+    :edit_failure_alerts,
+    :invite_project_user
+  ]
+
+  test "a caller without the grant hears which grant, never the deletion, unless no grant would do",
        %{project: project, grantless: grantless} do
     for {policy, actions} <- @project_actions, action <- actions do
-      assert policy.authorize(action, grantless, project) ==
-               {:error, {:insufficient_scope, grant(policy, action)}},
+      expected =
+        if policy == ProjectUsers and action in @person_actions,
+          do: false,
+          else: {:error, {:insufficient_scope, grant(policy, action)}}
+
+      assert policy.authorize(action, grantless, project) == expected,
              "#{inspect(policy)} #{action}"
     end
 

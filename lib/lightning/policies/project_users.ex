@@ -108,21 +108,22 @@ defmodule Lightning.Policies.ProjectUsers do
   @spec authorize(actions(), Scope.t() | Scope.actor(), Scope.subject()) ::
           Decision.answer()
   # A member's own notifications are for the person, and so is inviting
-  # someone, never the service account, whatever its grants. After the grant, so
-  # a token without it still hears which grant, but before the project, so the
-  # API refuses the service account before it looks anything up.
+  # someone, never the service account, whatever its grants. Refused with
+  # `false` ahead of the grant, as every other person-only rule is through
+  # `Decision.person/2`: naming a grant would tell the service account to ask
+  # for one that still wouldn't let it in.
   def authorize(action, %Scope{} = scope, subject)
-      when action in @person_actions do
-    case Decision.project(
-           scope,
-           subject,
-           grant(action),
-           judge(action, scope, subject)
-         ) do
-      {:error, {:insufficient_scope, _grant}} = refused -> refused
-      answer -> Decision.person(scope, answer)
-    end
-  end
+      when action in @person_actions,
+      do:
+        Decision.person(
+          scope,
+          Decision.project(
+            scope,
+            subject,
+            grant(action),
+            judge(action, scope, subject)
+          )
+        )
 
   def authorize(action, %Scope{} = scope, subject),
     do:
