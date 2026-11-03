@@ -24,7 +24,7 @@ defmodule LightningWeb.TokensLiveTest do
 
       # The side menu is drawn by React from the layout's bridge; the profile
       # menu marks "API Tokens" current from the path.
-      assert %{"variant" => "profile"} =
+      assert %{"menu" => "profile"} =
                page_props(token_live, "#sidebar-bridge")
 
       assert html =~ "Personal Access Tokens"

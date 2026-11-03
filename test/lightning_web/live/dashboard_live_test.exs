@@ -50,10 +50,9 @@ defmodule LightningWeb.DashboardLiveTest do
       props = page_props(index_live, "#sidebar-bridge")
 
       assert %{
-               "variant" => "profile",
+               "menu" => "profile",
                "canAccessAdmin" => false,
                "collapsed" => false,
-               "theme" => "primary-theme",
                "user" => %{"email" => email, "firstName" => first_name}
              } = props
 

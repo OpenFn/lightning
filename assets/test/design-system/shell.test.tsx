@@ -11,7 +11,7 @@ import {
 
 // What a layout's SidebarBridge publishes (see LayoutComponents.sidebar_bridge).
 const props: Props = {
-  variant: 'profile',
+  menu: 'profile',
   project: undefined,
   user: {
     firstName: 'Amy',
@@ -20,10 +20,8 @@ const props: Props = {
     experimentalFeatures: false,
   },
   canAccessAdmin: false,
-  sysInfo: true,
   adminEmail: 'support@openfn.org',
   releaseLabel: 'v2.19.2',
-  theme: 'primary-theme',
   collapsed: false,
 };
 
@@ -61,9 +59,8 @@ describe('Shell', () => {
 
   test('a superuser gets the admin links; the admin menu has its areas and Back', () => {
     renderShell('/settings/audit', {
-      variant: 'admin',
+      menu: 'admin',
       canAccessAdmin: true,
-      theme: 'sudo-variant',
     });
 
     for (const name of [
@@ -85,7 +82,7 @@ describe('Shell', () => {
 
   test('a project menu links to its areas', () => {
     renderShell('/projects/p1/history', {
-      variant: 'project',
+      menu: 'project',
       project: { id: 'p1' },
     });
 

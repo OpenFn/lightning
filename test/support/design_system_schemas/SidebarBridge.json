@@ -2,8 +2,8 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
-    "variant": {
-      "$ref": "#/definitions/SidebarVariant"
+    "menu": {
+      "$ref": "#/definitions/SidebarMenu"
     },
     "project": {
       "type": "object",
@@ -21,24 +21,18 @@
     "canAccessAdmin": {
       "type": "boolean"
     },
-    "sysInfo": {
-      "type": "boolean"
-    },
     "adminEmail": {
       "type": "string"
     },
     "releaseLabel": {
       "type": "string"
     },
-    "theme": {
-      "$ref": "#/definitions/SidebarTheme"
-    },
     "collapsed": {
       "type": "boolean"
     }
   },
   "required": [
-    "variant",
+    "menu",
     "user",
     "canAccessAdmin",
     "adminEmail",
@@ -47,7 +41,7 @@
   ],
   "additionalProperties": false,
   "definitions": {
-    "SidebarVariant": {
+    "SidebarMenu": {
       "type": "string",
       "enum": ["project", "profile", "admin"]
     },
@@ -69,10 +63,6 @@
       },
       "required": ["firstName", "lastName", "email", "experimentalFeatures"],
       "additionalProperties": false
-    },
-    "SidebarTheme": {
-      "type": "string",
-      "enum": ["primary-theme", "sudo-variant"]
     }
   }
 }

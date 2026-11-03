@@ -214,7 +214,7 @@ defmodule LightningWeb.LayoutComponents do
     user = assigns.current_user
 
     props = %{
-      variant: assigns.variant,
+      menu: assigns.variant,
       user: %{
         firstName: user.first_name,
         lastName: user.last_name,
@@ -223,10 +223,8 @@ defmodule LightningWeb.LayoutComponents do
           Lightning.Accounts.experimental_features_enabled?(user)
       },
       canAccessAdmin: user.role == :superuser,
-      sysInfo: function_exported?(Routes, :live_dashboard_path, 2),
       adminEmail: Lightning.Config.instance_admin_email(),
       releaseLabel: LightningWeb.Components.Common.release_label(),
-      theme: assigns.side_menu_theme,
       collapsed: assigns.sidebar_collapsed == true
     }
 

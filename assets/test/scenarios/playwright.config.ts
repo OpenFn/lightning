@@ -10,7 +10,7 @@ import { defineConfig, devices } from '@playwright/test';
 // TARGET=demo runs them against the openfn-ia-demo Vite app instead.
 const baseURL =
   process.env.TARGET === 'demo'
-    ? 'http://localhost:5173/openfn-ia-demo/'
+    ? process.env.DEMO_URL || 'http://localhost:5173/openfn-3-poc/'
     : process.env.LIGHTNING_URL || 'http://localhost:4003';
 
 const use = {
