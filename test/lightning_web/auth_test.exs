@@ -575,8 +575,9 @@ defmodule LightningWeb.AuthTest do
       refute Repo.reload!(workflow).deleted_at
     end
 
-    # The session's person has no GitHub connection, which is 403 too.
-    test "the GitHub lists take only a session token, and refuse every bearer token with 403",
+    # The tokens' person has no GitHub connection, which is 403 too, so a
+    # person's tokens being let in is shown in `API.Me.GithubTest`.
+    test "the GitHub lists take a person's tokens, and refuse the service account and a repo connection with 403",
          %{conn: conn, tokens: tokens} do
       for route <- [
             {:get, ~p"/api/me/github_repos"},

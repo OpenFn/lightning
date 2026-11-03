@@ -31,9 +31,11 @@ defmodule Lightning.Policies.Account do
   @spec authorize(actions(), Scope.t(), any()) :: Decision.answer()
 
   # A personal access token may list and revoke its person's tokens, itself
-  # included, so a script can rotate its own.
+  # included, so a script can rotate its own. It may also list the GitHub
+  # repositories and branches its person can reach, since the same token may
+  # connect one to a project (`Lightning.Policies.RepoConnections`).
   def authorize(action, %Scope{} = scope, _subject)
-      when action in [:list_own_tokens, :revoke_own_token],
+      when action in [:list_own_tokens, :revoke_own_token, :list_github_repos],
       do: Decision.person(scope, true)
 
   # A new token is a new way into the account that outlives the session. A new
@@ -52,8 +54,7 @@ defmodule Lightning.Policies.Account do
       when action in [
              :read_own_mfa,
              :start_mfa,
-             :disconnect_github,
-             :list_github_repos
+             :disconnect_github
            ],
       do: Decision.session(scope, true)
 
