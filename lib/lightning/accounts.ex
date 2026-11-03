@@ -451,6 +451,7 @@ defmodule Lightning.Accounts do
     |> case do
       {:ok, %{totp: totp}} -> {:ok, totp}
       {:error, :totp, changeset, _} -> stale_or(changeset)
+      {:error, :backup_codes, :concurrent_edit, _} -> {:error, :concurrent_edit}
     end
   end
 
@@ -715,14 +716,16 @@ defmodule Lightning.Accounts do
     User.scheduled_deletion_changeset(user, attrs)
   end
 
-  def cancel_scheduled_deletion(user_id) do
+  @doc """
+  Cancels a user's scheduled deletion and enables them again. Given an
+  `actor`, records it as having changed the user, as `update_user/3` does.
+  """
+  @spec cancel_scheduled_deletion(Ecto.UUID.t(), User.t() | nil) ::
+          {:ok, User.t()} | {:error, Changeset.t() | :concurrent_edit}
+  def cancel_scheduled_deletion(user_id, actor \\ nil) do
     user_id
     |> get_user!()
-    |> User.details_changeset(%{
-      "scheduled_deletion" => nil,
-      "disabled" => false
-    })
-    |> Repo.update()
+    |> update_user(%{"scheduled_deletion" => nil, "disabled" => false}, actor)
   end
 
   @doc """

@@ -66,6 +66,12 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
          )
          |> push_navigate(to: socket.assigns.return_to)}
 
+      {:error, :concurrent_edit} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, save_error_message(:concurrent_edit))
+         |> push_navigate(to: socket.assigns.return_to)}
+
       {:error, %Ecto.Changeset{} = _changeset} ->
         {:noreply, socket}
     end

@@ -143,6 +143,12 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
              "You are not authorized to edit this keychain credential."
            )}
 
+        {:error, :concurrent_edit} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, save_error_message(:concurrent_edit))
+           |> push_event("close_modal", %{id: socket.assigns.id})}
+
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :changeset, changeset)}
       end

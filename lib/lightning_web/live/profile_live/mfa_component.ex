@@ -60,6 +60,12 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
          |> put_flash(:info, "MFA Setup")
          |> maybe_redirect_to_backup_codes()}
 
+      {:error, :concurrent_edit} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, save_error_message(:concurrent_edit))
+         |> push_navigate(to: ~p"/profile")}
+
       {:error, changeset} ->
         {:noreply, assign(socket, totp_changeset: changeset)}
     end

@@ -607,6 +607,25 @@ defmodule LightningWeb.DataclipControllerTest do
       assert is_nil(updated["name"])
     end
 
+    test "a dataclip another request deletes mid-rename answers 409 with a message",
+         %{conn: conn, project: project, dataclip: dataclip} do
+      Lightning.RaceHelpers.after_first_query("dataclips", dataclip.id, fn id ->
+        Repo.query!("DELETE FROM dataclips WHERE id = $1", [id])
+      end)
+
+      conn =
+        patch(conn, ~p"/projects/#{project}/dataclips/#{dataclip}", %{
+          name: "New Name"
+        })
+
+      assert json_response(conn, 409) == %{
+               "error" =>
+                 "Someone else changed or deleted this record while you were editing it. Reload and try again."
+             }
+
+      refute Repo.reload(dataclip)
+    end
+
     test "requires authentication", %{project: project, dataclip: dataclip} do
       conn = build_conn()
 

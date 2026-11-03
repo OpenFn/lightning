@@ -37,6 +37,16 @@ defmodule LightningWeb.BrowserFallbackController do
     |> render(:"403")
   end
 
+  # Another request changed or deleted the record mid-request. Only the JSON
+  # endpoints the editor calls return this, so it answers in JSON.
+  def call(conn, {:error, :concurrent_edit}) do
+    conn
+    |> put_status(:conflict)
+    |> json(%{
+      error: LightningWeb.LiveHelpers.save_error_message(:concurrent_edit)
+    })
+  end
+
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)
