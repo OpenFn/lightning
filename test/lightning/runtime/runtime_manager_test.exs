@@ -3,6 +3,8 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
   alias Lightning.Runtime.RuntimeManager
 
+  @moduletag :tmp_dir
+
   defmodule RuntimeClient do
     @behaviour Lightning.Runtime.RuntimeManager.RuntimeClient
 
@@ -52,6 +54,29 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
              start_server(:test_start_false,
                runtime_client: RuntimeClient,
                start: false
+             )
+  end
+
+  test "the runtime manager refuses to start when the worker is missing", %{
+    test: test,
+    tmp_dir: tmp_dir
+  } do
+    missing_dir = Path.join(tmp_dir, "nope")
+
+    assert {:error, {{:worker_not_found, ^missing_dir}, _}} =
+             start_server(test,
+               runtime_client: RuntimeClient,
+               start: true,
+               cd: missing_dir
+             )
+
+    missing_script = Path.join(tmp_dir, "node_modules/.bin/worker")
+
+    assert {:error, {{:worker_not_found, ^missing_script}, _}} =
+             start_server(test,
+               runtime_client: RuntimeClient,
+               start: true,
+               cd: tmp_dir
              )
   end
 

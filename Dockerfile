@@ -64,6 +64,11 @@ COPY assets assets
 RUN mix lightning.install_runtime
 RUN npm install --prefix assets
 
+# The worker gets its own install so the release doesn't carry the frontend's
+# node_modules. Pinned to the version assets/ locks, which dev runs.
+RUN npm install --prefix priv/worker --omit=dev --no-audit --no-fund \
+  @openfn/ws-worker@$(node -p "require('./assets/package-lock.json').packages['node_modules/@openfn/ws-worker'].version")
+
 # compile assets
 RUN mix assets.deploy
 
