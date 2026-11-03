@@ -995,8 +995,12 @@ defmodule Lightning.Accounts do
   date based on the PURGE_DELETED_AFTER_DAYS environment variable. If no ENV is
   set, this date defaults to NOW but the automatic user purge cronjob will never
   run. (Note that subsequent logins will be blocked for users pending deletion.)
+
+  Given an `actor`, records it as having changed the user. Returns
+  `{:error, :concurrent_edit}` when another request deleted the user while
+  this one ran.
   """
-  def schedule_user_deletion(user, email) do
+  def schedule_user_deletion(user, email, actor \\ nil) do
     date =
       case Lightning.Config.purge_deleted_after_days() do
         nil -> DateTime.utc_now()
@@ -1011,7 +1015,8 @@ defmodule Lightning.Accounts do
       })
 
     Ecto.Multi.new()
-    |> Ecto.Multi.update(:user, changeset)
+    |> Ecto.Multi.update(:user, changeset, stale_error_field: :id)
+    |> maybe_audit_update(changeset, actor)
     |> Ecto.Multi.delete_all(
       :tokens,
       UserToken.user_and_contexts_query(user, :all)
@@ -1022,6 +1027,9 @@ defmodule Lightning.Accounts do
         LightningWeb.UserAuth.disconnect_user_sockets(user)
         UserNotifier.send_deletion_notification_email(user)
         {:ok, user}
+
+      {:error, :user, %Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
 
       {:error, :user, changeset, _} ->
         {:error, changeset}

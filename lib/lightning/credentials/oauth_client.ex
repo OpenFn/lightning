@@ -74,7 +74,9 @@ defmodule Lightning.Credentials.OauthClient do
   `Lightning.Credentials.Credential`.
   """
   def create_changeset(oauth_client, attrs, opts \\ []) do
-    build_changeset(oauth_client, attrs, [:user_id | castable_fields(opts)])
+    oauth_client
+    |> build_changeset(attrs, [:user_id | castable_fields(opts)])
+    |> unique_constraint(:id, name: :oauth_clients_pkey)
   end
 
   defp build_changeset(oauth_client, attrs, fields) do

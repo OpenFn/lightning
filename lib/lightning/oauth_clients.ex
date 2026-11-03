@@ -114,6 +114,45 @@ defmodule Lightning.OauthClients do
   def get_client!(id), do: Repo.get!(OauthClient, id)
 
   @doc """
+  The OAuth client `id`, with its project links loaded, or `nil`.
+  """
+  @spec get_client(Ecto.UUID.t()) :: OauthClient.t() | nil
+  def get_client(id) do
+    OauthClient
+    |> Repo.get(id)
+    |> Repo.preload(:project_oauth_clients)
+  end
+
+  @doc """
+  A page of the OAuth clients `list_clients/1` lists for a project or a user:
+  those linked to the project, or the user's own, and every global one. They
+  are ordered by name, each with its project links loaded.
+  """
+  @spec paginate_clients(Project.t() | User.t(), keyword()) :: Scrivener.Page.t()
+  def paginate_clients(%Project{id: project_id}, page) do
+    linked =
+      from(poc in ProjectOauthClient,
+        where: poc.project_id == ^project_id,
+        select: poc.oauth_client_id
+      )
+
+    from(c in OauthClient, where: c.global or c.id in subquery(linked))
+    |> paginate_by_name(page)
+  end
+
+  def paginate_clients(%User{id: user_id}, page) do
+    from(c in OauthClient, where: c.user_id == ^user_id or c.global)
+    |> paginate_by_name(page)
+  end
+
+  defp paginate_by_name(query, page) do
+    query
+    |> order_by([c], asc: fragment("lower(?)", c.name), asc: c.id)
+    |> preload(:project_oauth_clients)
+    |> Repo.paginate(page)
+  end
+
+  @doc """
   Creates a new OAuth client with the specified attributes.
 
   ## Parameters
@@ -123,6 +162,10 @@ defmodule Lightning.OauthClients do
   ## Returns
     - `{:ok, oauth_client}` if the client is created successfully.
     - `{:error, changeset}` if there is an error during creation due to validation failures or database issues.
+
+  ## Options
+    - `:id` - the id to create the client under, rather than a new one
+    - `:allow_global` - see `Lightning.Credentials.OauthClient.changeset/3`
 
   ## Examples
     iex> create_client(%{name: "New Client", user_id: user.id}, actor)
@@ -141,7 +184,8 @@ defmodule Lightning.OauthClients do
   end
 
   defp do_create_client(attrs, opts) do
-    changeset = OauthClient.create_changeset(%OauthClient{}, attrs, opts)
+    changeset =
+      OauthClient.create_changeset(%OauthClient{id: opts[:id]}, attrs, opts)
 
     Multi.new()
     |> Multi.insert(:client, changeset)
@@ -160,6 +204,8 @@ defmodule Lightning.OauthClients do
   ## Returns
   - A tuple {:ok, oauth_client} if update is successful.
   - A tuple {:error, changeset} if update fails.
+  - `{:error, :concurrent_edit}` if another request deleted the client
+    since it was read.
 
   ## Examples
       iex> update_client(client, %{field: new_value}, actor)
@@ -178,7 +224,7 @@ defmodule Lightning.OauthClients do
     changeset = OauthClient.changeset(client, attrs, opts)
 
     Multi.new()
-    |> Multi.update(:client, changeset)
+    |> Multi.update(:client, changeset, stale_error_field: :id)
     |> derive_events(changeset)
     |> Repo.transaction()
     |> handle_transaction_result()
@@ -187,6 +233,11 @@ defmodule Lightning.OauthClients do
   defp handle_transaction_result({:ok, %{client: client}}) do
     {:ok, client}
   end
+
+  defp handle_transaction_result(
+         {:error, :client, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _}
+       ),
+       do: {:error, :concurrent_edit}
 
   defp handle_transaction_result({:error, _op, changeset, _changes}) do
     {:error, changeset}
@@ -285,6 +336,8 @@ defmodule Lightning.OauthClients do
   ## Returns
   - A tuple {:ok, oauth_client} if deletion is successful.
   - A tuple {:error, changeset} if deletion fails.
+  - `{:error, :concurrent_edit}` if another request deleted the client
+    since it was read.
 
   ## Examples
       iex> delete_client(client, actor)
@@ -322,11 +375,18 @@ defmodule Lightning.OauthClients do
         {count, _} -> {:ok, count}
       end
     end)
-    |> Multi.delete(:client, client)
+    |> Multi.delete(:client, client, stale_error_field: :id)
     |> Multi.insert(:audit, fn _ ->
       OauthClientAudit.user_initiated_event("deleted", client)
     end)
     |> Repo.transaction()
+    |> case do
+      {:error, :client, %Ecto.Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
+
+      result ->
+        result
+    end
   end
 
   defp remove_project_oauth_clients(client_id) do

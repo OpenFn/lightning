@@ -61,6 +61,34 @@ defmodule Lightning.Collections do
     Repo.all(query)
   end
 
+  @doc """
+  A page of every project's collections, each with its project loaded, in
+  `order_by` order, such as `[asc: :name]` or `[desc: :byte_size_sum]`. The id
+  breaks ties, so a page boundary between equal values stays put.
+  """
+  @spec paginate_collections(keyword(), keyword()) :: Scrivener.Page.t()
+  def paginate_collections(order_by, page) do
+    from(c in Collection,
+      order_by: ^(order_by ++ [asc: :id]),
+      preload: :project
+    )
+    |> Repo.paginate(page)
+  end
+
+  @doc """
+  A page of `project`'s collections, ordered as `paginate_collections/2`
+  orders them.
+  """
+  @spec paginate_project_collections(Project.t(), keyword(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_project_collections(%Project{id: project_id}, order_by, page) do
+    from(c in Collection,
+      where: c.project_id == ^project_id,
+      order_by: ^(order_by ++ [asc: :id])
+    )
+    |> Repo.paginate(page)
+  end
+
   @doc "The collection with primary key `id`, or `nil`."
   @spec get_collection_by_id(Ecto.UUID.t()) :: Collection.t() | nil
   def get_collection_by_id(id), do: Repo.get(Collection, id)
@@ -245,6 +273,43 @@ defmodule Lightning.Collections do
 
       {:error, :audit, changeset, _changes} ->
         raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+    end
+  end
+
+  @doc """
+  Deletes `collection` and every item in it, recording `actor` as having
+  deleted it.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted the
+  collection while this one ran.
+  """
+  @spec delete_collection(Collection.t(), Lightning.Actor.t()) ::
+          {:ok, Collection.t()} | {:error, :concurrent_edit}
+  def delete_collection(%Collection{} = collection, actor) do
+    Repo.transact(fn ->
+      :ok =
+        CollectionHook.handle_delete(
+          collection.project_id,
+          collection.byte_size_sum
+        )
+
+      with {:ok, deleted} <- Repo.delete(collection, stale_error_field: :id),
+           {:ok, _audit} <-
+             "deleted"
+             |> Audit.event(collection.id, actor, %{
+               before: Map.take(collection, [:name, :project_id]),
+               after: nil
+             })
+             |> Repo.insert() do
+        {:ok, deleted}
+      end
+    end)
+    |> case do
+      {:error, %Changeset{errors: [id: {_, stale: true}]}} ->
+        {:error, :concurrent_edit}
+
+      result ->
+        result
     end
   end
 
