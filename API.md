@@ -346,3 +346,8 @@ and repo connections are refused 403 `forbidden`.
 | `GET`  | `/api/projects/:project_id/workflows/:workflow_id/health/outcomes` | Workflow health: run outcomes | Session only |
 | `GET`  | `/api/projects/:project_id/workflows/:workflow_id/health/failures` | Workflow health: failures     | Session only |
 | `GET`  | `/api/projects/:project_id/workflows/:workflow_id/health/runs`     | Workflow health: runs         | Session only |
+| `GET`  | `/api/projects/:project_id/ai_sessions`                            | Lists a project's AI sessions | Session only |
+| `POST` | `/api/projects/:project_id/ai_sessions`                            | Starts an AI session          | Session only |
+| `GET`  | `/api/ai_sessions/:id`                                             | Reads an AI session           | Session only |
+| `POST` | `/api/ai_sessions/:id/messages`                                    | Sends an AI message           | Session only |
+| `POST` | `/api/ai_sessions/:id/messages/:message_id/retries`                | Retries a failed AI message   | Session only |

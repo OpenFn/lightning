@@ -50,7 +50,8 @@ defmodule LightningWeb.API.Codes do
     bad_gateway: {502, "The channel could not reach its destination."},
     service_unavailable: {503, "Try again shortly."},
     not_ready: {503, "This is not ready yet. Try again shortly."},
-    timeout: {504, "The workflow did not finish in time."}
+    timeout: {504, "The workflow did not finish in time."},
+    not_retryable: {409, "Only a message that failed can be retried."}
   }
 
   @typedoc "A response code, one of the keys of the response list."

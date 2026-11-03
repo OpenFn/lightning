@@ -82,10 +82,28 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       |> Repo.get!(message_id)
       |> update_message_status(:processing)
 
-    session = update_session_with_job_context(session, message)
+    session =
+      session
+      |> put_project_id()
+      |> update_session_with_job_context(message)
+
     result = dispatch_message_processing(session, message)
     handle_processing_result(message, result)
   end
+
+  # Run and step lookups are scoped to session.project_id. Sessions about a job
+  # not yet saved were stored without one, so reach the project through the
+  # session's workflow or job, as AiAssistant.get_project_id/1 does.
+  @spec put_project_id(AiAssistant.ChatSession.t()) ::
+          AiAssistant.ChatSession.t()
+  defp put_project_id(%{project_id: nil, id: id} = session) do
+    case AiAssistant.get_project_id(id) do
+      {:ok, project_id} -> %{session | project_id: project_id}
+      {:error, :not_found} -> session
+    end
+  end
+
+  defp put_project_id(session), do: session
 
   @spec update_session_with_job_context(
           AiAssistant.ChatSession.t(),
@@ -113,6 +131,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           session
       end
 
+    session = put_message_context(session, message_meta)
+
     # Propagate follow_run_id from message meta to in-memory session meta
     # so that maybe_add_run_logs can find it during enrichment
     case message_meta do
@@ -125,6 +145,33 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       _ ->
         session
     end
+  end
+
+  # A message sent through the API carries its own attachments and editor
+  # context, so it is answered, and retried, with what it sent rather than with
+  # what the session last held. Messages from the channel carry neither and
+  # keep the session's.
+  defp put_message_context(session, message_meta) do
+    meta = session.meta || %{}
+
+    meta =
+      case message_meta do
+        %{"message_options" => options} when is_map(options) ->
+          Map.update(meta, "message_options", options, fn
+            existing when is_map(existing) -> Map.merge(existing, options)
+            _other -> options
+          end)
+
+        _other ->
+          meta
+      end
+
+    meta =
+      if Map.has_key?(message_meta, "runtime_context"),
+        do: Map.put(meta, "runtime_context", message_meta["runtime_context"]),
+        else: meta
+
+    %{session | meta: meta}
   end
 
   @spec dispatch_message_processing(
@@ -394,7 +441,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           {:ok, AiAssistant.ChatSession.t()}
           | {:error, AiAssistant.stream_error()}
   defp process_workflow_message(session, message) do
-    code = message.code || workflow_code_from_session(session)
+    code =
+      if get_in(session.meta, ["message_options", "send_code"]) == false,
+        do: nil,
+        else: message.code || workflow_code_from_session(session)
 
     AiAssistant.query_workflow_stream(session, message.content, code: code)
   end
