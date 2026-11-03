@@ -1,7 +1,12 @@
 defmodule LightningWeb.API.RunStepController do
   @moduledoc """
-  `GET /api/runs/:id/steps`: a run's steps, in the order they ran, for any
-  member of the run's project. `job_id` narrows them to one job's. Not paged.
+  `GET /api/runs/:id/steps`: a run's steps, in the order they ran, for anyone
+  who may read the run (`GET /api/runs/:id`), the service account included.
+  `job_id` narrows them to one job's. Not paged.
+
+  A step carries only its timing, outcome and dataclip ids, no more than the
+  run's log lines tell. The dataclips themselves stay for people only
+  (`Lightning.Policies.Dataclips`).
   """
   use LightningWeb, :controller
 
@@ -12,7 +17,7 @@ defmodule LightningWeb.API.RunStepController do
 
   action_fallback FallbackController
 
-  plug LightningWeb.Plugs.AuthorizeAction, {:history, :read_history}
+  plug LightningWeb.Plugs.AuthorizeAction, {:project_users, :access_project}
 
   @doc """
   Lists the run's steps. A `job_id` that isn't a UUID is 400
@@ -29,7 +34,7 @@ defmodule LightningWeb.API.RunStepController do
            Target.in_project_of(
              conn.assigns.scope,
              Request.param(conn, "id"),
-             {:history, :read_history},
+             {:project_users, :access_project},
              &Runs.get_project_id/1,
              &Runs.get_for_project(&1, &2, include: [:steps])
            ),

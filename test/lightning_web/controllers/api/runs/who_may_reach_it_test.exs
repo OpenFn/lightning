@@ -19,7 +19,7 @@ defmodule LightningWeb.API.Runs.WhoMayReachItTest do
   end
 
   describe "who may reach it" do
-    test "cancelling, retrying and reading steps: everyone but a permitted person gets the same 403 for every id, and so does a permitted one for an unknown or malformed id",
+    test "cancelling, retrying and reading steps: everyone but a permitted caller gets the same 403 for every id, and so does a permitted one for an unknown or malformed id",
          context do
       unknown = Ecto.UUID.generate()
 
@@ -32,11 +32,16 @@ defmodule LightningWeb.API.Runs.WhoMayReachItTest do
 
       rows =
         for(
-          caller <- [:stranger, :superuser, :service_account],
+          caller <- [:stranger, :superuser],
           route <- [read | writes],
           id <- [context.own.id, unknown, "not-a-uuid"],
           do: {caller, route, id}
         ) ++
+          for(
+            route <- writes,
+            id <- [context.own.id, unknown, "not-a-uuid"],
+            do: {:service_account, route, id}
+          ) ++
           for(
             route <- writes,
             id <- [context.own.id, unknown, "not-a-uuid"],
@@ -62,6 +67,21 @@ defmodule LightningWeb.API.Runs.WhoMayReachItTest do
       end
 
       assert Repo.reload!(context.own).state == :available
+    end
+
+    # Steps are read as the run is, and the service account may learn which
+    # runs exist.
+    test "reading steps: the service account gets 404 for an unknown run and 400 for a malformed id",
+         %{service_account: service_account} do
+      for {id, status, code, entries} <- [
+            {Ecto.UUID.generate(), 404, :not_found, []},
+            {"not-a-uuid", 400, :invalid_parameter,
+             [not_a_uuid_entry(%{"path" => "id"})]}
+          ] do
+        service_account
+        |> get("/api/runs/#{id}/steps")
+        |> assert_problem(status, code, entries)
+      end
     end
 
     test "a run in a project scheduled for deletion is 409 scheduled_for_deletion to a permitted person",
