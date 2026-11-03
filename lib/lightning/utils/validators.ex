@@ -324,6 +324,7 @@ defmodule Lightning.Validators do
   - Has a valid `http` or `https` scheme.
   - Has a valid host (domain name, IPv4, or IPv6).
   - The host is not blank and does not exceed 255 characters.
+  - The port is no higher than 65535.
 
   Returns a changeset error for invalid URLs.
   """
@@ -344,6 +345,9 @@ defmodule Lightning.Validators do
 
           not valid_host?(uri.host) ->
             [{field, {"host has invalid characters", code: :format}}]
+
+          uri.port > 65_535 ->
+            [{field, {"port must be 65535 or lower", code: :format}}]
 
           true ->
             []
