@@ -138,6 +138,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         |> maybe_return_to()
         |> noreply()
 
+      {:error, :concurrent_edit} ->
+        socket
+        |> put_flash(:error, save_error_message(:concurrent_edit))
+        |> maybe_return_to()
+        |> noreply()
+
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
     end

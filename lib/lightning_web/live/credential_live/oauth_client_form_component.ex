@@ -353,6 +353,14 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     {:noreply, put_flash(socket, :error, "You are not authorized to do that.")}
   end
 
+  # Another request deleted the client while the form was open.
+  defp handle_oauth_client_response({:error, :concurrent_edit}, socket, _flash) do
+    {:noreply,
+     socket
+     |> put_flash(:error, save_error_message(:concurrent_edit))
+     |> push_navigate(to: socket.assigns.return_to)}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""

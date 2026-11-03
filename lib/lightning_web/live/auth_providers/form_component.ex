@@ -94,6 +94,12 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
              |> assign(auth_provider: model)
              |> put_flash(:info, "Authentication Provider updated.")}
 
+          {:error, :concurrent_edit} ->
+            {:noreply,
+             socket
+             |> put_flash(:error, save_error_message(:concurrent_edit))
+             |> push_navigate(to: Routes.auth_providers_index_path(socket, :new))}
+
           {:error, %Ecto.Changeset{}} ->
             {:noreply, socket |> put_flash(:error, "Something went wrong.")}
         end

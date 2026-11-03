@@ -26,12 +26,21 @@ defmodule LightningWeb.BackupCodesLive.Index do
   @impl true
   def handle_event("regenerate-backup-codes", _params, socket) do
     current_user = socket.assigns.current_user
-    {:ok, user} = Accounts.regenerate_user_backup_codes(current_user)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "New Backup Codes Generated!")
-     |> assign(backup_codes: user.backup_codes)}
+    case Accounts.regenerate_user_backup_codes(current_user) do
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "New Backup Codes Generated!")
+         |> assign(backup_codes: user.backup_codes)}
+
+      # Another request replaced the codes first; show the ones it saved.
+      {:error, :concurrent_edit} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, save_error_message(:concurrent_edit))
+         |> assign(backup_codes: Accounts.list_user_backup_codes(current_user))}
+    end
   end
 
   defp apply_action(socket, :index, _params) do
