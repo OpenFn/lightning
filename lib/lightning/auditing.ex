@@ -11,22 +11,71 @@ defmodule Lightning.Auditing do
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Workflows.Trigger
 
+  @filter_types %{
+    item_type: :string,
+    item_id: Ecto.UUID,
+    actor_id: Ecto.UUID,
+    event: :string,
+    inserted_after: :utc_datetime_usec,
+    inserted_before: :utc_datetime_usec
+  }
+
   def list_all(params \\ %{}) do
-    from(a in Audit,
+    Audit
+    |> with_actors()
+    |> order_by([a], desc: a.inserted_at)
+    |> Repo.paginate(params)
+    |> assign_actor_displays()
+  end
+
+  @doc """
+  The filters `paginate_events/2` takes, with the type of each.
+  """
+  @spec filter_types() :: %{atom() => atom() | module()}
+  def filter_types, do: @filter_types
+
+  @doc """
+  A page of audit events, newest first, each with its actor named in
+  `actor_display`, narrowed by `filters`: any of `filter_types/0`, already
+  cast. `inserted_after` and `inserted_before` are exclusive.
+
+  Events recorded in the same second come in a fixed order, so a page never
+  repeats or skips one.
+  """
+  @spec paginate_events(map(), keyword()) :: Scrivener.Page.t()
+  def paginate_events(filters, page) do
+    filters
+    |> Enum.reduce(Audit, &filter/2)
+    |> with_actors()
+    |> order_by([a], desc: a.inserted_at, desc: a.id)
+    |> Repo.paginate(page)
+    |> assign_actor_displays()
+  end
+
+  defp filter({key, value}, query)
+       when key in [:item_type, :item_id, :actor_id, :event],
+       do: where(query, [a], field(a, ^key) == ^value)
+
+  defp filter({:inserted_after, at}, query),
+    do: where(query, [a], a.inserted_at > type(^at, :utc_datetime_usec))
+
+  defp filter({:inserted_before, at}, query),
+    do: where(query, [a], a.inserted_at < type(^at, :utc_datetime_usec))
+
+  defp with_actors(query) do
+    from(a in query,
       left_join: p in ProjectRepoConnection,
       on: p.id == a.actor_id and a.actor_type == :project_repo_connection,
       left_join: t in Trigger,
       on: t.id == a.actor_id and a.actor_type == :trigger,
       left_join: u in User,
       on: u.id == a.actor_id and a.actor_type == :user,
-      select: %{audit: a, user: u, trigger: t, project_repo_connection: p},
-      order_by: [desc: a.inserted_at]
+      select: %{audit: a, user: u, trigger: t, project_repo_connection: p}
     )
-    |> Repo.paginate(params)
-    |> then(fn %{entries: entries} = result ->
-      Map.put(result, :entries, Enum.map(entries, &assign_actor_display/1))
-    end)
   end
+
+  defp assign_actor_displays(%{entries: entries} = page),
+    do: Map.put(page, :entries, Enum.map(entries, &assign_actor_display/1))
 
   defp assign_actor_display(%{audit: %{actor_type: :service_account} = audit}) do
     %{

@@ -23,8 +23,9 @@ defmodule Lightning.Invocation.DataclipAudit do
         "label_deleted"
       end
 
-    event_name
-    |> event(dataclip.id, user, changeset)
-    |> save()
+    case event(event_name, dataclip.id, user, changeset) do
+      :no_changes -> {:ok, :no_changes}
+      event -> save(event)
+    end
   end
 end

@@ -440,7 +440,7 @@ defmodule LightningWeb.API.SentinelSweepTest do
 
   defp no_standing_on_parent?(%{path: path}, :array),
     do:
-      path in ["/api/projects/:id", "/api/provision"] or
+      path in ["/api/projects/:id", "/api/provision", "/api/dataclips/:id"] or
         String.starts_with?(path, "/api/projects/:id/")
 
   defp no_standing_on_parent?(%{path: path}, :planted) do
@@ -451,7 +451,8 @@ defmodule LightningWeb.API.SentinelSweepTest do
       "/api/jobs/:id",
       "/api/runs/:id",
       "/api/work_orders/:id",
-      "/api/channel_requests/:id"
+      "/api/channel_requests/:id",
+      "/api/dataclips/:id"
     ] or String.contains?(path, ":project_id") or
       String.starts_with?(path, "/api/projects/:id/")
   end

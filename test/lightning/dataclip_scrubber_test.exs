@@ -1,9 +1,9 @@
 defmodule Lightning.DataclipScrubberTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.DataclipScrubber
-
   import Lightning.Factories
+
+  alias Lightning.DataclipScrubber
 
   describe "scrub_dataclip_body!/1" do
     test "returns nil for nil body" do
@@ -152,6 +152,63 @@ defmodule Lightning.DataclipScrubberTest do
         })
 
       assert result == body_json
+    end
+  end
+
+  describe "scrub_dataclip_term!/1" do
+    test "scrubs keys, strings and numbers at any depth, and leaves the rest as they were" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      webhook_auth =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :api,
+          api_key: "4242"
+        )
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook,
+          webhook_auth_methods: [webhook_auth]
+        )
+
+      dataclip = insert(:dataclip, project: project, type: :http_request)
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip
+      )
+
+      body = %{
+        "4242" => [%{"key" => "x4242x", "n" => 4242, "m" => 17}],
+        "flag" => true,
+        "none" => nil,
+        "ratio" => 1.5
+      }
+
+      assert DataclipScrubber.scrub_dataclip_term!(%{
+               body: body,
+               type: :http_request,
+               id: dataclip.id
+             }) == %{
+               "***" => [%{"key" => "x***x", "n" => "***", "m" => 17}],
+               "flag" => true,
+               "none" => nil,
+               "ratio" => 1.5
+             }
+    end
+
+    test "passes through nil bodies and types that are never scrubbed" do
+      for {body, type} <- [{nil, :step_result}, {%{"a" => 1}, :saved_input}] do
+        assert DataclipScrubber.scrub_dataclip_term!(%{
+                 body: body,
+                 type: type,
+                 id: Ecto.UUID.generate()
+               }) == body
+      end
     end
   end
 

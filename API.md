@@ -159,6 +159,7 @@ stepped up with 403 `step_up_required`.
 | `POST`   | `/api/users`          | Creates a user                                      | `users:write`                   |
 | `PATCH`  | `/api/users/:id`      | Changes a user                                      | `users:write`                   |
 | `POST`   | `/api/users/register` | Signs up, where the instance offers it              | None                            |
+| `GET`    | `/api/audit_events`   | Lists audit events, newest first                    | `audit:read`                    |
 
 ### Deleting users
 
@@ -366,6 +367,13 @@ and repo connections are refused 403 `forbidden`.
 | `DELETE` | `/api/projects/:project_id/channels/:id`             | Deletes a channel and its request history    | Not open to the service account |
 | `GET`    | `/api/projects/:project_id/channel_requests`         | Lists a project's channel requests           | Not open to the service account |
 | `GET`    | `/api/channel_requests/:id`                          | Reads a channel request                      | Not open to the service account |
+
+### Dataclips
+
+| Method  | Path                 | What it does                    | Token grant                     |
+| ------- | -------------------- | ------------------------------- | ------------------------------- |
+| `GET`   | `/api/dataclips/:id` | Reads a dataclip and its body   | Not open to the service account |
+| `PATCH` | `/api/dataclips/:id` | Names a dataclip, or unnames it | Not open to the service account |
 
 ### Lightning's web app
 
