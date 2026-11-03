@@ -71,6 +71,9 @@ and this project adheres to
   version in the standard `org.opencontainers.image.version` label. Usage
   tracking reports the version without the `v` too, and counts an image tag with
   or without it as a match.
+- New GitHub Sync workflows are named in the repo's Actions tab: "Pull from
+  OpenFn" and "Deploy to OpenFn (project id)".
+  [#5275](https://github.com/OpenFn/lightning/pull/5275)
 
 ### Fixed
 
