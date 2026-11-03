@@ -173,7 +173,6 @@ defmodule LightningWeb.Router do
     resources "/runs", API.RunController, only: [:index, :show]
     resources "/log_lines", API.LogLinesController, only: [:index]
 
-    # api-area:account (routes for this area go between these markers)
     get "/me/tokens", API.MeTokenController, :index
     post "/me/tokens", API.MeTokenController, :create
     delete "/me/tokens/:id", API.MeTokenController, :delete
@@ -193,9 +192,6 @@ defmodule LightningWeb.Router do
     put "/auth_provider", API.AuthProviderController, :update
     delete "/auth_provider", API.AuthProviderController, :delete
 
-    # end-api-area:account
-
-    # api-area:projects (routes for this area go between these markers)
     delete "/projects/:id", API.ProjectDeletionController, :delete
 
     delete "/projects/:id/scheduled_deletion",
@@ -232,9 +228,6 @@ defmodule LightningWeb.Router do
          API.ProjectInvitationController,
          :create
 
-    # end-api-area:projects
-
-    # api-area:sandboxes_github (routes for this area go between these markers)
     get "/projects/:project_id/sandboxes", API.SandboxController, :index
     put "/projects/:project_id/sandboxes/:id", API.SandboxController, :update
 
@@ -262,9 +255,6 @@ defmodule LightningWeb.Router do
          API.RepoConnectionController,
          :sync
 
-    # end-api-area:sandboxes_github
-
-    # api-area:credentials (routes for this area go between these markers)
     put "/credentials/:id/scheduled_deletion",
         API.CredentialScheduledDeletionController,
         :update
@@ -295,9 +285,7 @@ defmodule LightningWeb.Router do
 
     put "/credentials/:id/transfer", API.CredentialTransferController, :update
     delete "/credentials/:id/transfer", API.CredentialTransferController, :delete
-    # end-api-area:credentials
 
-    # api-area:credential_extras (routes for this area go between these markers)
     get "/credential_schemas", API.CredentialSchemaController, :index
     get "/credential_schemas/:name", API.CredentialSchemaController, :show
 
@@ -338,9 +326,6 @@ defmodule LightningWeb.Router do
            API.UserDeletionController,
            :cancel
 
-    # end-api-area:credential_extras
-
-    # api-area:workflows (routes for this area go between these markers)
     delete "/projects/:project_id/workflows/:id",
            API.WorkflowsController,
            :delete
@@ -355,9 +340,6 @@ defmodule LightningWeb.Router do
     get "/workflow_templates", API.WorkflowTemplateController, :index
     put "/workflows/:id/template", API.WorkflowTemplateController, :update
 
-    # end-api-area:workflows
-
-    # api-area:work_orders_runs (routes for this area go between these markers)
     patch "/runs/:id", API.RunController, :update
     post "/runs/:id/retries", API.RunRetryController, :create
     get "/runs/:id/steps", API.RunStepController, :index
@@ -392,15 +374,10 @@ defmodule LightningWeb.Router do
         API.HistoryExportController,
         :download
 
-    # end-api-area:work_orders_runs
-
-    # api-area:dataclips_audit (routes for this area go between these markers)
     get "/dataclips/:id", API.DataclipController, :show
     patch "/dataclips/:id", API.DataclipController, :update
     get "/audit_events", API.AuditEventController, :index
-    # end-api-area:dataclips_audit
 
-    # api-area:webhooks_channels (routes for this area go between these markers)
     get "/projects/:project_id/webhook_auth_methods",
         API.WebhookAuthMethodController,
         :index
@@ -431,9 +408,6 @@ defmodule LightningWeb.Router do
 
     get "/channel_requests/:id", API.ChannelRequestController, :show
 
-    # end-api-area:webhooks_channels
-
-    # api-area:ai_assistant (routes for this area go between these markers)
     get "/projects/:project_id/ai_sessions", API.AiSessionController, :index
     post "/projects/:project_id/ai_sessions", API.AiSessionController, :create
     get "/ai_sessions/:id", API.AiSessionController, :show
@@ -442,8 +416,6 @@ defmodule LightningWeb.Router do
     post "/ai_sessions/:id/messages/:message_id/retries",
          API.AiMessageController,
          :retry
-
-    # end-api-area:ai_assistant
   end
 
   scope "/api", LightningWeb, as: :api do
@@ -462,13 +434,10 @@ defmodule LightningWeb.Router do
       singleton: true,
       only: [:create, :show, :delete]
 
-    # api-area:account (routes that take no token, or a session that may be
-    # shut out pending confirmation)
     post "/password_resets", API.PasswordResetController, :create
     put "/password_resets/:token", API.PasswordResetController, :update
     post "/confirmations", API.ConfirmationController, :create
     put "/confirmations/:token", API.ConfirmationController, :update
-    # end-api-area:account
   end
 
   ## Cookie-authenticated JSON, for the app's own React components
