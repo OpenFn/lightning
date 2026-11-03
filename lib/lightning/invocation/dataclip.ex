@@ -60,6 +60,9 @@ defmodule Lightning.Invocation.Dataclip do
     field :request, :map, load_in_query: false
     field :type, Ecto.Enum, values: @source_types
     field :wiped_at, :utc_datetime
+    # tsvector built by DataclipSearchVectorWorker. Mapped only so that
+    # wipe_dataclips/1 can clear it; never loaded.
+    field :search_vector, :string, load_in_query: false
     belongs_to :project, Project
 
     has_one :source_step, Step, foreign_key: :output_dataclip_id

@@ -283,7 +283,14 @@ defmodule Lightning.Invocation.Query do
       where: is_nil(d.name),
       where: is_nil(d.wiped_at),
       update: [
-        set: [request: nil, body: nil, wiped_at: ^Lightning.current_time()]
+        set: [
+          request: nil,
+          body: nil,
+          # Empty rather than NULL, so DataclipSearchVectorWorker doesn't pick
+          # the row back up.
+          search_vector: fragment("''::tsvector"),
+          wiped_at: ^Lightning.current_time()
+        ]
       ]
     )
   end
