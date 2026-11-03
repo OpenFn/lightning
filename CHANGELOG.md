@@ -74,6 +74,38 @@ and this project adheres to
   on or off, replacing the authenticator and replacing backup codes need a
   session token stepped up in the last five minutes, and answer 403
   `step_up_required` otherwise.
+- Projects through the API: schedule a project's deletion and cancel it
+  (`DELETE /api/projects/:id`, `/api/projects/:id/scheduled_deletion`), set its
+  data retention, MFA requirement and support access, list, add, change and
+  remove members, set your own notifications and invite someone new. The service
+  account can schedule and cancel a user's deletion at
+  `/api/users/:id/scheduled_deletion`. Scheduling or cancelling a project's,
+  sandbox's or user's deletion is now recorded in the audit trail, from the app
+  as well as the API. [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Sandboxes and GitHub sync through the API: list a project's sandboxes, create
+  one, preview and make a merge, and read, connect, replace, disconnect and sync
+  a project's GitHub repo connection. A merge stays inside the sandbox's
+  workspace, and deleting the target project waits for a merge into it to
+  finish. [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Workflows, runs and history through the API: delete a workflow, read its
+  snapshots and versions, list and publish templates, run a workflow by hand,
+  retry and cancel work orders and runs, read a run's steps, and export a
+  project's history and download the export. Two requests that delete the same
+  workflow at once delete it once, and the second answers 409 `concurrent_edit`.
+  [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Credentials through the API: schedule and cancel a credential's deletion, link
+  it to a project and unlink it, manage its environments, start and cancel its
+  transfer, list the credential types and read each one's JSON Schema, and
+  manage keychain credentials and OAuth clients.
+  [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Webhook auth methods and channels through the API: read, create, replace and
+  delete a project's webhook auth methods and channels, and read the requests
+  its channels recorded. [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Dataclips, audit events, collections and the AI assistant through the API:
+  read and rename a dataclip, list audit events newest first with
+  `GET /api/audit_events` (grant `audit:read`), list collections with their
+  sizes and delete one, and start, read and message AI assistant sessions with a
+  session token. [#5272](https://github.com/OpenFn/lightning/pull/5272)
 
 ### Changed
 
