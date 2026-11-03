@@ -128,7 +128,7 @@ defmodule LightningWeb.API.Runs.RetryingTest do
       assert runs_of(run) == 1
     end
 
-    test "a run whose workflow has been deleted is 409 scheduled_for_deletion, before the body is read",
+    test "a run whose workflow has been deleted is 409 not_retryable, before the body is read",
          %{editor: editor, run: run, graph: graph} do
       Repo.update!(
         Ecto.Changeset.change(graph.workflow,
@@ -138,7 +138,7 @@ defmodule LightningWeb.API.Runs.RetryingTest do
 
       editor
       |> post(~p"/api/runs/#{run.id}/retries", %{step_id: "not-a-uuid"})
-      |> assert_problem(409, :scheduled_for_deletion, [])
+      |> assert_problem(409, :not_retryable, [])
 
       assert runs_of(run) == 1
     end
@@ -165,7 +165,7 @@ defmodule LightningWeb.API.Runs.RetryingTest do
   end
 
   describe "stale writes" do
-    test "a workflow deleted after the run was read is 409 scheduled_for_deletion, and no run is made",
+    test "a workflow deleted after the run was read is 409 concurrent_edit, as starting a work order is, and no run is made",
          %{editor: editor, run: run, step_a: step_a, graph: graph} do
       RaceHelpers.after_first_query("workflows", graph.workflow.id, fn id ->
         Repo.query!("UPDATE workflows SET deleted_at = now() WHERE id = $1", [
@@ -175,7 +175,7 @@ defmodule LightningWeb.API.Runs.RetryingTest do
 
       editor
       |> post(~p"/api/runs/#{run.id}/retries", %{step_id: step_a.id})
-      |> assert_problem(409, :scheduled_for_deletion, [])
+      |> assert_problem(409, :concurrent_edit, [])
 
       assert runs_of(run) == 1
       refute is_nil(Repo.reload!(graph.workflow).deleted_at)
