@@ -36,7 +36,12 @@ defmodule Lightning.Policies.Workflows do
   # rule is `Lightning.Policies.ProjectUsers`'s, so a project's roles, MFA
   # requirement and scheduled deletion apply as they do in the app.
   #
-  #   * `:delete_workflow` - owners, admins and editors.
+  #   * `:delete_workflow` - owners, admins and editors. Never the service
+  #     account, though it may create and replace workflows: a deleted
+  #     workflow can't be restored, and the service account may only make a
+  #     deletion that waits out a retention period and can be cancelled, as a
+  #     project's (`Lightning.Policies.ProjectDeletion`) or a credential's
+  #     (`:schedule_credential_deletion`) does.
   #   * `:read_workflow_history` - any member, for snapshots and versions.
   #   * `:publish_template` - support users who are members, or whose project
   #     allows support access.

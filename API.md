@@ -278,6 +278,13 @@ The service account must send `project_id` to list credentials at
 
 ### Credential deletion, links, environments and transfers
 
+The service account may schedule a credential's deletion but not delete one at
+once (`DELETE /api/credentials/:id`): a scheduled deletion waits out the
+retention period and can be cancelled until then. Scheduling a deletion that is
+already scheduled answers 200 with the credential unchanged, since `PUT` is
+idempotent. A project, user or webhook auth method is scheduled through
+`DELETE`, and a second one answers 409 `scheduled_for_deletion`.
+
 | Method   | Path                                        | What it does                                       | Token grant                     |
 | -------- | ------------------------------------------- | -------------------------------------------------- | ------------------------------- |
 | `PUT`    | `/api/credentials/:id/scheduled_deletion`   | Schedules a credential's deletion                  | `credentials:write`             |
@@ -320,6 +327,11 @@ lines at the top level.
 | `GET`   | `/api/log_lines`                            | Lists log lines                   | `projects:write` |
 
 ### A workflow's history and lifecycle
+
+The service account may create and replace a workflow but not delete one. A
+deleted workflow can't be restored, and the service account may only make
+deletions that wait out a retention period and can be cancelled, such as a
+project's or a credential's.
 
 | Method   | Path                                        | What it does                           | Token grant                     |
 | -------- | ------------------------------------------- | -------------------------------------- | ------------------------------- |
@@ -377,14 +389,17 @@ and repo connections are refused 403 `forbidden`.
 
 ### Lightning's web app
 
-| Method | Path                                                               | What it does                  | Token grant  |
-| ------ | ------------------------------------------------------------------ | ----------------------------- | ------------ |
-| `GET`  | `/api/ai_assistant/sessions`                                       | Lists AI assistant sessions   | Session only |
-| `GET`  | `/api/projects/:project_id/workflows/:workflow_id/health/outcomes` | Workflow health: run outcomes | Session only |
-| `GET`  | `/api/projects/:project_id/workflows/:workflow_id/health/failures` | Workflow health: failures     | Session only |
-| `GET`  | `/api/projects/:project_id/workflows/:workflow_id/health/runs`     | Workflow health: runs         | Session only |
-| `GET`  | `/api/projects/:project_id/ai_sessions`                            | Lists a project's AI sessions | Session only |
-| `POST` | `/api/projects/:project_id/ai_sessions`                            | Starts an AI session          | Session only |
-| `GET`  | `/api/ai_sessions/:id`                                             | Reads an AI session           | Session only |
-| `POST` | `/api/ai_sessions/:id/messages`                                    | Sends an AI message           | Session only |
-| `POST` | `/api/ai_sessions/:id/messages/:message_id/retries`                | Retries a failed AI message   | Session only |
+`GET /api/ai_assistant/sessions` is the older list the web app's editor uses.
+New clients should use `GET /api/projects/:project_id/ai_sessions`.
+
+| Method | Path                                                               | What it does                  | Token grant   |
+| ------ | ------------------------------------------------------------------ | ----------------------------- | ------------- |
+| `GET`  | `/api/ai_assistant/sessions`                                       | Lists AI assistant sessions   | Session only  |
+| `GET`  | `/api/projects/:project_id/workflows/:workflow_id/health/outcomes` | Workflow health: run outcomes | Session only  |
+| `GET`  | `/api/projects/:project_id/workflows/:workflow_id/health/failures` | Workflow health: failures     | Session only  |
+| `GET`  | `/api/projects/:project_id/workflows/:workflow_id/health/runs`     | Workflow health: runs         | Session only  |
+| `GET`  | `/api/projects/:project_id/ai_sessions`                            | Lists a project's AI sessions | Session token |
+| `POST` | `/api/projects/:project_id/ai_sessions`                            | Starts an AI session          | Session token |
+| `GET`  | `/api/ai_sessions/:id`                                             | Reads an AI session           | Session token |
+| `POST` | `/api/ai_sessions/:id/messages`                                    | Sends an AI message           | Session token |
+| `POST` | `/api/ai_sessions/:id/messages/:message_id/retries`                | Retries a failed AI message   | Session token |

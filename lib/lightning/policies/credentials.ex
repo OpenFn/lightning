@@ -152,6 +152,8 @@ defmodule Lightning.Policies.Credentials do
     end
   end
 
+  # Unlike `:delete_credential`, open to an operator: nothing is lost until the
+  # retention period ends, and the deletion can be cancelled until then.
   def authorize(:schedule_credential_deletion, %Scope{} = scope, subject),
     do: owner_or_operator(scope, subject)
 
@@ -298,7 +300,9 @@ defmodule Lightning.Policies.Credentials do
   defp owns?(:edit_credential, scope, %Credential{user_id: owner_id}),
     do: scope.actor.id == owner_id or Scope.operator?(scope)
 
-  # An operator may write a credential but never delete one.
+  # An operator may write a credential but never delete one at once. It may
+  # schedule a deletion (`:schedule_credential_deletion`), which waits out the
+  # retention period and can be cancelled until then.
   defp owns?(:delete_credential, scope, %Credential{user_id: owner_id}),
     do: scope.actor.id == owner_id
 
