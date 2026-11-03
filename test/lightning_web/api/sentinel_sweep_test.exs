@@ -348,6 +348,18 @@ defmodule LightningWeb.API.SentinelSweepTest do
        when {verb, path} in @session_token_only and attempt in [:planted, :array],
        do: @forbidden
 
+  # The AI assistant takes only a session token, so a member's personal token
+  # is refused before the action reads an id or a body.
+  defp expected(%{path: path}, attempt)
+       when attempt in [:planted, :array] and
+              path in [
+                "/api/projects/:project_id/ai_sessions",
+                "/api/ai_sessions/:id",
+                "/api/ai_sessions/:id/messages",
+                "/api/ai_sessions/:id/messages/:message_id/retries"
+              ],
+       do: @forbidden
+
   defp expected(%{pipeline: [:session_api], verb: verb, path: path}, attempt) do
     case Map.fetch!(@session_api, {verb, path}) do
       %{otherwise: otherwise} = by_attempt ->

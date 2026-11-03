@@ -659,6 +659,59 @@ defmodule LightningWeb.AuthTest do
       )
     end
 
+    test "the AI assistant takes only a session token, and refuses every other kind the pipeline takes with 403",
+         %{conn: conn, tokens: tokens, project: project} do
+      {:session, user} = tokens[:session]
+
+      session =
+        insert(:chat_session,
+          session_type: "workflow_template",
+          project: project,
+          user: user
+        )
+
+      for path <- [
+            ~p"/api/projects/#{project.id}/ai_sessions?#{%{workflow_id: Ecto.UUID.generate()}}",
+            ~p"/api/ai_sessions/#{session.id}"
+          ] do
+        assert_each_kind(conn, tokens, path,
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :forbidden,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: :logs_in
+        )
+      end
+
+      Process.put(:oban_testing, :manual)
+
+      failed =
+        insert(:chat_message,
+          chat_session: session,
+          user: user,
+          role: :user,
+          status: :error
+        )
+
+      for {path, body} <- [
+            {~p"/api/projects/#{project.id}/ai_sessions",
+             %{"kind" => "workflow", "message" => %{"content" => "Hi"}}},
+            {~p"/api/ai_sessions/#{session.id}/messages", %{"content" => "Hi"}},
+            {~p"/api/ai_sessions/#{session.id}/messages/#{failed.id}/retries",
+             %{}}
+          ] do
+        assert_each_kind_posting_ai(conn, tokens, path, body,
+          service_account: :forbidden,
+          expired_service_account: :expired_token,
+          personal: :forbidden,
+          repo_connection: :forbidden,
+          run: :invalid_token,
+          session: {:status, 201}
+        )
+      end
+    end
+
     test "authenticated_json takes no bearer token of any kind", %{
       conn: conn,
       tokens: tokens
@@ -960,6 +1013,31 @@ defmodule LightningWeb.AuthTest do
 
         :expired_token ->
           assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+        :forbidden ->
+          assert_problem(conn, 403, :forbidden, [])
+          assert get_resp_header(conn, "www-authenticate") == []
+      end
+    end
+  end
+
+  # assert_each_kind/4 for a POST of `body`, where a token that gets through
+  # is answered `{:status, status}`.
+  defp assert_each_kind_posting_ai(conn, tokens, path, body, expected) do
+    assert Enum.sort(Keyword.keys(expected)) == Enum.sort(Keyword.keys(tokens))
+
+    for {kind, answer} <- expected do
+      conn = conn |> with_token(tokens[kind]) |> post(path, body)
+
+      case answer do
+        {:status, status} ->
+          assert conn.status == status, "#{kind} was answered #{conn.status}"
+
+        :expired_token ->
+          assert_unauthenticated(conn, :invalid_token, @expired_token)
+
+        :invalid_token ->
+          assert_unauthenticated(conn, :invalid_token, @invalid_token)
 
         :forbidden ->
           assert_problem(conn, 403, :forbidden, [])
