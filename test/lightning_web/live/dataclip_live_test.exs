@@ -19,7 +19,7 @@ defmodule LightningWeb.DataclipLiveTest do
       dataclip: dataclip,
       project: project_scoped
     } do
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(
           conn,
           Routes.project_dataclip_show_path(
@@ -31,25 +31,12 @@ defmodule LightningWeb.DataclipLiveTest do
           on_error: :raise
         )
 
-      # Check page title appears
-      assert html =~ "Dataclip"
+      # The page draws the details and the viewer from these props.
+      assert %{"dataclip" => %{"id" => id, "type" => type, "wipedAt" => nil}} =
+               page_props(view, "#dataclip-show-page")
 
-      # Check dataclip ID appears in the metadata section
-      assert html =~ dataclip.id
-
-      # Check "Dataclip Details" section header appears
-      assert html =~ "Dataclip Details"
-
-      # Check metadata fields are present
-      assert html =~ "ID"
-      assert html =~ "Type"
-      assert html =~ "Created"
-      assert html =~ "Updated"
-
-      # Check dataclip viewer component is rendered (not wiped message)
-      assert html =~ "dataclip-viewer-#{dataclip.id}"
-      refute html =~ "No Data Available"
-      refute html =~ "wiped in accordance"
+      assert id == dataclip.id
+      assert type == to_string(dataclip.type)
     end
 
     test "no access to project on show", %{

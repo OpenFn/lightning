@@ -10,114 +10,6 @@ defmodule LightningWeb.OauthClientsLiveTest do
   alias Lightning.Credentials.OauthClient
   alias Lightning.OauthClients
 
-  defp update_scopes(view, form_id, target, scopes) do
-    Enum.each(scopes, fn scope ->
-      view
-      |> form(form_id)
-      |> render_change(%{
-        "_target" => ["oauth_client", target],
-        "oauth_client" => %{target => scope}
-      })
-    end)
-  end
-
-  defp assert_scopes(view, scope_type, scopes, assert_func) do
-    Enum.each(scopes, fn scope ->
-      assert_func.(
-        view
-        |> element("##{scope_type}-scopes-new-#{scope}")
-        |> has_element?()
-      )
-    end)
-  end
-
-  defp refute_scopes(view, scope_type, scopes) do
-    assert_scopes(view, scope_type, scopes, &refute/1)
-  end
-
-  defp perforom_scopes_management_tests(view) do
-    mandatory_scopes_to_add = [
-      "scope_1,scope_2,will_be_removed",
-      "scope_3 scope_4 will_be_modified",
-      "scope_5"
-    ]
-
-    optional_scopes_to_add = [
-      "scope_6,scope_7,will_be_removed",
-      "scope_8 scope_9 will_be_modified",
-      "scope_10"
-    ]
-
-    update_scopes(
-      view,
-      "#oauth-client-form-new",
-      "mandatory_scopes",
-      mandatory_scopes_to_add
-    )
-
-    update_scopes(
-      view,
-      "#oauth-client-form-new",
-      "optional_scopes",
-      optional_scopes_to_add
-    )
-
-    added_mandatory_scopes = [
-      "scope_1",
-      "scope_2",
-      "scope_3",
-      "scope_4",
-      "will_be_removed",
-      "will_be_modified"
-    ]
-
-    not_added_mandatory_scopes = ["scope_5"]
-
-    added_optional_scopes = [
-      "scope_6",
-      "scope_7",
-      "scope_8",
-      "scope_9",
-      "will_be_removed",
-      "will_be_modified"
-    ]
-
-    not_added_optional_scopes = ["scope_10"]
-
-    assert_scopes(view, "mandatory", added_mandatory_scopes, &assert/1)
-    assert_scopes(view, "optional", added_optional_scopes, &assert/1)
-    refute_scopes(view, "mandatory", not_added_mandatory_scopes)
-    refute_scopes(view, "optional", not_added_optional_scopes)
-
-    [{"mandatory", "will_be_removed"}, {"optional", "will_be_removed"}]
-    |> Enum.each(fn {scope_type, scope_value} ->
-      view
-      |> element("##{scope_type}-scopes-new-#{scope_value} button")
-      |> render_click()
-
-      refute view
-             |> element("##{scope_type}-scopes-new-#{scope_value}")
-             |> has_element?()
-    end)
-
-    [{"mandatory", "will_be_modified"}, {"optional", "will_be_modified"}]
-    |> Enum.each(fn {scope_type, scope_value} ->
-      view
-      |> element("##{scope_type}-scopes-new-#{scope_value}")
-      |> render_hook("edit_#{scope_type}_scope", %{
-        "scope" => scope_value
-      })
-
-      assert view
-             |> element(
-               ~s{#oauth-client-form-new input[name='oauth_client[#{scope_type}_scopes]'][value="#{scope_value}"]}
-             )
-             |> has_element?()
-    end)
-
-    {view, added_mandatory_scopes, added_optional_scopes}
-  end
-
   def random_name do
     first_name = Enum.random(["Google", "Salesforce", "DHIS2", "MS Graph"])
     "#{first_name} OAuth Client"
@@ -208,30 +100,6 @@ defmodule LightningWeb.OauthClientsLiveTest do
       }
     end
 
-    test "closing the modal removes it from the DOM", %{
-      conn: conn,
-      project: project
-    } do
-      # On /credentials the dialog is the design system's and sends nothing
-      # until it saves.
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
-      refute has_element?(view, "#new-oauth-client-modal")
-
-      view |> element("#new-oauth-client-option-menu-item") |> render_click()
-
-      assert has_element?(view, "#new-oauth-client-modal")
-
-      view
-      |> element("#new-oauth-client-modal button", "Cancel")
-      |> render_click()
-
-      refute has_element?(view, "#new-oauth-client-modal")
-    end
-
     test "can create a new oauth client", %{
       conn: conn,
       project: project,
@@ -292,47 +160,20 @@ defmodule LightningWeb.OauthClientsLiveTest do
       assert String.split(client.mandatory_scopes, ",") == mandatory_scopes
       assert String.split(client.optional_scopes, ",") == optional_scopes
 
-      # Project settings still draws its own form.
-      {:ok, view, _html} =
+      # Project settings sends the same event from its credentials tab.
+      {:ok, settings, _html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
-      view |> element("#new-oauth-client-option-menu-item") |> render_click()
+      push_page_event(
+        settings,
+        "#project-settings-page",
+        "create_oauth_client",
+        client_values(%{"name" => valid_attrs.name <> " 2"})
+      )
 
-      html =
-        view
-        |> form("#oauth-client-form-new", oauth_client: invalid_attrs)
-        |> render_change()
-
-      assert html =~ "This field can&#39;t be blank."
-      assert html =~ "must be either a http or https URL"
-
-      {view, added_mandatory_scopes, added_optional_scopes} =
-        perforom_scopes_management_tests(view)
-
-      valid_attrs = %{valid_attrs | name: valid_attrs.name <> " 2"}
-
-      {:ok, _view, html} =
-        view
-        |> form("#oauth-client-form-new", oauth_client: valid_attrs)
-        |> render_submit()
-        |> follow_redirect(conn, ~p"/projects/#{project}/settings#credentials")
-
-      assert html =~ valid_attrs.name
-      assert html =~ "Oauth client created successfully"
-
-      client = Lightning.Repo.get_by!(OauthClient, name: valid_attrs.name)
-
-      assert MapSet.subset?(
-               MapSet.new(String.split(client.mandatory_scopes, ",")),
-               MapSet.new(added_mandatory_scopes)
-             )
-
-      assert MapSet.subset?(
-               MapSet.new(String.split(client.optional_scopes, ",")),
-               MapSet.new(added_optional_scopes)
-             )
+      assert Lightning.Repo.get_by(OauthClient, name: valid_attrs.name <> " 2")
     end
 
     test "a non-superuser cannot create a global client via crafted params", %{

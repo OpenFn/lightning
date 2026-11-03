@@ -35,7 +35,7 @@ defmodule LightningWeb.AccountsConfirmationLiveTest do
 
     # The page itself still renders for a user inside the grace period — the
     # banner warns, it does not block.
-    assert view |> has_element?("#user-projects-section")
+    assert view |> has_element?("#projects-dashboard-page")
   end
 
   test "Users who have their account not confirmed but created them within 48 hours dont see the banner if email verification isn't enabled",

@@ -55,7 +55,14 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       # assert response =~ email
 
       assert response =~ "User Profile"
-      assert response =~ "No projects found."
+
+      # The dashboard draws "No projects found." from an empty list.
+      [props] =
+        response
+        |> Floki.parse_document!()
+        |> Floki.attribute("#projects-dashboard-page", "data-props")
+
+      assert %{"projects" => []} = Jason.decode!(props)
       assert response =~ "User created successfully."
     end
 

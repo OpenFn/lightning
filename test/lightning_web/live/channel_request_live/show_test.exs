@@ -638,10 +638,11 @@ defmodule LightningWeb.ChannelRequestLive.ShowTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/history/channels")
 
-      html = render(view)
+      # The page links each row to /projects/:id/history/channels/:row_id.
+      assert [%{"id" => id}] =
+               page_props(view, "#history-channel-logs-page")["rows"]
 
-      assert html =~
-               ~r/href="[^"]*\/projects\/#{project.id}\/history\/channels\/#{request.id}"/
+      assert id == request.id
     end
   end
 end
