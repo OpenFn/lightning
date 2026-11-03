@@ -1,3 +1,5 @@
+name: Deploy to OpenFn (<%= @project_id %>)
+
 on:
   push:
     branches:
