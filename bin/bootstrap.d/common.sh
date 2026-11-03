@@ -229,7 +229,7 @@ setup_project_directory() {
 
 setup_project_database() {
   step "Setting up database"
-  mix "do" ecto.create, ecto.migrate
+  mix do ecto.create + ecto.migrate
 }
 
 run_bootstrap() {
