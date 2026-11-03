@@ -39,6 +39,7 @@ defmodule LightningWeb.API.Codes do
       {409, "More than one collection has this name. Add project_id."},
     export_conflict:
       {409, "Two items in this project export under the same key."},
+    not_retryable: {409, "This can't be retried in its current state."},
     superuser: {409, "A superuser can't be deleted. Change their role first."},
     content_too_large: {413, "The body is too large."},
     uri_too_long: {414, "The query string is too long."},
@@ -51,8 +52,7 @@ defmodule LightningWeb.API.Codes do
     bad_gateway: {502, "The channel could not reach its destination."},
     service_unavailable: {503, "Try again shortly."},
     not_ready: {503, "This is not ready yet. Try again shortly."},
-    timeout: {504, "The workflow did not finish in time."},
-    not_retryable: {409, "Only a message that failed can be retried."}
+    timeout: {504, "The workflow did not finish in time."}
   }
 
   @typedoc "A response code, one of the keys of the response list."

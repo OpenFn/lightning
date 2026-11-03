@@ -29,7 +29,9 @@ defmodule LightningWeb.API.RunRetryController do
   Creates a run on the run's work order, starting from `step_id`, and answers
   201 with it.
 
-  A workflow that has been deleted is 409 `scheduled_for_deletion`. A step
+  A run whose workflow had been deleted before the request is 409
+  `not_retryable`, and one whose workflow another request deletes while this one
+  runs is 409 `concurrent_edit`, as starting a work order answers. A step
   that isn't in the run is 422 with a `not_found` entry at `#/step_id`, and
   one whose input has been wiped a `dataclip_wiped` entry. The run limits are
   asked last, 429 `too_many_runs` or 402 `exceeds_limit`.
@@ -67,7 +69,10 @@ defmodule LightningWeb.API.RunRetryController do
   end
 
   defp refuse_deleted(%{deleted_at: nil}), do: :ok
-  defp refuse_deleted(_workflow), do: {:error, :scheduled_for_deletion}
+  # A deleted workflow can't be restored, so `scheduled_for_deletion`'s "cancel
+  # the deletion first" would send the caller looking for something that isn't
+  # there. The run itself still reads, so it isn't 404 either.
+  defp refuse_deleted(_workflow), do: {:error, :not_retryable}
 
   defp step(run, body) do
     unknown = Request.unknown_keys(body, [], [:step_id])
@@ -110,8 +115,9 @@ defmodule LightningWeb.API.RunRetryController do
 
   defp retry(run, step, user) do
     case WorkOrders.retry(run.id, step.id, created_by: user) do
+      # Deleted after the lookup read it.
       {:error, :workflow_deleted} ->
-        {:error, :scheduled_for_deletion}
+        {:error, :concurrent_edit}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:error, Errors.problem(changeset, %{input_dataclip_id: :step_id})}
