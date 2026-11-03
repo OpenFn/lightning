@@ -11,9 +11,12 @@
           "type": "null"
         }
       ]
+    },
+    "cancelHref": {
+      "type": "string"
     }
   },
-  "required": ["user"],
+  "required": ["user", "cancelHref"],
   "additionalProperties": false,
   "definitions": {
     "AdminUserRow": {

@@ -10,9 +10,12 @@
     },
     "mfaEnabled": {
       "type": "boolean"
+    },
+    "profileHref": {
+      "type": "string"
     }
   },
-  "required": ["codes", "mfaEnabled"],
+  "required": ["codes", "mfaEnabled", "profileHref"],
   "additionalProperties": false,
   "definitions": {
     "BackupCode": {

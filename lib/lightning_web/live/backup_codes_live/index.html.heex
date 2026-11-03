@@ -3,7 +3,8 @@
   props={
     %{
       codes: codes_json(@backup_codes),
-      mfaEnabled: @current_user.mfa_enabled
+      mfaEnabled: @current_user.mfa_enabled,
+      profileHref: ~p"/profile"
     }
   }
   banner={assigns[:banner]}

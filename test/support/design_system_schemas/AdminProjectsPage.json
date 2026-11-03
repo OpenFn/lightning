@@ -30,9 +30,22 @@
     },
     "gracePeriodDays": {
       "type": "number"
+    },
+    "newProjectHref": {
+      "type": "string"
+    },
+    "cancelHref": {
+      "type": "string"
     }
   },
-  "required": ["projects", "form", "deleteProject", "gracePeriodDays"],
+  "required": [
+    "projects",
+    "form",
+    "deleteProject",
+    "gracePeriodDays",
+    "newProjectHref",
+    "cancelHref"
+  ],
   "additionalProperties": false,
   "definitions": {
     "AdminProjectRow": {
@@ -58,10 +71,10 @@
         }
       },
       "required": [
-        "description",
         "id",
-        "insertedAt",
         "name",
+        "description",
+        "insertedAt",
         "ownerName",
         "scheduledDeletion"
       ],

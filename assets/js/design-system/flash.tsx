@@ -15,7 +15,9 @@ import type {
  * Design-system pages send their own toasts there too, so a page has one
  * stack.
  */
-type Tone = 'info' | 'error';
+// The design system's toast tones; LiveView's flash keys are info and error
+type Tone = 'info' | 'danger';
+type FlashKey = 'info' | 'error';
 type Show = (message: ReactNode, tone?: Tone) => void;
 
 let show: Show | null = null;
@@ -75,13 +77,13 @@ export const FlashBridge = {
       }
       if (message === this.seen[key]) continue;
       this.seen[key] = message;
-      showToast(message, key);
+      showToast(message, key === 'error' ? 'danger' : 'info');
       // Cleared once shown, so the same message flashed again shows again
       this.pushEvent('lv:clear-flash', { key });
     }
   },
 } satisfies ThisType<
   GetPhoenixHookInternalThis<
-    PhoenixHook<{ publish(): void; seen: Partial<Record<Tone, string>> }>
+    PhoenixHook<{ publish(): void; seen: Partial<Record<FlashKey, string>> }>
   >
 >;

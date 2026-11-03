@@ -1,5 +1,5 @@
 <.design_system_page
   name="AdminUserEditPage"
-  props={%{user: @user && user_json(@user)}}
+  props={%{user: @user && user_json(@user), cancelHref: ~p"/settings/users"}}
   current_user={@current_user}
 />

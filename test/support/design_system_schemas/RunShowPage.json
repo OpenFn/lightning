@@ -250,16 +250,16 @@
         }
       },
       "required": [
-        "exitReason",
-        "finishedAt",
         "id",
-        "inputDataclipId",
-        "insertedAt",
         "jobId",
         "jobName",
+        "exitReason",
+        "startedAt",
+        "finishedAt",
+        "insertedAt",
+        "inputDataclipId",
         "outputDataclipId",
-        "snapshotLockVersion",
-        "startedAt"
+        "snapshotLockVersion"
       ],
       "additionalProperties": false
     },

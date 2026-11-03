@@ -103,7 +103,7 @@ describe('ProfilePage', () => {
       reply: { secret: 'ABCDEF234567', qrCodeSrc: 'data:image/svg+xml,x' },
     });
 
-    await userEvent.click(screen.getByRole('switch', { name: /multi-factor/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Set up MFA' }));
 
     expect(pushEvent).toHaveBeenCalledWith('start_mfa_setup', {});
     expect(await screen.findByRole('img', { name: /QR code/ })).toHaveAttribute(

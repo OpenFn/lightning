@@ -96,7 +96,10 @@ defmodule LightningWeb.UserLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/settings/users/new")
 
-      assert page_props(view, @form) == %{"user" => nil}
+      assert page_props(view, @form) == %{
+               "user" => nil,
+               "cancelHref" => "/settings/users"
+             }
 
       save(view, @invalid_attrs)
 

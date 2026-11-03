@@ -1278,6 +1278,8 @@ defmodule LightningWeb.ProjectLive.Settings do
       description: project.description || "",
       env: project.env || "",
       concurrency: project.concurrency,
+      # An instance that limits concurrency draws its own input beside the page.
+      concurrencyLimitMessage: nil,
       exportHref: ~p"/download/yaml?id=#{project.id}",
       deleteHref: ~p"/projects/#{project.id}/settings/delete",
       gracePeriodDays: Lightning.Config.purge_deleted_after_days(),

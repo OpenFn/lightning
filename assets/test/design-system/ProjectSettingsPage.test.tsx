@@ -19,6 +19,7 @@ const props: Props = {
     description: '',
     env: '',
     concurrency: null,
+    concurrencyLimitMessage: null,
     exportHref: '/download/yaml?id=p1',
     deleteHref: '/projects/p1/settings/delete',
     gracePeriodDays: 7,
@@ -73,6 +74,12 @@ const props: Props = {
 const save = (form: string) =>
   within(document.getElementById(form)!).getByRole('button', { name: 'Save' });
 
+// Opens a design-system Select (a listbox button) and picks the named option.
+const pick = async (select: HTMLElement, option: string) => {
+  await userEvent.click(select);
+  await userEvent.click(screen.getByRole('option', { name: option }));
+};
+
 describe('ProjectSettingsPage', () => {
   afterEach(() => {
     window.history.replaceState(null, '', '/');
@@ -114,7 +121,11 @@ describe('ProjectSettingsPage', () => {
     await userEvent.click(
       screen.getByRole('switch', { name: /Disable parallel execution/ })
     );
-    await userEvent.click(save('project-concurrency-form'));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Disable parallel execution',
+      })
+    );
 
     expect(pushEvent).toHaveBeenCalledWith('save_concurrency', {
       concurrency: 1,
@@ -131,7 +142,6 @@ describe('ProjectSettingsPage', () => {
     await userEvent.click(
       screen.getByRole('switch', { name: /Disable parallel execution/ })
     );
-    await userEvent.click(save('project-concurrency-form'));
 
     expect(pushEvent).toHaveBeenCalledWith('save_concurrency', {
       concurrency: null,
@@ -146,16 +156,24 @@ describe('ProjectSettingsPage', () => {
     });
 
     await userEvent.type(
-      screen.getByRole('textbox', { name: /name/i }),
+      within(screen.getByRole('dialog')).getByRole('textbox', {
+        name: /name/i,
+      }),
       'my-project'
     );
-    await userEvent.click(screen.getByRole('button', { name: /^Delete/ }));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: /^Delete/,
+      })
+    );
 
     expect(pushEvent).toHaveBeenCalledWith('delete_project', {
       nameConfirmation: 'my-project',
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' })
+    );
     expect(navigate).toHaveBeenCalledWith('/projects/p1/settings', undefined);
   });
 
@@ -251,7 +269,7 @@ describe('ProjectSettingsPage', () => {
     );
     const add = within(screen.getByRole('dialog'));
     await userEvent.type(add.getByLabelText('Email'), 'new@example.org');
-    await userEvent.selectOptions(add.getByLabelText('Role'), 'editor');
+    await pick(add.getByRole('button', { name: /Role/ }), 'Editor');
     await userEvent.click(
       add.getByRole('button', { name: /Save Collaborator/ })
     );
@@ -297,9 +315,9 @@ describe('ProjectSettingsPage', () => {
     window.history.replaceState(null, '', '/projects/p1/settings#data-storage');
     const { pushEvent } = renderIsland<Props>(ProjectSettingsPage, props);
 
-    await userEvent.selectOptions(
-      screen.getByLabelText('History Retention Period'),
-      '14'
+    await pick(
+      screen.getByRole('button', { name: /History Retention Period/ }),
+      '14 Days'
     );
     await userEvent.click(save('retention-settings-form'));
 

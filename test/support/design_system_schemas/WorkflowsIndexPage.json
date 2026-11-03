@@ -76,7 +76,6 @@
     },
     "WorkflowRow": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "workflow": {
           "type": "object",
@@ -153,14 +152,15 @@
         }
       },
       "required": [
-        "failedWorkordersCount",
-        "lastFailedAt",
-        "lastWorkOrder",
-        "stepCount",
-        "stepSuccessRate",
         "workflow",
-        "workordersCount"
-      ]
+        "lastWorkOrder",
+        "lastFailedAt",
+        "workordersCount",
+        "failedWorkordersCount",
+        "stepCount",
+        "stepSuccessRate"
+      ],
+      "additionalProperties": false
     },
     "TriggerType": {
       "type": "string",

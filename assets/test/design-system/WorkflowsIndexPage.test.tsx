@@ -185,7 +185,9 @@ describe('WorkflowsIndexPage', () => {
     ).toBe('Health');
 
     fireEvent.click(screen.getByText('Intake'));
-    expect(redirect).toHaveBeenCalledWith('/projects/p1/w/wf-1', undefined);
+    expect(redirect).toHaveBeenCalledWith('/projects/p1/w/wf-1', {
+      replace: false,
+    });
   });
 
   test('a sandbox with the lifecycle on keeps its switches under "Turn on"', () => {

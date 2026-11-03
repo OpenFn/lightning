@@ -41,7 +41,7 @@ const props: Props = {
 describe('ChannelRequestShowPage', () => {
   test('draws the page from data-props', () => {
     renderIsland<Props>(ChannelRequestShowPage, props);
-    expect(screen.getByText(/Channel Request/).textContent).toContain(
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
       '4f1c9a8e'
     );
     expect(screen.getByText('192.168.1.1')).toBeTruthy();

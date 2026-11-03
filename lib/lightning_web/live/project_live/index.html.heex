@@ -5,7 +5,9 @@
       projects: projects_json(@projects),
       form: form_json(@form_project, @form_users),
       deleteProject: delete_project_json(@delete_project),
-      gracePeriodDays: @grace_period_days
+      gracePeriodDays: @grace_period_days,
+      newProjectHref: ~p"/settings/projects/new",
+      cancelHref: ~p"/settings/projects"
     }
   }
   current_user={@current_user}

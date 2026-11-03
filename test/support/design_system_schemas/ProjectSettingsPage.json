@@ -113,6 +113,9 @@
         "concurrency": {
           "type": ["number", "null"]
         },
+        "concurrencyLimitMessage": {
+          "type": ["string", "null"]
+        },
         "exportHref": {
           "type": "string"
         },
@@ -157,6 +160,7 @@
         "description",
         "env",
         "concurrency",
+        "concurrencyLimitMessage",
         "exportHref",
         "deleteHref",
         "gracePeriodDays",
