@@ -92,6 +92,9 @@ and this project adheres to
 - The Docker image's Node.js moves from 24.18.1 to 24.22.1, so Node's own
   bundled certificate list no longer trusts the emSign C1 and ECC C3 roots
   either.
+- Ecto moves from 3.13.2 to 3.14.3, which fixes CVE-2026-118391: some queries
+  could grow Ecto's query cache without limit. Lightning doesn't use the
+  affected query forms, so this clears the advisory rather than a live issue.
 
 ## [2.20.1] - 2026-11-04
 
