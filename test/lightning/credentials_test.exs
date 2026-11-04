@@ -95,17 +95,17 @@ defmodule Lightning.CredentialsTest do
       assert {Enum.map(page.entries, & &1.id), page.total_entries} ==
                {[first.id], 2}
     end
-  end
 
-  test "paginate_credentials_for/2 pages only the credentials a scope's user owns" do
-    [user, other_user] = insert_list(2, :user)
-    owned = insert(:credential, user: user)
-    insert(:credential, user: other_user)
+    test "paginate_credentials_for/2 pages only the credentials a scope's user owns" do
+      [user, other_user] = insert_list(2, :user)
+      owned = insert(:credential, user: user)
+      insert(:credential, user: other_user)
 
-    page = Credentials.paginate_credentials_for(Lightning.Scope.new(user), [])
+      page = Credentials.paginate_credentials_for(Lightning.Scope.new(user), [])
 
-    assert {Enum.map(page.entries, & &1.id), page.total_entries} ==
-             {[owned.id], 1}
+      assert {Enum.map(page.entries, & &1.id), page.total_entries} ==
+               {[owned.id], 1}
+    end
 
     test "list_credentials/2 returns a paginated page for a user" do
       user = insert(:user)
