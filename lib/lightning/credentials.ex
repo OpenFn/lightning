@@ -26,6 +26,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Scope
   alias Lightning.Tokens.CredentialTransferToken
@@ -117,29 +118,40 @@ defmodule Lightning.Credentials do
     |> Repo.all()
   end
 
-  @spec list_credentials(Project.t(), map()) :: Scrivener.Page.t()
-  def list_credentials(%Project{} = project, page_params) do
-    query =
-      from c in Credential,
-        join: pc in assoc(c, :project_credentials),
-        on: pc.project_id == ^project.id,
-        preload: [
-          :user,
-          :project_credentials,
-          :projects,
-          :credential_bodies,
-          :oauth_client
-        ],
-        order_by: [asc: fragment("lower(?)", c.name)],
-        group_by: c.id
+  @doc """
+  Returns a page of credentials for a project or a user.
 
-    Repo.paginate(query, page_params)
+  ## Options
+
+    * `:search` - only return credentials whose name, type, external ID, owner
+      email or project names contain this term.
+    * `:order_by` - a `{field, direction}` tuple, where `field` is `:name`,
+      `:type` or `:owner`. Defaults to `{:name, :asc}`.
+  """
+  @spec list_credentials(Project.t() | User.t(), map(), keyword()) ::
+          Scrivener.Page.t()
+  def list_credentials(project_or_user, page_params, opts \\ [])
+
+  def list_credentials(%Project{} = project, page_params, opts) do
+    from(c in Credential,
+      join: pc in assoc(c, :project_credentials),
+      on: pc.project_id == ^project.id,
+      preload: [
+        :user,
+        :project_credentials,
+        :projects,
+        :credential_bodies,
+        :oauth_client
+      ]
+    )
+    |> search_and_sort_credentials(opts)
+    |> Repo.paginate(page_params)
   end
 
-  @spec list_credentials(User.t(), map()) :: Scrivener.Page.t()
-  def list_credentials(%User{id: user_id}, page_params) do
-    list_credentials_query(user_id)
-    |> order_by([c], asc: fragment("lower(?)", c.name))
+  def list_credentials(%User{id: user_id}, page_params, opts) do
+    user_id
+    |> list_credentials_query()
+    |> search_and_sort_credentials(opts)
     |> Repo.paginate(page_params)
   end
 
@@ -148,6 +160,62 @@ defmodule Lightning.Credentials do
       where: c.user_id == ^user_id,
       preload: [:projects, :user, :credential_bodies, :oauth_client]
     )
+  end
+
+  defp search_and_sort_credentials(query, opts) do
+    from(c in query,
+      as: :credential,
+      left_join: client in assoc(c, :oauth_client),
+      as: :oauth_client,
+      left_join: owner in assoc(c, :user),
+      as: :owner
+    )
+    |> search_credentials(Keyword.get(opts, :search, ""))
+    |> sort_credentials(Keyword.get(opts, :order_by, {:name, :asc}))
+  end
+
+  defp search_credentials(query, ""), do: query
+
+  defp search_credentials(query, search) do
+    pattern = "%#{search}%"
+
+    matching_projects =
+      from(pc in ProjectCredential,
+        join: p in assoc(pc, :project),
+        where:
+          pc.credential_id == parent_as(:credential).id and
+            ilike(p.name, ^pattern),
+        select: 1
+      )
+
+    where(
+      query,
+      [credential: c, oauth_client: client, owner: owner],
+      ilike(c.name, ^pattern) or ilike(c.schema, ^pattern) or
+        ilike(c.external_id, ^pattern) or ilike(client.name, ^pattern) or
+        ilike(owner.email, ^pattern) or exists(matching_projects)
+    )
+  end
+
+  defp sort_credentials(query, {:name, direction}) do
+    order_by(query, [credential: c], [
+      {^direction, fragment("lower(?)", c.name)},
+      {:asc, c.id}
+    ])
+  end
+
+  defp sort_credentials(query, {:type, direction}) do
+    order_by(query, [credential: c, oauth_client: client], [
+      {^direction, fragment("lower(coalesce(?, ?))", client.name, c.schema)},
+      {:asc, c.id}
+    ])
+  end
+
+  defp sort_credentials(query, {:owner, direction}) do
+    order_by(query, [credential: c, owner: owner], [
+      {^direction, fragment("lower(?)", owner.email)},
+      {:asc, c.id}
+    ])
   end
 
   @doc """
@@ -1018,7 +1086,7 @@ defmodule Lightning.Credentials do
 
     {count, _} =
       Repo.insert_all(
-        Lightning.Projects.ProjectCredential,
+        ProjectCredential,
         credential_rows,
         on_conflict: :nothing,
         conflict_target: [:project_id, :credential_id]
@@ -1271,7 +1339,7 @@ defmodule Lightning.Credentials do
 
   defp remove_credential_associations(%Credential{id: credential_id}) do
     project_credential_ids_query =
-      from(pc in Lightning.Projects.ProjectCredential,
+      from(pc in ProjectCredential,
         where: pc.credential_id == ^credential_id,
         select: pc.id
       )
@@ -2197,14 +2265,55 @@ defmodule Lightning.Credentials do
 
   def list_keychain_credentials_for_project(
         %Project{id: project_id},
-        page_params
+        page_params,
+        opts \\ []
       ) do
     from(kc in KeychainCredential,
+      as: :keychain_credential,
+      left_join: owner in assoc(kc, :created_by),
+      as: :owner,
+      left_join: default in assoc(kc, :default_credential),
+      as: :default_credential,
       where: kc.project_id == ^project_id,
-      order_by: [asc: fragment("lower(?)", kc.name)],
       preload: [:project, :created_by, :default_credential]
     )
+    |> search_keychain_credentials(Keyword.get(opts, :search, ""))
+    |> sort_keychain_credentials(Keyword.get(opts, :order_by, {:name, :asc}))
     |> Repo.paginate(page_params)
+  end
+
+  defp search_keychain_credentials(query, ""), do: query
+
+  defp search_keychain_credentials(query, search) do
+    pattern = "%#{search}%"
+
+    where(
+      query,
+      [keychain_credential: kc, owner: owner, default_credential: default],
+      ilike(kc.name, ^pattern) or ilike(kc.path, ^pattern) or
+        ilike(owner.email, ^pattern) or ilike(default.name, ^pattern)
+    )
+  end
+
+  defp sort_keychain_credentials(query, {:name, direction}) do
+    order_by(query, [keychain_credential: kc], [
+      {^direction, fragment("lower(?)", kc.name)},
+      {:asc, kc.id}
+    ])
+  end
+
+  defp sort_keychain_credentials(query, {:path, direction}) do
+    order_by(query, [keychain_credential: kc], [
+      {^direction, fragment("lower(?)", kc.path)},
+      {:asc, kc.id}
+    ])
+  end
+
+  defp sort_keychain_credentials(query, {:owner, direction}) do
+    order_by(query, [keychain_credential: kc, owner: owner], [
+      {^direction, fragment("lower(?)", owner.email)},
+      {:asc, kc.id}
+    ])
   end
 
   @doc """
@@ -2355,8 +2464,8 @@ defmodule Lightning.Credentials do
 
   """
   def new_keychain_credential(
-        %Lightning.Accounts.User{} = user,
-        %Lightning.Projects.Project{} = project
+        %User{} = user,
+        %Project{} = project
       ) do
     %KeychainCredential{}
     |> Ecto.Changeset.change()

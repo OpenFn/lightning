@@ -161,6 +161,160 @@ defmodule Lightning.OauthClientsTest do
     end
   end
 
+  describe "list_clients/3" do
+    defp list_client_ids(project_or_user, opts) do
+      page = OauthClients.list_clients(project_or_user, %{"page" => "1"}, opts)
+      Enum.map(page.entries, & &1.id)
+    end
+
+    defp list_client_names(project_or_user, opts) do
+      page = OauthClients.list_clients(project_or_user, %{"page" => "1"}, opts)
+      Enum.map(page.entries, & &1.name)
+    end
+
+    test "search matches a client's name, URL, owner and projects, ignoring case" do
+      project = insert(:project)
+      shared_project = insert(:project, name: "shared-project")
+
+      by_name =
+        insert(:oauth_client,
+          name: "Acme Login",
+          project_oauth_clients: [%{project: project}]
+        )
+
+      by_url =
+        insert(:oauth_client,
+          authorization_endpoint: "https://login.example.org/authorize",
+          project_oauth_clients: [%{project: project}]
+        )
+
+      by_owner =
+        insert(:oauth_client,
+          user: build(:user, email: "client-owner@example.com"),
+          project_oauth_clients: [%{project: project}]
+        )
+
+      by_project =
+        insert(:oauth_client,
+          project_oauth_clients: [
+            %{project: project},
+            %{project: shared_project}
+          ]
+        )
+
+      # Matches the name, but belongs to another project.
+      insert(:oauth_client,
+        name: "Acme Other",
+        project_oauth_clients: [%{project: insert(:project)}]
+      )
+
+      for {term, client} <- [
+            {"ACME", by_name},
+            {"login.example.org", by_url},
+            {"client-owner", by_owner},
+            {"shared-project", by_project}
+          ] do
+        assert list_client_ids(project, search: term) == [client.id]
+      end
+
+      assert list_client_ids(project, search: "no such client") == []
+      assert length(list_client_ids(project, search: "")) == 4
+    end
+
+    test "search only returns a user's own clients and global clients" do
+      user = insert(:user)
+      own = insert(:oauth_client, user: user, name: "Acme Own")
+      global = insert(:oauth_client, global: true, name: "Acme Global")
+      insert(:oauth_client, name: "Acme Stranger")
+
+      assert user |> list_client_ids(search: "acme") |> Enum.sort() ==
+               Enum.sort([own.id, global.id])
+    end
+
+    test "search doesn't reveal the hidden owner and projects of a global client" do
+      user = insert(:user)
+
+      global =
+        insert(:oauth_client,
+          global: true,
+          name: "Shared Client",
+          user: build(:user, email: "hidden-owner@example.com"),
+          project_oauth_clients: [
+            %{project: insert(:project, name: "hidden-project")}
+          ]
+        )
+
+      assert list_client_ids(user, search: "hidden-owner") == []
+      assert list_client_ids(user, search: "hidden-project") == []
+
+      assert list_client_ids(user, search: "shared client") == [global.id]
+      assert list_client_ids(user, search: "global") == [global.id]
+    end
+
+    test "sorts by name, ignoring case" do
+      user = insert(:user)
+
+      for name <- ["beta", "Alpha", "gamma"],
+          do: insert(:oauth_client, user: user, name: name)
+
+      assert list_client_names(user, []) == ["Alpha", "beta", "gamma"]
+
+      assert list_client_names(user, order_by: {:name, :desc}) ==
+               ["gamma", "beta", "Alpha"]
+    end
+
+    test "sorts by owner, treating a global client's owner as global" do
+      project = insert(:project)
+
+      for {name, email} <- [
+            {"zeta's", "zeta@example.com"},
+            {"alpha's", "Alpha@example.com"}
+          ] do
+        insert(:oauth_client,
+          name: name,
+          user: build(:user, email: email),
+          project_oauth_clients: [%{project: project}]
+        )
+      end
+
+      insert(:oauth_client,
+        name: "global",
+        global: true,
+        user: build(:user, email: "mallory@example.com")
+      )
+
+      assert list_client_names(project, order_by: {:owner, :asc}) ==
+               ["alpha's", "global", "zeta's"]
+
+      assert list_client_names(project, order_by: {:owner, :desc}) ==
+               ["zeta's", "global", "alpha's"]
+    end
+
+    test "paginates only the matching clients, in a stable order" do
+      user = insert(:user)
+
+      owned_by_user =
+        insert_list(5, :oauth_client, user: user, name: "same name")
+
+      insert(:oauth_client, user: user, name: "unrelated")
+
+      ids =
+        Enum.flat_map(["1", "2", "3"], fn page_number ->
+          page =
+            OauthClients.list_clients(
+              user,
+              %{"page" => page_number, "page_size" => "2"},
+              search: "same name"
+            )
+
+          assert page.total_entries == 5
+          Enum.map(page.entries, & &1.id)
+        end)
+
+      assert ids == owned_by_user |> Enum.map(& &1.id) |> Enum.sort()
+    end
+  end
+
   describe "create_client/1 with project association" do
     test "successfully creates a client and associates with a project" do
       user = insert(:user)

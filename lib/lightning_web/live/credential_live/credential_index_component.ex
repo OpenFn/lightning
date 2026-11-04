@@ -30,7 +30,9 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
        project: nil,
        project_user: nil,
        projects: [],
-       show_owner_in_tables: false
+       show_owner_in_tables: false,
+       table_params: %{},
+       table_path: nil
      )}
   end
 
@@ -73,6 +75,31 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
 
   def handle_event("toggle_oauth_clients", _params, socket) do
     {:noreply, update(socket, :oauth_clients_expanded, &(!&1))}
+  end
+
+  def handle_event("filter", %{"value" => search}, socket) do
+    %{table_params: table_params} = socket.assigns
+
+    {:noreply,
+     patch_table_params(socket, Helpers.search_params(table_params, search))}
+  end
+
+  def handle_event("clear_filter", _params, socket) do
+    %{table_params: table_params} = socket.assigns
+
+    {:noreply,
+     patch_table_params(socket, Helpers.search_params(table_params, ""))}
+  end
+
+  def handle_event("sort_" <> table, %{"by" => sort_key}, socket)
+      when table in ["credentials", "keychain", "oauth_clients"] do
+    %{table_params: table_params} = socket.assigns
+
+    {:noreply,
+     patch_table_params(
+       socket,
+       Helpers.sort_params(table_params, table, sort_key)
+     )}
   end
 
   def handle_event("show_modal", %{"target" => "new_credential"}, socket) do
@@ -410,6 +437,10 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
       current_user,
       client
     )
+  end
+
+  defp patch_table_params(socket, table_params) do
+    push_patch(socket, to: socket.assigns.table_path.(table_params))
   end
 
   defp not_authorized(socket) do

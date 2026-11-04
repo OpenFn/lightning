@@ -38,6 +38,10 @@ and this project adheres to
   service account and using it to create the first superuser and project on a
   new instance. [#5272](https://github.com/OpenFn/lightning/pull/5272)
 
+- Searching the credentials and project credentials pages, and sorting their
+  tables by clicking a column header.
+  [#4302](https://github.com/OpenFn/lightning/issues/4302)
+
 ### Changed
 
 - The web app's interactive pages now run on React 19, up from React 18. They

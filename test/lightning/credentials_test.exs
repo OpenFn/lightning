@@ -469,6 +469,266 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
+  describe "list_credentials/3" do
+    setup do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      %{user: user, project: project}
+    end
+
+    defp list_credential_ids(project_or_user, opts) do
+      page =
+        Credentials.list_credentials(project_or_user, %{"page" => "1"}, opts)
+
+      Enum.map(page.entries, & &1.id)
+    end
+
+    defp list_credential_names(project_or_user, opts) do
+      page =
+        Credentials.list_credentials(project_or_user, %{"page" => "1"}, opts)
+
+      Enum.map(page.entries, & &1.name)
+    end
+
+    test "search matches a user's credentials by name, type, external ID and project, ignoring case",
+         %{user: user} do
+      by_name = insert(:credential, user: user, name: "DHIS2 Production")
+      by_schema = insert(:credential, user: user, schema: "salesforce")
+
+      by_client =
+        insert(:credential,
+          user: user,
+          schema: "oauth",
+          oauth_client: build(:oauth_client, name: "Google Sheets Client")
+        )
+
+      by_external_id = insert(:credential, user: user, external_id: "ext-12345")
+
+      by_project =
+        insert(:credential,
+          user: user,
+          project_credentials: [
+            %{project: insert(:project, name: "health-data")}
+          ]
+        )
+
+      # Matches the name, but belongs to another user.
+      insert(:credential, user: insert(:user), name: "DHIS2 Stranger")
+
+      for {term, credential} <- [
+            {"dhis2", by_name},
+            {"SALESFORCE", by_schema},
+            {"google sheets", by_client},
+            {"ext-12345", by_external_id},
+            {"health-data", by_project}
+          ] do
+        assert list_credential_ids(user, search: term) == [credential.id]
+      end
+
+      assert list_credential_ids(user, search: "no such credential") == []
+      assert length(list_credential_ids(user, search: "")) == 5
+    end
+
+    test "search matches a project's credentials by owner and stays in the project",
+         %{user: user, project: project} do
+      by_owner =
+        insert(:credential,
+          user: build(:user, email: "credential-owner@example.com"),
+          project_credentials: [%{project: project}]
+        )
+
+      insert(:credential, user: user, project_credentials: [%{project: project}])
+
+      insert(:credential,
+        user: build(:user, email: "credential-owner-2@example.com"),
+        project_credentials: [%{project: insert(:project)}]
+      )
+
+      assert list_credential_ids(project, search: "credential-owner") ==
+               [by_owner.id]
+    end
+
+    test "sorts by name, ignoring case", %{user: user} do
+      for name <- ["beta", "Alpha", "gamma"],
+          do: insert(:credential, user: user, name: name)
+
+      assert list_credential_names(user, []) == ["Alpha", "beta", "gamma"]
+
+      assert list_credential_names(user, order_by: {:name, :desc}) ==
+               ["gamma", "beta", "Alpha"]
+    end
+
+    test "sorts by type, using the client's name for an oauth credential",
+         %{user: user} do
+      insert(:credential, user: user, name: "http", schema: "http")
+      insert(:credential, user: user, name: "salesforce", schema: "salesforce")
+
+      insert(:credential,
+        user: user,
+        name: "oauth",
+        schema: "oauth",
+        oauth_client: build(:oauth_client, name: "Zebra Client")
+      )
+
+      assert list_credential_names(user, order_by: {:type, :asc}) ==
+               ["http", "salesforce", "oauth"]
+
+      assert list_credential_names(user, order_by: {:type, :desc}) ==
+               ["oauth", "salesforce", "http"]
+    end
+
+    test "sorts by owner", %{project: project} do
+      for {name, email} <- [
+            {"zeta's", "zeta@example.com"},
+            {"alpha's", "Alpha@example.com"}
+          ] do
+        insert(:credential,
+          name: name,
+          user: build(:user, email: email),
+          project_credentials: [%{project: project}]
+        )
+      end
+
+      assert list_credential_names(project, order_by: {:owner, :asc}) ==
+               ["alpha's", "zeta's"]
+
+      assert list_credential_names(project, order_by: {:owner, :desc}) ==
+               ["zeta's", "alpha's"]
+    end
+
+    test "paginates only the matching credentials, in a stable order",
+         %{project: project} do
+      matching =
+        for _i <- 1..5 do
+          insert(:credential,
+            user: insert(:user),
+            name: "same name",
+            project_credentials: [%{project: project}]
+          )
+        end
+
+      insert(:credential,
+        user: insert(:user),
+        name: "unrelated",
+        project_credentials: [%{project: project}]
+      )
+
+      ids =
+        Enum.flat_map(["1", "2", "3"], fn page_number ->
+          page =
+            Credentials.list_credentials(
+              project,
+              %{"page" => page_number, "page_size" => "2"},
+              search: "same name"
+            )
+
+          assert page.total_entries == 5
+          Enum.map(page.entries, & &1.id)
+        end)
+
+      assert ids == matching |> Enum.map(& &1.id) |> Enum.sort()
+    end
+  end
+
+  describe "list_keychain_credentials_for_project/3" do
+    setup do
+      %{project: insert(:project)}
+    end
+
+    defp list_keychain_names(project, opts) do
+      project
+      |> Credentials.list_keychain_credentials_for_project(
+        %{"page" => "1"},
+        opts
+      )
+      |> Map.fetch!(:entries)
+      |> Enum.map(& &1.name)
+    end
+
+    test "search matches the name, path, owner and default credential, ignoring case",
+         %{project: project} do
+      insert(:keychain_credential, project: project, name: "District Keychain")
+
+      insert(:keychain_credential,
+        project: project,
+        name: "path",
+        path: "$.site"
+      )
+
+      insert(:keychain_credential,
+        project: project,
+        name: "owner",
+        created_by: build(:user, email: "keychain-owner@example.com")
+      )
+
+      insert(:keychain_credential,
+        project: project,
+        name: "default",
+        default_credential:
+          insert(:credential, user: insert(:user), name: "Fallback Credential")
+      )
+
+      # Matches the name, but belongs to another project.
+      insert(:keychain_credential,
+        project: insert(:project),
+        name: "District Other"
+      )
+
+      for {term, name} <- [
+            {"DISTRICT", "District Keychain"},
+            {"$.site", "path"},
+            {"keychain-owner", "owner"},
+            {"fallback credential", "default"}
+          ] do
+        assert list_keychain_names(project, search: term) == [name]
+      end
+
+      assert list_keychain_names(project, search: "no such keychain") == []
+      assert length(list_keychain_names(project, search: "")) == 4
+    end
+
+    test "sorts by name, path and owner", %{project: project} do
+      insert(:keychain_credential,
+        project: project,
+        name: "Alpha",
+        path: "$.zone",
+        created_by: build(:user, email: "mid@example.com")
+      )
+
+      insert(:keychain_credential,
+        project: project,
+        name: "beta",
+        path: "$.area",
+        created_by: build(:user, email: "zed@example.com")
+      )
+
+      insert(:keychain_credential,
+        project: project,
+        name: "gamma",
+        path: "$.Mid",
+        created_by: build(:user, email: "Abe@example.com")
+      )
+
+      assert list_keychain_names(project, []) == ["Alpha", "beta", "gamma"]
+
+      assert list_keychain_names(project, order_by: {:name, :desc}) ==
+               ["gamma", "beta", "Alpha"]
+
+      assert list_keychain_names(project, order_by: {:path, :asc}) ==
+               ["beta", "gamma", "Alpha"]
+
+      assert list_keychain_names(project, order_by: {:path, :desc}) ==
+               ["Alpha", "gamma", "beta"]
+
+      assert list_keychain_names(project, order_by: {:owner, :asc}) ==
+               ["gamma", "Alpha", "beta"]
+
+      assert list_keychain_names(project, order_by: {:owner, :desc}) ==
+               ["beta", "Alpha", "gamma"]
+    end
+  end
+
   describe "create_credential/1" do
     setup :isolated_adaptors
 

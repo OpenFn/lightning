@@ -208,6 +208,10 @@ defmodule LightningWeb.ProjectLive.Settings do
        name: project.name,
        oauth_clients_page: CredentialHelpers.empty_page(),
        oauth_clients_url: nil,
+       table_params: %{},
+       table_path: fn query ->
+         ~p"/projects/#{project.id}/settings?#{query}" <> "#credentials"
+       end,
        parent_project: parent_project,
        root_project: root_project,
        project: project,
@@ -254,19 +258,30 @@ defmodule LightningWeb.ProjectLive.Settings do
     concurrency_input_component = Map.get(route_metadata, :concurrency_input)
     usage_caps_input_component = Map.get(route_metadata, :usage_caps_input)
 
-    creds_params = %{"page" => params["credentials_page"] || "1"}
-    keychain_params = %{"page" => params["keychain_page"] || "1"}
-    oauth_params = %{"page" => params["oauth_clients_page"] || "1"}
+    table_path = socket.assigns.table_path
+    table_params = CredentialHelpers.table_params(params)
 
     credentials_page =
-      Credentials.list_credentials(project, creds_params)
+      Credentials.list_credentials(
+        project,
+        CredentialHelpers.page_params(table_params, "credentials"),
+        CredentialHelpers.list_opts(table_params, "credentials")
+      )
       |> CredentialHelpers.with_credential_display_fields()
 
     keychain_credentials_page =
-      Credentials.list_keychain_credentials_for_project(project, keychain_params)
+      Credentials.list_keychain_credentials_for_project(
+        project,
+        CredentialHelpers.page_params(table_params, "keychain"),
+        CredentialHelpers.list_opts(table_params, "keychain")
+      )
 
     oauth_clients_page =
-      OauthClients.list_clients(project, oauth_params)
+      OauthClients.list_clients(
+        project,
+        CredentialHelpers.page_params(table_params, "oauth_clients"),
+        CredentialHelpers.list_opts(table_params, "oauth_clients")
+      )
       |> CredentialHelpers.with_oauth_client_display_fields()
 
     socket
@@ -281,32 +296,21 @@ defmodule LightningWeb.ProjectLive.Settings do
       active_modal: nil,
       active_modal_assigns: nil
     )
+    |> assign(:table_params, table_params)
     |> assign(:credentials_page, credentials_page)
     |> assign(:keychain_credentials_page, keychain_credentials_page)
     |> assign(:oauth_clients_page, oauth_clients_page)
     |> assign(
       :credentials_url,
-      fn opts ->
-        Routes.project_settings_path(socket, :index, project.id,
-          credentials_page: opts[:page]
-        )
-      end
+      CredentialHelpers.page_url(table_path, table_params, "credentials")
     )
     |> assign(
       :keychain_url,
-      fn opts ->
-        Routes.project_settings_path(socket, :index, project.id,
-          keychain_page: opts[:page]
-        )
-      end
+      CredentialHelpers.page_url(table_path, table_params, "keychain")
     )
     |> assign(
       :oauth_clients_url,
-      fn opts ->
-        Routes.project_settings_path(socket, :index, project.id,
-          oauth_clients_page: opts[:page]
-        )
-      end
+      CredentialHelpers.page_url(table_path, table_params, "oauth_clients")
     )
   end
 

@@ -88,35 +88,93 @@ defmodule Lightning.OauthClients do
     |> Repo.all()
   end
 
-  def list_clients(%Project{} = project, page_params) do
-    global_clients_subquery =
-      from(c in OauthClient,
-        where: c.global == true,
-        select: c.id
+  @doc """
+  Returns a page of OAuth clients for a project or a user, including global
+  clients.
+
+  ## Options
+
+    * `:search` - only return clients whose name, authorization URL, owner email
+      or project names contain this term. A global client's owner and projects
+      are hidden from the table, so they aren't searched either.
+    * `:order_by` - a `{field, direction}` tuple, where `field` is `:name` or
+      `:owner`. Defaults to `{:name, :asc}`.
+  """
+  def list_clients(project_or_user, page_params, opts \\ [])
+
+  def list_clients(%Project{} = project, page_params, opts) do
+    project_client_ids =
+      from(poc in ProjectOauthClient,
+        where: poc.project_id == ^project.id,
+        select: poc.oauth_client_id
       )
 
-    clients_query =
-      from(c in OauthClient,
-        left_join: poc in ProjectOauthClient,
-        on: poc.oauth_client_id == c.id,
-        where:
-          poc.project_id == ^project.id or
-            c.id in subquery(global_clients_subquery),
-        preload: [:user, :project_oauth_clients, :projects],
-        order_by: [asc: fragment("lower(?)", c.name)],
-        group_by: c.id
-      )
-
-    Repo.paginate(clients_query, page_params)
-  end
-
-  def list_clients(%User{id: user_id}, page_params) do
-    from(c in OauthClient,
-      where: c.user_id == ^user_id or c.global,
-      preload: :projects,
-      order_by: [asc: fragment("lower(?)", c.name)]
+    from([client: c] in search_and_sort_clients(opts),
+      where: c.global or c.id in subquery(project_client_ids),
+      preload: [:user, :project_oauth_clients, :projects]
     )
     |> Repo.paginate(page_params)
+  end
+
+  def list_clients(%User{id: user_id}, page_params, opts) do
+    from([client: c] in search_and_sort_clients(opts),
+      where: c.user_id == ^user_id or c.global,
+      preload: :projects
+    )
+    |> Repo.paginate(page_params)
+  end
+
+  defp search_and_sort_clients(opts) do
+    from(c in OauthClient,
+      as: :client,
+      left_join: owner in assoc(c, :user),
+      as: :owner
+    )
+    |> search_clients(Keyword.get(opts, :search, ""))
+    |> sort_clients(Keyword.get(opts, :order_by, {:name, :asc}))
+  end
+
+  defp search_clients(query, ""), do: query
+
+  defp search_clients(query, search) do
+    pattern = "%#{search}%"
+
+    matching_projects =
+      from(poc in ProjectOauthClient,
+        join: p in assoc(poc, :project),
+        where:
+          poc.oauth_client_id == parent_as(:client).id and
+            ilike(p.name, ^pattern),
+        select: 1
+      )
+
+    where(
+      query,
+      [client: c, owner: owner],
+      ilike(c.name, ^pattern) or ilike(c.authorization_endpoint, ^pattern) or
+        (c.global and ilike("GLOBAL", ^pattern)) or
+        (not c.global and
+           (ilike(owner.email, ^pattern) or exists(matching_projects)))
+    )
+  end
+
+  defp sort_clients(query, {:name, direction}) do
+    order_by(query, [client: c], [
+      {^direction, fragment("lower(?)", c.name)},
+      {:asc, c.id}
+    ])
+  end
+
+  defp sort_clients(query, {:owner, direction}) do
+    order_by(query, [client: c, owner: owner], [
+      {^direction,
+       fragment(
+         "CASE WHEN ? THEN 'global' ELSE lower(?) END",
+         c.global,
+         owner.email
+       )},
+      {:asc, c.id}
+    ])
   end
 
   @doc """

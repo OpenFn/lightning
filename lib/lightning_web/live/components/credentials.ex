@@ -25,6 +25,8 @@ defmodule LightningWeb.Components.Credentials do
   attr :credentials_url, :any, default: nil
   attr :keychain_url, :any, default: nil
   attr :oauth_clients_url, :any, default: nil
+  attr :table_params, :map, default: %{}
+  attr :table_path, :any, default: nil
 
   def credentials_index_live_component(assigns) do
     ~H"""
