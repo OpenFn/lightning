@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.20.1] - 2026-11-04
+
+### Added
+
 - Removing a GitHub sync (v2) integration also removes the project's sync files
   from the branch, in one commit, unless "Preserve project files" is ticked.
   `openfn.yaml` and other projects' files stay.
