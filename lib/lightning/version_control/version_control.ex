@@ -425,9 +425,15 @@ defmodule Lightning.VersionControl do
   end
 
   @doc """
-  Deletes a github connection
+  Deletes a github connection, and the deploy workflow and API secret it set
+  up on GitHub.
+
+  With `delete_files: true`, a v2 connection also deletes this project's
+  files from the branch in one commit: its copies under `.projects`, and the
+  checkout when the branch tracks this project. Files other projects in the
+  workspace use, `openfn.yaml` included, stay.
   """
-  def remove_github_connection(repo_connection, user) do
+  def remove_github_connection(repo_connection, user, opts \\ []) do
     Multi.new()
     |> Multi.delete(:delete_repo_connection, repo_connection)
     |> Multi.insert(
@@ -437,10 +443,7 @@ defmodule Lightning.VersionControl do
     |> Repo.transaction()
     |> tap(fn
       {:ok, %{delete_repo_connection: repo_connection}} ->
-        undo_repo_actions(
-          repo_connection,
-          user
-        )
+        undo_repo_actions(repo_connection, user, opts[:delete_files] == true)
 
       _other ->
         :ok
@@ -1104,14 +1107,20 @@ defmodule Lightning.VersionControl do
     "OPENFN_#{sanitized_id}_API_KEY"
   end
 
-  defp undo_repo_actions(repo_connection, user) do
+  defp undo_repo_actions(repo_connection, user, delete_files?) do
     with {:ok, access_token} <- fetch_user_access_token(user),
          {:ok, client} <- GithubClient.build_bearer_client(access_token) do
-      maybe_delete_file(
-        client,
-        repo_connection,
-        deploy_yml_target_path(repo_connection)
-      )
+      deleted_workspace? =
+        delete_files? and repo_connection.sync_version and
+          match?({:ok, _}, delete_workspace_files(client, repo_connection))
+
+      if !deleted_workspace? do
+        maybe_delete_file(
+          client,
+          repo_connection,
+          deploy_yml_target_path(repo_connection)
+        )
+      end
 
       # v2's openfn.yaml belongs to the CLI workspace, so leave it in place
       if !repo_connection.sync_version do
@@ -1128,6 +1137,85 @@ defmodule Lightning.VersionControl do
         api_secret_name(repo_connection)
       )
     end
+  end
+
+  defp delete_workspace_files(client, %{repo: repo, branch: branch} = conn) do
+    project_id = conn.project_id
+    host = URI.parse(endpoint_url()).host
+
+    with {:ok,
+          %{
+            status: 200,
+            body: %{
+              "sha" => base_sha,
+              "commit" => %{"tree" => %{"sha" => tree_sha}}
+            }
+          }} <- GithubClient.get_commit(client, repo, "heads/#{branch}"),
+         {:ok, %{body: %{"tree" => entries}}} <-
+           GithubClient.get_tree(client, repo, tree_sha),
+         {:ok, %{tracking: tracking, projects: projects}} <-
+           workspace_state(client, conn),
+         checkout = checkout_prefixes(client, conn, tracking),
+         copies =
+           projects
+           |> Enum.filter(fn project ->
+             match?(%{uuid: ^project_id, host: ^host}, project)
+           end)
+           |> Enum.map(fn project -> project.path end),
+         deleted =
+           entries
+           |> Enum.filter(fn entry -> entry["type"] == "blob" end)
+           |> Enum.map(fn entry -> entry["path"] end)
+           |> Enum.filter(fn path ->
+             path in [deploy_yml_target_path(conn) | copies] or
+               String.starts_with?(path, checkout)
+           end),
+         {:ok, %{status: 201, body: tree}} <-
+           GithubClient.create_tree(client, repo, %{
+             base_tree: tree_sha,
+             tree:
+               Enum.map(
+                 deleted,
+                 fn path ->
+                   %{path: path, mode: "100644", type: "blob", sha: nil}
+                 end
+               )
+           }),
+         {:ok, %{status: 201, body: commit}} <-
+           GithubClient.create_commit(client, repo, %{
+             message: "[skip actions] Disconnect OpenFn",
+             tree: tree["sha"],
+             parents: [base_sha]
+           }) do
+      GithubClient.update_ref(client, repo, "heads/#{branch}", %{
+        sha: commit["sha"]
+      })
+    end
+  end
+
+  # The checkout belongs to whichever project the branch tracks, so only
+  # take it when that's this one
+  defp checkout_prefixes(client, conn, :ok),
+    do: [checkout_path(conn), workflows_dir(client, conn) <> "/"]
+
+  defp checkout_prefixes(_client, _conn, _tracking), do: []
+
+  # openfn.yaml's dirs.workflows, as @openfn/project reads it
+  defp workflows_dir(client, %{repo: repo, branch: branch} = conn) do
+    path = ProjectRepoConnection.workspace_file(conn, "openfn.yaml")
+
+    dir =
+      with {:ok, %{body: %{"content" => content}}} <-
+             GithubClient.get_repo_content(client, repo, path, "heads/#{branch}"),
+           {:ok, yaml} <- Base.decode64(content, ignore: :whitespace),
+           {:ok, config} <- YamlElixir.read_from_string(yaml),
+           dir when is_binary(dir) <- get_in(config, ["dirs", "workflows"]) do
+        dir
+      else
+        _missing -> "workflows"
+      end
+
+    ProjectRepoConnection.workspace_file(conn, dir)
   end
 
   defp maybe_delete_file(client, repo_connection, file_path) do
