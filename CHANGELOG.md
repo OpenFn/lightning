@@ -93,6 +93,28 @@ and this project adheres to
   bundled certificate list no longer trusts the emSign C1 and ECC C3 roots
   either.
 
+## [2.20.1] - 2026-11-04
+
+### Added
+
+- Removing a GitHub sync (v2) integration also removes the project's sync files
+  from the branch, in one commit, unless "Preserve project files" is ticked.
+  `openfn.yaml` and other projects' files stay.
+
+### Changed
+
+- The GitHub sync "Reconnect" dialog checks the workspace the same way Connect
+  does, and its button stays disabled until the box is ticked and the check has
+  finished.
+
+### Fixed
+
+- GitHub sync allowed a project to be saved in the workspace under a second
+  alias, for example after disconnecting and reconnecting with a different
+  alias. The CLI then couldn't tell which copy to pull and every sync failed.
+  Connect and Reconnect now block this, and the status page warns when a
+  workspace already holds two copies.
+
 ## [2.20.0] - 2026-10-30
 
 ## [2.20.0-pre1] - 2026-10-29

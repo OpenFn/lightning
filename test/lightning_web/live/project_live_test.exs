@@ -6088,6 +6088,72 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> element("#workspace-alias") |> render() =~ "main"
     end
 
+    test "blocks saving this project under a second alias in the workspace",
+         %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+      repo_url = "https://api.github.com/repos/someaccount/somerepo"
+      host = URI.parse(Lightning.VersionControl.endpoint_url()).host
+      copy = "main@#{host}.yaml"
+
+      stub_connect_form(%{
+        (repo_url <> "/contents/ws/.projects") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: [
+               %{"name" => copy, "path" => "ws/.projects/" <> copy, "sha" => "s"}
+             ]
+           }},
+        (repo_url <> "/git/blobs/s") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "content" => Base.encode64("openfn:\n  uuid: #{project.id}\n")
+             }
+           }}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      change = fn params ->
+        view
+        |> form("#project-repo-connection-form")
+        |> render_change(
+          connection:
+            Map.merge(
+              %{
+                github_installation_id: "1234",
+                repo: "someaccount/somerepo",
+                branch: "main",
+                workspace_path: "ws",
+                accept: "true"
+              },
+              params
+            )
+        )
+
+        render_async(view)
+      end
+
+      change.(%{local_alias: "demo"})
+
+      # the CLI can't pick between two copies of one project
+      assert view |> element("#workspace-stray-copy") |> render() =~
+               "ws/.projects/" <> copy
+
+      assert has_element?(view, "#connect-and-sync-button[disabled]")
+
+      change.(%{local_alias: ""})
+
+      refute has_element?(view, "#workspace-stray-copy")
+      assert view |> element("#workspace-alias") |> render() =~ "main"
+      refute has_element?(view, "#connect-and-sync-button[disabled]")
+    end
+
     test "warns without blocking when a copy under the same alias has no readable uuid",
          %{conn: conn} do
       project = insert(:project)
@@ -6427,6 +6493,97 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project #{other_id}"
     end
 
+    test "warns when the workspace holds this project under two aliases",
+         %{conn: conn} do
+      project = insert(:project)
+      host = URI.parse(LightningWeb.Endpoint.url()).host
+
+      stub_sync_status(project,
+        checkout: project.id,
+        projects: %{
+          "demo@#{host}.yaml" => project.id,
+          "main@#{host}.yaml" => project.id
+        }
+      )
+
+      view = live_sync_tab(conn, project)
+
+      html = view |> element("#stray-copies") |> render()
+      assert html =~ ".projects/demo@#{host}.yaml"
+      assert html =~ ".projects/main@#{host}.yaml"
+    end
+
+    test "ignores this project's copies on other hosts", %{conn: conn} do
+      project = insert(:project)
+      host = URI.parse(LightningWeb.Endpoint.url()).host
+
+      stub_sync_status(project,
+        checkout: project.id,
+        projects: %{
+          "main@#{host}.yaml" => project.id,
+          "demo@app.example.org.yaml" => project.id
+        }
+      )
+
+      view = live_sync_tab(conn, project)
+
+      refute has_element?(view, "#stray-copies")
+    end
+
+    test "reconnecting checks the workspace like connecting does",
+         %{conn: conn} do
+      project = insert(:project)
+      host = URI.parse(LightningWeb.Endpoint.url()).host
+
+      stub_sync_status(project,
+        checkout: project.id,
+        projects: %{"main@#{host}.yaml" => project.id}
+      )
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      # nothing ticked yet
+      assert has_element?(view, "#reconnect-project-button[disabled]")
+
+      # opening the modal checks the workspace straight away
+      view
+      |> with_target("#github-sync-component")
+      |> render_click("open-reconnect")
+
+      render_async(view)
+
+      assert view |> element("#reconnect_modal #workspace-alias") |> render() =~
+               "main"
+
+      change = fn params ->
+        view
+        |> form("#reconnect-project-form")
+        |> render_change(
+          connection:
+            Map.merge(%{sync_direction: "pull", accept: "true"}, params)
+        )
+
+        render_async(view)
+      end
+
+      change.(%{local_alias: "demo"})
+
+      assert view
+             |> element("#reconnect_modal #workspace-stray-copy")
+             |> render() =~
+               ".projects/main@#{host}.yaml"
+
+      assert has_element?(view, "#reconnect-project-button[disabled]")
+
+      change.(%{local_alias: ""})
+
+      refute has_element?(view, "#reconnect_modal #workspace-stray-copy")
+      refute has_element?(view, "#reconnect-project-button[disabled]")
+    end
+
     test "reads the project's alias back from the workspace", %{conn: conn} do
       project = insert(:project)
 
@@ -6437,7 +6594,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
       view = live_sync_tab(conn, project)
 
-      assert view |> element("#workspace-alias") |> render() =~ "staging"
+      assert view |> element("#connected-workspace-alias") |> render() =~
+               "staging"
     end
 
     test "doesn't offer to reconnect while a new connection's files appear", %{
@@ -7125,14 +7283,55 @@ defmodule LightningWeb.ProjectLiveTest do
 
         # click the confirm button
         view
-        |> element("#remove_connection_modal_confirm_button")
-        |> render_click()
+        |> form("#remove-connection-form")
+        |> render_submit()
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
         assert flash["info"] == "Connection removed successfully"
 
         refute Lightning.Repo.reload(repo_connection)
+      end
+    end
+
+    @tag :capture_log
+    test "removing a v2 connection deletes the project's files unless preserved",
+         %{conn: conn} do
+      for preserve_files <- [nil, "true"] do
+        project = insert(:project)
+        stub_sync_status(project, checkout: project.id)
+        {conn, user} = setup_project_user(conn, project, :admin)
+        set_valid_github_oauth_token!(user)
+
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+        render_async(view)
+
+        assert has_element?(view, "#remove-connection-preserve-files")
+        refute has_element?(view, "#remove-connection-preserve-files[checked]")
+
+        test = self()
+
+        stub(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+          send(test, {:github, url})
+          {:ok, %Tesla.Env{status: 404, body: %{}}}
+        end)
+
+        view
+        |> form("#remove-connection-form")
+        |> render_submit(
+          if preserve_files, do: %{preserve_files: preserve_files}, else: %{}
+        )
+
+        assert assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")[
+                 "info"
+               ] == "Connection removed successfully"
+
+        head =
+          "https://api.github.com/repos/someaccount/somerepo/commits/heads/somebranch"
+
+        if preserve_files,
+          do: refute_received({:github, ^head}),
+          else: assert_received({:github, ^head})
       end
     end
 
@@ -7209,8 +7408,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
         # click the confirm button
         view
-        |> element("#remove_connection_modal_confirm_button")
-        |> render_click()
+        |> form("#remove-connection-form")
+        |> render_submit()
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
