@@ -7,14 +7,15 @@ defmodule LightningWeb.AdaptorController do
   matching `If-None-Match` answers 304 without touching Postgres, and a
   miss on the ETag still serves an already-rendered payload.
 
-  A catalogue that has never loaded answers 503 with a `retry-after` rather
-  than an empty list, so the picker shows its retry state instead of no
+  A catalogue that has never loaded answers 503 `not_ready` with a `retry-after`
+  rather than an empty list, so the picker shows its retry state instead of no
   adaptors.
   """
 
   use LightningWeb, :controller
 
   alias Lightning.Adaptors
+  alias LightningWeb.API.Problem
 
   require Logger
 
@@ -41,10 +42,7 @@ defmodule LightningWeb.AdaptorController do
             inspect(reason)
         )
 
-        conn
-        |> put_resp_header("retry-after", "5")
-        |> put_status(:service_unavailable)
-        |> json(%{"error" => "adaptor catalogue unavailable"})
+        Problem.respond(conn, Problem.new(:not_ready, retry_after: 5))
     end
   end
 

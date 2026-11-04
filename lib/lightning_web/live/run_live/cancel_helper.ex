@@ -10,9 +10,7 @@ defmodule LightningWeb.RunLive.CancelHelper do
           {:ok, Run.t()}
           | {:error, :not_found | :not_available | Ecto.Changeset.t()}
   def cancel_run(run_id, project_id) do
-    case Runs.get_for_project(run_id, project_id) do
-      nil -> {:error, :not_found}
-      run -> Runs.cancel_run(run)
-    end
+    with {:ok, run} <- Runs.get_for_project(project_id, run_id),
+         do: Runs.cancel_run(run)
   end
 end

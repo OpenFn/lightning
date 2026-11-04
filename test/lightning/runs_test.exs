@@ -9,6 +9,7 @@ defmodule Lightning.RunsTest do
   alias Lightning.Invocation
   alias Lightning.Run
   alias Lightning.Runs
+  alias Lightning.Scope
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
   alias Lightning.Workflows
@@ -69,7 +70,7 @@ defmodule Lightning.RunsTest do
     end
   end
 
-  describe "get_for_project/2" do
+  describe "get_for_project/3" do
     setup do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
@@ -91,22 +92,42 @@ defmodule Lightning.RunsTest do
       %{run: run, project: workflow.project}
     end
 
-    test "returns the run when it belongs to the given project", %{
+    test "finds a run only in the project its workflow belongs to", %{
       run: run,
       project: project
     } do
-      assert %Run{id: id} = Runs.get_for_project(run.id, project.id)
-      assert id == run.id
+      run_id = run.id
+      assert {:ok, %Run{id: ^run_id}} = Runs.get_for_project(project.id, run.id)
+
+      for {project_id, id} <- [
+            {insert(:project).id, run.id},
+            {project.id, Ecto.UUID.generate()},
+            {project.id, "not-a-uuid"}
+          ] do
+        assert Runs.get_for_project(project_id, id) == {:error, :not_found}
+      end
     end
+  end
 
-    test "returns nil when the run belongs to a different project", %{run: run} do
-      other_project = insert(:project)
+  describe "get_project_id/1" do
+    test "finds the project a run's workflow belongs to" do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
 
-      refute Runs.get_for_project(run.id, other_project.id)
-    end
+      run =
+        insert(:run,
+          work_order:
+            insert(:workorder,
+              workflow: workflow,
+              trigger: trigger,
+              dataclip: dataclip
+            ),
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
 
-    test "returns nil when the run does not exist", %{project: project} do
-      refute Runs.get_for_project(Ecto.UUID.generate(), project.id)
+      assert Runs.get_project_id(run.id) == {:ok, workflow.project_id}
+      assert Runs.get_project_id(Ecto.UUID.generate()) == {:error, :not_found}
     end
   end
 
@@ -324,8 +345,9 @@ defmodule Lightning.RunsTest do
           "step_id" => Ecto.UUID.generate()
         })
 
-      assert {:job_id, {"does not exist", []}} in changeset.errors
-      refute {:run_id, {"does not exist", []}} in changeset.errors
+      assert {:job_id, {"does not exist", [code: :not_found]}} in changeset.errors
+
+      refute {:run_id, {"does not exist", [code: :not_found]}} in changeset.errors
 
       # both run_id and job_id doesn't exist
       {:error, changeset} =
@@ -335,8 +357,9 @@ defmodule Lightning.RunsTest do
           "step_id" => Ecto.UUID.generate()
         })
 
-      assert {:job_id, {"does not exist", []}} in changeset.errors
-      assert {:run_id, {"does not exist", []}} in changeset.errors
+      assert {:job_id, {"does not exist", [code: :not_found]}} in changeset.errors
+
+      assert {:run_id, {"does not exist", [code: :not_found]}} in changeset.errors
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
@@ -382,7 +405,7 @@ defmodule Lightning.RunsTest do
           "step_id" => Ecto.UUID.generate()
         })
 
-      assert {:job_id, {"does not exist", []}} in changeset.errors
+      assert {:job_id, {"does not exist", [code: :not_found]}} in changeset.errors
 
       {:ok, step} =
         Runs.start_step(run_1, %{
@@ -710,7 +733,10 @@ defmodule Lightning.RunsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      assert {:error, %Ecto.Changeset{errors: [step_id: {"not found", []}]}} =
+      assert {:error,
+              %Ecto.Changeset{
+                errors: [step_id: {"not found", [code: :not_found]}]
+              }} =
                Runs.complete_step(%{
                  step_id: Ecto.UUID.generate(),
                  reason: "success",
@@ -940,7 +966,7 @@ defmodule Lightning.RunsTest do
 
       assert {:state,
               {"cannot mark run success that has not been claimed by a worker",
-               []}} in changeset.errors
+               [code: :not_allowed]}} in changeset.errors
 
       {:ok, run} =
         Repo.update(run |> Ecto.Changeset.change(state: :claimed))
@@ -986,7 +1012,7 @@ defmodule Lightning.RunsTest do
       assert changeset.errors == [
                state:
                  {"cannot mark run lost that has not been claimed by a worker",
-                  []}
+                  [code: :not_allowed]}
              ]
     end
 
@@ -1077,7 +1103,7 @@ defmodule Lightning.RunsTest do
               {"should be at most %{count} character(s)",
                [count: 8, validation: :length, kind: :max, type: :string]}} in changeset.errors
 
-      assert {:message, {"can't be blank", []}} in changeset.errors
+      assert {:message, {"can't be blank", [code: :required]}} in changeset.errors
 
       assert {:timestamp, {"can't be blank", [validation: :required]}} in changeset.errors
 
@@ -1088,7 +1114,7 @@ defmodule Lightning.RunsTest do
           timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
         })
 
-      assert {:step_id, {"must be associated with the run", []}} in changeset.errors
+      assert {:step_id, {"must be associated with the run", [code: :not_found]}} in changeset.errors
 
       {:ok, _log_line} =
         Runs.append_run_log(run, %{
@@ -1367,6 +1393,81 @@ defmodule Lightning.RunsTest do
 
       assert_received %Runs.Events.RunUpdated{}
       assert_received %WorkOrders.Events.RunUpdated{}
+    end
+  end
+
+  describe "paginate_runs_for/3" do
+    setup do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      [started, success] =
+        for state <- [:started, :success] do
+          insert(:workorder,
+            workflow: workflow,
+            trigger: trigger,
+            dataclip: build(:dataclip),
+            runs: [
+              %{
+                state: state,
+                dataclip: build(:dataclip),
+                starting_trigger: trigger
+              }
+            ]
+          ).runs
+          |> hd()
+        end
+
+      %{triggers: [other_trigger]} = other_workflow = insert(:simple_workflow)
+
+      insert(:workorder,
+        workflow: other_workflow,
+        trigger: other_trigger,
+        dataclip: build(:dataclip),
+        runs: [
+          %{
+            state: :success,
+            dataclip: build(:dataclip),
+            starting_trigger: other_trigger
+          }
+        ]
+      )
+
+      %{user: user, project: project, started: started, success: success}
+    end
+
+    test "narrows a project's runs by the filters", %{
+      project: project,
+      success: success
+    } do
+      assert %Scrivener.Page{entries: [%{id: id}], total_entries: 1} =
+               Runs.paginate_runs_for(project, %{state: ["success"]}, [])
+
+      assert id == success.id
+    end
+
+    test "pages the runs of every project a user may access", %{
+      user: user,
+      started: started,
+      success: success
+    } do
+      page = Runs.paginate_runs_for(Scope.new(user), %{}, page_size: 1)
+
+      assert %Scrivener.Page{
+               page_number: 1,
+               page_size: 1,
+               total_entries: 2,
+               total_pages: 2
+             } = page
+
+      assert MapSet.new(
+               Runs.paginate_runs_for(Scope.new(user), %{}, []).entries,
+               & &1.id
+             ) ==
+               MapSet.new([started.id, success.id])
     end
   end
 

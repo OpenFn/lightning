@@ -35,14 +35,43 @@ defmodule Lightning.Collections.Item do
   @doc false
   def changeset(entry, attrs) do
     entry
-    |> cast(attrs, [:collection_id, :key, :value])
-    |> validate_required([:collection_id, :key, :value])
-    |> validate_length(:value, max: 1_000_000)
-    |> Lightning.Validators.validate_name_fits_column(
-      :value,
-      "value is too long, please use a shorter one",
-      1_000_000
-    )
+    |> value_changeset(attrs)
+    |> key_changeset(attrs)
+  end
+
+  @doc false
+  def value_changeset(entry, attrs) do
+    entry
+    |> cast(attrs, [:value])
+    |> validate_required([:value])
+    |> validate_value_length()
+  end
+
+  @max_value_length 1_000_000
+
+  # A string has no more graphemes or codepoints than bytes, so a value that
+  # fits in bytes needn't have either counted.
+  defp validate_value_length(changeset) do
+    case get_change(changeset, :value) do
+      value when is_binary(value) and byte_size(value) > @max_value_length ->
+        changeset
+        |> validate_length(:value, max: @max_value_length)
+        |> Lightning.Validators.validate_name_fits_column(
+          :value,
+          "value is too long, please use a shorter one",
+          @max_value_length
+        )
+
+      _fits ->
+        changeset
+    end
+  end
+
+  @doc false
+  def key_changeset(entry, attrs) do
+    entry
+    |> cast(attrs, [:collection_id, :key])
+    |> validate_required([:collection_id, :key])
     |> Lightning.Validators.validate_name_fits_column(
       :key,
       "key is too long, please use a shorter one"

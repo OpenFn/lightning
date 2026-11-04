@@ -312,11 +312,12 @@ defmodule LightningWeb.RunLive.IndexTest do
       {:ok, view, _html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
-      # a non-UUID run id must not reach (and crash) the query
-      assert render_click(view, "rerun", %{
-               "run_id" => "not-a-uuid",
-               "step_id" => Ecto.UUID.generate()
-             }) =~ "Run not found."
+      for run_id <- ["not-a-uuid", Ecto.UUID.generate()] do
+        assert render_click(view, "rerun", %{
+                 "run_id" => run_id,
+                 "step_id" => Ecto.UUID.generate()
+               }) =~ "Run not found."
+      end
 
       # a valid in-project run, but a step that is not one of its steps
       [run] = work_order_1.runs

@@ -2,6 +2,7 @@ defmodule Lightning.ServiceAccountHelpers do
   @moduledoc false
 
   alias Lightning.ServiceAccount
+  alias Lightning.ServiceAccount.AccessToken
 
   @doc """
   A fresh key pair and the service account its public half registers.
@@ -40,10 +41,57 @@ defmodule Lightning.ServiceAccountHelpers do
   end
 
   @doc """
+  Returns `{conn, account}`, with `conn` bearing a live access token carrying
+  `scopes` for a fresh service account that this Lightning registers.
+  """
+  def with_service_account(conn, scopes) do
+    {account, _private_key} = service_account_with_key()
+    Mox.stub(Lightning.MockConfig, :service_account, fn -> account end)
+
+    {with_scopes(conn, account, scopes), account}
+  end
+
+  @doc """
+  `conn` bearing a live access token for `account` carrying `scopes`.
+  """
+  def with_scopes(conn, account, scopes) do
+    Plug.Conn.put_req_header(
+      conn,
+      "authorization",
+      "Bearer " <> AccessToken.issue(account, issuable!(scopes))
+    )
+  end
+
+  @doc """
+  An access token for `account` carrying `scope`, signed as Lightning signs
+  one, that expired a second ago.
+  """
+  def expired_access_token(%ServiceAccount{id: id}, scope) do
+    sign_assertion(
+      Lightning.Config.token_signer().jwk,
+      %{
+        "iss" => AccessToken.issuer(),
+        "aud" => AccessToken.issuer() <> "/api",
+        "sub" => id,
+        "scope" => scope,
+        "exp" => System.system_time(:second) - 1
+      },
+      %{"alg" => "RS256", "typ" => "at+jwt"}
+    )
+  end
+
+  @doc """
   A token that claims `alg: none` and carries no signature.
   """
   def unsigned_assertion(claims) do
     encode = &Base.url_encode64(Jason.encode!(&1), padding: false)
     encode.(%{"alg" => "none"}) <> "." <> encode.(claims) <> "."
+  end
+
+  defp issuable!(scopes) do
+    case scopes -- AccessToken.scopes() do
+      [] -> scopes
+      others -> raise ArgumentError, "no token is issued #{inspect(others)}"
+    end
   end
 end

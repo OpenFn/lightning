@@ -139,6 +139,7 @@ defmodule LightningWeb.CollectionLive.Components do
                     id={"update-collection-#{collection.id}-modal"}
                     module={LightningWeb.CollectionLive.CollectionCreationModal}
                     collection={collection}
+                    current_user={@user}
                     mode={:update}
                     return_to={~p"/settings/collections"}
                   />

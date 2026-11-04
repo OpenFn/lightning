@@ -87,6 +87,18 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def collections_stream_page_size do
+      Application.get_env(:lightning, Lightning.Collections, [])
+      |> Keyword.fetch!(:stream_page_size)
+    end
+
+    @impl true
+    def collections_default_stream_limit do
+      Application.get_env(:lightning, :collections_api, [])
+      |> Keyword.fetch!(:default_stream_limit)
+    end
+
+    @impl true
     def log_lines_search_indexing_batch_size do
       log_lines_search_indexing_config() |> Keyword.fetch!(:batch_size)
     end
@@ -434,6 +446,8 @@ defmodule Lightning.Config do
   @callback promex_enabled?() :: boolean()
   @callback purge_deleted_after_days() :: integer()
   @callback activity_cleanup_chunk_size() :: integer()
+  @callback collections_stream_page_size() :: pos_integer()
+  @callback collections_default_stream_limit() :: non_neg_integer()
   @callback log_lines_search_indexing_batch_size() :: pos_integer()
   @callback log_lines_search_indexing_max_batches() :: pos_integer()
   @callback dataclip_search_indexing_batch_size() :: pos_integer()
@@ -537,6 +551,14 @@ defmodule Lightning.Config do
 
   def activity_cleanup_chunk_size do
     impl().activity_cleanup_chunk_size()
+  end
+
+  def collections_stream_page_size do
+    impl().collections_stream_page_size()
+  end
+
+  def collections_default_stream_limit do
+    impl().collections_default_stream_limit()
   end
 
   def log_lines_search_indexing_batch_size do

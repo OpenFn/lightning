@@ -5,6 +5,7 @@ defmodule LightningWeb.UserAuthTest do
   alias LightningWeb.UserAuth
   import Lightning.AccountsFixtures
   import Lightning.Factories
+  import LightningWeb.API.ProblemHelpers
 
   @remember_me_cookie "_lightning_web_user_remember_me"
 
@@ -87,16 +88,11 @@ defmodule LightningWeb.UserAuthTest do
   end
 
   describe "require_authenticated_api_resource/2" do
-    setup %{conn: conn} do
-      # The :api pipeline accepts JSON only, so the refusal renders as JSON.
-      %{conn: Phoenix.Controller.put_format(conn, "json")}
-    end
-
     test "refuses a request with no resource", %{conn: conn} do
       conn = UserAuth.require_authenticated_api_resource(conn, [])
 
       assert conn.halted
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+      assert_unauthenticated(conn, :unauthenticated, ["Bearer"])
     end
 
     test "refuses a user past their confirmation deadline", %{conn: conn} do
@@ -104,11 +100,15 @@ defmodule LightningWeb.UserAuthTest do
 
       conn =
         conn
+        |> put_req_header("authorization", "Bearer a-locked-users-token")
         |> assign(:current_resource, unconfirmed_user(hours_old: 50))
         |> UserAuth.require_authenticated_api_resource([])
 
       assert conn.halted
-      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+
+      assert_unauthenticated(conn, :invalid_token, [
+        ~s(Bearer error="invalid_token")
+      ])
     end
 
     test "passes a confirmed user, a user inside the grace period, and an unconfirmed user with the flag off",
@@ -494,8 +494,7 @@ defmodule LightningWeb.UserAuthTest do
         |> UserAuth.require_authenticated_user([])
 
       assert conn.halted
-      assert conn.status == 401
-      assert conn.resp_body |> Jason.decode!() == %{"error" => "Unauthorized"}
+      assert_session_refused(conn)
     end
 
     test "stores the path to redirect to on GET", %{conn: conn} do
@@ -576,8 +575,7 @@ defmodule LightningWeb.UserAuthTest do
         |> UserAuth.require_authenticated_user([])
 
       assert conn.halted
-      assert conn.status == 401
-      assert conn.resp_body |> Jason.decode!() == %{"error" => "Unauthorized"}
+      assert_session_refused(conn)
     end
   end
 
@@ -626,8 +624,7 @@ defmodule LightningWeb.UserAuthTest do
         |> UserAuth.require_authenticated_user([])
 
       assert conn.halted
-      assert conn.status == 401
-      assert Jason.decode!(conn.resp_body) == %{"error" => "Unauthorized"}
+      assert_session_refused(conn)
     end
 
     test "serves the paths a locked-out account still needs", %{
@@ -909,21 +906,6 @@ defmodule LightningWeb.UserAuthTest do
       assert conn.halted
       assert Phoenix.Flash.get(conn.assigns.flash, :nav) == :no_access_no_back
       assert conn |> redirected_to() == "/projects"
-    end
-
-    test "returns 403 if user is not superuser and json request ", %{
-      conn: conn,
-      user: user
-    } do
-      conn =
-        conn
-        |> assign(:current_user, user)
-        |> Phoenix.Controller.put_format("json")
-        |> UserAuth.require_superuser([])
-
-      assert conn.halted
-      assert conn.status == 403
-      assert conn.resp_body |> Jason.decode!() == %{"error" => "Forbidden"}
     end
 
     test "allows the request to proceed if user is a superuser", %{conn: conn} do

@@ -134,6 +134,25 @@ defmodule LightningWeb.UserLiveTest do
       assert Repo.reload!(user) |> user_attrs_match?(@update_attrs)
     end
 
+    test "saving a user deleted since the form loaded flashes and returns to the list",
+         %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, form_live, _html} =
+        live(conn, Routes.user_edit_path(conn, :edit, user))
+
+      Repo.delete!(user)
+
+      {:ok, _index_live, html} =
+        form_live
+        |> form("#user-form", user: %{first_name: "Renamed"})
+        |> render_submit()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+
+      assert html =~
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
+    end
+
     test "records the superuser behind a create, a change and a disable, but not a save that changes nothing",
          %{conn: conn, user: superuser} do
       {:ok, new_live, _html} = live(conn, Routes.user_edit_path(conn, :new))

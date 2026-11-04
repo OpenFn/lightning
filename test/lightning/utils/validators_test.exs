@@ -30,7 +30,7 @@ defmodule Lightning.ValidatorsTest do
     test "rejects a 16-byte non-hex string (the dump/cast asymmetry)" do
       cs = changeset("__ID_JOB_Fetch__")
       refute cs.valid?
-      assert cs.errors[:ref_id] == {"is not a valid UUID", []}
+      assert cs.errors[:ref_id] == {"is not a valid UUID", [code: :format]}
     end
 
     test "accepts a canonical UUID" do

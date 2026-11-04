@@ -70,7 +70,7 @@ defmodule Lightning.Credentials.CredentialBody do
     validate_change(changeset, :body, fn :body, body ->
       case validate_sensitive_values_count(body) do
         :ok -> []
-        {:error, message} -> [body: message]
+        {:error, message} -> [body: {message, code: :too_many_secrets}]
       end
     end)
   end

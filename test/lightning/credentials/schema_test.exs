@@ -110,7 +110,7 @@ defmodule Lightning.Credentials.SchemaTest do
         |> Ecto.Changeset.put_change(:baseUrl, "not a uri")
         |> Schema.validate(schema)
 
-      assert {:baseUrl, {"expected to be a URI", []}} in bad.errors
+      assert {:baseUrl, {"expected to be a URI", [code: :format]}} in bad.errors
     end
 
     test "creates a struct containing the schema, types and data", %{
@@ -383,7 +383,9 @@ defmodule Lightning.Credentials.SchemaTest do
 
       assert Enum.any?(
                errors,
-               &(&1 == {:host, {"expected to be a URI or an IPv4 address", []}})
+               &(&1 ==
+                   {:host,
+                    {"expected to be a URI or an IPv4 address", [code: :type]}})
              )
     end
 
@@ -401,7 +403,7 @@ defmodule Lightning.Credentials.SchemaTest do
 
       assert Enum.any?(
                errors,
-               &(&1 == {:baseUrl, {"expected to be a URI", []}})
+               &(&1 == {:baseUrl, {"expected to be a URI", [code: :format]}})
              )
     end
 
@@ -431,7 +433,7 @@ defmodule Lightning.Credentials.SchemaTest do
 
       assert Enum.any?(
                errors,
-               &(&1 == {:email, {"expected to be an email", []}})
+               &(&1 == {:email, {"expected to be an email", [code: :format]}})
              )
     end
 
@@ -495,7 +497,7 @@ defmodule Lightning.Credentials.SchemaTest do
       validated = Schema.validate(changeset, schema)
 
       refute validated.valid?
-      assert {:settings, {"invalid JSON", []}} in validated.errors
+      assert {:settings, {"invalid JSON", [code: :type]}} in validated.errors
     end
 
     test "adds error when JSON array provided for object type field" do
@@ -516,7 +518,7 @@ defmodule Lightning.Credentials.SchemaTest do
       validated = Schema.validate(changeset, schema)
 
       refute validated.valid?
-      assert {:data, {"invalid JSON", []}} in validated.errors
+      assert {:data, {"invalid JSON", [code: :type]}} in validated.errors
     end
 
     test "handles various JSON edge cases for object type validation" do
@@ -532,28 +534,30 @@ defmodule Lightning.Credentials.SchemaTest do
         |> Ecto.Changeset.put_change(:config, "null")
 
       validated_null = Schema.validate(changeset_null, schema)
-      assert {:config, {"invalid JSON", []}} in validated_null.errors
+      assert {:config, {"invalid JSON", [code: :type]}} in validated_null.errors
 
       changeset_string =
         %Ecto.Changeset{data: %{}, types: %{config: :map}, valid?: true}
         |> Ecto.Changeset.put_change(:config, ~s("just a string"))
 
       validated_string = Schema.validate(changeset_string, schema)
-      assert {:config, {"invalid JSON", []}} in validated_string.errors
+
+      assert {:config, {"invalid JSON", [code: :type]}} in validated_string.errors
 
       changeset_number =
         %Ecto.Changeset{data: %{}, types: %{config: :map}, valid?: true}
         |> Ecto.Changeset.put_change(:config, "123")
 
       validated_number = Schema.validate(changeset_number, schema)
-      assert {:config, {"invalid JSON", []}} in validated_number.errors
+
+      assert {:config, {"invalid JSON", [code: :type]}} in validated_number.errors
 
       changeset_bool =
         %Ecto.Changeset{data: %{}, types: %{config: :map}, valid?: true}
         |> Ecto.Changeset.put_change(:config, "true")
 
       validated_bool = Schema.validate(changeset_bool, schema)
-      assert {:config, {"invalid JSON", []}} in validated_bool.errors
+      assert {:config, {"invalid JSON", [code: :type]}} in validated_bool.errors
 
       changeset_empty =
         %Ecto.Changeset{data: %{}, types: %{config: :map}, valid?: true}
@@ -582,7 +586,7 @@ defmodule Lightning.Credentials.SchemaTest do
       validated = Schema.validate(changeset, schema)
 
       refute validated.valid?
-      assert {:config, {"must be an object", []}} in validated.errors
+      assert {:config, {"must be an object", [code: :type]}} in validated.errors
     end
 
     test "accepts valid JSON object string and continues without error" do
@@ -628,7 +632,8 @@ defmodule Lightning.Credentials.SchemaTest do
 
       validated = Schema.validate(changeset_atom, schema)
       refute validated.valid?
-      assert {:settings, {"must be an object", []}} in validated.errors
+
+      assert {:settings, {"must be an object", [code: :type]}} in validated.errors
 
       changeset_nil = %Ecto.Changeset{
         data: %{settings: nil},
@@ -639,7 +644,8 @@ defmodule Lightning.Credentials.SchemaTest do
 
       validated_nil = Schema.validate(changeset_nil, schema)
       refute validated_nil.valid?
-      assert {:settings, {"can't be blank", []}} in validated_nil.errors
+
+      assert {:settings, {"can't be blank", [code: :required]}} in validated_nil.errors
 
       changeset_map =
         %Ecto.Changeset{

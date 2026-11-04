@@ -1,3 +1,5 @@
+name: Pull from OpenFn
+
 on:
   workflow_dispatch:
     inputs:

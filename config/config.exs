@@ -31,8 +31,7 @@ config :hammer,
 config :lightning, LightningWeb.Endpoint,
   url: [host: "localhost"],
   render_errors: [
-    view: LightningWeb.ErrorView,
-    accepts: ~w(html json),
+    formats: [html: LightningWeb.ErrorView, json: LightningWeb.ErrorView],
     layout: false
   ],
   pubsub_server: Lightning.PubSub,
@@ -226,9 +225,9 @@ config :lightning, :dataclip_search_indexing, batch_size: 250, max_batches: 10
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
-config :lightning, LightningWeb.CollectionsController,
-  default_stream_limit: 1_000,
-  max_database_limit: 500
+config :lightning, :collections_api, default_stream_limit: 1_000
+
+config :lightning, Lightning.Collections, stream_page_size: 500
 
 # Configuration for injecting a custom feedback mechanism or component collection
 # for the AI Assistant. This can include interactive elements such as a button

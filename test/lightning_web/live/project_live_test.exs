@@ -7,6 +7,7 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.AccountsFixtures
   import Lightning.AdaptorTestHelpers
   import Lightning.Factories
+  import Lightning.RaceHelpers
   import LightningWeb.CredentialLiveHelpers
 
   import Lightning.ApplicationHelpers,
@@ -91,7 +92,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> render_submit()
 
       assert html =~
-               "Every project must have exactly one owner. Please specify one below."
+               "Every project must have exactly one owner."
     end
 
     test "saves new project with members", %{conn: conn} do
@@ -108,14 +109,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # error for no owner is not shown until you make a change
       refute render(index_live) =~
-               "Every project must have exactly one owner. Please specify one below."
+               "Every project must have exactly one owner."
 
       assert index_live
              |> form("#project-form", project: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
       assert render(index_live) =~
-               "Every project must have exactly one owner. Please specify one below."
+               "Every project must have exactly one owner."
 
       user_1_index = find_user_index_in_list(index_live, user_1)
       user_2_index = find_user_index_in_list(index_live, user_2)
@@ -153,16 +154,14 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(index_live) =~ "Project created successfully"
 
       project_name = String.replace(@create_attrs.raw_name, " ", "-")
+      subject = "You now have access to \"#{project_name}\""
 
-      assert_email_sent(
-        to: [Swoosh.Email.Recipient.format(user_1)],
-        subject: "You now have access to \"#{project_name}\""
-      )
+      for user <- [user_1, user_2] do
+        recipient = Swoosh.Email.Recipient.format(user)
 
-      assert_email_sent(
-        to: [Swoosh.Email.Recipient.format(user_2)],
-        subject: "You now have access to \"#{project_name}\""
-      )
+        assert_received {:email,
+                         %Swoosh.Email{to: [^recipient], subject: ^subject}}
+      end
     end
 
     test "project owners can delete a project from the settings page",
@@ -1854,6 +1853,27 @@ defmodule LightningWeb.ProjectLiveTest do
       assert %{name: "dep-burundi-datafi"} = Repo.get!(Project, project.id)
     end
 
+    test "saving settings for a project deleted mid-save flashes and keeps the form",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      delete_project_mid_save(project.id, view.pid)
+
+      assert view
+             |> form("#project-settings-form", project: %{raw_name: "renamed"})
+             |> render_submit() =~
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
+
+      assert has_element?(view, "#project-settings-form")
+    end
+
     test "saving project settings with name that resolves to blank shows error",
          %{
            conn: conn,
@@ -2275,6 +2295,34 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view
              |> element("#toggle-mfa-switch")
              |> render_click() =~ "Project MFA requirement updated successfully"
+    end
+
+    test "a refused MFA or support access toggle says so instead of crashing",
+         %{conn: conn} do
+      project = insert(:project)
+
+      project_user =
+        insert(:project_user, role: :owner, project: project, user: build(:user))
+
+      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _, _ ->
+        :ok
+      end)
+
+      stub(Lightning.Extensions.MockProjectHook, :handle_project_validation, fn
+        changeset -> Ecto.Changeset.add_error(changeset, :name, "is refused")
+      end)
+
+      conn = log_in_user(conn, project_user.user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/settings#security")
+
+      assert render_click(view, "toggle-mfa", %{}) =~
+               "Changes couldn&#39;t be saved, please try again"
+
+      assert render_click(view, "toggle_support_access", %{}) =~
+               "Changes couldn&#39;t be saved, please try again"
+
+      assert %{requires_mfa: false, allow_support_access: false} =
+               Lightning.Repo.reload!(project)
     end
 
     test "MFA limited: banner displayed, button is disabled, and MFA cannot be toggled",
@@ -6040,6 +6088,72 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> element("#workspace-alias") |> render() =~ "main"
     end
 
+    test "blocks saving this project under a second alias in the workspace",
+         %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+      repo_url = "https://api.github.com/repos/someaccount/somerepo"
+      host = URI.parse(Lightning.VersionControl.endpoint_url()).host
+      copy = "main@#{host}.yaml"
+
+      stub_connect_form(%{
+        (repo_url <> "/contents/ws/.projects") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: [
+               %{"name" => copy, "path" => "ws/.projects/" <> copy, "sha" => "s"}
+             ]
+           }},
+        (repo_url <> "/git/blobs/s") =>
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "content" => Base.encode64("openfn:\n  uuid: #{project.id}\n")
+             }
+           }}
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      change = fn params ->
+        view
+        |> form("#project-repo-connection-form")
+        |> render_change(
+          connection:
+            Map.merge(
+              %{
+                github_installation_id: "1234",
+                repo: "someaccount/somerepo",
+                branch: "main",
+                workspace_path: "ws",
+                accept: "true"
+              },
+              params
+            )
+        )
+
+        render_async(view)
+      end
+
+      change.(%{local_alias: "demo"})
+
+      # the CLI can't pick between two copies of one project
+      assert view |> element("#workspace-stray-copy") |> render() =~
+               "ws/.projects/" <> copy
+
+      assert has_element?(view, "#connect-and-sync-button[disabled]")
+
+      change.(%{local_alias: ""})
+
+      refute has_element?(view, "#workspace-stray-copy")
+      assert view |> element("#workspace-alias") |> render() =~ "main"
+      refute has_element?(view, "#connect-and-sync-button[disabled]")
+    end
+
     test "warns without blocking when a copy under the same alias has no readable uuid",
          %{conn: conn} do
       project = insert(:project)
@@ -6379,6 +6493,97 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project #{other_id}"
     end
 
+    test "warns when the workspace holds this project under two aliases",
+         %{conn: conn} do
+      project = insert(:project)
+      host = URI.parse(LightningWeb.Endpoint.url()).host
+
+      stub_sync_status(project,
+        checkout: project.id,
+        projects: %{
+          "demo@#{host}.yaml" => project.id,
+          "main@#{host}.yaml" => project.id
+        }
+      )
+
+      view = live_sync_tab(conn, project)
+
+      html = view |> element("#stray-copies") |> render()
+      assert html =~ ".projects/demo@#{host}.yaml"
+      assert html =~ ".projects/main@#{host}.yaml"
+    end
+
+    test "ignores this project's copies on other hosts", %{conn: conn} do
+      project = insert(:project)
+      host = URI.parse(LightningWeb.Endpoint.url()).host
+
+      stub_sync_status(project,
+        checkout: project.id,
+        projects: %{
+          "main@#{host}.yaml" => project.id,
+          "demo@app.example.org.yaml" => project.id
+        }
+      )
+
+      view = live_sync_tab(conn, project)
+
+      refute has_element?(view, "#stray-copies")
+    end
+
+    test "reconnecting checks the workspace like connecting does",
+         %{conn: conn} do
+      project = insert(:project)
+      host = URI.parse(LightningWeb.Endpoint.url()).host
+
+      stub_sync_status(project,
+        checkout: project.id,
+        projects: %{"main@#{host}.yaml" => project.id}
+      )
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+      render_async(view)
+
+      # nothing ticked yet
+      assert has_element?(view, "#reconnect-project-button[disabled]")
+
+      # opening the modal checks the workspace straight away
+      view
+      |> with_target("#github-sync-component")
+      |> render_click("open-reconnect")
+
+      render_async(view)
+
+      assert view |> element("#reconnect_modal #workspace-alias") |> render() =~
+               "main"
+
+      change = fn params ->
+        view
+        |> form("#reconnect-project-form")
+        |> render_change(
+          connection:
+            Map.merge(%{sync_direction: "pull", accept: "true"}, params)
+        )
+
+        render_async(view)
+      end
+
+      change.(%{local_alias: "demo"})
+
+      assert view
+             |> element("#reconnect_modal #workspace-stray-copy")
+             |> render() =~
+               ".projects/main@#{host}.yaml"
+
+      assert has_element?(view, "#reconnect-project-button[disabled]")
+
+      change.(%{local_alias: ""})
+
+      refute has_element?(view, "#reconnect_modal #workspace-stray-copy")
+      refute has_element?(view, "#reconnect-project-button[disabled]")
+    end
+
     test "reads the project's alias back from the workspace", %{conn: conn} do
       project = insert(:project)
 
@@ -6389,7 +6594,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
       view = live_sync_tab(conn, project)
 
-      assert view |> element("#workspace-alias") |> render() =~ "staging"
+      assert view |> element("#connected-workspace-alias") |> render() =~
+               "staging"
     end
 
     test "doesn't offer to reconnect while a new connection's files appear", %{
@@ -7077,14 +7283,55 @@ defmodule LightningWeb.ProjectLiveTest do
 
         # click the confirm button
         view
-        |> element("#remove_connection_modal_confirm_button")
-        |> render_click()
+        |> form("#remove-connection-form")
+        |> render_submit()
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
         assert flash["info"] == "Connection removed successfully"
 
         refute Lightning.Repo.reload(repo_connection)
+      end
+    end
+
+    @tag :capture_log
+    test "removing a v2 connection deletes the project's files unless preserved",
+         %{conn: conn} do
+      for preserve_files <- [nil, "true"] do
+        project = insert(:project)
+        stub_sync_status(project, checkout: project.id)
+        {conn, user} = setup_project_user(conn, project, :admin)
+        set_valid_github_oauth_token!(user)
+
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+        render_async(view)
+
+        assert has_element?(view, "#remove-connection-preserve-files")
+        refute has_element?(view, "#remove-connection-preserve-files[checked]")
+
+        test = self()
+
+        stub(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+          send(test, {:github, url})
+          {:ok, %Tesla.Env{status: 404, body: %{}}}
+        end)
+
+        view
+        |> form("#remove-connection-form")
+        |> render_submit(
+          if preserve_files, do: %{preserve_files: preserve_files}, else: %{}
+        )
+
+        assert assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")[
+                 "info"
+               ] == "Connection removed successfully"
+
+        head =
+          "https://api.github.com/repos/someaccount/somerepo/commits/heads/somebranch"
+
+        if preserve_files,
+          do: refute_received({:github, ^head}),
+          else: assert_received({:github, ^head})
       end
     end
 
@@ -7161,8 +7408,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
         # click the confirm button
         view
-        |> element("#remove_connection_modal_confirm_button")
-        |> render_click()
+        |> form("#remove-connection-form")
+        |> render_submit()
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
@@ -7635,7 +7882,7 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {{conn, _user}, index} <-
+      for {{conn, user}, index} <-
             setup_project_users(conn, project, [:owner, :admin])
             |> Enum.with_index() do
         {:ok, view, _html} =
@@ -7681,9 +7928,16 @@ defmodule LightningWeb.ProjectLiveTest do
         assert flash["info"] == "Collection created"
 
         # collection now exists
-        assert Lightning.Repo.get_by(Lightning.Collections.Collection,
-                 project_id: project.id,
-                 name: expected_collection_name
+        assert collection =
+                 Lightning.Repo.get_by(Lightning.Collections.Collection,
+                   project_id: project.id,
+                   name: expected_collection_name
+                 )
+
+        assert Lightning.Repo.get_by(Lightning.Collections.Audit.base_query(),
+                 item_id: collection.id,
+                 event: "created",
+                 actor_id: user.id
                )
       end
     end
@@ -7819,7 +8073,7 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {conn, _user} <-
+      for {conn, user} <-
             setup_project_users(conn, project, [:owner, :admin]) do
         collection = insert(:collection, project: project)
 
@@ -7872,7 +8126,45 @@ defmodule LightningWeb.ProjectLiveTest do
                  project_id: project.id,
                  name: new_collection_name
                )
+
+        assert Lightning.Repo.get_by(Lightning.Collections.Audit.base_query(),
+                 item_id: collection.id,
+                 event: "updated",
+                 actor_id: user.id
+               )
       end
+    end
+
+    test "saving a collection deleted since the modal opened flashes and closes it",
+         %{conn: conn} do
+      project = insert(:project)
+      [{conn, _user}] = setup_project_users(conn, project, [:admin])
+      collection = insert(:collection, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      view
+      |> element("#edit-collection-#{collection.id}-button")
+      |> render_click()
+
+      view
+      |> form("#edit-collection-#{collection.id}-modal form",
+        collection: %{raw_name: "renamed"}
+      )
+      |> render_change()
+
+      Repo.delete!(collection)
+
+      view
+      |> form("#edit-collection-#{collection.id}-modal form")
+      |> render_submit()
+
+      flash =
+        assert_redirected(view, ~p"/projects/#{project.id}/settings#collections")
+
+      assert flash["error"] ==
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
     end
 
     test "unauthorized users cannot delete a collection", %{

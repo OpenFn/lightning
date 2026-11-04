@@ -140,7 +140,9 @@ defmodule Lightning.Credentials.Scoping do
 
       changeset =
         Enum.reduce(matched, changeset, fn %{field: field}, cs ->
-          Ecto.Changeset.add_error(cs, field, violation_message(field))
+          Ecto.Changeset.add_error(cs, field, violation_message(field),
+            code: :credential_not_allowed
+          )
         end)
 
       {changeset, rest}
@@ -166,7 +168,8 @@ defmodule Lightning.Credentials.Scoping do
       Ecto.Changeset.add_error(
         cs,
         :base,
-        "#{subject}: #{violation_message(field)} (#{field})"
+        "#{subject}: #{violation_message(field)} (#{field})",
+        code: :credential_not_allowed
       )
     end)
     |> Map.put(:valid?, false)

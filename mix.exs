@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.20.0",
+      version: "2.20.1",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -264,6 +264,7 @@ defmodule Lightning.MixProject do
         "WORKERS.md": [title: "Workers"],
         "PROVISIONING.md": [title: "Provisioning"],
         "SERVICE_ACCOUNTS.md": [title: "Service Accounts"],
+        "API.md": [title: "API"],
         "CHANGELOG.md": [title: "Changelog"]
       ],
       source_url: "https://github.com/OpenFn/lightning",
