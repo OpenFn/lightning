@@ -11,15 +11,17 @@ defmodule LightningWeb.MaintenanceLive.Index do
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
+  alias Lightning.UsageTracking
 
   @impl true
   def mount(_params, _session, socket) do
     if superuser?(socket) do
       {:ok,
-       assign(socket,
-         active_menu_item: :maintenance,
-         page_title: "Maintenance"
-       ), layout: {LightningWeb.Layouts, :settings}}
+       socket
+       |> assign(active_menu_item: :maintenance, page_title: "Maintenance")
+       |> assign_async(:usage_tracking, fn ->
+         {:ok, %{usage_tracking: usage_tracking_status()}}
+       end), layout: {LightningWeb.Layouts, :settings}}
     else
       {:ok,
        socket
@@ -87,6 +89,48 @@ defmodule LightningWeb.MaintenanceLive.Index do
     {:noreply,
      put_flash(socket, :error, "Icon refresh failed: #{inspect(reason)}")}
   end
+
+  defp usage_tracking_status do
+    %{
+      enabled: Lightning.Config.usage_tracking_enabled?(),
+      cleartext: Lightning.Config.usage_tracking_cleartext_uuids_enabled?(),
+      host: Lightning.Config.usage_tracking_host(),
+      identity: UsageTracking.instance_identity()
+    }
+  end
+
+  attr :enabled, :boolean, required: true
+
+  defp usage_status_pill(%{enabled: true} = assigns) do
+    ~H"""
+    <.pill id="usage-metrics-status" color="green">Enabled</.pill>
+    """
+  end
+
+  defp usage_status_pill(assigns) do
+    ~H"""
+    <.pill id="usage-metrics-status" color="red">Disabled</.pill>
+    """
+  end
+
+  attr :id, :string, default: nil
+  attr :tone, :string, default: "gray", values: ["gray", "red"]
+  attr :class, :string, default: nil
+  attr :value, :string, required: true
+
+  # phx-no-format keeps the value flush against the tags; any whitespace
+  # inside them would show as padding on the shaded background.
+  defp inline_code(assigns) do
+    ~H"""
+    <code id={@id} class={[inline_code_classes(@tone), @class]} phx-no-format>{@value}</code>
+    """
+  end
+
+  defp inline_code_classes("gray"),
+    do: "rounded bg-secondary-100 px-1.5 py-0.5 font-mono text-xs"
+
+  defp inline_code_classes("red"),
+    do: "rounded bg-red-100 px-1 font-mono"
 
   defp superuser?(socket) do
     Permissions.can?(

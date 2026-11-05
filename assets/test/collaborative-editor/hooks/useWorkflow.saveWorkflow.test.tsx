@@ -185,7 +185,7 @@ describe('useWorkflowActions().saveWorkflow', () => {
     test('notify "none": rethrows a channel error with the formatted message', async () => {
       const { result, saveWorkflowSpy, cleanup } = await createTestSetup(false);
       saveWorkflowSpy.mockRejectedValue(
-        new ChannelRequestError('optimistic_lock_error', {
+        new ChannelRequestError('concurrent_edit', {
           base: ['This workflow has been changed by someone else'],
         })
       );

@@ -7,10 +7,10 @@ defmodule LightningWeb.API.UserJSON do
 
   @fields ~w(email first_name last_name role)a
 
-  def render("index.json", %{page: page, conn: conn}) do
+  def render("index.json", %{page: page, filters: filters, conn: conn}) do
     %{
       data: Enum.map(page.entries, &resource(conn, &1)),
-      links: Map.merge(%{self: url_for(conn)}, pagination_links(conn, page))
+      links: pagination_links(conn, page, filters)
     }
   end
 

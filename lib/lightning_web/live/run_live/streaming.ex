@@ -15,7 +15,7 @@ defmodule LightningWeb.RunLive.Streaming do
   def get_run_async(socket, run_id, project_id) do
     socket
     |> start_async(:run, fn ->
-      Runs.get_for_project(run_id, project_id,
+      Runs.get_for_project(project_id, run_id,
         include: [
           :created_by,
           :starting_trigger,
@@ -153,7 +153,7 @@ defmodule LightningWeb.RunLive.Streaming do
 
   defp handle_asyncs do
     quote do
-      def handle_async(:run, {:ok, nil}, socket) do
+      def handle_async(:run, {:ok, {:error, :not_found}}, socket) do
         {:noreply,
          socket
          |> assign(
@@ -162,7 +162,7 @@ defmodule LightningWeb.RunLive.Streaming do
          )}
       end
 
-      def handle_async(:run, {:ok, updated_run}, socket) do
+      def handle_async(:run, {:ok, {:ok, updated_run}}, socket) do
         %{run: run} = socket.assigns
 
         Runs.subscribe(updated_run)

@@ -10,6 +10,7 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Project
+  alias Lightning.Scope
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -521,36 +522,31 @@ defmodule Lightning.WorkflowsTest do
       project = insert(:project)
       workflow = insert(:workflow, project: project)
 
-      # workflow belongs to the project
-      assert Workflows.get_workflow_for_project(project, workflow.id)
-             |> unload_relation(:project) ==
-               workflow |> unload_relation(:project)
+      assert {:ok, found} =
+               Workflows.get_workflow_for_project(project.id, workflow.id)
 
-      # workflow belongs to a different project
-      other_project = insert(:project)
+      assert unload_relation(found, :project) ==
+               unload_relation(workflow, :project)
 
-      assert Workflows.get_workflow_for_project(other_project, workflow.id) ==
-               nil
-
-      # workflow does not exist
-      assert Workflows.get_workflow_for_project(project, Ecto.UUID.generate()) ==
-               nil
-
-      # malformed uuid returns nil instead of raising
-      assert Workflows.get_workflow_for_project(project, "not-a-uuid") == nil
-      assert Workflows.get_workflow_for_project(project, nil) == nil
+      for {project_id, id} <- [
+            {insert(:project).id, workflow.id},
+            {project.id, Ecto.UUID.generate()},
+            {project.id, "not-a-uuid"},
+            {project.id, nil}
+          ] do
+        assert Workflows.get_workflow_for_project(project_id, id) ==
+                 {:error, :not_found}
+      end
     end
 
-    # Built on `Query.workflows_for/1`, so every caller — the health API, the
-    # index's trigger toggle and its delete handler — refuses a workflow on its
-    # way out without checking for itself.
     test "get_workflow_for_project/3 skips a workflow marked for deletion" do
       project = insert(:project)
 
       workflow =
         insert(:workflow, project: project, deleted_at: DateTime.utc_now())
 
-      assert Workflows.get_workflow_for_project(project, workflow.id) == nil
+      assert Workflows.get_workflow_for_project(project.id, workflow.id) ==
+               {:error, :not_found}
     end
 
     test "get_workflow_for_project/3 preloads the requested associations" do
@@ -558,12 +554,24 @@ defmodule Lightning.WorkflowsTest do
       workflow = insert(:workflow, project: project)
       trigger = insert(:trigger, workflow: workflow)
 
-      loaded =
-        Workflows.get_workflow_for_project(project, workflow.id,
-          include: [:triggers]
-        )
+      assert {:ok, loaded} =
+               Workflows.get_workflow_for_project(project.id, workflow.id,
+                 include: [:triggers]
+               )
 
       assert Enum.map(loaded.triggers, & &1.id) == [trigger.id]
+    end
+
+    test "get_project_id/1 finds a workflow's project, deleted or not" do
+      %{id: project_id} = project = insert(:project)
+
+      for deleted_at <- [nil, DateTime.utc_now()] do
+        workflow = insert(:workflow, project: project, deleted_at: deleted_at)
+        assert Workflows.get_project_id(workflow.id) == {:ok, project_id}
+      end
+
+      assert Workflows.get_project_id(Ecto.UUID.generate()) ==
+               {:error, :not_found}
     end
 
     test "workflow_exists_in_project?/2 checks project ownership of a workflow" do
@@ -1305,11 +1313,11 @@ defmodule Lightning.WorkflowsTest do
 
       assert updated_workflow.lock_version == 2
 
-      # Throws an error because the lock_version is outdated
-      assert_raise Ecto.StaleEntryError, fn ->
-        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
-        |> Workflows.save_workflow(user)
-      end
+      assert {:error, :concurrent_edit} =
+               Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
+               |> Workflows.save_workflow(user)
+
+      assert Repo.reload(workflow).lock_version == 2
     end
 
     test "change_workflow/1 returns a workflow changeset" do
@@ -1678,24 +1686,6 @@ defmodule Lightning.WorkflowsTest do
 
       refute cs.valid?
       assert {"contains an invalid value", _} = cs.errors[:base]
-    end
-
-    test "stale lock still raises Ecto.StaleEntryError (not rescued)" do
-      # Guards that the rescue does NOT swallow optimistic-lock conflicts
-      # (mirrors the "saving with locks" test above).
-      user = insert(:user)
-      valid_attrs = params_with_assocs(:workflow, jobs: [params_for(:job)])
-
-      {:ok, workflow} = Workflows.save_workflow(valid_attrs, insert(:user))
-
-      {:ok, _} =
-        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
-        |> Workflows.save_workflow(user)
-
-      assert_raise Ecto.StaleEntryError, fn ->
-        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
-        |> Workflows.save_workflow(user)
-      end
     end
   end
 
@@ -2591,6 +2581,44 @@ defmodule Lightning.WorkflowsTest do
     test "ignores empty search term", %{project: project} do
       workflows = Workflows.get_workflows_for(project, search: "")
       assert length(workflows) == 3
+    end
+  end
+
+  describe "list_workflows_for/2" do
+    test "lists the live workflows in the user's projects, newest first" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      older =
+        insert(:workflow,
+          project: project,
+          inserted_at: ~U[2024-01-01 00:00:00Z]
+        )
+
+      newer =
+        insert(:workflow,
+          project: project,
+          inserted_at: ~U[2024-02-01 00:00:00Z]
+        )
+
+      insert(:workflow, project: project, deleted_at: DateTime.utc_now())
+      insert(:workflow)
+
+      assert Workflows.list_workflows_for(Scope.new(user)) |> Enum.map(& &1.id) ==
+               [newer.id, older.id]
+    end
+
+    test "preloads the associations named in include:" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+
+      assert [%{jobs: [%{id: job_id}]} = listed] =
+               Workflows.list_workflows_for(Scope.new(user), include: [:jobs])
+
+      assert job_id == job.id
+      refute Ecto.assoc_loaded?(listed.edges)
     end
   end
 

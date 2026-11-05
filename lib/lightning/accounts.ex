@@ -171,9 +171,12 @@ defmodule Lightning.Accounts do
   Scheduling a deletion revokes every token the user has. Disabling them, or
   changing their password, email, role or support access, signs them out of
   every session but keeps their API tokens.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted the user
+  while this one ran.
   """
   @spec update_user(User.t(), map(), User.t() | ServiceAccount.t() | nil) ::
-          {:ok, User.t()} | {:error, Changeset.t()}
+          {:ok, User.t()} | {:error, Changeset.t() | :concurrent_edit}
   def update_user(%User{} = user, attrs, actor \\ nil) do
     user |> User.details_changeset(attrs) |> write_user(actor)
   end
@@ -182,7 +185,7 @@ defmodule Lightning.Accounts do
     revoke_contexts = revoke_contexts(changeset)
 
     Multi.new()
-    |> Multi.update(:user, changeset)
+    |> Multi.update(:user, changeset, stale_error_field: :id)
     |> maybe_audit_update(changeset, actor)
     |> maybe_revoke_tokens(user, revoke_contexts)
     |> Repo.transaction()
@@ -195,6 +198,9 @@ defmodule Lightning.Accounts do
             do: superuser_changed(change, updated, actor)
 
         {:ok, updated}
+
+      {:error, :user, %Changeset{errors: [id: {_, stale: true}]}, _} ->
+        {:error, :concurrent_edit}
 
       {:error, _step, changeset, _changes} ->
         {:error, changeset}
@@ -839,7 +845,7 @@ defmodule Lightning.Accounts do
   defp validate_email_changed(changeset, user) do
     Changeset.validate_change(changeset, :email, fn :email, email ->
       if user.email == email do
-        [email: "has not changed"]
+        [email: {"has not changed", code: :unchanged}]
       else
         []
       end
@@ -852,7 +858,7 @@ defmodule Lightning.Accounts do
       if User.valid_password?(user, password) do
         []
       else
-        [current_password: "does not match password"]
+        [current_password: {"does not match password", code: :mismatch}]
       end
     end)
   end

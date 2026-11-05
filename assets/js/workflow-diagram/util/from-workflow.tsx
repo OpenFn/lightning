@@ -9,7 +9,7 @@ import {
 import type { Lightning, Flow, Positions } from '../types';
 
 function getEdgeLabel(edge: Lightning.Edge) {
-  let label: string | JSX.Element = '{ }';
+  let label: string | React.JSX.Element = '{ }';
 
   switch (edge.condition_type) {
     case 'on_job_success':

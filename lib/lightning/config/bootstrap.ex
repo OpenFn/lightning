@@ -11,9 +11,9 @@ defmodule Lightning.Config.Bootstrap do
 
   > #### Sourcing envs {: .info}
   >
-  > Internally this module uses `Dotenvy.source/1` to source environment variables
-  > from the `.env`, `.env.<config_env>`, and `.env.<config_env>.override` files.
-  > It also sources the system environment variables.
+  > Internally this module uses `Dotenvy.source/2` to source environment variables
+  > from the `.env`, `.<config_env>.env` and `.<config_env>.override.env` files,
+  > in that order, then from the system environment, which wins over every file.
   >
   > Calling `configure/0` without calling `source_envs/0` or `Dotenvy.source/2`
   > first will result in no environment variables being loaded.
@@ -29,18 +29,44 @@ defmodule Lightning.Config.Bootstrap do
   import Config
   import Dotenvy
 
+  alias Lightning.Config.PEM
   alias Lightning.Config.Utils
 
   require Logger
 
   def source_envs do
-    {:ok, _} =
-      source([
-        ".env",
-        ".#{config_env()}.env",
-        ".#{config_env()}.override.env",
-        System.get_env()
-      ])
+    source_envs([
+      ".env",
+      ".#{config_env()}.env",
+      ".#{config_env()}.override.env"
+    ])
+  end
+
+  @doc """
+  Sources `files` in order, then the system environment. A later file wins
+  over an earlier one, and the system environment wins over every file.
+  Returns `{:ok, vars}` and keeps `vars` for `Dotenvy.env!/3`.
+
+  Raises a `RuntimeError` naming the file when one can't be parsed. The message
+  leaves out Dotenvy's reason, which quotes the line it stopped at.
+  """
+  def source_envs(files) do
+    vars = Enum.reduce(files, %{}, &source_file!/2)
+    source([vars, System.get_env()])
+  end
+
+  defp source_file!(file, vars) do
+    case source([vars, file], side_effect: false) do
+      {:ok, vars} ->
+        vars
+
+      {:error, _reason} ->
+        raise "Could not load #{file}: it is not a valid env file. " <>
+                "The parser's own message is left out because it quotes the " <>
+                "line it stopped at, which can be part of a secret. The usual " <>
+                "cause is a value that runs over several lines without double " <>
+                "quotes around it, such as a PEM key."
+    end
   end
 
   # credo:disable-for-this-file Credo.Check.Refactor.CyclomaticComplexity
@@ -196,25 +222,7 @@ defmodule Lightning.Config.Bootstrap do
       workloops: env!("WORKER_WORKLOOPS", :string, nil)
 
     config :lightning, :workers,
-      private_key:
-        env!(
-          "WORKER_RUNS_PRIVATE_KEY",
-          fn encoded ->
-            encoded
-            |> Base.decode64(padding: false)
-            |> case do
-              {:ok, pem} -> pem
-              :error -> raise "Could not decode PEM"
-            end
-          end,
-          Utils.get_env([:lightning, :workers, :private_key])
-        )
-        |> tap(fn v ->
-          unless v do
-            raise "No worker private key found, please set WORKER_RUNS_PRIVATE_KEY"
-          end
-        end)
-        |> tap(&validate_rsa_key!/1),
+      private_key: worker_key!(),
       worker_secret:
         env!(
           "WORKER_SECRET",
@@ -959,29 +967,14 @@ defmodule Lightning.Config.Bootstrap do
 
   defp github_config do
     decoded_cert =
-      env!(
-        "GITHUB_CERT",
-        fn encoded ->
-          encoded
-          |> Base.decode64()
-          |> case do
-            {:ok, decoded} ->
-              decoded
-
-            :error ->
-              raise """
-              Could not decode GITHUB_CERT.
-
-              Ensure you have encoded the certificate as a base64 string.
-
-              For example:
-
-                  cat private-key.pem | base64 -w 0
-              """
-          end
-        end,
-        Utils.get_env([:lightning, :github_app, :cert])
-      )
+      case env!(
+             "GITHUB_CERT",
+             :string,
+             Utils.get_env([:lightning, :github_app, :cert])
+           ) do
+        nil -> nil
+        value -> decode_github_cert!(value)
+      end
 
     github_app_id =
       env!(
@@ -1039,7 +1032,7 @@ defmodule Lightning.Config.Bootstrap do
 
   defp release_info do
     [
-      label: "v#{Application.spec(:lightning, :vsn)}",
+      label: to_string(Application.spec(:lightning, :vsn)),
       image_tag: env!("IMAGE_TAG", :string, nil),
       branch: env!("BRANCH", :string, nil),
       commit: env!("COMMIT", :string, nil)
@@ -1180,53 +1173,139 @@ defmodule Lightning.Config.Bootstrap do
     end
   end
 
-  defp decode_service_account!(encoded) do
-    with {:ok, pem} <- Base.decode64(encoded, padding: false),
+  defp decode_service_account!(value) do
+    with {:ok, pem} <- PEM.from_env(value),
          {:ok, service_account} <- Lightning.ServiceAccount.from_pem(pem) do
       service_account
     else
-      :error ->
-        raise "SERVICE_ACCOUNT_PUBLIC_KEY is not unpadded base64"
-
       {:error, reason} ->
-        raise "SERVICE_ACCOUNT_PUBLIC_KEY #{reason}"
+        raise "SERVICE_ACCOUNT_PUBLIC_KEY " <> service_account_key_error(reason)
     end
   end
 
-  defp validate_rsa_key!(pem) when is_binary(pem) do
-    case parse_rsa_key(pem) do
-      :ok -> :ok
-      {:error, message} -> raise message
+  defp service_account_key_error(:empty),
+    do:
+      "is empty. Set it to the service account's public key, or unset it to run without a service account."
+
+  defp service_account_key_error(:private_key),
+    do:
+      "holds a private key. Set it to the public key instead: openssl pkey -in sa_private.pem -pubout"
+
+  defp service_account_key_error(:not_rsa),
+    do: "is not an RSA key. It must be an RSA public key of at least 2048 bits."
+
+  defp service_account_key_error({:too_small, bits}),
+    do:
+      "is a #{bits}-bit RSA key. Generate an RSA key pair of at least 2048 bits."
+
+  defp service_account_key_error(:not_a_key),
+    do:
+      "holds a PEM block that is not a key Lightning can read. It must be an RSA public key of at least 2048 bits."
+
+  defp service_account_key_error(reason),
+    do: pem_error(reason, "the public key", "sa_public.pem")
+
+  defp worker_key! do
+    with value when is_binary(value) <-
+           env!(
+             "WORKER_RUNS_PRIVATE_KEY",
+             :string,
+             Utils.get_env([:lightning, :workers, :private_key])
+           ),
+         {:ok, pem} <- PEM.from_env(value),
+         {:ok, pem} <- rsa_private_key(pem) do
+      pem
+    else
+      nil -> raise worker_key_error(:unset)
+      {:error, reason} -> raise worker_key_error(reason)
     end
   end
 
-  defp parse_rsa_key(pem) do
+  defp rsa_private_key(pem) do
     case JOSE.JWK.from_pem(pem) do
+      %JOSE.JWK{kty: {:jose_jwk_kty_rsa, {:RSAPublicKey, _, _}}} ->
+        {:error, :public_key}
+
       %JOSE.JWK{kty: {:jose_jwk_kty_rsa, _}} ->
-        :ok
+        {:ok, pem}
 
-      %JOSE.JWK{kty: {kty_module, _}} ->
-        key_type =
-          kty_module |> to_string() |> String.replace("jose_jwk_kty_", "")
+      %JOSE.JWK{} ->
+        {:error, :not_rsa}
 
-        {:error,
-         worker_key_error(
-           "has wrong key type: #{key_type}\n\nLightning requires an RSA key for RS256 signing, but the configured key is #{key_type}."
-         )}
-
-      _ ->
-        {:error, worker_key_error("could not be parsed as a valid key.")}
+      _other ->
+        {:error, :not_a_key}
     end
   rescue
-    e ->
-      {:error, worker_key_error("could not be parsed: #{Exception.message(e)}")}
+    _ -> {:error, :not_a_key}
   end
+
+  defp decode_github_cert!(value) do
+    case PEM.from_env(value) do
+      {:ok, pem} ->
+        pem
+
+      {:error, :empty} ->
+        nil
+
+      {:error, reason} ->
+        raise "GITHUB_CERT " <>
+                pem_error(
+                  reason,
+                  "the GitHub App's private key",
+                  "private-key.pem"
+                )
+    end
+  end
+
+  defp pem_error(:quoted, _key, _file),
+    do:
+      "starts and ends with a quote character. docker run --env-file and Compose's env_file with format: raw keep quotes as part of the value; remove them."
+
+  defp pem_error(:not_pem, key, _file),
+    do:
+      "is not a PEM key. Set it to the contents of #{key} file, BEGIN and END lines included, or to that file base64-encoded."
+
+  defp pem_error({:truncated, label}, _key, file),
+    do:
+      "has a BEGIN #{label} line but no END line, so only part of the key arrived. A file that holds one variable per line keeps only the first line of a multi-line value; base64-encode the PEM file on one line instead: openssl base64 -A -in #{file}"
+
+  defp pem_error(:damaged, key, _file),
+    do:
+      "holds a PEM block whose body is not valid base64. Copy #{key} file again."
+
+  defp pem_error(:several_blocks, key, _file),
+    do: "holds more than one PEM block. Set it to #{key} alone."
+
+  defp pem_error(:unknown_label, key, _file),
+    do:
+      "has a BEGIN line that names no key type Lightning reads. Copy #{key} file again, BEGIN and END lines included."
 
   defp worker_key_error(reason) do
     """
-    WORKER_RUNS_PRIVATE_KEY #{reason}
+    WORKER_RUNS_PRIVATE_KEY #{worker_key_problem(reason)}
 
     You can generate new worker keys using: mix lightning.gen_worker_keys
     """
   end
+
+  defp worker_key_problem(:unset),
+    do: "is not set. Set it to the RSA private key that signs run tokens."
+
+  defp worker_key_problem(:empty),
+    do: "is empty. Set it to the RSA private key that signs run tokens."
+
+  defp worker_key_problem(:public_key),
+    do:
+      "holds a public key. Set it to the RSA private key that signs run tokens; its public key goes in the worker's WORKER_LIGHTNING_PUBLIC_KEY."
+
+  defp worker_key_problem(:not_rsa),
+    do:
+      "is not an RSA key. Run tokens are signed with RS256, which needs an RSA private key."
+
+  defp worker_key_problem(:not_a_key),
+    do:
+      "holds a PEM block that is not a key Lightning can read. Set it to the RSA private key that signs run tokens."
+
+  defp worker_key_problem(reason),
+    do: pem_error(reason, "the private key", "FILE")
 end

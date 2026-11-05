@@ -9,7 +9,7 @@ defmodule LightningWeb.WorkflowController do
   alias Lightning.WorkOrders
   alias LightningWeb.WorkflowLive.Helpers
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback LightningWeb.BrowserFallbackController
 
   @doc """
   Create a manual workflow run.
@@ -266,7 +266,7 @@ defmodule LightningWeb.WorkflowController do
       # reason atom; hand it to the fallback controller instead, so this route
       # answers a refused caller the way the rest of the app does.
       {:error, :unauthorized} = error ->
-        LightningWeb.FallbackController.call(conn, error)
+        LightningWeb.BrowserFallbackController.call(conn, error)
 
       {:error, reason} ->
         conn

@@ -230,6 +230,7 @@
           phx-disable-with="Connecting..."
           disabled={
             @actions_disabled || !@changeset.valid? ||
+              workspace_checking?(@workspace_check) ||
               alias_clash?(@workspace_check, f, @project)
           }
           tooltip={
@@ -255,6 +256,7 @@
         changeset={@changeset}
         repos={@repos}
         project={@project}
+        workspace_check={@workspace_check}
         can_reconnect={
           @can_install_github &&
             can_access_github_installation?(
@@ -303,7 +305,7 @@
         }>
           Local alias:
           <span
-            id="workspace-alias"
+            id="connected-workspace-alias"
             class="text-xs font-mono bg-gray-200 rounded-md p-1"
           >
             {alias}
@@ -359,6 +361,7 @@
       <.confirm_connection_removal_modal
         :if={@can_install_github}
         id="remove_connection_modal"
+        repo_connection={@project_repo_connection}
         myself={@myself}
       />
     </div>

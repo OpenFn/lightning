@@ -396,7 +396,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useAwareness', () => ({
 }));
 
 // Create stable function references that persist across test renders
-// This prevents re-registering hotkeys on React 18 StrictMode double-renders
+// This prevents re-registering hotkeys on React StrictMode double-renders
 let stableHandleRun: ReturnType<typeof vi.fn>;
 let stableHandleRetry: ReturnType<typeof vi.fn>;
 

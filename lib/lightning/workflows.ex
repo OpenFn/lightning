@@ -10,6 +10,7 @@ defmodule Lightning.Workflows do
   import Ecto.Query
 
   alias Ecto.Multi
+  alias Lightning.Scope
 
   alias Lightning.Config
   alias Lightning.Credentials.Scoping
@@ -144,16 +145,37 @@ defmodule Lightning.Workflows do
   @doc """
   Gets a workflow by id, scoped to the given project.
 
-  Returns `nil` when the id is malformed, missing, belongs to another project,
-  or is marked for deletion, so it can't be used to read or mutate a workflow
-  across projects or one on its way out.
+  Returns `{:error, :not_found}` when the id is malformed, missing, belongs to
+  another project, or is marked for deletion, so it can't be used to read or
+  mutate a workflow across projects or one on its way out.
   """
-  def get_workflow_for_project(%Project{} = project, id, opts \\ []) do
+  @spec get_workflow_for_project(Ecto.UUID.t(), term(), keyword()) ::
+          {:ok, Workflow.t()} | {:error, :not_found}
+  def get_workflow_for_project(project_id, id, opts \\ []) do
     if Lightning.Validators.valid_uuid?(id) do
-      from(w in Query.workflows_for(project), where: w.id == ^id)
-      |> preload(^Keyword.get(opts, :include, []))
-      |> Repo.one()
+      from(w in Workflow,
+        where:
+          w.id == ^id and w.project_id == ^project_id and is_nil(w.deleted_at),
+        preload: ^Keyword.get(opts, :include, [])
+      )
+      |> Repo.fetch_one()
+    else
+      {:error, :not_found}
     end
+  end
+
+  @doc """
+  The id of the project the workflow `id` sits in, or `{:error, :not_found}`
+  when no workflow has that id.
+
+  A workflow marked for deletion still answers its project, so that
+  `get_workflow_for_project/3` in that project is what finds it missing.
+  """
+  @spec get_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_project_id(id) do
+    from(w in Workflow, where: w.id == ^id, select: w.project_id)
+    |> Repo.fetch_one()
   end
 
   @doc """
@@ -194,7 +216,8 @@ defmodule Lightning.Workflows do
           | {:error,
              Ecto.Changeset.t(Workflow.t())
              | :workflow_deleted
-             | :snapshot_failed}
+             | :snapshot_failed
+             | :concurrent_edit}
   def save_workflow(changeset_or_attrs, actor, opts \\ [])
 
   def save_workflow(
@@ -212,11 +235,6 @@ defmodule Lightning.Workflows do
         changeset
         |> build_save_multi(actor, opts)
         |> Repo.transaction()
-
-        # NOTE: Ecto.StaleEntryError is deliberately NOT caught — optimistic
-        # lock conflicts have their own reload UX and workflows_test.exs asserts
-        # it raises. Anything off this allow-list re-raises automatically with
-        # the original stacktrace.
       rescue
         e in Ecto.ChangeError ->
           # Malformed values that pass cast but fail at dump (e.g. a 16-byte
@@ -333,7 +351,9 @@ defmodule Lightning.Workflows do
     |> Multi.run(:orphan_deleted_jobs, fn repo, _changes ->
       orphan_jobs_being_deleted(repo, changeset)
     end)
-    |> Multi.insert_or_update(:workflow, changeset)
+    |> Multi.insert_or_update(:workflow, changeset,
+      stale_error_field: :lock_version
+    )
     |> Multi.run(:credential_scope_check, fn _repo, %{workflow: workflow} ->
       credential_scope_check(workflow, changeset)
     end)
@@ -476,6 +496,14 @@ defmodule Lightning.Workflows do
     do: {:error, changeset}
 
   defp handle_save_result(
+         {:error, :workflow,
+          %Ecto.Changeset{errors: [lock_version: {_, stale: true}]}, _changes},
+         _changeset,
+         _skip
+       ),
+       do: {:error, :concurrent_edit}
+
+  defp handle_save_result(
          {:error, :workflow, changeset, _changes},
          _changeset,
          _skip
@@ -546,7 +574,7 @@ defmodule Lightning.Workflows do
     Logger.log(level, log_message)
 
     changeset
-    |> Ecto.Changeset.add_error(:base, base_message)
+    |> Ecto.Changeset.add_error(:base, base_message, code: :invalid)
     |> Map.put(:action, derive_action(changeset))
   end
 
@@ -861,12 +889,17 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Returns a query for workflows accessible to a user
+  Lists the live workflows of every project the caller may list, newest first,
+  preloading the associations named in `include:`.
   """
-  @spec workflows_for_user_query(Lightning.Accounts.User.t()) ::
-          Ecto.Queryable.t()
-  def workflows_for_user_query(%Lightning.Accounts.User{} = user) do
-    Query.workflows_for(user)
+  @spec list_workflows_for(Scope.t(), keyword()) :: [Workflow.t()]
+  def list_workflows_for(%Scope{} = scope, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+
+    scope
+    |> Query.workflows_for()
+    |> preload(^include)
+    |> Repo.all()
   end
 
   @spec to_project_space([Workflow.t()]) :: %{}
@@ -1433,7 +1466,8 @@ defmodule Lightning.Workflows do
   and saves in one transaction (capturing a snapshot and recording a version).
   """
   @spec go_live(Workflow.t(), struct()) ::
-          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+          {:ok, Workflow.t()}
+          | {:error, Ecto.Changeset.t(Workflow.t()) | :concurrent_edit}
   def go_live(%Workflow{} = workflow, actor) do
     workflow
     |> Repo.preload(:triggers)
@@ -1456,7 +1490,8 @@ defmodule Lightning.Workflows do
   replacement is more than the incremental reconciler can express.
   """
   @spec restore_version(Workflow.t(), WorkflowRelease.t(), struct()) ::
-          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+          {:ok, Workflow.t()}
+          | {:error, Ecto.Changeset.t(Workflow.t()) | :concurrent_edit}
   def restore_version(
         %Workflow{} = workflow,
         %WorkflowRelease{snapshot: %Snapshot{} = snapshot} = release,
@@ -1476,7 +1511,8 @@ defmodule Lightning.Workflows do
   disables its triggers, saved in one transaction.
   """
   @spec switch_to_draft(Workflow.t(), struct()) ::
-          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+          {:ok, Workflow.t()}
+          | {:error, Ecto.Changeset.t(Workflow.t()) | :concurrent_edit}
   def switch_to_draft(%Workflow{} = workflow, actor) do
     workflow
     |> Repo.preload(:triggers)

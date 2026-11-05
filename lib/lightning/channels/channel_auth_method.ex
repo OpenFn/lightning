@@ -78,7 +78,8 @@ defmodule Lightning.Channels.ChannelAuthMethod do
           add_error(
             changeset,
             :project_credential_id,
-            "client auth must use a webhook auth method, not a project credential"
+            "client auth must use a webhook auth method, not a project credential",
+            code: :not_allowed
           )
         else
           changeset
@@ -89,7 +90,8 @@ defmodule Lightning.Channels.ChannelAuthMethod do
           add_error(
             changeset,
             :webhook_auth_method_id,
-            "destination auth must use a project credential, not a webhook auth method"
+            "destination auth must use a project credential, not a webhook auth method",
+            code: :not_allowed
           )
         else
           changeset

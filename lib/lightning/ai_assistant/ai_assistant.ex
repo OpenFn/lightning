@@ -326,6 +326,22 @@ defmodule Lightning.AiAssistant do
     end
   end
 
+  @doc """
+  Returns a job-code session for the job, matching either its saved `job_id` or
+  the id of the unsaved job in its `meta`, or `nil` when there is none.
+  """
+  @spec unsaved_job_session(Ecto.UUID.t()) :: ChatSession.t() | nil
+  def unsaved_job_session(job_id) do
+    from(s in ChatSession,
+      where: s.session_type == "job_code",
+      where:
+        s.job_id == ^job_id or
+          fragment("? -> 'unsaved_job' ->> 'id' = ?", s.meta, ^job_id),
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
   defp update_session_if_job_exists(session, job_ids, count) do
     unsaved_job = session.meta["unsaved_job"]
     unsaved_job_id = unsaved_job["id"]

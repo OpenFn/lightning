@@ -195,6 +195,7 @@ defmodule Lightning.Application do
       ]
       |> Enum.reject(&is_nil/1)
 
+    log_service_account()
     warn_if_apollo_timeout_still_set()
     warn_if_connect_timeout_is_unreachable()
     warn_if_ai_jobs_outlive_the_drain_window()
@@ -245,6 +246,17 @@ defmodule Lightning.Application do
   end
 
   defp poolable_url?(_endpoint), do: false
+
+  @doc false
+  def log_service_account do
+    case Lightning.Config.service_account() do
+      %Lightning.ServiceAccount{id: id} ->
+        Logger.info("Service account enabled, id #{id}")
+
+      nil ->
+        :ok
+    end
+  end
 
   # Reaching Apollo happens inside the adapter's wait for the first byte, so a
   # connect timeout above the idle one can never expire.

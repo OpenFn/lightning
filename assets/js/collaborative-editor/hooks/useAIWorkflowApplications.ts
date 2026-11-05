@@ -123,14 +123,14 @@ export function useAIWorkflowApplications({
     updateJob: (jobId: string, updates: { body: string }) => void;
     saveWorkflow: (options?: SaveWorkflowOptions) => Promise<unknown>;
   };
-  monacoRef: RefObject<MonacoHandle> | null;
+  monacoRef: RefObject<MonacoHandle | null> | null;
   jobs: Job[];
   canApplyChanges: boolean;
   connectionState: ConnectionState;
   setPreviewingMessageId: (id: string | null) => void;
   previewingMessageId: string | null;
   setApplyingMessageId: (id: string | null) => void;
-  appliedMessageIdsRef: React.MutableRefObject<Set<string>>;
+  appliedMessageIdsRef: RefObject<Set<string>>;
   /**
    * Pending streaming apply record from AIAssistantStore: the YAML already
    * imported to the canvas during streaming (see StreamingApplyState).

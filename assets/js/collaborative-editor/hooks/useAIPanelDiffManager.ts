@@ -32,7 +32,7 @@ export function useAIPanelDiffManager({
   isOpen: boolean;
   previewingMessageId: string | null;
   setPreviewingMessageId: (id: string | null) => void;
-  monacoRef: RefObject<MonacoHandle> | null;
+  monacoRef: RefObject<MonacoHandle | null> | null;
   currentVersion: string | undefined;
   aiMode: AIModeResult | null;
   closeAIAssistantPanel: () => void;

@@ -8,6 +8,7 @@ defmodule Lightning.UsageTracking.ProjectMetricsService do
 
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.UsageTracking.Identity
   alias Lightning.UsageTracking.UserService
   alias Lightning.UsageTracking.WorkflowMetricsService
 
@@ -38,7 +39,7 @@ defmodule Lightning.UsageTracking.ProjectMetricsService do
   defp instrument_identity(identity, false = _cleartext_enabled) do
     %{
       cleartext_uuid: nil,
-      hashed_uuid: identity |> build_hash()
+      hashed_uuid: Identity.hash(identity)
     }
   end
 
@@ -47,8 +48,6 @@ defmodule Lightning.UsageTracking.ProjectMetricsService do
     |> instrument_identity(false)
     |> Map.merge(%{cleartext_uuid: identity})
   end
-
-  defp build_hash(uuid), do: Base.encode16(:crypto.hash(:sha256, uuid))
 
   defp instrument_workflows(project, cleartext_enabled, date) do
     project.workflows

@@ -79,9 +79,9 @@ export type ReactComponentHook<Props = object> = PhoenixHook<
 
     /**
      * Passed to Root and Portal Boundary elements as a callback ref so we know
-     * when they've mounted in the DOM.
+     * when they've mounted in the DOM. Returns the ref cleanup.
      */
-    _onBoundary(element: HTMLDivElement | null): void;
+    _onBoundary(element: HTMLDivElement | null): (() => void) | undefined;
 
     _boundaryMounted: boolean;
 

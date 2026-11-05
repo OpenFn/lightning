@@ -8,6 +8,7 @@ defmodule Lightning.UsageTracking do
   alias Lightning.UsageTracking.Client
   alias Lightning.UsageTracking.DailyReportConfiguration
   alias Lightning.UsageTracking.GithubClient
+  alias Lightning.UsageTracking.Identity
   alias Lightning.UsageTracking.Report
   alias Lightning.UsageTracking.ReportData
   alias Lightning.UsageTracking.ReportWorker
@@ -156,6 +157,20 @@ defmodule Lightning.UsageTracking do
     Oban.insert(Lightning.Oban, ReportWorker.new(%{date: date}))
   end
 
+  @doc """
+  Returns the instance UUID and the SHA-256 hash that reports carry in its
+  place, or `nil` if no instance ID has been generated yet.
+  """
+  def instance_identity do
+    case Repo.one(from c in DailyReportConfiguration, select: c.instance_id) do
+      nil ->
+        nil
+
+      instance_id ->
+        %{instance_id: instance_id, hashed_id: Identity.hash(instance_id)}
+    end
+  end
+
   def find_enabled_daily_report_config do
     case Repo.one(DailyReportConfiguration) do
       %{tracking_enabled_at: nil} -> nil
@@ -200,7 +215,7 @@ defmodule Lightning.UsageTracking do
   def lightning_version do
     info = Lightning.release()
 
-    "v#{info.vsn}:#{image_for_submission(info.image_tag, info.vsn)}:#{commit_for_submission(info.commit)}"
+    "#{info.vsn}:#{image_for_submission(info.image_tag, info.vsn)}:#{commit_for_submission(info.commit)}"
   end
 
   defp commit_for_submission(commit) do
@@ -210,7 +225,7 @@ defmodule Lightning.UsageTracking do
   defp image_for_submission(tag, vsn) do
     cond do
       tag == "edge" -> "edge"
-      tag == "v#{vsn}" -> "match"
+      tag == to_string(vsn) -> "match"
       true -> "other"
     end
   end

@@ -350,7 +350,7 @@ export const createMyStore = () => {
 2. **Referential Stability** — Immer + `createWithSelector` for optimal React performance
 3. **Single Responsibility** — Each store manages one domain of data
 4. **Type Safety** — Zod for runtime validation at network boundaries, TypeScript for compile-time
-5. **useSyncExternalStore** — All stores implement React 18's external store contract
+5. **useSyncExternalStore** — All stores implement React's external store contract
 6. **Immutability** — All state updates via Immer's `produce()`
 
 ### Dangling-reference reconciliation: server authoritative, client advisory

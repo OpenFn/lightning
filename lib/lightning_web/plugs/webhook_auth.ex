@@ -7,6 +7,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
 
   alias Lightning.Retry
   alias Lightning.Workflows
+  alias LightningWeb.API.Problem
   alias LightningWeb.Auth
 
   require Logger
@@ -29,11 +30,12 @@ defmodule LightningWeb.Plugs.WebhookAuth do
          `workflow` and `edges`) and its
          `webhook_auth_methods`, wrapped in `Lightning.Retry.with_webhook_retry/2`
          so transient DB errors are retried.
-      2. If the trigger is missing → responds **404** `{"error":"webhook_not_found"}`.
+      2. If the trigger is missing → responds **404** `not_found`.
       3. If auth methods are configured:
          - If credentials match → assigns `:trigger` and continues.
          - If credentials are present but wrong → responds **404** (hide existence).
-         - If credentials are missing → responds **401**.
+         - If credentials are missing → responds **401** `unauthenticated`,
+           challenging for an API key when the trigger takes one.
       4. If retries exhaust due to DB issues → responds **503** with `Retry-After`
          based on `WEBHOOK_RETRY_TIMEOUT_MS`.
 
@@ -67,9 +69,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
             LightningWeb.Utils.respond_service_unavailable(
               conn,
               error,
-              %{op: :webhook_auth_lookup, webhook: log_key(segments)},
-              message:
-                "Temporary database issue during webhook lookup. Please retry in %{s}s."
+              %{op: :webhook_auth_lookup, webhook: log_key(segments)}
             )
         end
 
@@ -83,7 +83,8 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   # `/i/<trigger-id>/Patient`, and that is where record identifiers turn up.
   defp log_key(segments), do: segments |> Enum.take(1) |> Enum.join("/")
 
-  defp validate_auth(nil, _methods, conn), do: not_found_response(conn)
+  defp validate_auth(nil, _methods, conn),
+    do: Problem.halt(conn, Problem.new(:not_found))
 
   defp validate_auth(trigger, methods, conn) do
     case methods do
@@ -103,24 +104,10 @@ defmodule LightningWeb.Plugs.WebhookAuth do
         successful_response(conn, trigger)
 
       Auth.has_credentials?(conn) ->
-        not_found_response(conn)
+        Problem.halt(conn, Problem.new(:not_found))
 
       true ->
-        unauthorized_response(conn)
+        Auth.refuse(conn, auth_methods)
     end
-  end
-
-  defp unauthorized_response(conn) do
-    conn
-    |> put_status(:unauthorized)
-    |> json(%{"error" => "Unauthorized"})
-    |> halt()
-  end
-
-  defp not_found_response(conn) do
-    conn
-    |> put_status(:not_found)
-    |> json(%{"error" => "Webhook not found"})
-    |> halt()
   end
 end

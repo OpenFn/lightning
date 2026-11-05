@@ -10,18 +10,24 @@ defmodule Lightning.Projects.Audit do
       "collaborator_added",
       "collaborator_removed",
       "collaborator_role_changed",
+      "created",
       "dataclip_retention_period_updated",
+      "description_updated",
       "history_retention_period_updated",
+      "name_updated",
       "requires_mfa_updated"
     ]
 
   alias Ecto.Multi
+  alias Lightning.Projects.Project
 
   def derive_events(multi, changeset, user) do
     [
       :allow_support_access,
       :dataclip_retention_period,
+      :description,
       :history_retention_period,
+      :name,
       :requires_mfa
     ]
     |> Enum.reduce(multi, fn field, multi ->
@@ -36,6 +42,26 @@ defmodule Lightning.Projects.Audit do
           Multi.insert(multi, operation(field), audit_changeset)
       end
     end)
+  end
+
+  @doc """
+  Appends the events for a newly created project: `created`, then one
+  `collaborator_added` per member in its `project_users`.
+  """
+  def derive_creation_events(multi, %Project{} = project, actor) do
+    multi
+    |> Multi.insert(
+      :audit_created,
+      event("created", project.id, actor, %{
+        before: nil,
+        after: %{"name" => project.name, "description" => project.description}
+      })
+    )
+    |> derive_membership_events(
+      project.id,
+      Enum.map(project.project_users, &{:added, &1}),
+      actor
+    )
   end
 
   @doc """
