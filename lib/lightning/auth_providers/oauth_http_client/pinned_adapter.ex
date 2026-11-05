@@ -81,7 +81,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter do
     end
   end
 
-  defp exchange(conn, env, target, receive_timeout) do
+  defp exchange(conn, %Tesla.Env{} = env, target, receive_timeout) do
     method = env.method |> to_string() |> String.upcase()
     acc = %{status: nil, headers: [], body: []}
 

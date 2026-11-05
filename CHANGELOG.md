@@ -23,6 +23,24 @@ and this project adheres to
 > succeeding. [API.md](API.md) describes the error format, every code and each
 > route.
 
+> **Breaking for self-hosters: TLS certificates need a subjectAltName.**
+> Lightning now runs on Erlang/OTP 28.5.0.8, which no longer falls back to a
+> certificate's Common Name (CN) when checking the hostname. A server whose
+> certificate names its host only in the CN, with no subjectAltName (SAN), fails
+> to connect when verification is on. Most likely that is your database, since
+> Postgres connections are verified unless `DISABLE_DB_SSL_CERT_VERIFY=true`.
+> OAuth client endpoints and channel destinations are checked the same way.
+> Before you upgrade, look at the database's certificate:
+>
+> ```sh
+> openssl s_client -connect HOST:5432 -starttls postgres </dev/null \
+>   | openssl x509 -noout -ext subjectAltName
+> ```
+>
+> If the output doesn't list the hostname from `DATABASE_URL`, reissue the
+> certificate with that hostname as a SAN.
+> [#5274](https://github.com/OpenFn/lightning/pull/5274)
+
 ### Added
 
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
@@ -80,9 +98,21 @@ and this project adheres to
 - A form that loses a save race with another user, or saves a record someone
   else deleted, shows a message instead of crashing.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- URLs with a port above 65535 are now rejected on save, for OAuth client
+  endpoints and channel destinations. On Elixir 1.19.7 such a URL would
+  otherwise be sent to the scheme's default port.
+  [#5274](https://github.com/OpenFn/lightning/pull/5274)
 
 ### Security
 
+- Elixir moves from 1.18.4 to 1.19.7, picking up the 1.18.5 and 1.18.6 security
+  fixes (`URI.parse` port limits, decoding of oversized JSON integers and
+  `List.to_string/1`). The 1.18 line no longer ships an OTP 28 build upstream,
+  so staying on 1.18 would have meant downgrading to OTP 27. OTP moves from 28.5
+  to 28.5.0.8 and the Debian base snapshot from bookworm-20260421 to
+  bookworm-20261027, both still Debian 12. `.tool-versions` names the exact OTP
+  patch too, so local builds need Erlang 28.5.0.8.
+  [#5274](https://github.com/OpenFn/lightning/pull/5274)
 - The Docker image no longer trusts the emSign Root CA C1 and ECC Root CA C3
   certificates, which Mozilla removed after eMudhra issued intermediates with
   weak keys. Lightning trusts the OS certificate store for most outbound HTTPS,

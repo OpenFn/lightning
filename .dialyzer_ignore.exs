@@ -19,16 +19,5 @@
   # still the latest release. Drop all three filters once a release carries it.
   {"deps/httpoison/lib/httpoison/base.ex", :callback_arg_type_mismatch},
   {"deps/httpoison/lib/httpoison/base.ex", :callback_type_mismatch},
-  {"deps/httpoison/lib/httpoison/base.ex", :pattern_match_cov},
-
-  # PinnedAdapter hands Mint a validated IP tuple, and Mint's typespecs cannot
-  # see that connect succeeding, so what follows it looks unreachable. mint
-  # 1.10.0 widened `Mint.Core.Util.hostname/2`, which turned that from a
-  # `:call` and its cascade into an opacity complaint about `Mint.HTTP.t()`
-  # being a plain union of opaque types. Upstream typespec bug, so drop this if
-  # it is fixed. Philter filters the same warnings. Detail in #5117.
-  {"lib/lightning/auth_providers/oauth_http_client/pinned_adapter.ex",
-   :call_with_opaque},
-  {"lib/lightning/auth_providers/oauth_http_client/pinned_adapter.ex",
-   :no_return, 80}
+  {"deps/httpoison/lib/httpoison/base.ex", :pattern_match_cov}
 ]

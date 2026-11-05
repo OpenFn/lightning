@@ -49,10 +49,9 @@ defmodule LightningWeb.API.Helpers do
   def self_url(conn), do: Routes.url(conn) <> conn.request_path
 
   defp url_with(query, conn) do
-    %URI{
-      URI.new!(self_url(conn))
-      | query: Plug.Conn.Query.encode(query)
-    }
+    %URI{} = uri = URI.new!(self_url(conn))
+
+    %{uri | query: Plug.Conn.Query.encode(query)}
     |> URI.to_string()
   end
 end
