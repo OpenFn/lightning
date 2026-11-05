@@ -84,6 +84,14 @@ and this project adheres to
   the key; set it to the GitHub App's private key alone. An empty `GITHUB_CERT`
   counts as unset. An env file Dotenvy can't parse stops the boot without
   printing the line. [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Versions are shown without a leading `v` (`2.21.0`, not `v2.21.0`) in the
+  sidebar version chip, to match how images are now tagged. Images carry their
+  version in the standard `org.opencontainers.image.version` label. Usage
+  tracking reports the version without the `v` too, and counts an image tag with
+  or without it as a match.
+- New GitHub Sync workflows are named in the repo's Actions tab: "Pull from
+  OpenFn" and "Deploy to OpenFn (project id)".
+  [#5275](https://github.com/OpenFn/lightning/pull/5275)
 
 ### Fixed
 
@@ -114,6 +122,31 @@ and this project adheres to
 - The Docker image's Node.js moves from 24.18.1 to 24.22.1, so Node's own
   bundled certificate list no longer trusts the emSign C1 and ECC C3 roots
   either.
+- Ecto moves from 3.13.2 to 3.14.3, which fixes CVE-2026-118391: some queries
+  could grow Ecto's query cache without limit. Lightning doesn't use the
+  affected query forms, so this clears the advisory rather than a live issue.
+
+## [2.20.1] - 2026-11-04
+
+### Added
+
+- Removing a GitHub sync (v2) integration also removes the project's sync files
+  from the branch, in one commit, unless "Preserve project files" is ticked.
+  `openfn.yaml` and other projects' files stay.
+
+### Changed
+
+- The GitHub sync "Reconnect" dialog checks the workspace the same way Connect
+  does, and its button stays disabled until the box is ticked and the check has
+  finished.
+
+### Fixed
+
+- GitHub sync allowed a project to be saved in the workspace under a second
+  alias, for example after disconnecting and reconnecting with a different
+  alias. The CLI then couldn't tell which copy to pull and every sync failed.
+  Connect and Reconnect now block this, and the status page warns when a
+  workspace already holds two copies.
 
 ## [2.20.0] - 2026-10-30
 
