@@ -612,24 +612,7 @@ describe('AIAssistantPanel', () => {
       expect(textarea).toBeDisabled();
     });
 
-    it('should attach the run on the job page when one is selected', () => {
-      mockHistoryStore = createMockHistoryStore({}, {
-        id: 'run-123',
-      } as never);
-
-      renderWithStore(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          page="job_code"
-          sessionId="session-1"
-        />
-      );
-
-      expect(screen.getByTestId('attached-context')).toBeInTheDocument();
-    });
-
-    it('should attach the run on the canvas too', () => {
+    it('should attach the selected run', () => {
       mockHistoryStore = createMockHistoryStore({}, {
         id: 'run-123',
       } as never);

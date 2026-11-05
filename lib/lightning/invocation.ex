@@ -26,9 +26,8 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
 
-  # Logs and I/O sent together should stay under Apollo's 250,000-character
-  # attachment limit, or the whole turn is refused. Only a step whose data is
-  # unusually wide can still push it over.
+  # Logs and I/O together stay under Apollo's 250,000-character attachment
+  # limit, past which the whole turn is refused.
   @logs_char_budget 120_000
 
   # The ids and level ride along with every line, indented as Apollo renders
@@ -38,9 +37,8 @@ defmodule Lightning.Invocation do
   # So one console.log of a whole state can't crowd out the lines before it.
   @log_line_max 8_000
 
-  # On the scrubbed output as Apollo renders it, indented. The step that
-  # crosses it is read whole.
-  @io_byte_budget 50_000
+  # On the scrubbed output as Apollo renders it, indented.
+  @io_char_budget 100_000
 
   # Past this a body is described rather than read.
   @io_dataclip_byte_cap 1_000_000
@@ -1176,14 +1174,20 @@ defmodule Lightning.Invocation do
     end
   end
 
-  defp cap_line(%{message: message} = line)
-       when is_binary(message) and byte_size(message) > @log_line_max do
-    %{line | message: take_escaped(message, @log_line_max, []) <> @log_line_cut}
+  defp cap_line(%{message: message} = line) when is_binary(message) do
+    if escaped_size(message) > @log_line_max do
+      %{
+        line
+        | message: take_escaped(message, @log_line_max, []) <> @log_line_cut
+      }
+    else
+      line
+    end
   end
 
   defp cap_line(line), do: line
 
-  # A single line can hold a whole state dump; the room left keeps its start.
+  # The line that crosses the budget keeps as much of its start as fits.
   defp cut_line(line, room, lines) do
     case room - @logs_line_overhead - byte_size(@log_line_cut) do
       left when left > 0 ->
@@ -1220,8 +1224,10 @@ defmodule Lightning.Invocation do
         lines
 
       omitted ->
+        noun = if omitted == 1, do: "line", else: "lines"
+
         message =
-          "[first #{omitted} lines omitted, the log ran past what can be sent]"
+          "[first #{omitted} #{noun} omitted, the log ran past what can be sent]"
 
         [%{step_id: nil, job_id: nil, level: nil, message: message} | lines]
     end
@@ -1278,16 +1284,9 @@ defmodule Lightning.Invocation do
     |> Repo.all()
   end
 
-  # Past the budget a step still appears, saying why it was not read.
-  defp take_io_within_budget(step, size) when size > @io_byte_budget do
-    entry = %{
-      step_name: step.step_name,
-      input: over_budget(step.input_dataclip_id),
-      output: over_budget(step.output_dataclip_id)
-    }
-
-    {entry, size + io_entry_size(entry)}
-  end
+  # Like the log, the data stops at the first step that doesn't fit, and the
+  # steps from there on still appear, saying why they were not read.
+  defp take_io_within_budget(step, :full), do: {over_budget_entry(step), :full}
 
   defp take_io_within_budget(step, size) do
     entry = %{
@@ -1296,7 +1295,21 @@ defmodule Lightning.Invocation do
       output: scrubbed_body(step.output_dataclip_id)
     }
 
-    {entry, size + io_entry_size(entry)}
+    entry_size = io_entry_size(entry)
+
+    if size + entry_size <= @io_char_budget do
+      {entry, size + entry_size}
+    else
+      {over_budget_entry(step), :full}
+    end
+  end
+
+  defp over_budget_entry(step) do
+    %{
+      step_name: step.step_name,
+      input: over_budget(step.input_dataclip_id),
+      output: over_budget(step.output_dataclip_id)
+    }
   end
 
   defp scrubbed_body(nil), do: nil

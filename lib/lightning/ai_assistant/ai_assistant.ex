@@ -1535,13 +1535,14 @@ defmodule Lightning.AiAssistant do
       "and paste the part you need into the chat instead."
   end
 
-  defp log_attachment_sizes(%{
-         "total_characters" => total,
-         "limit_characters" => limit
-       }) do
+  defp log_attachment_sizes(
+         %{"total_characters" => total, "limit_characters" => limit} = details
+       ) do
+    largest = get_in(details, ["largest_attachment", "type"])
+
     Logger.warning(
       "[AI Assistant] Attachments too large: #{total} characters " <>
-        "against a #{limit} limit"
+        "against a #{limit} limit, largest #{inspect(largest)}"
     )
   end
 

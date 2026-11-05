@@ -617,9 +617,10 @@ export function AIAssistantPanel({
               changes it makes are applied to the canvas as they arrive.
             </p>
             <p>
-              <strong>What you attach:</strong> with a run selected, its logs as
-              written and the structure of each step's input and output, without
-              the values, go with your message until you detach it.
+              <strong>What you attach:</strong> with a run selected, the latest
+              part of its logs and the shape of each step's input and output go
+              with your message until you detach it. In the shape, the field
+              names go as they are and the values are replaced by their types.
             </p>
             <p>
               All chat sessions are shared with project collaborators. Everyone

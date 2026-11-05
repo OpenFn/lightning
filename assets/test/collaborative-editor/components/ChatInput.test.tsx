@@ -368,7 +368,7 @@ describe('ChatInput', () => {
       expect(mockSendMessage).toHaveBeenNthCalledWith(2, 'Second', {});
     });
 
-    it('should attach again when another run is selected', async () => {
+    it('should attach a detached run again once it is selected anew', async () => {
       const { rerender } = render(
         <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
       );
@@ -377,6 +377,9 @@ describe('ChatInput', () => {
       rerender(
         <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-456" />
       );
+      rerender(
+        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
+      );
 
       const textarea = screen.getByPlaceholderText('Ask me anything...');
       await userEvent.type(textarea, 'Test{Enter}');
@@ -384,7 +387,7 @@ describe('ChatInput', () => {
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_logs: true,
         attach_io_data: true,
-        follow_run_id: 'run-456',
+        follow_run_id: 'run-123',
       });
     });
   });

@@ -39,8 +39,9 @@ interface MessageOptions {
 }
 
 const ATTACHED_RUN_DESCRIPTION =
-  "The assistant sees this run's logs as written, and the structure of each " +
-  "step's input and output without the values.";
+  "The assistant sees the latest part of this run's logs, and the shape of " +
+  "each step's input and output: the field names, with the values replaced " +
+  'by their types.';
 
 const MIN_TEXTAREA_HEIGHT = 52;
 const MAX_TEXTAREA_HEIGHT = 200;

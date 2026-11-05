@@ -2862,22 +2862,32 @@ defmodule Lightning.InvocationTest do
       assert hd(kept).message == "line #{2100 - length(kept) + 1}"
     end
 
-    test "keeps the start of a line too long to fit", %{
+    test "keeps the start of the line that crosses the budget", %{
       project: project,
       run: run,
       step: step
     } do
-      # One console.log of a whole state is one line.
-      insert(:log_line,
-        run: run,
-        step: step,
-        message: "start" <> String.duplicate("x", 300_000),
-        timestamp: ~U[2026-08-25 10:00:00Z]
-      )
+      # 479 lines of 100 characters and 150 overhead leave 250 for the
+      # crossing line, which is under the per-line cap.
+      messages =
+        ["very first", "start" <> String.duplicate("x", 7_000)] ++
+          List.duplicate(String.duplicate("y", 100), 479)
 
-      assert [%{message: message}] = Invocation.logs_for_run(run.id, project.id)
-      assert message =~ ~r/^startx+ \[rest of this line cut/
-      assert byte_size(message) <= 120_000
+      for {message, n} <- Enum.with_index(messages) do
+        insert(:log_line,
+          run: run,
+          step: step,
+          message: message,
+          timestamp: DateTime.add(~U[2026-08-25 10:00:00Z], n, :second)
+        )
+      end
+
+      assert [omitted, crossing | rest] =
+               Invocation.logs_for_run(run.id, project.id)
+
+      assert omitted.message =~ "[first 1 line omitted"
+      assert crossing.message =~ ~r/^startx* \[rest of this line cut/
+      assert length(rest) == 479
     end
 
     test "a huge line keeps its start without pushing out the lines before it",
@@ -2907,21 +2917,20 @@ defmodule Lightning.InvocationTest do
       run: run,
       step: step
     } do
-      # Each of these is one character but six once escaped as \uXXXX.
+      # Each of these is three bytes but six characters once escaped as
+      # \uXXXX, so the line is under the cap in bytes and over it as sent.
       insert(:log_line,
         run: run,
         step: step,
-        message: String.duplicate("ሰ", 300_000),
+        message: String.duplicate("ሰ", 2_000),
         timestamp: ~U[2026-08-25 10:00:00Z]
       )
 
       assert [line] = Invocation.logs_for_run(run.id, project.id)
 
-      rendered =
-        Jason.encode!(line, pretty: true, escape: :unicode_safe)
-
-      assert byte_size(rendered) <= 120_000
-      assert line.message =~ "[rest of this line cut"
+      assert line.message ==
+               String.duplicate("ሰ", 1_333) <>
+                 " [rest of this line cut, it ran past what can be sent]"
     end
 
     test "returns lines oldest first with the step's job attributed", %{
@@ -3276,6 +3285,35 @@ defmodule Lightning.InvocationTest do
                entries,
                &(is_binary(&1.input) and &1.input =~ "ran past")
              )
+    end
+
+    test "marks a step too large to fit rather than sending it whole", ctx do
+      # Long keys up to the scrubber's key budget, so the shape alone is over
+      # the run's budget.
+      long = String.duplicate("k", 190)
+
+      wide =
+        for i <- 1..10, into: %{} do
+          {"group-#{i}", for(j <- 1..50, into: %{}, do: {"#{long}-#{j}", "v"})}
+        end
+
+      add_step(ctx, "too wide",
+        started_at: ~U[2026-09-01 10:00:00Z],
+        input_dataclip: clip(ctx.project, wide),
+        output_dataclip: clip(ctx.project, wide)
+      )
+
+      add_step(ctx, "after",
+        started_at: ~U[2026-09-01 10:00:01Z],
+        input_dataclip: clip(ctx.project, %{"a" => 1})
+      )
+
+      assert [
+               %{step_name: "too wide", input: input, output: output},
+               %{step_name: "after", input: later}
+             ] = Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      for marked <- [input, output, later], do: assert(marked =~ "ran past")
     end
 
     test "caps how many keys a wide map carries out", ctx do
