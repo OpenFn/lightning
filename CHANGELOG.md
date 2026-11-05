@@ -102,6 +102,9 @@ and this project adheres to
   endpoints and channel destinations. On Elixir 1.19.7 such a URL would
   otherwise be sent to the scheme's default port.
   [#5274](https://github.com/OpenFn/lightning/pull/5274)
+- GitHub Sync now refreshes and retries a rejected OAuth token once when loading
+  app installations, and directs users to reconnect their account when recovery
+  is not possible. [#4972](https://github.com/OpenFn/lightning/issues/4972)
 
 ### Security
 
