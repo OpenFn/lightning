@@ -3,7 +3,9 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
   use Mimic
   import Phoenix.LiveViewTest
+  import Ecto.Query
   import Lightning.Factories
+  import Lightning.RaceHelpers
 
   setup_all do
     Mimic.copy(Lightning.Projects)
@@ -428,6 +430,60 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       # Should NOT show validation error
       refute html =~ "Sandbox name already exists"
+    end
+  end
+
+  describe "edit modal when the save is refused" do
+    setup %{user: user} do
+      parent = insert(:project, project_users: [%{user: user, role: :editor}])
+
+      sb =
+        insert(:sandbox,
+          parent: parent,
+          name: "sb-1",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      %{parent: parent, sb: sb}
+    end
+
+    test "saving a sandbox deleted since the form loaded flashes and closes it",
+         %{conn: conn, parent: parent, sb: sb} do
+      {:ok, view, _} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
+
+      delete_project_mid_save(sb.id, view.pid)
+
+      view
+      |> element("#sandbox-form-#{sb.id}")
+      |> render_submit(%{"project" => %{"raw_name" => "sb-2"}})
+
+      flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert flash["error"] ==
+               "Someone else changed or deleted this record while you were editing it. Reload and try again."
+    end
+
+    test "saving after losing the right to edit the sandbox flashes and closes it",
+         %{conn: conn, parent: parent, sb: sb, user: user} do
+      {:ok, view, _} =
+        live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
+
+      Repo.update_all(
+        from(pu in Lightning.Projects.ProjectUser,
+          where: pu.project_id == ^sb.id and pu.user_id == ^user.id
+        ),
+        set: [role: :editor]
+      )
+
+      view
+      |> element("#sandbox-form-#{sb.id}")
+      |> render_submit(%{"project" => %{"raw_name" => "sb-2"}})
+
+      flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
+
+      assert flash["error"] ==
+               "You are not authorized to perform this action."
     end
   end
 

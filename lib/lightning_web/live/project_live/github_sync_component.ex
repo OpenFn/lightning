@@ -64,12 +64,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
-  def handle_event("delete-connection", _params, socket) do
+  def handle_event("delete-connection", params, socket) do
     if socket.assigns.can_install_github do
       {:ok, _} =
         VersionControl.remove_github_connection(
           socket.assigns.project_repo_connection,
-          socket.assigns.user
+          socket.assigns.user,
+          delete_files: params["preserve_files"] != "true"
         )
 
       {:noreply,
@@ -82,6 +83,21 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
        |> put_flash(:error, "You are not authorized to perform this action")
        |> push_navigate(to: ~p"/projects/#{socket.assigns.project}/settings#vcs")}
     end
+  end
+
+  def handle_event("open-reconnect", _params, socket) do
+    {:noreply, maybe_check_workspace(socket)}
+  end
+
+  # Reconnecting keeps the installation, repo and branch, so only check the
+  # workspace, as the connect form does
+  def handle_event("validate-reconnect", %{"connection" => params}, socket) do
+    changeset =
+      socket.assigns.project_repo_connection
+      |> ProjectRepoConnection.reconfigure_changeset(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, socket |> assign(changeset: changeset) |> maybe_check_workspace()}
   end
 
   def handle_event("reconnect", %{"connection" => params}, socket) do
@@ -194,7 +210,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
        }) do
     socket
     |> assign(
-      changeset: ProjectRepoConnection.configure_changeset(repo_connection, %{})
+      changeset: ProjectRepoConnection.configure_changeset(repo_connection, %{}),
+      workspace_check: nil,
+      workspace_key: nil
     )
     |> assign_async([:installations, :repos], fn ->
       # repos are grouped using the installation_id
@@ -322,7 +340,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     branch_errors = Keyword.get_values(changeset.errors, :branch)
 
     if Enum.any?(branch_errors, fn {_msg, opts} ->
-         Keyword.get(opts, :reason) == :tree_branch_conflict
+         Keyword.get(opts, :code) == :tree_branch_conflict
        end) do
       Map.put(changeset, :action, :validate)
     else
@@ -670,21 +688,27 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp tracking_check(%AsyncResult{ok?: true, result: status} = result, conn) do
     # The alias is only known once the first pull files this project, as it
     # may have been given a (virtual) local alias. No alias, no clashes.
-    clashes =
-      alias_clashes(
-        status.projects,
-        conn.project_id,
-        workspace_alias(result, conn.project_id)
-      )
+    alias = workspace_alias(result, conn.project_id)
+    clashes = alias_clashes(status.projects, conn.project_id, alias)
+    strays = stray_copies(status.projects, conn.project_id, alias)
 
-    case {status.tracking, clashes} do
-      {{:other_project, uuid}, _clashes} ->
+    case {status.tracking, clashes, strays} do
+      {{:other_project, uuid}, _clashes, _strays} ->
         {:other_project, uuid, find_project(status.projects, uuid)[:name]}
 
-      {_tracking, [clash | _]} ->
+      {_tracking, [clash | _], _strays} ->
         {:clash, clash.alias, clashes}
 
-      {:ok, []} ->
+      {_tracking, [], [_ | _]} ->
+        {:stray_copies,
+         Enum.filter(
+           status.projects,
+           fn project ->
+             project.uuid == conn.project_id and project.host == cli_host()
+           end
+         )}
+
+      {:ok, [], []} ->
         :ok
 
       _pending ->
@@ -707,15 +731,39 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   # The workspace's local project copies that share `alias` with this project
   # but not its uuid or host. The CLI refuses to pull with any of these around.
+  # A copy on this host whose uuid we couldn't read may be this project's own,
+  # so it's left to `unreadable_copies/2` rather than blocking.
   defp alias_clashes(projects, project_id, alias) do
-    # the host the CLI was given, so it matches the files it writes
-    host = URI.parse(VersionControl.endpoint_url()).host
+    host = cli_host()
 
     Enum.filter(
       projects,
-      &(&1.alias == alias and (&1.uuid != project_id or &1.host != host))
+      &(&1.alias == alias and
+          (&1.host != host or (&1.uuid != nil and &1.uuid != project_id)))
     )
   end
+
+  # This project's other copies on this host, under another alias. The CLI
+  # pulls by uuid, so with more than one copy around it can't pick, and fails.
+  defp stray_copies(projects, project_id, alias) do
+    host = cli_host()
+
+    Enum.filter(
+      projects,
+      fn project ->
+        project.uuid == project_id and project.host == host and
+          project.alias != alias
+      end
+    )
+  end
+
+  defp unreadable_copies(projects, alias) do
+    host = cli_host()
+    Enum.filter(projects, &(&1.alias == alias and &1.host == host and !&1.uuid))
+  end
+
+  # the host the CLI was given, so it matches the files it writes
+  defp cli_host, do: URI.parse(VersionControl.endpoint_url()).host
 
   # Nothing has committed this project's checkout yet
   defp pending_check(nil, conn),
@@ -844,6 +892,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   attr :repos, AsyncResult, required: true
   attr :project, :map, required: true
   attr :myself, :any, required: true
+  attr :workspace_check, AsyncResult, default: nil
 
   defp sync_health(assigns) do
     checks = status_checks(assigns)
@@ -888,7 +937,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           id="outdated-workflows"
           type="warning"
           header="This repository has the old OpenFn GitHub workflows"
-          actions={reconnect_action(@can_reconnect, "outdated-workflows-reconnect")}
+          actions={
+            reconnect_action(@can_reconnect, "outdated-workflows-reconnect", @myself)
+          }
         >
           <:message>
             This project was connected with an earlier version of GitHub sync. Reconnect to update the workflow files and get full sync status.
@@ -896,9 +947,17 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         </Common.alert>
       </div>
       <ul class="divide-y divide-gray-100">
-        <.repo_row check={@checks[:repo]} can_reconnect={@can_reconnect} />
+        <.repo_row
+          check={@checks[:repo]}
+          can_reconnect={@can_reconnect}
+          myself={@myself}
+        />
         <%= if @project_repo_connection.sync_version do %>
-          <.tracking_row check={@checks[:tracking]} can_reconnect={@can_reconnect} />
+          <.tracking_row
+            check={@checks[:tracking]}
+            can_reconnect={@can_reconnect}
+            myself={@myself}
+          />
           <.run_row
             id="last-pull-run"
             label="Last sync: OpenFn --> GitHub"
@@ -922,6 +981,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         myself={@myself}
         project={@project}
         repos={@repos}
+        workspace_check={@workspace_check}
       />
     </div>
     """
@@ -934,20 +994,24 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         sync_status
       )
 
-  defp reconnect_action(true, id),
+  defp reconnect_action(true, id, myself),
     do: [
       %{
         id: id,
         text: "Reconnect",
-        click: show_modal("reconnect_modal"),
+        click:
+          "reconnect_modal"
+          |> show_modal()
+          |> JS.push("open-reconnect", target: myself),
         target: nil
       }
     ]
 
-  defp reconnect_action(false, _id), do: []
+  defp reconnect_action(false, _id, _myself), do: []
 
   attr :check, :any, required: true
   attr :can_reconnect, :boolean, required: true
+  attr :myself, :any, required: true
 
   defp repo_row(assigns) do
     ~H"""
@@ -966,7 +1030,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           id="verify-connection-error"
           type="warning"
           header="Your GitHub repository is not properly connected with Lightning."
-          actions={reconnect_action(@can_reconnect, "reconnect-button")}
+          actions={reconnect_action(@can_reconnect, "reconnect-button", @myself)}
         >
           <:message>
             <%= case @check do %>
@@ -986,6 +1050,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   attr :check, :any, required: true
   attr :can_reconnect, :boolean, required: true
+  attr :myself, :any, required: true
 
   defp tracking_row(assigns) do
     ~H"""
@@ -1027,7 +1092,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         <Common.alert
           id="tracking-other-project"
           type="warning"
-          actions={reconnect_action(@can_reconnect, "tracking-reconnect-button")}
+          actions={
+            reconnect_action(@can_reconnect, "tracking-reconnect-button", @myself)
+          }
         >
           <:message>
             This branch tracks another project:
@@ -1042,7 +1109,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           id="alias-clash"
           type="warning"
           header={"Another project in this workspace also uses the alias \"#{elem(@check, 1)}\""}
-          actions={reconnect_action(@can_reconnect, "clash-reconnect-button")}
+          actions={
+            reconnect_action(@can_reconnect, "clash-reconnect-button", @myself)
+          }
         >
           <:message>
             <.clash_list clashes={elem(@check, 2)} />
@@ -1050,6 +1119,21 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
               The CLI can't tell them apart, so syncs will fail. Remove the
               stale file from the branch, or reconnect with a different
               workspace folder or local alias.
+            </p>
+          </:message>
+        </Common.alert>
+      </:detail>
+      <:detail :if={match?({:stray_copies, _}, @check)}>
+        <Common.alert
+          id="stray-copies"
+          type="warning"
+          header="This project is saved in the workspace more than once"
+        >
+          <:message>
+            <.clash_list clashes={elem(@check, 1)} />
+            <p class="mt-2">
+              The CLI can't tell which copy to use, so syncs will fail. Delete
+              the copies you no longer use from the branch.
             </p>
           </:message>
         </Common.alert>
@@ -1231,8 +1315,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   defp pull_alias_check(assigns) do
     %{check: check, form: form, project: project} = assigns
 
-    %{alias: alias, clashes: clashes, error: error} =
-      form_alias(check, form, project)
+    %{
+      alias: alias,
+      clashes: clashes,
+      strays: strays,
+      unreadable: unreadable,
+      error: error
+    } = form_alias(check, form, project)
 
     takeover_uuid =
       case check.tracking do
@@ -1244,6 +1333,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       assign(assigns,
         alias: alias,
         clashes: clashes,
+        strays: strays,
+        unreadable: unreadable,
         alias_error: error,
         takeover_uuid: takeover_uuid
       )
@@ -1290,11 +1381,41 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         </div>
       </:message>
     </Common.alert>
+    <Common.alert
+      :if={@clashes == [] && @strays != []}
+      id="workspace-stray-copy"
+      type="warning"
+      header={"This project is already saved in this workspace as \"#{hd(@strays).alias}\""}
+    >
+      <:message>
+        <.clash_list clashes={@strays} />
+        <p class="mt-2">
+          Saving it as "{@alias}" as well would leave two copies, and the CLI
+          can't tell which to use. Connecting is disabled until you clear the
+          local alias under <.advanced_link myself={@myself} />, or delete the
+          old copy from the branch.
+        </p>
+      </:message>
+    </Common.alert>
+    <Common.alert
+      :if={@clashes == [] && @strays == [] && @unreadable != []}
+      id="workspace-unreadable-copy"
+      type="warning"
+      header={"Couldn't check what's saved as \"#{@alias}\""}
+    >
+      <:message>
+        <.clash_list clashes={@unreadable} />
+        <p class="mt-2">
+          If it belongs to another project, the first pull may fail. To be safe,
+          set a local alias under <.advanced_link myself={@myself} />.
+        </p>
+      </:message>
+    </Common.alert>
     <p :if={@alias_error} id="local-alias-error" class="mt-1 text-xs text-red-600">
       Local alias: {@alias_error}
     </p>
     <p
-      :if={@clashes == []}
+      :if={@clashes == [] && @strays == []}
       id="workspace-alias-note"
       class="mt-1 text-xs text-gray-500"
     >
@@ -1321,6 +1442,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     %{
       alias: alias,
       clashes: alias_clashes(check.projects, project.id, alias),
+      strays: stray_copies(check.projects, project.id, alias),
+      unreadable: unreadable_copies(check.projects, alias),
       error: error && elem(error, 0)
     }
   end
@@ -1331,11 +1454,17 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
          form,
          project
        ) do
+    %{clashes: clashes, strays: strays} = form_alias(check, form, project)
+
     sync_version?(form) and form[:sync_direction].value != :deploy and
-      form_alias(check, form, project).clashes != []
+      (clashes != [] or strays != [])
   end
 
   defp alias_clash?(_workspace_check, _form, _project), do: false
+
+  defp workspace_checking?(workspace_check),
+    do:
+      match?(%AsyncResult{loading: loading} when loading != nil, workspace_check)
 
   attr :myself, :any, required: true
 
@@ -1386,27 +1515,47 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           </button>
         </div>
       </:title>
-      <div class="px-6">
+      <form
+        id="remove-connection-form"
+        phx-submit="delete-connection"
+        phx-target={@myself}
+      >
         <p class="text-sm text-gray-500">
-          You are about to disconnect this project from GitHub.
-          Until you reconnect, you will not be able to sync this project to GitHub.
+          You are about to disconnect this project from GitHub, disabling two-way sync. You can reconnect at any time.
         </p>
-      </div>
-      <.modal_footer>
-        <.button
-          id={"#{@id}_confirm_button"}
-          type="button"
-          theme="danger"
-          phx-disable-with="Removing..."
-          phx-click="delete-connection"
-          phx-target={@myself}
-        >
-          Disconnect
-        </.button>
-        <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
-          Cancel
-        </.button>
-      </.modal_footer>
+        <%= if @repo_connection.sync_version do %>
+          <div class="mt-4">
+            <.input
+              type="checkbox"
+              id="remove-connection-preserve-files"
+              name="preserve_files"
+              value={false}
+              hidden_input={false}
+              label="Preserve project files"
+            />
+            <p class="ml-6 text-xs text-gray-500">
+              Select this option to leave a working copy of the project in your GitHub repo, including all workflows and state files created by the sync.
+            </p>
+          </div>
+        <% else %>
+          <p id="remove-connection-leftover-files" class="mt-2 text-sm text-gray-500">
+            This removes the deploy workflow and API secret from <code>{@repo_connection.repo}</code>. Any other files the sync committed to <code>{@repo_connection.branch}</code>, like the project and workflow files, stay in the repo. Delete them yourself if you no longer need them.
+          </p>
+        <% end %>
+        <.modal_footer>
+          <.button
+            id={"#{@id}_confirm_button"}
+            type="submit"
+            theme="danger"
+            phx-disable-with="Removing..."
+          >
+            Disconnect
+          </.button>
+          <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
+            Cancel
+          </.button>
+        </.modal_footer>
+      </form>
     </.modal>
     """
   end
@@ -1416,6 +1565,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   attr :myself, :any, required: true
   attr :changeset, Ecto.Changeset, required: true
   attr :project, :map, required: true
+  attr :workspace_check, AsyncResult, default: nil
 
   defp reconnect_modal(assigns) do
     ~H"""
@@ -1441,6 +1591,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         id="reconnect-project-form"
         as={:connection}
         for={@changeset}
+        phx-change="validate-reconnect"
         phx-submit="reconnect"
         phx-target={@myself}
       >
@@ -1448,6 +1599,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           <.sync_order_radio form={f} />
         </div>
         <.workspace_fields :if={sync_version?(f)} form={f} />
+        <.workspace_check
+          :if={@workspace_check && sync_version?(f)}
+          workspace_check={@workspace_check}
+          form={f}
+          project={@project}
+          myself={@myself}
+        />
         <div>
           <.accept_checkbox
             project={@project}
@@ -1466,6 +1624,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             type="submit"
             theme="primary"
             phx-disable-with="Connecting..."
+            disabled={
+              !@changeset.valid? || workspace_checking?(@workspace_check) ||
+                alias_clash?(@workspace_check, f, @project)
+            }
           >
             Reconnect
           </.button>

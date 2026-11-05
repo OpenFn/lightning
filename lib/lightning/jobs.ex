@@ -8,6 +8,7 @@ defmodule Lightning.Jobs do
   alias Ecto.Multi
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Scope
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -27,14 +28,20 @@ defmodule Lightning.Jobs do
     |> Enum.map(fn e -> e.target_job end)
   end
 
-  @spec jobs_for_project_query(Project.t()) :: Ecto.Queryable.t()
-  def jobs_for_project_query(%Project{} = project) do
-    Query.jobs_for(project)
+  @doc """
+  A page of the jobs of `project`, or of every project the caller may list.
+  """
+  @spec paginate_jobs_for(Project.t() | Scope.t(), keyword()) ::
+          Scrivener.Page.t()
+  def paginate_jobs_for(project_or_scope, page) do
+    project_or_scope
+    |> Query.jobs_for()
+    |> Repo.paginate(page)
   end
 
   @spec jobs_for_project(Project.t()) :: [Job.t()]
   def jobs_for_project(%Project{} = project) do
-    jobs_for_project_query(project) |> Repo.all()
+    Query.jobs_for(project) |> Repo.all()
   end
 
   @doc """
@@ -46,9 +53,7 @@ defmodule Lightning.Jobs do
   @spec job_in_project?(Ecto.UUID.t(), Project.t()) :: boolean()
   def job_in_project?(job_id, %Project{} = project) do
     match?({:ok, _}, Ecto.UUID.cast(job_id)) and
-      Repo.exists?(
-        from(j in jobs_for_project_query(project), where: j.id == ^job_id)
-      )
+      Repo.exists?(from(j in Query.jobs_for(project), where: j.id == ^job_id))
   end
 
   @doc """
@@ -149,6 +154,43 @@ defmodule Lightning.Jobs do
       nil -> {:error, :not_found}
       job -> {:ok, job}
     end
+  end
+
+  @doc """
+  Gets a job by id, scoped to a project.
+
+  Returns `{:error, :not_found}` when the id is malformed, or the job doesn't
+  exist or belongs to a workflow in another project. Takes the same `:include`
+  option as `get_job/2`.
+  """
+  @spec get_job_for_project(Ecto.UUID.t(), term(), keyword()) ::
+          {:ok, Job.t()} | {:error, :not_found}
+  def get_job_for_project(project_id, id, opts \\ []) do
+    if Lightning.Validators.valid_uuid?(id) do
+      from(j in Job,
+        join: w in assoc(j, :workflow),
+        where: j.id == ^id and w.project_id == ^project_id,
+        preload: ^Keyword.get(opts, :include, [])
+      )
+      |> Repo.fetch_one()
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
+  The id of the project the job `id` sits in, or `{:error, :not_found}` when
+  no job has that id.
+  """
+  @spec get_project_id(Ecto.UUID.t()) ::
+          {:ok, Ecto.UUID.t()} | {:error, :not_found}
+  def get_project_id(id) do
+    from(j in Job,
+      join: w in assoc(j, :workflow),
+      where: j.id == ^id,
+      select: w.project_id
+    )
+    |> Repo.fetch_one()
   end
 
   @doc """

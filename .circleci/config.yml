@@ -5,12 +5,14 @@ orbs:
 
 # Shared configuration
 defaults:
-  elixir_version: &elixir_version '1.18.4-otp-28'
-  nodejs_version: &nodejs_version '24.18.1'
+  elixir_version: &elixir_version '1.19.7-otp-28'
+  nodejs_version: &nodejs_version '24.22.1'
+  # The tag floats across OTP patch releases; the digest holds it at 28.5.0.8.
+  elixir_image: &elixir_image elixir:1.19.7-otp-28@sha256:125f91e280fabd725e815d3fa20f8051fc06a5cf7b128895e4f7bc1bbbd3d190
   docker_elixir: &docker_elixir
-    - image: elixir:1.18.4-otp-28
+    - image: *elixir_image
   docker_elixir_postgres: &docker_elixir_postgres
-    - image: elixir:1.18.4-otp-28
+    - image: *elixir_image
     - image: cimg/postgres:17.3
   environment: &environment
     ERL_FLAGS: +S 4:4

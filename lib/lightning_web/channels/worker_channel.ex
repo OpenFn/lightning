@@ -9,6 +9,7 @@ defmodule LightningWeb.WorkerChannel do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workers
 
+  alias LightningWeb.ChannelHelpers
   alias LightningWeb.Observability
   alias LightningWeb.WorkerPresence
 
@@ -63,7 +64,7 @@ defmodule LightningWeb.WorkerChannel do
         {:reply, {:ok, %{runs: runs}}, socket}
 
       {:error, changeset} ->
-        {:reply, {:error, LightningWeb.ChangesetJSON.errors(changeset)}, socket}
+        {:reply, {:error, ChannelHelpers.changeset_errors(changeset)}, socket}
     end
   end
 

@@ -30,12 +30,15 @@ environment.
 Lightning uses external worker processes for executing Runs. There are three
 settings required to configure worker authentication.
 
-- `WORKER_RUNS_PRIVATE_KEY`: base64 encoded RSA private key
+- `WORKER_RUNS_PRIVATE_KEY`: an RSA private key, as the PEM file's contents or
+  that file base64-encoded
 - `WORKER_LIGHTNING_PUBLIC_KEY`: base64 encoded RSA public key
 - `WORKER_SECRET`: 256bit long shared secret used by the worker to sign JWTs
 
 You can use the `mix lightning.gen_worker_keys` task to generate these for
-convenience.
+convenience. It prints each key as one line of base64 in double quotes, ready
+for a `.env` file. For other ways to set the private key, see
+[PEM keys in environment variables](#pem-keys-in-environment-variables).
 
 For more information see the [Workers](WORKERS.md) documentation.
 
@@ -43,6 +46,65 @@ For more information see the [Workers](WORKERS.md) documentation.
 
 Note that for secure deployments, it's recommended to use a combination of
 `secrets` and `configMaps` to generate secure environment variables.
+
+### PEM keys in environment variables
+
+Set the variable to the contents of the PEM file. If your tooling keeps one
+variable per line, base64-encode the file on one line instead.
+
+This applies to `SERVICE_ACCOUNT_PUBLIC_KEY`, `WORKER_RUNS_PRIVATE_KEY` and
+`GITHUB_CERT`. `WORKER_LIGHTNING_PUBLIC_KEY` is read by the worker, not
+Lightning, and stays one line of base64. Use `openssl base64 -A -in FILE`, which
+behaves the same on macOS and Linux.
+[Service accounts](SERVICE_ACCOUNTS.md#set-up-a-new-instance) step 2 has an
+example for Kubernetes, Docker, Docker Compose, a `.env` file and systemd.
+
+Keep the base64 on one line. A file that holds one variable per line, such as a
+`docker run --env-file` file or an unquoted value in a Compose `env_file:`,
+keeps only the first line of wrapped base64 and says nothing. Lightning then
+stops at boot because the key has a BEGIN line but no END line.
+
+In a `docker run --env-file` file, or a Compose `env_file:` with `format: raw`,
+don't put quotes around the value. They become part of it.
+
+A raw PEM in a file that holds one variable per line shows up as an error before
+Lightning starts:
+
+- If you see
+  `docker: --env-file: invalid env file (…): variable '-----END PUBLIC KEY-----' contains whitespaces`,
+  or from Compose
+  `failed to read …: line 3: unexpected character "/" in variable name …` or
+  `variable '-----END PUBLIC KEY-----' contains whitespaces`, the file holds a
+  multi-line PEM without quotes. In a plain Compose `env_file:`, put it in
+  double quotes. With `docker run --env-file` or `format: raw`, use one line of
+  base64.
+- If you see
+  `** (RuntimeError) Could not load .env: it is not a valid env file. The parser's own message is left out because it quotes the line it stopped at, which can be part of a secret. The usual cause is a value that runs over several lines without double quotes around it, such as a PEM key.`,
+  Lightning's own env file holds a multi-line PEM without quotes. Put it in
+  double quotes. The message names whichever of `.env`, `.<env>.env` or
+  `.<env>.override.env` failed. It doesn't show the line, because the line could
+  be part of a key, so look in that file for an unquoted value that spans
+  several lines.
+
+Lightning's own boot errors name the variable and say what to set.
+[Service accounts](SERVICE_ACCOUNTS.md#set-up-a-new-instance) lists them for
+`SERVICE_ACCOUNT_PUBLIC_KEY`. `WORKER_RUNS_PRIVATE_KEY` and `GITHUB_CERT` give
+the same messages for a value that isn't a PEM key, is quoted, is cut short, is
+damaged or holds more than one PEM block. Each names its own variable and key
+file. The other cases differ:
+
+- `WORKER_RUNS_PRIVATE_KEY` has its own messages for an empty or unset value, a
+  public key, a key that isn't RSA, and a PEM block that isn't a key. Set it to
+  the RSA private key. Its public key goes in the worker's
+  `WORKER_LIGHTNING_PUBLIC_KEY`. Each message ends with
+  `You can generate new worker keys using: mix lightning.gen_worker_keys`.
+- An empty `GITHUB_CERT` counts as unset. Lightning starts with GitHub sync off
+  and gives no message.
+
+If a message says the key
+`has a BEGIN line that names no key type Lightning reads`, the BEGIN line lost
+some of its dashes, or the key is in a format Lightning doesn't read, such as an
+OpenSSH key. Copy the PEM file again, or make the key with `openssl`.
 
 ### Limits
 
@@ -98,7 +160,7 @@ app:
 | `GITHUB_APP_NAME`          | the github app name. This is the name used in the public link. It is the downcased name with spaces replaced with hyphens |
 | `GITHUB_APP_CLIENT_ID`     | the github app Client ID                                                                                                  |
 | `GITHUB_APP_CLIENT_SECRET` | the github app Client Secret                                                                                              |
-| `GITHUB_CERT`              | the github app private key (Base 64 encoded)                                                                              |
+| `GITHUB_CERT`              | The GitHub App's private key, as the PEM file's contents or that file base64-encoded.                                     |
 
 You can access these from your github app settings menu. Also needed for the
 configuration is:
@@ -233,7 +295,7 @@ For SMTP, the following environment variables are required:
 | `QUEUE_RESULT_RETENTION_PERIOD_MINUTES`           | The number of minutes to keep completed (successful) `ObanJobs` in the queue (not to be confused with runs and/or history)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `SECRET_KEY_BASE`                                 | A secret key used as a base to generate secrets for encrypting and signing data.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `SENTRY_DSN`                                      | If using Sentry for error monitoring, your DSN                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `SERVICE_ACCOUNT_PUBLIC_KEY`                      | An RSA public key, as PEM encoded in unpadded base64, for a service account that configures this instance through its API. While it is set, first setup is turned off. Lightning will not start if the value is not an RSA public key of at least 2048 bits. See [Service accounts](SERVICE_ACCOUNTS.md).                                                                                                                                                                                                                                                                                                                                                                     |
+| `SERVICE_ACCOUNT_PUBLIC_KEY`                      | An RSA public key of at least 2048 bits, as the PEM file's contents or that file base64-encoded. It sets up a service account that configures this instance through its API. While it is set, first setup is turned off. Lightning will not start if the value is wrong. See [Service accounts](SERVICE_ACCOUNTS.md) and [PEM keys in environment variables](#pem-keys-in-environment-variables).                                                                                                                                                                                                                                                                             |
 | `URL_HOST`                                        | The host used for writing URLs (e.g., `demo.openfn.org`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `URL_PORT`                                        | The port, usually `443` for production                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `URL_SCHEME`                                      | The scheme for writing URLs (e.g., `https`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

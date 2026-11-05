@@ -269,6 +269,12 @@ defmodule LightningWeb.ChannelLive.FormComponent do
          |> put_flash(:info, "Channel updated successfully.")
          |> push_patch(to: ~p"/projects/#{socket.assigns.project}/channels")}
 
+      {:error, :concurrent_edit} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, save_error_message(:concurrent_edit))
+         |> push_patch(to: ~p"/projects/#{socket.assigns.project}/channels")}
+
       {:error, changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
     end

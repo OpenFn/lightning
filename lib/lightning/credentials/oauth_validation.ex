@@ -18,14 +18,6 @@ defmodule Lightning.Credentials.OauthValidation do
     that can occur during authentication flows, token validation, and scope verification.
     Each error includes a type for programmatic handling, a human-readable message,
     and optional details for additional context.
-
-    ## Examples
-
-        iex> Error.new(:missing_scopes, "Required scopes not granted")
-        %Error{type: :missing_scopes, message: "Required scopes not granted", details: nil}
-
-        iex> Error.new(:missing_refresh_token, "No refresh token", %{existing_token_available: true})
-        %Error{type: :missing_refresh_token, message: "No refresh token", details: %{existing_token_available: true}}
     """
 
     @type error_type ::
@@ -43,18 +35,21 @@ defmodule Lightning.Credentials.OauthValidation do
             | :missing_token_type
             | :unsupported_token_type
 
+    @typedoc """
+    `code` names the rule the token broke, and `field` the token key it is
+    about, or `nil` for the token as a whole. `message` never quotes a value
+    from the token, since it can reach a client as it is. Values a screen
+    needs go in `details`.
+    """
     @type t :: %__MODULE__{
             type: error_type(),
+            code: atom() | nil,
+            field: String.t() | nil,
             message: String.t(),
             details: map() | nil
           }
 
-    defstruct [:type, :message, :details]
-
-    @spec new(error_type(), String.t(), map() | nil) :: t()
-    def new(type, message, details \\ nil) do
-      %__MODULE__{type: type, message: message, details: details}
-    end
+    defstruct [:type, :code, :field, :message, :details]
   end
 
   @doc """
@@ -141,11 +136,12 @@ defmodule Lightning.Credentials.OauthValidation do
         check_scope_match(granted_scopes, expected_scopes)
 
       {:error, :no_scope_data} ->
-        {:error,
-         Error.new(
-           :invalid_oauth_response,
-           "OAuth token missing scope information"
-         )}
+        refuse(
+          :invalid_oauth_response,
+          "scope",
+          "OAuth token missing scope information",
+          code: :required
+        )
     end
   end
 
@@ -279,8 +275,26 @@ defmodule Lightning.Credentials.OauthValidation do
 
   defp convert_to_string(_), do: nil
 
+  # Callers name the code under the `code:` keyword, as changeset errors do,
+  # so searching lib for that keyword finds every code Lightning sets.
+  defp refuse(type, field, message, code: code),
+    do: refuse(type, field, message, code: code, details: nil)
+
+  defp refuse(type, field, message, code: code, details: details) do
+    {:error,
+     %Error{
+       type: type,
+       code: code,
+       field: field,
+       message: message,
+       details: details
+     }}
+  end
+
   defp validate_token_format(token_data) when not is_map(token_data) do
-    {:error, Error.new(:invalid_token_format, "OAuth token must be a valid map")}
+    refuse(:invalid_token_format, nil, "OAuth token must be a valid map",
+      code: :type
+    )
   end
 
   defp validate_token_format(_), do: :ok
@@ -292,27 +306,27 @@ defmodule Lightning.Credentials.OauthValidation do
 
   defp validate_access_token(%{"access_token" => token})
        when not is_binary(token) do
-    {:error,
-     Error.new(
-       :invalid_access_token,
-       "access_token must be a non-empty string, got: #{inspect(token)}"
-     )}
+    refuse(
+      :invalid_access_token,
+      "access_token",
+      "access_token must be a non-empty string",
+      code: :type
+    )
   end
 
   defp validate_access_token(%{"access_token" => ""}) do
-    {:error,
-     Error.new(
-       :invalid_access_token,
-       "access_token cannot be empty"
-     )}
+    refuse(:invalid_access_token, "access_token", "access_token cannot be empty",
+      code: :required
+    )
   end
 
   defp validate_access_token(_) do
-    {:error,
-     Error.new(
-       :missing_access_token,
-       "Missing required OAuth field: access_token"
-     )}
+    refuse(
+      :missing_access_token,
+      "access_token",
+      "Missing required OAuth field: access_token",
+      code: :required
+    )
   end
 
   defp validate_refresh_token(%{"refresh_token" => token})
@@ -322,54 +336,58 @@ defmodule Lightning.Credentials.OauthValidation do
 
   defp validate_refresh_token(%{"refresh_token" => token})
        when not is_binary(token) do
-    {:error,
-     Error.new(
-       :invalid_refresh_token,
-       "refresh_token must be a non-empty string, got: #{inspect(token)}"
-     )}
+    refuse(
+      :invalid_refresh_token,
+      "refresh_token",
+      "refresh_token must be a non-empty string",
+      code: :type
+    )
   end
 
   defp validate_refresh_token(%{"refresh_token" => ""}) do
-    {:error,
-     Error.new(
-       :invalid_refresh_token,
-       "refresh_token cannot be empty"
-     )}
+    refuse(
+      :invalid_refresh_token,
+      "refresh_token",
+      "refresh_token cannot be empty",
+      code: :required
+    )
   end
 
   defp validate_refresh_token(_) do
-    {:error,
-     Error.new(
-       :missing_refresh_token,
-       "Missing required OAuth field: refresh_token"
-     )}
+    refuse(
+      :missing_refresh_token,
+      "refresh_token",
+      "Missing required OAuth field: refresh_token",
+      code: :required
+    )
   end
 
   defp validate_token_type(%{"token_type" => "Bearer"}), do: :ok
   defp validate_token_type(%{"token_type" => "bearer"}), do: :ok
 
   defp validate_token_type(%{"token_type" => type}) when is_binary(type) do
-    {:error,
-     Error.new(
-       :unsupported_token_type,
-       "Unsupported token type: '#{type}'. Expected 'Bearer'"
-     )}
+    refuse(
+      :unsupported_token_type,
+      "token_type",
+      "Unsupported token type. Expected 'Bearer'",
+      code: :not_allowed,
+      details: %{token_type: type}
+    )
   end
 
-  defp validate_token_type(%{"token_type" => type}) do
-    {:error,
-     Error.new(
-       :invalid_token_format,
-       "token_type must be a string, got: #{inspect(type)}"
-     )}
+  defp validate_token_type(%{"token_type" => _type}) do
+    refuse(:invalid_token_format, "token_type", "token_type must be a string",
+      code: :type
+    )
   end
 
   defp validate_token_type(_) do
-    {:error,
-     Error.new(
-       :missing_token_type,
-       "Missing required OAuth field: token_type"
-     )}
+    refuse(
+      :missing_token_type,
+      "token_type",
+      "Missing required OAuth field: token_type",
+      code: :required
+    )
   end
 
   defp validate_scope_field(%{"scope" => scope})
@@ -381,52 +399,46 @@ defmodule Lightning.Credentials.OauthValidation do
     if Enum.all?(scopes, &is_binary/1) do
       :ok
     else
-      {:error,
-       Error.new(
-         :invalid_oauth_response,
-         "scopes array must contain only strings"
-       )}
+      refuse(
+        :invalid_oauth_response,
+        "scopes",
+        "scopes array must contain only strings",
+        code: :type
+      )
     end
   end
 
   defp validate_scope_field(%{"scope" => ""}) do
-    {:error,
-     Error.new(
-       :missing_scope,
-       "scope field cannot be empty"
-     )}
+    refuse(:missing_scope, "scope", "scope field cannot be empty",
+      code: :required
+    )
   end
 
   defp validate_scope_field(%{"scopes" => []}) do
-    {:error,
-     Error.new(
-       :missing_scope,
-       "scopes array cannot be empty"
-     )}
+    refuse(:missing_scope, "scopes", "scopes array cannot be empty",
+      code: :required
+    )
   end
 
   defp validate_scope_field(%{"scope" => scope}) when not is_binary(scope) do
-    {:error,
-     Error.new(
-       :invalid_oauth_response,
-       "scope must be a string, got: #{inspect(scope)}"
-     )}
+    refuse(:invalid_oauth_response, "scope", "scope must be a string",
+      code: :type
+    )
   end
 
   defp validate_scope_field(%{"scopes" => scopes}) when not is_list(scopes) do
-    {:error,
-     Error.new(
-       :invalid_oauth_response,
-       "scopes must be a list, got: #{inspect(scopes)}"
-     )}
+    refuse(:invalid_oauth_response, "scopes", "scopes must be a list",
+      code: :type
+    )
   end
 
   defp validate_scope_field(_) do
-    {:error,
-     Error.new(
-       :missing_scope,
-       "Missing required OAuth field: scope or scopes"
-     )}
+    refuse(
+      :missing_scope,
+      "scope",
+      "Missing required OAuth field: scope or scopes",
+      code: :required
+    )
   end
 
   defp validate_expiration(%{"expires_in" => expires_in}) do
@@ -438,28 +450,31 @@ defmodule Lightning.Credentials.OauthValidation do
   end
 
   defp validate_expiration(_) do
-    {:error,
-     Error.new(
-       :missing_expiration,
-       "Missing expiration field: either expires_in or expires_at is required"
-     )}
+    refuse(
+      :missing_expiration,
+      "expires_in",
+      "Missing expiration field: either expires_in or expires_at is required",
+      code: :required
+    )
   end
 
   defp validate_expires_in(expires_in) when is_integer(expires_in) do
     cond do
       expires_in <= 0 ->
-        {:error,
-         Error.new(
-           :invalid_expiration,
-           "expires_in must be greater than 0 seconds, got: #{expires_in}"
-         )}
+        refuse(
+          :invalid_expiration,
+          "expires_in",
+          "expires_in must be greater than 0 seconds",
+          code: :out_of_range
+        )
 
       expires_in > 365 * 24 * 3600 ->
-        {:error,
-         Error.new(
-           :invalid_expiration,
-           "expires_in seems unreasonably long (#{expires_in} seconds = #{div(expires_in, 3600)} hours)"
-         )}
+        refuse(
+          :invalid_expiration,
+          "expires_in",
+          "expires_in seems unreasonably long",
+          code: :out_of_range
+        )
 
       true ->
         :ok
@@ -472,20 +487,22 @@ defmodule Lightning.Credentials.OauthValidation do
         validate_expires_in(int_value)
 
       _ ->
-        {:error,
-         Error.new(
-           :invalid_expiration,
-           "expires_in string must represent a valid positive integer, got: #{expires_in}"
-         )}
+        refuse(
+          :invalid_expiration,
+          "expires_in",
+          "expires_in string must represent a valid positive integer",
+          code: :type
+        )
     end
   end
 
-  defp validate_expires_in(expires_in) do
-    {:error,
-     Error.new(
-       :invalid_expiration,
-       "expires_in must be a positive integer (seconds), got: #{inspect(expires_in)}"
-     )}
+  defp validate_expires_in(_expires_in) do
+    refuse(
+      :invalid_expiration,
+      "expires_in",
+      "expires_in must be a positive integer (seconds)",
+      code: :type
+    )
   end
 
   defp validate_expires_at(expires_at) when is_integer(expires_at) do
@@ -495,18 +512,20 @@ defmodule Lightning.Credentials.OauthValidation do
 
     cond do
       expires_at < min_valid_time ->
-        {:error,
-         Error.new(
-           :invalid_expiration,
-           "expires_at timestamp appears to be too far in the past (possible clock skew)"
-         )}
+        refuse(
+          :invalid_expiration,
+          "expires_at",
+          "expires_at timestamp appears to be too far in the past (possible clock skew)",
+          code: :out_of_range
+        )
 
       expires_at > max_valid_time ->
-        {:error,
-         Error.new(
-           :invalid_expiration,
-           "expires_at timestamp appears to be too far in the future"
-         )}
+        refuse(
+          :invalid_expiration,
+          "expires_at",
+          "expires_at timestamp appears to be too far in the future",
+          code: :out_of_range
+        )
 
       true ->
         :ok
@@ -515,39 +534,32 @@ defmodule Lightning.Credentials.OauthValidation do
 
   defp validate_expires_at(expires_at)
        when is_binary(expires_at) and byte_size(expires_at) > 0 do
-    cond do
-      Regex.match?(~r/^\d+$/, expires_at) ->
-        case Integer.parse(expires_at) do
-          {timestamp, ""} ->
-            validate_expires_at(timestamp)
+    case Integer.parse(expires_at) do
+      {timestamp, ""} ->
+        validate_expires_at(timestamp)
 
-          _ ->
-            {:error,
-             Error.new(
-               :invalid_expiration,
-               "expires_at string must be a valid integer timestamp"
-             )}
+      _not_a_timestamp ->
+        if String.contains?(expires_at, ["T", "Z"]) or
+             String.match?(expires_at, ~r/\d{4}-\d{2}-\d{2}/) do
+          :ok
+        else
+          refuse(
+            :invalid_expiration,
+            "expires_at",
+            "expires_at must be a Unix timestamp or ISO 8601 date string",
+            code: :format
+          )
         end
-
-      String.contains?(expires_at, ["T", "Z"]) or
-          String.match?(expires_at, ~r/\d{4}-\d{2}-\d{2}/) ->
-        :ok
-
-      true ->
-        {:error,
-         Error.new(
-           :invalid_expiration,
-           "expires_at must be a Unix timestamp or ISO 8601 date string, got: #{expires_at}"
-         )}
     end
   end
 
-  defp validate_expires_at(expires_at) do
-    {:error,
-     Error.new(
-       :invalid_expiration,
-       "expires_at must be an integer timestamp or date string, got: #{inspect(expires_at)}"
-     )}
+  defp validate_expires_at(_expires_at) do
+    refuse(
+      :invalid_expiration,
+      "expires_at",
+      "expires_at must be an integer timestamp or date string",
+      code: :type
+    )
   end
 
   defp extract_granted_scopes(token_data) do
@@ -572,18 +584,19 @@ defmodule Lightning.Credentials.OauthValidation do
           String.downcase(scope) in missing_normalized
         end)
 
-      scope_list = Enum.join(missing_original, ", ")
-
-      message =
-        "Missing required scopes: #{scope_list}. Please reauthorize and grant all selected permissions."
-
       details = %{
         expected_scopes: expected_scopes,
         granted_scopes: granted_scopes,
         missing_scopes: missing_original
       }
 
-      {:error, Error.new(:missing_scopes, message, details)}
+      refuse(
+        :missing_scopes,
+        "scope",
+        "Missing required scopes. Please reauthorize and grant all selected permissions.",
+        code: :scope_not_granted,
+        details: details
+      )
     end
   end
 

@@ -59,6 +59,12 @@ defmodule Lightning.VersionControl.GithubClient do
     |> handle_resp([200])
   end
 
+  def get_blob(client, repo, sha) do
+    client
+    |> Tesla.get("/repos/#{repo}/git/blobs/#{sha}")
+    |> handle_resp([200])
+  end
+
   def delete_repo_content(client, repo, path, body) do
     client
     |> Tesla.delete("/repos/#{repo}/contents/#{path}", body: body)
@@ -71,6 +77,12 @@ defmodule Lightning.VersionControl.GithubClient do
 
   def create_tree(client, repo, body) do
     client |> Tesla.post("/repos/#{repo}/git/trees", body) |> handle_resp([201])
+  end
+
+  def get_tree(client, repo, sha) do
+    client
+    |> Tesla.get("/repos/#{repo}/git/trees/#{sha}", query: [recursive: 1])
+    |> handle_resp([200])
   end
 
   def get_commit(client, repo, ref) do

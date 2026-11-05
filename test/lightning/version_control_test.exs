@@ -443,6 +443,95 @@ defmodule Lightning.VersionControlTest do
                VersionControl.remove_github_connection(repo_connection, user)
     end
 
+    test "with delete_files, removes this project's v2 files in one commit" do
+      project = insert(:project)
+      user = user_with_valid_github_oauth()
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          sync_version: true
+        )
+
+      stub_workspace_removal(project.id,
+        checkout: project.id,
+        projects: %{
+          "demo@localhost.yaml" => project.id,
+          "old@localhost.yaml" => project.id,
+          "main@localhost.yaml" => Ecto.UUID.generate(),
+          # another Lightning's copy of the same project
+          "main@app.openfn.org.yaml" => project.id
+        },
+        files: [
+          "openfn.yaml",
+          "src/wf-1/workflow.yaml",
+          "src/wf-1/job.js",
+          "elsewhere/job.js"
+        ],
+        openfn_yaml: "dirs:\n  workflows: src\n  projects: .projects\n"
+      )
+
+      assert {:ok, _connection} =
+               VersionControl.remove_github_connection(repo_connection, user,
+                 delete_files: true
+               )
+
+      assert_received {:tree, %{"base_tree" => "basetree", "tree" => tree}}
+
+      assert Enum.all?(tree, &is_nil(&1["sha"]))
+
+      assert tree |> Enum.map(fn entry -> entry["path"] end) |> Enum.sort() ==
+               Enum.sort([
+                 ".github/workflows/openfn-#{project.id}-deploy.yml",
+                 ".projects/demo@localhost.yaml",
+                 ".projects/old@localhost.yaml",
+                 ".openfn/branches/somebranch/checkout.yaml",
+                 "src/wf-1/job.js",
+                 "src/wf-1/workflow.yaml"
+               ])
+
+      assert_received {:commit,
+                       %{"message" => "[skip actions] Disconnect OpenFn"}}
+
+      assert_received :ref_updated
+      assert_received :secret_deleted
+    end
+
+    test "with delete_files, leaves the checkout of another project alone" do
+      project = insert(:project)
+      user = user_with_valid_github_oauth()
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          sync_version: true
+        )
+
+      stub_workspace_removal(project.id,
+        checkout: Ecto.UUID.generate(),
+        projects: %{"old@localhost.yaml" => project.id},
+        files: ["openfn.yaml", "workflows/wf-1/workflow.yaml"]
+      )
+
+      assert {:ok, _connection} =
+               VersionControl.remove_github_connection(repo_connection, user,
+                 delete_files: true
+               )
+
+      assert_received {:tree, %{"tree" => tree}}
+
+      assert tree |> Enum.map(fn entry -> entry["path"] end) |> Enum.sort() == [
+               ".github/workflows/openfn-#{project.id}-deploy.yml",
+               ".projects/old@localhost.yaml"
+             ]
+    end
+
     test "audits the removal of the repo connection" do
       %{id: project_id} = project = insert(:project)
       %{id: user_id} = user = user_with_valid_github_oauth()
@@ -736,16 +825,16 @@ defmodule Lightning.VersionControlTest do
       expect_get_repo_content(repo_connection.repo, ".projects", 200, [
         %{
           "name" => "main@app.openfn.org.yaml",
-          "path" => ".projects/main@app.openfn.org.yaml"
+          "path" => ".projects/main@app.openfn.org.yaml",
+          "sha" => "mainsha"
         },
         %{"name" => "README.md", "path" => ".projects/README.md"}
       ])
 
-      expect_get_repo_content(
+      expect_get_blob(
         repo_connection.repo,
-        ".projects/main@app.openfn.org.yaml",
-        200,
-        %{"content" => Base.encode64("openfn:\n  uuid: #{project_id}\n")}
+        "mainsha",
+        "openfn:\n  uuid: #{project_id}\n"
       )
 
       # openfn-pull.yml is shared: skip another project's run
@@ -1815,5 +1904,82 @@ defmodule Lightning.VersionControlTest do
     insert(:user)
     |> set_valid_github_oauth_token!()
     |> Lightning.Repo.reload!()
+  end
+
+  # Stubs GitHub for removing a v2 connection on someaccount/somerepo@somebranch
+  # with delete_files. The branch holds the deploy yml, `projects` (file name
+  # => uuid) under .projects, a checkout of `checkout` and `files`. Sends the
+  # tree, commit, ref update and secret deletion to the test.
+  defp stub_workspace_removal(project_id, opts) do
+    test = self()
+    repo_url = "https://api.github.com/repos/someaccount/somerepo"
+    contents = repo_url <> "/contents/"
+    checkout = ".openfn/branches/somebranch/checkout.yaml"
+    projects = opts[:projects]
+    ok = fn body -> {:ok, %Tesla.Env{status: 200, body: body}} end
+
+    blobs =
+      [".github/workflows/openfn-#{project_id}-deploy.yml", checkout] ++
+        Enum.map(Map.keys(projects), fn name -> ".projects/" <> name end) ++
+        opts[:files]
+
+    stub(Lightning.Tesla.Mock, :call, fn
+      %{method: :get, url: ^repo_url <> "/commits/heads/somebranch"}, _opts ->
+        ok.(%{
+          "sha" => "basesha",
+          "commit" => %{"tree" => %{"sha" => "basetree"}}
+        })
+
+      %{method: :get, url: ^repo_url <> "/git/trees/basetree"}, _opts ->
+        ok.(%{
+          "truncated" => false,
+          "tree" =>
+            Enum.map(blobs, fn path ->
+              %{"path" => path, "type" => "blob", "sha" => path}
+            end) ++
+              [%{"path" => ".projects", "type" => "tree", "sha" => "dir"}]
+        })
+
+      %{url: ^contents <> ^checkout}, _opts ->
+        ok.(%{"content" => Base.encode64("uuid: #{opts[:checkout]}\n")})
+
+      %{url: ^contents <> "openfn.yaml"}, _opts ->
+        if yaml = opts[:openfn_yaml],
+          do: ok.(%{"content" => Base.encode64(yaml)}),
+          else:
+            ok.(%{"content" => Base.encode64("dirs:\n  projects: .projects\n")})
+
+      %{url: ^contents <> ".projects"}, _opts ->
+        ok.(
+          Enum.map(
+            Map.keys(projects),
+            fn name ->
+              %{"name" => name, "path" => ".projects/" <> name, "sha" => name}
+            end
+          )
+        )
+
+      %{url: ^repo_url <> "/git/blobs/" <> name}, _opts ->
+        ok.(%{
+          "content" => Base.encode64("openfn:\n  uuid: #{projects[name]}\n")
+        })
+
+      %{method: :post, url: ^repo_url <> "/git/trees", body: body}, _opts ->
+        send(test, {:tree, Jason.decode!(body)})
+        {:ok, %Tesla.Env{status: 201, body: %{"sha" => "newtree"}}}
+
+      %{method: :post, url: ^repo_url <> "/git/commits", body: body}, _opts ->
+        send(test, {:commit, Jason.decode!(body)})
+        {:ok, %Tesla.Env{status: 201, body: %{"sha" => "newcommit"}}}
+
+      %{method: :post, url: ^repo_url <> "/git/refs/heads/somebranch"}, _opts ->
+        send(test, :ref_updated)
+        ok.(%{})
+
+      %{method: :delete, url: ^repo_url <> "/actions/secrets/" <> _name},
+      _opts ->
+        send(test, :secret_deleted)
+        {:ok, %Tesla.Env{status: 204, body: ""}}
+    end)
   end
 end

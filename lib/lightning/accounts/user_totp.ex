@@ -38,7 +38,7 @@ defmodule Lightning.Accounts.UserTOTP do
     if changeset.valid? and valid_totp?(totp, code) do
       changeset
     else
-      add_error(changeset, :code, "invalid code")
+      add_error(changeset, :code, "invalid code", code: :mismatch)
     end
   end
 

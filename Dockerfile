@@ -10,12 +10,11 @@
 #   - https://hub.docker.com/r/hexpm/elixir/tags - for the build image
 #   - https://hub.docker.com/_/debian?tab=tags&page=1&name=bullseye-20210902-slim - for the release image
 #   - https://pkgs.org/ - resource for finding needed packages
-#   - Ex: hexpm/elixir:1.16.2-erlang-26.2.5-debian-bookworm-20240513
 #
-ARG ELIXIR_VERSION=1.18.4
-ARG OTP_VERSION=28.5
-ARG DEBIAN_VERSION=bookworm-20260421
-ARG NODE_VERSION=24.18.1
+ARG ELIXIR_VERSION=1.19.7
+ARG OTP_VERSION=28.5.0.8
+ARG DEBIAN_VERSION=bookworm-20261027
+ARG NODE_VERSION=24.22.1
 ARG ERL_FLAGS
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
@@ -86,12 +85,26 @@ ARG ERL_FLAGS
 ARG BRANCH=""
 ARG COMMIT=""
 ARG IMAGE_TAG=""
+# Release builds pass the git tag, such as v2.19.2, as IMAGE_TAG, and the
+# version without the `v`, such as 2.19.2, as VERSION. Images are tagged with
+# VERSION, and it's recorded in the standard OCI version label.
+ARG VERSION=""
 LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
+LABEL org.opencontainers.image.version=${VERSION}
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
   libstdc++6 openssl libncurses5 locales ca-certificates \
   curl libsodium-dev
+
+# Mozilla distrusted emSign C1 and C3 (eMudhra intermediates with weak keys).
+# This fails once Debian's ca-certificates drops them, so the step can go.
+RUN for cert in emSign_Root_CA_-_C1 emSign_ECC_Root_CA_-_C3; do \
+      grep -qx "mozilla/${cert}.crt" /etc/ca-certificates.conf \
+        || { echo "${cert} is no longer shipped; remove this step" >&2; exit 1; }; \
+      sed -i "s|^mozilla/${cert}.crt\$|!mozilla/${cert}.crt|" /etc/ca-certificates.conf; \
+    done \
+  && update-ca-certificates --fresh
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 

@@ -15,17 +15,149 @@ and this project adheres to
 
 ## [Unreleased]
 
+> **Breaking changes to the API.** Every API error now comes back in one new
+> format, some refusals/errors have changed status. Anything that calls the API
+> directly needs checking before you upgrade, including scripts that use a
+> personal access token. Jobs using the collections adaptor are affected too:
+> writing an item that's too big, or has no value, now fails instead of quietly
+> succeeding. [API.md](API.md) describes the error format, every code and each
+> route.
+
+> **Breaking for self-hosters: TLS certificates need a subjectAltName.**
+> Lightning now runs on Erlang/OTP 28.5.0.8, which no longer falls back to a
+> certificate's Common Name (CN) when checking the hostname. A server whose
+> certificate names its host only in the CN, with no subjectAltName (SAN), fails
+> to connect when verification is on. Most likely that is your database, since
+> Postgres connections are verified unless `DISABLE_DB_SSL_CERT_VERIFY=true`.
+> OAuth client endpoints and channel destinations are checked the same way.
+> Before you upgrade, look at the database's certificate:
+>
+> ```sh
+> openssl s_client -connect HOST:5432 -starttls postgres </dev/null \
+>   | openssl x509 -noout -ext subjectAltName
+> ```
+>
+> If the output doesn't list the hostname from `DATABASE_URL`, reissue the
+> certificate with that hostname as a SAN.
+> [#5274](https://github.com/OpenFn/lightning/pull/5274)
+
 ### Added
 
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
   metrics are enabled, where they're sent, and the instance UUID and its hash.
   [#5262](https://github.com/OpenFn/lightning/issues/5262)
+- `GET` and `PUT` by id for projects, credentials and collections. A `PUT`
+  creates the record at the id you choose or replaces it, so sending the same
+  requests again sets up the same instance. The service account can use them,
+  and run history, through three new grants: `projects:write`,
+  `credentials:write` and `collections:write`. For now, reading needs the write
+  grant. [API.md](API.md) lists every route and the grant it needs, and
+  [SERVICE_ACCOUNTS.md](SERVICE_ACCOUNTS.md) walks through setting up the
+  service account and using it to create the first superuser and project on a
+  new instance. [#5272](https://github.com/OpenFn/lightning/pull/5272)
 
 ### Changed
 
 - The web app's interactive pages now run on React 19, up from React 18. They
   look and behave the same.
   [#5256](https://github.com/OpenFn/lightning/pull/5256)
+- **Breaking:** API errors are
+  [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem documents with a
+  stable `code`, on `/api` (except `/api/oauth/token`), `/collections`,
+  `/adaptors/catalogue`, webhooks and the channel proxy. Some statuses change
+  with it. A caller without access gets 403 whether or not the record exists,
+  401 means only a failed login, a value already in use is a 422, and plan
+  limits are 402 (webhooks keep 429). `PUT /collections/:name/:key` with a value
+  Lightning can't store answers 422, where it answered 200 `{"upserted": 0}`.
+  [API.md](API.md#errors) has every code and status.
+  [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- **Breaking:** `/api/users` refuses a personal access token with 403. The
+  service account must send `project_id` on `GET /api/runs`, `/api/work_orders`
+  and `/api/log_lines`. Both credential lists page like the other lists, 10 by
+  default, so a client that read the whole list must follow `links.next`.
+  `POST /api/provision` reads the project id from the body only.
+  [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- `SERVICE_ACCOUNT_PUBLIC_KEY`, `WORKER_RUNS_PRIVATE_KEY` and `GITHUB_CERT` take
+  raw PEM, PEM with literal `\n`, or base64, and a bad value now stops the boot
+  naming the variable instead of failing later. That includes a placeholder
+  `GITHUB_CERT` such as `changeme`, or one that holds the certificate as well as
+  the key; set it to the GitHub App's private key alone. An empty `GITHUB_CERT`
+  counts as unset. An env file Dotenvy can't parse stops the boot without
+  printing the line. [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Versions are shown without a leading `v` (`2.21.0`, not `v2.21.0`) in the
+  sidebar version chip, to match how images are now tagged. Images carry their
+  version in the standard `org.opencontainers.image.version` label. Usage
+  tracking reports the version without the `v` too, and counts an image tag with
+  or without it as a match.
+- New GitHub Sync workflows are named in the repo's Actions tab: "Pull from
+  OpenFn" and "Deploy to OpenFn (project id)".
+  [#5275](https://github.com/OpenFn/lightning/pull/5275)
+
+### Fixed
+
+- A form that loses a save race with another user, or saves a record someone
+  else deleted, shows a message instead of crashing.
+  [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- URLs with a port above 65535 are now rejected on save, for OAuth client
+  endpoints and channel destinations. On Elixir 1.19.7 such a URL would
+  otherwise be sent to the scheme's default port.
+  [#5274](https://github.com/OpenFn/lightning/pull/5274)
+
+### Security
+
+- Elixir moves from 1.18.4 to 1.19.7, picking up the 1.18.5 and 1.18.6 security
+  fixes (`URI.parse` port limits, decoding of oversized JSON integers and
+  `List.to_string/1`). The 1.18 line no longer ships an OTP 28 build upstream,
+  so staying on 1.18 would have meant downgrading to OTP 27. OTP moves from 28.5
+  to 28.5.0.8 and the Debian base snapshot from bookworm-20260421 to
+  bookworm-20261027, both still Debian 12. `.tool-versions` names the exact OTP
+  patch too, so local builds need Erlang 28.5.0.8.
+  [#5274](https://github.com/OpenFn/lightning/pull/5274)
+- The Docker image no longer trusts the emSign Root CA C1 and ECC Root CA C3
+  certificates, which Mozilla removed after eMudhra issued intermediates with
+  weak keys. Lightning trusts the OS certificate store for most outbound HTTPS,
+  Postgres and SMTP, so if you build your own image or run outside Docker,
+  update `ca-certificates` or distrust these two roots yourself.
+  [#5266](https://github.com/OpenFn/lightning/pull/5266)
+- The Docker image's Node.js moves from 24.18.1 to 24.22.1, so Node's own
+  bundled certificate list no longer trusts the emSign C1 and ECC C3 roots
+  either.
+- Ecto moves from 3.13.2 to 3.14.3, which fixes CVE-2026-118391: some queries
+  could grow Ecto's query cache without limit. Lightning doesn't use the
+  affected query forms, so this clears the advisory rather than a live issue.
+
+## [2.20.1] - 2026-11-04
+
+### Added
+
+- Removing a GitHub sync (v2) integration also removes the project's sync files
+  from the branch, in one commit, unless "Preserve project files" is ticked.
+  `openfn.yaml` and other projects' files stay.
+
+### Changed
+
+- The GitHub sync "Reconnect" dialog checks the workspace the same way Connect
+  does, and its button stays disabled until the box is ticked and the check has
+  finished.
+
+### Fixed
+
+- GitHub sync allowed a project to be saved in the workspace under a second
+  alias, for example after disconnecting and reconnecting with a different
+  alias. The CLI then couldn't tell which copy to pull and every sync failed.
+  Connect and Reconnect now block this, and the status page warns when a
+  workspace already holds two copies.
+
+## [2.20.0] - 2026-10-30
+
+## [2.20.0-pre1] - 2026-10-29
+
+### Changed
+
+- The GitHub sync "Last sync" and "Last deploy" statuses only show runs from
+  after the repo was connected.
+- The GitHub sync "Remove integration" dialog says which files stay in the repo,
+  so users know to delete them themselves.
 - Bump hackney to 4.9.1, jose to 1.11.13 and tidewave to 0.9.2 for security
   fixes, and move tzdata back to a Hex release
 - The AI assistant always reads the selected run's logs and data unless you
@@ -34,6 +166,11 @@ and this project adheres to
   [#5271](https://github.com/OpenFn/lightning/pull/5271)
 
 ### Fixed
+
+- GitHub sync wrongly blocked connecting a branch, saying another project was
+  saved under the same alias, when the project's own copy in `.projects/` was
+  over 1 MB. A copy whose uuid can't be read now shows a warning but no longer
+  disables Connect.
 
 ## [2.20.0-pre] - 2026-10-23
 

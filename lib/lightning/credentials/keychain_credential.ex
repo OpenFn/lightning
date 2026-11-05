@@ -63,7 +63,7 @@ defmodule Lightning.Credentials.KeychainCredential do
     validate_change(changeset, field, fn ^field, path ->
       case validate_jsonpath_syntax(path) do
         :ok -> []
-        {:error, message} -> [{field, message}]
+        {:error, message} -> [{field, {message, code: :format}}]
       end
     end)
   end
@@ -107,7 +107,8 @@ defmodule Lightning.Credentials.KeychainCredential do
         add_error(
           changeset,
           :default_credential_id,
-          "cannot be checked without knowing the project"
+          "cannot be checked without knowing the project",
+          code: :required
         )
 
       shared_with_project?(project_id, default_credential_id) ->
@@ -117,7 +118,8 @@ defmodule Lightning.Credentials.KeychainCredential do
         add_error(
           changeset,
           :default_credential_id,
-          "must belong to the same project"
+          "must belong to the same project",
+          code: :not_found
         )
     end
   end

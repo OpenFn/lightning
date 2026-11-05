@@ -308,7 +308,7 @@ defmodule Lightning.Runs.Handlers do
         |> fetch_existing_job(job_id)
         |> Enum.reduce(changeset, fn {k, v}, changeset ->
           if is_nil(v) do
-            add_error(changeset, k, "does not exist")
+            add_error(changeset, k, "does not exist", code: :not_found)
           else
             changeset
           end
@@ -370,7 +370,9 @@ defmodule Lightning.Runs.Handlers do
           changeset
 
         true ->
-          add_error(changeset, :input_dataclip_id, "does not exist")
+          add_error(changeset, :input_dataclip_id, "does not exist",
+            code: :not_found
+          )
       end
     end
 
@@ -391,7 +393,9 @@ defmodule Lightning.Runs.Handlers do
           changeset
 
         true ->
-          add_error(changeset, :credential_id, "does not exist")
+          add_error(changeset, :credential_id, "does not exist",
+            code: :not_found
+          )
       end
     end
   end
@@ -486,7 +490,7 @@ defmodule Lightning.Runs.Handlers do
             {:error,
              complete_step
              |> change()
-             |> add_error(:step_id, "not found")}
+             |> add_error(:step_id, "not found", code: :not_found)}
 
           error ->
             error
