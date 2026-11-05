@@ -26,13 +26,19 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
 
-  # Comfortably above Apollo's own 250,000-character attachment limit, so a
-  # payload that would have been accepted is never shortened here.
-  @logs_byte_budget 300_000
+  # Logs and I/O together stay under Apollo's 250,000-character attachment
+  # limit, past which the whole turn is refused.
+  @logs_char_budget 120_000
+
+  # The ids and level ride along with every line, indented as Apollo renders
+  # them, so a run of short messages costs far more than its text suggests.
   @logs_line_overhead 150
 
-  # On the scrubbed output, and the step that crosses it is read whole.
-  @io_byte_budget 100_000
+  # So one console.log of a whole state can't crowd out the lines before it.
+  @log_line_max 8_000
+
+  # On the scrubbed output as Apollo renders it, indented.
+  @io_char_budget 100_000
 
   # Past this a body is described rather than read.
   @io_dataclip_byte_cap 1_000_000
@@ -40,6 +46,7 @@ defmodule Lightning.Invocation do
   @io_erased "[erased by this project's retention policy]"
   @io_too_large "[too large to summarise]"
   @io_over_budget "[not read, the run's data ran past what can be sent]"
+  @log_line_cut " [rest of this line cut, it ran past what can be sent]"
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
@@ -1104,11 +1111,15 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Return every log line for a run in `project_id`, oldest first, as maps.
+  Return the log lines for a run in `project_id`, oldest first, as maps.
 
   Unlike the `assemble_logs_*` functions this keeps the columns needed to tell
   the lines apart: `job_id` for attribution, `level`, and `step_id` to separate
   retries. Run-level lines have no step, so both ids are nil for them.
+
+  A long log keeps its tail, where a failure usually is. What was left out is
+  said in a first line with nil ids and level, because a reader that is told
+  nothing takes the tail for the whole log.
   """
   @spec logs_for_run(Ecto.UUID.t(), Ecto.UUID.t()) :: [map()]
   def logs_for_run(_run_id, nil), do: []
@@ -1128,7 +1139,7 @@ defmodule Lightning.Invocation do
         join: w in assoc(wo, :workflow),
         left_join: s in assoc(l, :step),
         where: l.run_id == ^run_id and w.project_id == ^project_id,
-        order_by: [asc: l.timestamp],
+        order_by: [desc: l.timestamp],
         select: %{
           step_id: l.step_id,
           job_id: s.job_id,
@@ -1137,28 +1148,88 @@ defmodule Lightning.Invocation do
         }
       )
 
-    {:ok, lines} =
+    # Read newest first and prepended, so the kept lines come out oldest first.
+    {:ok, result} =
       Repo.transaction(fn ->
         query
         |> Repo.stream()
         |> Enum.reduce_while({[], 0}, &take_until_over_budget/2)
-        |> then(fn {lines, _size} -> Enum.reverse(lines) end)
       end)
 
-    lines
+    case result do
+      {lines, :cut} -> with_omitted_line(lines, run_id)
+      {lines, _size} -> lines
+    end
   end
 
   # A job that logs per record produces hundreds of thousands of rows.
   defp take_until_over_budget(line, {lines, size}) do
-    # The ids and level ride along with every line, so a run of short messages
-    # costs far more on the wire than its text suggests.
-    size = size + byte_size(line.message || "") + @logs_line_overhead
-    lines = [line | lines]
+    line = cap_line(line)
+    line_size = escaped_size(line.message || "") + @logs_line_overhead
 
-    if size > @logs_byte_budget do
-      {:halt, {lines, size}}
+    if size + line_size <= @logs_char_budget do
+      {:cont, {[line | lines], size + line_size}}
     else
-      {:cont, {lines, size}}
+      {:halt, {cut_line(line, @logs_char_budget - size, lines), :cut}}
+    end
+  end
+
+  defp cap_line(%{message: message} = line) when is_binary(message) do
+    if escaped_size(message) > @log_line_max do
+      %{
+        line
+        | message: take_escaped(message, @log_line_max, []) <> @log_line_cut
+      }
+    else
+      line
+    end
+  end
+
+  defp cap_line(line), do: line
+
+  # The line that crosses the budget keeps as much of its start as fits.
+  defp cut_line(line, room, lines) do
+    case room - @logs_line_overhead - byte_size(@log_line_cut) do
+      left when left > 0 ->
+        start = take_escaped(line.message || "", left, [])
+        [%{line | message: start <> @log_line_cut} | lines]
+
+      _ ->
+        lines
+    end
+  end
+
+  defp take_escaped(message, room, kept) do
+    with {grapheme, rest} <- String.next_grapheme(message),
+         size when size <= room <- escaped_size(grapheme) do
+      take_escaped(rest, room - size, [kept, grapheme])
+    else
+      _ -> IO.iodata_to_binary(kept)
+    end
+  end
+
+  # Apollo escapes non-ASCII as \uXXXX, which can double the size of non-Latin
+  # text, and counts the characters of that.
+  defp escaped_size(text) do
+    byte_size(Jason.encode!(text, escape: :unicode_safe)) - 2
+  end
+
+  defp with_omitted_line(lines, run_id) do
+    total =
+      from(l in LogLine, where: l.run_id == ^run_id, select: count())
+      |> Repo.one()
+
+    case total - length(lines) do
+      0 ->
+        lines
+
+      omitted ->
+        noun = if omitted == 1, do: "line", else: "lines"
+
+        message =
+          "[first #{omitted} #{noun} omitted, the log ran past what can be sent]"
+
+        [%{step_id: nil, job_id: nil, level: nil, message: message} | lines]
     end
   end
 
@@ -1213,16 +1284,9 @@ defmodule Lightning.Invocation do
     |> Repo.all()
   end
 
-  # Past the budget a step still appears, saying why it was not read.
-  defp take_io_within_budget(step, size) when size > @io_byte_budget do
-    entry = %{
-      step_name: step.step_name,
-      input: over_budget(step.input_dataclip_id),
-      output: over_budget(step.output_dataclip_id)
-    }
-
-    {entry, size + io_entry_size(entry)}
-  end
+  # Like the log, the data stops at the first step that doesn't fit, and the
+  # steps from there on still appear, saying why they were not read.
+  defp take_io_within_budget(step, :full), do: {over_budget_entry(step), :full}
 
   defp take_io_within_budget(step, size) do
     entry = %{
@@ -1231,7 +1295,21 @@ defmodule Lightning.Invocation do
       output: scrubbed_body(step.output_dataclip_id)
     }
 
-    {entry, size + io_entry_size(entry)}
+    entry_size = io_entry_size(entry)
+
+    if size + entry_size <= @io_char_budget do
+      {entry, size + entry_size}
+    else
+      {over_budget_entry(step), :full}
+    end
+  end
+
+  defp over_budget_entry(step) do
+    %{
+      step_name: step.step_name,
+      input: over_budget(step.input_dataclip_id),
+      output: over_budget(step.output_dataclip_id)
+    }
   end
 
   defp scrubbed_body(nil), do: nil
@@ -1280,7 +1358,9 @@ defmodule Lightning.Invocation do
 
   defp io_entry_size(entry) do
     # Scrubbed output is always encodable.
-    entry |> Jason.encode!() |> byte_size()
+    entry
+    |> Jason.encode!(pretty: true, escape: :unicode_safe)
+    |> byte_size()
   end
 
   def assemble_logs_for_step(nil), do: nil

@@ -1526,38 +1526,27 @@ defmodule Lightning.AiAssistant do
   # Catch-all for anything unexpected
   defp handle_sse_event(_session_id, _event, acc), do: acc
 
-  # Built from `details`, not Apollo's prose, so the wording stays ours. The
-  # sizes go to the log rather than into the sentence: they are what support
-  # needs, and not what the reader has to do next.
+  # Ours, not Apollo's prose. The caps on the run data should keep this from
+  # firing; the sizes go to the log for support rather than into the sentence.
   defp attachment_too_large_message(details) do
     log_attachment_sizes(details)
 
-    "The attached run data is too large. Untick #{attachment_box(details)} " <>
+    "The selected run's data is too large to send. Detach the run " <>
       "and paste the part you need into the chat instead."
   end
 
-  defp log_attachment_sizes(%{
-         "total_characters" => total,
-         "limit_characters" => limit
-       }) do
+  defp log_attachment_sizes(
+         %{"total_characters" => total, "limit_characters" => limit} = details
+       ) do
+    largest = get_in(details, ["largest_attachment", "type"])
+
     Logger.warning(
       "[AI Assistant] Attachments too large: #{total} characters " <>
-        "against a #{limit} limit"
+        "against a #{limit} limit, largest #{inspect(largest)}"
     )
   end
 
   defp log_attachment_sizes(_details), do: :ok
-
-  # Naming the box beats naming the limit: unticking it is the thing that gets
-  # an answer, and the part of the run log that matters is usually a few lines.
-  defp attachment_box(%{"largest_attachment" => %{"type" => "log"}}),
-    do: "“Send run logs”"
-
-  defp attachment_box(%{"largest_attachment" => %{"type" => dataclip}})
-       when dataclip in ["input_dataclip", "output_dataclip"],
-       do: "“Send run data”"
-
-  defp attachment_box(_details), do: "one of the attachment boxes"
 
   defp handle_stream_event(
          session_id,
