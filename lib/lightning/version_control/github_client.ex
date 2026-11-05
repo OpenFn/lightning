@@ -79,6 +79,12 @@ defmodule Lightning.VersionControl.GithubClient do
     client |> Tesla.post("/repos/#{repo}/git/trees", body) |> handle_resp([201])
   end
 
+  def get_tree(client, repo, sha) do
+    client
+    |> Tesla.get("/repos/#{repo}/git/trees/#{sha}", query: [recursive: 1])
+    |> handle_resp([200])
+  end
+
   def get_commit(client, repo, ref) do
     client |> Tesla.get("/repos/#{repo}/commits/#{ref}") |> handle_resp([200])
   end

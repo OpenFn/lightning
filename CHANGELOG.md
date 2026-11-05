@@ -23,6 +23,24 @@ and this project adheres to
 > succeeding. [API.md](API.md) describes the error format, every code and each
 > route.
 
+> **Breaking for self-hosters: TLS certificates need a subjectAltName.**
+> Lightning now runs on Erlang/OTP 28.5.0.8, which no longer falls back to a
+> certificate's Common Name (CN) when checking the hostname. A server whose
+> certificate names its host only in the CN, with no subjectAltName (SAN), fails
+> to connect when verification is on. Most likely that is your database, since
+> Postgres connections are verified unless `DISABLE_DB_SSL_CERT_VERIFY=true`.
+> OAuth client endpoints and channel destinations are checked the same way.
+> Before you upgrade, look at the database's certificate:
+>
+> ```sh
+> openssl s_client -connect HOST:5432 -starttls postgres </dev/null \
+>   | openssl x509 -noout -ext subjectAltName
+> ```
+>
+> If the output doesn't list the hostname from `DATABASE_URL`, reissue the
+> certificate with that hostname as a SAN.
+> [#5274](https://github.com/OpenFn/lightning/pull/5274)
+
 ### Added
 
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
@@ -71,18 +89,33 @@ and this project adheres to
   version in the standard `org.opencontainers.image.version` label. Usage
   tracking reports the version without the `v` too, and counts an image tag with
   or without it as a match.
+- New GitHub Sync workflows are named in the repo's Actions tab: "Pull from
+  OpenFn" and "Deploy to OpenFn (project id)".
+  [#5275](https://github.com/OpenFn/lightning/pull/5275)
 
 ### Fixed
 
 - A form that loses a save race with another user, or saves a record someone
   else deleted, shows a message instead of crashing.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- URLs with a port above 65535 are now rejected on save, for OAuth client
+  endpoints and channel destinations. On Elixir 1.19.7 such a URL would
+  otherwise be sent to the scheme's default port.
+  [#5274](https://github.com/OpenFn/lightning/pull/5274)
 - GitHub Sync now refreshes and retries a rejected OAuth token once when loading
   app installations, and directs users to reconnect their account when recovery
   is not possible. [#4972](https://github.com/OpenFn/lightning/issues/4972)
 
 ### Security
 
+- Elixir moves from 1.18.4 to 1.19.7, picking up the 1.18.5 and 1.18.6 security
+  fixes (`URI.parse` port limits, decoding of oversized JSON integers and
+  `List.to_string/1`). The 1.18 line no longer ships an OTP 28 build upstream,
+  so staying on 1.18 would have meant downgrading to OTP 27. OTP moves from 28.5
+  to 28.5.0.8 and the Debian base snapshot from bookworm-20260421 to
+  bookworm-20261027, both still Debian 12. `.tool-versions` names the exact OTP
+  patch too, so local builds need Erlang 28.5.0.8.
+  [#5274](https://github.com/OpenFn/lightning/pull/5274)
 - The Docker image no longer trusts the emSign Root CA C1 and ECC Root CA C3
   certificates, which Mozilla removed after eMudhra issued intermediates with
   weak keys. Lightning trusts the OS certificate store for most outbound HTTPS,
@@ -92,6 +125,31 @@ and this project adheres to
 - The Docker image's Node.js moves from 24.18.1 to 24.22.1, so Node's own
   bundled certificate list no longer trusts the emSign C1 and ECC C3 roots
   either.
+- Ecto moves from 3.13.2 to 3.14.3, which fixes CVE-2026-118391: some queries
+  could grow Ecto's query cache without limit. Lightning doesn't use the
+  affected query forms, so this clears the advisory rather than a live issue.
+
+## [2.20.1] - 2026-11-04
+
+### Added
+
+- Removing a GitHub sync (v2) integration also removes the project's sync files
+  from the branch, in one commit, unless "Preserve project files" is ticked.
+  `openfn.yaml` and other projects' files stay.
+
+### Changed
+
+- The GitHub sync "Reconnect" dialog checks the workspace the same way Connect
+  does, and its button stays disabled until the box is ticked and the check has
+  finished.
+
+### Fixed
+
+- GitHub sync allowed a project to be saved in the workspace under a second
+  alias, for example after disconnecting and reconnecting with a different
+  alias. The CLI then couldn't tell which copy to pull and every sync failed.
+  Connect and Reconnect now block this, and the status page warns when a
+  workspace already holds two copies.
 
 ## [2.20.0] - 2026-10-30
 

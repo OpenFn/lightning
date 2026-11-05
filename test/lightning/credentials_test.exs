@@ -1128,7 +1128,7 @@ defmodule Lightning.CredentialsTest do
       }
 
       assert_raise RuntimeError,
-                   ~r/.*`:on_replace` option of this relation\nis set to `:raise`.*/,
+                   ~r/.*`:on_replace` option of this relation\sis set to `:raise`.*/,
                    fn ->
                      Credentials.update_credential(
                        credential,

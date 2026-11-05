@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.20.0",
+      version: "2.20.1",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -25,15 +25,6 @@ defmodule Lightning.MixProject do
         plt_core_path: "priv/plts/core.plt"
       ],
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        "coveralls.detail": :test,
-        "coveralls.html": :test,
-        "coveralls.post": :test,
-        "coveralls.json": :test,
-        "test.watch": :test,
-        coveralls: :test,
-        verify: :test
-      ],
       compilers: Mix.compilers(),
       hex: hex_audit(),
 
@@ -54,6 +45,20 @@ defmodule Lightning.MixProject do
         project
       end
     end)
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.post": :test,
+        "coveralls.json": :test,
+        "test.watch": :test,
+        coveralls: :test,
+        verify: :test
+      ]
+    ]
   end
 
   # Configuration for the OTP application.

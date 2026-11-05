@@ -147,6 +147,18 @@ defmodule ValidatorsTest do
       assert changeset(%{url: @valid_ip_v6_url}).valid?
     end
 
+    test "validates URLs with the highest port" do
+      assert changeset(%{url: "https://example.com:65535/path"}).valid?
+    end
+
+    for port <- [65_536, 99_999] do
+      test "invalidates URLs with port #{port}" do
+        changeset = changeset(%{url: "https://example.com:#{unquote(port)}"})
+        refute changeset.valid?
+        assert ["port must be 65535 or lower"] == errors_on(changeset).url
+      end
+    end
+
     test "invalidates URLs that are not valid at all" do
       changeset = changeset(%{url: @invalid_url})
       refute changeset.valid?
