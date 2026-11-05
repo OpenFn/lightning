@@ -76,9 +76,18 @@ defmodule LightningWeb.Components.CommonTest do
     test "displays the version and a badge" do
       html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
-      assert html =~ "Build"
       assert html =~ to_string(Application.spec(:lightning, :vsn))
       refute html =~ "v#{Application.spec(:lightning, :vsn)}"
+
+      assert LightningWeb.Components.Common.version_message() =~ "Build"
+    end
+
+    test "the message leads with the update state" do
+      assert LightningWeb.Components.Common.version_message(:available) =~
+               ~r/^A new version is available\. Build/
+
+      assert LightningWeb.Components.Common.version_message(:current) =~
+               ~r/^Up to date\. Build/
     end
   end
 
@@ -96,8 +105,10 @@ defmodule LightningWeb.Components.CommonTest do
 
       html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
-      assert html =~ "Unreleased build"
       assert html =~ "abcdef7"
+
+      assert LightningWeb.Components.Common.version_message() =~
+               "Unreleased build"
 
       # Check for the cube icon
       assert html |> Floki.parse_fragment!() |> Floki.find("span.hero-cube")
@@ -120,7 +131,9 @@ defmodule LightningWeb.Components.CommonTest do
 
       assert html =~ to_string(Application.spec(:lightning, :vsn))
       refute html =~ "v#{Application.spec(:lightning, :vsn)}"
-      assert html =~ "No image tag found."
+
+      assert LightningWeb.Components.Common.version_message() ==
+               "No image tag found."
     end
   end
 

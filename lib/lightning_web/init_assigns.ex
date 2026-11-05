@@ -53,6 +53,7 @@ defmodule LightningWeb.InitAssigns do
       end
     end)
     |> assign_new(:gdpr_banner, fn -> Lightning.Config.gdpr_banner() end)
+    |> assign_new(:update_status, fn -> Lightning.UpdateCheck.status() end)
     |> attach_hook(:sidebar_toggle, :handle_event, &handle_sidebar_toggle/3)
     |> try_attach_current_path()
   end

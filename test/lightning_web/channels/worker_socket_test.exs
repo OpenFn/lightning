@@ -26,6 +26,18 @@ defmodule LightningWeb.WorkerSocketTest do
                socket.assigns
     end
 
+    test "drops versions that aren't short strings" do
+      assert {:ok, socket} =
+               LightningWeb.WorkerSocket
+               |> connect(%{
+                 "token" => ws_worker_token(),
+                 "worker_version" => %{"a" => "b"},
+                 "api_version" => String.duplicate("1", 65)
+               })
+
+      assert %{worker_version: nil, api_version: nil} = socket.assigns
+    end
+
     # THE ws-worker compatibility guard, at the surface a worker actually meets, and
     # with its twin in test/lightning/workers/worker_token_test.exs the most
     # important test in this suite. A real worker token carries worker_id, iat
