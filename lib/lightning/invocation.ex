@@ -1184,7 +1184,7 @@ defmodule Lightning.Invocation do
   defp take_escaped(message, room, kept) do
     with {grapheme, rest} <- String.next_grapheme(message),
          size when size <= room <- escaped_size(grapheme) do
-      take_escaped(rest, room - size, [kept | grapheme])
+      take_escaped(rest, room - size, [kept, grapheme])
     else
       _ -> IO.iodata_to_binary(kept)
     end
