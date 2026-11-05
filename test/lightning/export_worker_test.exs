@@ -53,7 +53,10 @@ defmodule Lightning.ExportWorkerTest do
             dataclip: input_dataclip,
             steps: [step_1, step_2],
             log_lines: [
-              build(:log_line, step: step_1, message: "Here is another log line"),
+              build(:log_line,
+                step: step_1,
+                message: "Here is another log line"
+              ),
               build(:log_line, step: step_2, message: "Want more log lines ? :)")
             ]
           )

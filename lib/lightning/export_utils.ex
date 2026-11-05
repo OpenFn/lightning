@@ -483,8 +483,10 @@ defmodule Lightning.ExportUtils do
     }
   end
 
-  defp channel_destination_project_credential_id(%{destination_auth_method: nil}),
-    do: nil
+  defp channel_destination_project_credential_id(%{
+         destination_auth_method: nil
+       }),
+       do: nil
 
   defp channel_destination_project_credential_id(%{
          destination_auth_method: %{project_credential_id: id}

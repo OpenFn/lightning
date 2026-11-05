@@ -25,7 +25,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/token"} = env,
+        _opts ->
           assert env.body =~ "client_id=id"
           assert env.body =~ "client_secret=secret"
           assert env.body =~ "code=authcode123"
@@ -60,10 +61,12 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
-        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/token"} = env,
+        _opts ->
           {:ok, %Tesla.Env{env | status: 200, body: token_response}}
 
-        %{method: :post, url: "http://example.com/introspect"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/introspect"} = env,
+        _opts ->
           assert env.body =~ "token=token123"
           assert env.body =~ "client_id=id"
           assert env.body =~ "client_secret=secret"
@@ -89,7 +92,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/token"} = env,
+        _opts ->
           {:ok, %Tesla.Env{env | status: 400, body: error_response}}
       end)
 
@@ -107,7 +111,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :post, url: "http://example.com/token"}, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/token"}, _opts ->
           {:error, %Tesla.Error{reason: :econnrefused}}
       end)
 
@@ -141,7 +145,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/token"} = env,
+        _opts ->
           assert env.body =~ "grant_type=refresh_token"
           assert env.body =~ "refresh_token=refresh123"
 
@@ -174,7 +179,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/token"} = env,
+        _opts ->
           {:ok, %Tesla.Env{env | status: 200, body: response_body}}
       end)
 
@@ -215,7 +221,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/token"} = env,
+        _opts ->
           {:ok,
            %Tesla.Env{env | status: 401, body: %{"error" => "invalid_token"}}}
       end)
@@ -238,7 +245,11 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       response_body = %{"user_id" => "123", "name" => "Sadio Mane"}
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :get, url: "http://example.com/userinfo", headers: headers} =
+        %Tesla.Env{
+          method: :get,
+          url: "http://example.com/userinfo",
+          headers: headers
+        } =
             env,
         _opts ->
           assert {"Authorization", "Bearer validToken"} in headers
@@ -277,7 +288,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :get, url: "http://example.com/userinfo"} = env, _opts ->
+        %Tesla.Env{method: :get, url: "http://example.com/userinfo"} = env,
+        _opts ->
           {:ok, %Tesla.Env{env | status: 401, body: "Unauthorized"}}
       end)
 
@@ -305,7 +317,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
-        %{method: :post, url: "http://example.com/revoke", body: body} = env,
+        %Tesla.Env{method: :post, url: "http://example.com/revoke", body: body} =
+            env,
         _opts ->
           cond do
             body =~ "token=refresh123" ->
@@ -334,7 +347,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
-        %{method: :post, url: "http://example.com/revoke", body: body} = env,
+        %Tesla.Env{method: :post, url: "http://example.com/revoke", body: body} =
+            env,
         _opts ->
           cond do
             body =~ "token=refresh123" ->
@@ -377,7 +391,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
-        %{method: :post, url: "http://example.com/revoke"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/revoke"} = env,
+        _opts ->
           {:ok, %Tesla.Env{env | status: 500, body: "Server error"}}
       end)
 
@@ -447,7 +462,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/token"} = env,
+        _opts ->
           {:ok, %Tesla.Env{env | status: 500, body: "Internal Server Error"}}
       end)
 
@@ -464,7 +480,8 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
-        %{method: :get, url: "http://example.com/userinfo"} = env, _opts ->
+        %Tesla.Env{method: :get, url: "http://example.com/userinfo"} = env,
+        _opts ->
           {:ok, %Tesla.Env{env | status: 200, body: ""}}
       end)
 
@@ -488,10 +505,12 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, 2, fn
-        %{method: :post, url: "http://example.com/token"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/token"} = env,
+        _opts ->
           {:ok, %Tesla.Env{env | status: 200, body: token_response}}
 
-        %{method: :post, url: "http://example.com/introspect"} = env, _opts ->
+        %Tesla.Env{method: :post, url: "http://example.com/introspect"} = env,
+        _opts ->
           {:ok, %Tesla.Env{env | status: 500, body: "Server Error"}}
       end)
 
