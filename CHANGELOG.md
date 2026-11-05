@@ -58,6 +58,10 @@ and this project adheres to
 
 ### Changed
 
+- The AI assistant always reads the selected run's logs and data unless you
+  detach it, replacing the "Send run logs" and "Send run data" boxes. A long log
+  sends its latest part, marked as cut, instead of failing the message.
+  [#5271](https://github.com/OpenFn/lightning/pull/5271)
 - The web app's interactive pages now run on React 19, up from React 18. They
   look and behave the same.
   [#5256](https://github.com/OpenFn/lightning/pull/5256)
@@ -160,10 +164,6 @@ and this project adheres to
   so users know to delete them themselves.
 - Bump hackney to 4.9.1, jose to 1.11.13 and tidewave to 0.9.2 for security
   fixes, and move tzdata back to a Hex release
-- The AI assistant always reads the selected run's logs and data unless you
-  detach it, replacing the "Send run logs" and "Send run data" boxes. A long log
-  sends its latest part, marked as cut, instead of failing the message.
-  [#5271](https://github.com/OpenFn/lightning/pull/5271)
 
 ### Fixed
 
