@@ -38,6 +38,10 @@ and this project adheres to
   service account and using it to create the first superuser and project on a
   new instance. [#5272](https://github.com/OpenFn/lightning/pull/5272)
 
+- Searching the credentials and project credentials pages, and sorting their
+  tables by clicking a column header.
+  [#4302](https://github.com/OpenFn/lightning/issues/4302)
+
 ### Changed
 
 - The web app's interactive pages now run on React 19, up from React 18. They
@@ -1602,6 +1606,13 @@ Migrations in this release, all in `priv/repo/migrations/`:
 
 ### Added
 
+- Pagination (10 items per page) for credentials, keychain credentials, and
+  OAuth clients on the credentials page (`/credentials`) and the project
+  settings credentials tab. Each table paginates independently via URL
+  parameters. OAuth clients are behind a collapsible section, collapsed by
+  default. Tables are ordered: credentials first, keychain credentials second
+  (project settings only), OAuth clients last.
+  [#4301](https://github.com/OpenFn/lightning/issues/4301)
 - Add support for sync v2 protocol
   [#4523](https://github.com/OpenFn/lightning/issues/4523)
 - Support collections in sandboxes. Collection names are now scoped per project,

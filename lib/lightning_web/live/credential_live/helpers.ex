@@ -5,6 +5,24 @@ defmodule LightningWeb.CredentialLive.Helpers do
   of projects associations to credentials and / or oauth clients.
   """
 
+  alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.OauthClient
+  alias LightningWeb.Live.Helpers.TableHelpers
+
+  @table_params ~w(q
+    credentials_page credentials_sort credentials_dir
+    keychain_page keychain_sort keychain_dir
+    oauth_clients_page oauth_clients_sort oauth_clients_dir
+  )
+
+  @page_params ~w(credentials_page keychain_page oauth_clients_page)
+
+  @sortable_columns %{
+    "credentials" => [:name, :type, :owner],
+    "keychain" => [:name, :path, :owner],
+    "oauth_clients" => [:name, :owner]
+  }
+
   defp build_project_assoc_map(
          %{id: id, project_id: project_id},
          extra_fields \\ %{}
@@ -167,4 +185,127 @@ defmodule LightningWeb.CredentialLive.Helpers do
       |> Phoenix.LiveView.push_navigate(to: socket.assigns.return_to)
     end
   end
+
+  @doc """
+  Picks the search, sort and page params the credentials tables use out of a
+  LiveView's params.
+  """
+  @spec table_params(map()) :: map()
+  def table_params(params) do
+    params
+    |> Map.take(@table_params)
+    |> Map.filter(fn {_key, value} -> is_binary(value) and value != "" end)
+  end
+
+  @doc """
+  The page params for one table: `"credentials"`, `"keychain"` or
+  `"oauth_clients"`.
+  """
+  @spec page_params(map(), String.t()) :: map()
+  def page_params(table_params, table) do
+    %{"page" => table_params["#{table}_page"] || "1"}
+  end
+
+  @doc """
+  The `:search` and `:order_by` options for one table. The sort column is
+  resolved against an allow-list, so an unknown value falls back to the name.
+  """
+  @spec list_opts(map(), String.t()) :: keyword()
+  def list_opts(table_params, table) do
+    field =
+      TableHelpers.sort_field(
+        table_params["#{table}_sort"],
+        Map.fetch!(@sortable_columns, table),
+        :name
+      )
+
+    direction = TableHelpers.sort_direction(table_params["#{table}_dir"])
+
+    [search: table_params["q"] || "", order_by: {field, direction}]
+  end
+
+  @doc """
+  Builds the pagination URL function for one table. It keeps every other param,
+  so changing page doesn't lose the search, the sort or another table's page.
+  """
+  @spec page_url(function(), map(), String.t()) :: function()
+  def page_url(table_path, table_params, table) do
+    fn opts ->
+      table_path.(Map.put(table_params, "#{table}_page", opts[:page]))
+    end
+  end
+
+  @doc """
+  Sets the search term and sends every table back to its first page.
+  """
+  @spec search_params(map(), String.t()) :: map()
+  def search_params(table_params, search) do
+    table_params
+    |> Map.drop(@page_params)
+    |> Map.put("q", String.trim(search))
+    |> table_params()
+  end
+
+  @doc """
+  Sorts one table by `sort_key`, or flips the direction if it's already sorted
+  by that column, and sends that table back to its first page.
+  """
+  @spec sort_params(map(), String.t(), String.t()) :: map()
+  def sort_params(table_params, table, sort_key) do
+    {sort_key, direction} =
+      TableHelpers.toggle_sort_direction(
+        table_params["#{table}_dir"] || "asc",
+        table_params["#{table}_sort"] || "name",
+        sort_key
+      )
+
+    table_params
+    |> Map.delete("#{table}_page")
+    |> Map.merge(%{"#{table}_sort" => sort_key, "#{table}_dir" => direction})
+  end
+
+  @spec empty_page() :: Scrivener.Page.t()
+  def empty_page do
+    %Scrivener.Page{
+      entries: [],
+      page_number: 1,
+      page_size: 0,
+      total_entries: 0,
+      total_pages: 1
+    }
+  end
+
+  @doc """
+  Fills in the `project_names` and `environment_names` the credentials table
+  displays, for every credential on the page.
+  """
+  @spec with_credential_display_fields(Scrivener.Page.t()) ::
+          Scrivener.Page.t()
+  def with_credential_display_fields(%Scrivener.Page{} = page) do
+    %{page | entries: Enum.map(page.entries, &credential_display_fields/1)}
+  end
+
+  @doc """
+  Fills in the `project_names` the OAuth clients table displays, labelling
+  global clients as `GLOBAL`.
+  """
+  @spec with_oauth_client_display_fields(Scrivener.Page.t()) ::
+          Scrivener.Page.t()
+  def with_oauth_client_display_fields(%Scrivener.Page{} = page) do
+    %{page | entries: Enum.map(page.entries, &oauth_client_display_fields/1)}
+  end
+
+  defp credential_display_fields(%Credential{} = credential) do
+    %{
+      credential
+      | project_names: Enum.map(credential.projects, & &1.name),
+        environment_names: Enum.map(credential.credential_bodies, & &1.name)
+    }
+  end
+
+  defp oauth_client_display_fields(%OauthClient{global: true} = client),
+    do: %{client | project_names: ["GLOBAL"]}
+
+  defp oauth_client_display_fields(%OauthClient{} = client),
+    do: %{client | project_names: Enum.map(client.projects, & &1.name)}
 end

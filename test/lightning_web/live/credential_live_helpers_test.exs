@@ -275,4 +275,155 @@ defmodule LightningWeb.CredentialLive.HelpersTest do
       assert project_ids == [grandchild.id]
     end
   end
+
+  describe "table_params/1" do
+    test "keeps the table params and drops everything else" do
+      assert Helpers.table_params(%{
+               "q" => "dhis",
+               "credentials_page" => "2",
+               "keychain_sort" => "path",
+               "oauth_clients_dir" => "desc",
+               "project_id" => "abc"
+             }) == %{
+               "q" => "dhis",
+               "credentials_page" => "2",
+               "keychain_sort" => "path",
+               "oauth_clients_dir" => "desc"
+             }
+    end
+
+    test "drops empty and non-string values" do
+      assert Helpers.table_params(%{
+               "q" => %{"a" => "b"},
+               "credentials_sort" => "",
+               "keychain_page" => ["1"]
+             }) == %{}
+    end
+  end
+
+  describe "page_params/2" do
+    test "reads the page of the given table, defaulting to the first" do
+      table_params = %{"credentials_page" => "3", "keychain_page" => "2"}
+
+      assert Helpers.page_params(table_params, "credentials") == %{"page" => "3"}
+
+      assert Helpers.page_params(table_params, "oauth_clients") == %{
+               "page" => "1"
+             }
+    end
+  end
+
+  describe "list_opts/2" do
+    test "builds the search and sort options of the given table" do
+      table_params = %{
+        "q" => "dhis",
+        "keychain_sort" => "path",
+        "keychain_dir" => "desc",
+        "credentials_sort" => "type"
+      }
+
+      assert Helpers.list_opts(table_params, "keychain") == [
+               search: "dhis",
+               order_by: {:path, :desc}
+             ]
+
+      assert Helpers.list_opts(%{}, "credentials") == [
+               search: "",
+               order_by: {:name, :asc}
+             ]
+    end
+
+    test "falls back to the name for a column the table can't sort by" do
+      assert Helpers.list_opts(
+               %{
+                 "oauth_clients_sort" => "client_secret",
+                 "oauth_clients_dir" => "sideways"
+               },
+               "oauth_clients"
+             ) == [search: "", order_by: {:name, :asc}]
+
+      # `path` is a real column, but only on the keychain table.
+      assert Helpers.list_opts(%{"credentials_sort" => "path"}, "credentials") ==
+               [search: "", order_by: {:name, :asc}]
+    end
+  end
+
+  describe "page_url/3" do
+    test "changes the page of one table and keeps every other param" do
+      url =
+        Helpers.page_url(
+          &Function.identity/1,
+          %{"q" => "dhis", "keychain_page" => "3", "credentials_page" => "1"},
+          "credentials"
+        )
+
+      assert url.(page: 2) == %{
+               "q" => "dhis",
+               "keychain_page" => "3",
+               "credentials_page" => 2
+             }
+    end
+  end
+
+  describe "search_params/2" do
+    test "sets the trimmed term, resets every page and keeps the sort" do
+      assert Helpers.search_params(
+               %{
+                 "q" => "old",
+                 "credentials_page" => "2",
+                 "keychain_page" => "3",
+                 "oauth_clients_page" => "4",
+                 "credentials_sort" => "type"
+               },
+               "  dhis "
+             ) == %{"q" => "dhis", "credentials_sort" => "type"}
+    end
+
+    test "removes the search when the term is blank" do
+      assert Helpers.search_params(%{"q" => "old"}, "   ") == %{}
+    end
+  end
+
+  describe "sort_params/3" do
+    test "flips the direction when sorting by the current column" do
+      # The table is sorted by name ascending until the URL says otherwise.
+      assert Helpers.sort_params(%{}, "credentials", "name") == %{
+               "credentials_sort" => "name",
+               "credentials_dir" => "desc"
+             }
+
+      assert Helpers.sort_params(
+               %{"credentials_sort" => "type", "credentials_dir" => "desc"},
+               "credentials",
+               "type"
+             ) == %{"credentials_sort" => "type", "credentials_dir" => "asc"}
+    end
+
+    test "starts a new column ascending" do
+      assert Helpers.sort_params(
+               %{"keychain_sort" => "name", "keychain_dir" => "desc"},
+               "keychain",
+               "path"
+             ) == %{"keychain_sort" => "path", "keychain_dir" => "asc"}
+    end
+
+    test "resets only the sorted table's page" do
+      assert Helpers.sort_params(
+               %{
+                 "q" => "dhis",
+                 "credentials_page" => "3",
+                 "keychain_page" => "2",
+                 "keychain_sort" => "path"
+               },
+               "credentials",
+               "owner"
+             ) == %{
+               "q" => "dhis",
+               "keychain_page" => "2",
+               "keychain_sort" => "path",
+               "credentials_sort" => "owner",
+               "credentials_dir" => "asc"
+             }
+    end
+  end
 end

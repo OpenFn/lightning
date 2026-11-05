@@ -14,6 +14,11 @@ defmodule LightningWeb.Components.DataTables do
   attr :title, :string, required: true
   attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
+  attr :page, :map, default: nil
+  attr :url, :any, default: nil
+  attr :sort_by, :string, default: "name"
+  attr :sort_direction, :string, default: "asc"
+  attr :sort_target, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -30,12 +35,38 @@ defmodule LightningWeb.Components.DataTables do
       <%= if Enum.empty?(@credentials) do %>
         {render_slot(@empty_state)}
       <% else %>
-        <.table id={"#{@id}-table"}>
+        <.table id={"#{@id}-table"} page={@page} url={@url}>
           <:header>
             <.tr>
-              <.th>Name</.th>
-              <.th>Type</.th>
-              <.th :if={@show_owner}>
+              <.th
+                sortable={true}
+                sort_by="name"
+                active={@sort_by == "name"}
+                sort_direction={@sort_direction}
+                phx_click="sort_credentials"
+                phx_target={@sort_target}
+              >
+                Name
+              </.th>
+              <.th
+                sortable={true}
+                sort_by="type"
+                active={@sort_by == "type"}
+                sort_direction={@sort_direction}
+                phx_click="sort_credentials"
+                phx_target={@sort_target}
+              >
+                Type
+              </.th>
+              <.th
+                :if={@show_owner}
+                sortable={true}
+                sort_by="owner"
+                active={@sort_by == "owner"}
+                sort_direction={@sort_direction}
+                phx_click="sort_credentials"
+                phx_target={@sort_target}
+              >
                 Owner
               </.th>
               <.th>
@@ -125,6 +156,11 @@ defmodule LightningWeb.Components.DataTables do
   attr :title, :string, required: true
   attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
+  attr :page, :map, default: nil
+  attr :url, :any, default: nil
+  attr :sort_by, :string, default: "name"
+  attr :sort_direction, :string, default: "asc"
+  attr :sort_target, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -141,13 +177,39 @@ defmodule LightningWeb.Components.DataTables do
       <%= if Enum.empty?(@keychain_credentials) do %>
         {render_slot(@empty_state)}
       <% else %>
-        <.table id={"#{@id}-table"}>
+        <.table id={"#{@id}-table"} page={@page} url={@url}>
           <:header>
             <.tr>
-              <.th>Name</.th>
-              <.th>Path</.th>
+              <.th
+                sortable={true}
+                sort_by="name"
+                active={@sort_by == "name"}
+                sort_direction={@sort_direction}
+                phx_click="sort_keychain"
+                phx_target={@sort_target}
+              >
+                Name
+              </.th>
+              <.th
+                sortable={true}
+                sort_by="path"
+                active={@sort_by == "path"}
+                sort_direction={@sort_direction}
+                phx_click="sort_keychain"
+                phx_target={@sort_target}
+              >
+                Path
+              </.th>
               <.th>Default Credential</.th>
-              <.th :if={@show_owner}>
+              <.th
+                :if={@show_owner}
+                sortable={true}
+                sort_by="owner"
+                active={@sort_by == "owner"}
+                sort_direction={@sort_direction}
+                phx_click="sort_keychain"
+                phx_target={@sort_target}
+              >
                 Owner
               </.th>
               <.th>
@@ -198,7 +260,13 @@ defmodule LightningWeb.Components.DataTables do
   attr :id, :string, required: true
   attr :clients, :list, required: true
   attr :title, :string, required: true
+  attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
+  attr :page, :map, default: nil
+  attr :url, :any, default: nil
+  attr :sort_by, :string, default: "name"
+  attr :sort_direction, :string, default: "asc"
+  attr :sort_target, :any, default: nil
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -209,17 +277,34 @@ defmodule LightningWeb.Components.DataTables do
   def oauth_clients_table(assigns) do
     ~H"""
     <div id={"#{@id}-table-container"}>
-      <div class="leading-loose pb-2">
+      <div :if={@display_table_title} class="leading-loose pb-2">
         <h6 class="font-normal text-black">{@title}</h6>
       </div>
       <%= if Enum.empty?(@clients) do %>
         {render_slot(@empty_state)}
       <% else %>
-        <.table id={"#{@id}-table"}>
+        <.table id={"#{@id}-table"} page={@page} url={@url}>
           <:header>
             <.tr>
-              <.th>Name</.th>
-              <.th :if={@show_owner}>
+              <.th
+                sortable={true}
+                sort_by="name"
+                active={@sort_by == "name"}
+                sort_direction={@sort_direction}
+                phx_click="sort_oauth_clients"
+                phx_target={@sort_target}
+              >
+                Name
+              </.th>
+              <.th
+                :if={@show_owner}
+                sortable={true}
+                sort_by="owner"
+                active={@sort_by == "owner"}
+                sort_direction={@sort_direction}
+                phx_click="sort_oauth_clients"
+                phx_target={@sort_target}
+              >
                 Owner
               </.th>
               <.th>

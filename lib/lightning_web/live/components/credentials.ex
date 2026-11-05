@@ -19,6 +19,14 @@ defmodule LightningWeb.Components.Credentials do
   attr :can_create_project_credential, :any, required: true
   attr :show_owner_in_tables, :boolean, default: false
   attr :return_to, :string, required: true
+  attr :credentials_page, :map, default: nil
+  attr :keychain_credentials_page, :map, default: nil
+  attr :oauth_clients_page, :map, default: nil
+  attr :credentials_url, :any, default: nil
+  attr :keychain_url, :any, default: nil
+  attr :oauth_clients_url, :any, default: nil
+  attr :table_params, :map, default: %{}
+  attr :table_path, :any, default: nil
 
   def credentials_index_live_component(assigns) do
     ~H"""
