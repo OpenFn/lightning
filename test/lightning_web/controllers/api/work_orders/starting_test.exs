@@ -61,8 +61,7 @@ defmodule LightningWeb.API.WorkOrders.StartingTest do
       assert get_resp_header(conn, "x-meta-run-id") == [run.id]
 
       assert {body_of(work_order.dataclip_id), work_order.dataclip.type,
-              run.starting_job_id, run.created_by_id,
-              run.priority} ==
+              run.starting_job_id, run.created_by_id, run.priority} ==
                {%{"patient" => "x"}, :saved_input, graph.job_b.id, editor.id,
                 :immediate}
     end
