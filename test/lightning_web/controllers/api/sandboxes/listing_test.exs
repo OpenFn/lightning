@@ -20,10 +20,11 @@ defmodule LightningWeb.API.Sandboxes.ListingTest do
     %{
       "type" => "projects",
       "id" => project.id,
-      "attributes" => %{
-        "name" => project.name,
-        "description" => project.description
-      },
+      "attributes" =>
+        Map.merge(default_settings(), %{
+          "name" => project.name,
+          "description" => project.description
+        }),
       "relationships" => %{},
       "links" => %{
         "self" => "#{LightningWeb.Endpoint.url()}/api/projects/#{project.id}"

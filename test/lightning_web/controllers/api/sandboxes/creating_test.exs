@@ -40,11 +40,12 @@ defmodule LightningWeb.API.Sandboxes.CreatingTest do
       "data" => %{
         "type" => "projects",
         "id" => id,
-        "attributes" => %{
-          "name" => name,
-          "description" => nil,
-          "members" => members
-        },
+        "attributes" =>
+          Map.merge(default_settings(), %{
+            "name" => name,
+            "description" => nil,
+            "members" => members
+          }),
         "relationships" => %{},
         "links" => %{
           "self" => "#{LightningWeb.Endpoint.url()}/api/projects/#{id}"

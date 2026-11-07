@@ -176,13 +176,14 @@ defmodule LightningWeb.API.Sandboxes.MergingTest do
                "data" => %{
                  "type" => "projects",
                  "id" => ctx.parent.id,
-                 "attributes" => %{
-                   "name" => ctx.parent.name,
-                   "description" => ctx.parent.description,
-                   "members" => [
-                     %{"email" => "owner@example.com", "role" => "owner"}
-                   ]
-                 },
+                 "attributes" =>
+                   Map.merge(default_settings(), %{
+                     "name" => ctx.parent.name,
+                     "description" => ctx.parent.description,
+                     "members" => [
+                       %{"email" => "owner@example.com", "role" => "owner"}
+                     ]
+                   }),
                  "relationships" => %{},
                  "links" => %{"self" => url}
                },
