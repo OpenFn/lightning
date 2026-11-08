@@ -157,7 +157,7 @@ stepped up with 403 `step_up_required`.
 | `GET`    | `/api/users`          | Lists users, or finds one by `email`                | `users:read`                    |
 | `GET`    | `/api/users/:id`      | Reads a user                                        | `users:read`                    |
 | `POST`   | `/api/users`          | Creates a user                                      | `users:write`                   |
-| `PATCH`  | `/api/users/:id`      | Changes a user; a person may change their own names | `users:write`                   |
+| `PATCH`  | `/api/users/:id`      | Changes a user, or a person's own account           | `users:write`                   |
 | `POST`   | `/api/users/register` | Signs up, where the instance offers it              | None                            |
 | `GET`    | `/api/audit_events`   | Lists audit events, newest first                    | `audit:read`                    |
 

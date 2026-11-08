@@ -19,6 +19,7 @@ defmodule Lightning.Policies.Users do
           | :write_users
           | :read_own_account
           | :update_own_account
+          | :update_own_sign_in
 
   @spec authorize(actions(), User.t() | Scope.t(), any()) :: Decision.answer()
 
@@ -38,6 +39,12 @@ defmodule Lightning.Policies.Users do
   # step-up. Which account the request names is the controller's to check.
   def authorize(:update_own_account, %Scope{} = scope, _subject),
     do: Decision.person(scope, true)
+
+  # Their email and password are how they sign in, so changing either needs a
+  # person at the keyboard who has just proved who they are: a session token,
+  # stepped up.
+  def authorize(:update_own_sign_in, %Scope{} = scope, _subject),
+    do: Decision.session(scope, true, step_up: true)
 
   def authorize(:access_admin_space, %User{role: role}, _params) do
     role in [:superuser]

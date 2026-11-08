@@ -89,7 +89,7 @@ defmodule LightningWeb.API.Users.UpdatingOwnTest do
       assert audit.changes.after == %{"first_name" => "Grace"}
     end
 
-    test "refuses any other key, their role and email included, with the body's other errors, changing nothing",
+    test "refuses any other key, their role included, with the body's other errors, changing nothing",
          %{user: user} do
       unknown = fn key ->
         %{
@@ -101,8 +101,6 @@ defmodule LightningWeb.API.Users.UpdatingOwnTest do
 
       for {body, entries} <- [
             {%{role: "superuser"}, [unknown.("role")]},
-            {%{email: "new@example.com", password: "a new password"},
-             [unknown.("email"), unknown.("password")]},
             {%{confirmed: true, first_name: " ", contact_preference: "often"},
              [
                unknown.("confirmed"),
