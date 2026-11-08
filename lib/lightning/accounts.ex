@@ -181,6 +181,20 @@ defmodule Lightning.Accounts do
     user |> User.details_changeset(attrs) |> write_user(actor)
   end
 
+  @doc """
+  Changes what a person may change about their own account without stepping
+  up: `first_name`, `last_name` and `contact_preference`, recorded with the
+  person as the actor. None of these signs them out.
+
+  Returns `{:error, :concurrent_edit}` when another request deleted the user
+  while this one ran.
+  """
+  @spec update_own_details(User.t(), map()) ::
+          {:ok, User.t()} | {:error, Changeset.t() | :concurrent_edit}
+  def update_own_details(%User{} = user, attrs) do
+    user |> User.info_changeset(attrs) |> write_user(user)
+  end
+
   defp write_user(%Changeset{data: user} = changeset, actor) do
     revoke_contexts = revoke_contexts(changeset)
 

@@ -15,6 +15,13 @@ defmodule LightningWeb.API.UserController do
   It answers 200 with the user rendered as a 201 renders one. `confirmed` only
   ever confirms.
 
+  A person may also `PATCH` their own id, with a personal access token or a
+  session token, and change their own `first_name`, `last_name` and
+  `contact_preference` (`critical` or `any`). Any other key, `role` included,
+  is refused as `unknown_key` the same way. Any other id answers them 403
+  `forbidden` before it is looked up, so the answer says nothing about whether
+  it names a user.
+
   Either answers 400 `malformed` to a body that isn't a JSON object.
 
   `GET /api/users` is paginated, at most 100 a page, and filters by `?email=`
@@ -34,8 +41,10 @@ defmodule LightningWeb.API.UserController do
 
   @create_fields ~w(email password first_name last_name role confirmed)a
   @update_fields ~w(first_name last_name role password confirmed)a
+  @own_fields ~w(first_name last_name contact_preference)a
   @create_keys Enum.map(@create_fields, &Atom.to_string/1)
   @update_keys Enum.map(@update_fields, &Atom.to_string/1)
+  @own_keys Enum.map(@own_fields, &Atom.to_string/1)
 
   plug AuthorizeAction,
        {:users, :read_users}
@@ -43,7 +52,9 @@ defmodule LightningWeb.API.UserController do
 
   plug AuthorizeAction,
        {:users, :write_users}
-       when action in [:create, :update]
+       when action == :create
+
+  plug :authorize_update when action == :update
 
   def index(conn, params) do
     with {:ok, page} <-
@@ -63,6 +74,25 @@ defmodule LightningWeb.API.UserController do
   end
 
   def update(conn, _params) do
+    if own_account?(conn), do: update_own(conn), else: update_any(conn)
+  end
+
+  defp update_own(conn) do
+    body = conn.body_params
+    attrs = Map.take(body, @own_keys)
+    user = conn.assigns.current_resource
+
+    with :ok <- Request.check_object(body),
+         :ok <-
+           refuse_unknown_keys(body, @own_fields, fn ->
+             User.info_changeset(user, attrs)
+           end),
+         {:ok, user} <- Accounts.update_own_details(user, attrs) do
+      render(conn, "show.json", user: user, conn: conn)
+    end
+  end
+
+  defp update_any(conn) do
     body = conn.body_params
     attrs = Map.take(body, @update_keys)
 
@@ -94,6 +124,23 @@ defmodule LightningWeb.API.UserController do
       |> render("show.json", user: user, conn: conn)
     end
   end
+
+  # A person naming their own id changes their own account; anyone else needs
+  # the service account's `users:write`, which refuses a person whatever the id
+  # names.
+  defp authorize_update(conn, _opts) do
+    permission =
+      if own_account?(conn),
+        do: {:users, :update_own_account},
+        else: {:users, :write_users}
+
+    AuthorizeAction.call(conn, AuthorizeAction.init(permission))
+  end
+
+  defp own_account?(%{assigns: %{current_resource: %User{id: id}}} = conn),
+    do: match?({_location, ^id}, Request.param(conn, "id"))
+
+  defp own_account?(_conn), do: false
 
   # An unknown key refuses the body together with every error its changeset
   # holds.

@@ -25,9 +25,9 @@ Two kinds of bearer token work:
 - A personal access token, which you create in Lightning under your profile at
   **Personal Access Tokens**. It acts with your own permissions on your projects
   and lasts until you revoke it. `/api/users` takes only the service account's
-  token. It answers a personal access token with 403 `forbidden`, and a project
-  repo connection's token with 403 `insufficient_scope` naming `users:read` or
-  `users:write`.
+  token, except that you may `PATCH` your own user. It answers a personal access
+  token with 403 `forbidden` on everything else, and a project repo connection's
+  token with 403 `insufficient_scope` naming `users:read` or `users:write`.
 
 Lightning's own web app calls the API with a session token instead: the session
 cookie that signing in sets, whether through the sign-in page, a single sign-on
@@ -157,7 +157,7 @@ stepped up with 403 `step_up_required`.
 | `GET`    | `/api/users`          | Lists users, or finds one by `email`                | `users:read`                    |
 | `GET`    | `/api/users/:id`      | Reads a user                                        | `users:read`                    |
 | `POST`   | `/api/users`          | Creates a user                                      | `users:write`                   |
-| `PATCH`  | `/api/users/:id`      | Changes a user                                      | `users:write`                   |
+| `PATCH`  | `/api/users/:id`      | Changes a user; a person may change their own names | `users:write`                   |
 | `POST`   | `/api/users/register` | Signs up, where the instance offers it              | None                            |
 | `GET`    | `/api/audit_events`   | Lists audit events, newest first                    | `audit:read`                    |
 
