@@ -18,6 +18,7 @@ defmodule Lightning.Policies.Users do
           | :read_users
           | :write_users
           | :read_own_account
+          | :update_own_account
 
   @spec authorize(actions(), User.t() | Scope.t(), any()) :: Decision.answer()
 
@@ -30,6 +31,12 @@ defmodule Lightning.Policies.Users do
   # A person reads their own account on either of their tokens. The service
   # account isn't a user, so it has no account to read.
   def authorize(:read_own_account, %Scope{} = scope, _subject),
+    do: Decision.person(scope, true)
+
+  # And changes their own names and contact preference on either token.
+  # Nothing they may change this way is a way into the account, so it needs no
+  # step-up. Which account the request names is the controller's to check.
+  def authorize(:update_own_account, %Scope{} = scope, _subject),
     do: Decision.person(scope, true)
 
   def authorize(:access_admin_space, %User{role: role}, _params) do

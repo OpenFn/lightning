@@ -69,7 +69,9 @@ and this project adheres to
   confirmations (`/api/confirmations`), list, create and revoke personal access
   tokens (`/api/me/tokens`), set up and turn off MFA and replace backup codes
   (`/api/me/mfa`), and disconnect GitHub and list the repositories and branches
-  it can reach (`/api/me/github_*`). A superuser can read, set and remove the
+  it can reach (`/api/me/github_*`). A person can change their own names and
+  contact preference with `PATCH /api/users/:id` on their own id, with a session
+  token or a personal access token. A superuser can read, set and remove the
   single sign-on provider at `/api/auth_provider`. Creating a token, turning MFA
   on or off, replacing the authenticator and replacing backup codes need a
   session token stepped up in the last five minutes, and answer 403
@@ -122,9 +124,10 @@ and this project adheres to
   Lightning can't store answers 422, where it answered 200 `{"upserted": 0}`.
   [API.md](API.md#errors) has every code and status.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
-- **Breaking:** `/api/users` refuses a personal access token with 403. The
-  service account must send `project_id` on `GET /api/runs`, `/api/work_orders`
-  and `/api/log_lines`. Both credential lists page like the other lists, 10 by
+- **Breaking:** `/api/users` refuses a personal access token with 403, except a
+  person changing their own names and contact preference. The service account
+  must send `project_id` on `GET /api/runs`, `/api/work_orders` and
+  `/api/log_lines`. Both credential lists page like the other lists, 10 by
   default, so a client that read the whole list must follow `links.next`.
   `POST /api/provision` reads the project id from the body only.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
