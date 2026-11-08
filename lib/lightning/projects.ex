@@ -2522,6 +2522,7 @@ defmodule Lightning.Projects do
     but two siblings cannot share a name (enforced by the `projects_unique_child_name` index).
   * This function does **not** clone workflows, credentials, or dataclips. It only creates
     a new project row with `parent_id` set. See sandbox provisioning flow for full cloning.
+  * The sandbox belongs to its parent's organization.
 
   ## Returns
 
@@ -2530,9 +2531,14 @@ defmodule Lightning.Projects do
   """
   @spec create_sandbox(Project.t(), map(), Lightning.Actor.t()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
-  def create_sandbox(%Project{id: parent_id}, attrs, actor) do
+  def create_sandbox(
+        %Project{id: parent_id, organization_id: organization_id},
+        attrs,
+        actor
+      ) do
     attrs
     |> Map.put(:parent_id, parent_id)
+    |> Map.put(:organization_id, organization_id)
     |> create_project(actor, notify: false)
   end
 

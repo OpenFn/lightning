@@ -85,6 +85,16 @@ defmodule Lightning.Factories do
     %Lightning.Projects.ProjectUser{}
   end
 
+  def organization_factory do
+    %Lightning.Organizations.Organization{
+      name: sequence(:organization_name, &"Organization #{&1}")
+    }
+  end
+
+  def organization_user_factory do
+    %Lightning.Organizations.OrganizationUser{role: :member}
+  end
+
   def workflow_factory do
     %Lightning.Workflows.Workflow{
       project: build(:project),

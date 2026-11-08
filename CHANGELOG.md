@@ -43,6 +43,13 @@ and this project adheres to
 
 ### Added
 
+- Organizations, the institutions above projects. Every project belongs to one,
+  and a person can belong to many, as an admin or a member. Belonging to one
+  opens none of its projects. Upgrading puts every existing project in one
+  "Default organization", with superusers as its admins and project members as
+  its members. A superuser creates organizations, and an admin renames one and
+  manages its members, at `/api/organizations` with the new
+  `organizations:write` grant. The pages don't show organizations yet.
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
   metrics are enabled, where they're sent, and the instance UUID and its hash.
   [#5262](https://github.com/OpenFn/lightning/issues/5262)

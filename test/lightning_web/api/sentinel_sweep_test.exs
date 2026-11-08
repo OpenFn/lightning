@@ -344,6 +344,11 @@ defmodule LightningWeb.API.SentinelSweepTest do
   # before the body is read.
   defp expected(%{path: "/api/auth_provider"}, :array), do: @forbidden
 
+  # Only a superuser may create an organization, so the member is refused
+  # before the body is read.
+  defp expected(%{verb: :post, path: "/api/organizations"}, :array),
+    do: @forbidden
+
   # A route that takes only a session token refuses the member's personal
   # token before it reads an id or a body.
   defp expected(%{verb: verb, path: path}, attempt)
@@ -440,6 +445,11 @@ defmodule LightningWeb.API.SentinelSweepTest do
               "/api/work_orders/:id"
             ],
        do: true
+
+  # Only a superuser or the service account learns which organizations exist,
+  # so a person hears 403 for any organization they aren't in, with any body.
+  defp no_standing_on_parent?(%{path: "/api/organizations/" <> _}, _attempt),
+    do: true
 
   defp no_standing_on_parent?(%{path: path}, :array),
     do:

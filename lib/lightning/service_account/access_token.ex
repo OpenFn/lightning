@@ -15,6 +15,7 @@ defmodule Lightning.ServiceAccount.AccessToken do
     "projects:write",
     "credentials:write",
     "collections:write",
+    "organizations:write",
     "audit:read"
   ]
   @lifetime 300

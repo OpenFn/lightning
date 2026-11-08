@@ -5,7 +5,7 @@ defmodule LightningWeb.API.ProjectJSON do
 
   alias LightningWeb.Router.Helpers, as: Routes
 
-  @fields ~w(name description)a
+  @fields ~w(name description organization_id)a
 
   # The settings each have their own route under the project.
   @settings ~w(retention_policy history_retention_period dataclip_retention_period

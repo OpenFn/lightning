@@ -108,6 +108,7 @@ defmodule LightningWeb.API.Codes do
     :no_access,
     :not_found,
     :not_supported,
+    :one_admin,
     :one_body,
     :one_enabled,
     :one_enabled_edge,
