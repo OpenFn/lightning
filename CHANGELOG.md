@@ -71,11 +71,13 @@ and this project adheres to
   (`/api/me/mfa`), and disconnect GitHub and list the repositories and branches
   it can reach (`/api/me/github_*`). A person can change their own names and
   contact preference with `PATCH /api/users/:id` on their own id, with a session
-  token or a personal access token. A superuser can read, set and remove the
-  single sign-on provider at `/api/auth_provider`. Creating a token, turning MFA
-  on or off, replacing the authenticator and replacing backup codes need a
-  session token stepped up in the last five minutes, and answer 403
-  `step_up_required` otherwise.
+  token or a personal access token, and their password and email with a session
+  token stepped up. A new password ends their other sessions and revokes their
+  personal access tokens, and a new email changes once they follow the link sent
+  to it. A superuser can read, set and remove the single sign-on provider at
+  `/api/auth_provider`. Creating a token, turning MFA on or off, replacing the
+  authenticator and replacing backup codes need a session token stepped up in
+  the last five minutes, and answer 403 `step_up_required` otherwise.
 - Projects through the API: schedule a project's deletion and cancel it
   (`DELETE /api/projects/:id`, `/api/projects/:id/scheduled_deletion`), set its
   data retention, MFA requirement and support access, list, add, change and
@@ -125,12 +127,11 @@ and this project adheres to
   [API.md](API.md#errors) has every code and status.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
 - **Breaking:** `/api/users` refuses a personal access token with 403, except a
-  person changing their own names and contact preference. The service account
-  must send `project_id` on `GET /api/runs`, `/api/work_orders` and
-  `/api/log_lines`. Both credential lists page like the other lists, 10 by
-  default, so a client that read the whole list must follow `links.next`.
-  `POST /api/provision` reads the project id from the body only.
-  [#5272](https://github.com/OpenFn/lightning/pull/5272)
+  person changing their own account. The service account must send `project_id`
+  on `GET /api/runs`, `/api/work_orders` and `/api/log_lines`. Both credential
+  lists page like the other lists, 10 by default, so a client that read the
+  whole list must follow `links.next`. `POST /api/provision` reads the project
+  id from the body only. [#5272](https://github.com/OpenFn/lightning/pull/5272)
 - `SERVICE_ACCOUNT_PUBLIC_KEY`, `WORKER_RUNS_PRIVATE_KEY` and `GITHUB_CERT` take
   raw PEM, PEM with literal `\n`, or base64, and a bad value now stops the boot
   naming the variable instead of failing later. That includes a placeholder

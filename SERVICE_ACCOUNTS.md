@@ -13,7 +13,7 @@ A service account differs from a person's personal access token:
 
 - It is not a user. It has no email, no password and no project memberships.
 - It can act on every project, and it is the only caller that can use
-  `/api/users`, beyond a person changing their own names.
+  `/api/users`, beyond a person changing their own account.
 - Its token carries only the token grants it asked for, and expires after five
   minutes. A personal access token carries its person's permissions and lasts
   until the person revokes it.

@@ -182,31 +182,65 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Changes what a person may change about their own account without stepping
-  up: `first_name`, `last_name` and `contact_preference`, recorded with the
-  person as the actor. None of these signs them out.
+  Changes what a person may change about their own account, recorded with the
+  person as the actor: `first_name`, `last_name`, `contact_preference`,
+  `password` and `email`.
+
+  The names and contact preference change at once and sign no one out. A new
+  password ends every session but the one in `:keep_session` (a session token)
+  and revokes the person's personal access tokens and password reset links.
+  The password they already have changes nothing. A new email isn't changed
+  yet: the person is sent a link at the new address, which changes it once
+  followed, and the old address is told.
 
   Returns `{:error, :concurrent_edit}` when another request deleted the user
   while this one ran.
   """
-  @spec update_own_details(User.t(), map()) ::
+  @spec update_own_account(User.t(), map(), keyword()) ::
           {:ok, User.t()} | {:error, Changeset.t() | :concurrent_edit}
-  def update_own_details(%User{} = user, attrs) do
-    user |> User.info_changeset(attrs) |> write_user(user)
+  def update_own_account(%User{} = user, attrs, opts \\ []) do
+    changeset = User.own_account_changeset(user, attrs)
+    new_email = Changeset.get_change(changeset, :email)
+    changeset = Changeset.delete_change(changeset, :email)
+
+    revoke =
+      if Changeset.changed?(changeset, :hashed_password),
+        do:
+          UserToken.user_and_contexts_query(
+            user,
+            ["session", "api", "reset_password"],
+            except: opts[:keep_session]
+          )
+
+    with {:ok, updated} <- write_user(changeset, user, revoke) do
+      if new_email, do: {:ok, _email} = request_email_update(updated, new_email)
+      {:ok, updated}
+    end
   end
 
-  defp write_user(%Changeset{data: user} = changeset, actor) do
-    revoke_contexts = revoke_contexts(changeset)
+  # `revoke` is the query of the tokens to delete with the change, or `nil` to
+  # delete none. By default it follows what changed (`revoke_contexts/1`).
+  defp write_user(changeset, actor, revoke \\ :by_change)
 
+  defp write_user(%Changeset{data: user} = changeset, actor, :by_change) do
+    revoke =
+      case revoke_contexts(changeset) do
+        nil -> nil
+        contexts -> UserToken.user_and_contexts_query(user, contexts)
+      end
+
+    write_user(changeset, actor, revoke)
+  end
+
+  defp write_user(%Changeset{} = changeset, actor, revoke) do
     Multi.new()
     |> Multi.update(:user, changeset, stale_error_field: :id)
     |> maybe_audit_update(changeset, actor)
-    |> maybe_revoke_tokens(user, revoke_contexts)
+    |> maybe_revoke_tokens(revoke)
     |> Repo.transaction()
     |> case do
       {:ok, %{user: updated}} ->
-        if revoke_contexts,
-          do: LightningWeb.UserAuth.disconnect_user_sockets(updated)
+        if revoke, do: LightningWeb.UserAuth.disconnect_user_sockets(updated)
 
         for {change, true} <- superuser_changes(changeset),
             do: superuser_changed(change, updated, actor)
@@ -667,15 +701,10 @@ defmodule Lightning.Accounts do
     User.user_registration_changeset(attrs, hash_password: false)
   end
 
-  defp maybe_revoke_tokens(multi, _user, nil), do: multi
+  defp maybe_revoke_tokens(multi, nil), do: multi
 
-  defp maybe_revoke_tokens(multi, user, contexts) do
-    Ecto.Multi.delete_all(
-      multi,
-      :tokens,
-      UserToken.user_and_contexts_query(user, contexts)
-    )
-  end
+  defp maybe_revoke_tokens(multi, query),
+    do: Ecto.Multi.delete_all(multi, :tokens, query)
 
   def change_user_info(%User{} = user, attrs \\ %{}) do
     User.info_changeset(user, attrs)

@@ -325,6 +325,48 @@ defmodule Lightning.Accounts.User do
   end
 
   @doc """
+  A user changeset for what a person may change about their own account:
+  `first_name`, `last_name`, `contact_preference`, `password` and `email`.
+
+  A password is checked and hashed as `details_changeset/2` does, so the one
+  they already have changes nothing, and an account that signs in only
+  through a provider can set its first one. An email they send must be a new
+  one in a valid format that no one else holds; the change it leaves is the
+  address to confirm, not one to save.
+  """
+  def own_account_changeset(user, attrs) do
+    user
+    |> cast(attrs, [
+      :first_name,
+      :last_name,
+      :contact_preference,
+      :password,
+      :email
+    ])
+    |> validate_names()
+    |> maybe_validate_password()
+    |> validate_new_email()
+  end
+
+  defp validate_new_email(changeset) do
+    case Map.fetch(changeset.changes, :email) do
+      {:ok, nil} ->
+        add_error(changeset, :email, "can't be blank",
+          validation: :required,
+          code: :required
+        )
+
+      {:ok, _email} ->
+        validate_email(changeset)
+
+      :error ->
+        if Map.has_key?(changeset.params, "email"),
+          do: add_error(changeset, :email, "did not change", code: :unchanged),
+          else: changeset
+    end
+  end
+
+  @doc """
   A user changeset for changing the email.
 
   It requires the email to change otherwise an error is added.

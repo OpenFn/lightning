@@ -288,4 +288,15 @@ defmodule Lightning.Accounts.UserToken do
       order_by: [desc: :inserted_at]
     )
   end
+
+  @doc """
+  The user's tokens in `contexts`, except the one token in `:except`, so a
+  change can end every other session and keep the one that made it.
+  """
+  def user_and_contexts_query(user, [_ | _] = contexts, except: nil),
+    do: user_and_contexts_query(user, contexts)
+
+  def user_and_contexts_query(user, [_ | _] = contexts, except: token) do
+    from(t in user_and_contexts_query(user, contexts), where: t.token != ^token)
+  end
 end
