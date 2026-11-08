@@ -366,6 +366,7 @@ curl -s https://lightning.example.org/.well-known/oauth-authorization-server
     "projects:write",
     "credentials:write",
     "collections:write",
+    "organizations:write",
     "audit:read"
   ],
   "grant_types_supported": ["client_credentials"],
@@ -505,14 +506,15 @@ which.
 A request to the token endpoint names the token grants it needs in `scope`, and
 the access token carries only those. Ask for the fewest that do the job.
 
-| Token grant         | What it allows                                                                              |
-| ------------------- | ------------------------------------------------------------------------------------------- |
-| `users:read`        | Finds and reads users.                                                                      |
-| `users:write`       | Creates and changes users, including superusers. It does not include `users:read`.          |
-| `projects:write`    | Reads and changes projects and what's in them: workflows, jobs, work orders, runs and logs. |
-| `credentials:write` | Reads and changes credentials, and which projects they are linked to.                       |
-| `collections:write` | Reads, creates and renames a project's collections.                                         |
-| `audit:read`        | Reads the instance's audit events.                                                          |
+| Token grant           | What it allows                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `users:read`          | Finds and reads users.                                                                      |
+| `users:write`         | Creates and changes users, including superusers. It does not include `users:read`.          |
+| `projects:write`      | Reads and changes projects and what's in them: workflows, jobs, work orders, runs and logs. |
+| `credentials:write`   | Reads and changes credentials, and which projects they are linked to.                       |
+| `collections:write`   | Reads, creates and renames a project's collections.                                         |
+| `organizations:write` | Reads, creates and renames organizations, and adds, changes and removes their members.      |
+| `audit:read`          | Reads the instance's audit events.                                                          |
 
 To set up a new instance, ask for `users:write` and `projects:write`, and
 `users:read` if the automation looks users up before creating them.

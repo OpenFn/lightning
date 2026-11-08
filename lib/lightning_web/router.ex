@@ -137,6 +137,27 @@ defmodule LightningWeb.Router do
 
     get "/me", API.MeController, :show
 
+    get "/organizations", API.OrganizationController, :index
+    post "/organizations", API.OrganizationController, :create
+    get "/organizations/:id", API.OrganizationController, :show
+    patch "/organizations/:id", API.OrganizationController, :update
+
+    get "/organizations/:organization_id/members",
+        API.OrganizationMemberController,
+        :index
+
+    post "/organizations/:organization_id/members",
+         API.OrganizationMemberController,
+         :create
+
+    patch "/organizations/:organization_id/members/:user_id",
+          API.OrganizationMemberController,
+          :update
+
+    delete "/organizations/:organization_id/members/:user_id",
+           API.OrganizationMemberController,
+           :delete
+
     get "/projects/:id", API.ProjectController, :show
     put "/projects/:id", API.ProjectController, :update
 

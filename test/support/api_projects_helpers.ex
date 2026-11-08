@@ -49,10 +49,12 @@ defmodule LightningWeb.ApiProjectsHelpers do
   end
 
   @doc """
-  The settings a project the factory builds carries among its attributes.
+  The settings a project the factory builds carries among its attributes,
+  with the organization it belongs to, which the factory leaves unset.
   """
   def default_settings do
     %{
+      "organization_id" => nil,
       "retention_policy" => "retain_all",
       "history_retention_period" => nil,
       "dataclip_retention_period" => nil,

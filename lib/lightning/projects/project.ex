@@ -40,6 +40,7 @@ defmodule Lightning.Projects.Project do
     field :starting_dataclip_id, :binary_id, virtual: true
 
     belongs_to :parent, __MODULE__, type: :binary_id
+    belongs_to :organization, Lightning.Organizations.Organization
 
     has_many :project_users, ProjectUser
     has_many :users, through: [:project_users, :user]
@@ -285,6 +286,7 @@ defmodule Lightning.Projects.Project do
     |> cast(attrs, [
       :id,
       :name,
+      :organization_id,
       :description,
       :concurrency,
       :parent_id,

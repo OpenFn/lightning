@@ -194,6 +194,19 @@ their own account, and for a superuser setting up single sign-on.
 | `PUT`    | `/api/auth_provider`                         | Sets up or replaces the single sign-on provider, as a superuser | Not open to the service account |
 | `DELETE` | `/api/auth_provider`                         | Removes the single sign-on provider, as a superuser             | Not open to the service account |
 
+### Organizations
+
+| Method   | Path                                                   | What it does                            | Token grant           |
+| -------- | ------------------------------------------------------ | --------------------------------------- | --------------------- |
+| `GET`    | `/api/organizations`                                   | Lists organizations                     | `organizations:write` |
+| `POST`   | `/api/organizations`                                   | Creates an organization, as a superuser | `organizations:write` |
+| `GET`    | `/api/organizations/:id`                               | Reads an organization                   | `organizations:write` |
+| `PATCH`  | `/api/organizations/:id`                               | Renames an organization                 | `organizations:write` |
+| `GET`    | `/api/organizations/:organization_id/members`          | Lists an organization's members         | `organizations:write` |
+| `POST`   | `/api/organizations/:organization_id/members`          | Adds a member by email                  | `organizations:write` |
+| `PATCH`  | `/api/organizations/:organization_id/members/:user_id` | Changes a member's role                 | `organizations:write` |
+| `DELETE` | `/api/organizations/:organization_id/members/:user_id` | Removes a member                        | `organizations:write` |
+
 ### Projects
 
 | Method | Path                                        | What it does                                                  | Token grant                     |
