@@ -81,10 +81,10 @@ defmodule Lightning.SetupUtils do
     organization =
       create_demo_organization(
         [
-          {super_user, :admin},
-          {admin, :admin},
-          {editor, :member},
-          {viewer, :member}
+          %{user: super_user, role: :admin},
+          %{user: admin, role: :admin},
+          %{user: editor, role: :member},
+          %{user: viewer, role: :member}
         ],
         [openhie_project, dhis2_project]
       )
@@ -108,13 +108,11 @@ defmodule Lightning.SetupUtils do
 
   # The demo's organization, holding its projects. Without one, an instance
   # seeded from scratch has none: the migration that makes a "Default
-  # organization" runs before there are projects to put in it. `members` pairs
-  # each user with a role; a missing superuser (nil) is left out.
-  defp create_demo_organization(members, projects) do
-    [%{user: actor} | _] =
-      members =
-      for {user, role} <- members, user, do: %{user: user, role: role}
-
+  # organization" runs before there are projects to put in it.
+  defp create_demo_organization(
+         [%{user: actor} | _] = members,
+         projects
+       ) do
     {:ok, organization} =
       Organizations.create_organization(
         %{name: "Default organization"},

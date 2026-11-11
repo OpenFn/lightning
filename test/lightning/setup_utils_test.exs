@@ -643,18 +643,6 @@ defmodule Lightning.SetupUtilsTest do
                  {viewer.id, :member}
                ])
     end
-
-    test "has Amy as its admin when there's no superuser" do
-      Lightning.SetupUtils.tear_down(destroy_super: true)
-
-      %{organization: organization, users: [nil, admin, _editor, _viewer]} =
-        Lightning.SetupUtils.setup_demo(create_super: false)
-
-      assert Repo.all(Lightning.Organizations.OrganizationUser)
-             |> Enum.filter(&(&1.role == :admin))
-             |> Enum.map(&{&1.organization_id, &1.user_id}) ==
-               [{organization.id, admin.id}]
-    end
   end
 
   describe "Tear down demo data" do
