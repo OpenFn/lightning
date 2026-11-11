@@ -10,23 +10,32 @@
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 
-Lightning.Accounts.register_user(%{
-  email: "admin@openfn.org",
-  password: "123456789abc",
-  password_confirmation: "123456789abc",
-  role: "admin"
-})
+[admin | others] =
+  for {email, first_name, last_name} <- [
+        {"admin@openfn.org", "Admin", "User"},
+        {"user1@openfn.org", "First", "User"},
+        {"user2@openfn.org", "Second", "User"}
+      ] do
+    {:ok, user} =
+      Lightning.Accounts.register_user(%{
+        email: email,
+        first_name: first_name,
+        last_name: last_name,
+        password: "123456789abc",
+        password_confirmation: "123456789abc"
+      })
 
-Lightning.Accounts.register_user(%{
-  email: "user1@openfn.org",
-  password: "123456789abc",
-  password_confirmation: "123456789abc",
-  role: "user"
-})
+    user
+  end
 
-Lightning.Accounts.register_user(%{
-  email: "user2@openfn.org",
-  password: "123456789abc",
-  password_confirmation: "123456789abc",
-  role: "user"
-})
+# An organization for them to belong to: the migration that makes one runs
+# before there's anyone to put in it.
+{:ok, _organization} =
+  Lightning.Organizations.create_organization(
+    %{name: "Default organization"},
+    [
+      %{user: admin, role: :admin}
+      | Enum.map(others, &%{user: &1, role: :member})
+    ],
+    admin
+  )
