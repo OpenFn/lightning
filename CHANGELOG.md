@@ -157,6 +157,10 @@ and this project adheres to
 
 ### Fixed
 
+- A demo reset, or a fresh database seeded with `priv/repo/seeds.exs`, now has
+  a "Default organization" holding its projects and users. Before, it had none,
+  because the migration that makes one runs before there are projects. The dev
+  seeds also failed to create any user, since they gave no names.
 - Setting up a new authenticator while MFA was already on kept the old secret,
   so codes from the new authenticator were refused at the next sign-in.
 - Signing out now also ends the session's step-up (the sudo token from

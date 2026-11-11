@@ -9,7 +9,9 @@ defmodule Lightning.SetupUtils do
   alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Jobs
+  alias Lightning.Organizations
   alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Workflows
@@ -40,6 +42,7 @@ defmodule Lightning.SetupUtils do
 
   @spec setup_demo(nil | maybe_improper_list | map) :: %{
           jobs: [...],
+          organization: Lightning.Organizations.Organization.t(),
           projects: [atom | %{:id => any, optional(any) => any}, ...],
           users: [atom | %{:id => any, optional(any) => any}, ...],
           workflows: [atom | %{:id => any, optional(any) => any}, ...],
@@ -75,16 +78,56 @@ defmodule Lightning.SetupUtils do
         %{user_id: admin.id, role: :owner}
       ])
 
+    organization =
+      create_demo_organization(
+        [
+          {super_user, :admin},
+          {admin, :admin},
+          {editor, :member},
+          {viewer, :member}
+        ],
+        [openhie_project, dhis2_project]
+      )
+
     %{
       jobs: openhie_jobs ++ dhis2_jobs,
       users: [super_user, admin, editor, viewer],
-      projects: [openhie_project, dhis2_project],
+      organization: organization,
+      projects:
+        Enum.map(
+          [openhie_project, dhis2_project],
+          &%{&1 | organization_id: organization.id}
+        ),
       workflows: [openhie_workflow, dhis2_workflow],
       workorders: [
         openhie_workorder,
         failure_dhis2_workorder
       ]
     }
+  end
+
+  # The demo's organization, holding its projects. Without one, an instance
+  # seeded from scratch has none: the migration that makes a "Default
+  # organization" runs before there are projects to put in it. `members` pairs
+  # each user with a role; a missing superuser (nil) is left out.
+  defp create_demo_organization(members, projects) do
+    [%{user: actor} | _] =
+      members =
+      for {user, role} <- members, user, do: %{user: user, role: role}
+
+    {:ok, organization} =
+      Organizations.create_organization(
+        %{name: "Default organization"},
+        members,
+        actor
+      )
+
+    project_ids = Enum.map(projects, & &1.id)
+
+    from(p in Project, where: p.id in ^project_ids)
+    |> Repo.update_all(set: [organization_id: organization.id])
+
+    organization
   end
 
   defp to_log_lines(log) do
@@ -821,6 +864,8 @@ defmodule Lightning.SetupUtils do
       Lightning.Channels.ChannelSnapshot,
       Lightning.Channels.Channel,
       Lightning.Projects.Project,
+      Lightning.Organizations.OrganizationUser,
+      Lightning.Organizations.Organization,
       Lightning.Collaboration.DocumentState
     ])
 

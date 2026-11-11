@@ -613,6 +613,50 @@ defmodule Lightning.SetupUtilsTest do
     end
   end
 
+  describe "Demo organization" do
+    setup do
+      Lightning.SetupUtils.setup_demo(create_super: true)
+    end
+
+    test "holds both projects, with the superuser and Amy as admins", %{
+      organization: organization,
+      users: [super_user, admin, editor, viewer],
+      projects: projects
+    } do
+      assert organization.name == "Default organization"
+
+      assert Repo.all(Lightning.Organizations.Organization)
+             |> Enum.map(& &1.id) == [organization.id]
+
+      for project <- projects do
+        assert Repo.get!(Projects.Project, project.id).organization_id ==
+                 organization.id
+      end
+
+      assert Repo.all(Lightning.Organizations.OrganizationUser)
+             |> Enum.map(&{&1.user_id, &1.role})
+             |> Enum.sort() ==
+               Enum.sort([
+                 {super_user.id, :admin},
+                 {admin.id, :admin},
+                 {editor.id, :member},
+                 {viewer.id, :member}
+               ])
+    end
+
+    test "has Amy as its admin when there's no superuser" do
+      Lightning.SetupUtils.tear_down(destroy_super: true)
+
+      %{organization: organization, users: [nil, admin, _editor, _viewer]} =
+        Lightning.SetupUtils.setup_demo(create_super: false)
+
+      assert Repo.all(Lightning.Organizations.OrganizationUser)
+             |> Enum.filter(&(&1.role == :admin))
+             |> Enum.map(&{&1.organization_id, &1.user_id}) ==
+               [{organization.id, admin.id}]
+    end
+  end
+
   describe "Tear down demo data" do
     setup do
       Lightning.SetupUtils.setup_demo(create_super: true)
@@ -632,6 +676,7 @@ defmodule Lightning.SetupUtilsTest do
 
       assert Lightning.Accounts.list_users() |> Enum.count() == 0
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
+      assert Repo.all(Lightning.Organizations.Organization) == []
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
       assert Repo.all(Lightning.Invocation.Step) |> Enum.count() == 0
@@ -654,6 +699,7 @@ defmodule Lightning.SetupUtilsTest do
 
       assert Lightning.Accounts.list_users() |> Enum.count() == 1
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
+      assert Repo.all(Lightning.Organizations.Organization) == []
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
       assert Repo.all(Lightning.Invocation.Step) |> Enum.count() == 0
