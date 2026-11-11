@@ -10,8 +10,9 @@ defmodule Lightning.UsageTracking.UserQueries do
   alias Lightning.Accounts.UserToken
 
   # Trailing window (in days) used for the two active-user metrics. The 90-day
-  # figure is the original `no_of_active_users` series; the 30-day figure backs
-  # the standard SaaS "monthly active users" (MAU) metric.
+  # figure is the original `no_of_active_users` series (effectively quarterly
+  # active users); the 30-day figure backs the standard SaaS "monthly active
+  # users" (MAU) metric. Both count logins and API token use.
   @active_window_days 90
   @monthly_active_window_days 30
 
@@ -42,6 +43,9 @@ defmodule Lightning.UsageTracking.UserQueries do
     |> filter_by_users(user_list)
   end
 
+  # A user is active if, within the window, a session was created for them (a
+  # login) or one of their API tokens was used. API tokens record use in
+  # `last_used_at`, not `inserted_at`.
   defp active_users_within(date, window_days) do
     report_time = report_date_as_time(date)
 
@@ -55,8 +59,11 @@ defmodule Lightning.UsageTracking.UserQueries do
       distinct: eu.id,
       join: ut in UserToken,
       on: ut.user_id == eu.id,
-      where: ut.context == "session",
-      where: ut.inserted_at > ^threshold_time and ut.inserted_at <= ^report_time
+      where:
+        (ut.context == "session" and ut.inserted_at > ^threshold_time and
+           ut.inserted_at <= ^report_time) or
+          (ut.context == "api" and ut.last_used_at > ^threshold_time and
+             ut.last_used_at <= ^report_time)
   end
 
   defp filter_by_users(query, user_list) do
