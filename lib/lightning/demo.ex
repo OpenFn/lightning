@@ -12,6 +12,11 @@ defmodule Lightning.Demo do
   """
   def reset_demo do
     if Application.get_env(:lightning, :is_resettable_demo) do
+      # The demo's log lines are timestamped in a time zone, and the minimum
+      # setup doesn't start the time zone database, so a release's
+      # `eval "Lightning.Demo.reset_demo()"` would crash without it.
+      {:ok, _apps} = Application.ensure_all_started(:tzdata)
+
       {:ok, _, _} =
         Lightning.Setup.with_minimum_setup(fn ->
           SetupUtils.tear_down(destroy_super: true)

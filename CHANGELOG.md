@@ -157,6 +157,10 @@ and this project adheres to
 
 ### Fixed
 
+- `Lightning.Demo.reset_demo()` run from a release
+  (`bin/lightning eval "Lightning.Demo.reset_demo()"`) crashed with
+  `:time_zone_not_found` while seeding, because the time zone database wasn't
+  started. [#5283](https://github.com/OpenFn/lightning/pull/5283)
 - A demo reset, or a fresh database seeded with `priv/repo/seeds.exs`, now has a
   "Default organization" holding its projects and users. Before, it had none,
   because the migration that makes one runs before there are projects. The dev
