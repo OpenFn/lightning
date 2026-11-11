@@ -94,12 +94,12 @@ export const jobOf = (jobId: string) =>
      where j.id = '${jobId}'`
   )[0];
 
-async function openConfigure(page: Page, box: Locator) {
+export async function openConfigure(page: Page, box: Locator) {
   await configureButton(box).click();
   await expect(configureTitle(page)).toBeVisible();
 }
 
-async function closeConfigure(page: Page) {
+export async function closeConfigure(page: Page) {
   await configure(page)
     .getByRole('button', { name: 'Close', exact: true })
     .click();
@@ -413,6 +413,32 @@ export async function S11(
   step: Step & { projectName: string },
   save: () => Promise<void>
 ) {
+  await saveDhis2FromStep(page, box, 'DHIS2 test', form =>
+    expect(form).toContainText(step.projectName)
+  );
+
+  await expect(configureTitle(page)).toBeVisible();
+  await expect(credentialChoice(page, 'DHIS2 test')).toBeChecked();
+  await closeConfigure(page);
+  await save();
+  await expect
+    .poll(() => jobOf(step.jobId))
+    .toMatchObject({ credential: 'DHIS2 test' });
+}
+
+// ---------------------------------------------------------------------------
+// What a step's "Configure connection" does, for flows that start there
+// (flow-editor-credentials-broadcast)
+// ---------------------------------------------------------------------------
+
+// When I click "New Credential" in "Configure connection" on <box>'s step
+// and save a DHIS2 credential <name>. <check> looks at the form first.
+export async function saveDhis2FromStep(
+  page: Page,
+  box: Locator,
+  name: string,
+  check: (form: Locator) => Promise<void> = async () => {}
+) {
   await openConfigure(page, box);
   await configure(page)
     .getByRole('button', { name: 'New Credential' })
@@ -422,22 +448,81 @@ export async function S11(
   await expect(credentialForm(page)).toBeVisible();
   const form = credentialDialog(page);
   await expect(field(form, 'Host URL')).toBeVisible();
-  await expect(form).toContainText(step.projectName);
-  await field(form, 'Credential Name').fill('DHIS2 test');
+  await check(form);
+  await field(form, 'Credential Name').fill(name);
   await field(form, 'Username').fill('admin');
   await field(form, 'Password').fill('district');
   await field(form, 'Host URL').fill('https://play.dhis2.example.org');
   // The form checks each change before Save is on
   await expect(submitButton(form, 'Save Credential')).toBeEnabled();
   await submit(form, 'Save Credential');
+}
 
-  await expect(configureTitle(page)).toBeVisible();
-  await expect(credentialChoice(page, 'DHIS2 test')).toBeChecked();
-  await closeConfigure(page);
-  await save();
-  await expect
-    .poll(() => jobOf(step.jobId))
-    .toMatchObject({ credential: 'DHIS2 test' });
+// When I save a keychain credential <name> with JSONPath <path> from
+// "Configure connection" on <box>'s step ("Advanced", then "Keychain")
+export async function saveKeychainFromStep(
+  page: Page,
+  box: Locator,
+  name: string,
+  path: string
+) {
+  await openConfigure(page, box);
+  await configure(page)
+    .getByRole('button', { name: 'New Credential' })
+    .first()
+    .click();
+  await expect(credentialForm(page)).toBeVisible();
+  await fillKeychain(page, name, path);
+  await submit(page, 'Create');
+}
+
+// When I rename my credential <from> to <to> from "Configure connection"
+// on <box>'s step, with its edit button
+export async function renameFromStep(
+  page: Page,
+  box: Locator,
+  from: string,
+  to: string
+) {
+  await openConfigure(page, box);
+  await credentialRow(page, from)
+    .getByRole('button', { name: /edit credential/i })
+    .click();
+  await expect(credentialForm(page)).toBeVisible();
+  const form = credentialDialog(page);
+  await field(form, 'Credential Name').fill(to);
+  await expect(submitButton(form, 'Save Credential')).toBeEnabled();
+  await submit(form, 'Save Credential');
+}
+
+// The credentials "Configure connection" lists under <group>: "matching"
+// (the ones made for the step's adaptor, shown first) or a heading of the
+// other credentials ("Generic Credentials", "Keychain Credentials"). The
+// dialog must be open; it is switched to that list if it shows the other.
+export async function listedUnder(page: Page, group: string) {
+  const toggle = (name: string) =>
+    configure(page).getByRole('button', { name, exact: true });
+  const other = group !== 'matching';
+  const away = toggle(
+    other ? 'Other credentials' : 'Back to matching credentials'
+  );
+  if (await away.isVisible()) await away.click();
+  const list = other
+    ? configure(page)
+        .locator('div')
+        .filter({ has: page.getByText(group, { exact: true }) })
+        .filter({ has: page.getByRole('radio') })
+        .last()
+    : configure(page);
+  if (other && (await list.count()) === 0) return [];
+  // Each choice is named "Select <name> credential"
+  return (
+    await list
+      .getByRole('radio')
+      .evaluateAll(radios =>
+        radios.map(r => r.getAttribute('aria-label') ?? '')
+      )
+  ).map(label => label.replace(/^Select (.*) credential$/, '$1'));
 }
 
 // @S12 A viewer cannot save a credential from the editor

@@ -133,15 +133,21 @@ const inputEditor = (page: Page) =>
 
 // When the input editor holds <text>: pasted over whatever it held, as a user
 // would. Typing would have Monaco close brackets and quotes for me.
-export async function setCustomInput(page: Page, text: string) {
+// <editor> is the panel's input editor, unless the panel sits elsewhere
+// (the IDE's: workflow-editor-ide's runPanelInput)
+export async function setCustomInput(
+  page: Page,
+  text: string,
+  editor = inputEditor(page)
+) {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-  await inputEditor(page).click();
+  await editor.click();
   // A key pressed before Monaco takes focus is lost
-  await expect(inputEditor(page)).toHaveClass(/\bfocused\b/);
+  await expect(editor).toHaveClass(/\bfocused\b/);
   await expect(async () => {
     await page.keyboard.press('ControlOrMeta+A');
     await page.keyboard.press('Backspace');
-    expect((await customInputText(page)).trim()).toBe('');
+    expect((await customInputText(page, editor)).trim()).toBe('');
   }).toPass();
   if (!text) return;
   await page.evaluate(t => navigator.clipboard.writeText(t), text);
@@ -153,8 +159,8 @@ export const focusCustomInput = (page: Page) => inputEditor(page).click();
 
 // The text the input editor shows, one line per drawn line (Monaco draws
 // spaces as no-break spaces)
-export async function customInputText(page: Page) {
-  const lines = inputEditor(page).locator('.view-line');
+export async function customInputText(page: Page, editor = inputEditor(page)) {
+  const lines = editor.locator('.view-line');
   return (await lines.allInnerTexts()).join('\n').replace(/\u00a0/g, ' ');
 }
 

@@ -378,6 +378,14 @@ export const changedStep = (within: Locator, name: string) =>
 export const openStepButton = (within: Locator, name: string) =>
   changedStep(within, name).getByRole('button', { name: 'Open', exact: true });
 
+// The line under a question naming who asked it ("Sent by <full name>")
+export const sentBy = (page: Page, name: string) =>
+  panel(page).getByText(new RegExp(`Sent by ${name}\\b`));
+
+// "Try again" on a failed reply or a change that did not apply
+export const tryAgainButton = (page: Page) =>
+  panel(page).getByRole('button', { name: 'Try again', exact: true });
+
 export const revertButton = (page: Page) =>
   panel(page).getByRole('button', { name: 'Revert changes', exact: true });
 export const restoreButton = (page: Page) =>

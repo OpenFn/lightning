@@ -41,6 +41,22 @@ export async function logLines(page: Page) {
   return lines.length === 1 && !lines[0] ? [] : lines;
 }
 
+// The whole log, every line of it, not just the ones drawn: selected and
+// copied from the log's editor, as a person would copy it out
+// <editor> is the log's editor where a page shows more than one
+export async function wholeLog(page: Page, editor = logEditor(page)) {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await editor.locator('.view-lines').click();
+  // Monaco reads the platform from the user agent, which the test browser
+  // gives as Windows, so its select-all is Ctrl+A; the copy is the
+  // browser's own, Cmd+C on a Mac
+  await page.keyboard.press('Control+a');
+  await page.keyboard.press('ControlOrMeta+c');
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  // Lines are padded to line up; the drawn ones are not
+  return text ? text.split('\n').map(line => line.trimEnd()) : [];
+}
+
 // The drawn lines marked in the gutter
 export const markedLines = async (page: Page) =>
   (await drawn(page)).filter(l => l.marked).map(l => l.text);

@@ -17,6 +17,15 @@ const READY = { timeout: 20000 };
 export const editorPath = (projectId: string, workflowId: string, query = '') =>
   `/projects/${projectId}/w/${workflowId}${query}`;
 
+// A bookmark from before the collaborative editor: run <runId> and step
+// <jobId> as the old editor's a= and s=
+export const legacyEditorPath = (
+  projectId: string,
+  workflowId: string,
+  runId: string,
+  jobId: string
+) => `/projects/${projectId}/w/${workflowId}/legacy?a=${runId}&s=${jobId}`;
+
 export const workflowsListPath = (projectId: string) =>
   `/projects/${projectId}/w`;
 
@@ -454,6 +463,9 @@ export const editorToast = (page: Page, text: string | RegExp) =>
     .or(page.getByRole('alert').filter({ hasText: text }))
     .first();
 
+// Every toast the editor shows now
+export const editorToasts = (page: Page) => page.locator('[data-sonner-toast]');
+
 // The button inside a toast
 export const toastButton = (page: Page, text: string | RegExp, name: string) =>
   page
@@ -578,6 +590,8 @@ export async function watchEditorSocket(page: Page) {
   const doc = new Y.Doc();
   const replies = new Map<string, Reply>();
   const pushes: { event: string; payload: unknown }[] = [];
+  // Every event the server sent, on any topic (run:<id> and the rest)
+  const frames: { topic: string; event: string }[] = [];
   let send: ((m: string | Buffer) => void) | null = null;
   let closePage: (() => void) | null = null;
   let offline = false;
@@ -605,6 +619,7 @@ export async function watchEditorSocket(page: Page) {
     server.onMessage(m => {
       if (typeof m === 'string') {
         const [, ref, topic, event, payload] = JSON.parse(m) as Frame;
+        frames.push({ topic, event });
         if (isRoom(topic)) {
           if (event === 'phx_reply' && ref) replies.set(ref, payload as Reply);
           else pushes.push({ event, payload });
@@ -624,11 +639,16 @@ export async function watchEditorSocket(page: Page) {
   return {
     // The room the page joined ("workflow:collaborate:<id>[:v<n>]")
     room: () => room.topic,
+    // The server's answer to the page's join of that room, once it came
+    joinReply: () => replies.get(room.joinRef),
     // What the server pushed on the room, by event name
     pushed: (event: string) =>
       pushes.filter(p => p.event === event).map(p => p.payload),
     // How many times a connection was closed
     closed: () => closed,
+    // The events the server sent on <topic>, in order
+    eventsOn: (topic: string) =>
+      frames.filter(f => f.topic === topic).map(f => f.event),
     // The shared document as the server has sent it to this page
     doc,
 
@@ -693,6 +713,13 @@ export async function watchEditorSocket(page: Page) {
     },
   };
 }
+
+// Whether each trigger is on, in a copy of the shared document (a pinned
+// version draws no switch, so this is what the page holds)
+export const triggersEnabledIn = (doc: Y.Doc) =>
+  (doc.getArray('triggers').toJSON() as { enabled: boolean }[]).map(
+    t => t.enabled
+  );
 
 // Renames the workflow in a copy of the shared document
 export const renameWorkflowIn = (name: string) => (doc: Y.Doc) =>

@@ -506,6 +506,22 @@ export function saveRenameOnNode(
   return result<number>(out);
 }
 
+// When "<by>" changes step <step>'s code in workflow <id> to <body> and saves
+// it through Lightning, keeping its other steps — returns the new save number
+export function saveBodyOnNode(
+  id: string,
+  step: string,
+  body: string,
+  by: string
+) {
+  const out = onNode(`
+    wf = Lightning.Repo.get!(Lightning.Workflows.Workflow, ${q(id)}) |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+    jobs = Enum.map(wf.jobs, fn j -> if j.name == ${q(step)}, do: %{id: j.id, body: ${q(body)}}, else: %{id: j.id} end)
+    {:ok, wf} = wf |> Lightning.Workflows.Workflow.changeset(%{jobs: jobs}) |> Lightning.Workflows.save_workflow(${exUser(by)})
+    Jason.encode!(wf.lock_version)`);
+  return result<number>(out);
+}
+
 export type PublishKind = 'go_live' | 'promote';
 
 // Given "<by>" published workflow <id>'s current content as its next

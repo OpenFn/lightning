@@ -493,6 +493,11 @@ export async function openRunPanel(page: Page) {
   await expect(inputChoice(page, 'Empty')).toBeVisible();
 }
 
+// The run panel's input editor (its "Custom" tab): the IDE's last code
+// editor, after the job's own
+export const runPanelInput = (page: Page) =>
+  ide(page).locator('.monaco-editor').last();
+
 // The warning that the run executed another version
 export const versionWarning = (page: Page) =>
   ide(page).getByText(/^This run took place on version \d+\.$/);

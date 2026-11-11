@@ -13,6 +13,7 @@
 // readers below do the same, inside the run viewer only.
 import type { Locator, Page } from '@playwright/test';
 
+import { wholeLog } from '../shared/log-viewer';
 import { exec, sql } from '../steps';
 
 import { node, pathBetween } from './workflow-editor';
@@ -172,6 +173,10 @@ export async function logLines(page: Page) {
   return lines.length === 1 && !lines[0] ? [] : lines;
 }
 
+// The whole log, not just the lines drawn (shared-log-viewer's reader, on
+// the run viewer's own editor)
+export const wholeRunLog = (page: Page) => wholeLog(page, viewerEditor(page));
+
 // The level control. Today a button that opens a list of levels.
 export const levelFilter = (page: Page) =>
   runViewer(page)
@@ -251,6 +256,11 @@ export async function nodeTips(page: Page, name: string) {
   await page.mouse.move(0, 0);
   return tips;
 }
+
+// The chip naming the run the canvas shows ("Run <first 7 characters of its
+// id>"), drawn under the history panel with a "Remove" beside it
+export const canvasRunChip = (page: Page, runId: string) =>
+  page.getByText(`Run ${runId.slice(0, 7)}`, { exact: true }).first();
 
 // The number drawn on a node whose step ran more than once
 export const timesRun = (page: Page, name: string) =>

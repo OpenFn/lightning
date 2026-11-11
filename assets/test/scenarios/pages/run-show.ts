@@ -47,6 +47,13 @@ const stepLink = (page: Page, stepId: string, name: string) =>
 export const stepNamed = (page: Page, name: string) =>
   page.locator('li[data-step-id]').filter({ hasText: name });
 
+// The names of the steps listed, top to bottom (each item reads its name,
+// then its duration)
+export const listedSteps = async (page: Page) =>
+  (await page.locator('li[data-step-id]').allInnerTexts()).map(t =>
+    t.trim().split('\n')[0].trim()
+  );
+
 // When I select step <name> in the step list
 export const selectStep = (page: Page, stepId: string, name: string) =>
   stepLink(page, stepId, name).click();
@@ -127,3 +134,9 @@ export async function expectDisabledTab(
 // and the admins it names on hover
 export const projectAdmins = (page: Page) =>
   page.getByText('project admins', { exact: true }).filter({ visible: true });
+
+// A message the page shows, wherever it puts it ("Nothing yet" in an empty
+// tab, "No logs were received for this run."). Today's tab panels have no
+// panel role, so the message is found by its words.
+export const onScreen = (page: Page, text: string | RegExp) =>
+  page.getByText(text).filter({ visible: true });

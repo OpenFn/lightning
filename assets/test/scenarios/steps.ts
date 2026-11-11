@@ -3775,7 +3775,15 @@ export type WorkerReport =
   /** a step of this job starts; returns its id */
   | { startStep: string }
   | { log: string; step?: string }
-  | { completeStep: string; reason?: string; output?: object }
+  /** lines sent together, as one run:batch_logs, a millisecond apart */
+  | { logs: string[]; step?: string }
+  | {
+      completeStep: string;
+      reason?: string;
+      /** what failed, as a worker names it ("RuntimeError") */
+      errorType?: string;
+      output?: object;
+    }
   | { complete: string; finalState?: object };
 
 // When the worker reports <report> for run <runId>. Sent through the
@@ -3804,9 +3812,19 @@ export function workerReports(runId: string, report: WorkerReport): string {
     act = [
       `{:ok, _} = Lightning.Runs.append_run_log(run, %{"message" => ${ex(report.log)}, "source" => "R/T", "level" => "info", "step_id" => ${report.step ? ex(report.step) : 'nil'}, "timestamp" => DateTime.utc_now()})`,
     ];
+  else if ('logs' in report)
+    act = [
+      `now = DateTime.utc_now()`,
+      `{:ok, _} = Lightning.Runs.append_run_logs_batch(run, [${report.logs
+        .map(
+          (message, i) =>
+            `%{"message" => ${ex(message)}, "source" => "R/T", "level" => "info", "step_id" => ${report.step ? ex(report.step) : 'nil'}, "timestamp" => DateTime.add(now, ${i}, :millisecond)}`
+        )
+        .join(', ')}])`,
+    ];
   else if ('completeStep' in report)
     act = [
-      `{:ok, _} = Lightning.Runs.complete_step(%{"run_id" => run.id, "step_id" => ${ex(report.completeStep)}, "project_id" => run.work_order.workflow.project_id, "reason" => ${ex(report.reason ?? 'success')}${
+      `{:ok, _} = Lightning.Runs.complete_step(%{"run_id" => run.id, "step_id" => ${ex(report.completeStep)}, "project_id" => run.work_order.workflow.project_id, "reason" => ${ex(report.reason ?? 'success')}${report.errorType ? `, "error_type" => ${ex(report.errorType)}` : ''}${
         report.output
           ? `, "output_dataclip" => ${ex(JSON.stringify(report.output))}, "output_dataclip_id" => Ecto.UUID.generate()`
           : ''
@@ -3814,7 +3832,9 @@ export function workerReports(runId: string, report: WorkerReport): string {
     ];
   else
     act = [
-      `{:ok, _} = Lightning.Runs.complete_run(run, %{"state" => ${ex(report.complete)}${report.finalState ? `, "final_state" => ${exJson(report.finalState)}` : ''}})`,
+      `{:ok, done} = Lightning.Runs.complete_run(run, %{"state" => ${ex(report.complete)}${report.finalState ? `, "final_state" => ${exJson(report.finalState)}` : ''}})`,
+      // As the run channel does on run:complete
+      `done |> Lightning.Repo.preload(work_order: [:workflow]) |> Lightning.FailureAlerter.alert_on_failure()`,
     ];
   const last = 'startStep' in report ? `id` : `""`;
   const out = onNode([...head, ...act, last].join('\n'))
@@ -3822,6 +3842,23 @@ export function workerReports(runId: string, report: WorkerReport): string {
     .split('\n')
     .pop()!;
   return JSON.parse(out) as string;
+}
+
+// While the worker keeps logging: lines <messages> are sent for run <runId>,
+// one every <everyMs> milliseconds, from a process on the node. This returns
+// at once and the lines keep coming.
+export function workerKeepsLogging(
+  runId: string,
+  messages: string[],
+  everyMs = 50
+) {
+  onNodeOk([
+    `run = Lightning.Repo.get!(Lightning.Run, ${ex(runId)})`,
+    `Task.start(fn -> for m <- ${ex(messages)} do
+       Process.sleep(${everyMs})
+       Lightning.Runs.append_run_log(run, %{"message" => m, "source" => "R/T", "level" => "info", "timestamp" => DateTime.utc_now()})
+     end end)`,
+  ]);
 }
 
 // When the line <message> that run <runId> logged reaches an open run page a
@@ -4682,4 +4719,55 @@ export function patchWithBearer(
     headers: { Authorization: `Bearer ${token}` },
     data: body,
   });
+}
+
+// When a client sends PUT <path> with "Authorization: Bearer <token>" and
+// <body> as JSON
+export function putWithBearer(
+  request: APIRequestContext,
+  path: string,
+  token: string,
+  body: Record<string, unknown>
+) {
+  lightningOnly('needs a server: the API');
+  return request.put(path, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: body,
+  });
+}
+
+// Given deleting workflow <workflowId> fails in the database: a trigger
+// refuses the update that marks it deleted. Returns a function that removes
+// the trigger again.
+export function refuseDeletionOf(workflowId: string) {
+  const fn = `scenario_refuse_delete_${workflowId.replace(/-/g, '')}`;
+  exec(`create function ${fn}() returns trigger language plpgsql as $f$
+          begin
+            if new.id = '${workflowId}' and new.deleted_at is not null and old.deleted_at is null then
+              raise exception 'scenario: deleting this workflow fails';
+            end if;
+            return new;
+          end $f$;
+        create trigger ${fn} before update on workflows
+          for each row execute function ${fn}();`);
+  return () =>
+    exec(`drop trigger if exists ${fn} on workflows;
+          drop function if exists ${fn}();`);
+}
+
+// Given someone else saves workflow <workflowId> whenever I do: the database
+// skips every update of its row, so a save finds the version it read has
+// moved on (Ecto's stale entry). Returns a function that puts it back.
+export function workflowMovesOnUnderSaves(workflowId: string) {
+  const fn = `scenario_moved_on_${workflowId.replace(/-/g, '')}`;
+  exec(`create function ${fn}() returns trigger language plpgsql as $f$
+          begin
+            if new.id = '${workflowId}' then return null; end if;
+            return new;
+          end $f$;
+        create trigger ${fn} before update on workflows
+          for each row execute function ${fn}();`);
+  return () =>
+    exec(`drop trigger if exists ${fn} on workflows;
+          drop function if exists ${fn}();`);
 }
