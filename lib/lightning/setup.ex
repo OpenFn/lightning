@@ -81,6 +81,9 @@ defmodule Lightning.Setup do
   def ensure_minimum_setup do
     Lightning.Release.load_app()
 
+    # The global time zone database is Tzdata (config.exs), so it must run here too.
+    {:ok, _} = Application.ensure_all_started(:tzdata)
+
     children =
       [
         {Phoenix.PubSub,
