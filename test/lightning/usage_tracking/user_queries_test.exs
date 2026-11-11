@@ -131,6 +131,55 @@ defmodule Lightning.UsageTracking.UserQueriesTest do
       refute(result |> contains(user_5))
     end
 
+    test "includes users who used an API token in the last 90 days" do
+      api_user_within_window =
+        insert(:user, inserted_at: ~U[2023-06-01 00:00:00Z])
+
+      insert(:user_token,
+        context: "api",
+        inserted_at: ~U[2023-06-01 00:00:00Z],
+        last_used_at: ~U[2023-11-08 00:00:00.000000Z],
+        user: api_user_within_window
+      )
+
+      api_user_on_report_date =
+        insert(:user, inserted_at: ~U[2023-06-01 00:00:00Z])
+
+      insert(:user_token,
+        context: "api",
+        inserted_at: ~U[2023-06-01 00:00:00Z],
+        last_used_at: ~U[2024-02-05 23:59:59.000000Z],
+        user: api_user_on_report_date
+      )
+
+      api_user_older_than_90_days =
+        insert(:user, inserted_at: ~U[2023-06-01 00:00:00Z])
+
+      insert(:user_token,
+        context: "api",
+        inserted_at: ~U[2024-02-01 00:00:00Z],
+        last_used_at: ~U[2023-11-07 23:59:59.000000Z],
+        user: api_user_older_than_90_days
+      )
+
+      api_user_after_report_date =
+        insert(:user, inserted_at: ~U[2023-06-01 00:00:00Z])
+
+      insert(:user_token,
+        context: "api",
+        inserted_at: ~U[2023-06-01 00:00:00Z],
+        last_used_at: ~U[2024-02-06 00:00:01.000000Z],
+        user: api_user_after_report_date
+      )
+
+      result = UserQueries.active_users(@date) |> Repo.all()
+
+      assert(result |> contains(api_user_within_window))
+      assert(result |> contains(api_user_on_report_date))
+      refute(result |> contains(api_user_older_than_90_days))
+      refute(result |> contains(api_user_after_report_date))
+    end
+
     test "if user has more than one token, only includes user once" do
       user_1 =
         insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
