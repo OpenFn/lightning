@@ -95,6 +95,9 @@ and this project adheres to
 
 ### Fixed
 
+- The create-sandbox dialog now opens with a real default name (`Dev`) instead
+  of a placeholder that disabled submit.
+  [#3832](https://github.com/OpenFn/lightning/issues/3832)
 - A form that loses a save race with another user, or saves a record someone
   else deleted, shows a message instead of crashing.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
