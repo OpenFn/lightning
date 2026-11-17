@@ -208,10 +208,12 @@ export default [
     },
   },
   {
-    // Test mocks lean on `any` by design.
+    // Test mocks lean on `any` by design. Scenario specs index shared step
+    // modules by scenario id, which TypeScript checks and import/namespace can't.
     files: ['test/**'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      'import/namespace': 'off',
     },
   },
 ];
