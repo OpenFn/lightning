@@ -2,7 +2,6 @@
 id: project-settings-security
 type: view
 title: Project settings › Security
-status: not-started
 owner:
 
 trigger:
@@ -185,7 +184,7 @@ Feature: Project MFA requirement
   As a project admin
   I want to require multi-factor authentication for everyone on the project
 
-  @S01 @pending
+  @S01
   Scenario: Admin turns on the MFA requirement
     # Value: an admin can lock a sensitive project to MFA-protected accounts the same day, without a superuser.
     Given project "Malawi HIV" does not require MFA
@@ -200,7 +199,7 @@ Feature: Project MFA requirement
     # settings.html.heex:726-753; settings.ex:411-427; projects.ex:589-598; audit.ex:20-38
     # project_live_test.exs:2109-2127 (flash only), :2259-2278; projects_test.exs:3560-3579
 
-  @S02 @pending
+  @S02
   Scenario: Admin turns off the MFA requirement
     # Value: the people who set the requirement can lift it, and who loosened it is on record.
     Given project "Malawi HIV" requires MFA
@@ -212,7 +211,7 @@ Feature: Project MFA requirement
     And an audit event "requires_mfa_updated" is recorded with me as the actor, before true and after false
     # settings.ex:411-427; settings.html.heex:747-751; audit.ex:20-38 (audit both directions; only the on direction is tested)
 
-  @S03 @pending
+  @S03
   Scenario Outline: Every member can see whether MFA is required
     # Value: members can tell which rule governs the project, and why a colleague without MFA is turned away.
     Given project "Malawi HIV" does not require MFA
@@ -229,7 +228,7 @@ Feature: Project MFA requirement
       | admin  |
       | owner  |
 
-  @S04 @pending
+  @S04
   Scenario Outline: Members who aren't admins can't change the requirement
     # Value: only people trusted with access decisions can tighten or loosen how the project is protected.
     Given project "Malawi HIV" does not require MFA
@@ -248,7 +247,7 @@ Feature: Project MFA requirement
       | viewer                                |
       | support user with no row, access on   |
 
-  @S05 @pending
+  @S05
   Scenario: An admin demoted while the page is open can't change the requirement
     # Value: a revoked admin can't change the project's protection from a page they opened before losing the role.
     Given I am an admin on project "Malawi HIV" with the "Security" tab open
@@ -258,7 +257,7 @@ Feature: Project MFA requirement
     And project "Malawi HIV" still does not require MFA
     # settings.ex:414, :744-749; scope.ex:111-117, :183-188; membership_revocation_test.exs:261-273, :294-298
 
-  @S06 @pending @variant:mfa-limited
+  @S06 @variant:mfa-limited
   Scenario: The usage limiter refuses requiring MFA
     # Value: usage limits hold, and the admin is told why they can't turn the requirement on.
     Given the usage limiter refuses ":require_mfa" for project "Malawi HIV" with the message "MFA Feature is disabled"
@@ -272,7 +271,7 @@ Feature: Project MFA requirement
     # hooks.ex:214-227; settings.ex:54, :414, :429; settings.html.heex:696-704, :731
     # project_live_test.exs:2280-2316; not-limited counterpart :2259-2278
 
-  @S07 @pending @variant:sandbox
+  @S07 @variant:sandbox
   Scenario: The requirement can't be changed from a sandbox
     # Value: the switch is disabled in a sandbox; the banner points to the parent.
     Given sandbox "dev" of project "Malawi HIV"
@@ -281,7 +280,7 @@ Feature: Project MFA requirement
     Then the "Require MFA?" switch is disabled
     # settings.html.heex:729-732; sandbox_settings_test.exs:265-272 (asserts id, "disabled" and "cursor-not-allowed" in the page HTML)
 
-  @S08 @pending
+  @S08
   Scenario: Turning on the requirement hands off to MFA enforcement
     # Value: the switch here is the rule every project page, API call and email recipient check then obeys.
     Given I am an admin on project "Malawi HIV"

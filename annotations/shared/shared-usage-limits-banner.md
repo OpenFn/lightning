@@ -2,7 +2,6 @@
 id: shared-usage-limits-banner
 type: shared
 title: Usage limits banner (and book-a-demo banner)
-status: not-started
 owner:
 
 trigger:
@@ -118,7 +117,7 @@ Feature: Usage limits banner
   As anyone working in a project
   I want to see a banner when the project is over a usage limit
 
-  @S01 @pending @variant:usage-limited
+  @S01 @variant:usage-limited
   Scenario: Over-limit project shows the limiter's banner
     # Value: people learn they've hit a usage limit before they lose time wondering why runs stopped.
     Given the usage limiter reports project "Malawi HIV" is over its run limit
@@ -127,7 +126,7 @@ Feature: Usage limits banner
     # lib/lightning_web/live/live_helpers.ex:200-210
     # test/lightning_web/live/workflow_live/index_test.exs:47-60 asserts "Some banner text"
 
-  @S02 @pending
+  @S02
   Scenario: Within-limit project shows no banner
     # Value: nobody is nagged when nothing is wrong.
     Given the default usage limiter

@@ -2,7 +2,6 @@
 id: profile-experimental-features
 type: view
 title: User profile › Experimental features
-status: not-started
 owner:
 
 trigger:
@@ -155,7 +154,7 @@ Feature: Experimental features on the user profile
   As any signed-in user
   I want to switch experimental features on and off for my own account
 
-  @S01 @passing-old
+  @S01
   Scenario: The card shows experimental features off by default
     # Value: nobody is put on unfinished features without choosing to be.
     Given I am signed in and have never changed the setting
@@ -167,7 +166,7 @@ Feature: Experimental features on the user profile
     # new_inputs.ex:865-870, :892-899
     # profile_live_test.exs:660-667 (asserts the copy only, not the switch state)
 
-  @S02 @passing-old @variant:experimental-features
+  @S02 @variant:experimental-features
   Scenario: The card shows the setting is on when it is on
     # Value: a user who is seeing unusual behaviour can check, in one place, whether they opted into it.
     Given I have experimental features turned on
@@ -176,7 +175,7 @@ Feature: Experimental features on the user profile
     # experimental_features_component.ex:9-11, :22-29; new_inputs.ex:865-870, :898
     # profile_live_test.exs:669-686 (asserts the heading only, not the switch state)
 
-  @S03 @passing-old
+  @S03
   Scenario: A user turns experimental features on
     # Value: a user can opt into early features themselves, without asking an administrator.
     Given I am on "/profile" with experimental features off
@@ -186,7 +185,7 @@ Feature: Experimental features on the user profile
     # accounts.ex:631-637; user.ex:383-386
     # profile_live_test.exs:688-708, :781-795 (assert the stored value; neither asserts the flash)
 
-  @S04 @passing-old @variant:experimental-features
+  @S04 @variant:experimental-features
   Scenario: A user turns experimental features off
     # Value: a user who finds an early feature getting in the way can get back to the standard product on their own.
     Given I am on "/profile" with experimental features on
@@ -195,7 +194,7 @@ Feature: Experimental features on the user profile
     # new_inputs.ex:891 (hidden "false" sent when unchecked); experimental_features_component.ex:32-46
     # profile_live_test.exs:710-734
 
-  @S05 @passing-old
+  @S05
   Scenario: Changing the setting keeps my other preferences
     # Value: opting in or out doesn't quietly reset other personal settings, such as a collapsed sidebar.
     Given I have other saved preferences
@@ -205,7 +204,7 @@ Feature: Experimental features on the user profile
     # user.ex:383-386 (Map.merge); experimental_features_component.ex:35-39
     # profile_live_test.exs:736-764
 
-  @S06 @passing-old
+  @S06
   Scenario: The setting reaches the rest of the app
     # Value: opting in actually changes what the user gets, and they are told it is on wherever they go.
     Given I switched on "Experimental features" on "/profile"

@@ -2,7 +2,6 @@
 id: history-work-orders
 type: view
 title: History › Work orders
-status: not-started
 owner:
 
 trigger:
@@ -276,7 +275,7 @@ Feature: Work order history
   As a member of a project
   I want to find work orders, inspect their runs, and retry, cancel or export them
 
-  @S01 @passing-old
+  @S01
   Scenario: A bare visit shows the last 30 days of activity
     # Value: people land on recent work, and the chip tells them older work is filtered out.
     Given I am a viewer on project "Malawi HIV"
@@ -287,7 +286,7 @@ Feature: Work order history
     And the last activity chip reads "Last activity after" a date 30 days ago
     # index.ex:133, :157-169, index.html.heex:207-224, invocation.ex:741-747
 
-  @S02 @passing-old
+  @S02
   Scenario: Work orders from other projects never appear
     # Value: one project's health data is never shown to another project's members.
     Given I am an editor on project "Malawi HIV"
@@ -296,7 +295,7 @@ Feature: Work order history
     Then I do not see "K"
     # invocation.ex:675-685
 
-  @S03 @passing-old
+  @S03
   Scenario: Filter by workflow
     # Value: people investigating one integration only see its work orders.
     Given project "Malawi HIV" has workflows "Intake" and "Sync" with work orders
@@ -306,7 +305,7 @@ Feature: Work order history
     # index.html.heex:61-113, invocation.ex:713-717
     # test/lightning_web/live/run_live/index_test.exs:814-841
 
-  @S04 @passing-old
+  @S04
   Scenario: Filter by several statuses
     # Value: people can pull up every kind of failure at once.
     Given project "Malawi HIV" has failed, crashed and successful work orders
@@ -316,7 +315,7 @@ Feature: Work order history
     # index.html.heex:116-159, invocation.ex:719-723, search_params.ex:130-136
     # test/lightning_web/live/run_live/index_test.exs:895-912
 
-  @S05 @passing-old
+  @S05
   Scenario: Filter by when the work order was received
     # Value: people can find the data that arrived during an incident window.
     Given work orders received on 1 March and 10 March
@@ -325,7 +324,7 @@ Feature: Work order history
     And I see only the 10 March work order
     # index.html.heex:161-203, invocation.ex:725-739
 
-  @S06 @passing-old
+  @S06
   Scenario: Clearing a filter chip removes that filter
     # Value: people can widen a search without starting over.
     Given I have filtered by workflow "Intake"
@@ -335,7 +334,7 @@ Feature: Work order history
     # pills.ex:119-176, index.ex:510-523
     # test/lightning_web/live/run_live/index_test.exs:842-869
 
-  @S07 @passing-old
+  @S07
   Scenario: Search work orders by inputs and logs
     # Value: people can find the work order that carried a particular record or produced a particular log line.
     Given work order "A" has an input containing "eliaswalyba"
@@ -347,7 +346,7 @@ Feature: Work order history
     # index.html.heex:325-434, invocation.ex:901-973
     # test/lightning_web/live/work_order_live_test.exs:1063-1205
 
-  @S08 @passing-old
+  @S08
   Scenario: A broad search tells me to narrow it
     # Value: people know the result count is partial and how to get a complete answer.
     Given 60 work orders have logs containing "error"
@@ -356,7 +355,7 @@ Feature: Work order history
     And I see "(try more specific filters)"
     # index.html.heex:436-447, invocation.ex:44, :580-582
 
-  @S09 @passing-old
+  @S09
   Scenario: Sort by created date and toggle direction
     # Value: people can read history in arrival order when reconstructing what happened.
     Given work orders created on 1, 2 and 3 March
@@ -366,7 +365,7 @@ Feature: Work order history
     Then the oldest is first
     # index.ex:525-550, index.html.heex:597-612, invocation.ex:1502-1525
 
-  @S10 @passing-old
+  @S10
   Scenario: A link to one work order opens it expanded
     # Value: an alert or a run page takes people straight to the work order in question with its full retry history.
     Given work order "W" has two runs
@@ -377,7 +376,7 @@ Feature: Work order history
     # index.ex:930-942, index.html.heex:288-296, invocation.ex:706-711
     # test/lightning_web/live/work_order_live_test.exs:1503-1618
 
-  @S11 @passing-old
+  @S11
   Scenario: Expanding a work order shows its latest run, and earlier runs on request
     # Value: people see the current outcome first and can still trace every retry.
     Given work order "W" has three runs
@@ -389,7 +388,7 @@ Feature: Work order history
     # workorder_component.ex:78-95, :330-367
     # test/lightning_web/live/work_order_live_test.exs:1381-1500
 
-  @S12 @passing-old
+  @S12
   Scenario: Steps carried over from an earlier run are marked
     # Value: after a rerun from a step, people can tell which steps actually ran again.
     Given a run that was rerun from its second step
@@ -397,7 +396,7 @@ Feature: Work order history
     Then its first step is faded with a paperclip whose tooltip says it "was originally executed in a previous run"
     # components.ex:405-461
 
-  @S13 @passing-old
+  @S13
   Scenario: The workflow link opens the version the run executed
     # Value: people inspect the code that actually ran, not code changed since.
     Given work order "W" ran on workflow version 3 and the workflow is now on version 5
@@ -406,7 +405,7 @@ Feature: Work order history
     # workorder_component.ex:190-209, components.ex:298-314
     # test/lightning_web/live/work_order_live_test.exs:189-231
 
-  @S14 @passing-old @variant:experimental-features
+  @S14 @variant:experimental-features
   Scenario: With experimental features the workflow link pins the run itself
     # Value: runs on versions that were never released can still be opened at the code that ran.
     Given I have experimental features enabled
@@ -416,7 +415,7 @@ Feature: Work order history
     # components.ex:308-309
     # test/lightning_web/live/work_order_live_test.exs:189-231
 
-  @S15 @passing-old
+  @S15
   Scenario: Editor retries a finished work order from the start
     # Value: a failure caused by a downstream outage is fixed in one click once the outage is over.
     Given I am an editor and work order "W" has failed
@@ -425,7 +424,7 @@ Feature: Work order history
     And a retry of "W" is queued
     # workorder_component.ex:269-289, index.ex:410-443, :729-741, work_orders.ex:454-486
 
-  @S16 @passing-old
+  @S16
   Scenario: Editor reruns a run from a failed step
     # Value: after fixing a job, people resume from that step without reprocessing the steps before it.
     Given I am an editor and a run of work order "W" failed at step "Load"
@@ -435,7 +434,7 @@ Feature: Work order history
     # components.ex:474-476, :501-547, index.ex:370-408, work_orders.ex:312-359, :404-425
     # test/lightning_web/live/work_order_live_test.exs:1915-1928
 
-  @S17 @passing-old
+  @S17
   Scenario: A run from another project cannot be rerun
     # Value: an editor of one project cannot execute another project's runs or read its data.
     Given I am an editor on project "Malawi HIV"
@@ -446,7 +445,7 @@ Feature: Work order history
     # index.ex:379-393
     # test/lightning_web/live/run_live/index_test.exs:259-308, :310-328
 
-  @S18 @passing-old
+  @S18
   Scenario: Runs of a deleted workflow cannot be retried
     # Value: a retired integration does not start sending data again.
     Given work order "W" belongs to a deleted workflow
@@ -454,7 +453,7 @@ Feature: Work order history
     Then I see "Runs for deleted workflows cannot be retried"
     # index.ex:398-401, work_orders.ex:339-345
 
-  @S19 @passing-old
+  @S19
   Scenario: Viewers see no retry, cancel or export controls
     # Value: read-only members can investigate without being able to trigger reprocessing.
     Given I am a viewer on project "Malawi HIV" with a failed and a pending work order
@@ -465,7 +464,7 @@ Feature: Work order history
     # workorder_component.ex:252-313, components.ex:474-476, index.html.heex:664-674
     # test/lightning_web/live/run_live/index_test.exs:1568-1591
 
-  @S20 @passing-old
+  @S20
   Scenario: Viewer actions sent without the button are refused
     # Value: viewers cannot run, cancel or export, whichever way the action reaches the page.
     Given I am a viewer on project "Malawi HIV"
@@ -475,7 +474,7 @@ Feature: Work order history
     # index.ex:694-708
     # test/lightning_web/live/run_live/index_test.exs:167-197, :1303-1325, :1498-1511, :1568-1591
 
-  @S21 @passing-old
+  @S21
   Scenario: A work order whose input was wiped cannot be selected or retried
     # Value: nobody retries with missing data and gets a misleading empty run.
     Given work order "W" has an input dataclip wiped by the retention policy
@@ -487,7 +486,7 @@ Feature: Work order history
     # workorder_component.ex:120-176, :290-313, :448-493, index.ex:488-498
     # test/lightning_web/live/work_order_live_test.exs:265-400, :401-535, :2194-2249
 
-  @S22 @passing-old
+  @S22
   Scenario: Retention tooltips point admins to the setting and others to an admin
     # Value: the person who can change retention can get there, and everyone else knows whom to ask.
     Given work order "W" has a wiped input
@@ -497,7 +496,7 @@ Feature: Work order history
     Then the tooltip says "For more information, contact one of your project admins."
     # components.ex:549-570, index.ex:96-102
 
-  @S23 @passing-old
+  @S23
   Scenario: Selecting a whole page offers to retry every matching work order
     # Value: people can reprocess an entire incident's worth of work orders without paging through them.
     Given 25 failed work orders match my filters
@@ -507,7 +506,7 @@ Feature: Work order history
     # index.html.heex:453-480, :692-702, components.ex:808-866
     # test/lightning_web/live/run_live/index_test.exs:495-560, test/lightning_web/live/work_order_live_test.exs:2115-2192, :2251-2286
 
-  @S24 @passing-old
+  @S24
   Scenario: Bulk retry reports how many work orders were queued and how many were skipped
     # Value: people know when some of what they asked to retry was not retried.
     Given I selected three finished work orders, one of which belongs to a deleted workflow
@@ -516,7 +515,7 @@ Feature: Work order history
     And the page reloads with my filters
     # index.ex:410-443, :743-749, work_orders.ex:454-486, :961-967
 
-  @S25 @passing-old
+  @S25
   Scenario: Rerun from a step is only offered for one workflow at a time
     # Value: a step choice is only meaningful within a single workflow.
     Given I selected finished work orders from workflows "Intake" and "Sync"
@@ -526,7 +525,7 @@ Feature: Work order history
     # index.html.heex:548-584, :704-713
     # test/lightning_web/live/run_live/index_test.exs:89-165
 
-  @S26 @passing-old
+  @S26
   Scenario: Steps with nothing to rerun are disabled in the rerun-from modal
     # Value: people can't pick a step that would rerun nothing.
     Given the selected work orders' latest runs only have a usable input for job "Load"
@@ -538,7 +537,7 @@ Feature: Work order history
     # rerun_job_component.ex:14-55, :112-138, work_orders.ex:438-444, :721-765
     # test/lightning_web/live/run_live/index_test.exs:199-257, :407-493
 
-  @S27 @passing-old
+  @S27
   Scenario: A mixed selection disables both bulk actions and says why
     # Value: people aren't offered an action that would only apply to part of what they selected.
     Given I selected one pending and one failed work order
@@ -547,7 +546,7 @@ Feature: Work order history
     # index.ex:789-817, index.html.heex:485-547
     # test/lightning_web/live/run_live/index_test.exs:1326-1363
 
-  @S28 @passing-old
+  @S28
   Scenario: Editor cancels a pending work order
     # Value: data queued by mistake, or that would hit a broken system, is stopped before it is sent.
     Given I am an editor and work order "W" is pending
@@ -557,7 +556,7 @@ Feature: Work order history
     # workorder_component.ex:252-268, index.ex:587-620, runs.ex:506-527
     # test/lightning_web/live/run_live/index_test.exs:1135-1175, :1222-1256
 
-  @S29 @passing-old
+  @S29
   Scenario: Cancelling never stops a run a worker has already claimed
     # Value: a run part way through delivering data is never cut off from this page.
     Given work order "W" was pending when I loaded the page
@@ -568,7 +567,7 @@ Feature: Work order history
     # index.ex:602-609, runs.ex:506-516, components.ex:680-683
     # test/lightning_web/live/run_live/index_test.exs:1365-1401
 
-  @S30 @passing-old
+  @S30
   Scenario: Editor cancels one enqueued run of a work order
     # Value: people can stop a single queued retry without touching the rest of the work order.
     Given work order "W" has an enqueued run "R"
@@ -579,7 +578,7 @@ Feature: Work order history
     # workorder_component.ex:412-425, index.ex:622-649, cancel_helper.ex:310-315, runs.ex:466-492
     # test/lightning_web/live/run_live/index_test.exs:1258-1301, :1445-1496
 
-  @S31 @passing-old
+  @S31
   Scenario: Editor cancels selected pending work orders
     # Value: a batch of queued work can be stopped in one action.
     Given I selected two pending work orders
@@ -588,7 +587,7 @@ Feature: Work order history
     # index.ex:558-585, :762-765, components.ex:648-760
     # test/lightning_web/live/run_live/index_test.exs:1177-1220
 
-  @S32 @passing-old
+  @S32
   Scenario: Cancelling all matching work orders runs in the background
     # Value: a large backlog can be cancelled without the page timing out.
     Given 3 pending work orders match my filters and I selected all of them
@@ -598,7 +597,7 @@ Feature: Work order history
     # index.ex:571-576, :767-787, work_orders.ex:540-551
     # test/lightning_web/live/run_live/index_test.exs:1513-1554
 
-  @S33 @pending @variant:usage-limited
+  @S33 @variant:usage-limited
   Scenario: Reruns over the plan limit are refused with the limiter's message
     # Value: people learn a plan limit is blocking retries instead of wondering why nothing ran.
     Given the usage limiter refuses new runs with "Runs limit exceeded"
@@ -608,7 +607,7 @@ Feature: Work order history
     # index.ex:387, :395-396, work_orders.ex:84-92
     # test/lightning_web/live/work_order_live_test.exs:1930-1952
 
-  @S34 @pending @variant:usage-limited
+  @S34 @variant:usage-limited
   Scenario: The bulk retry button reports the plan limit instead of opening the modal
     # Value: people are told before choosing options that the retry cannot go ahead.
     Given the usage limiter refuses the number of runs my selection would create, with "Runs limit exceeded"
@@ -617,7 +616,7 @@ Feature: Work order history
     And the retry modal does not open
     # index.html.heex:513-530, index.ex:552-556, :944-952
 
-  @S35 @passing-old
+  @S35
   Scenario: Editor starts a history export
     # Value: people can hand the full record of an incident to someone outside Lightning.
     Given I am an editor and 12 work orders match my filters
@@ -627,14 +626,14 @@ Feature: Work order history
     # index.html.heex:41-46, :664-674, export_confirmation_modal.ex:1-55, index.ex:651-684, invocation.ex:1311-1340
     # test/lightning_web/live/run_live/index_test.exs:1593-1608
 
-  @S36 @passing-old
+  @S36
   Scenario: No export is offered when nothing matches
     # Value: nobody waits on an email for an empty export.
     Given I am an editor and no work orders match my filters
     Then I do not see the export button
     # index.html.heex:665
 
-  @S37 @passing-old
+  @S37
   Scenario: A failed search says so
     # Value: people don't mistake a failed or timed-out search for "nothing happened".
     Given the work order search fails or times out
@@ -643,7 +642,7 @@ Feature: Work order history
     # index.ex:238-247, index.html.heex:634-640, invocation.ex:577
     # test/lightning_web/live/work_order_live_test.exs:1620-1642
 
-  @S38 @passing-old
+  @S38
   Scenario: Filters from the health page show as chips that can be dropped
     # Value: people arriving from a chart can see what slice they are looking at and widen it.
     Given I arrive with "run_status[]=failed", "run_date_after" and "run_date_before" set
@@ -654,7 +653,7 @@ Feature: Work order history
     # index.html.heex:249-285, index.ex:850-863
     # test/lightning_web/live/run_live/index_test.exs:1057-1131
 
-  @S39 @passing-old
+  @S39
   Scenario: The error signature chip shows a job name only for this project
     # Value: a link naming a job from another project shows the short id, not the name.
     Given a link with "error_signature_job_id" set to a job in another project
@@ -663,7 +662,7 @@ Feature: Work order history
     # index.ex:192-193, index.html.heex:298-320, jobs.ex:172-185
     # test/lightning_web/live/run_live/index_test.exs:975-1055
 
-  @S40 @passing-old
+  @S40
   Scenario: An unrecognised error signature matches nothing
     # Value: a bulk retry from a stale or edited link can never widen to every failed work order.
     Given a link with "error_signature_exit_reason" set to "rejected" and no job id
@@ -671,7 +670,7 @@ Feature: Work order history
     Then I see no work orders
     # invocation.ex:793-799, :871-874
 
-  @S41 @passing-old @variant:experimental-features
+  @S41 @variant:experimental-features
   Scenario: The channel logs tab appears only with experimental features
     # Value: an unfinished feature stays out of the way of people who haven't opted in.
     Given I have experimental features enabled
@@ -681,7 +680,7 @@ Feature: Work order history
     # index.ex:142-143, index.html.heex:22-38
     # test/lightning_web/live/run_live/index_test.exs:563-595
 
-  @S42 @passing-old
+  @S42
   Scenario: The page listens for work order changes in the project
     # Value: people watching an incident see retries and new arrivals without reloading.
     Given I have the history page open
@@ -689,7 +688,7 @@ Feature: Work order history
     Then the flow "flow-history-live-updates" ends on this page
     # index.ex:82, :274-348
 
-  @S43 @passing-old
+  @S43
   Scenario: Filter by last activity and sort by it
     # Value: people can find work that was still moving during an incident window, not just work that arrived then.
     Given work order "A" received 20 days ago with last activity 2 days ago

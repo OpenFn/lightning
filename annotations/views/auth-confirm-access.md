@@ -2,7 +2,6 @@
 id: auth-confirm-access
 type: view
 title: Confirm access (re-authenticate)
-status: not-started
 owner:
 
 trigger:
@@ -171,7 +170,7 @@ Feature: Confirm access
   As a signed-in user
   I want to prove it is me with my password or authenticator before I am let through
 
-  @S01 @pending
+  @S01
   Scenario: The page shows who is signed in and asks for the password by default
     # Value: the person at the keyboard can see whose account they are confirming before typing a password.
     Given I am signed in as "Amara Diallo"
@@ -185,7 +184,7 @@ Feature: Confirm access
     # new.ex:9-16, :48-51; new.html.heex:10-27, :33-39, :55-62, :76-89; layout_components.ex:21-46
     # reauthenticate_live_test.exs:14-26
 
-  @S02 @pending
+  @S02
   Scenario: Correct password sends me back to the page I asked for
     # Value: a user who proves who they are reaches the sensitive page without starting over.
     Given I am signed in
@@ -197,7 +196,7 @@ Feature: Confirm access
     # new.ex:34-42, :57-59, :71-78; accounts.ex:1021-1025; user.ex:394-400
     # reauthenticate_live_test.exs:74-104 (token row exists; redirect to return path with Base64 token)
 
-  @S03 @pending
+  @S03
   Scenario: Wrong password is refused and unlocks nothing
     # Value: someone at an unattended signed-in browser cannot get through without the account password.
     Given I am signed in
@@ -209,7 +208,7 @@ Feature: Confirm access
     # new.ex:38-46, :57-63; new.html.heex:40-44
     # reauthenticate_live_test.exs:106-124 computes a match without asserting it, against different copy; effectively untested
 
-  @S04 @pending
+  @S04
   Scenario: Users with MFA can switch to their authenticator code and back
     # Value: a user who signs in through an external provider, or doesn't have their password to hand, still has a way to confirm.
     Given I am signed in with MFA enabled
@@ -225,7 +224,7 @@ Feature: Confirm access
     # new.ex:29-32; new.html.heex:33-39, :64-72, :76-89, :99-120
     # reauthenticate_live_test.exs:40-72
 
-  @S05 @pending
+  @S05
   Scenario: Users without MFA are not offered the authenticator option
     # Value: users are only offered a method they can actually complete.
     Given I am signed in without MFA
@@ -234,7 +233,7 @@ Feature: Confirm access
     # new.html.heex:99
     # reauthenticate_live_test.exs:28-38
 
-  @S06 @pending
+  @S06
   Scenario: Correct authenticator code sends me back to the page I asked for
     # Value: an MFA user can confirm with the device they already trust instead of a password.
     Given I am signed in with MFA enabled
@@ -247,7 +246,7 @@ Feature: Confirm access
     # new.ex:34-42, :53-55; accounts.ex:463-467; user_totp.ex:45-65
     # reauthenticate_live_test.exs:126-158
 
-  @S07 @pending
+  @S07
   Scenario: Wrong or reused authenticator code is refused and unlocks nothing
     # Value: a wrong, stale or reused code cannot stand in for the user's own device.
     Given I am signed in with MFA enabled

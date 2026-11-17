@@ -2,7 +2,6 @@
 id: projects-dashboard
 type: view
 title: Projects
-status: not-started
 owner:
 
 trigger:
@@ -205,7 +204,7 @@ Feature: Projects
   As anyone signed in to Lightning
   I want to see the projects I belong to and create new ones
 
-  @S01 @passing-old
+  @S01
   Scenario: I see the projects I belong to and no others
     # Value: a project's existence and name are never disclosed to people who are not on it.
     Given I am an owner of "project-1" and an admin of "project-2"
@@ -216,7 +215,7 @@ Feature: Projects
     # projects.ex:135-142, :158-175; user_projects_section.ex:39-49
     # dashboard_live_test.exs:62-102 (refute row for project_3; assert_project_listed for the others)
 
-  @S02 @passing-old
+  @S02
   Scenario: Each row shows my role, counts and last change
     # Value: people can tell at a glance what they can do in each project and which ones are active.
     Given I am an admin of "project-2", which has an owner and me as collaborators
@@ -229,7 +228,7 @@ Feature: Projects
     # components.ex:116-143; projects.ex:166-174
     # dashboard_live_test.exs:476-538 (role, workflow count, collaborator link and count, data-iso-timestamp); :215-241 (deleted workflow not counted)
 
-  @S03 @passing-old @variant:support-user
+  @S03 @variant:support-user
   Scenario: Support users also see projects that asked for support
     # Value: support staff can find a project that opted into support without being added as a member.
     Given I am a support user and an owner of "project-1"
@@ -241,7 +240,7 @@ Feature: Projects
     And I do not see "project-3"
     # projects.ex:103-133; dashboard_live_test.exs:104-163, helper :491-498 ("Support" for a support row)
 
-  @S04 @passing-old
+  @S04
   Scenario: Someone with no projects is offered to create one
     # Value: a new user is never stuck on an empty page with no next step.
     Given I am not a member of any project
@@ -252,7 +251,7 @@ Feature: Projects
     # user_projects_section.ex:62-71; components.ex:72-73; table.ex:304-324
     # dashboard_live_test.exs:15-25 (text only; the click is read from code)
 
-  @S05 @passing-old
+  @S05
   Scenario: Sorting by name
     # Value: people with many projects can find one by name.
     Given I am a member of three projects
@@ -265,7 +264,7 @@ Feature: Projects
     # user_projects_section.ex:20, :24-49; table_helpers.ex:110-118; projects.ex:177-181
     # dashboard_live_test.exs:323-353; :380-435 (support user)
 
-  @S06 @passing-old
+  @S06
   Scenario: Sorting by last updated
     # Value: people can bring the projects that changed most recently, or least recently, to the top.
     Given I am a member of three projects with workflows changed at different times
@@ -276,7 +275,7 @@ Feature: Projects
     # user_projects_section.ex:24-37; projects.ex:183-187
     # dashboard_live_test.exs:437-473 (asserts the ascending click only after the default name sort)
 
-  @S07 @passing-old
+  @S07
   Scenario: A sort request for an unknown column is ignored
     # Value: a sort request for an unknown column leaves the page working and sorted by name.
     Given I am on "/projects" with three projects
@@ -286,7 +285,7 @@ Feature: Projects
     # user_projects_section.ex:13, :39-44; table_helpers.ex:84-86, :93-94
     # dashboard_live_test.exs:355-378
 
-  @S08 @passing-old
+  @S08
   Scenario: A row leads into the project
     # Value: one click takes people from the list to the part of the project they came for.
     Given I am a member of "project-1"
@@ -299,7 +298,7 @@ Feature: Projects
     # components.ex:111-115, :126-132, :145-151
     # assets/test/e2e/pages/projects.page.ts:22-29 (row click); dashboard_live_test.exs:527 (collaborators href only)
 
-  @S09 @passing-old
+  @S09
   Scenario: Creating a project makes me its owner
     # Value: anyone can start a project the same day without waiting on an administrator, and it is never left without an owner.
     Given I am on "/projects"
@@ -310,7 +309,7 @@ Feature: Projects
     # project_creation_modal.ex:39-62; projects.ex:562-575; project.ex:282-302, :304-323
     # dashboard_live_test.exs:243-269 (project created and listed; role read from code)
 
-  @S10 @passing-old
+  @S10
   Scenario: I see the stored name before creating
     # Value: people know the exact name their project will be stored and referred to by before they commit to it.
     Given the "Create a new project" modal is open
@@ -319,7 +318,7 @@ Feature: Projects
     # project_creation_modal.ex:26-37, :106-111; helpers.ex:221-238; pills.ex:98-105
     # dashboard_live_test.exs:248-258 (hidden name field value)
 
-  @S11 @pending
+  @S11
   Scenario: A name with no usable characters is refused
     # Value: no project is created with an empty name that nobody could find or refer to.
     Given the "Create a new project" modal is open
@@ -329,7 +328,7 @@ Feature: Projects
     # project_creation_modal.ex:46-48, :64-72; helpers.ex:221-238; project.ex:155-157
     # dashboard_live_test.exs:289-302
 
-  @S12 @pending
+  @S12
   Scenario: A description over 240 characters is refused
     # Value: people learn the limit before submitting instead of losing what they wrote.
     Given the "Create a new project" modal is open
@@ -338,7 +337,7 @@ Feature: Projects
     And no project is created
     # project.ex:107; project_creation_modal.ex:26-37, :121-123, :127-131
 
-  @S13 @passing-old
+  @S13
   Scenario: Cancelling creates nothing
     # Value: backing out of the form never leaves a stray project behind.
     Given I have filled in the "Create a new project" modal
@@ -347,7 +346,7 @@ Feature: Projects
     And no project has been created
     # project_creation_modal.ex:21-24, :135-143; dashboard_live_test.exs:304-321
 
-  @S14 @passing-old
+  @S14
   Scenario: A project created here is always top-level with me as its only member
     # Value: a new project is never created under another project and has no members other than its creator.
     Given "other-project" exists and I have no role on it
@@ -355,14 +354,14 @@ Feature: Projects
     Then a top-level project is created with me as its only member
     # project_creation_modal.ex:41-54; dashboard_live_test.exs:271-287 (parent_id is nil; the project_users override is read from code)
 
-  @S15 @passing-old
+  @S15
   Scenario: Creating a project does not email me that I was added to it
     # Value: the creator is not sent an access notice for something they just did themselves.
     When I create project "my-awesome-project"
     Then the flow "flow-collaborator-added-email" has not started for me
     # project_creation_modal.ex:55; projects.ex:562-568, :836-847
 
-  @S16 @passing-old
+  @S16
   Scenario: The welcome text points to help
     # Value: people who don't know where to start can find documentation and the community from the first page they see.
     When I open "/projects"
@@ -370,7 +369,7 @@ Feature: Projects
     And a link to "docs.openfn.org" and a link to "community.openfn.org", each opening in a new tab
     # components.ex:7-51; assets/js/hooks/index.ts:872-946
 
-  @S17 @passing-old
+  @S17
   Scenario: The instance root opens the projects list
     # Value: the bare instance address takes signed-in people straight to their work.
     Given I am logged in
@@ -378,7 +377,7 @@ Feature: Projects
     Then I am on "/projects"
     # router.ex:329; plugs/redirect.ex (call/2). Signed out, "/projects" then follows shared-authenticated-session S01.
 
-  @S18 @passing-old
+  @S18
   Scenario: The owner lands here after scheduling deletion
     # Value: the owner gets confirmation and is returned to a page that still exists.
     Given the flow "flow-schedule-project-deletion" has been completed by me for "project-1"
@@ -386,7 +385,7 @@ Feature: Projects
     And I see "Project scheduled for deletion"
     # project_deletion_modal.ex:49-53; flow-schedule-project-deletion S01. The listing that follows is 6.1.
 
-  @S19 @passing-old
+  @S19
   Scenario: A newly invited collaborator finds their project here
     # Value: someone who has just joined lands on the project they were invited to without needing its URL.
     Given the flow "flow-invite-new-collaborator" has added me as an editor of "Malawi HIV"

@@ -2,7 +2,6 @@
 id: flow-restore-version-open-editor
 type: flow
 title: Restoring a workflow version while others have it open
-status: not-started
 owner:
 
 trigger:
@@ -200,7 +199,7 @@ Feature: Restoring a workflow version while others have it open
   As an editor restoring an earlier publish
   I want every open editor on the workflow to switch to the restored content
 
-  @S01 @pending @variant:experimental-features
+  @S01 @variant:experimental-features
   Scenario: A colleague on Latest sees the restored workflow
     # Value: nobody keeps working from a version that was just rolled back.
     Given "Intake" is live with publishes v1 and v2, and v2 added the step "Notify"
@@ -213,7 +212,7 @@ Feature: Restoring a workflow version while others have it open
     # document_supervisor.ex:120-122, :204-210; createSessionContextStore.ts:556-575; useUnsavedChanges.ts:9-56
     # reconcile_workflow_document_test.exs:65-91 (broadcast resets a live doc; no end-to-end restore test)
 
-  @S02 @pending @variant:experimental-features
+  @S02 @variant:experimental-features
   Scenario: A colleague's code editor shows the restored step body
     # Value: someone in the code editor doesn't keep editing a body that is no longer what runs.
     Given v2 of "Intake" changed the body of "Fetch cases"
@@ -222,7 +221,7 @@ Feature: Restoring a workflow version while others have it open
     Then eventually tab B's code editor shows v1's body of "Fetch cases"
     # workflow_reconciler.ex:144-161; workflow_serializer.ex:80; FullScreenIDE.tsx:1020-1033
 
-  @S03 @pending @variant:experimental-features @variant:colleague-can-edit
+  @S03 @variant:experimental-features @variant:colleague-can-edit
   Scenario: A colleague's next save keeps the rollback
     # Value: a rollback is not undone by a colleague saving an editor that still held the old version.
     Given "Ben" has "Intake" open on Latest without experimental features
@@ -233,7 +232,7 @@ Feature: Restoring a workflow version while others have it open
     # workflow_reconciler.ex:144-161 (doc carries the new lock_version, workflow_serializer.ex:69)
     # shared-editor-session S06 (save from the doc); workflow_channel.ex:1507-1510
 
-  @S04 @pending @variant:experimental-features
+  @S04 @variant:experimental-features
   Scenario: A colleague's version list shows the restore
     # Value: colleagues can see the workflow was rolled back, to what, and by whom.
     Given "Ben" has "Intake" open on Latest in tab B and has opened its version list
@@ -243,7 +242,7 @@ Feature: Restoring a workflow version while others have it open
     # workflow_channel.ex:466, :1890-1900; createSessionContextStore.ts:302-317, :556-575
     # VersionDropdown.tsx:114-134; releaseLabel.tsx:23-25
 
-  @S05 @pending @variant:experimental-features
+  @S05 @variant:experimental-features
   Scenario: A colleague reading an older version keeps seeing it
     # Value: someone comparing against a past version isn't moved off it mid-review.
     Given "Ben" is reading v2 of "Intake" in tab B
@@ -252,7 +251,7 @@ Feature: Restoring a workflow version while others have it open
     And "Ben"'s version list includes v3 when he opens it again
     # document_supervisor.ex:120-122; workflow_channel.ex:79-82, :1155-1160; createSessionContextStore.ts:556-575
 
-  @S06 @pending @variant:experimental-features
+  @S06 @variant:experimental-features
   Scenario: A refused restore leaves colleagues' editors alone
     # Value: colleagues never lose their view or their edits to a rollback that didn't happen.
     Given "Ben" has "Intake" open on Latest in tab B

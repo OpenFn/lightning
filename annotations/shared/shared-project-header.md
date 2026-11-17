@@ -2,7 +2,6 @@
 id: shared-project-header
 type: shared
 title: Project page header and project picker
-status: not-started
 owner:
 
 trigger:
@@ -185,7 +184,7 @@ Feature: Project page header and project picker
   As anyone working in a project
   I want every project page to show the same header, picker and menu
 
-  @S01 @pending
+  @S01
   Scenario: Breadcrumbs show where I am and link back up
     # Value: people see how they reached a page and get back to the list in one click.
     Given I am an editor on project "Malawi HIV"
@@ -195,7 +194,7 @@ Feature: Project page header and project picker
     # layout_components.ex:369-388, :427-449; run_live/show.ex:67-89
     # test/lightning_web/components/layout_components_test.exs:320-337
 
-  @S02 @pending
+  @S02
   Scenario: The picker button names the current project
     # Value: people know which project they are about to change before they change anything.
     Given I am an editor on project "Malawi HIV"
@@ -204,7 +203,7 @@ Feature: Project page header and project picker
     # hooks.ex:103-119, layout_components.ex:395-420
     # test/lightning_web/live/project_live_test.exs:853-857
 
-  @S03 @pending
+  @S03
   Scenario: A sandbox is labelled and coloured as a sandbox
     # Value: someone working in a sandbox can't mistake it for the live project.
     Given project "Malawi HIV" has a sandbox "dev" with colour "#E33D63"
@@ -214,7 +213,7 @@ Feature: Project page header and project picker
     # hooks.ex:103-111, projects.ex:1495-1505, layout_components.ex:399-417, PickerButton.tsx:37-83
     # layout_components_test.exs:106-131 asserts data-label "parent-project/my-sandbox", data-is-sandbox "true", data-color
 
-  @S04 @pending
+  @S04
   Scenario: The picker lists only projects I can reach, with the current one marked
     # Value: switching projects never reveals a project someone isn't on.
     Given I am a member of "project-1" and "project-2"
@@ -225,7 +224,7 @@ Feature: Project page header and project picker
     # layout_components.ex:461-497, projects.ex:1367-1372, Picker.tsx:330, :373-387
     # project_live_test.exs:826-880
 
-  @S05 @pending
+  @S05
   Scenario: Sandboxes nest under the nearest project I can see
     # Value: a collaborator invited only to a sandbox can still switch to it, without seeing projects above it.
     Given project "Malawi HIV" has sandbox "dev", which has sandbox "feature"
@@ -237,7 +236,7 @@ Feature: Project page header and project picker
     # projects.ex:1189-1220, :1260-1288, layout_components.ex:500-532
     # layout_components_test.exs:144-245
 
-  @S06 @pending
+  @S06
   Scenario: Projects scheduled for deletion are not offered
     # Value: nobody switches into a project that is being wound down.
     Given I am a member of "Malawi HIV" and "Old pilot"
@@ -246,7 +245,7 @@ Feature: Project page header and project picker
     Then I do not see "Old pilot"
     # projects.ex:1361, :1370, :1295, :1303
 
-  @S07 @pending @variant:support-user
+  @S07 @variant:support-user
   Scenario: Support users see projects that allow support access
     # Value: support staff can reach a project that granted access without being added to it.
     Given I am a support user with no role on project "Malawi HIV"
@@ -255,7 +254,7 @@ Feature: Project page header and project picker
     Then I see "Malawi HIV"
     # projects.ex:1349-1365, :1519-1529
 
-  @S08 @pending
+  @S08
   Scenario: Searching matches the full path and keeps parents in view
     # Value: in a long list, people find a sandbox by its parent's name and can tell same-named sandboxes apart.
     Given I can reach "Malawi HIV" with sandbox "dev" and "Kenya TB" with sandbox "dev"
@@ -264,7 +263,7 @@ Feature: Project page header and project picker
     And I do not see "Kenya TB"
     # layout_components.ex:513-521 (searchLabel), Picker.tsx:104-131
 
-  @S09 @pending
+  @S09
   Scenario: Switching project keeps me in the same section and tab
     # Value: people compare the same page across projects, such as production and a sandbox, in one step.
     Given I am a member of "Malawi HIV" and "Kenya TB"
@@ -274,7 +273,7 @@ Feature: Project page header and project picker
     # layout_components.ex:544-563, Picker.tsx:212-222
     # test/lightning_web/project_picker_sections_test.exs:46-58
 
-  @S10 @pending
+  @S10
   Scenario Outline: Switching from a page that has no equivalent lands on one that does
     # Value: a switch never lands on a missing page for an id that only exists in the first project.
     Given I am a member of "Kenya TB"
@@ -290,7 +289,7 @@ Feature: Project page header and project picker
     # layout_components.ex:544-563
     # project_picker_sections_test.exs:55-91
 
-  @S11 @pending
+  @S11
   Scenario: The picker opens from the keyboard
     # Value: people who switch projects often can do it without reaching for the mouse.
     Given I am on any page in the live layout
@@ -300,7 +299,7 @@ Feature: Project page header and project picker
     Then I am taken to the highlighted project
     # Picker.tsx:142-167, :224-248; live.html.heex:109-113
 
-  @S12 @pending
+  @S12
   Scenario: The picker leads to the full projects list
     # Value: people can reach every project, and create one, from wherever they are.
     When I open the project picker
@@ -308,7 +307,7 @@ Feature: Project page header and project picker
     Then I am on "/projects"
     # layout_components.ex:490-491, Picker.tsx:292-321
 
-  @S13 @pending @variant:require-email-verification
+  @S13 @variant:require-email-verification
   Scenario: Confirmed users and non-verifying instances show no confirmation banner
     # Value: people with nothing left to do are not nagged on every page.
     Given my email is confirmed, or the instance does not require email verification
@@ -317,7 +316,7 @@ Feature: Project page header and project picker
     # layout_components.ex:261-266
     # test/lightning_web/live/accounts_confirmation_live_test.exs:16-24, :41-58, :76-97 (asserted on /projects, same component)
 
-  @S14 @pending @variant:require-email-verification
+  @S14 @variant:require-email-verification
   Scenario: Asking for a new confirmation email hands off to the resend flow
     # Value: an unconfirmed user can get a fresh link from wherever they are working, before the deadline locks them out.
     Given my account was created 2 hours ago and my email is unconfirmed
@@ -327,7 +326,7 @@ Feature: Project page header and project picker
     # layout_components.ex:271-276, common.ex:266-271 (plain link), router.ex:236
     # The warning text itself is shared-authenticated-session S06
 
-  @S15 @pending
+  @S15
   Scenario: The side menu leads to each area of the project and marks the current one
     # Value: people move between a project's areas in one click and can see which one they are in.
     Given I am a viewer on project "Malawi HIV"
@@ -337,7 +336,7 @@ Feature: Project page header and project picker
     # layout_components.ex:207-231, menu.ex:44-87, project_live/settings.ex:197
     # test/lightning_web/components/menu_test.exs:60-99
 
-  @S16 @pending @variant:experimental-features
+  @S16 @variant:experimental-features
   Scenario: Experimental features add Channels and say so
     # Value: unfinished features stay out of the way of people who haven't opted in, and people who have can tell.
     Given I have experimental features turned on
@@ -350,7 +349,7 @@ Feature: Project page header and project picker
     # menu.ex:18-37, :54-61; layout_components.ex:111-134
     # menu_test.exs:33-57, layout_components_test.exs:11-31
 
-  @S17 @pending
+  @S17
   Scenario: Superusers reach administration; everyone else reaches help
     # Value: instance admins get to user and project administration from any project, and other users always have a route to help.
     Given I am a superuser with a role on project "Malawi HIV"
@@ -361,7 +360,7 @@ Feature: Project page header and project picker
     Then the side menu shows "Documentation", "Community" and "Support"
     # live.html.heex:45-79
 
-  @S18 @pending
+  @S18
   Scenario: The account menu shows who I am and where my account settings are
     # Value: people sharing a machine can see which account is signed in, and reach account settings or log out from any project.
     Given I am signed in as "amara@example.org"

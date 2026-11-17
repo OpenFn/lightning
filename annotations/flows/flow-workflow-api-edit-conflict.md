@@ -2,7 +2,6 @@
 id: flow-workflow-api-edit-conflict
 type: flow
 title: Workflow changed through the API while open in the editor
-status: not-started
 owner:
 
 trigger:
@@ -190,7 +189,7 @@ Feature: Workflow changed through the API while open in the editor
   As an API client updating a workflow
   I want my write refused while someone has the workflow open
 
-  @S01 @pending
+  @S01
   Scenario Outline: An API update is refused while the workflow is open in the editor
     # Value: a script can't overwrite a workflow under someone who is editing it, or have its change undone by their next save.
     Given "amara@example.org" has "Intake" open in the editor
@@ -207,7 +206,7 @@ Feature: Workflow changed through the API while open in the editor
       | PATCH  |
       | PUT    |
 
-  @S02 @pending
+  @S02
   Scenario: The lock lifts when the editor closes
     # Value: automated updates resume once nobody is editing, without anyone having to release a lock by hand.
     Given "amara@example.org" had "Intake" open in the editor
@@ -219,7 +218,7 @@ Feature: Workflow changed through the API while open in the editor
     # session.ex:140-158, :457-473; workflows_controller.ex:313-316; workflows.ex:200-257
     # session_test.exs:147-182 asserts presence is listed while sessions live; no test asserts it drops
 
-  @S03 @pending
+  @S03
   Scenario: The next person to open the editor sees the API's change, not an old draft
     # Value: a draft left in the editor can't be saved back over a change made through the API.
     Given "amara@example.org" renamed a job in "Intake" without saving and closed the tab

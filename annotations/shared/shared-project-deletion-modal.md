@@ -2,7 +2,6 @@
 id: shared-project-deletion-modal
 type: shared
 title: Project deletion modal
-status: not-started
 owner:
 
 trigger:
@@ -188,7 +187,7 @@ Feature: Project deletion modal
   As a project owner or a superuser
   I want to confirm deletion by typing the project's name
 
-  @S01 @pending
+  @S01
   Scenario: The modal names the project and the grace period
     # Value: the person deleting sees exactly which project goes, and when its data is removed, before committing.
     Given the modal is open for project "project-1"
@@ -196,7 +195,7 @@ Feature: Project deletion modal
     And I see "The whole project will be deleted along with all workflows and work order history, 7 day(s) from today."
     # project_deletion_modal.ex:76-79, :113-121; project_live_test.exs:180-182 (prompt only)
 
-  @S02 @pending
+  @S02
   Scenario: A mistyped name is refused
     # Value: a project can't be shut down by a slip of the keyboard or on the wrong row.
     Given the modal is open for project "project-1"
@@ -208,7 +207,7 @@ Feature: Project deletion modal
     # project_deletion_modal.ex:18-29, :32-38, :58-59, :127, :140, project.ex:276-280
     # project_test.exs:146-167 (changeset only); project_live_test.exs:259-263 asserts only that the prompt still renders
 
-  @S03 @pending
+  @S03
   Scenario: Confirming an unscheduled project schedules it and returns to the host
     # Value: a correct confirmation retires the project in one step, with the grace period the copy promised.
     Given the modal is open for unscheduled project "project-1" with "after delete" page "/projects"
@@ -218,7 +217,7 @@ Feature: Project deletion modal
     And the flow "flow-schedule-project-deletion" has started for "project-1"
     # project_deletion_modal.ex:38-39, :49-53, :68-74, projects.ex:1639-1652; project_live_test.exs:168-195, :239-276
 
-  @S04 @pending
+  @S04
   Scenario: Confirming an already scheduled project starts the purge now
     # Value: purging before the grace period ends sits behind the same type-the-name check as scheduling.
     Given project "project-1" is scheduled for deletion
@@ -230,7 +229,7 @@ Feature: Project deletion modal
     # handoff to flow-schedule-project-deletion S12
     # project_deletion_modal.ex:39-47, :68-71, projects.ex:929-934; project_live_test.exs:322-355
 
-  @S05 @pending
+  @S05
   Scenario Outline: Backing out returns to the host and changes nothing
     # Value: abandoning a deletion is one click and leaves the project untouched.
     Given the modal is open for project "project-1" with "cancel" page "<cancel_page>"
@@ -320,7 +319,7 @@ none
 
 ## Summary
 
-- Scenarios: 5 (S01 to S05), all `@pending`.
+- Scenarios: 5 (S01 to S05).
 - Section 6: 6.1 has 6, 6.2 has 10, 6.3 has 2, 6.4 has 1, 6.5 has 2.
 - Flows: references flow-schedule-project-deletion (S03, S04 hand off to it);
   none proposed.

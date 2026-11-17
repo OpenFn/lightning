@@ -29,7 +29,6 @@ section is where the laundry list lives, so the top of the file stays readable.
 id: project-settings-collaborators
 type: view # view | capability | flow | shared
 title: Project settings › Collaborators
-status: not-started # not-started | in-progress | migrated | cut
 owner:
 
 trigger:
@@ -208,8 +207,10 @@ the request fails)
 
 Gherkin. Happy paths first. Every scenario carries:
 
-- an id tag `@Sxx`
-- a status tag: `@pending`, `@passing-old`, `@passing-new`, `@cut`
+- an id tag `@Sxx`. Status is not kept here: it lives on the scenario's test
+  (the `@passing-old` and `@passing-new` tags in its spec), and
+  `npm run check:annotations` lists every id that has no test yet
+- `@cut` if it is deliberately not being rebuilt (see section 7)
 - a config variant tag when it only applies to one: `@variant:mfa-required`
 - a **Value** line stating what the scenario protects, in plain language. If you
   can't write that line, the scenario belongs in section 6.
@@ -225,7 +226,7 @@ Feature: Project collaborators
   As a project admin
   I want to add, change and remove collaborators
 
-  @S01 @passing-old
+  @S01
   Scenario: Admin adds a collaborator
     # Value: new team members get access the same day, without a superuser.
     Given I am an admin on project "Malawi HIV"
@@ -235,14 +236,14 @@ Feature: Project collaborators
     And the flow "flow-invite-collaborator" has started for "amara@example.org"
     And an audit event "project_user.added" is recorded
 
-  @S02 @passing-old
+  @S02
   Scenario: Editor cannot see the add collaborator control
     # Value: only people trusted with access decisions can make them.
     Given I am an editor on project "Malawi HIV"
     When I open the collaborators panel
     Then I do not see the "Add collaborator" button
 
-  @S03 @passing-old
+  @S03
   Scenario: The last owner cannot be removed
     # Value: a project never ends up with nobody able to administer it.
     Given I am the only owner on project "Malawi HIV"
@@ -250,7 +251,7 @@ Feature: Project collaborators
     Then I see "A project must have at least one owner"
     And I remain an owner
 
-  @S04 @pending @variant:mfa-required
+  @S04 @variant:mfa-required
   Scenario: Admin without MFA cannot change roles on an MFA-required project
     # Value: sensitive projects are only administered from MFA-protected accounts.
     Given project "Malawi HIV" requires MFA
@@ -382,7 +383,7 @@ Read the view's code, the policies and contexts it calls, and its tests. Then:
    first in last-activity desc" protects nothing you can name: section 6.2.
 5. **A crash, a stale assign, copy that doesn't match the button, or a count
    that doesn't match the action is a possible bug.** Put it in 6.1. Never write
-   it as a `@passing-old` scenario.
+   it as a scenario.
 6. **If a behaviour spans another route, a controller, an email or a second
    browser tab**, don't write the scenario here. Create or reference a flow
    annotation and assert only the handoff in this file.
@@ -411,11 +412,13 @@ Read the view's code, the policies and contexts it calls, and its tests. Then:
    `decide` blocks `migrated`.
 3. **Flow lint.** Every flow's `surfaces` entries exist. Every view that names a
    flow is in that flow's `surfaces`.
-4. **Old-app run.** `@pending` and `@passing-old` scenarios run against current
-   Lightning on the tagged variant. A failure means the annotation is wrong.
-5. **New-app run.** `@passing-old` scenarios run against the rebuild. Passing
-   ones become `@passing-new`.
+4. **Old-app run.** Every scenario's test runs against current Lightning on the
+   tagged variant. A failure means the annotation is wrong. A test that passes
+   is tagged `@passing-old` in its spec.
+5. **New-app run.** `@passing-old` tests run against the rebuild. Passing ones
+   are also tagged `@passing-new`.
 6. **Report**, kept as separate lists: uncovered inventory, failing scenarios on
    the rebuild, section 6 items still at `decide`, deliberate cuts, and possible
-   bugs by disposition. `status: migrated` requires: inventory covered, every
-   non-cut scenario `@passing-new`, no `decide` items, section 8 empty.
+   bugs by disposition. A page is migrated when: inventory covered, every
+   non-cut scenario's test tagged `@passing-new`, no `decide` items, section 8
+   empty.

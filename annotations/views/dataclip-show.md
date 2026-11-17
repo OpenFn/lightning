@@ -2,7 +2,6 @@
 id: dataclip-show
 type: view
 title: Dataclip
-status: not-started
 owner:
 
 trigger:
@@ -195,7 +194,7 @@ Feature: Dataclip page
   As anyone on the project
   I want to read a stored dataclip with its details
 
-  @S01 @pending
+  @S01
   Scenario: The details panel identifies the dataclip
     # Value: people can tell exactly which piece of data they are reading and when it was stored.
     Given project "Malawi HIV" has a step result dataclip with body {"foo": "bar"}
@@ -207,7 +206,7 @@ Feature: Dataclip page
     # show.ex:20-28, :56-104; live_helpers.ex:169-171
     # test/lightning_web/live/dataclip_live_test.exs:17-47
 
-  @S02 @pending
+  @S02
   Scenario Outline: The type pill says where the data came from
     # Value: people know whether they are looking at what a system sent, what a job produced, or what someone saved by hand.
     Given a dataclip of type <type>
@@ -223,7 +222,7 @@ Feature: Dataclip page
       | global        | "global"         |
       | kafka         | "kafka"          |
 
-  @S03 @pending
+  @S03
   Scenario: The body is shown formatted and read-only
     # Value: people read the payload in a form they can scan, without any risk of changing stored data.
     Given a global dataclip whose body is {"patients":[{"id":1}]}
@@ -233,7 +232,7 @@ Feature: Dataclip page
     # show.ex:139-144; viewers.ex:200-210; DataclipViewer.tsx:10-58; CodeViewer.tsx:79-99
     # dataclip_live_test.exs:49-52 asserts only that the viewer element is rendered
 
-  @S04 @pending
+  @S04
   Scenario: The body can be copied
     # Value: people lift the payload into a manual run, a test or a bug report without retyping it.
     Given I am on a dataclip page whose body has loaded
@@ -242,7 +241,7 @@ Feature: Dataclip page
     And the button reads "Copied!" for two seconds
     # CodeViewer.tsx:11-37, :41-77
 
-  @S05 @pending
+  @S05
   Scenario: A webhook request shows its data and request together, with webhook credentials hidden
     # Value: people see what a source system actually sent without exposing the secret it authenticates with.
     Given workflow "Intake" has a webhook trigger protected by basic auth "webhook_user" with password "webhook_secret_pass"
@@ -255,7 +254,7 @@ Feature: Dataclip page
     # query.ex:346-363; dataclip_controller.ex:57-78; dataclip_scrubber.ex:40-41
     # test/lightning_web/controllers/dataclip_controller_test.exs:111-162
 
-  @S06 @pending
+  @S06
   Scenario: A step's output hides the credential values the step used
     # Value: a job that echoes its configuration does not show credential secrets to everyone who can read the project.
     Given step "Fetch" ran with a credential whose values include the number 1234 and the string "some-secret"
@@ -266,7 +265,7 @@ Feature: Dataclip page
     # dataclip_controller.ex:62-70; dataclip_scrubber.ex:26-38
     # dataclip_controller_test.exs:164-178
 
-  @S07 @pending
+  @S07
   Scenario: A dataclip from another project cannot be opened
     # Value: a member of one project cannot read another project's data by dataclip id.
     Given I am an editor on project "Malawi HIV"
@@ -278,7 +277,7 @@ Feature: Dataclip page
     # show.ex:20-34; invocation.ex:225-235
     # dataclip_live_test.exs:93-113 (other project only)
 
-  @S08 @pending
+  @S08
   Scenario: A non-member cannot open the page
     # Value: project data stays with the people on the project.
     Given dataclip "D" belongs to project "Kenya TB"
@@ -288,7 +287,7 @@ Feature: Dataclip page
     # show.ex:9
     # dataclip_live_test.exs:55-91
 
-  @S09 @pending
+  @S09
   Scenario: A wiped dataclip says its data was erased, and when
     # Value: people can tell data deliberately erased under the retention policy from data that failed to arrive.
     Given project "Malawi HIV" has a step result dataclip that the retention policy wiped on 1 March
@@ -300,7 +299,7 @@ Feature: Dataclip page
     # show.ex:105-138; wiping: projects.ex:224-231, :1734-1785; query.ex:365-373
     # dataclip_live_test.exs:51-52 refutes this panel for an unwiped dataclip; nothing asserts the wiped case
 
-  @S10 @pending
+  @S10
   Scenario: A zero-persistence run's final output opens as wiped
     # Value: people following a run's output on a zero-persistence project are told why there is nothing to read.
     Given project "Malawi HIV" does not retain data

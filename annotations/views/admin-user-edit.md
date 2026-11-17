@@ -2,7 +2,6 @@
 id: admin-user-edit
 type: view
 title: Admin settings › New user and edit user
-status: not-started
 owner:
 
 trigger:
@@ -249,7 +248,7 @@ Feature: Admin user form
   As a superuser
   I want to create accounts and change any account's details, role and access
 
-  @S01 @pending
+  @S01
   Scenario: A superuser creates a user account
     # Value: an instance without self sign-up can still bring people on, without database access.
     Given I am a superuser
@@ -264,7 +263,7 @@ Feature: Admin user form
     # form_component.ex:46-48, :75-99; accounts.ex:146-165; extensions/account_hook.ex:28-33; user.ex:85-100
     # user_live_test.exs:43-75 (flash, list, stored names and role); :137-174 (audit actor and event)
 
-  @S02 @pending
+  @S02
   Scenario: A new account is sent a confirmation email that names its creator
     # Value: the person learns an account exists for them, who made it, and how to confirm the address before any verification deadline.
     Given I am a superuser named "Bob" with email "bob@example.org"
@@ -277,7 +276,7 @@ Feature: Admin user form
     # accounts_test.exs:1792-1816 asserts the token and recipient; no LiveView test asserts this email
     # Under require-email-verification the account is locked out after 48 hours if unconfirmed (accounts.ex:1360-1368)
 
-  @S03 @pending
+  @S03
   Scenario: The superuser is told when the confirmation email could not be sent
     # Value: the administrator knows the new user has not been told about the account and has no confirmation link, and can follow up.
     Given I am a superuser
@@ -288,7 +287,7 @@ Feature: Admin user form
     And "amara@example.org" is in the list
     # form_component.ex:78-92; user_notifier.ex:49-60; untested
 
-  @S04 @pending
+  @S04
   Scenario: A superuser creates another superuser
     # Value: an instance can have more than one administrator, so it isn't stranded when one is away or leaves.
     Given I am a superuser
@@ -298,7 +297,7 @@ Feature: Admin user form
     # form_component.ex:50-55 (options "Superuser", "User"); user.ex:93; accounts.ex:153-160
     # user_live_test.exs:77-107
 
-  @S05 @pending
+  @S05
   Scenario: The form refuses an account that can't be used
     # Value: an administrator can't create or leave an account nobody can sign in to, or one whose email collides with another person's.
     Given I am a superuser
@@ -315,7 +314,7 @@ Feature: Admin user form
     # form_component.ex:12-23, :26-38; form_component.html.heex:104; user.ex:102-131, :241-267
     # user_live_test.exs:57-59, :120-122 assert "can't be blank" only; the other messages are read from code
 
-  @S06 @pending
+  @S06
   Scenario: A superuser changes an account's details, role and access
     # Value: an administrator can correct a name, reset a forgotten password, appoint an administrator or cut off an account without database access.
     Given I am a superuser
@@ -331,7 +330,7 @@ Feature: Admin user form
     # form_component.ex:57-73; accounts.ex:177-201; user.ex:287-305
     # user_live_test.exs:109-135 (all fields, password checked with valid_password?)
 
-  @S07 @pending
+  @S07
   Scenario: Leaving the password blank keeps the current one
     # Value: correcting someone's name doesn't silently reset their password or sign them out.
     Given I am a superuser
@@ -344,7 +343,7 @@ Feature: Admin user form
     # form_component.html.heex:35 (no value rendered); user.ex:118-127 (password validated only when changed), :136-146; accounts.ex:218-219
     # flow-account-revocation-teardown S08; the blank password case itself is untested
 
-  @S08 @pending
+  @S08
   Scenario Outline: Changes that reduce or move access hand off to the revocation flow
     # Value: when an administrator cuts off or changes how someone gets in, the change reaches the browsers and editors they already have open.
     Given I am a superuser
@@ -365,7 +364,7 @@ Feature: Admin user form
       | choose role "User"                            |
       | turn off "Support User"                       |
 
-  @S09 @pending
+  @S09
   Scenario: A superuser changes someone's email without their confirmation
     # Value: an account whose owner has lost their old inbox can be moved to a new address by an administrator, who is accountable for it in the audit trail.
     Given I am a superuser
@@ -378,7 +377,7 @@ Feature: Admin user form
     # user.ex:287-305 (email cast directly); accounts.ex:177-230; accounts/audit.ex:28-46
     # contrast flow-change-email-confirm entry (accounts.ex:740-756)
 
-  @S10 @pending
+  @S10
   Scenario: Granting support access warns how far it reaches
     # Value: an administrator understands that support access opens every project that allows it before granting it.
     Given I am a superuser
@@ -392,7 +391,7 @@ Feature: Admin user form
     # form_component.ex:21, :40-44; form_component.html.heex:53-71; user.ex:295
     # user_live_test.exs:176-217; what support access opens is shared-project-header (support users) and project policies
 
-  @S11 @pending
+  @S11
   Scenario: Scheduled deletion is only offered for non-superuser accounts
     # Value: an instance administrator can't be queued for automatic deletion from this form.
     Given I am a superuser
@@ -409,7 +408,7 @@ Feature: Admin user form
     # user_live_test.exs:219-236, :238-259, :261-277, :279-299
     # saving as a superuser also clears any stored date (user.ex:442-447); untested
 
-  @S12 @pending
+  @S12
   Scenario: Cancel leaves the account unchanged
     # Value: a superuser who opened the wrong account can back out without touching it.
     Given I am a superuser

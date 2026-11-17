@@ -2,7 +2,6 @@
 id: run-show
 type: view
 title: Run
-status: not-started
 owner:
 
 trigger:
@@ -252,7 +251,7 @@ Feature: Run page
   As anyone on the project
   I want to see the run's details, steps, data and logs
 
-  @S01 @pending
+  @S01
   Scenario: The run's summary shows what ran, when and how it ended
     # Value: someone investigating a failure sees at a glance which workflow ran, when, for how long and with what result.
     Given workflow "Intake" in project "Malawi HIV" has a run that a webhook request started
@@ -265,7 +264,7 @@ Feature: Run page
     # show.ex:75-80, :104-190
     # test/lightning_web/live/run_live/show_test.exs:67-93 asserts "Enqueued" and "Webhook trigger"
 
-  @S02 @pending
+  @S02
   Scenario Outline: "Started by" names the person or the trigger
     # Value: people can tell whether a person or an integration started the run, and whom to ask about it.
     Given a run of workflow "Intake" <started>
@@ -280,7 +279,7 @@ Feature: Run page
       | started by its cron trigger               | "Cron trigger"        |
       | retried by "amara@example.org" from History | "amara@example.org" |
 
-  @S03 @pending
+  @S03
   Scenario: The version chip says whether the run used the latest workflow
     # Value: people know before opening the editor whether the workflow has changed since this run.
     Given a run executed on workflow "Intake" at its current version
@@ -292,7 +291,7 @@ Feature: Run page
     And its tooltip says the run is based on a snapshot taken on that snapshot's date and time
     # show.ex:23-47, :82-86; common.ex:284-305
 
-  @S04 @pending
+  @S04
   Scenario: The final output links to the stored result
     # Value: people can open the data the run produced without hunting for it.
     Given a run of "Intake" finished with a final output
@@ -302,7 +301,7 @@ Feature: Run page
     # show.ex:166-180
     # show_test.exs:233-246 (failed run, refute "dataclips/"), :248-327 (short id shown)
 
-  @S05 @pending
+  @S05
   Scenario: The work order link opens that work order in History
     # Value: people go from one run to the work order's full retry history in one click.
     Given a run of work order "W"
@@ -311,7 +310,7 @@ Feature: Run page
     And history-work-orders S10 holds
     # show.ex:121-133
 
-  @S06 @pending
+  @S06
   Scenario: A run from another project cannot be opened
     # Value: a member of one project cannot read another project's runs, data or logs by run id.
     Given I am an editor on project "Malawi HIV"
@@ -323,7 +322,7 @@ Feature: Run page
     # hooks.ex:169-183; runs.ex:74-84
     # show_test.exs:19-42
 
-  @S07 @pending
+  @S07
   Scenario: Selecting a step shows its input and output
     # Value: people see exactly what data went into and came out of the step that failed.
     Given a run whose steps "Fetch" and "Transform" have finished with stored input and output
@@ -337,7 +336,7 @@ Feature: Run page
     # show.ex:206-225, :262-296, :363-367; streaming.ex:55-77, :235-246; viewers.ex:243-290; DataclipViewer.tsx:32-58
     # show_test.exs:136-147, :167-176, :212-222 assert the dataclip id handed to the viewer
 
-  @S08 @pending
+  @S08
   Scenario: A step link opens the run with that step selected
     # Value: links from History and the workflow editor land on the step in question, not the top of the run.
     Given run "R" has a finished step "Fetch"
@@ -347,7 +346,7 @@ Feature: Run page
     # streaming.ex:165-196, :235-246; show.ex:363-367
     # inbound links: components.ex:436-439 (History), RunTabPanel.tsx:79 (editor)
 
-  @S09 @pending
+  @S09
   Scenario: Input and output need a step to be selected
     # Value: people are told why the data tabs are empty instead of reading an empty panel as missing data.
     Given I open a run without selecting a step
@@ -356,7 +355,7 @@ Feature: Run page
     And the "Output" tab is disabled with the tooltip "A valid step (with a readable output) must be selected to view its output"
     # show.ex:53, :228-261; tabbed.ex:106-123; TabbedContainer.ts:13-14, :27
 
-  @S10 @pending
+  @S10
   Scenario: The log tab shows everything the run logged
     # Value: people read what the job printed, which is usually where the cause of a failure is.
     Given a finished run of "Intake" that logged "Fetched 12 patients" and "Posted batch 1"
@@ -365,7 +364,7 @@ Feature: Run page
     # streaming.ex:181-195 (streamed in chunks of 100, show.ex:3), :113-118; viewers.ex:92-113; log-viewer/index.ts:35-44; store.ts:130-144, :158-173
     # store.test.ts:22-38, :72-106, :126-144
 
-  @S11 @pending
+  @S11
   Scenario: Selecting a step highlights its log lines
     # Value: in a long log, people find the failing step's output without scrolling through every step.
     Given a finished run whose steps "Fetch" and "Transform" both logged
@@ -376,7 +375,7 @@ Feature: Run page
     # viewers.ex:99; log-viewer/index.ts:47-50; store.ts:46-95, :185-197; component.tsx:51-78
     # store.test.ts:215-266 asserts only that ranges exist and clear
 
-  @S12 @pending
+  @S12
   Scenario: The log level filter is remembered
     # Value: people who only care about warnings and errors don't have to re-filter every run they open.
     Given I have never set a log level
@@ -389,7 +388,7 @@ Feature: Run page
     # viewers.ex:52-60, :79-86, :121-197; streaming.ex:214-227; store.ts:26-44, :135-144, :151-153, :199-201
     # store.test.ts:160-207
 
-  @S13 @pending
+  @S13
   Scenario: A finished run with no logs says so
     # Value: people can tell a run that logged nothing from a log that is still loading.
     Given a run that was lost before it logged anything
@@ -398,7 +397,7 @@ Feature: Run page
     # viewers.ex:68-76; Run.final_states (run.ex:46-55)
     # test/lightning_web/live/components/viewer_test.exs:15-38
 
-  @S14 @pending
+  @S14
   Scenario Outline: An unfinished run's log says what it is waiting for
     # Value: people can tell work stuck in the queue from a worker that is still setting up.
     Given a run in state <state> that has not logged anything
@@ -413,7 +412,7 @@ Feature: Run page
       | claimed   | "Creating runtime & installing adaptors"  |
       | started   | "Nothing yet"                             |
 
-  @S15 @pending
+  @S15
   Scenario: A running step's output says it is not there yet
     # Value: people don't mistake a step that is still running for one that produced nothing.
     Given a started run whose step "Fetch" has not finished
@@ -422,7 +421,7 @@ Feature: Run page
     # viewers.ex:277-286; dataclip_wiped? is false for an unfinished step (viewers.ex:372-380)
     # show_test.exs:148, :193 (output_is_empty? looks for "#step-output-<id>-nothing-yet"); viewer_test.exs:169-187
 
-  @S16 @pending
+  @S16
   Scenario: Editors can cancel a queued run from this page
     # Value: people who spot a run queued by mistake can stop it where they found it.
     Given I am an editor and run "R" is "available"
@@ -432,7 +431,7 @@ Feature: Run page
     # show.ex:191-203, :311-317, :370-404
     # show_test.exs:435-626
 
-  @S17 @pending
+  @S17
   Scenario: The workflow and step inspect links open the version that ran
     # Value: people inspect the code that actually ran, not code changed since.
     Given a run executed on an older version of "Intake"
@@ -442,7 +441,7 @@ Feature: Run page
     # show.ex:111-118, :213-223
     # show_test.exs:329-428
 
-  @S18 @pending
+  @S18
   Scenario: An open run page follows the run as it executes
     # Value: someone watching a run sees its state, steps, output and logs arrive without reloading.
     Given I have run "R" open while it is "available"
@@ -451,7 +450,7 @@ Feature: Run page
     # streaming.ex:120-150, :168
     # show_test.exs:67-246 drives the whole lifecycle through the run topic
 
-  @S19 @pending
+  @S19
   Scenario: A failure alert's run link lands on this page
     # Value: the person alerted goes straight to the failing run's logs.
     Given I received a failure alert for run "R" of workflow "Intake"
@@ -461,7 +460,7 @@ Feature: Run page
     And if I was signed out, the flow "flow-login-return-to" starts for that URL
     # failure_alerter.ex:69-73; failure_alert.html.heex:7-8; router.ex:189-190, :297
 
-  @S20 @pending
+  @S20
   Scenario: A run on a zero-persistence project shows its data as not retained
     # Value: investigators read an empty step as policy, not failure, and know who can change it.
     Given project "Malawi HIV" never retains I/O data and run "R" was created after the switch

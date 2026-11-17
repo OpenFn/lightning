@@ -2,7 +2,6 @@
 id: shared-workflow-yaml-format
 type: shared
 title: Workflow YAML format and import errors
-status: not-started
 owner:
 
 trigger:
@@ -200,7 +199,7 @@ Feature: Workflow YAML format
   As someone importing, templating or applying workflow YAML
   I want a file to mean exactly what it says, or to be told what is wrong with it
 
-  @S01 @pending
+  @S01
   Scenario Outline: Both workflow formats are accepted
     # Value: files from older Lightning exports, the provisioning API, the CLI and the current code view all import.
     # util.ts:41-58; format.ts:24-31; v2.ts:71-95; util.test.ts:253-294; YAMLImportModal.test.tsx:369-389
@@ -214,7 +213,7 @@ Feature: Workflow YAML format
       | v1 (top-level jobs, triggers and edges maps) |
       | v2 (top-level steps list, no jobs key)       |
 
-  @S02 @pending
+  @S02
   Scenario: A workflow keeps its logic through export and re-import
     # Value: a workflow copied between projects or instances behaves the same, instead of silently rewiring.
     # v2.ts:254-414 (emit), :600-683 (parse); v2.test.ts:182-345; test/fixtures/portability/v2/canonical_workflow.yaml
@@ -225,7 +224,7 @@ Feature: Workflow YAML format
     And the same edges with the same conditions, label and disabled state
     And the same webhook reply, cron expression and cron cursor
 
-  @S03 @pending
+  @S03
   Scenario Outline: v2 edge conditions keep their meaning
     # Value: conditions written by hand or by the CLI run the same way once imported.
     # v2.ts:600-625, :639-658; v2.test.ts:236-250
@@ -241,7 +240,7 @@ Feature: Workflow YAML format
       | { b: "state.data.ok" }                | JS expression "state.data.ok"      |
       | { b: false }                          | JS expression "false"              |
 
-  @S04 @pending
+  @S04
   Scenario: Text that is not valid YAML is refused with the parser's reason
     # Value: the user is pointed at the formatting problem instead of a generic failure.
     # util.ts:51-54; workflow-errors.ts:60-69, :230-231; ValidationErrorDisplay.tsx:45-58; util.test.ts:296-298
@@ -250,7 +249,7 @@ Feature: Workflow YAML format
     Then I see "Validation Error" with the code "YAML_SYNTAX_ERROR"
     And the message starts "YAML syntax error:" and ends "Please check your YAML formatting."
 
-  @S05 @pending
+  @S05
   Scenario Outline: A file that does not match the format names the field and its path
     # Value: users fix the exact field instead of hunting for which part of a long file is wrong.
     # v1.ts:235-245, :281-298; v2.ts:142-148; workflow-errors.ts:108-157, :219-246; ValidationErrorDisplay.tsx:48-58
@@ -264,7 +263,7 @@ Feature: Workflow YAML format
       | job "fetch" has an extra key "timeout"       | SCHEMA_INVALID_PROPERTY  | /jobs/fetch             |
       | job "fetch" has "body: 42"                   | SCHEMA_TYPE_ERROR        | /jobs/fetch/body        |
 
-  @S06 @pending
+  @S06
   Scenario Outline: An edge to a missing step is refused
     # Value: no workflow is created with an edge that leads nowhere.
     # v1.ts:126-153; v2.ts:536-566; workflow-errors.ts:71-93, :221-225; v2.test.ts:464-512
@@ -278,7 +277,7 @@ Feature: Workflow YAML format
       | v1     |
       | v2     |
 
-  @S07 @pending
+  @S07
   Scenario: Two step names that would export to the same key are refused
     # Value: an imported workflow can always be exported again; otherwise it imports cleanly and fails on the way back out.
     # v1.ts:45-48, :247-264; workflow-errors.ts:95-106, :227-228; util.test.ts:517-525
@@ -287,7 +286,7 @@ Feature: Workflow YAML format
     Then I see the code "DUPLICATE_JOB_NAME"
     But a file with steps named "a b" and "a c" imports
 
-  @S08 @pending
+  @S08
   Scenario: Only webhook and cron triggers are accepted
     # Value: an unrecognised trigger type never becomes a public webhook endpoint the file did not ask for.
     # workflow-spec.json:63-66; workflow-spec-v2.json:39-42; v1.ts:109-119 (backstop comment); workflow-errors.ts:132-136, :239-242
@@ -295,7 +294,7 @@ Feature: Workflow YAML format
     When I import it
     Then I see the code "SCHEMA_INVALID_VALUE" and "Must be one of: cron, webhook"
 
-  @S09 @pending
+  @S09
   Scenario Outline: Triggers are only on when the file says so
     # Value: importing a workflow does not start accepting webhook requests or running on a schedule by accident.
     # workflow-spec.json:107 (v1 requires enabled); v2.ts:577-598; v2.test.ts:268-287; util.test.ts:44-152
@@ -309,7 +308,7 @@ Feature: Workflow YAML format
       | v2     | says "enabled: true"    | the webhook trigger is imported enabled                     |
       | v1     | has no "enabled" key    | I see "SCHEMA_MISSING_PROPERTY" naming "enabled"            |
 
-  @S10 @pending
+  @S10
   Scenario: The workflow id in a file is ignored
     # Value: importing a file exported from another workflow never writes into that workflow.
     # YAMLStateToYDoc.ts:131-134 (only the name is copied to workflow metadata); v1.ts:166-167
@@ -319,7 +318,7 @@ Feature: Workflow YAML format
     Then a separate workflow is created
     And "Lab results" is unchanged
 
-  @S11 @pending
+  @S11
   Scenario: Re-applying a file that does not mention a webhook path keeps the live path
     # Value: an AI or YAML re-apply cannot silently break the URL a source system is posting to.
     # v1.ts:99-103; YAMLStateToYDoc.ts:80-86, :147-172; YAMLStateToYDoc.test.ts:619-700; util.test.ts:187-250

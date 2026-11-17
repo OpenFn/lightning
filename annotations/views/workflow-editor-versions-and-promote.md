@@ -2,7 +2,6 @@
 id: workflow-editor-versions-and-promote
 type: view
 title: Workflow editor › Versions, run history, restore, edit in sandbox, sync and promote
-status: not-started
 owner:
 
 trigger:
@@ -288,7 +287,7 @@ Feature: Workflow versions, history and sandbox editing
   As a member of a project
   I want to browse versions and runs, roll back, and work on copies
 
-  @S01 @pending
+  @S01
   Scenario: Member opens an earlier save read-only
     # Value: anyone can check what the workflow looked like at an earlier save without being able to change it by accident.
     Given workflow "Intake" has saves 3, 4 and 5, and 5 is current
@@ -303,7 +302,7 @@ Feature: Workflow versions, history and sandbox editing
     # workflow_channel.ex:622-651; read-only is shared-editor-session S10
     # SnapshotVersionDropdown.test.tsx:61-74, :209-245; workflow_channel_test.exs:6828-6870
 
-  @S02 @pending @variant:experimental-features
+  @S02 @variant:experimental-features
   Scenario: A live workflow lists its publishes and where each came from
     # Value: people can tell who put each version into production and whether it was published, promoted from a sandbox or restored.
     Given "Intake" is live outside a sandbox with publishes v1 (first go-live), v2 (promoted from sandbox "fix-dates"), v3 (published from draft) and v4 (restored v2)
@@ -315,7 +314,7 @@ Feature: Workflow versions, history and sandbox editing
     # VersionDropdown.tsx:183-312; releaseLabel.tsx:10-33; workflow_channel.ex:594-619, :1463-1481; workflow_releases.ex:52-62
     # VersionDropdown.test.tsx:637-723, :1016-1061; workflow_channel_test.exs:6607-6827
 
-  @S03 @pending @variant:experimental-features
+  @S03 @variant:experimental-features
   Scenario: Member opens a publish read-only and comes back to Latest
     # Value: a publish can be inspected in place, and there is always a way back to the editable copy, even before anything is published.
     Given "Intake" is live with publishes v1 and v2
@@ -328,7 +327,7 @@ Feature: Workflow versions, history and sandbox editing
     # useVersionSelect.ts:54-62; VersionDropdown.tsx:60-77, :145-152, :183-206, :227-229
     # useVersionSelect.test.tsx:54-68, :108-122; VersionDropdown.test.tsx:755-797, :831-886; workflow_channel_test.exs:2617-2685
 
-  @S04 @pending @variant:experimental-features
+  @S04 @variant:experimental-features
   Scenario Outline: The list matches what the workflow's versions mean
     # Value: on a live workflow the numbers people see are the versions that went to production; elsewhere they are every save.
     Given "Intake" is <state> <where>
@@ -341,7 +340,7 @@ Feature: Workflow versions, history and sandbox editing
       | live  | in a sandbox          | saves     |
     # useVersionPicker.ts:16-25; CollaborativeEditor.tsx:266-281; useVersionPicker.test.tsx:33-66
 
-  @S05 @pending @variant:experimental-features
+  @S05 @variant:experimental-features
   Scenario: A saved-version link on a live workflow falls back to the live copy
     # Value: an old "v=" link can't open a numbering that the live workflow's list no longer uses.
     Given "Intake" is live outside a sandbox
@@ -349,7 +348,7 @@ Feature: Workflow versions, history and sandbox editing
     Then "v=5" is removed from the URL without adding a history entry
     # CollaborativeEditor.tsx:233-239; CollaborativeEditor.restore.test.tsx:224-246 (BreadcrumbContent rendered with Header and VersionDropdown mocked)
 
-  @S06 @pending @variant:experimental-features
+  @S06 @variant:experimental-features
   Scenario: Switching version with unsaved edits asks first
     # Value: nobody loses work just by looking at an older version.
     Given I am an editor with unsaved changes in "Intake"
@@ -364,7 +363,7 @@ Feature: Workflow versions, history and sandbox editing
     # useVersionSelect.ts:71-76; useDiscardGuard.tsx:18-60; DiscardChangesDialog.tsx:23-106; CollaborativeEditor.tsx:341-346
     # useVersionSelect.test.tsx:140-229; CollaborativeEditor.discardGuard.test.tsx:142-235
 
-  @S07 @pending
+  @S07
   Scenario: The version list catches up with saves
     # Value: nobody pins or restores from a list that is missing the latest save or publish.
     Given I opened the version chip on "Intake" once
@@ -374,7 +373,7 @@ Feature: Workflow versions, history and sandbox editing
     # createSessionContextStore.ts:303-317, :556-575; VersionDropdown.tsx:114-134; SnapshotVersionDropdown.tsx:85-103
     # VersionDropdown.test.tsx:401-438, :512-540; SnapshotVersionDropdown.test.tsx:110-139
 
-  @S08 @pending
+  @S08
   Scenario: A version list that fails to load says so and tries again
     # Value: a passing failure doesn't leave history unreachable for the rest of the session.
     Given loading the versions of "Intake" fails
@@ -385,7 +384,7 @@ Feature: Workflow versions, history and sandbox editing
     # VersionDropdown.tsx:128-143, :212-215; SnapshotVersionDropdown.tsx:97-112; createSessionContextStore.ts:416-424, :473-480
     # VersionDropdown.test.tsx:439-511, :1181-1250; SnapshotVersionDropdown.test.tsx:140-207
 
-  @S09 @pending @variant:experimental-features
+  @S09 @variant:experimental-features
   Scenario: Editor restores an earlier publish without taking the workflow offline
     # Value: a bad go-live can be rolled back in one step while the workflow keeps serving.
     Given "Intake" is live with publishes v1 and v2, and v2 broke a job
@@ -401,7 +400,7 @@ Feature: Workflow versions, history and sandbox editing
     # workflow_channel.ex:455-482; workflows.ex:1460-1472, :380-405; snapshot.ex:344-352
     # workflow_channel_test.exs:2437-2476; VersionDropdown.test.tsx:1274-1310; RestoreVersionDialog.test.tsx:110-120
 
-  @S10 @pending @variant:experimental-features
+  @S10 @variant:experimental-features
   Scenario: The restore dialog says which triggers it will delete or bring back off
     # Value: nobody silently breaks an integration that calls a webhook URL, or forgets to re-enable a trigger.
     Given "Intake" gained a webhook at "/payments" and lost its cron trigger since v1
@@ -412,7 +411,7 @@ Feature: Workflow versions, history and sandbox editing
     # RestoreVersionDialog.tsx:41-47, :116-170, :185; CollaborativeEditor.tsx:143-164; workflow_channel.ex:434-452, :1434-1461
     # RestoreVersionDialog.test.tsx:70-108; CollaborativeEditor.restore.test.tsx:151-208; workflow_channel_test.exs:2537-2587, :2608-2614
 
-  @S11 @pending @variant:experimental-features
+  @S11 @variant:experimental-features
   Scenario: Viewers can't restore
     # Value: only people trusted to change the workflow can roll production back.
     Given I am a viewer on "Intake"
@@ -422,7 +421,7 @@ Feature: Workflow versions, history and sandbox editing
     # CollaborativeEditor.tsx:135, :271-273; VersionDropdown.tsx:294; workflow_channel.ex:460, :1950-1956
     # VersionDropdown.test.tsx:1311-1320; workflow_channel_test.exs:2484-2504
 
-  @S12 @pending @variant:experimental-features
+  @S12 @variant:experimental-features
   Scenario Outline: A refused restore says why and leaves the workflow as it was
     # Value: a restore never half-happens, and a colleague's save is not overwritten by one.
     Given I am an editor restoring v1 of "Intake"
@@ -436,7 +435,7 @@ Feature: Workflow versions, history and sandbox editing
     # workflow_channel.ex:461-463, :479, :1428-1432, :1670-1686; CollaborativeEditor.tsx:166-186; RestoreVersionDialog.tsx:69-75
     # workflow_channel_test.exs:2478-2482, :2589-2606; RestoreVersionDialog.test.tsx:121-132
 
-  @S13 @pending
+  @S13
   Scenario: Member sees recent activity without leaving the editor
     # Value: people can tell at a glance whether the workflow is working.
     Given "Intake" has work orders with runs
@@ -447,7 +446,7 @@ Feature: Workflow versions, history and sandbox editing
     # MiniHistory.tsx:555-597, :633-649, :745-891; CollaborativeWorkflowDiagram.tsx:73-93, :234-256; workflow_channel.ex:253-265, :2351-2387; work_orders.ex:553-580
     # MiniHistory.test.tsx:266-375, :427-587; CollaborativeWorkflowDiagram.preferences.test.tsx:214-283; workflow_channel_test.exs:4963-5114
 
-  @S14 @pending
+  @S14
   Scenario Outline: The history panel says when there is nothing to show or it could not load
     # Value: a failed load is never mistaken for a workflow that has never run.
     Given <condition>
@@ -461,7 +460,7 @@ Feature: Workflow versions, history and sandbox editing
     # MiniHistory.tsx:826-877; CollaborativeWorkflowDiagram.tsx:318-323; createHistoryStore.ts:667-700
     # MiniHistory.test.tsx:376-426, :995-1147
 
-  @S15 @pending
+  @S15
   Scenario: Picking a run shows it on the version it ran on
     # Value: the canvas a run is read against is the shape that actually produced it.
     Given run "a1b2c3" of "Intake" ran on save 3, and save 5 is current
@@ -473,7 +472,7 @@ Feature: Workflow versions, history and sandbox editing
     # CollaborativeWorkflowDiagram.tsx:192-205; MiniHistory.tsx:584-597
     # CollaborativeWorkflowDiagram.runSelection.test.tsx:278-308; MiniHistory.test.tsx:508-553
 
-  @S16 @pending @variant:experimental-features
+  @S16 @variant:experimental-features
   Scenario: On a live workflow, a run of older content opens as it executed
     # Value: a run of an earlier publish is shown on the content it ran, without making the live workflow editable.
     Given "Intake" is live and run "a1b2c3" ran on content that is no longer live
@@ -485,7 +484,7 @@ Feature: Workflow versions, history and sandbox editing
     # CollaborativeWorkflowDiagram.tsx:207-217; useViewAsExecuted.ts:15-27; VersionDropdown.tsx:51-53, :67-77
     # CollaborativeWorkflowDiagram.runSelection.test.tsx:205-277, :325-340; useViewAsExecuted.test.tsx:39-145; VersionDropdown.test.tsx:161-207
 
-  @S17 @pending
+  @S17
   Scenario: A run read on another version says so and offers to switch
     # Value: nobody misreads a run against a workflow shape that has changed since it ran.
     Given run "a1b2c3" ran on save 3 and the canvas shows save 5 with that run selected
@@ -496,7 +495,7 @@ Feature: Workflow versions, history and sandbox editing
     # useVersionMismatch.ts:28-80; VersionMismatchBanner.tsx:29-67; MiniHistory.tsx:810-818, :883-890; CollaborativeWorkflowDiagram.tsx:173-190
     # MiniHistory.test.tsx:195-265
 
-  @S18 @pending @variant:experimental-features
+  @S18 @variant:experimental-features
   Scenario: Reading a publish shows only the runs of that publish
     # Value: people can see what one publish did in production without other versions' runs mixed in.
     Given "Intake" has runs on v1 and on v2
@@ -505,7 +504,7 @@ Feature: Workflow versions, history and sandbox editing
     # CollaborativeWorkflowDiagram.tsx:234-264; createHistoryStore.ts:681-688; workflow_channel.ex:235-250, :2323-2340; work_orders.ex:620-650
     # workflow_channel_test.exs:5115-5157 (server only; nothing on the client asserts the filter is sent)
 
-  @S19 @pending @variant:experimental-features
+  @S19 @variant:experimental-features
   Scenario: Each run is tagged with the version it ran on
     # Value: people can tell which publish a run belongs to without opening it.
     Given "Intake" is live and its runs ran on v2 and on content never published
@@ -516,7 +515,7 @@ Feature: Workflow versions, history and sandbox editing
     # MiniHistory.tsx:130-162, :266-343; workflow_channel.ex:2372-2387; workflow_releases.ex:85-106
     # MiniHistory.test.tsx:109-165, :1409-1440; workflow_channel_test.exs:5084-5114
 
-  @S20 @pending
+  @S20
   Scenario: History links lead to the full history, a work order or a run
     # Value: people can go from the summary to the detail they need.
     Given the history panel lists work order "wo1" with run "r1"
@@ -528,7 +527,7 @@ Feature: Workflow versions, history and sandbox editing
     Then I am taken to that run's page
     # MiniHistory.tsx:603-631, :769-784; navigation.ts:26-79; MiniHistory.test.tsx:768-882
 
-  @S21 @pending @variant:experimental-features
+  @S21 @variant:experimental-features
   Scenario: Editor copies a live workflow into a new sandbox and lands in it
     # Value: a production workflow can be changed and tested without touching what is live.
     Given "Intake" is live in an ordinary project and I am an editor
@@ -542,7 +541,7 @@ Feature: Workflow versions, history and sandbox editing
     # workflow_channel.ex:367-406; projects.ex:2400-2432
     # EditInSandboxPicker.test.tsx:901-923, :1059-1111, :1260-1286; Header.sandbox.test.tsx:635-660; workflow_channel_test.exs:914-950, :959-966
 
-  @S22 @pending @variant:experimental-features
+  @S22 @variant:experimental-features
   Scenario: Starting a sandbox from the open run's input, checked first
     # Value: a fix can be tried against the data that broke production, with anything sensitive removed before it leaves.
     Given run "a1b2c3" is open in "Intake" and its input was kept
@@ -557,7 +556,7 @@ Feature: Workflow versions, history and sandbox editing
     # EditInSandboxPicker.tsx:446-472, :623-699, :337-353, :770-885; workflow_channel.ex:2035-2046; sandboxes.ex:191-245
     # EditInSandboxPicker.test.tsx:235-258, :297-411, :665-692; workflow_channel_test.exs:781-803
 
-  @S23 @pending @variant:experimental-features
+  @S23 @variant:experimental-features
   Scenario: A run whose input was not kept can't seed a sandbox
     # Value: nobody starts a sandbox believing it holds real data when it holds none.
     Given the open run's input was not kept
@@ -565,7 +564,7 @@ Feature: Workflow versions, history and sandbox editing
     Then I see "This run's input was not kept, so there is nothing to copy." and "Continue" is disabled
     # EditInSandboxPicker.tsx:649-654, :718-721, :1041-1050; EditInSandboxPicker.test.tsx:634-664
 
-  @S24 @pending @variant:experimental-features
+  @S24 @variant:experimental-features
   Scenario: The picker says when the sandbox forks a newer version than the run used
     # Value: people know their sandbox holds the current workflow, not the version their run ran on.
     Given the open run ran on v2 and v3 is live
@@ -573,7 +572,7 @@ Feature: Workflow versions, history and sandbox editing
     Then I see "This run used v2. The sandbox starts from v3, the version live now"
     # EditInSandboxPicker.tsx:545-561, :826-834, :1052-1062; EditInSandboxPicker.test.tsx:693-751
 
-  @S25 @pending @variant:experimental-features
+  @S25 @variant:experimental-features
   Scenario: Starting a sandbox from a saved input
     # Value: a named input meant for reuse can travel into a sandbox; transient step results can't.
     Given the project has named inputs "Sample patient" (saved input) and "Step result" (step result)
@@ -586,7 +585,7 @@ Feature: Workflow versions, history and sandbox editing
     # EditInSandboxPicker.tsx:203-295, :331-335, :510-543, :624-627; workflow_channel.ex:383, :1581-1585, :2027-2033; sandboxes.ex:169-189
     # EditInSandboxPicker.test.tsx:752-900; workflow_channel_test.exs:804-870
 
-  @S26 @pending @variant:experimental-features
+  @S26 @variant:experimental-features
   Scenario: Editor continues in a sandbox that already holds the workflow
     # Value: people pick up a colleague's work instead of forking production again.
     Given sandboxes "fix-dates" and "old-try" of the project hold a workflow named "Intake", and "gone" is scheduled for deletion
@@ -599,7 +598,7 @@ Feature: Workflow versions, history and sandbox editing
     # EditInSandboxPicker.tsx:95-167, :474-508, :701-710, :1079-1113; workflow_channel.ex:343-364, :2070-2094; projects.ex:2184-2217
     # EditInSandboxPicker.test.tsx:929-1057, :1287-1310; workflow_channel_test.exs:581-697
 
-  @S27 @pending @variant:experimental-features
+  @S27 @variant:experimental-features
   Scenario: A sandbox name already used under the project is refused in place
     # Value: two sandboxes of the same project are never confused by name.
     Given the project already has a sandbox "trying-dates"
@@ -607,7 +606,7 @@ Feature: Workflow versions, history and sandbox editing
     Then I see "A sandbox with this name exists already." under the name field
     # EditInSandboxPicker.tsx:79-93, :604-614, :993-1003; workflow_channel.ex:2048-2056; EditInSandboxPicker.test.tsx:1125-1190
 
-  @S28 @pending @variant:experimental-features @variant:sandbox-limited
+  @S28 @variant:experimental-features @variant:sandbox-limited
   Scenario: The plan's sandbox limit stops a new sandbox but not joining one
     # Value: the plan's sandbox limit is explained before anyone tries, and existing sandboxes stay usable.
     Given the plan allows no more sandboxes
@@ -619,7 +618,7 @@ Feature: Workflow versions, history and sandbox editing
     # EditInSandboxPicker.tsx:397-401, :913-987; workflow_channel.ex:382, :1688-1694, :2020-2025, :2433-2450
     # EditInSandboxPicker.test.tsx:1322-1413; workflow_channel_test.exs:967-986
 
-  @S29 @pending @variant:experimental-features
+  @S29 @variant:experimental-features
   Scenario: People who can't create sandboxes can't start one from the editor
     # Value: only people trusted to change the project can copy it into a sandbox.
     Given I am a viewer on "Intake", which is live
@@ -629,7 +628,7 @@ Feature: Workflow versions, history and sandbox editing
     # Header.tsx:259-261, :836-858; workflow_channel.ex:347-363, :381, :1979-1989; policies/sandboxes.ex:94-96
     # Header.sandbox.test.tsx:251-266, :408-416; workflow_channel_test.exs:698-720, :987-1009
 
-  @S30 @pending @variant:experimental-features
+  @S30 @variant:experimental-features
   Scenario: Leaving for a sandbox with unsaved changes asks first
     # Value: nobody loses work by jumping to a sandbox.
     Given I have unsaved changes in "Intake"
@@ -640,7 +639,7 @@ Feature: Workflow versions, history and sandbox editing
     # EditInSandboxPicker.tsx:367-374, :395, :601-603, :705-707, :1120-1126; unloadGuard.ts:5-7; shared-editor-session S20
     # EditInSandboxPicker.test.tsx:1415-1561, :1563-1625
 
-  @S31 @pending
+  @S31
   Scenario: Save & Sync hands off to the GitHub sync flow
     # Value: an editor can publish their change to the project's repository from where they made it.
     Given "Intake" is in a project connected to GitHub and I am an editor
@@ -649,7 +648,7 @@ Feature: Workflow versions, history and sandbox editing
     And the flow "flow-github-sync-actions" has started when I confirm
     # Header.tsx:144-191, :910; GitHubSyncModal.tsx:33-212; owned by flow-github-sync-actions S02
 
-  @S32 @pending @variant:experimental-features
+  @S32 @variant:experimental-features
   Scenario: Promote hands off to the sandbox merge flow, and only acts on the current workflow
     # Value: nobody promotes a version they are only reading, believing it is what they are sending.
     Given "Intake" is open in a sandbox
@@ -659,14 +658,14 @@ Feature: Workflow versions, history and sandbox editing
     Then "Promote" is disabled with "You are reading the past. Promote acts on the current workflow."
     # Header.tsx:347-349, :820-834, :967-976; owned by flow-sandbox-merge S06 to S15
 
-  @S33 @pending
+  @S33
   Scenario: Any open view of the workflow counts as open for API writes
     # Value: an API update can't land under someone who is reading or editing the workflow, whichever version they hold.
     Given I have "Intake" open on an older save
     Then the flow "flow-workflow-api-edit-conflict" treats "Intake" as open in the editor
     # flow-workflow-api-edit-conflict reachable_when (workflow_channel.ex:62-72; workflow_resolver.ex:161-199)
 
-  @S34 @pending @variant:experimental-features
+  @S34 @variant:experimental-features
   Scenario: A restore reaches colleagues who have the workflow open
     # Value: everyone working on the workflow sees the rolled-back content, not a copy that no longer exists.
     Given "Ben" has "Intake" open on Latest

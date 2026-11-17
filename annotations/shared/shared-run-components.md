@@ -2,7 +2,6 @@
 id: shared-run-components
 type: shared
 title: Run display components
-status: not-started
 owner:
 
 trigger:
@@ -210,7 +209,7 @@ Feature: Run display components
   As anyone working in a project
   I want consistent run states, step outcomes, durations, version links and cancel
 
-  @S01 @pending
+  @S01
   Scenario: States show as labelled pills
     # Value: people can tell queued work from work in progress without knowing internal state names.
     Given a run in state "available" and another in state "claimed"
@@ -220,7 +219,7 @@ Feature: Run display components
     # components.ex:110-138, :162-174
     # test/lightning_web/live/run_live/show_test.exs:541-569 asserts "Cancelled" after a cancel
 
-  @S02 @pending
+  @S02
   Scenario: Step icons distinguish success, failure, crash and pending
     # Value: people find the failing step at a glance and don't mistake a crash for a handled failure.
     Given a run with a pending step, a successful step and a failed step
@@ -229,7 +228,7 @@ Feature: Run display components
     # components.ex:579-625
     # test/lightning_web/live/run_live/components_test.exs:59-214 asserts the gray-400, green-500 and red-500 icon classes
 
-  @S03 @pending
+  @S03
   Scenario: A killed step says why it was killed
     # Value: people can tell a timeout from a memory or security limit and fix the right thing.
     Given a step with exit reason "kill" and error type "TimeoutError"
@@ -240,7 +239,7 @@ Feature: Run display components
     # components.ex:587-591
     # test/lightning_web/live/run_live/components_test.exs:380-400
 
-  @S04 @pending
+  @S04
   Scenario: A running item's duration counts up
     # Value: someone watching a long job can see it is still going and for how long, without refreshing.
     Given a step that started 5 seconds ago and has not finished
@@ -249,7 +248,7 @@ Feature: Run display components
     And a second later it reads "6 s"
     # components.ex:24-33, ElapsedIndicator.ts:16-41
 
-  @S05 @pending
+  @S05
   Scenario: A finished item shows its final duration and an unstarted one says so
     # Value: people compare run times to spot slow jobs, and can tell a queued run from a fast one.
     Given a step that ran for 90 seconds
@@ -258,7 +257,7 @@ Feature: Run display components
     And the run's duration reads "Not started"
     # ElapsedIndicator.ts:3-13, :32-40
 
-  @S06 @pending
+  @S06
   Scenario: Steps carried over from an earlier run are marked
     # Value: after a rerun from a step, people can tell which steps actually ran again.
     Given run "R2" was rerun from the last step of run "R1"
@@ -268,7 +267,7 @@ Feature: Run display components
     # components.ex:236-253, :411-418, :445-460; show.ex:217-219
     # test/lightning_web/live/run_live/components_test.exs:215-288
 
-  @S07 @pending
+  @S07
   Scenario: Links to the workflow open the version the run executed
     # Value: people inspect the code that actually ran, not code changed since.
     Given a run executed on workflow version 1 and the workflow is now on version 2
@@ -278,7 +277,7 @@ Feature: Run display components
     # components.ex:298-314, :256-270, :477-488; show.ex:111-118
     # test/lightning_web/live/run_live/components_test.exs:122-155, :330-345; show_test.exs:329-392
 
-  @S08 @pending @variant:experimental-features
+  @S08 @variant:experimental-features
   Scenario: With experimental features the link pins the run itself
     # Value: runs on versions that were never released can still be opened at the code that ran.
     Given I have experimental features enabled
@@ -289,7 +288,7 @@ Feature: Run display components
     # components.ex:283-287, :308-309
     # test/lightning_web/live/run_live/components_test.exs:157-182, :347-375; show_test.exs:394-428
 
-  @S09 @pending
+  @S09
   Scenario: Editor cancels a run no worker has claimed
     # Value: people stop work queued by mistake before it sends data anywhere.
     Given I am an editor and run "R" is in state "available"
@@ -300,7 +299,7 @@ Feature: Run display components
     # cancel_helper.ex:12-16, runs.ex:466-492, :269-287; show.ex:191-203, :370-374; index.ex:622-626
     # test/lightning_web/live/run_live/show_test.exs:541-569, index_test.exs:1280-1300
 
-  @S10 @pending
+  @S10
   Scenario: Cancelling never stops a run a worker has already claimed
     # Value: a run that is already executing is never marked cancelled while it carries on sending data.
     Given I am an editor with run "R" open while it is "available"
@@ -311,7 +310,7 @@ Feature: Run display components
     # runs.ex:466-492 (state guard and SKIP LOCKED in the UPDATE), show.ex:379-386, index.ex:631-638
     # test/lightning_web/live/run_live/show_test.exs:571-600 asserts "already been claimed"; index_test.exs:1462-1495 asserts "no longer available"
 
-  @S11 @pending
+  @S11
   Scenario: A run from another project cannot be cancelled
     # Value: an editor of one project cannot stop another project's work.
     Given I am an editor on project "Malawi HIV"
@@ -322,7 +321,7 @@ Feature: Run display components
     # cancel_helper.ex:13-14, runs.ex:74-84
     # show_test.exs:602-626 and index_test.exs:1445-1459 cover only a random id, not a foreign run
 
-  @S12 @pending
+  @S12
   Scenario: Cancel is only offered on available runs to people who can run workflows
     # Value: viewers can investigate without being able to stop work, and nobody is offered a cancel that can't succeed.
     Given run "R" is "available"
@@ -332,7 +331,7 @@ Feature: Run display components
     # show.ex:191, workorder_component.ex:413
     # test/lightning_web/live/run_live/show_test.exs:457-539
 
-  @S13 @pending
+  @S13
   Scenario: Retention tooltips point admins to the setting and others to an admin
     # Value: the person who can change retention can get there, and everyone else knows whom to ask.
     Given a finished step whose input was not stored because of the project's retention policy
@@ -344,7 +343,7 @@ Feature: Run display components
     # components.ex:525-545, :549-570
     # test/lightning_web/live/run_live/components_test.exs:507-606, :608-707
 
-  @S14 @pending
+  @S14
   Scenario: A step whose job was deleted cannot be rerun
     # Value: nobody tries to rerun a job that no longer exists in the workflow.
     Given a finished step whose job has since been deleted
@@ -357,7 +356,7 @@ Feature: Run display components
   # S15 to S18: the React ports in the editor run viewer. Each restates a LiveView scenario above
   # for the editor so the two cannot drift; differences are in 6.1 and 6.2.
 
-  @S15 @pending
+  @S15
   Scenario: The editor run viewer labels run states as History does
     # Value: a builder opening a run in the editor reads the same state as the person who sent them the link.
     Given run "R" is in state "available"
@@ -368,7 +367,7 @@ Feature: Run display components
     # StatePill.tsx:9-38 (port of components.ex:110-138, :162-174); RunTabPanel.tsx:88-93
     # no test renders StatePill
 
-  @S16 @pending
+  @S16
   Scenario: The editor run viewer shows the same step outcome icons
     # Value: the failing step, and why a step was killed, look the same in the editor as on the run page.
     Given a run with a pending, a successful, a failed and a crashed step
@@ -378,7 +377,7 @@ Feature: Run display components
     # StepIcon.tsx:14-54 (port of components.ex:579-625); StepItem.tsx:69
     # StepIcon.test.tsx:11-26 asserts only the exclamation icon and yellow-800 class for OOMError, StateTooLargeError and an unknown type
 
-  @S17 @pending
+  @S17
   Scenario: Editor durations count up while running and settle when finished
     # Value: someone watching a run from the editor sees it is still going, and the final time once it ends.
     Given step "Fetch" started 5 seconds ago and has not finished
@@ -390,7 +389,7 @@ Feature: Run display components
     # ElapsedIndicator.tsx:21-55 (port of ElapsedIndicator.ts:3-41); StepItem.tsx:92-97; RunTabPanel.tsx:95-103
     # no test renders ElapsedIndicator.tsx
 
-  @S18 @pending
+  @S18
   Scenario: The editor run viewer marks steps carried over from an earlier run
     # Value: after a rerun from a step, a builder in the editor can tell which steps actually ran again.
     Given run "R2" was rerun from the last step of run "R1"

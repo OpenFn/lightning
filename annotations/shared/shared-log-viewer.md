@@ -2,7 +2,6 @@
 id: shared-log-viewer
 type: shared
 title: Run log viewer
-status: not-started
 owner:
 
 trigger:
@@ -175,7 +174,7 @@ Feature: Run log viewer
   As anyone who can open a run
   I want to read, filter and navigate its log
 
-  @S01 @pending
+  @S01
   Scenario: Every logged line is shown once, in time order, with its source
     # Value: people read what happened in the order it happened, without duplicates that suggest a step ran twice.
     Given a finished run whose job logged "Posted batch 1" at 10:00:02 and "Fetched 12 patients" at 10:00:01 from source "JOB"
@@ -187,7 +186,7 @@ Feature: Run log viewer
     # hosts: log-viewer/index.ts:35-44 (run page); LogTabPanel.tsx:270-296 (editor)
     # store.test.ts:22-38 (formatting), :40-70 (dedupe by id), :72-106 (sort), :126-144 (source prefix)
 
-  @S02 @pending
+  @S02
   Scenario: JSON a job logged is shown indented
     # Value: a job that logs a payload can be read field by field instead of as one long line.
     Given a finished run whose job logged '{"patients":12,"status":"ok"}'
@@ -197,7 +196,7 @@ Feature: Run log viewer
     # store.ts:106-128, :130-133
     # store.test.ts:270-305
 
-  @S03 @pending
+  @S03
   Scenario: The level filter hides lower-level lines
     # Value: people chasing an error can hide debug noise, and can bring it back when they need the detail.
     Given a finished run that logged a "debug" line and an "info" line
@@ -211,7 +210,7 @@ Feature: Run log viewer
     # store.ts:26-44, :135-144, :151-153, :185-216; viewers.ex:54-60, :124-198; LogLevelFilter.tsx:3, :62-72; LogTabPanel.tsx:84-90
     # store.test.ts:160-207; component.test.tsx:207; LogTabPanel.test.tsx:387-434
 
-  @S04 @pending
+  @S04
   Scenario: On the run page the chosen level is remembered
     # Value: people who only care about warnings and errors don't have to re-filter every run they open.
     Given I am on the run page for run "R1"
@@ -221,7 +220,7 @@ Feature: Run log viewer
     # viewers.ex:54-60, :99, :167-171; streaming.ex:214-227; accounts.ex:1417-1424; log-viewer/index.ts:31, :47-49
     # no test covers save-log-filter
 
-  @S05 @pending
+  @S05
   Scenario: Selecting a step marks its lines and brings them into view
     # Value: in a long log, people find the failing step's output without scrolling through every step.
     Given a finished run whose steps "Fetch" and "Transform" each logged several lines, "Fetch" first
@@ -235,7 +234,7 @@ Feature: Run log viewer
     # hosts: viewers.ex:98, log-viewer/index.ts:30, :48 (run page); LogTabPanel.tsx:242-244 (editor)
     # store.test.ts:215-266 asserts only that ranges exist, then clear
 
-  @S06 @pending
+  @S06
   Scenario: A finished run that logged nothing says so
     # Value: people can tell a run that logged nothing from a log that is still loading.
     Given a run in state "lost" with no log lines

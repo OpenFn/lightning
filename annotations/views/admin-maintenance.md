@@ -2,7 +2,6 @@
 id: admin-maintenance
 type: view
 title: Admin settings › Maintenance
-status: not-started
 owner:
 
 trigger:
@@ -237,7 +236,7 @@ Feature: Admin maintenance
   As a superuser
   I want to run an adaptor registry refresh and an icon refresh from the admin space
 
-  @S01 @pending
+  @S01
   Scenario: A superuser sees both maintenance actions
     # Value: instance admins find the on-demand adaptor fixes in one place, each with a plain description of what it will and won't change.
     Given I am a superuser
@@ -248,7 +247,7 @@ Feature: Admin maintenance
     # index.ex:16-22; index.html.heex:1-53 (titles :15, :36; copy :18, :39-40; buttons :21-27, :43-49)
     # index_test.exs:27-35, :52-58
 
-  @S02 @pending
+  @S02
   Scenario: Refreshing the adaptor registry is queued and confirmed at once
     # Value: a newly published adaptor or version becomes available to workflow authors on the instance without waiting for the hourly poll or a restart, and the admin is not left waiting on the page.
     Given I am a superuser on "/settings/maintenance"
@@ -259,7 +258,7 @@ Feature: Admin maintenance
     # index.ex:32-43; adaptors.ex:321-332; scheduler.ex:64-66, :362-365, :430-433, :519-559
     # index_test.exs:37-50 (asserts the info flash only); adaptors_test.exs:382-413 (refresh/1 starts a tick)
 
-  @S03 @pending
+  @S03
   Scenario: A registry refresh that can't be started is reported as a failure
     # Value: the admin is not told work is underway when nothing was queued, so they know to look at the instance rather than wait.
     Given I am a superuser on "/settings/maintenance"
@@ -270,7 +269,7 @@ Feature: Admin maintenance
     # index.ex:35-41; adaptors.ex:330-332 (exit mapped to :timeout or :unavailable)
     # no LiveView test; adaptors_test.exs:470-488 covers :unavailable for refresh_package and refresh_icons only
 
-  @S04 @pending
+  @S04
   Scenario: A registry refresh during one already running joins it
     # Value: repeated clicks, or a click during the periodic poll, don't start parallel refreshes that hit the registry twice and write the same rows twice.
     Given I am a superuser on "/settings/maintenance"
@@ -281,7 +280,7 @@ Feature: Admin maintenance
     # scheduler.ex:362-365, :424-426 (maybe_start_refresh), :252-258 (tick coalesces too)
     # scheduler_test.exs:663-689 waits for refresh == nil "so refresh_now starts a new one instead of coalescing"
 
-  @S05 @pending
+  @S05
   Scenario: Refreshing icons reports its start and then its result
     # Value: an admin can fix stale or broken adaptor icons across the instance, keep using the page while it runs, and learn how many icons actually changed.
     Given I am a superuser on "/settings/maintenance"
@@ -293,7 +292,7 @@ Feature: Admin maintenance
     # index.ex:52-59, :68-84; adaptors.ex:359-364; scheduler.ex:121-123, :389-424, :660-695
     # index_test.exs:60-83 (asserts "Icon refresh started." then "Icon refresh complete"; not the counts); scheduler_test.exs:1175 onward (rows whose sha256 differs are updated)
 
-  @S06 @pending
+  @S06
   Scenario: A failed icon refresh is reported as an error
     # Value: the admin knows the icons were not updated and can retry or investigate, instead of assuming the fix landed.
     Given I am a superuser on "/settings/maintenance"
@@ -303,7 +302,7 @@ Feature: Admin maintenance
     # index.ex:79-80, :86-89; scheduler.ex:417-423, :321-330
     # index_test.exs:85-104; scheduler_test.exs:1159-1173 (a crash in the task replies an error, Scheduler survives)
 
-  @S07 @pending
+  @S07
   Scenario: An icon refresh never changes adaptor versions or metadata
     # Value: fixing icons can't move the adaptor versions or configuration schemas that running workflows and credentials depend on, as the card promises.
     Given "@openfn/language-http" is stored at version "7.0.0" with a configuration schema
@@ -313,7 +312,7 @@ Feature: Admin maintenance
     And its icon is updated
     # index.html.heex:39-40; scheduler.ex:401-408 (no fetch_adaptor), :683; catalogue.ex:216-245 (update_icons sidesteps upsert_adaptor and adaptor_versions)
 
-  @S08 @pending @variant:local-adaptors
+  @S08 @variant:local-adaptors
   Scenario: Under the local adaptors strategy, icons come from the local repo
     # Value: an adaptor developer running Lightning against a local adaptors checkout sees an icon they changed without restarting.
     Given the instance uses the local adaptors strategy
@@ -411,8 +410,7 @@ none
 
 ## Summary
 
-- Scenarios: 8 (S01 to S08), all `@pending`; S08 tagged
-  `@variant:local-adaptors`.
+- Scenarios: 8 (S01 to S08); S08 tagged `@variant:local-adaptors`.
 - Section 6: 6.1 has 3, 6.2 has 9, 6.3 has 2, 6.4 has 5, 6.5 has 2.
 - Flows: proposed flow-adaptor-catalogue-update (S02, S05 handoffs); none
   existing referenced.

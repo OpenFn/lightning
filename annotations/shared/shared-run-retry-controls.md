@@ -2,7 +2,6 @@
 id: shared-run-retry-controls
 type: shared
 title: Run and retry controls
-status: not-started
 owner:
 
 trigger:
@@ -222,7 +221,7 @@ Feature: Run and retry controls
   As a workflow builder
   I want consistent run and retry controls wherever I am in the editor
 
-  @S01 @pending
+  @S01
   Scenario: Quick run from the header
     # Value: one click runs the whole workflow end to end while building it.
     Given I am an editor with "Intake" open, a trigger "Webhook" and no run loaded
@@ -234,7 +233,7 @@ Feature: Run and retry controls
     # Header.tsx:385-420, :587-608, :861-881; NewRunButton.tsx:87-105; workflow_controller.ex:26-66, :103-124
     # Header.keyboard.test.tsx:1145-1256
 
-  @S02 @pending
+  @S02
   Scenario: Retry a finished run from the header
     # Value: after fixing a failure, the builder re-runs the same run on its own work order in one click.
     Given run "R" of "Intake" has finished and is loaded with "run=<R id>"
@@ -248,7 +247,7 @@ Feature: Run and retry controls
     # Header.tsx:291-297, :422-491, :587-608, :868-879; workflow_controller.ex:208-244; work_orders.ex:312-401
     # Header.keyboard.test.tsx:1368-1442; workflow_controller_test.exs:435-449
 
-  @S03 @pending @variant:experimental-features
+  @S03 @variant:experimental-features
   Scenario: Retrying from an older version runs the latest version and says so
     # Value: nobody believes they re-ran old code when the retry actually executes the current workflow.
     Given I am viewing "Intake" pinned to v2 with finished run "R" loaded, and v3 is current
@@ -260,7 +259,7 @@ Feature: Run and retry controls
     # useWorkflow.tsx:992-994; Header.tsx:373-383, :450-473, :861-879; useSaveBeforeRun.ts:21-25; work_orders.ex:355-366
     # useCanRun.test.tsx:54-90; useSaveBeforeRun.test.tsx:41-50
 
-  @S04 @pending
+  @S04
   Scenario: Retry is offered only for the input the run used
     # Value: a retry never quietly re-runs with a different input from the one the builder sees selected.
     Given run "R" is followed and its "Fetch" step took input "D", not wiped
@@ -271,7 +270,7 @@ Feature: Run and retry controls
     # useRunRetry.ts:158-171, :204-213; RunRetryButton.tsx:69-70, :133-172
     # useRunRetry.test.tsx:369-464; RunRetryButton.test.tsx:28-76
 
-  @S05 @pending
+  @S05
   Scenario: Retry continues the work order, the chevron starts a new one
     # Value: builders choose between extending a run's history and a fresh, separately tracked work order with the same input.
     Given the panel or the IDE offers "Retry" for run "R"
@@ -283,7 +282,7 @@ Feature: Run and retry controls
     # RunRetryButton.tsx:128-131, :237-286; useRunRetryShortcuts.ts:115-126; useRunRetry.ts:248-315, :343-449; work_orders.ex:355-401
     # RunRetryButton.test.tsx:154-212; ManualRunPanel.keyboard.test.tsx:986-1218
 
-  @S06 @pending
+  @S06
   Scenario: Run and retry from the keyboard while typing
     # Value: builders iterate on a step without leaving the code or input they are editing.
     Given the run panel or the IDE has a valid input and I can run
@@ -293,7 +292,7 @@ Feature: Run and retry controls
     # useRunRetryShortcuts.ts:99-113; KeyboardProvider.tsx:74-122
     # ManualRunPanel.keyboard.test.tsx:410-573; FullScreenIDE.keyboard.test.tsx:609-704
 
-  @S07 @pending
+  @S07
   Scenario: The shortcut acts on the surface in front of me
     # Value: a keystroke never fires a hidden control, such as a whole-workflow run while the builder is looking at one step.
     Given the run panel for "Fetch" is open over the canvas
@@ -305,7 +304,7 @@ Feature: Run and retry controls
     # useRunRetryShortcuts.ts:32-43; ManualRunPanel.tsx:504-512 (priority 25); FullScreenIDE.tsx:465-485 (priority 50); Header.tsx:587-608, :875 (priority 0)
     # Header.keyboard.test.tsx:1216-1256
 
-  @S08 @pending
+  @S08
   Scenario: A run never starts if the workflow can't be saved first
     # Value: a run always executes the version on screen, never an older saved one the builder thinks they changed.
     Given "Intake" has a change the server will not save
@@ -315,7 +314,7 @@ Feature: Run and retry controls
     # useSaveBeforeRun.ts:17-25; useRunRetry.ts:264-268, :316-324, :365-368, :429-437; Header.tsx:388-412, :426-481
     # ManualRunPanel.test.tsx:973-1049; useSaveBeforeRun.test.tsx:19-28
 
-  @S09 @pending @variant:experimental-features
+  @S09 @variant:experimental-features
   Scenario: A live workflow runs without saving
     # Value: testing a live workflow never requires taking it out of production.
     Given "Intake" is live and content-locked
@@ -325,7 +324,7 @@ Feature: Run and retry controls
     # useSaveBeforeRun.ts:17-25; useWorkflow.tsx:945 (run deliberately ignores the read-only lock); useRunRetry.ts:291-296; Header.tsx:396-401
     # useSaveBeforeRun.test.tsx:30-40
 
-  @S10 @pending
+  @S10
   Scenario Outline: A disabled run control says why
     # Value: people see why they can't run instead of clicking a button that does nothing.
     Given <state>
@@ -342,7 +341,7 @@ Feature: Run and retry controls
       | I am viewing a pinned version            | "You are viewing a pinned version of this workflow" |
       | "Intake" is new and not yet created      | "Create this workflow before running it"            |
 
-  @S11 @pending @variant:run-limit-reached
+  @S11 @variant:run-limit-reached
   Scenario: Run limits refuse up front and on the server
     # Value: run limits hold, and people learn about them before they click rather than after.
     Given the usage limiter refuses new runs in "Malawi HIV" with "Run limit reached"
@@ -355,7 +354,7 @@ Feature: Run and retry controls
     # helpers.ex:51-53; workflow_controller.ex:235, :246-249; fallback_controller.ex:55-63; useRunRetry.ts:385-388; api/dataclips.ts:160-170
     # workflow_controller_test.exs:261-286, :451-476
 
-  @S12 @pending
+  @S12
   Scenario Outline: The server retries only for people who may run, inside the project
     # Value: only people trusted to execute code against external systems can re-run it, and never across projects.
     Given run "R" belongs to "Intake" in project "Malawi HIV"
@@ -371,7 +370,7 @@ Feature: Run and retry controls
       | I am an editor on "Kenya TB" only    | "Kenya TB"    | 422    |
       | I am signed out                      | "Malawi HIV"  | 302    |
 
-  @S13 @pending
+  @S13
   Scenario: One click starts one run
     # Value: an impatient double click, or a run still in progress, never stacks duplicate work orders.
     Given I start a run or a retry from any run control
@@ -475,7 +474,7 @@ shared-editor-session.
 
 ## Summary
 
-- Scenarios: 13 (S01 to S13), all `@pending`; S03 and S09 tagged
+- Scenarios: 13 (S01 to S13); S03 and S09 tagged
   `@variant:experimental-features`, S11 `@variant:run-limit-reached`.
 - Section 6: 6.1 has 4, 6.2 has 14, 6.3 has 2, 6.4 has 2, 6.5 has 4.
 - Flows: none proposed; references flow-manual-run-live-follow and

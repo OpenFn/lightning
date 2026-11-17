@@ -2,7 +2,6 @@
 id: admin-projects
 type: view
 title: Admin settings › Projects
-status: not-started
 owner:
 
 trigger:
@@ -269,7 +268,7 @@ Feature: Admin projects
   As a superuser
   I want to list, create, edit and delete any project
 
-  @S01 @pending
+  @S01
   Scenario: Superuser sees every project on the instance
     # Value: instance admins can see what projects exist and who answers for each, including ones they are not a member of.
     Given I am a superuser who is not a member of project "malawi-hiv"
@@ -279,7 +278,7 @@ Feature: Admin projects
     And the row has an "Actions" menu with "Edit" and "Delete"
     # index.ex:44-54, :182-211; index.html.heex:41-130; project_live_test.exs:71-77 (asserts the name only)
 
-  @S02 @pending
+  @S02
   Scenario: A project without an owner is called out
     # Value: an orphaned project is visible to the one role that can give it an owner again.
     Given project "legacy-sync" has members but none with role owner
@@ -287,7 +286,7 @@ Feature: Admin projects
     Then the owner column for "legacy-sync" says "No owner"
     # index.ex:203-211; index.html.heex:97-104
 
-  @S03 @pending
+  @S03
   Scenario: Superuser filters the list by name, description or owner
     # Value: on an instance with many projects, an admin finds the one a user is asking about by whatever they remember of it.
     Given projects "alpha-project" (description "First project", owner "John Owner") and "beta-project" (description "Second project")
@@ -301,7 +300,7 @@ Feature: Admin projects
     Then I see both projects
     # index.ex:26-32, :127-151; table_helpers.ex:26-58, :130-141; project_live_test.exs:488-536, :538-558
 
-  @S04 @pending
+  @S04
   Scenario: Superuser sorts the list by a column
     # Value: an admin can line projects up by age, owner or upcoming deletion to review them.
     Given projects "alpha-project", "beta-project" and "charlie-project"
@@ -314,7 +313,7 @@ Feature: Admin projects
     # index.ex:14-24, :109-125; table_helpers.ex:110-118, :152-164, :220-228; project_live_test.exs:419-486
     # first click on the already active "name" key reverses it, since the list starts sorted by name ascending (index.ex:49-51)
 
-  @S05 @pending
+  @S05
   Scenario: Superuser creates a project for a team without joining it
     # Value: a team can be given a project, with its owner already in place, without the superuser appearing on it.
     Given users "1st user" and "another person" exist
@@ -329,7 +328,7 @@ Feature: Admin projects
     # form_component.ex:135-163, :183-195; projects.ex:562-577, :836-847; project_hook.ex:14-18
     # project_live_test.exs:97-166 (asserts flash and both "You now have access to" emails; membership asserted by :357-396 for edit)
 
-  @S06 @pending
+  @S06
   Scenario: A project cannot be saved without exactly one owner
     # Value: no project leaves this form with nobody, or two people, answering for it.
     Given I am on "/settings/projects/new"
@@ -344,7 +343,7 @@ Feature: Admin projects
     # project.ex:304-325; form_component.html.heex:33-47, :191-193; form_component.ex:76-80, :92-104
     # project_live_test.exs:79-95, :97-125
 
-  @S07 @pending
+  @S07
   Scenario: The saved name is shown before saving, and a name with no usable characters is refused
     # Value: the admin knows the exact identifier members, URLs and exports will use, and can't create a project with an empty one.
     Given I am on "/settings/projects/new"
@@ -355,7 +354,7 @@ Feature: Admin projects
     # project.ex:189-194; helpers.ex:221-240; form_component.ex:161; form_component.html.heex:11-22; pills.ex:98-105
     # project_live_test.exs:398-417 (edit route, blank error only)
 
-  @S08 @pending
+  @S08
   Scenario: Superuser changes a project's members
     # Value: access can be fixed by the instance admin when no one on the project is able to, for example when the owner has left.
     Given project "malawi-hiv" has owner "Alice Smith", editor "Bob Jones" and viewer "Charlie Brown"
@@ -371,7 +370,7 @@ Feature: Admin projects
     # form_component.ex:135-181; projects.ex:629-660, :695-736, :757-773, :836-847; hooks.ex:252-254
     # project_live_test.exs:357-396, :560-606, :608-645, :647-680 (membership rows asserted; emails and broadcasts not)
 
-  @S09 @pending
+  @S09
   Scenario: Removing a member withdraws their credentials from the project
     # Value: someone taken off a project stops having their own credentials used by that project's workflows.
     Given "Charlie Brown" is a viewer on "malawi-hiv" and owns credential "DHIS2 play" shared with it
@@ -380,7 +379,7 @@ Feature: Admin projects
     And "DHIS2 play" still belongs to "Charlie Brown"
     # projects.ex:695-700, :738-755
 
-  @S10 @pending
+  @S10
   Scenario: Membership changes made here are audited against the superuser
     # Value: a project's owners and auditors can see that an instance admin, and which one, changed who has access.
     Given I am superuser "root@example.org"
@@ -388,7 +387,7 @@ Feature: Admin projects
     Then an audit event "collaborator_role_changed" is recorded for "malawi-hiv" with actor "root@example.org", before role "editor" and after role "admin"
     # projects.ex:699-708; audit.ex:47-85; listing of the event belongs to admin-audit
 
-  @S11 @pending
+  @S11
   Scenario: Cancel leaves the project form without saving
     # Value: an admin can back out of a membership edit without side effects on the project.
     Given I am on "Edit" for "malawi-hiv"
@@ -397,7 +396,7 @@ Feature: Admin projects
     And "Bob Jones" is still a member of "malawi-hiv"
     # form_component.html.heex:183-188
 
-  @S12 @pending
+  @S12
   Scenario: Only a project already scheduled for deletion can be purged now
     # Value: a live project's data can't be purged in a single step; it must first go through the grace period and its notice.
     Given project "alpha-project" is not scheduled for deletion
@@ -408,7 +407,7 @@ Feature: Admin projects
     And the scheduled deletion column for "beta-project" shows "21 Oct"
     # index.ex:153-180; index.html.heex:105-108, :125; project_live_test.exs:239-255, :308-320, :322-337
 
-  @S13 @pending
+  @S13
   Scenario: Delete starts the schedule-deletion flow
     # Value: an instance admin can retire a project nobody on it is able to retire.
     Given project "alpha-project" is not scheduled for deletion
@@ -417,7 +416,7 @@ Feature: Admin projects
     And the flow "flow-schedule-project-deletion" has started (its S10)
     # index.ex:82-93, :172-177; index.html.heex:16-24; project_live_test.exs:239-276
 
-  @S14 @pending
+  @S14
   Scenario: Cancel deletion hands off to the schedule-deletion flow
     # Value: a mistaken deletion can be undone during the grace period.
     Given project "beta-project" is scheduled for deletion
@@ -427,7 +426,7 @@ Feature: Admin projects
     And the rest is flow "flow-schedule-project-deletion" S11
     # index.ex:95-107 (push_patch re-runs apply_action :index, :44-54); projects.ex:1728-1732; project_live_test.exs:308-320 (flash only)
 
-  @S15 @pending
+  @S15
   Scenario: Delete now hands off to the schedule-deletion flow
     # Value: a superuser can remove a project's data before the grace period ends when that is required.
     Given project "beta-project" is scheduled for deletion

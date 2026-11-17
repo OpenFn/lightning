@@ -2,7 +2,6 @@
 id: shared-admin-space
 type: shared
 title: Superuser admin space
-status: not-started
 owner:
 
 trigger:
@@ -193,7 +192,7 @@ Feature: Superuser admin space
   As a superuser
   I want every admin page behind one gate and inside one admin frame
 
-  @S01 @pending
+  @S01
   Scenario: The admin side menu leads to each admin area and marks the current one
     # Value: instance admins move between users, projects, login, audit, collections and maintenance in one click, can see where they are, and can get back to their own work.
     Given I am a superuser
@@ -205,7 +204,7 @@ Feature: Superuser admin space
     # settings.html.heex:41-91; menu.ex:119-157 (aria-current on the active item); audit_live/index.ex:16, :23
     # active items per view: user_live/index.ex:13, user_live/edit.ex:15, project_live/index.ex:48, auth_providers/index.ex:15, collection_live/index.ex:19, maintenance_live/index.ex:20
 
-  @S02 @pending
+  @S02
   Scenario Outline: A non-superuser is turned away from every admin page
     # Value: only instance admins can read or change instance-wide accounts, projects, login settings, audit history, collections and adaptor maintenance.
     Given I am signed in as a regular user
@@ -227,7 +226,7 @@ Feature: Superuser admin space
     # user_live_test.exs:729-749, project_live_test.exs:34-40, audit_live_test.exs:13-20,
     # auth_providers_live_test.exs:25-34, collection_live_test.exs:7-16, maintenance_live/index_test.exs:12-21, hooks_test.exs:47-54, :65-71
 
-  @S03 @pending
+  @S03
   Scenario: An admin page refuses a non-superuser websocket mount
     # Value: admin event handlers can't be invoked by a socket that never went through an HTTP check, such as a reconnecting client.
     Given I am signed in as a regular user
@@ -236,7 +235,7 @@ Feature: Superuser admin space
     And I am redirected to "/projects" with "No Access"
     # hooks.ex:28-30 (comment), :45-52; hooks_test.exs:65-71 (asserts :redirect or :live_redirect)
 
-  @S04 @pending
+  @S04
   Scenario: A non-superuser is turned away from the system dashboard
     # Value: process, memory and database internals of the instance are visible only to the people who run it.
     Given I am signed in as a regular user
@@ -247,7 +246,7 @@ Feature: Superuser admin space
     # router.ex:360-361; user_auth.ex:415-418, :431-435, :514; live_helpers.ex:97-103
     # test/lightning_web/controllers/live_dashboard_test.exs:14-31 (asserts the redirect and the message, not the missing button)
 
-  @S05 @pending
+  @S05
   Scenario: The system dashboard also checks the socket mount
     # Value: a client that reconnects straight to the dashboard socket, skipping the HTTP plugs, still can't see it unless it is a superuser.
     Given the "/dashboard" route
@@ -257,7 +256,7 @@ Feature: Superuser admin space
     Then I am on "/dashboard/home"
     # router.ex:363-369; live_dashboard_test.exs:33-47, :49-69
 
-  @S06 @pending
+  @S06
   Scenario: Demoting a superuser hands off to the revocation flow
     # Value: taking away superuser rights takes effect on admin pages the person already has open.
     Given "amara@example.org" is a superuser with "/settings/users" open
@@ -266,7 +265,7 @@ Feature: Superuser admin space
     # accounts.ex:177-201, :204-216 (role change revokes "session" tokens and disconnects sockets);
     # on reconnect the session gate and S02 refuse her
 
-  @S07 @pending @variant:settings-menu-extension
+  @S07 @variant:settings-menu-extension
   Scenario: An instance adds its own items to the admin menu
     # Value: instances can put their own admin pages in the same menu as the built-in ones.
     Given the instance configures a settings menu extension component
@@ -349,8 +348,7 @@ none
 
 ## Summary
 
-- Scenarios: 7 (S01 to S07), all `@pending`; S07 tagged
-  `@variant:settings-menu-extension`.
+- Scenarios: 7 (S01 to S07); S07 tagged `@variant:settings-menu-extension`.
 - Section 6: 6.1 has 1, 6.2 has 11, 6.3 has 3, 6.4 has 1, 6.5 has 2.
 - Flows: none proposed; references flow-account-revocation-teardown (S06
   handoff).

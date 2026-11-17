@@ -2,7 +2,6 @@
 id: shared-editor-session
 type: shared
 title: Collaborative editor session
-status: not-started
 owner:
 
 trigger:
@@ -268,7 +267,7 @@ Feature: Collaborative editor session
   As a member of a project
   I want one shared, live copy of the workflow that only people allowed to change it can change
 
-  @S01 @pending
+  @S01
   Scenario: The editor waits for the shared copy before showing the workflow
     # Value: nobody edits or saves against a half-loaded workflow (steps piled in one spot, or a stale saved version).
     Given I am a viewer on project "Malawi HIV" with workflow "Intake"
@@ -278,7 +277,7 @@ Feature: Collaborative editor session
     # collaborate.ex:252-287; CollaborativeEditor.tsx:442-514; StoreProvider.tsx:229-266
     # LoadingBoundary.tsx:23-71; createSessionStore.ts:396-470; LoadingBoundary.test.tsx:65-160, :639-660
 
-  @S02 @pending
+  @S02
   Scenario: Collaborators see each other's edits without saving
     # Value: two people working on the same workflow never build on different copies.
     Given editors "Amara" and "Ben" both have "Intake" open
@@ -287,7 +286,7 @@ Feature: Collaborative editor session
     # workflow_channel.ex:202-231, :840-844; session.ex:439-450
     # workflow_channel_test.exs:1941-1954 (an editor's frame mutates the shared doc)
 
-  @S03 @pending
+  @S03
   Scenario: Unsaved edits survive a reload
     # Value: a closed tab, crashed browser or redeploy doesn't throw away work in progress.
     Given I am an editor with "Intake" open
@@ -297,7 +296,7 @@ Feature: Collaborative editor session
     # persistence.ex:18-58, :63-92; persistence_writer.ex:29-37
     # e2e collaborative-editor-node-addition.spec.ts:94-125
 
-  @S04 @pending
+  @S04
   Scenario: A shared draft older than the last save is replaced by the saved workflow
     # Value: nobody resumes a draft built on a version that has since been superseded.
     Given "Intake" has a stored shared draft from lock version 3
@@ -306,7 +305,7 @@ Feature: Collaborative editor session
     Then I see the workflow as saved at lock version 5
     # persistence.ex:114-149; persistence_test.exs:281-320
 
-  @S05 @pending
+  @S05
   Scenario: A dropped connection keeps the workflow on screen and blocks saving
     # Value: a flaky connection costs nothing: edits are kept and sent when it returns, and nothing half-synced is committed.
     Given I am an editor with "Intake" open
@@ -320,7 +319,7 @@ Feature: Collaborative editor session
     # useWorkflow.tsx:850-871, :886-910; Header.tsx:627-634
     # LoadingBoundary.test.tsx:455-637; Header.keyboard.test.tsx:355-402
 
-  @S06 @pending
+  @S06
   Scenario: Editor saves the workflow
     # Value: changes only reach production when an editor deliberately commits them, and they know when that happened.
     Given I am an editor with "Intake" open and unsaved changes
@@ -331,7 +330,7 @@ Feature: Collaborative editor session
     # useWorkflow.tsx:421-480, :572-584; workflow_channel_test.exs:3330-3357
     # useWorkflow.saveWorkflow.test.tsx:106-136
 
-  @S07 @pending
+  @S07
   Scenario: Everyone in the room learns about a save
     # Value: collaborators don't think they still have to save a change someone else has already committed.
     Given editors "Amara" and "Ben" have "Intake" open with the same unsaved change
@@ -341,7 +340,7 @@ Feature: Collaborative editor session
     # workflow_channel.ex:855-858, :1170-1177; createSessionContextStore.ts:556-576; useUnsavedChanges.ts:9-56
     # workflow_channel_broadcast_test.exs:70-110, :154-192, :296-325
 
-  @S08 @pending
+  @S08
   Scenario: An invalid workflow is refused and its errors are shown to everyone
     # Value: a broken workflow never reaches production, and every collaborator can see what to fix.
     Given editors "Amara" and "Ben" have "Intake" open
@@ -355,7 +354,7 @@ Feature: Collaborative editor session
     # session.ex:577-591, :621-664, :715-770; workflow_channel.ex:1696-1702; useWorkflow.tsx:512-520
     # workflow_channel_test.exs:3378-3399, :3781-3838; workflow_channel_broadcast_test.exs:244-264
 
-  @S09 @pending
+  @S09
   Scenario: A failed save says so and can be retried
     # Value: a save that didn't happen is never mistaken for one that did, and the edits are still there to retry.
     Given I am an editor with "Intake" open
@@ -367,7 +366,7 @@ Feature: Collaborative editor session
     # useWorkflow.tsx:490-570, :464-468; workflow_channel.ex:1229-1252, :1616-1622
     # useWorkflow.saveWorkflow.test.tsx:153-168, :234-330; workflow_channel_test.exs:3359-3376
 
-  @S10 @pending
+  @S10
   Scenario Outline: The shared copy can't be changed by someone who may only read it
     # Value: a viewer, or anyone reading an older version, can't alter what collaborators are working on.
     Given <who> with "Intake" open
@@ -383,7 +382,7 @@ Feature: Collaborative editor session
     # useWorkflow.tsx:886-930, :1036-1121; createWorkflowStore.ts:268-299; StoreProvider.tsx:144-147
     # workflow_channel_test.exs:1860-1940, :3567-3593; useWorkflowReadOnly.test.tsx; createWorkflowStore.permissions.test.ts
 
-  @S11 @pending
+  @S11
   Scenario: Demoting an editor stops their changes straight away
     # Value: taking edit rights away takes effect before the demoted person can make one more change.
     Given I am an editor with "Intake" open
@@ -394,7 +393,7 @@ Feature: Collaborative editor session
     # workflow_channel.ex:1119-1135, :1966-1977
     # workflow_channel_test.exs:1972-2002, :3668-3709
 
-  @S12 @pending
+  @S12
   Scenario: Removing a member closes their session on the workflow
     # Value: a removed person's edits stop reaching the people still on the project immediately.
     Given I am an editor with "Intake" open
@@ -404,7 +403,7 @@ Feature: Collaborative editor session
     And other collaborators' sessions stay open
     # workflow_channel.ex:1093-1100, :1140-1150; workflow_channel_test.exs:2004-2056
 
-  @S13 @pending
+  @S13
   Scenario: Revoking support access closes a support user's session but not a member's
     # Value: a project admin who withdraws support access knows support can no longer change their workflow.
     Given a support user with no role and an editor both have "Intake" open
@@ -413,7 +412,7 @@ Feature: Collaborative editor session
     And the editor's session stays open
     # workflow_channel.ex:1102-1112; workflow_channel_test.exs:2111-2178; LiveView side: shared-project-scope S09
 
-  @S14 @pending
+  @S14
   Scenario: Non-members and unenrolled members can't join the room
     # Value: the shared copy, including unsaved job code, can't be read by going around the page.
     Given workflow "Intake" in project "Malawi HIV"
@@ -426,7 +425,7 @@ Feature: Collaborative editor session
       | an editor who has not enrolled in MFA, on an MFA project    |
     # workflow_channel.ex:2196-2212, :2244-2273; workflow_channel_test.exs:1490-1503, :1645-1673, :1771-1815
 
-  @S15 @pending
+  @S15
   Scenario: Scheduling a project for deletion closes its editor sessions only
     # Value: nobody keeps changing a project that is being wound down, and people in other projects are not interrupted.
     Given I have "Intake" open in "project-1" and another member has a workflow open in "project-2"
@@ -436,7 +435,7 @@ Feature: Collaborative editor session
     # workflow_channel.ex:1073-1083; workflow_channel_test.exs:2193-2255
     # absorbs the editor-channel part of flow-schedule-project-deletion S04 and S05; LiveView side: shared-project-scope S10
 
-  @S16 @pending
+  @S16
   Scenario: Deleting the open workflow closes only that workflow's sessions
     # Value: nobody keeps editing a workflow that no longer exists.
     Given I have "Intake" open
@@ -445,7 +444,7 @@ Feature: Collaborative editor session
     And sessions on other workflows in the project stay open
     # workflow_channel.ex:1085-1091; workflow_channel_test.exs:2258-2296
 
-  @S17 @pending
+  @S17
   Scenario: Members see who else has the workflow open
     # Value: people know someone else is working before they change the same thing.
     Given "Amara Banda" and I both have "Intake" open
@@ -458,7 +457,7 @@ Feature: Collaborative editor session
     # ActiveCollaborators.tsx:17-62; useAwareness.ts:318-370; createAwarenessStore.ts:136, :300-340, :596-680; StoreProvider.tsx:194-226
     # ActiveCollaborators.test.tsx:59-160, :163-300, :424-510
 
-  @S18 @pending
+  @S18
   Scenario: Members see where others are pointing on the canvas
     # Value: collaborators can talk about "this step" and avoid working on the same spot.
     Given "Amara Banda" and I both have "Intake" open
@@ -468,7 +467,7 @@ Feature: Collaborative editor session
     Then her cursor disappears
     # PointerTrackerViewer.tsx:10-63; RemoteCursor.tsx; PointerTrackerViewer.test.tsx; RemoteCursor.test.tsx
 
-  @S19 @pending
+  @S19
   Scenario: Save shows when I have unsaved changes
     # Value: editors know there is work that has not reached production yet.
     Given I am an editor with "Intake" open and nothing changed
@@ -477,7 +476,7 @@ Feature: Collaborative editor session
     Then "Save" shows the unsaved changes marker
     # useUnsavedChanges.ts:9-141; Header.tsx:371, :893-899; Header.test.tsx:1013-1195
 
-  @S20 @pending @variant:experimental-features
+  @S20 @variant:experimental-features
   Scenario: Leaving with unsaved changes asks for confirmation
     # Value: nobody closes the tab believing changes are live when they were never saved.
     Given I am an editor with experimental features and unsaved changes in "Intake"
@@ -488,7 +487,7 @@ Feature: Collaborative editor session
     # useUnloadWarning.ts:11-32; unloadGuard.ts:1-19; EditInSandboxPicker.tsx:372; CollaborativeEditor.tsx:134
     # useUnloadWarning.test.tsx:52-117
 
-  @S21 @pending
+  @S21
   Scenario: Editor saves with the keyboard from anywhere on the page
     # Value: people mid-edit, including inside a form field or code editor, can commit without reaching for the mouse.
     Given I am an editor with "Intake" open and my cursor in a form field
@@ -498,7 +497,7 @@ Feature: Collaborative editor session
     Then nothing is saved
     # Header.tsx:627-634; keyboard/KeyboardProvider.tsx:79-120; Header.keyboard.test.tsx:262-330, :432-590
 
-  @S22 @pending
+  @S22
   Scenario: A tab left open across a deploy keeps its connection
     # Value: a long-lived editing session isn't dropped because the server was updated underneath it.
     Given I have "Intake" open from before a deploy that removed an event my tab still sends
@@ -600,8 +599,7 @@ payloads.
 
 ## Summary
 
-- Scenarios: 22 (S01 to S22), all `@pending`; S20 tagged
-  `@variant:experimental-features`.
+- Scenarios: 22 (S01 to S22); S20 tagged `@variant:experimental-features`.
 - Section 6: 6.1 has 4, 6.2 has 11, 6.3 has 5, 6.4 has 4, 6.5 has 2.
 - Flows: none proposed; references flow-delete-open-workflow,
   flow-schedule-project-deletion, flow-toggle-workflow-open-editor,

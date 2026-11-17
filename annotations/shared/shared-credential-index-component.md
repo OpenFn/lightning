@@ -2,7 +2,6 @@
 id: shared-credential-index-component
 type: shared
 title: Credential index component (credentials, OAuth clients, keychains)
-status: not-started
 owner:
 
 trigger:
@@ -150,7 +149,7 @@ Feature: Credential index
   As a user or project admin
   I want to see and manage credentials in one list
 
-  @S01 @pending
+  @S01
   Scenario: Owner sees edit actions on their own credential
     # Value: people can maintain their own secrets.
     Given I own credential "DHIS2 prod"
@@ -158,7 +157,7 @@ Feature: Credential index
     Then I see edit, delete and transfer actions for "DHIS2 prod"
     # credential_index_component.html.heex:72
 
-  @S02 @pending
+  @S02
   Scenario: Another member's credential has no edit actions
     # Value: shared secrets can be used but only changed by the person responsible for them.
     Given credential "DHIS2 prod" is owned by someone else and shared with project "Malawi HIV"
@@ -167,7 +166,7 @@ Feature: Credential index
     And I see no edit, delete or transfer actions for it
     # credential_index_component.html.heex:72, policies/users.ex:42-44
 
-  @S03 @pending
+  @S03
   Scenario: Editor cannot manage keychains
     # Value: keychains can resolve many secrets at run time, so only project admins set them up.
     Given I am an editor on project "Malawi HIV" with keychain "By district"
@@ -176,7 +175,7 @@ Feature: Credential index
     And I see no edit or delete actions for it
     # credential_index_component.html.heex:134, policies/credentials.ex:92-93
 
-  @S04 @pending
+  @S04
   Scenario: Admin deletes a keychain
     # Value: admins can retire a keychain that is no longer needed.
     Given I am an admin on project "Malawi HIV" with keychain "By district"
@@ -185,7 +184,7 @@ Feature: Credential index
     And "By district" is no longer listed
     # credential_index_component.ex:319-346
 
-  @S05 @pending
+  @S05
   Scenario: Owner cancels a scheduled credential deletion
     # Value: a credential deleted by mistake can be recovered before it is purged.
     Given I own credential "DHIS2 prod" which is scheduled for deletion
@@ -193,7 +192,7 @@ Feature: Credential index
     Then I see "Credential deletion canceled"
     # credential_index_component.ex:353-374, lib/lightning/credentials.ex:936-940
 
-  @S06 @pending
+  @S06
   Scenario: An edit request from a non-owner is refused
     # Value: the server checks ownership on every action, not only the page.
     Given credential "DHIS2 prod" is owned by someone else

@@ -4,7 +4,6 @@ type: view
 title:
   Workflow editor › Manual run panel (run or retry from a step or trigger with a
   chosen input)
-status: not-started
 owner:
 
 trigger:
@@ -321,7 +320,7 @@ Feature: Manual run panel
   As a workflow builder
   I want to start, retry and configure manual runs from the editor
 
-  @S01 @pending
+  @S01
   Scenario: Run a step with an empty input
     # Value: a builder can check a step's code runs at all without needing any data.
     Given I am an editor on project "Malawi HIV" with workflow "Intake" open
@@ -339,7 +338,7 @@ Feature: Manual run panel
     # useRunRetry.ts:248-315; api/dataclips.ts:136-173; workflow_controller.ex:26-66, :130-143; helpers.ex:46-64; work_orders.ex:127-149
     # ManualRunPanel.test.tsx:228-240, :292-305, :928-971; useRunRetry.test.tsx:509-538, :872-901; workflow_controller_test.exs:47-59
 
-  @S02 @pending
+  @S02
   Scenario: Run with a custom JSON input
     # Value: a builder can test a step with a hand-written payload that matches a case they need to handle.
     Given the run panel is open for "Fetch"
@@ -351,7 +350,7 @@ Feature: Manual run panel
     # workflow_controller.ex:131-134; manual.ex:31-48; work_orders.ex:176-190
     # useRunRetry.test.tsx:573-610; workflow_controller_test.exs:22-45
 
-  @S03 @pending
+  @S03
   Scenario Outline: A custom input must be a JSON object within the size limit
     # Value: no run starts with an input the job can't read, and nobody waits on an upload the server will reject.
     Given the run panel is open for "Fetch" on the "New" tab
@@ -368,7 +367,7 @@ Feature: Manual run panel
       | an object larger than 10 MB   | "Dataclip exceeds the 10 MB size limit" |
       | nothing                       | no message                              |
 
-  @S04 @pending
+  @S04
   Scenario: Upload a JSON file as the custom input
     # Value: builders reuse sample payloads they already have on disk instead of pasting them.
     Given the run panel is open for "Fetch" on the "New" tab
@@ -378,7 +377,7 @@ Feature: Manual run panel
     Then I see "Invalid file format. Please only upload: JSON" for a few seconds
     # CustomView.tsx:25-37, :77; FileUploader.tsx:29-64, :112-122; no test found
 
-  @S05 @pending
+  @S05
   Scenario: Run with an input the step received before
     # Value: a builder replays real data that broke a step, without asking the source system to send it again.
     Given step "Fetch" has received inputs in earlier runs
@@ -395,7 +394,7 @@ Feature: Manual run panel
     # dataclip_controller.ex:114-187; new_manual_run.ex:26-58; invocation.ex:87-104; query.ex:326-335; work_orders.ex:177-178
     # ManualRunPanel.test.tsx:524-548, :650-682; SelectedDataclipView.test.tsx:47-107; useRunRetry.test.tsx:540-571; dataclip_controller_test.exs:345-360
 
-  @S06 @pending
+  @S06
   Scenario Outline: Find an earlier input by search and filters
     # Value: a builder finds the one payload behind a failure among many runs.
     Given the run panel is open for "Fetch" on the "Existing" tab
@@ -414,7 +413,7 @@ Feature: Manual run panel
       | set "Created After" and "Created Before"                  |
       | turn on the named only filter                             |
 
-  @S07 @pending
+  @S07
   Scenario: Inputs never cross projects
     # Value: a run in one project can never read another project's data as its input.
     Given step "Other" belongs to project "Kenya TB" where I am not a member
@@ -425,7 +424,7 @@ Feature: Manual run panel
     # new_manual_run.ex:34-37, :55-57; manual.ex:72-84
     # dataclip_controller_test.exs:404-417; new_manual_run_test.exs:331-347; manual_test.exs:15-33
 
-  @S08 @pending
+  @S08
   Scenario: A cron step defaults to the input its next scheduled run will use
     # Value: a builder tests with exactly the state the next cron run will receive.
     Given step "Fetch" is reached from a cron trigger
@@ -438,7 +437,7 @@ Feature: Manual run panel
     # invocation.ex:283-334, :1342-1378
     # ManualRunPanel.test.tsx:550-624; SelectedDataclipView.test.tsx:131-171; new_manual_run_test.exs:120-249
 
-  @S09 @pending
+  @S09
   Scenario: An input I unselect stays unselected
     # Value: the panel never puts back an input the builder deliberately set aside.
     Given the run panel is open for "Fetch" with an existing input selected
@@ -451,7 +450,7 @@ Feature: Manual run panel
     # ManualRunPanel.tsx:108, :123-130, :265-296, :468-470; SelectedDataclipView.tsx:140-145; useRunRetry.ts:236-241
     # ManualRunPanel.test.tsx:1141-1300
 
-  @S10 @pending
+  @S10
   Scenario: Name an earlier input
     # Value: teams label reference payloads ("Malawi edge case") so anyone can find and reuse them.
     Given I am an editor and an existing input "Unnamed" is selected
@@ -465,7 +464,7 @@ Feature: Manual run panel
     # dataclip_controller.ex:157-169, :254-292; invocation.ex:403-416; dataclip_audit.ex:18-29
     # SelectedDataclipView.test.tsx:173-215, :298-370, :598-630, :765-797; dataclip_controller_test.exs:597-624, :637-664
 
-  @S11 @pending
+  @S11
   Scenario: Run the whole workflow with a custom input from the header
     # Value: a builder tests the workflow from its entry point with data they choose.
     Given "Intake" has trigger "Webhook" connected to step "Fetch"
@@ -481,7 +480,7 @@ Feature: Manual run panel
     # workflow_controller.ex:103-124
     # ManualRunPanel.test.tsx:258-274, :503-522; Header.keyboard.test.tsx:1257-1366; workflow_controller_test.exs:86-106
 
-  @S12 @pending
+  @S12
   Scenario: Quick run from the header
     # Value: one click runs the whole workflow end to end while building it.
     Given "Intake" has a trigger and no run is loaded
@@ -491,7 +490,7 @@ Feature: Manual run panel
     # Header.tsx:385-420, :587-608, :863-879; NewRunButton.tsx:72-85
     # Header.keyboard.test.tsx:1140-1256; e2e run-retry-keyboard-shortcuts.spec.ts:58-91
 
-  @S13 @pending
+  @S13
   Scenario: A path cannot be a starting point
     # Value: every manual run starts from a node the server can resolve.
     Given the run panel is open for "Fetch"
@@ -503,7 +502,7 @@ Feature: Manual run panel
     # WorkflowEditor.tsx:184-198; ManualRunPanel.tsx:585-590; useRunRetry.ts:241-243
     # useRunRetry.test.tsx:221-228
 
-  @S14 @pending
+  @S14
   Scenario: Retry a followed run from a step with the same input
     # Value: after fixing a step, the builder re-runs it on the same input and work order without re-running upstream steps.
     Given run "R" of "Intake" is loaded and its "Fetch" step took input "D", not wiped
@@ -519,7 +518,7 @@ Feature: Manual run panel
     # workflow_controller.ex:208-244; work_orders.ex:296-401, :810-835, :870-905
     # useRunRetry.test.tsx:388-413, :656-705, :903-943; workflow_controller_test.exs:435-449; e2e run-retry-keyboard-shortcuts.spec.ts:93-141
 
-  @S15 @pending
+  @S15
   Scenario: Force a new work order while retry is available
     # Value: a builder can start a fresh, separately tracked run with the same input instead of extending the old work order.
     Given the panel offers "Retry" for run "R"
@@ -529,7 +528,7 @@ Feature: Manual run panel
     # RunRetryButton.tsx:128-131, :258-286; useRunRetryShortcuts.ts:115-126
     # RunRetryButton.test.tsx:154-212; ManualRunPanel.keyboard.test.tsx:986-1218; e2e run-retry-keyboard-shortcuts.spec.ts:143-185, :287-331
 
-  @S16 @pending
+  @S16
   Scenario: Run, retry and close from the keyboard
     # Value: builders iterate on a step without reaching for the mouse.
     Given the run panel is open for "Fetch" with a valid input
@@ -540,7 +539,7 @@ Feature: Manual run panel
     # ManualRunPanel.tsx:488-512; useRunRetryShortcuts.ts:90-127
     # ManualRunPanel.keyboard.test.tsx:410-573, :773-984, :1341-1388; e2e run-retry-keyboard-shortcuts.spec.ts:366-395
 
-  @S17 @pending
+  @S17
   Scenario: A run never starts if the workflow can't be saved first
     # Value: a run always executes the version on screen, never an older saved one the builder thinks they changed.
     Given "Intake" has a change the server will not save
@@ -550,7 +549,7 @@ Feature: Manual run panel
     # useRunRetry.ts:264-267, :316-324; useSaveBeforeRun.ts:17-26
     # ManualRunPanel.test.tsx:973-1049; useSaveBeforeRun.test.tsx:19-28
 
-  @S18 @pending @variant:experimental-features
+  @S18 @variant:experimental-features
   Scenario: A live workflow runs without saving
     # Value: testing a live workflow never requires taking it out of production.
     Given "Intake" is live and content-locked
@@ -560,7 +559,7 @@ Feature: Manual run panel
     # useSaveBeforeRun.ts:21-25; useRunRetry.ts:291-296
     # useSaveBeforeRun.test.tsx:30-50
 
-  @S19 @pending
+  @S19
   Scenario Outline: Run is refused with a reason
     # Value: people see why they can't run instead of clicking a button that silently does nothing.
     Given <state>
@@ -578,7 +577,7 @@ Feature: Manual run panel
       | "Intake" is new and not yet created                | "Create this workflow before running it"                |
       | the project's run limit says "Run limit reached"   | "Run limit reached"                                     |
 
-  @S20 @pending
+  @S20
   Scenario Outline: The server only starts runs for people who may run them
     # Value: only people trusted to execute code against external systems can do so, whatever the client shows.
     Given workflow "Intake" in project "Malawi HIV"
@@ -596,7 +595,7 @@ Feature: Manual run panel
       | I am a support user and the project allows support access            | 201    | a work order is created  |
       | I am an editor but "Intake" belongs to another project               | 403    | no work order is created |
 
-  @S21 @pending
+  @S21
   Scenario Outline: A retry that can't run says why
     # Value: a builder learns the input is gone or the workflow is deleted instead of assuming a retry happened.
     Given the panel offers "Retry" for run "R"
@@ -612,7 +611,7 @@ Feature: Manual run panel
       | R's input to "Fetch" has been wiped      | "Failed to retry run"                     |
       | "Intake" has been deleted                | "Cannot retry run for deleted workflow"   |
 
-  @S22 @pending @variant:run-limit-reached
+  @S22 @variant:run-limit-reached
   Scenario: The server enforces the run limit even when the page allowed the click
     # Value: plan limits hold even if the page's view of the limit is stale.
     Given the usage limiter refuses new runs with "Run limit exceeded for this project"
@@ -622,7 +621,7 @@ Feature: Manual run panel
     # helpers.ex:51-53; workflow_controller.ex:235, :246-249; fallback_controller.ex:55-63; api/dataclips.ts:160-170
     # workflow_controller_test.exs:261-286, :451-476
 
-  @S23 @pending
+  @S23
   Scenario: One click starts one run
     # Value: an impatient double click or a still-running run never stacks duplicate work orders.
     Given the run panel is open for "Fetch"
@@ -633,7 +632,7 @@ Feature: Manual run panel
     # ManualRunPanel.tsx:686; useRunRetry.ts:136, :174, :178-202, :344-348; RunRetryButton.tsx:133-171, :184-234
     # ManualRunPanel.test.tsx:1086-1138; RunRetryButton.test.tsx:77-108, :888-912; e2e run-retry-keyboard-shortcuts.spec.ts:333-364
 
-  @S24 @pending
+  @S24
   Scenario: A link can open the panel with an input chosen
     # Value: handoffs from other screens land ready to run with the intended input.
     Given step "Fetch" has received input "D" recently
@@ -643,7 +642,7 @@ Feature: Manual run panel
     # WorkflowEditor.tsx:121-136; ManualRunPanel.tsx:317-337
     # ManualRunPanel.test.tsx:408-501
 
-  @S25 @pending
+  @S25
   Scenario: Errors inside the panel don't take down the editor
     # Value: a broken input preview or bad response leaves the canvas and unsaved work usable.
     Given something in the run panel throws while rendering

@@ -675,9 +675,18 @@ test('@S18', PASSING_BOTH, async ({ page }) => {
 });
 
 // Shared scenarios from annotations/shared/shared-webhook-auth-method-form.md.
-// The page's own scenarios already run most of them on this host: shared
-// S01=S05, S02=S06, S03=S07, S04=S08, S06=S09, S07=S10, S08=S11, S09=S12,
-// S10=S13, S11=S14. Shared S12 is the workflow editor host, not this page.
+// The page's own scenarios already run most of them on this host:
+// covers shared-webhook-auth-method-form@S01 with @S05
+// covers shared-webhook-auth-method-form@S02 with @S06
+// covers shared-webhook-auth-method-form@S03 with @S07
+// covers shared-webhook-auth-method-form@S04 with @S08
+// covers shared-webhook-auth-method-form@S06 with @S09
+// covers shared-webhook-auth-method-form@S07 with @S10
+// covers shared-webhook-auth-method-form@S08 with @S11
+// covers shared-webhook-auth-method-form@S09 with @S12
+// covers shared-webhook-auth-method-form@S10 with @S13
+// covers shared-webhook-auth-method-form@S11 with @S14
+// Shared S05 runs below. Shared S12 is the workflow editor host, not this page.
 test.describe('webhook-auth-method-form', () => {
   // @S05
   // Scenario: Cancelling the form creates nothing
@@ -685,18 +694,22 @@ test.describe('webhook-auth-method-form', () => {
   //   When I click "Cancel"
   //   Then the auth method form closes
   //   And project "Malawi HIV" has no method named "Draft"
-  test('@S05', PASSING_BOTH, async ({ page }) => {
-    const id = givenProject('admin');
-    await onWebhookSecurity(page, id);
+  test(
+    'shared-webhook-auth-method-form@S05 on project-settings-webhook-security',
+    PASSING_BOTH,
+    async ({ page }) => {
+      const id = givenProject('admin');
+      await onWebhookSecurity(page, id);
 
-    await createBasic(page, 'Draft');
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: 'Cancel' })
-      .click();
+      await createBasic(page, 'Draft');
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Cancel' })
+        .click();
 
-    await expect(field(page, 'Auth method name')).toBeHidden();
-    await expect(authMethodRow(page, 'Draft')).toHaveCount(0);
-    expect(storedAuthMethod(id, 'Draft')).toBeUndefined();
-  });
+      await expect(field(page, 'Auth method name')).toBeHidden();
+      await expect(authMethodRow(page, 'Draft')).toHaveCount(0);
+      expect(storedAuthMethod(id, 'Draft')).toBeUndefined();
+    }
+  );
 });

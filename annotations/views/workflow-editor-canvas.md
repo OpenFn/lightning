@@ -2,7 +2,6 @@
 id: workflow-editor-canvas
 type: view
 title: Workflow editor › Canvas and header
-status: not-started
 owner:
 
 trigger:
@@ -311,7 +310,7 @@ Feature: Workflow editor canvas and header
   As a member of a project
   I want a diagram I can edit when I am allowed to, and that tells me when I am not
 
-  @S01 @pending
+  @S01
   Scenario: A member opens a workflow and sees its diagram
     # Value: everyone on a project can see how a workflow is wired before touching a step, run or version.
     Given project "Malawi HIV" has workflow "Intake" with a webhook trigger and steps "Fetch" and "Load"
@@ -323,7 +322,7 @@ Feature: Workflow editor canvas and header
     # collaborate.ex:252-287; CollaborativeEditor.tsx:490-498; LoadingBoundary.tsx:297-330
     # WorkflowDiagram.tsx:914-1013; from-workflow.tsx:46-199; LoadingBoundary.test.tsx:65-160
 
-  @S02 @pending
+  @S02
   Scenario: Editor adds a step from a step's plus button
     # Value: building a workflow is one click and a choice of adaptor, and the new step is already wired in.
     Given I am an editor with "Intake" open
@@ -337,7 +336,7 @@ Feature: Workflow editor canvas and header
     # Job.tsx:18-24; WorkflowDiagram.tsx:833-849, :747-813, :1016-1021; from-workflow.tsx:53-54
     # e2e collaborative-editor-node-addition.spec.ts:260-311; collaborative-editor-credentials.spec.ts:387
 
-  @S03 @pending
+  @S03
   Scenario: Editor adds a step by dragging a path onto empty canvas
     # Value: editors can place a new step where they want it as they draw the path.
     Given I am an editor with "Intake" open
@@ -350,7 +349,7 @@ Feature: Workflow editor canvas and header
     # useConnect.ts:124-160 (collaborative-editor/hooks); WorkflowDiagram.tsx:815-831, :873-882
     # e2e collaborative-editor-node-addition.spec.ts:220-258; job-inspector-configuration.spec.ts:188
 
-  @S04 @pending
+  @S04
   Scenario: Editor connects two steps
     # Value: editors can add a branch between existing steps without rebuilding them.
     Given I am an editor with "Intake" open, where "Fetch" and "Load" are not connected
@@ -358,7 +357,7 @@ Feature: Workflow editor canvas and header
     Then an "on success" path from "Fetch" to "Load" appears
     # useConnect.ts:69-94 (collaborative-editor/hooks); createWorkflowStore.ts:1050-1070
 
-  @S05 @pending
+  @S05
   Scenario Outline: The canvas refuses paths that would break the workflow
     # Value: a workflow can never be drawn with a loop or a duplicate path that the runtime could not execute.
     Given I am an editor with a workflow open
@@ -374,7 +373,7 @@ Feature: Workflow editor canvas and header
     # workflow-diagram/useConnect.ts:58-95; collaborative-editor/hooks/useConnect.ts:101-108, :182-188
     # e2e edge-validation.spec.ts:121-148, :150-194, :196-232, :234-307, :309-340
 
-  @S06 @pending
+  @S06
   Scenario: Selecting a step opens its inspector and empty canvas closes it
     # Value: people get from the picture to a step's details in one click, and back.
     Given I have "Intake" open
@@ -385,7 +384,7 @@ Feature: Workflow editor canvas and header
     # WorkflowDiagram.tsx:639-645, :833-849, :873-882; collaborative-editor/hooks/useConnect.ts:109-120
     # WorkflowEditor.tsx:281-292, :333-349
 
-  @S07 @pending
+  @S07
   Scenario: Editor undoes and redoes canvas edits
     # Value: a misplaced step or path can be taken back without rebuilding it by hand.
     Given I am an editor with "Intake" open
@@ -398,7 +397,7 @@ Feature: Workflow editor canvas and header
     # WorkflowDiagram.tsx:128-135, :162-196, :887-910, :973-1001; createWorkflowStore.ts:2145-2168
     # WorkflowDiagram.undo-redo.test.tsx:63-260
 
-  @S08 @pending
+  @S08
   Scenario: Editor arranges steps by hand in manual layout
     # Value: editors can lay a large workflow out the way their team reads it, and it stays that way for everyone.
     Given I am an editor with "Intake" open in automatic layout
@@ -411,7 +410,7 @@ Feature: Workflow editor canvas and header
     # WorkflowDiagram.tsx:155, :719-725, :852-871, :924, :950-965; createWorkflowStore positions map
     # useUnsavedChanges.ts:16, :87 (positions count as unsaved changes); e2e collaborative-editor-node-addition.spec.ts:173-218
 
-  @S09 @pending
+  @S09
   Scenario: Editor re-runs automatic layout over manual positions
     # Value: a cluttered hand layout can be tidied in one step.
     Given I am an editor with "Intake" open in manual layout
@@ -419,7 +418,7 @@ Feature: Workflow editor canvas and header
     Then the steps move to the automatic layout and those positions become the manual ones
     # WorkflowDiagram.tsx:335-350, :966-972
 
-  @S10 @pending
+  @S10
   Scenario: Member fits the diagram to the screen
     # Value: people never lose a workflow off the edge of the canvas.
     Given I have "Intake" open and have panned away from it
@@ -428,7 +427,7 @@ Feature: Workflow editor canvas and header
     And the diagram refits when the canvas is resized, for example when a side panel opens
     # WorkflowDiagram.tsx:648-717, :727-735, :945-947
 
-  @S11 @pending
+  @S11
   Scenario Outline: The canvas is read-only when I can't change what is on screen
     # Value: nobody edits a version that isn't current, a workflow they aren't trusted to change, or (with the lifecycle lock) a workflow that is live in production.
     Given <who> with "Intake" open
@@ -445,7 +444,7 @@ Feature: Workflow editor canvas and header
     # from-workflow.tsx:53-54; WorkflowDiagram.tsx:143-153, :924, :950-1001
     # useWorkflowReadOnly.test.tsx:278-298, :419-489; ReadOnlyWarning.test.tsx:311-368; Header.test.tsx:559-640
 
-  @S12 @pending
+  @S12
   Scenario: Editor switches the workflow off from the header and saves
     # Value: an editor who spots a misbehaving workflow can stop its triggers from where they are looking at it.
     Given experimental features are off for me
@@ -459,7 +458,7 @@ Feature: Workflow editor canvas and header
     # session.ex:507-534, :621-664; workflows.ex:741-764 (audit enabled/disabled)
     # Header.sandbox.test.tsx:338-347
 
-  @S13 @pending @variant:activation-limited
+  @S13 @variant:activation-limited
   Scenario: Switching a workflow on beyond the usage limit is refused on save
     # Value: usage limits on active workflows hold even when the switch is flipped inside the editor.
     Given the usage limiter refuses workflow activation with "Your usage limit has been reached."
@@ -469,7 +468,7 @@ Feature: Workflow editor canvas and header
     And "Intake" still has its triggers disabled
     # session.ex:510-519, :934-950; workflow_channel.ex:1688-1694; useWorkflow.tsx:490-570
 
-  @S14 @pending @variant:experimental-features
+  @S14 @variant:experimental-features
   Scenario: Editor takes a draft workflow live after confirming
     # Value: putting a workflow into production is a deliberate act, never a slip of the mouse.
     Given I am an editor with draft workflow "Intake" open
@@ -482,7 +481,7 @@ Feature: Workflow editor canvas and header
     # workflow_channel.ex:315-318, :1861-1888; session.ex:260-269, :596-605; workflows.ex:381-386
     # workflow_channel_test.exs:69-80; Header.sandbox.test.tsx:326-357, :497-516
 
-  @S15 @pending @variant:experimental-features
+  @S15 @variant:experimental-features
   Scenario: Going live saves what is on screen
     # Value: what goes into production is exactly the version the editor was looking at, not an older save.
     Given I am an editor with draft workflow "Intake" open
@@ -492,7 +491,7 @@ Feature: Workflow editor canvas and header
     # session.ex:371-374, :507-523 (set_state saves the shared document); workflow_channel.ex:1837-1843
     # no direct test; workflow_channel_test.exs:216-290 covers a transition from an older version acting on the current workflow
 
-  @S16 @pending @variant:experimental-features
+  @S16 @variant:experimental-features
   Scenario: A live workflow is locked until it is switched to draft
     # Value: production workflows can't be changed in place by accident; changes go through draft or a sandbox.
     Given I am an editor with live workflow "Intake" open
@@ -504,7 +503,7 @@ Feature: Workflow editor canvas and header
     # workflow_channel.ex:1507-1510, :1915-1938; workflow_channel_test.exs:493-528; Header.sandbox.test.tsx:467-476, :517-537
     # "Edit in sandbox" itself belongs to workflow-editor-versions-and-promote
 
-  @S17 @pending @variant:experimental-features @variant:activation-limited
+  @S17 @variant:experimental-features @variant:activation-limited
   Scenario: Going live beyond the usage limit says so and leaves the workflow in draft
     # Value: usage limits are enforced at the point of going live, with the reason shown.
     Given the usage limiter refuses workflow activation with "Your usage limit has been reached."
@@ -515,7 +514,7 @@ Feature: Workflow editor canvas and header
     # workflow_channel.ex:1845-1859; session.ex:934-950; Header.tsx:315-339; lib/errors.ts describeLifecycleError
     # workflow_channel_test.exs:82-123 (from an older version)
 
-  @S18 @pending @variant:experimental-features @variant:sandbox
+  @S18 @variant:experimental-features @variant:sandbox
   Scenario: Editor turns a sandbox's copy of a workflow on and off
     # Value: people can exercise a sandbox's own webhook and cron triggers without touching the parent's live workflow.
     Given I am an editor with "Intake" open in sandbox "dev"
@@ -525,7 +524,7 @@ Feature: Workflow editor canvas and header
     # Header.tsx:259, :780-819, :820-835; Header.sandbox.test.tsx:648-700
     # "Promote" hands off to flow-sandbox-merge
 
-  @S19 @pending @variant:sandbox
+  @S19 @variant:sandbox
   Scenario: The header shows the sandbox path from the highest project I can reach
     # Value: people always know which sandbox they are editing, without being shown projects they have no access to.
     Given "Root" has sandbox "a", which has sandbox "b"
@@ -535,7 +534,7 @@ Feature: Workflow editor canvas and header
     # collaborate.ex:64-76, :269-274; CollaborativeEditor.tsx:227-229, :244-252
     # collaborate_test.exs:120-195
 
-  @S20 @pending
+  @S20
   Scenario: The header shows the project's environment
     # Value: people can tell a production project from a staging one before they change it.
     Given project "Malawi HIV" has environment "production"
@@ -543,7 +542,7 @@ Feature: Workflow editor canvas and header
     Then I see a "production" badge after the workflow name, titled "Project environment is production"
     # collaborate.ex:275; CollaborativeEditor.tsx:226, :282-295; no test found
 
-  @S21 @pending
+  @S21
   Scenario: Clicking the workflow name returns to the bare canvas
     # Value: one click gets people out of any panel, selection or run view back to the whole workflow.
     Given I have "Intake" open with a step selected, the run panel open and a run loaded
@@ -552,7 +551,7 @@ Feature: Workflow editor canvas and header
     And the back button returns me to where I was
     # CollaborativeEditor.tsx:199-222, :256-259; CollaborativeEditor.breadcrumbTitle.test.tsx:144-200
 
-  @S22 @pending
+  @S22
   Scenario: Workflow settings open from the header and flag errors
     # Value: a workflow-level problem that blocks saving is visible without hunting for it.
     Given I have "Intake" open and its name is blank in the draft
@@ -563,7 +562,7 @@ Feature: Workflow editor canvas and header
     Then the panel closes
     # Header.tsx:244, :711-727, :890; useWorkflow.tsx:1123-1131; Header.test.tsx:418-557
 
-  @S23 @pending @variant:stale-build
+  @S23 @variant:stale-build
   Scenario: People are told when a newer build has been deployed
     # Value: nobody keeps working for hours in a client that no longer matches the server.
     Given I opened "Intake" before a deploy changed the editor's assets
@@ -573,7 +572,7 @@ Feature: Workflow editor canvas and header
     # collaborate.ex:85, :243-251, :281; StaleBuildNotice.tsx:8-33; CollaborativeEditor.tsx:461
     # StaleBuildNotice.test.tsx:15-40
 
-  @S24 @pending @variant:require-email-verification
+  @S24 @variant:require-email-verification
   Scenario: An unconfirmed user is warned in the editor and can ask for a new link
     # Value: people working in the editor learn their deadline and can act on it without leaving the workflow.
     Given my account was created 2 hours ago and my email is unconfirmed
@@ -584,7 +583,7 @@ Feature: Workflow editor canvas and header
     # EmailVerificationBanner.tsx:16-51; utils/dateFormatting.ts; Header.tsx:647
     # workflow_channel.ex:1388-1398, :1409-1415; EmailVerificationBanner.test.tsx:104-200
 
-  @S25 @pending @variant:experimental-features @variant:sandbox
+  @S25 @variant:experimental-features @variant:sandbox
   Scenario: Archiving a sandbox from the editor hands off to the sandbox flows
     # Value: someone who has promoted their change can retire the sandbox from where they are.
     Given I am an owner on sandbox "sb" and promoted "alpha" from it
@@ -593,7 +592,7 @@ Feature: Workflow editor canvas and header
     And the flow "flow-sandbox-scheduled-deletion" has started for "sb"
     # Header.tsx:547-572; workflow_channel.ex:501-513; createWorkflowStore.ts:1711-1726
 
-  @S26 @pending
+  @S26
   Scenario: The editor follows a workflow deleted elsewhere
     # Value: nobody keeps editing a workflow that someone else has deleted.
     Given I have "Intake" open
@@ -601,7 +600,7 @@ Feature: Workflow editor canvas and header
     Then the flow "flow-delete-open-workflow" ends here at its S01 and S02
     # hooks.ex:325-335; workflow_channel.ex:1086-1091
 
-  @S27 @pending
+  @S27
   Scenario: The editor follows a switch made on the workflows list
     # Value: the editor never shows a workflow as on when it was switched off elsewhere.
     Given I have "Intake" open
@@ -609,7 +608,7 @@ Feature: Workflow editor canvas and header
     Then the flow "flow-toggle-workflow-open-editor" ends here at its S01
     # workflow_reconciler.ex:39-61; Header.tsx:239, :701-709
 
-  @S28 @pending
+  @S28
   Scenario: A workflow from another project is not opened
     # Value: a guessed or pasted link never shows a workflow outside the project in the URL.
     Given I am an owner on "Malawi HIV" and not on "Kenya TB"
@@ -619,7 +618,7 @@ Feature: Workflow editor canvas and header
     # hooks.ex:138-158; collaborate.ex:26; collaborate_test.exs:198-219
     # the channel refuses the same join with "workflow not found" (workflow_channel.ex:2196-2207; workflow_channel_test.exs:1567-1590)
 
-  @S29 @pending
+  @S29
   Scenario: Having a workflow open blocks API writes to it
     # Value: a deploy or script can't overwrite a workflow under someone who is editing it.
     Given I have "Intake" open

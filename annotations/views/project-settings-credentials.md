@@ -2,7 +2,6 @@
 id: project-settings-credentials
 type: view
 title: Project settings › Credentials
-status: not-started
 owner:
 
 trigger:
@@ -228,7 +227,7 @@ Feature: Project credentials
   As a member of a project
   I want to see the project's credentials, OAuth clients and keychains, and add new ones here
 
-  @S01 @pending
+  @S01
   Scenario: Members see the project's credentials and who owns them
     # Value: a member debugging a failing job can see which secret the project has and whom to ask about it.
     Given I am a viewer on project "Malawi HIV"
@@ -239,7 +238,7 @@ Feature: Project credentials
     And I do not see "Personal sandbox"
     # settings.html.heex:358-365 (show_owner_in_tables), credentials.ex:106-122, data_tables.ex:36-83; project_live_test.exs:944-987
 
-  @S02 @pending
+  @S02
   Scenario: Members see the OAuth clients the project can use
     # Value: someone setting up an OAuth credential knows which approved OAuth apps this project already has.
     Given OAuth client "Google" is shared with "Malawi HIV"
@@ -250,7 +249,7 @@ Feature: Project credentials
     And I do not see "Other"
     # oauth_clients.ex:60-80, credential_index_component.ex:444-454, data_tables.ex:209-245
 
-  @S03 @pending
+  @S03
   Scenario: Members see only this project's keychains
     # Value: a project's run-time credential routing is visible to its team and not to other projects.
     Given project "Malawi HIV" has keychain "By district" with path "$.organization.id"
@@ -260,7 +259,7 @@ Feature: Project credentials
     And I do not see "Other keychain"
     # credential_index_component.ex:60-80, credentials.ex:1912-1919; project_live_test.exs:1244-1289
 
-  @S04 @pending
+  @S04
   Scenario: Editor creates a credential that is shared with this project
     # Value: a secret added from the project is usable there at once, without a separate sharing step.
     Given I am an editor on project "Malawi HIV"
@@ -272,7 +271,7 @@ Feature: Project credentials
     # settings.html.heex:323-333, credential_index_component.ex:91-109, helpers.ex:152-168; the form itself is credentials-index S02
     # project_live_test.exs:989-1033 (admin and editor)
 
-  @S05 @pending @variant:sandbox
+  @S05 @variant:sandbox
   Scenario: A credential created in a sandbox is shared with the sandbox only
     # Value: a credential made while experimenting does not reach the parent or ancestor projects before a merge.
     Given I am an admin on project "root" and its nested sandbox "sandbox-project"
@@ -281,7 +280,7 @@ Feature: Project credentials
     And neither "root" nor the intermediate project is selected
     # helpers.ex:156-158, credential_index_component.ex:93-96; project_live_test.exs:1035-1075
 
-  @S06 @pending @variant:support-user
+  @S06 @variant:support-user
   Scenario: Support user creates a credential in a project that allows support access
     # Value: support staff can add a missing secret for a project they are helping without being made a member.
     Given I am a support user with no membership on "Malawi HIV"
@@ -290,7 +289,7 @@ Feature: Project credentials
     Then I am back on the "Credentials" tab and the credential is listed
     # project_users.ex:167-169, settings.ex:166-171; project_live_test.exs:1077-1123
 
-  @S07 @pending
+  @S07
   Scenario: Viewer cannot create anything on this tab
     # Value: read-only members can't add secrets or OAuth apps to a project, whichever way the action reaches the page.
     Given I am a viewer on project "Malawi HIV"
@@ -302,7 +301,7 @@ Feature: Project credentials
     # settings.html.heex:327-348, components/credentials.ex:389-399, credential_index_component.ex:91-109, :419-424
     # project_live_test.exs:1125-1153 (credential); :1668-1695 (keychain)
 
-  @S08 @pending
+  @S08
   Scenario: Editor sees the keychain option disabled
     # Value: keychains decide at run time which secret a job uses, so only admins set them up.
     Given I am an editor on project "Malawi HIV"
@@ -311,7 +310,7 @@ Feature: Project credentials
     And "Keychain" is disabled
     # settings.html.heex:334-340, settings.ex:173-178, policies/credentials.ex:87-98; project_live_test.exs:1193-1213 asserts the admin side only
 
-  @S09 @pending
+  @S09
   Scenario: Editor creates an OAuth client shared with this project
     # Value: a team can register its own OAuth app for the project without asking a superuser.
     Given I am an editor on project "Malawi HIV"
@@ -322,7 +321,7 @@ Feature: Project credentials
     # credential_index_component.ex:133-158, oauth_client_form_component.ex:36-48; the form itself is credentials-index
     # oauth_clients_live_test.exs:206-270 (runs against both /credentials and this tab)
 
-  @S10 @pending
+  @S10
   Scenario: New OAuth credentials are offered the project's OAuth clients
     # Value: owners build OAuth credentials on the apps approved for this project rather than only their own.
     Given OAuth client "Google" owned by someone else is shared with "Malawi HIV"
@@ -332,7 +331,7 @@ Feature: Project credentials
     And it does not offer "Mine only"
     # credential_form_component.ex:1355-1395 (list_clients(project) when a project is assigned), oauth_clients.ex:60-80
 
-  @S11 @pending
+  @S11
   Scenario: Admin creates a keychain
     # Value: one job can use the right secret per organisation or district, picked from the run's input.
     Given I am an admin on project "Malawi HIV"
@@ -345,7 +344,7 @@ Feature: Project credentials
     # credential_index_component.ex:112-131, keychain_credential_form_component.ex:162-188, components/credentials.ex:229-325
     # project_live_test.exs:1523-1571
 
-  @S12 @pending
+  @S12
   Scenario: A keychain needs a name and a JSONPath starting with "$"
     # Value: a keychain that could never select a credential is caught when it is set up, not when runs fail.
     Given I am creating a keychain on "Malawi HIV"
@@ -356,7 +355,7 @@ Feature: Project credentials
     And "Create" is disabled
     # keychain_credential.ex:51-80, keychain_credential_form_component.ex:74-81, components/credentials.ex:304; project_live_test.exs:1633-1666
 
-  @S13 @pending
+  @S13
   Scenario: A keychain's default credential must be shared with the project
     # Value: a keychain can't route a run to a secret this project was never given.
     Given credential "DHIS2 prod" is shared with "Malawi HIV"
@@ -368,7 +367,7 @@ Feature: Project credentials
     And no keychain is created
     # keychain_credential_form_component.ex:37-42, components/credentials.ex:282-290, keychain_credential.ex:98-145
 
-  @S14 @pending
+  @S14
   Scenario: Two keychains in a project cannot share a name
     # Value: people choosing a keychain for a job can tell them apart.
     Given "Malawi HIV" has keychain "By district"
@@ -377,7 +376,7 @@ Feature: Project credentials
     And only one "By district" exists
     # keychain_credential.ex:55, priv/repo/migrations/20250709121359_create_keychain_credentials.exs:21
 
-  @S15 @pending
+  @S15
   Scenario: Admin edits a keychain
     # Value: admins can repoint a keychain when the run data or the default secret changes.
     Given "Malawi HIV" has keychain "Original Name" with path "$.org_id"
@@ -386,7 +385,7 @@ Feature: Project credentials
     And the keychain is stored with the new name and path
     # credential_index_component.ex:272-293, keychain_credential_form_component.ex:121-160; project_live_test.exs:1573-1631
 
-  @S16 @pending
+  @S16
   Scenario: A keychain edit from a viewer is refused
     # Value: viewers cannot change a project's credential routing.
     Given I am a viewer on "Malawi HIV" with keychain "Protected"
@@ -395,7 +394,7 @@ Feature: Project credentials
     And no keychain form is open
     # credential_index_component.ex:272-293, :419-424; project_live_test.exs:1697-1740
 
-  @S17 @pending
+  @S17
   Scenario: Owner schedules a credential for deletion from project settings
     # Value: an owner can retire a secret from where they found it, and the project stops using it at once.
     Given I own credential "DHIS2 prod" shared with "Malawi HIV"
@@ -405,7 +404,7 @@ Feature: Project credentials
     And the flow "flow-credential-scheduled-deletion" has started for "DHIS2 prod"
     # credential_index_component.ex:240-254, credential_deletion_modal.ex:40-51, credentials.ex:1036-1052; credential_live_test.exs:541-580
 
-  @S18 @pending
+  @S18
   Scenario: Owner starts a credential transfer from project settings
     # Value: a departing team member can hand over a project's credential without leaving the project.
     Given I own credential "DHIS2 prod" shared with "Malawi HIV"
@@ -415,7 +414,7 @@ Feature: Project credentials
     And the flow "flow-credential-transfer" has started for "DHIS2 prod"
     # credential_index_component.ex:256-270, credential_index_component.html.heex:244-251, transfer_credential_modal.ex:46-55, :100
 
-  @S19 @pending
+  @S19
   Scenario: OAuth sign-in started on this tab returns to this tab
     # Value: an editor can connect an OAuth credential for the project without leaving project settings.
     Given I am an editor on "Malawi HIV" and OAuth client "Google" is shared with it

@@ -2,7 +2,6 @@
 id: mfa-required
 type: view
 title: MFA required for project
-status: not-started
 owner:
 
 trigger:
@@ -151,7 +150,7 @@ Feature: MFA required for project
   As a member who has not enrolled in MFA
   I want to be told why I was stopped and where to enrol
 
-  @S01 @passing-old
+  @S01
   Scenario: An unenrolled member is told why and where to enrol
     # Value: a member stopped by the project's MFA requirement understands the reason instead of thinking the project is gone or broken.
     Given I am an editor on project "Malawi HIV", which requires MFA
@@ -164,7 +163,7 @@ Feature: MFA required for project
     # mfa_required.ex:32; mfa_required.html.heex:28-46
     # mfa_required_live_test.exs:11-18 asserts the copy and that an href="/profile" element exists (its project does not require MFA; see 6.1)
 
-  @S02 @passing-old
+  @S02
   Scenario: Visiting the account hands off to enrolment
     # Value: the member has a one-click route to fix their own access without asking an admin.
     Given I am an unenrolled member on "/mfa_required"
@@ -174,7 +173,7 @@ Feature: MFA required for project
     # mfa_required.html.heex:44-46; /profile is ProfileLive.Edit in the :services session (config/config.exs:58-59)
     # untested: no test clicks the link
 
-  @S03 @passing-old
+  @S03
   Scenario: An enrolled user is not kept on this page
     # Value: someone who has already enrolled, or follows an old bookmark, isn't shown a page saying they are blocked.
     Given I have enrolled in MFA
@@ -183,7 +182,7 @@ Feature: MFA required for project
     # mfa_required.ex:16-24; mfa_required_live_test.exs:20-29 (asserts {:redirect, %{to: "/projects"}})
     # same behaviour as flow-require-project-mfa S05; see section 8
 
-  @S04 @passing-old
+  @S04
   Scenario: A blocked member can still reach their other work
     # Value: being blocked on one MFA-required project doesn't strand the member; they can open their other projects and account pages.
     Given I am an unenrolled member on "/mfa_required"

@@ -2,7 +2,6 @@
 id: channels-index
 type: view
 title: Channels
-status: not-started
 owner:
 
 trigger:
@@ -247,7 +246,7 @@ Feature: Channels
   As a project editor
   I want to create, change, switch off and remove channels, and see whether they carry traffic
 
-  @S01 @pending
+  @S01
   Scenario: Member sees the project's channels
     # Value: people can tell which proxies exist, where they send traffic and whether they are in use.
     Given project "Malawi HIV" has channel "lab-results" to "https://destination.example.com/data"
@@ -259,7 +258,7 @@ Feature: Channels
     And each row shows whether the channel is enabled
     # index.ex:301-433; channels.ex:44-58; index_test.exs:81-136
 
-  @S02 @pending
+  @S02
   Scenario: Totals show channels and requests for the project
     # Value: someone checking an integration sees at a glance whether any traffic has gone through.
     Given project "Malawi HIV" has 2 channels with 3 requests between them
@@ -268,7 +267,7 @@ Feature: Channels
     And "Total requests" shows 3
     # index.ex:260-285; channels.ex:70-81; index_test.exs:60-68 asserts the labels only
 
-  @S03 @pending
+  @S03
   Scenario: Channels from other projects are not listed
     # Value: one project's proxy configuration and traffic stay private to that project.
     Given project "Malawi HIV" has channel "mine"
@@ -278,7 +277,7 @@ Feature: Channels
     And I do not see "theirs"
     # channels.ex:44-46, :70-72; index_test.exs:138-150
 
-  @S04 @pending
+  @S04
   Scenario: Copy a channel's proxy URL
     # Value: the client system is configured with the exact URL, without retyping a UUID.
     Given project "Malawi HIV" has channel "lab-results"
@@ -287,7 +286,7 @@ Feature: Channels
     And the tooltip says "Copied!"
     # index.ex:339-362; helpers.ex:7-9, :52-72; assets/js/hooks/index.ts:738-817; helpers_test.exs:6-12
 
-  @S05 @pending
+  @S05
   Scenario: Request count opens the channel logs for that channel
     # Value: from a channel with unexpected traffic, one click shows its requests.
     Given project "Malawi HIV" has channel "lab-results" with requests
@@ -296,14 +295,14 @@ Feature: Channels
     # Handoff only; the filtered list is owned by history-channel-logs. The Last activity cell links to the same URL.
     # index.ex:365-386
 
-  @S06 @pending
+  @S06
   Scenario: View all opens the channel logs for every channel
     # Value: people can review all proxied traffic for the project from the totals.
     When I click "View all" on the total requests card
     Then I am on the channel logs for project "Malawi HIV" with no channel filter
     # Handoff only, owned by history-channel-logs. index.ex:272-277
 
-  @S07 @pending
+  @S07
   Scenario: Requests stored without payloads still count
     # Value: on a project that keeps no request data, people can still see that a channel is carrying traffic.
     Given flow "flow-zero-persistence-channel-requests" has stored 2 requests on channel "lab-results" without their payloads
@@ -311,7 +310,7 @@ Feature: Channels
     Then "lab-results" shows requests "2" and a last activity time
     # Counts and max(started_at) ignore is_wiped (channels.ex:44-81); the wiping itself is owned by the flow
 
-  @S08 @pending
+  @S08
   Scenario: Editor creates a channel
     # Value: an editor can stand up a new proxy for a partner system without an admin.
     Given I am an editor on project "Malawi HIV"
@@ -323,7 +322,7 @@ Feature: Channels
     And an audit event "created" is recorded for the channel with me as actor
     # index.ex:50-57, :139-149; form_component.ex:233-249; channels.ex:194-217; form_test.exs:27-52
 
-  @S09 @pending
+  @S09
   Scenario: Name and destination URL are required
     # Value: no channel exists that cannot be identified or has nowhere to forward to.
     Given I am on the new channel form
@@ -332,7 +331,7 @@ Feature: Channels
     And no channel is created
     # channel.ex:60; form_component.ex:246-247; form_test.exs:92-107
 
-  @S10 @pending
+  @S10
   Scenario: Destination URL must be an http or https URL with a host
     # Value: requests are only forwarded to a web address, never to another scheme or a malformed target.
     Given I am on the new channel form
@@ -340,7 +339,7 @@ Feature: Channels
     Then the form stays open with "must be either a http or https URL"
     # validators.ex:320-344; channel.ex:86. Not covered by a test.
 
-  @S11 @pending
+  @S11
   Scenario: Channel names are unique within a project
     # Value: channel names identify channels in logs and the project spec, so two can't be confused.
     Given project "Malawi HIV" has channel "existing"
@@ -348,7 +347,7 @@ Feature: Channels
     Then the form stays open with "A channel with this name already exists in this project"
     # channel.ex:83-91; form_test.exs:110-138
 
-  @S12 @pending
+  @S12
   Scenario: Editor chooses the destination credential from the project's credentials
     # Value: OpenFn authenticates to the destination with a credential the project already holds, so clients never need it.
     Given project "Malawi HIV" has credentials "My API Key" and "OAuth Token"
@@ -361,7 +360,7 @@ Feature: Channels
     Then that channel has no destination auth method
     # form_component.ex:150-179, :321-334; audit.ex:297-307; form_test.exs:193-233, :547-641
 
-  @S13 @pending
+  @S13
   Scenario: Editor attaches client credentials
     # Value: only client systems holding one of the chosen credentials can use the channel.
     Given project "Malawi HIV" has webhook auth methods "API Key Auth" and "Basic Auth"
@@ -370,7 +369,7 @@ Feature: Channels
     And the flow "flow-channel-proxy-request" applies "API Key Auth" to requests on that channel
     # form_component.ex:181-216, :305-319; form_test.exs:56-89, :236-265
 
-  @S14 @pending
+  @S14
   Scenario: Edit form opens with the channel's current settings and its proxy URL
     # Value: an editor changes a live channel knowing exactly what it does now.
     Given channel "edit-me" to "https://old.example.com" with client method "API Key Auth" and destination credential "My API Key"
@@ -380,7 +379,7 @@ Feature: Channels
     And the form shows the channel's proxy URL, which copies on click
     # index.ex:157-171, :410-415; form_component.ex:13-45, :106-122; form_test.exs:284-303, :372-418
 
-  @S15 @pending
+  @S15
   Scenario: Editor saves changes to a channel
     # Value: a moved destination or a renamed channel can be fixed in place without recreating it and changing its proxy URL.
     Given I am editing channel "edit-me"
@@ -390,7 +389,7 @@ Feature: Channels
     And an audit event "updated" is recorded
     # form_component.ex:251-275; channels.ex:224-247; form_test.exs:306-340
 
-  @S16 @pending
+  @S16
   Scenario: Editor swaps or clears the destination credential
     # Value: a rotated or revoked destination secret can be replaced, and the change is traceable.
     Given channel "c" uses destination credential "Key A"
@@ -402,7 +401,7 @@ Feature: Channels
     And an audit event "auth_method_removed" is recorded
     # form_component.ex:321-334; audit.ex:266-330; form_test.exs:644-768
 
-  @S17 @pending
+  @S17
   Scenario: Editor adds and removes client credentials in one save
     # Value: client access can be rotated in a single step without a window where the channel is open.
     Given channel "c" has client method "Old" and destination credential "Key A"
@@ -412,7 +411,7 @@ Feature: Channels
     And audit events "auth_method_removed" and "auth_method_added" are recorded
     # form_component.ex:305-319; audit.ex:246-256; form_test.exs:420-495
 
-  @S18 @pending
+  @S18
   Scenario: Another project's credential cannot be attached as the destination credential
     # Value: a channel can only use credentials from its own project.
     Given another project has credential "other-project-cred"
@@ -421,7 +420,7 @@ Feature: Channels
     And no channel is created, or the existing destination credential is unchanged
     # channels.ex:249-331; form_test.exs:772-853. The form shows no message (6.1).
 
-  @S19 @pending
+  @S19
   Scenario: Another project's webhook auth method cannot be attached as a client credential
     # Value: a channel can only use auth methods from its own project.
     Given another project has webhook auth method "other-project-method"
@@ -430,7 +429,7 @@ Feature: Channels
     And the channel's existing client methods are unchanged
     # channels.ex:278-292; channel_auth_method.ex:151-153; form_test.exs:857-941
 
-  @S20 @pending
+  @S20
   Scenario: Another project's channel cannot be opened for editing
     # Value: an editor in one project cannot read or change another project's channel config through its URL.
     Given a channel belongs to another project
@@ -438,7 +437,7 @@ Feature: Channels
     Then I am sent to my project's channels list with "Channel not found"
     # index.ex:159-176; channels.ex:183-187; form_test.exs:498-542
 
-  @S21 @pending
+  @S21
   Scenario: Editor switches a channel off and on
     # Value: a misbehaving integration can be stopped at once without losing its configuration.
     Given channel "toggle-me" is enabled
@@ -451,7 +450,7 @@ Feature: Channels
     Then "toggle-me" is enabled
     # index.ex:184-207, :319-325, :388-398; channel_proxy_plug.ex:318-323; index_test.exs:153-210
 
-  @S22 @pending
+  @S22
   Scenario: Editor deletes a channel after confirming
     # Value: channels no longer needed can be removed so they stop being a way in, with a record of who removed them.
     Given channel "delete-me" exists
@@ -463,7 +462,7 @@ Feature: Channels
     And an audit event "deleted" is recorded with me as actor
     # index.ex:209-230, :416-425; channels.ex:343-358; index_test.exs:212-231, :253-294. History deletion: see 6.1.
 
-  @S23 @pending
+  @S23
   Scenario: Viewer sees channels read-only
     # Value: read-only members can check channel status without being able to break an integration.
     Given I am a viewer on project "Malawi HIV" with channel "viewer-channel"
@@ -473,7 +472,7 @@ Feature: Channels
     And the enabled column shows "Enabled" or "Disabled" as text, not a toggle
     # index.ex:50-66, :389-425; index_test.exs:37-56, :233-251
 
-  @S24 @pending
+  @S24
   Scenario: Viewer opening the new or edit URL is sent back to the list
     # Value: write forms are not reachable by URL for people who cannot save them.
     Given I am a viewer on project "Malawi HIV"
@@ -483,7 +482,7 @@ Feature: Channels
     Then I am on the channels list with "You are not authorized to edit channels."
     # index.ex:150-154, :177-181; form_test.exs:141-149 (new only)
 
-  @S25 @pending
+  @S25
   Scenario: A toggle or delete sent outside the page by a viewer is refused
     # Value: read-only members cannot change channels even by sending events the page didn't offer them.
     Given I am a viewer on project "Malawi HIV" with channel "c"
@@ -492,7 +491,7 @@ Feature: Channels
     And "c" is unchanged
     # index.ex:190, :211, :232-246. Not covered by a test.
 
-  @S26 @pending
+  @S26
   Scenario: A toggle or delete sent outside the page for another project's channel is refused
     # Value: an editor in one project cannot switch off or delete another project's proxy.
     Given I am an editor on project "Malawi HIV"
@@ -502,7 +501,7 @@ Feature: Channels
     And "theirs" is unchanged
     # index.ex:191, :212, :248-253; channels.ex:183-187. Not covered by a test.
 
-  @S27 @pending
+  @S27
   Scenario: Destination and client "Add new" links open the right settings tab
     # Value: someone setting up a channel can find where the missing credential or auth method is created without losing the form.
     Given I am on the new channel form
@@ -510,7 +509,7 @@ Feature: Channels
     And the client credentials "Add new" link opens project settings at #webhook_security in a new tab
     # Handoff only; tab selection is owned by shared-project-settings-tab-chrome. form_component.ex:155-161, :186-192; form_test.exs:268-279
 
-  @S28 @pending @variant:experimental-features
+  @S28 @variant:experimental-features
   Scenario: Channels appear in the project menu for people with experimental features on
     # Value: people who opted into preview features can find channels from any project page.
     Given I have experimental features on

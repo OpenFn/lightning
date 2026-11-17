@@ -2,7 +2,6 @@
 id: shared-flash-messages
 type: shared
 title: Flash messages
-status: not-started
 owner:
 
 trigger:
@@ -196,7 +195,7 @@ Feature: Flash messages
   As anyone using Lightning
   I want short, consistent messages after my actions and when a page is not available to me
 
-  @S01 @pending
+  @S01
   Scenario: An info flash appears as a toast and hides itself
     # Value: people get confirmation that an action worked without having to clear it themselves.
     Given I am on a page in the live layout
@@ -205,7 +204,7 @@ Feature: Flash messages
     And after about 5 seconds the toast is gone
     # common.ex:558-592 (info branch, check-circle icon); live.html.heex:92; index.ts:532-539
 
-  @S02 @pending
+  @S02
   Scenario: An error flash is styled as an error
     # Value: people can tell at a glance that something failed rather than succeeded.
     Given I am on a page in the live layout
@@ -215,7 +214,7 @@ Feature: Flash messages
     # common.ex:517-555 (error branch, exclamation-circle icon, role="alert"); live.html.heex:93
     # work_order_live_test.exs:1950 (asserts [data-flash-kind='error'] with the text)
 
-  @S03 @pending
+  @S03
   Scenario: Pointing at a toast keeps it on screen
     # Value: someone still reading a message does not lose it mid-sentence.
     Given I see an info toast
@@ -223,7 +222,7 @@ Feature: Flash messages
     Then it is still visible 4 seconds later
     # index.ts:540-544 (mouseover clears and restarts the 5 second timer)
 
-  @S04 @pending
+  @S04
   Scenario: Clicking a toast dismisses it
     # Value: a toast covering the bottom of the page can be cleared at once, and it does not come back on the next render.
     Given I see an info toast
@@ -232,7 +231,7 @@ Feature: Flash messages
     And it does not reappear when the page next updates
     # common.ex:571-575 (JS.push "lv:clear-flash" with phx-value-key="info", :576); project_live_test.exs:2069-2071
 
-  @S05 @pending
+  @S05
   Scenario: A flash carried in by a redirect shows on the page I land on
     # Value: the outcome of an action that moves me to another page (a deletion, a transfer, a refusal) is still reported.
     Given an action put the info flash "Credential transfer confirmed successfully." and redirected me to "/projects"
@@ -240,7 +239,7 @@ Feature: Flash messages
     Then I see an info toast reading "Credential transfer confirmed successfully."
     # router.ex:22-23 (fetch_live_flash); live.html.heex:92-93; handoff from flow-credential-transfer (credential_transfer_controller.ex:9-13)
 
-  @S06 @pending
+  @S06
   Scenario: A Not Found or No Access flash replaces the page with a card
     # Value: someone who followed a link they can't use is told so plainly instead of seeing an empty or unrelated page, and can step back.
     Given I was redirected to "/projects" with the nav flash "not found"
@@ -253,7 +252,7 @@ Feature: Flash messages
     # live.html.heex:94-96 (card wraps @inner_content only; sidebar is outside)
     # "No Access" with and without Back is covered by shared-admin-space S02 and S04; the non-member case by shared-project-scope S03
 
-  @S07 @pending
+  @S07
   Scenario: Admin pages show a toast that stays until clicked
     # Value: an admin can clear a confirmation that sits over the bottom of a table.
     Given I am a superuser on "/settings/projects"
@@ -263,7 +262,7 @@ Feature: Flash messages
     Then it is gone
     # settings.html.heex:99-100; live_helpers.ex:18-44 (phx-click lv:clear-flash, phx-value-key info :34-36); project_live/index.ex:105
 
-  @S08 @pending
+  @S08
   Scenario: Sign-in and account forms show the flash inside the form
     # Value: someone retrying a password still sees why the last attempt failed, next to the fields they are retyping.
     Given I am on "/users/log_in"

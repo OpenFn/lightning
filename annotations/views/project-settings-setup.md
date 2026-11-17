@@ -2,7 +2,6 @@
 id: project-settings-setup
 type: view
 title: Project settings › Setup
-status: not-started
 owner:
 
 trigger:
@@ -261,7 +260,7 @@ Feature: Project setup
   As a member of a project
   I want to edit its identity, set its concurrency, export it and delete it
 
-  @S01 @pending
+  @S01
   Scenario: Admin renames the project and edits its description
     # Value: a project's name and description can be kept accurate without a superuser.
     Given I am an admin on project "project-1"
@@ -271,7 +270,7 @@ Feature: Project setup
     And the project is named "somename" with description "some description"
     # settings.html.heex:107-167, settings.ex:351-363, :771-783; project_live_test.exs:1775-1804
 
-  @S02 @pending
+  @S02
   Scenario: The name is turned into a URL-safe slug
     # Value: project names stay usable in URLs, exports and the CLI whatever people type.
     Given I am an admin on project "project-1"
@@ -282,7 +281,7 @@ Feature: Project setup
     # settings.ex:299-323, settings.html.heex:122-128, pills.ex:98-105, helpers.ex:236-238
     # project_live_test.exs:1834-1855 (asserts the saved name; the preview text is not asserted)
 
-  @S03 @pending
+  @S03
   Scenario: A name with no usable characters is refused
     # Value: a project can't be saved without a name.
     Given I am an admin on project "project-1"
@@ -291,7 +290,7 @@ Feature: Project setup
     And the project is still named "project-1"
     # settings.ex:776-778, project.ex:155-157, helpers.ex:182-199; project_live_test.exs:1857-1882
 
-  @S04 @pending
+  @S04
   Scenario: A description over 240 characters is flagged before saving
     # Value: people learn the limit while typing instead of losing their text on save.
     Given I am an admin on project "project-1"
@@ -300,7 +299,7 @@ Feature: Project setup
     And the identity "Save" button is disabled
     # project.ex:107, settings.html.heex:162; project_live_test.exs:1742-1773
 
-  @S05 @pending
+  @S05
   Scenario: The project environment cannot be changed here
     # Value: the environment that decides which credential values runs use can't be changed by accident.
     Given I am an admin on project "project-1" with environment "staging"
@@ -310,7 +309,7 @@ Feature: Project setup
     And the project environment is still "staging"
     # settings.html.heex:133-143, settings.ex:345, :355-358; project_live_test.exs:1806-1832
 
-  @S06 @pending
+  @S06
   Scenario: A save with extra fields ignores them
     # Value: MFA, support access, deletion and parentage can only change through their own gated controls.
     Given I am an admin on project "project-1"
@@ -319,7 +318,7 @@ Feature: Project setup
     And it does not require MFA, does not allow support access, is not scheduled for deletion and has no parent
     # settings.ex:341-358; project_live_test.exs:1884-1920
 
-  @S07 @pending
+  @S07
   Scenario Outline: Members below admin see the identity read-only
     # Value: only people trusted with project administration can rename it or change how it runs.
     Given I am a <role> on project "project-1"
@@ -336,7 +335,7 @@ Feature: Project setup
       | viewer |
       | editor |
 
-  @S08 @pending
+  @S08
   Scenario: A support user without a membership cannot edit project details
     # Value: support staff can look but not rename or reconfigure a project.
     Given I am a support user and project "project-1" allows support access
@@ -347,7 +346,7 @@ Feature: Project setup
     Then I see "You are not authorized to perform this action."
     # project_users.ex:160-161; project_live_test.exs:1977-2009
 
-  @S09 @pending
+  @S09
   Scenario: Admin disables parallel execution
     # Value: a project whose workflows must not overlap can be limited to one run at a time.
     Given I am an admin on project "project-1" with parallel execution allowed
@@ -359,7 +358,7 @@ Feature: Project setup
     # concurrency_input_component.ex:8-25, new_inputs.ex:806-861, settings.html.heex:191-240
     # project_live_test.exs:1922-1944 (asserts the saved value; the warning is not asserted)
 
-  @S10 @pending
+  @S10
   Scenario: Admin re-enables parallel execution
     # Value: the one-at-a-time limit can be lifted once it is no longer needed.
     Given I am an admin on project "project-1" with concurrency 1
@@ -369,7 +368,7 @@ Feature: Project setup
     And the project has no concurrency limit
     # new_inputs.ex:815-822 (toggles between "" and "1"), settings.ex:351-363
 
-  @S11 @pending
+  @S11
   Scenario: Any member can export the project
     # Value: anyone on the project can take a copy of it as code, even without edit rights.
     Given I am a viewer on project "project-1"
@@ -379,7 +378,7 @@ Feature: Project setup
     And clicking it starts the flow "flow-export-project-yaml"
     # settings.html.heex:252-266; project_live_test.exs:197-211
 
-  @S12 @pending
+  @S12
   Scenario: Owner schedules the project for deletion
     # Value: an owner can retire a project themselves, with a grace period before data is purged.
     Given I am the owner of project "project-1"
@@ -397,7 +396,7 @@ Feature: Project setup
     # settings.html.heex:267-294, :304-311, project_deletion_modal.ex:58-88, :95-106, :131-180, projects.ex:1639-1690
     # project_live_test.exs:168-195
 
-  @S13 @pending
+  @S13
   Scenario: A mistyped name does not delete the project
     # Value: a project can't be deleted by a slip of the keyboard.
     Given I am the owner of project "project-1" on its delete modal
@@ -406,7 +405,7 @@ Feature: Project setup
     And the project is not scheduled for deletion
     # project_deletion_modal.ex:58-65, :85-87, project.ex:276-280; project_test.exs:165 (changeset only)
 
-  @S14 @pending
+  @S14
   Scenario: Cancelling the delete modal returns to settings
     # Value: backing out of deletion is one click and leaves the project untouched.
     Given I am the owner of project "project-1" on its delete modal
@@ -415,7 +414,7 @@ Feature: Project setup
     And the project is not scheduled for deletion
     # project_deletion_modal.ex:90-93, :171-178, settings.html.heex:310
 
-  @S15 @pending
+  @S15
   Scenario Outline: Only owners can reach project deletion
     # Value: admins and editors can't shut down a project they don't own.
     Given I am a <role> on project "project-1"
@@ -431,7 +430,7 @@ Feature: Project setup
       | editor |
       | viewer |
 
-  @S16 @pending
+  @S16
   Scenario: An admin cannot hard-delete a root project through the sandbox event
     # Value: no request can skip the owner-only, grace-period deletion and wipe a project outright.
     Given I am an admin on root project "root-project" with a workflow
@@ -440,7 +439,7 @@ Feature: Project setup
     And the project and its workflow still exist and it is not scheduled for deletion
     # settings.ex:476-505, sandboxes.ex:814-820; sandbox_settings_test.exs:60-89
 
-  @S17 @pending
+  @S17
   Scenario: A sandbox's setup tab identifies it within its parent
     # Value: people working in a sandbox can see which project it belongs to and that changes here stay local.
     Given I am the owner of sandbox "sandbox-test" under "parent-project"
@@ -452,7 +451,7 @@ Feature: Project setup
     # settings.html.heex:68-104, :271-291, sandbox_settings_banner.ex:30-38
     # sandbox_settings_test.exs:45-58, :116-155
 
-  @S18 @pending
+  @S18
   Scenario: Sandbox owner deletes the sandbox
     # Value: a finished experiment can be removed and the owner lands back in the workspace it came from.
     Given I am the owner of sandbox "sandbox-test" under "parent-project"
@@ -463,7 +462,7 @@ Feature: Project setup
     And the sandbox no longer exists
     # settings.ex:269-276, :476-491, settings.html.heex:296-303, project_hook.ex:22-45; sandbox_settings_test.exs:158-172
 
-  @S19 @pending
+  @S19
   Scenario: A mistyped sandbox name does not delete it
     # Value: a sandbox can't be deleted by a slip of the keyboard.
     Given I am the owner of sandbox "sandbox-test" on its delete modal
@@ -475,7 +474,7 @@ Feature: Project setup
     And the sandbox still exists
     # settings.ex:283-296, :463-474, :520-524, sandbox_live/components.ex:218-225; sandbox_settings_test.exs:174-201
 
-  @S20 @pending
+  @S20
   Scenario: Closing the sandbox delete modal returns to settings
     # Value: backing out of sandbox deletion is one click.
     Given I am the owner of sandbox "sandbox-test" on its delete modal
@@ -483,7 +482,7 @@ Feature: Project setup
     Then I am on "/projects/<sandbox_id>/settings"
     # settings.ex:457-461, sandbox_live/components.ex:150-170; sandbox_settings_test.exs:203-213
 
-  @S21 @pending
+  @S21
   Scenario Outline: A failed sandbox delete says so and keeps the sandbox
     # Value: people are never left thinking a sandbox is gone when it isn't.
     Given I am the owner of sandbox "sandbox-test" on its delete modal

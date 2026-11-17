@@ -2,7 +2,6 @@
 id: auth-confirmation-required
 type: view
 title: Confirm your email (lockout page)
-status: not-started
 owner:
 
 trigger:
@@ -219,7 +218,7 @@ Feature: Confirm your email (lockout page)
   As a user whose account is blocked pending email confirmation
   I want to see why, get a new link, or fix my address
 
-  @S01 @pending @variant:require-email-verification
+  @S01 @variant:require-email-verification
   Scenario: A locked-out user sees why and every way out
     # Value: a blocked user understands what is wrong and can recover without contacting an administrator.
     Given my account "amara@example.org" was created 50 hours ago and is unconfirmed
@@ -233,7 +232,7 @@ Feature: Confirm your email (lockout page)
     # user_confirmation_required_live.ex:24-36; .html.heex:11-26, :65-72, :75-123, :125-129
     # user_confirmation_required_live_test.exs:35-49; reachability is shared-authenticated-session S05
 
-  @S02 @pending @variant:require-email-verification
+  @S02 @variant:require-email-verification
   Scenario: The page shows no project data, chrome or socket credential
     # Value: a locked-out account learns nothing about the projects it belongs to and holds nothing that opens a channel.
     Given my account was created 50 hours ago and is unconfirmed
@@ -246,7 +245,7 @@ Feature: Confirm your email (lockout page)
     # user_auth.ex:378-392; layouts/root.html.heex:20
     # user_confirmation_required_live_test.exs:51-63; user_auth_test.exs:633-656 (no user_token for this path)
 
-  @S03 @pending @variant:require-email-verification
+  @S03 @variant:require-email-verification
   Scenario: Asking for a new confirmation link
     # Value: a user whose first link expired or never arrived can get another one from the only page they can reach.
     Given my account "amara@example.org" was created 50 hours ago and is unconfirmed
@@ -259,7 +258,7 @@ Feature: Confirm your email (lockout page)
     # user_confirmation_required_live.ex:42-56; .html.heex:28-32; accounts.ex:1197-1206; user_notifier.ex:121-133
     # user_confirmation_required_live_test.exs:65-87
 
-  @S04 @pending @variant:require-email-verification
+  @S04 @variant:require-email-verification
   Scenario: A fourth resend within 15 minutes sends nothing and says why
     # Value: the user is told to check their mail instead of being told a link was sent.
     Given my account was created 50 hours ago and is unconfirmed
@@ -270,7 +269,7 @@ Feature: Confirm your email (lockout page)
     # user_confirmation_required_live.ex:46-48; .html.heex:34-42; confirmation_lockout.ex:11-12, :48-50
     # accounts.ex:758-782, :1197-1206; user_confirmation_required_live_test.exs:89-110
 
-  @S05 @pending @variant:require-email-verification
+  @S05 @variant:require-email-verification
   Scenario: Resends from the bookmarked resend link count against the same allowance
     # Value: both routes share one allowance of three per 15 minutes.
     Given my account was created 50 hours ago and is unconfirmed
@@ -282,7 +281,7 @@ Feature: Confirm your email (lockout page)
     # accounts.ex:1197-1206 (both routes call remind_account_confirmation/1); confirmation_lockout.ex:28-30
     # user_confirmation_required_live_test.exs:112-138
 
-  @S06 @pending @variant:require-email-verification
+  @S06 @variant:require-email-verification
   Scenario: A failed send tells me to try again
     # Value: the user doesn't wait for an email that was never sent, and knows who to ask if it keeps failing.
     Given my account was created 50 hours ago and is unconfirmed
@@ -292,7 +291,7 @@ Feature: Confirm your email (lockout page)
     And I do not see "We have sent a new confirmation link"
     # user_confirmation_required_live.ex:58-66; .html.heex:54-63; user_notifier.ex:57-59; no test
 
-  @S07 @pending @variant:require-email-verification
+  @S07 @variant:require-email-verification
   Scenario: Correcting a mistyped address sends the link to the new address
     # Value: a user who mistyped their address at sign-up is not locked out for good.
     Given my account "amara@exmaple.org" was created 50 hours ago and is unconfirmed
@@ -306,7 +305,7 @@ Feature: Confirm your email (lockout page)
     # user_confirmation_required_live.ex:79-90; .html.heex:44-52, :75-123; accounts.ex:740-756, :795-801
     # user_confirmation_required_live_test.exs:160-185 (both emails, in order; password not in the html), :187-216
 
-  @S08 @pending @variant:require-email-verification
+  @S08 @variant:require-email-verification
   Scenario: A correction with the wrong password is refused
     # Value: the address on the account changes only with the current password.
     Given my account was created 50 hours ago and is unconfirmed
@@ -317,7 +316,7 @@ Feature: Confirm your email (lockout page)
     # user_confirmation_required_live.ex:84, :92-96; accounts.ex:849-858
     # user_confirmation_required_live_test.exs:144-158; the error copy is in 6.1
 
-  @S09 @pending @variant:require-email-verification
+  @S09 @variant:require-email-verification
   Scenario Outline: An address that can't be used is refused before anything is sent
     # Value: the correction can only go to a new, well-formed address no other account owns, so no confirmation mail reaches another account's owner.
     Given my account "amara@exmaple.org" was created 50 hours ago and is unconfirmed
@@ -335,7 +334,7 @@ Feature: Confirm your email (lockout page)
     # user_confirmation_required_live.ex:70-77; .html.heex:100-106, :118; accounts.ex:827-847
     # user.ex:241-256; validators.ex:20-28; errors.po:4-5, :37-38, :70-71; no test on this page
 
-  @S10 @pending @variant:require-email-verification
+  @S10 @variant:require-email-verification
   Scenario: A fourth correction within 15 minutes sends nothing and keeps what I typed
     # Value: after three corrections in 15 minutes the user is told to wait and keeps what they typed.
     Given my account was created 50 hours ago and is unconfirmed
@@ -348,7 +347,7 @@ Feature: Confirm your email (lockout page)
     # user_confirmation_required_live.ex:98-103; .html.heex:88-98; accounts.ex:758-782, :795-801
     # user_confirmation_required_live_test.exs:218-249; also asserted by flow-change-email-confirm S08 (see 8)
 
-  @S11 @pending @variant:require-email-verification
+  @S11 @variant:require-email-verification
   Scenario: Spending the resend allowance does not block a correction
     # Value: a user who resent to a mistyped address until throttled can still fix the address.
     Given my account was created 50 hours ago and is unconfirmed
@@ -358,7 +357,7 @@ Feature: Confirm your email (lockout page)
     And I do not see "You've asked us to change this address a few times recently."
     # accounts.ex:761 (separate buckets), :795-801, :1197-1206; user_confirmation_required_live_test.exs:251-280
 
-  @S12 @pending @variant:require-email-verification
+  @S12 @variant:require-email-verification
   Scenario Outline: An account that is not locked out is sent to its projects
     # Value: a user who can use OpenFn is never told their account is blocked.
     Given my account was created <age> and <state>
@@ -372,7 +371,7 @@ Feature: Confirm your email (lockout page)
     # user_confirmation_required_live.ex:24, :37-39; accounts.ex:1360-1368
     # user_confirmation_required_live_test.exs:283-298
 
-  @S13 @pending @variant:default
+  @S13 @variant:default
   Scenario: Nobody is held here when verification is not required
     # Value: instances that don't require verified addresses never block anyone, however old their unconfirmed account.
     Given email verification is not required
@@ -382,7 +381,7 @@ Feature: Confirm your email (lockout page)
     # accounts.ex:1366; user_confirmation_required_live.ex:24, :37-39
     # the plug half is user_auth_test.exs:660-689; no test mounts this page with the flag off
 
-  @S14 @pending @variant:require-email-verification
+  @S14 @variant:require-email-verification
   Scenario: A locked-out user can log out
     # Value: someone signed in to the wrong account, or on a shared computer, can leave without confirming.
     Given my account was created 50 hours ago and is unconfirmed

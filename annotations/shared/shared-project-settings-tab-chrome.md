@@ -2,7 +2,6 @@
 id: shared-project-settings-tab-chrome
 type: shared
 title: Project settings tab chrome
-status: not-started
 owner:
 
 trigger:
@@ -206,7 +205,7 @@ Feature: Project settings tab chrome
   As anyone on a project
   I want every settings tab to open the same way and tell me where I stand
 
-  @S01 @pending
+  @S01
   Scenario: Project settings opens on the Setup tab
     # Value: someone arriving from the sidebar lands on the project's basic details, not a blank page.
     Given I am an editor on project "Malawi HIV"
@@ -216,7 +215,7 @@ Feature: Project settings tab chrome
     And no other tab's panel is visible
     # settings.html.heex:28, tabbed.ex:71-72, :145-159; TabbedContainer.ts:13-14, :28, :46-62
 
-  @S02 @pending
+  @S02
   Scenario: A link to a tab opens that tab
     # Value: alerts, emails, flashes and other pages that point at a setting put the user on it, not on Setup.
     Given I am an admin on project "Malawi HIV"
@@ -226,7 +225,7 @@ Feature: Project settings tab chrome
     And the "Setup" panel is not visible
     # TabbedContainer.ts:28, :34-62; test/lightning_web/live/project_live_test.exs:3221-3229 loads this URL
 
-  @S03 @pending
+  @S03
   Scenario: Choosing a tab puts it in the address bar
     # Value: a user can bookmark or share the exact tab, and a reload keeps them on it.
     Given I am on project "Malawi HIV" settings on the "Setup" tab
@@ -237,7 +236,7 @@ Feature: Project settings tab chrome
     Then the "Collaboration" tab is still selected
     # tabbed.ex:125-133 (href "#<hash>"), TabbedContainer.ts:21-28
 
-  @S04 @pending
+  @S04
   Scenario: The open tab survives a server update
     # Value: saving or validating a form on one tab doesn't throw the user back to Setup mid-task.
     Given I am an admin on project "Malawi HIV" settings on the "Data Storage" tab
@@ -246,7 +245,7 @@ Feature: Project settings tab chrome
     And the "Setup" panel is still hidden
     # tabbed.ex:120, :133, :156 (lv-keep-aria, lv-keep-class); app.js:80-85, :101-107; TabbedContainer.ts:30-32
 
-  @S05 @pending
+  @S05
   Scenario: Read-only members still see every tab
     # Value: viewers can check how a project is set up (who is on it, which credentials and limits it has) without asking an admin.
     Given I am a viewer on project "Malawi HIV"
@@ -255,7 +254,7 @@ Feature: Project settings tab chrome
     And none of them is disabled
     # settings.html.heex:30-65; no :tab passes disabled (tabbed.ex:108-123)
 
-  @S06 @pending
+  @S06
   Scenario Outline: Members who can't change a tab are told why
     # Value: someone facing disabled controls learns it is their role, not a broken page, and what they can still do.
     Given I am a <role> on project "Malawi HIV"
@@ -276,7 +275,7 @@ Feature: Project settings tab chrome
       | editor | Sync             | version control configuration but you can initiate a sync.                 |
       | editor | Data Storage     | data storage settings.                                                     |
 
-  @S07 @pending
+  @S07
   Scenario: Members who can change a tab see no notice
     # Value: people with the right to act aren't told they can't.
     Given I am an admin on project "Malawi HIV"
@@ -284,7 +283,7 @@ Feature: Project settings tab chrome
     Then I do not see "Role based permissions" on any tab
     # layout_components.ex:590; admin passes every flag in section 3
 
-  @S08 @pending @variant:sandbox
+  @S08 @variant:sandbox
   Scenario Outline: Sandbox tabs say whether changes reach the parent
     # Value: someone experimenting in a sandbox knows before they change a setting whether merging will carry it to the live project.
     Given I am an owner of sandbox "dev" of project "Malawi HIV"
@@ -303,7 +302,7 @@ Feature: Project settings tab chrome
       | Credentials     | Changes you make here will sync to the parent project on merge.                                        |
       | Collections     | Changes you make here will sync to the parent project on merge.                                        |
 
-  @S09 @pending @variant:sandbox
+  @S09 @variant:sandbox
   Scenario: Inherited settings point to the parent that owns them
     # Value: a sandbox user who needs a security setting changed is sent to the project where it can be changed.
     Given I am an owner of sandbox "dev" of project "Malawi HIV"
@@ -312,7 +311,7 @@ Feature: Project settings tab chrome
     And "Malawi HIV" links to "/projects/<parent_id>/settings"
     # sandbox_settings_banner.ex:50-71; settings.html.heex:675-680; sandbox_settings_test.exs:129-136
 
-  @S10 @pending
+  @S10
   Scenario: A project that isn't a sandbox shows no sandbox banner
     # Value: people in the live project aren't told their changes stay local or merge somewhere.
     Given I am an owner of project "Malawi HIV", which has no parent

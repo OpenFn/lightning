@@ -2,7 +2,6 @@
 id: sandboxes-index
 type: view
 title: Sandboxes
-status: not-started
 owner:
 
 trigger:
@@ -270,7 +269,7 @@ Feature: Sandboxes
   As someone building workflows
   I want to create, manage and merge sandboxes of my project
 
-  @S01 @passing-new
+  @S01
   Scenario: Members see their workspace with the current project marked
     # Value: people know which sandboxes exist and which one they are in before they act.
     Given I am an owner on project "Malawi HIV" with sandboxes "sb-1" and "sb-2"
@@ -279,7 +278,7 @@ Feature: Sandboxes
     And I see cards for "sb-1" and "sb-2"
     # index.ex:662-709; components.ex:77-123, :608-648; index_test.exs:77-90, :104-113, :152-164
 
-  @S02 @passing-new
+  @S02
   Scenario: Environment badges tell a sandbox from the live project
     # Value: nobody mistakes a sandbox for production, or production for a sandbox.
     Given project "Malawi HIV" has env "production"
@@ -290,7 +289,7 @@ Feature: Sandboxes
     And the "sb-2" card shows no environment badge
     # components.ex:625-636, :718-722, :957-961; index_test.exs:115-150
 
-  @S03 @passing-new
+  @S03
   Scenario: A sandbox I have no membership on is not listed
     # Value: each sandbox's membership decides who sees it, even inside a project someone owns.
     Given I am an owner on project "Malawi HIV"
@@ -300,7 +299,7 @@ Feature: Sandboxes
     And I do not see "without-me"
     # index.ex:671-675; projects.ex:1438-1441; index_test.exs:830-888
 
-  @S04 @passing-new
+  @S04
   Scenario: A sandbox-only member does not see the projects above them
     # Value: inviting someone to a sandbox does not reveal the names of projects they were not invited to.
     Given project "Hidden root" has sandbox "team-space", which has sandbox "leaf"
@@ -310,7 +309,7 @@ Feature: Sandboxes
     And I do not see "Hidden root"
     # hooks.ex:104-105; projects.ex:1456-1464; index_test.exs:967-995
 
-  @S05 @passing-new
+  @S05
   Scenario: An empty workspace invites me to create a sandbox
     # Value: new users learn what to do next instead of facing a blank page.
     Given I am an editor on project "Malawi HIV", which has no sandboxes
@@ -319,7 +318,7 @@ Feature: Sandboxes
     And I see a "Create your first sandbox" link
     # components.ex:98-116; index_test.exs:77-102
 
-  @S06 @passing-new
+  @S06
   Scenario: Clicking a sandbox opens it
     # Value: one click takes people into the sandbox they want to work in.
     Given project "Malawi HIV" has sandbox "sb-1" that I belong to
@@ -327,7 +326,7 @@ Feature: Sandboxes
     Then I am on the workflows page of "sb-1"
     # components.ex:698-704; root card components.ex:612; no test
 
-  @S07 @passing-new
+  @S07
   Scenario: Editor creates a sandbox and lands in it
     # Value: people get a private copy to experiment in without asking an admin.
     Given I am an editor on project "Malawi HIV"
@@ -340,7 +339,7 @@ Feature: Sandboxes
     And sandbox "test-sandbox" has env "dev" and the colour I picked
     # components.ex:55-69; form_component.ex:58-80, :221-242, :314-321; index_test.exs:296-307, :3393-3420; form_component_test.exs:54-79
 
-  @S08 @passing-new
+  @S08
   Scenario: A new sandbox brings the team along, with the creator in charge
     # Value: collaborators can keep working in the sandbox straight away, and the person who made it can manage it.
     Given "owner@example.org" is the owner, I am an admin and "ed@example.org" is an editor on project "Malawi HIV"
@@ -348,7 +347,7 @@ Feature: Sandboxes
     Then on "admin-test-sandbox" I am an owner, "owner@example.org" is an admin and "ed@example.org" is an editor
     # sandboxes.ex:1065-1084; index_test.exs:3466-3606
 
-  @S09 @passing-new
+  @S09
   Scenario: A new sandbox keeps the parent's support access setting
     # Value: a support consent decision (or refusal) on a project also holds for its copies.
     Given project "Malawi HIV" allows support access
@@ -356,7 +355,7 @@ Feature: Sandboxes
     Then "test-sandbox" allows support access
     # sandboxes.ex:104-107, :1076-1077; index_test.exs:3393-3465
 
-  @S10 @passing-new
+  @S10
   Scenario: A new sandbox copies workflows with their triggers off
     # Value: experimenting in a sandbox never fires production webhooks or schedules twice.
     Given project "Malawi HIV" has workflow "Intake" with an enabled cron trigger
@@ -365,7 +364,7 @@ Feature: Sandboxes
     And its trigger is disabled
     # sandboxes.ex:1036, :1265-1267; read from code, no LiveView test asserts it
 
-  @S11 @passing-new
+  @S11
   Scenario: A sandbox name already used under the same parent is refused
     # Value: sibling sandboxes stay distinguishable in lists, URLs and merges.
     Given project "Malawi HIV" has sandbox "test-sandbox"
@@ -373,7 +372,7 @@ Feature: Sandboxes
     Then I see "Sandbox name already exists"
     # form_component.ex:288-312; projects.ex:2225-2240; form_component_test.exs:81-107, :162-203
 
-  @S12 @passing-new
+  @S12
   Scenario: A blank name cannot be submitted
     # Value: every sandbox has a usable name.
     When I start creating a sandbox and clear the name
@@ -381,7 +380,7 @@ Feature: Sandboxes
     And the "Create sandbox" button is disabled
     # form_component.ex:249-256; project.ex:155-157; form_component_test.exs:109-128
 
-  @S13 @passing-new
+  @S13
   Scenario: A viewer cannot create a sandbox
     # Value: only people trusted to change workflows can spin up copies of the project and its credentials.
     Given I am a viewer on project "Malawi HIV"
@@ -392,7 +391,7 @@ Feature: Sandboxes
     And I see "You are not authorized to create sandboxes in this workspace"
     # index.ex:81-92, :1207-1214; index_test.exs:796-812
 
-  @S14 @passing-new @variant:usage-limited
+  @S14 @variant:usage-limited
   Scenario: The usage limiter's sandbox limit blocks creating one
     # Value: people see why they can't create a sandbox before they fill in the form.
     Given the usage limiter refuses a new sandbox on "Malawi HIV" with "Sandbox limit reached"
@@ -402,7 +401,7 @@ Feature: Sandboxes
     Then I am on the sandboxes page of "Malawi HIV" with the error "Sandbox limit reached"
     # index.ex:94-97, :1219-1220; form_component.ex:75, :108-112; index_test.exs:206-261; form_component_test.exs:130-160
 
-  @S15 @passing-new @variant:nesting-capped
+  @S15 @variant:nesting-capped
   Scenario: The create button is off at the nesting limit
     # Value: workspaces stay shallow enough to understand and merge.
     Given the maximum sandbox nesting depth is 1
@@ -412,7 +411,7 @@ Feature: Sandboxes
     And I see "Maximum sandbox nesting depth reached"
     # index.ex:685-687, :1216-1217; index_test.exs:166-204
 
-  @S16 @passing-new
+  @S16
   Scenario: Admin renames a sandbox
     # Value: sandboxes can be renamed as their purpose changes, without recreating them.
     Given I am an admin on sandbox "sb-1" of project "Malawi HIV"
@@ -423,7 +422,7 @@ Feature: Sandboxes
     And I see "Sandbox updated"
     # components.ex:821-849; form_component.ex:116-136, :277-282; index_test.exs:309-321; form_component_test.exs:316-340, :362-381
 
-  @S17 @passing-new
+  @S17
   Scenario: Renaming to a sibling's name is refused, keeping the same name is fine
     # Value: a rename can't make two sandboxes indistinguishable.
     Given project "Malawi HIV" has sandboxes "sb-1" and "sb-2"
@@ -433,7 +432,7 @@ Feature: Sandboxes
     Then I see no name error
     # form_component.ex:295-312; form_component_test.exs:384-431
 
-  @S18 @passing-new
+  @S18
   Scenario: Non-admins see the sandbox actions disabled
     # Value: people can tell what they are not allowed to do instead of clicking and failing.
     Given I am a viewer on project "Malawi HIV" and on its sandbox "test-sandbox"
@@ -442,7 +441,7 @@ Feature: Sandboxes
     And their tooltips say "You are not authorized to merge this sandbox", "You are not authorized to edit this sandbox" and "You are not authorized to delete this sandbox"
     # components.ex:791-879; index.ex:717-738; index_test.exs:691-744, :2807-2824, :3089-3113
 
-  @S19 @passing-new
+  @S19
   Scenario: A non-admin following an edit link is sent back
     # Value: a shared or bookmarked edit link can't be used to change a sandbox.
     Given I am a viewer on project "Malawi HIV" and on its sandbox "test-sandbox"
@@ -451,7 +450,7 @@ Feature: Sandboxes
     And I see "You are not authorized to edit this sandbox"
     # index.ex:57-65; index_test.exs:778-794
 
-  @S20 @passing-new
+  @S20
   Scenario: The workspace root can't be edited, deleted or merged from here
     # Value: the live project can't be renamed, deleted or merged away through sandbox controls, even by its admins.
     Given I am an admin on project "workspace-root" with an enabled trigger
@@ -461,7 +460,7 @@ Feature: Sandboxes
     And "workspace-root" is not scheduled for deletion and its trigger is still enabled
     # components.ex:89-96, :608-648; policies/sandboxes.ex:90-92, :160-166; index_test.exs:926-965
 
-  @S21 @passing-new
+  @S21
   Scenario: Requests for a sandbox I can't see are refused
     # Value: hidden sandboxes can't be deleted, restored or merged by id.
     Given project "Malawi HIV" has sandbox "hidden-sandbox" where I have no role
@@ -470,7 +469,7 @@ Feature: Sandboxes
     And no modal opens
     # index.ex:107-110, :190-192, :212-214, :53-55; index_test.exs:890-924
 
-  @S22 @passing-new
+  @S22
   Scenario: Admin deletes a sandbox by typing its name
     # Value: a sandbox goes away only when someone deliberately confirms which one.
     Given I am an owner on project "Malawi HIV" and its sandbox "sb-1"
@@ -481,7 +480,7 @@ Feature: Sandboxes
     And "sb-1" is listed under "Scheduled for deletion" with a "Restore" button
     # index.ex:107-177, :828-855; components.ex:143-238, :125-132; index_test.exs:413-449, :1062-1099, :1167-1191
 
-  @S23 @passing-new
+  @S23
   Scenario: A mistyped name keeps the delete button off
     # Value: a slip of the keyboard can't delete the wrong sandbox.
     Given the delete modal is open for "sb-1"
@@ -489,7 +488,7 @@ Feature: Sandboxes
     Then the "Delete sandbox" button is disabled with "Type the sandbox name to enable"
     # index.ex:811-822; components.ex:217-225; index_test.exs:323-348, :559-587
 
-  @S24 @passing-new
+  @S24
   Scenario: The delete modal says how many child sandboxes go with it
     # Value: nobody deletes more than they were told, including children they can't see.
     Given sandbox "sb-1" has three active child sandboxes and one already scheduled for deletion
@@ -497,7 +496,7 @@ Feature: Sandboxes
     Then I see "Its 3 child sandboxes will also be deleted."
     # index.ex:711-715 (counts every active descendant, visible or not); components.ex:174-182; index_test.exs:350-411
 
-  @S25 @passing-new
+  @S25
   Scenario: The delete modal states the grace period
     # Value: people know a mistaken delete can still be undone, and for how long.
     Given sandboxes are kept for 7 days after deletion
@@ -505,7 +504,7 @@ Feature: Sandboxes
     Then I see "This sandbox will be retained for 7 days before being permanently removed."
     # components.ex:197-201, :240-246; index_test.exs:589-616
 
-  @S26 @passing-new
+  @S26
   Scenario: Deleting a sandbox stops its work and its children's
     # Value: a sandbox someone has decided to remove stops running jobs immediately, not after the grace period.
     Given sandbox "sb-1" has child sandbox "child" and both have enabled triggers
@@ -515,7 +514,7 @@ Feature: Sandboxes
     And the flow "flow-sandbox-scheduled-deletion" has started for "sb-1"
     # sandboxes.ex:942-973; read from code, no LiveView test asserts triggers
 
-  @S27 @passing-new
+  @S27
   Scenario: Deleting the sandbox I'm in sends me to its parent
     # Value: nobody is left on a page for a sandbox that is going away.
     Given I am on the sandboxes page of "grandchild", a child of "child-sandbox" under "parent"
@@ -524,7 +523,7 @@ Feature: Sandboxes
     Then I am on the sandboxes page of "parent"
     # index.ex:828-855; components.ex:188-191; index_test.exs:263-294, :1027-1060, :1101-1144
 
-  @S28 @passing-new
+  @S28
   Scenario: A scheduled sandbox shows when it will be removed
     # Value: people know how long they have to change their mind.
     Given sandbox "later" is scheduled for deletion in 5 days
@@ -533,7 +532,7 @@ Feature: Sandboxes
     And hovering it shows "Scheduled for deletion on <date> (in 5 days). Cancel the deletion to restore it."
     # components.ex:652-696, :963-977; index_test.exs:1167-1191, :1401-1510
 
-  @S29 @passing-new
+  @S29
   Scenario: Admin restores a scheduled sandbox
     # Value: a mistaken delete is undone in one click during the grace period.
     Given sandbox "scheduled" is scheduled for deletion and I am its owner
@@ -542,7 +541,7 @@ Feature: Sandboxes
     And "scheduled" is back in the active list with its actions
     # index.ex:185-208, :878-885; sandboxes.ex:923-931, :976-988; index_test.exs:1255-1267
 
-  @S30 @passing-new
+  @S30
   Scenario: A viewer can't restore a scheduled sandbox
     # Value: only people allowed to delete a sandbox can bring it back.
     Given sandbox "scheduled" is scheduled for deletion and I am a viewer on it
@@ -550,7 +549,7 @@ Feature: Sandboxes
     Then the "Restore" button on "scheduled" is disabled with "You are not authorized to cancel deletion of this sandbox"
     # components.ex:753-789; index_test.exs:1269-1302
 
-  @S31 @passing-new @variant:usage-limited
+  @S31 @variant:usage-limited
   Scenario: The sandbox limit blocks restoring
     # Value: restoring counts against the sandbox limit.
     Given the usage limiter refuses a new sandbox with "stub-blocked-message"
@@ -559,7 +558,7 @@ Feature: Sandboxes
     Then the "Restore" button on "scheduled" is disabled and I see "stub-blocked-message"
     # index.ex:726-743; components.ex:763-764; sandboxes.ex:925-928; index_test.exs:1357-1399
 
-  @S32 @passing-new
+  @S32
   Scenario: Admin merges a sandbox into its parent
     # Value: work done safely in a sandbox reaches the live project in one step.
     Given I am an owner on project "parent" and its sandbox "test-sandbox"
@@ -571,7 +570,7 @@ Feature: Sandboxes
     And the flow "flow-sandbox-merge" has started for "test-sandbox" into "parent"
     # index.ex:211-290, :476-550, :1162-1205; index_test.exs:1611-1628, :1801-1855, :2891-2932
 
-  @S33 @passing-new
+  @S33
   Scenario: Merge targets are limited to projects I can change
     # Value: a merge can only land where the person merging is already trusted to edit.
     Given "child1" is a sandbox of "root" with children "grandchild1" and "grandchild2"
@@ -580,7 +579,7 @@ Feature: Sandboxes
     Then the target options are "root", "child2" and "child3"
     # index.ex:907-943; index_test.exs:1586-1609, :1923-1974, :3173-3261
 
-  @S34 @passing-new
+  @S34
   Scenario: A target I wasn't offered is refused at merge time
     # Value: a merge request naming an unoffered target is refused.
     Given the merge modal is open for "test-sandbox"
@@ -591,7 +590,7 @@ Feature: Sandboxes
     And nothing is merged
     # index.ex:500-547; index_test.exs:1998-2019, :3129-3171, :4127-4181
 
-  @S35 @passing-new
+  @S35
   Scenario: Changed and new workflows are preselected, unchanged ones are not
     # Value: a merge brings across what was worked on and leaves the rest of the live project alone.
     Given "parent" and "test-sandbox" both have "Unchanged" at the same version
@@ -602,7 +601,7 @@ Feature: Sandboxes
     And "Unchanged" is not checked
     # index.ex:249-263, :971-1032; components.ex:343-415; index_test.exs:3856-3950, :4275-4312
 
-  @S36 @passing-new
+  @S36
   Scenario: Workflows changed in the target since the fork are flagged
     # Value: people see which live changes a merge would overwrite before they lose them.
     Given "Test Workflow" was changed in both "parent" and "test-sandbox" since the fork
@@ -611,7 +610,7 @@ Feature: Sandboxes
     And I see "Any conflicting changes in the target are lost."
     # index.ex:247, :1101-1105; merge_projects.ex:1067-1092; components.ex:337-340, :391-398; index_test.exs:3263-3297, :3627-3726
 
-  @S37 @passing-new
+  @S37
   Scenario: Deleting a workflow from the target is opt-in
     # Value: a merge never silently deletes a live workflow.
     Given "Gamma" existed in "parent" before "test-sandbox" was created and is not in "test-sandbox"
@@ -623,7 +622,7 @@ Feature: Sandboxes
     Then "Gamma" is deleted from "parent"
     # index.ex:1008-1028, :1042-1064; index_test.exs:3952-3992, :4183-4237
 
-  @S38 @passing-new
+  @S38
   Scenario: Workflows added to the target after the fork are left out of the merge
     # Value: a merge can't delete work that colleagues added to the live project while the sandbox existed.
     Given "Added Later" was created in "parent" after "test-sandbox" was created
@@ -632,7 +631,7 @@ Feature: Sandboxes
     And a request to select it is ignored and it survives the merge
     # index.ex:1013-1018, :1034-1040, :298-316; index_test.exs:3994-4024, :4239-4273
 
-  @S39 @passing-new
+  @S39
   Scenario: Selecting workflows, and merging nothing is not possible
     # Value: people control exactly which workflows move, and can't run an empty merge by accident.
     Given the merge modal lists 2 workflows, both checked
@@ -643,7 +642,7 @@ Feature: Sandboxes
     Then I see "2 of 2 selected"
     # index.ex:298-331; components.ex:343-367, :528-536, :552-560; index_test.exs:4314-4420
 
-  @S40 @passing-new
+  @S40
   Scenario: Changing the target recomputes the workflow list
     # Value: the preview always matches the project the merge will actually change.
     Given the merge modal for "test-sandbox" is open with target "parent"
@@ -652,7 +651,7 @@ Feature: Sandboxes
     And workflows I had unchecked stay unchecked
     # index.ex:362-438; index_test.exs:3727-3834, :4422-4515
 
-  @S41 @passing-new
+  @S41
   Scenario: Credentials only the sandbox has are offered and preselected
     # Value: merged jobs keep working because their credentials come along, unless someone chooses otherwise.
     Given "test-sandbox" has credential "sandbox-only-cred" that "parent" lacks
@@ -662,7 +661,7 @@ Feature: Sandboxes
     Then "parent" does not have "sandbox-only-cred"
     # index.ex:265, :334-359, :414-427, :1072-1095; sandboxes.ex:518-551; index_test.exs:4581-4719
 
-  @S42 @passing-new
+  @S42
   Scenario: Collections only the sandbox has are created empty; target collections are never removed
     # Value: jobs that use a new collection find it after the merge, and live collection data is never lost to a merge.
     Given "test-sandbox" has collections "col-a" and "col-b" and "parent" has "parent-only"
@@ -672,7 +671,7 @@ Feature: Sandboxes
     Then "parent" has "col-a" and "parent-only" and not "col-b"
     # index.ex:441-473, :770-801, :1113-1126; sandboxes.ex:1437-1475; index_test.exs:2333-2448, :2550-2720
 
-  @S43 @passing-new
+  @S43
   Scenario: The merge modal warns that the sandbox and its children will be deleted
     # Value: nobody merges without knowing the sandbox goes away afterwards.
     Given "child1" has one active child sandbox
@@ -681,7 +680,7 @@ Feature: Sandboxes
     And I see "Its child sandbox will also be deleted."
     # index.ex:227; components.ex:511-525; index_test.exs:1647-1707
 
-  @S44 @passing-new
+  @S44
   Scenario: A failed merge says so without exposing internals
     # Value: people know the merge didn't happen, and error details stay in the logs.
     Given the merge will fail validation
@@ -691,7 +690,7 @@ Feature: Sandboxes
     And nothing in "root" has changed
     # index.ex:1181-1193, :1227-1231; sandboxes.ex:357-362, :683-716; index_test.exs:2069-2241, :2722-2748
 
-  @S45 @pending @variant:usage-limited
+  @S45 @variant:usage-limited
   Scenario: A usage limit hit during the merge shows the limiter's message
     # Value: people learn the merge was blocked by the usage limiter, not by a fault.
     Given the usage limiter refuses the merge with "Custom import error message"
@@ -699,7 +698,7 @@ Feature: Sandboxes
     Then I see "Custom import error message"
     # index.ex:1227; sandboxes.ex:691-692; index_test.exs:2167-2201
 
-  @S46 @passing-new
+  @S46
   Scenario: A merge that can't schedule the sandbox for deletion still reports success
     # Value: people know the merge landed and that the sandbox is still there to clean up.
     Given the sandbox can't be scheduled for deletion after the merge
@@ -708,7 +707,7 @@ Feature: Sandboxes
     And I see "Successfully merged child1 into root, but could not schedule the sandbox for deletion."
     # index.ex:1195-1205; index_test.exs:2021-2067
 
-  @S47 @pending @variant:github-sync
+  @S47 @variant:github-sync
   Scenario: Merging into a GitHub-synced project commits before and after
     # Value: the repository keeps a restore point from just before the merge and a commit of the result.
     Given "parent" is synced to GitHub branch "main"
@@ -717,7 +716,7 @@ Feature: Sandboxes
     And it has started again with commit message "Merged sandbox test-sandbox"
     # index.ex:1128-1160; index_test.exs:4750-4885; no dispatch without a connection, index_test.exs:4887-4906
 
-  @S48 @pending
+  @S48
   Scenario: A sandbox-only member with no other project to merge into is told so
     # Value: someone who can merge but has nowhere to merge to learns that, instead of losing the page.
     Given project "Hidden root" has sandbox "team-space"

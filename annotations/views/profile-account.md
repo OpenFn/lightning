@@ -2,7 +2,6 @@
 id: profile-account
 type: view
 title: User profile › Account details (name, email, password)
-status: not-started
 owner:
 
 trigger:
@@ -204,7 +203,7 @@ Feature: Account details on the user profile
   As any signed-in user
   I want to change my name, email address and password myself
 
-  @S01 @passing-old
+  @S01
   Scenario: The profile shows whose account this is
     # Value: someone on a shared machine can tell which account they are about to change.
     Given I am signed in as "Amara Okafor" with email "amara@example.org"
@@ -216,7 +215,7 @@ Feature: Account details on the user profile
     # components.ex:6-24; form_component.html.heex:12, :67, :111; components.ex:86-100
     # profile_live_test.exs:52-58, :63-64
 
-  @S02 @passing-old
+  @S02
   Scenario: A user updates their name and contact preference
     # Value: collaborators and admins see the person's current name wherever the account appears, without an admin making the edit.
     Given I am signed in as "Amara Okafor"
@@ -229,7 +228,7 @@ Feature: Account details on the user profile
     # form_component.ex:86-97; accounts.ex:618-620; user.ex:314-318; form_component.ex:129-138
     # profile_live_test.exs:88-109 (name only; contact preference is submitted but never asserted)
 
-  @S03 @pending
+  @S03
   Scenario: A blank or unprintable name is refused
     # Value: an account never ends up with a name others can't read or identify.
     Given I am on "/profile"
@@ -241,7 +240,7 @@ Feature: Account details on the user profile
     # user.ex:102-110; utils/validators.ex:81-90; errors.po:1-2
     # profile_live_test.exs:66-86
 
-  @S04 @pending
+  @S04
   Scenario: A user asks to change their email with their password
     # Value: the account address only moves to an inbox the user proves they control, so password resets and alerts keep reaching them.
     Given I am signed in as "amara@example.org" with password "correct horse battery"
@@ -254,7 +253,7 @@ Feature: Account details on the user profile
     # form_component.ex:25-38; accounts.ex:740-756
     # no LiveView test exercises this path; see 6.5
 
-  @S05 @pending
+  @S05
   Scenario: An email change with the wrong password is refused
     # Value: an email change needs the current password.
     Given I am signed in as "amara@example.org"
@@ -266,7 +265,7 @@ Feature: Account details on the user profile
     # accounts.ex:849-857; form_component.ex:28-31, :41-42
     # profile_live_test.exs:156-168 (asserts the copy listed in 6.1)
 
-  @S06 @passing-old
+  @S06
   Scenario: An address that can't receive mail is refused before anything is sent
     # Value: a typo never sends a confirmation to a non-address and leaves the user waiting for mail that can't arrive.
     Given I am on "/profile"
@@ -276,7 +275,7 @@ Feature: Account details on the user profile
     # utils/validators.ex:20-28; errors.po:37-38; form_component.html.heex:92-96
     # profile_live_test.exs:184-190
 
-  @S07 @pending
+  @S07
   Scenario: A failed email delivery is reported
     # Value: the user knows the confirmation didn't go out and can try again, instead of waiting for nothing.
     Given the mailer is failing
@@ -284,7 +283,7 @@ Feature: Account details on the user profile
     Then I see "Failed to request email update"
     # form_component.ex:44-52; accounts.ex:753-755
 
-  @S08 @pending
+  @S08
   Scenario: A user changes their password
     # Value: a user who suspects their password has leaked can replace it immediately and cut off every other session.
     Given I am signed in with password "correct horse battery"
@@ -298,7 +297,7 @@ Feature: Account details on the user profile
     # form_component.ex:57-78; accounts.ex:919-940; user_session_controller.ex:55-67
     # profile_live_test.exs:141-153 (cannot observe the socket disconnect; see 6.1)
 
-  @S09 @passing-old
+  @S09
   Scenario: A password change with the wrong current password is refused
     # Value: a password change needs the current password.
     Given I am on "/profile"
@@ -310,7 +309,7 @@ Feature: Account details on the user profile
     And my other sessions are still signed in
     # user.ex:410-416; accounts.ex:919-930, :936-937; accounts_test.exs:1465-1472
 
-  @S10 @passing-old
+  @S10
   Scenario: A new password must be long enough and typed the same twice
     # Value: accounts guarding health data keep a minimum password strength, and a typo can't lock the user out of their own account.
     Given I am on "/profile"
@@ -322,7 +321,7 @@ Feature: Account details on the user profile
     # user.ex:258-266, :357-362; errors.po:27-30, :43-44; form_component.html.heex:144-151
     # profile_live_test.exs:112-139
 
-  @S11 @passing-old
+  @S11
   Scenario: The profile leads to account deletion
     # Value: users can find how to remove their own account without asking an administrator.
     Given I am signed in
@@ -330,7 +329,7 @@ Feature: Account details on the user profile
     Then I am on "/profile/<my user id>/delete"
     # components.ex:86-100; edit.html.heex:22-24; owned from there by profile-delete-account
 
-  @S12 @pending @variant:gdpr-preferences
+  @S12 @variant:gdpr-preferences
   Scenario: The configured GDPR preferences card is shown
     # Value: instances with privacy obligations give each user one place to manage their data preferences.
     Given the instance configures a GDPR preferences component

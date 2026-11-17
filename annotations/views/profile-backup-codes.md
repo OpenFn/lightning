@@ -2,7 +2,6 @@
 id: profile-backup-codes
 type: view
 title: User profile › Two-factor backup codes
-status: not-started
 owner:
 
 trigger:
@@ -233,7 +232,7 @@ Feature: Two-factor backup codes
   As a signed-in user with MFA
   I want to see, save and replace my recovery codes
 
-  @S01 @passing-old
+  @S01
   Scenario: A user who has just re-authenticated sees their recovery codes
     # Value: a user can retrieve the codes they need to sign in without their device, and store them somewhere safe.
     Given I am signed in and have enrolled in MFA
@@ -248,7 +247,7 @@ Feature: Two-factor backup codes
     # index.ex:37-44; index.html.heex:2-6, :10-13, :54-62, :88-108; user_auth.ex:211-231, :443-475
     # backup_codes_live_test.exs:39-49 (asserts "Recovery codes" and each code)
 
-  @S02 @passing-old
+  @S02
   Scenario: Opening the page without a valid sudo window hands off to re-authentication
     # Value: recovery codes are never shown to someone who has not just proved who they are.
     Given I am signed in and have enrolled in MFA
@@ -259,7 +258,7 @@ Feature: Two-factor backup codes
     # router.ex:252-262; user_auth.ex:397-410, :443-458
     # backup_codes_live_test.exs:24-37 (redirect to /auth/confirm_access; the session there still holds the setup user's token, so this is the "someone else's token" case)
 
-  @S03 @passing-old
+  @S03
   Scenario: First enrolment lands here with the new codes
     # Value: a user who has just turned on MFA is shown their recovery codes before they could ever need them, without being asked to re-authenticate straight after proving their device works.
     Given I have just confirmed MFA setup on "/profile" for the first time
@@ -268,7 +267,7 @@ Feature: Two-factor backup codes
     # handoff from flow-require-project-mfa S03 and profile-mfa S03 (mfa_component.ex:89-97; accounts.ex:423-431, :1021-1025)
     # user_auth.ex:226-231 copies the token into the session; profile_live_test.exs:311-349 asserts the redirect, not this page
 
-  @S04 @passing-old
+  @S04
   Scenario: Generating new codes replaces every old one
     # Value: a user who suspects their codes were seen can cancel all of them at once and get a fresh set.
     Given I am signed in and have enrolled in MFA
@@ -284,7 +283,7 @@ Feature: Two-factor backup codes
     # backup_codes_live_test.exs:70-91 (old codes gone from the page, stored codes shown; flash not asserted)
     # accounts_test.exs:461-471 (ten new codes, old rows gone)
 
-  @S05 @passing-old
+  @S05
   Scenario: Copying puts every code on the clipboard
     # Value: a user can paste their codes straight into a password manager, as the page recommends, without retyping them.
     Given I am on "/profile/auth/backup_codes" inside my sudo window
@@ -295,7 +294,7 @@ Feature: Two-factor backup codes
     # index.html.heex:134-150, :151-187; assets/js/hooks/index.ts:738-806
     # untested
 
-  @S06 @passing-old
+  @S06
   Scenario: Printing hands off to a printable copy in a new tab
     # Value: a user can keep a paper copy of their codes away from the device they might lose.
     Given I am on "/profile/auth/backup_codes" inside my sudo window
@@ -305,7 +304,7 @@ Feature: Two-factor backup codes
     # index.html.heex:111-131; router.ex:264; backup_codes_controller.ex:5-12
     # untested
 
-  @S07 @passing-old
+  @S07
   Scenario: A user without MFA is told the codes need it and where to turn it on
     # Value: a user who reaches their codes without MFA learns they do nothing yet, instead of trusting them as a way back in.
     Given I am signed in and have not enrolled in MFA

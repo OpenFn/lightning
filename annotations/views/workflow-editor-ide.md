@@ -2,7 +2,6 @@
 id: workflow-editor-ide
 type: view
 title: Workflow editor › Full-screen code editor (IDE)
-status: not-started
 owner:
 
 trigger:
@@ -334,7 +333,7 @@ Feature: Full-screen code editor
   As someone on the project
   I want a full-screen, collaborative code editor for one job at a time
 
-  @S01 @pending
+  @S01
   Scenario: Opening a step's code from the canvas
     # Value: people get from the diagram to a step's code in one action.
     Given I am an editor on workflow "Intake" and step "Send to DHIS2" is selected
@@ -347,7 +346,7 @@ Feature: Full-screen code editor
     # CollaborativeEditor.keyboard.test.tsx:462-600 (asserts updateSearchParams panel "editor", not for a trigger or nothing selected)
     # FullScreenIDE.test.tsx:674-719 (job name, editor rendered)
 
-  @S02 @pending
+  @S02
   Scenario: Leaving the IDE returns to the same step on the canvas, and Escape in the code does not
     # Value: people can leave the editor without losing their place, and pressing Escape while typing never throws them out.
     Given the IDE is open on "Send to DHIS2" with the cursor in the code
@@ -359,7 +358,7 @@ Feature: Full-screen code editor
     # FullScreenIDE.tsx:521-524, :710-727, :973-981; WorkflowEditor.tsx:277-279, :287-292
     # FullScreenIDE.keyboard.test.tsx:486-545 (blur first, onClose second); FullScreenIDE.test.tsx:695-708
 
-  @S03 @pending
+  @S03
   Scenario: Escape does not close the IDE while a modal is open over it
     # Value: dismissing an adaptor or credential dialog never also discards the person's IDE context.
     Given the IDE is open and the adaptor configuration modal is open
@@ -368,7 +367,7 @@ Feature: Full-screen code editor
     # FullScreenIDE.tsx:723-726 (enabled only with no configure, picker or credential modal open)
     # FullScreenIDE.keyboard.test.tsx:547-578 notes the condition but does not open a modal
 
-  @S04 @pending
+  @S04
   Scenario: Two editors type in the same job and see each other
     # Value: collaborators working on one job never overwrite each other's code.
     Given "Amara" and "Joe" are editors with the IDE open on "Send to DHIS2"
@@ -378,7 +377,7 @@ Feature: Full-screen code editor
     # CollaborativeMonaco.tsx:139-167 (MonacoBinding on the job's Y.Text with awareness), :447; Cursors.tsx:53-80; useWorkflow.tsx:248-261
     # no test exercises the binding with two clients
 
-  @S05 @pending
+  @S05
   Scenario: Code typed in the IDE is saved with the workflow
     # Value: job code written in the IDE is what runs after the next save.
     Given I am an editor with the IDE open on "Send to DHIS2"
@@ -388,7 +387,7 @@ Feature: Full-screen code editor
     # handoff: save is owned by shared-editor-session; this file asserts only that the IDE edits the job's body
     # CollaborativeMonaco.tsx:153-158; createWorkflowStore getJobBodyYText via useWorkflow.tsx:255-257
 
-  @S06 @pending
+  @S06
   Scenario Outline: The IDE is read-only for <who>
     # Value: people without edit rights, or looking at the past, can study job code but cannot change it.
     Given <who>
@@ -407,7 +406,7 @@ Feature: Full-screen code editor
       | I am an editor viewing version 3 from the version picker             |
       | I am an editor who followed a run link to the version that run used  |
 
-  @S07 @pending
+  @S07
   Scenario: A job that isn't in the opened version is explained, not shown blank
     # Value: people who follow a link into an older version understand why the code is missing and how to proceed.
     Given job "New step" was added after version 3
@@ -417,7 +416,7 @@ Feature: Full-screen code editor
     And the job selector still lists the jobs of version 3
     # FullScreenIDE.tsx:769-776, :836-844, :1007-1019
 
-  @S08 @pending
+  @S08
   Scenario: Switching jobs from the job selector, in workflow order
     # Value: people move between steps' code without going back to the canvas, finding them in the order the workflow runs them.
     Given workflow "Intake" runs "Fetch", then "Transform", then "Load"
@@ -429,7 +428,7 @@ Feature: Full-screen code editor
     # FullScreenIDE.tsx:499-519, :838-842; workflowGraph.ts:523-565; JobSelector.tsx:24-55
     # JobSelector.test.tsx:55-127 (selected mark, onChange, order as given)
 
-  @S09 @pending
+  @S09
   Scenario: With a run loaded, switching jobs follows the run's step for that job
     # Value: the logs beside the code always belong to the step whose code is on screen.
     Given the IDE is following run "R" which executed "Fetch" and "Transform"
@@ -439,7 +438,7 @@ Feature: Full-screen code editor
     # FullScreenIDE.tsx:508-519, :570-578, :564-568
     # e2e job-step-sync.spec.ts:50-168 asserts the step param changes (see 6.5 on its selectors)
 
-  @S10 @pending
+  @S10
   Scenario: Adaptor docs for the job's adaptor version, with examples editors can add
     # Value: people write against the API of the adaptor version they will actually run, and copy working examples.
     Given job "Send to DHIS2" uses "@openfn/language-dhis2@latest" and latest is "5.0.1"
@@ -451,7 +450,7 @@ Feature: Full-screen code editor
     # FullScreenIDE.tsx:411-428, :1118-1120; Docs.tsx:9-17; DocsPanel.tsx:65-127; Function.tsx:59-92; CollaborativeMonaco.tsx:183-247
     # FullScreenIDE.docs-panel.test.tsx:583-711 (mocked Docs receives the resolved specifier)
 
-  @S11 @pending
+  @S11
   Scenario: Metadata from the job's credential, browsable and suggested while typing
     # Value: people pick real field and org unit ids from their own system instead of guessing them.
     Given job "Send to DHIS2" is saved with a project credential for a DHIS2 instance
@@ -463,7 +462,7 @@ Feature: Full-screen code editor
     # Explorer.tsx:19-108; FullScreenIDE.tsx:1121-1126, :1026; CollaborativeMonaco.tsx:273-285; magic-completion.ts
     # workflow_channel_test.exs:2934-3026 (job_not_found, no_credential, sandbox environment, cross-project)
 
-  @S12 @pending
+  @S12
   Scenario: Code suggestions for the job's adaptor
     # Value: people discover adaptor operations and their arguments while typing, for the adaptor the job uses.
     Given job "Send to DHIS2" uses "@openfn/language-dhis2@5.0.1"
@@ -475,7 +474,7 @@ Feature: Full-screen code editor
     # CollaborativeMonaco.tsx:249-271, :442-444; loadDTS.ts:23-123
     # no test
 
-  @S13 @pending
+  @S13
   Scenario: The docs panel can be closed, reopened from the header and turned
     # Value: people give the code the whole width when they need it, with docs one click away.
     Given the IDE is open with the docs panel showing
@@ -488,7 +487,7 @@ Feature: Full-screen code editor
     # FullScreenIDE.tsx:800-820, :866-894, :1041-1130
     # FullScreenIDE.docs-panel.test.tsx:491-580, :712-981
 
-  @S14 @pending
+  @S14
   Scenario: Run history beside the code
     # Value: people can look at what recent runs of this workflow did without leaving the code they are fixing.
     Given the IDE is open with no run loaded
@@ -502,7 +501,7 @@ Feature: Full-screen code editor
     # handoff: the list is owned by workflow-editor-versions-and-promote (MiniHistory), the viewer by workflow-editor-run-viewer
     # FullScreenIDE.test.tsx:596-672, :739-782 (MiniHistory shown, run param cleared)
 
-  @S15 @pending
+  @S15
   Scenario: Running from the IDE opens the run panel first, also by keyboard
     # Value: a keystroke made while typing code never starts a run with an input nobody chose.
     Given I am an editor with the IDE open and no right panel showing
@@ -515,7 +514,7 @@ Feature: Full-screen code editor
     # handoff: the run panel and submission are owned by workflow-editor-manual-run
     # FullScreenIDE.keyboard.test.tsx:609-704; FullScreenIDE.test.tsx:546-593
 
-  @S16 @pending
+  @S16
   Scenario: Connecting a credential from the IDE assigns it to the job
     # Value: people fix a missing credential without leaving the code they are working on.
     Given I am an editor and job "Send to DHIS2" has no credential
@@ -529,7 +528,7 @@ Feature: Full-screen code editor
     # FullScreenIDE.tsx:599-605, :682-708, :849-862, :1344-1371; AdaptorDisplay.tsx:259-285; CredentialModalContext.tsx:121-203
     # handoff: the modals are owned by workflow-editor-inspectors
 
-  @S17 @pending
+  @S17
   Scenario: Following a run preselects the step's input so it can be retried
     # Value: after fixing a failing step's code, people rerun it on exactly the input that failed.
     Given run "R" failed at "Transform" and I am an editor
@@ -540,7 +539,7 @@ Feature: Full-screen code editor
     # handoff: the retry itself is owned by workflow-editor-manual-run
     # FullScreenIDE.integration.test.tsx:197-390 reimplements this logic rather than rendering it (6.5)
 
-  @S18 @pending
+  @S18
   Scenario: A job that was not part of the loaded run cannot be run against it
     # Value: people don't retry a run on a step that run never reached and misread the result.
     Given the IDE is following finished run "R", which did not execute "Load"
@@ -549,7 +548,7 @@ Feature: Full-screen code editor
     And "Run" is disabled with "Selected job was not part of this run"
     # FullScreenIDE.tsx:305-309, :936-969, :1238-1253
 
-  @S19 @pending
+  @S19
   Scenario: A step inspect link lands in the IDE with the run loaded
     # Value: from a failing step, people land on that step's code beside its logs.
     When the flow "flow-open-run-in-editor" follows a step's inspect link for run "R" and job "Send to DHIS2"
@@ -557,7 +556,7 @@ Feature: Full-screen code editor
     And the right panel shows "R" in the run viewer with the log tab
     # FullScreenIDE.tsx:128-131, :205, :554-568, :1285-1293; flow-open-run-in-editor S02
 
-  @S20 @pending @variant:ai-assistant-enabled
+  @S20 @variant:ai-assistant-enabled
   Scenario: The AI assistant works on the job open in the IDE
     # Value: AI help is about the code the person is looking at, not the whole workflow.
     Given the IDE is open on "Send to DHIS2" and the AI assistant panel is open
@@ -567,7 +566,7 @@ Feature: Full-screen code editor
     # handoff: owned by workflow-editor-ai-assistant
     # CollaborativeMonaco.diff.test.tsx:167-363
 
-  @S21 @pending @variant:sandbox
+  @S21 @variant:sandbox
   Scenario: The IDE says when it is in a sandbox
     # Value: people never mistake a sandbox's code for the production workflow's.
     Given I am in sandbox "staging-fix" of project "Malawi HIV"
@@ -575,7 +574,7 @@ Feature: Full-screen code editor
     Then I see "You are currently working in the sandbox staging-fix" above the IDE header
     # FullScreenIDE.tsx:824-829; SandboxIndicatorBanner.tsx:29-67; WorkflowEditor.tsx:374-379
 
-  @S22 @pending
+  @S22
   Scenario: The run panel warns when the run executed a different version
     # Value: people don't read a run's logs against code that is not the code that ran.
     Given the IDE is on version 7 and following run "R", which ran on version 3

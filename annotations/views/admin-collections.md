@@ -2,7 +2,6 @@
 id: admin-collections
 type: view
 title: Admin settings › Collections
-status: not-started
 owner:
 
 trigger:
@@ -213,7 +212,7 @@ Feature: Admin collections
   As a superuser
   I want to list, create, rename, move and delete any project's collections
 
-  @S01 @pending
+  @S01
   Scenario: Superuser sees every collection on the instance with its project and storage
     # Value: an instance admin can see which collections exist in every project, and which use the most storage, without joining each project.
     Given I am a superuser who is not a member of "Malawi HIV" or "Kenya TB"
@@ -226,7 +225,7 @@ Feature: Admin collections
     # index.ex:20; collections.ex:38-43 (all rows, project preloaded); components.ex:52-61, :64-115; helpers.ex:76-95
     # collection_live_test.exs:30-48 asserts both rows exist (not the project names, sizes or count); storage format as project-settings-collections S01
 
-  @S02 @pending
+  @S02
   Scenario: An instance with no collections offers to create one
     # Value: an admin on a fresh instance sees straight away where to create the first collection.
     Given I am a superuser
@@ -239,7 +238,7 @@ Feature: Admin collections
     # index.ex:86-95, :108-113; components.ex:71-73; table.ex:304-324
     # collection_live_test.exs:22-28 (asserts the copy, not the click)
 
-  @S03 @pending
+  @S03
   Scenario: Superuser creates a collection in a project they are not a member of
     # Value: a superuser can give a project the collection its jobs need without being added to the project.
     Given I am a superuser who is not a member of "Malawi HIV"
@@ -254,7 +253,7 @@ Feature: Admin collections
     # index.ex:96-106; collection_creation_modal.ex:43-54, :56-77, :130-152; helpers.ex:223-240; collections.ex:113-128
     # collection_live_test.exs:99-127 (the superuser is made a member at :103; the non-member case is read from code, 6.5)
 
-  @S04 @pending
+  @S04
   Scenario: A name that isn't URL safe can't be saved
     # Value: every collection name works unchanged in job code and API URLs.
     Given I am a superuser
@@ -265,7 +264,7 @@ Feature: Admin collections
     # same behaviour as project-settings-collections S04
     # collection.ex:51-53, :60-75; helpers.ex:223-228 (keeps "é"); collection_creation_modal.ex:47 (error copied to raw_name), :160
 
-  @S05 @pending
+  @S05
   Scenario: Two collections in a project can't share a name
     # Value: a job addressing a collection by name always gets the one it means.
     Given I am a superuser
@@ -277,7 +276,7 @@ Feature: Admin collections
     # collection.ex:54-57; collection_creation_modal.ex:85-91; migration 20260410000000_scope_collection_name_uniqueness_to_project.exs:6
     # collection_live_test.exs:179-200 renders the submit but never asserts (6.5)
 
-  @S06 @pending
+  @S06
   Scenario: The same name can be used in another project
     # Value: teams in different projects don't have to coordinate collection names.
     Given I am a superuser
@@ -287,7 +286,7 @@ Feature: Admin collections
     And I see two rows "patients", one for "Malawi HIV" and one for "Kenya TB"
     # same behaviour as project-settings-collections S06; migration 20260410000000_scope_collection_name_uniqueness_to_project.exs:4-8
 
-  @S07 @pending @variant:collection-limited
+  @S07 @variant:collection-limited
   Scenario: Creating a collection past the plan's limit is refused
     # Value: a superuser learns why a project can't take another collection instead of getting a silent failure.
     Given "Malawi HIV" is at its plan's collection limit, with the message "Some error message"
@@ -298,7 +297,7 @@ Feature: Admin collections
     # same behaviour as project-settings-collections S07, reached from here
     # collections.ex:115-120, :125; collection_creation_modal.ex:79-83; not tested on this page
 
-  @S08 @pending
+  @S08
   Scenario: Superuser renames a collection and keeps its records
     # Value: an admin can fix a badly named collection without recreating it and losing its records.
     Given I am a superuser
@@ -313,7 +312,7 @@ Feature: Admin collections
     # components.ex:119-127, :138-144; collection_creation_modal.ex:14-19, :58, :66-69; collections.ex:153-157
     # collection_live_test.exs:147-177 (asserts the flash, name and project name; records read from code)
 
-  @S09 @pending
+  @S09
   Scenario: Superuser moves a collection to another project
     # Value: a collection created in the wrong project can be put in the right one without losing its records.
     Given I am a superuser
@@ -329,7 +328,7 @@ Feature: Admin collections
     # collection_creation_modal.ex:146-152 (select rendered in edit mode too), :66-69; collection.ex:31-33 (casts project_id)
     # not tested (collection_live_test.exs:168-170 submits the same project)
 
-  @S10 @pending
+  @S10
   Scenario: A move into a project that already has that name is refused
     # Value: moving a collection can't leave a project with two collections a job can't tell apart.
     Given I am a superuser
@@ -339,7 +338,7 @@ Feature: Admin collections
     And each project still has its own "patients"
     # collection.ex:54-57; collection_creation_modal.ex:85-91; migration 20260410000000_scope_collection_name_uniqueness_to_project.exs:6; read from code
 
-  @S11 @pending
+  @S11
   Scenario: Superuser deletes a collection after confirming
     # Value: an admin can clear out data a project no longer needs, and can't do it with a single misclick.
     Given I am a superuser
@@ -354,7 +353,7 @@ Feature: Admin collections
     # components.ex:4-50, :128-136, :145-148; index.ex:48-54; collections.ex:163-179; create_collections migration :19-21 (cascade)
     # collection_live_test.exs:80-97 (clicks the confirm button directly; asserts the flash and the row gone)
 
-  @S12 @pending
+  @S12
   Scenario Outline: Cancelling a form or confirmation changes nothing
     # Value: an admin who opened the wrong dialog can back out safely.
     Given I am a superuser
@@ -374,7 +373,7 @@ Feature: Admin collections
       | Edit on "patients"   |
       | Delete on "patients" |
 
-  @S13 @pending
+  @S13
   Scenario: Superuser sorts the list by name or used storage
     # Value: an admin chasing instance storage can put the biggest collections at the top.
     Given I am a superuser

@@ -2,7 +2,6 @@
 id: project-settings-collaborators
 type: view
 title: Project settings › Collaboration
-status: not-started
 owner:
 
 trigger:
@@ -234,7 +233,7 @@ Feature: Project collaboration settings
   As a project owner, admin or member
   I want to manage collaborators, support access and my own notifications
 
-  @S01 @pending
+  @S01
   Scenario: Everyone on the project sees who else is on it
     # Value: members can tell who has access to the project's data before sharing anything with it.
     Given I am a viewer on project "Malawi HIV"
@@ -244,7 +243,7 @@ Feature: Project collaboration settings
     And I see each collaborator's failure alert and digest setting
     # settings.ex:234, settings.html.heex:616-622, data_tables.ex:413-462
 
-  @S02 @pending
+  @S02
   Scenario: Admin adds an existing user
     # Value: a new team member gets access the same day, without waiting for a superuser.
     Given I am an admin on project "Malawi HIV"
@@ -259,7 +258,7 @@ Feature: Project collaboration settings
     # new_collaborator_component.ex:38-74, :76-79; projects.ex:827-847; audit.ex:66-71
     # project_live_test.exs:4013-4064
 
-  @S03 @pending
+  @S03
   Scenario: Admin adds several users in one go
     # Value: onboarding a whole team takes one form, not one round trip per person.
     Given I am an owner on project "Malawi HIV"
@@ -271,7 +270,7 @@ Feature: Project collaboration settings
     And all three appear in the list with those roles
     # new_collaborator_component.html.heex:86-124, :135-137; project_live_test.exs:3653-3706, :4013-4064
 
-  @S04 @pending
+  @S04
   Scenario: Viewers and editors cannot add collaborators
     # Value: only people trusted with access decisions can grant access.
     Given I am an editor on project "Malawi HIV"
@@ -280,7 +279,7 @@ Feature: Project collaboration settings
     And sending "toggle_collaborators_modal" does not open the add form
     # settings.html.heex:577-588, :599-606; project_live_test.exs:3600-3651
 
-  @S05 @pending
+  @S05
   Scenario: The owner role cannot be granted when adding
     # Value: a project keeps exactly one owner, so ownership can't be handed out by accident.
     Given I am an admin on project "Malawi HIV"
@@ -289,7 +288,7 @@ Feature: Project collaboration settings
     And submitting role "owner" anyway shows "is invalid"
     # new_collaborator_component.html.heex:72-84; collaborators.ex:13; project_live_test.exs:3977-4011
 
-  @S06 @pending
+  @S06
   Scenario: Adding someone already on the project is refused
     # Value: an admin can't silently overwrite an existing member's access.
     Given I am an admin on project "Malawi HIV"
@@ -299,7 +298,7 @@ Feature: Project collaboration settings
     And nothing is saved
     # collaborators.ex:82-108; project_live_test.exs:3943-3975
 
-  @S07 @pending
+  @S07
   Scenario: An invalid email is caught before saving
     # Value: access isn't granted to a typo.
     Given I am an owner on project "Malawi HIV"
@@ -308,7 +307,7 @@ Feature: Project collaboration settings
     And the save button is disabled
     # collaborators.ex:28-33, new_collaborator_component.html.heex:133; project_live_test.exs:3708-3748
 
-  @S08 @pending
+  @S08
   Scenario: People without an account move on to the invite form
     # Value: an admin can bring in a colleague who has never used OpenFn without retyping their details.
     Given I am an owner on project "Malawi HIV"
@@ -319,7 +318,7 @@ Feature: Project collaboration settings
     # new_collaborator_component.ex:58-64, :80-82; settings.ex:710-718; invite_collaborator_component.ex:12-29
     # project_live_test.exs:3811-3833
 
-  @S09 @pending
+  @S09
   Scenario: Mixed list adds the people with accounts and invites the rest
     # Value: one submission handles a team where only some people already use OpenFn.
     Given I am an owner on project "Malawi HIV"
@@ -330,7 +329,7 @@ Feature: Project collaboration settings
     And the invite form opens for "new.person@example.org" only
     # new_collaborator_component.ex:49-64, :87-90, :115-132
 
-  @S10 @pending
+  @S10
   Scenario: Admin invites a person without an account
     # Value: the project can grow beyond people who already have accounts on this instance.
     Given the invite form is open for "new.person@example.org" as "Editor"
@@ -342,7 +341,7 @@ Feature: Project collaboration settings
     And the flow "flow-invite-new-collaborator" has started for "new.person@example.org"
     # invite_collaborator_component.ex:45-75; projects.ex:2010-2025; project_live_test.exs:3811-3871
 
-  @S11 @pending
+  @S11
   Scenario: An invite to an email that already has an account is refused
     # Value: inviting an existing email is refused rather than creating a duplicate.
     Given the invite form is open
@@ -351,7 +350,7 @@ Feature: Project collaboration settings
     And no email is sent
     # invited_collaborators.ex:38-81; project_live_test.exs:3873-3941
 
-  @S12 @pending @variant:usage-limited
+  @S12 @variant:usage-limited
   Scenario: The add button is disabled when the collaborator cap is reached
     # Value: admins learn the usage limit before filling in a form they can't submit.
     Given project "Malawi HIV" has reached its collaborator limit with message "You can only have 3 collaborators in this project"
@@ -361,7 +360,7 @@ Feature: Project collaboration settings
     And its tooltip says "You can only have 3 collaborators in this project"
     # settings.html.heex:577-584, settings.ex:919-927; project_live_test.exs:4066-4096
 
-  @S13 @pending @variant:usage-limited
+  @S13 @variant:usage-limited
   Scenario: Adding more rows than the usage limiter allows is blocked in the form
     # Value: a project can't exceed the collaborator count the usage limiter allows.
     Given project "Malawi HIV" may add 2 more collaborators
@@ -373,7 +372,7 @@ Feature: Project collaboration settings
     Then the message goes away
     # new_collaborator_component.ex:25-36, :153-169; .html.heex:41-52, :133; project_live_test.exs:4098-4211
 
-  @S14 @pending
+  @S14
   Scenario: Admin removes a collaborator
     # Value: someone who has left the team loses access to the project's data straight away.
     Given I am an admin on project "Malawi HIV"
@@ -387,7 +386,7 @@ Feature: Project collaboration settings
     And her open project pages are handed to shared-project-scope S07
     # settings.ex:647-681, :792-860; projects.ex:864-891; project_live_test.exs:4220-4302
 
-  @S15 @pending
+  @S15
   Scenario: Removal warns about and withdraws the person's credentials
     # Value: the admin knows which workflow credentials will stop being available before confirming.
     Given I am an admin on project "Malawi HIV"
@@ -398,7 +397,7 @@ Feature: Project collaboration settings
     Then neither credential is available in project "Malawi HIV"
     # settings.ex:792-815; projects.ex:738-755; project_live_test.exs:4608-4664; membership_events_test.exs:153
 
-  @S16 @pending
+  @S16
   Scenario: Viewers and editors cannot remove collaborators
     # Value: only people trusted with access decisions can withdraw access.
     Given I am an editor on project "Malawi HIV"
@@ -408,7 +407,7 @@ Feature: Project collaboration settings
     And the member is still on the project
     # settings.html.heex:617-645, settings.ex:870-871, :751-765; project_live_test.exs:4220-4256
 
-  @S17 @pending
+  @S17
   Scenario: The owner cannot be removed
     # Value: a project never ends up with nobody able to administer it.
     Given I am an admin on project "Malawi HIV"
@@ -417,7 +416,7 @@ Feature: Project collaboration settings
     And sending "remove_project_user" for the owner is refused
     # settings.ex:876-877, :894; projects.ex:867-870; project_live_test.exs:4304-4342
 
-  @S18 @pending
+  @S18
   Scenario: Admins cannot remove themselves
     # Value: an admin can't lock themselves out by a misclick.
     Given I am an admin on project "Malawi HIV"
@@ -426,7 +425,7 @@ Feature: Project collaboration settings
     And sending "remove_project_user" for my row is refused
     # settings.ex:873-874, :895; project_live_test.exs:4344-4380
 
-  @S19 @pending
+  @S19
   Scenario: A parent project's admins cannot be removed from a sandbox
     # Value: a sandbox can't lock out the people who administer the project it came from.
     Given "Parent Admin" is an admin on project "Malawi HIV"
@@ -436,7 +435,7 @@ Feature: Project collaboration settings
     Then "Parent Admin"'s "Remove collaborator" button is disabled with tooltip "Cannot remove a user who is admin or owner on the parent project"
     # settings.ex:879-880, :896, :912-913; projects.ex:872-879; sandbox_settings_test.exs:418-447
 
-  @S20 @pending
+  @S20
   Scenario: An admin demoted after loading the page cannot remove anyone
     # Value: withdrawn authority takes effect even on a page that was already open.
     Given I have the collaboration tab open as an admin on project "Malawi HIV"
@@ -446,7 +445,7 @@ Feature: Project collaboration settings
     And she is still on the project
     # settings.ex:659-666; membership_revocation_test.exs:118-141
 
-  @S21 @pending
+  @S21
   Scenario: Memberships of another project cannot be touched from this one
     # Value: being an admin of one project gives no power over another project's members.
     Given I am an admin on project "Malawi HIV"
@@ -456,7 +455,7 @@ Feature: Project collaboration settings
     And Bob's membership is unchanged
     # projects.ex:466-481; settings.ex:627-643, :652-679; project_live_test.exs:4382-4430
 
-  @S22 @pending
+  @S22
   Scenario: A member turns on their own failure alerts
     # Value: people responsible for a workflow find out when it fails, without asking an admin.
     Given I am an editor on project "Malawi HIV" with failure alerts disabled
@@ -466,7 +465,7 @@ Feature: Project collaboration settings
     And the flow "flow-failure-alert-email" uses my new setting
     # data_tables.ex:480-517; settings.ex:619-645, :726-742; projects.ex:814-825; project_live_test.exs:2011-2060, :4484-4505
 
-  @S23 @pending
+  @S23
   Scenario: A member chooses how often they get the digest
     # Value: each member controls how much project email they receive.
     Given I am a viewer on project "Malawi HIV" with digest "Never"
@@ -474,7 +473,7 @@ Feature: Project collaboration settings
     Then my digest shows "Weekly"
     # data_tables.ex:520-559; settings.ex:619-645; project_live_test.exs:4507-4526
 
-  @S24 @pending
+  @S24
   Scenario: Members cannot change other members' notifications
     # Value: nobody can silence, or flood, a colleague's inbox.
     Given I am an admin on project "Malawi HIV"
@@ -485,7 +484,7 @@ Feature: Project collaboration settings
     And her settings are unchanged
     # data_tables.ex:561-575; settings.ex:899-910; project_live_test.exs:4432-4482
 
-  @S25 @pending @variant:failure-alerts-limited
+  @S25 @variant:failure-alerts-limited
   Scenario: Failure alerts show as unavailable when the usage limiter doesn't allow them
     # Value: members aren't promised alerts the instance won't send.
     Given failure alerts are not available for project "Malawi HIV"
@@ -494,7 +493,7 @@ Feature: Project collaboration settings
     Then my failure alert shows "Unavailable" and cannot be changed
     # settings.ex:189-190; data_tables.ex:510-515; project_live_test.exs:4542-4606
 
-  @S26 @pending
+  @S26
   Scenario: Admin grants and revokes support access
     # Value: a project admin decides when the instance's support users may enter, and can take that back.
     Given I am an admin on project "Malawi HIV" with support access off
@@ -506,7 +505,7 @@ Feature: Project collaboration settings
     And open support sessions are handed to shared-project-scope S09
     # settings.ex:380-409, :929-957; projects.ex:589-618, :776-780; project_live_test.exs:2207-2235
 
-  @S27 @pending
+  @S27
   Scenario: Viewers and editors don't see the support access switch
     # Value: only people trusted with access decisions can let outsiders in.
     Given I am an editor on project "Malawi HIV"
@@ -514,7 +513,7 @@ Feature: Project collaboration settings
     Then I do not see "Grant support access"
     # settings.ex:935; project_live_test.exs:2237-2257
 
-  @S28 @pending
+  @S28
   Scenario: Members without admin rights are told what they can change
     # Value: a member knows why the controls are disabled and that their own notifications are still theirs to set.
     Given I am a viewer on project "Malawi HIV"
@@ -522,7 +521,7 @@ Feature: Project collaboration settings
     Then I see "Role based permissions: You cannot modify this project's collaboration settings, but you can change your notification preferences."
     # settings.html.heex:574-575; layout_components.ex:589-591, :623-629
 
-  @S29 @pending
+  @S29
   Scenario: A sandbox says its membership changes stay in the sandbox
     # Value: admins know that adding someone to a sandbox does not add them to the live project.
     Given I am the owner of sandbox "dev" of project "Malawi HIV"

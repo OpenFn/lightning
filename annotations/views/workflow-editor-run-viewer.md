@@ -2,7 +2,6 @@
 id: workflow-editor-run-viewer
 type: view
 title: Workflow editor › Run viewer (?run=)
-status: not-started
 owner:
 
 trigger:
@@ -327,7 +326,7 @@ Feature: Workflow editor run viewer
   As anyone working in a project
   I want the editor to show a run's steps, data and logs and paint its path on the canvas
 
-  @S01 @pending
+  @S01
   Scenario: The run viewer shows the run's summary and its steps
     # Value: a builder sees how the run went, who started it and which steps ran, next to the code that ran.
     Given run "R" of "Intake" was started manually by "amara@example.org"
@@ -341,7 +340,7 @@ Feature: Workflow editor run viewer
     # run_channel.ex:261-275; runs/run.ex:135-137; createHistoryStore.ts:362-386
     # StepList.test.tsx:91-124 (names render; hooks mocked); run_channel_test.exs:3138-3194 (fetch:run returns steps)
 
-  @S02 @pending
+  @S02
   Scenario Outline: Run state reads in plain words
     # Value: people can tell queued work from work in progress without knowing internal state names.
     Given the loaded run is in state "<state>"
@@ -355,7 +354,7 @@ Feature: Workflow editor run viewer
     # StatePill.tsx:24-38; parity with shared-run-components S01 (its LiveView original, components.ex:110-138)
     # no test renders StatePill
 
-  @S03 @pending
+  @S03
   Scenario: Step outcome and duration are shown per step
     # Value: people find the failing step at a glance, and can tell a timeout from a handled failure.
     Given the loaded run has a step that succeeded, one that failed, one killed with "TimeoutError" and one still running
@@ -364,7 +363,7 @@ Feature: Workflow editor run viewer
     # StepIcon.tsx:14-61; ElapsedIndicator.tsx:21-55; parity with shared-run-components S02 to S05
     # StepIcon.test.tsx:11-40 covers only the kill family
 
-  @S04 @pending
+  @S04
   Scenario: Steps carried over from an earlier run are marked
     # Value: after a rerun from a step, people can tell which steps actually ran again.
     Given run "R2" was retried from "Transform" of run "R1"
@@ -374,7 +373,7 @@ Feature: Workflow editor run viewer
     # StepItem.tsx:54-90 (step inserted before the run); parity with shared-run-components S06
     # no test covers the clone marker
 
-  @S05 @pending
+  @S05
   Scenario: Picking a step opens its job and shows that step's data and logs
     # Value: from a failed step, people get to the code and the data that failed in one click.
     Given I have the IDE open on "Fetch" with run "R" loaded
@@ -387,7 +386,7 @@ Feature: Workflow editor run viewer
     # InputTabPanel.tsx:45-58; OutputTabPanel.tsx:45-58; LogTabPanel.tsx:241-244
     # StepList.test.tsx:161-184 asserts the URL update call only (useURLState mocked)
 
-  @S06 @pending
+  @S06
   Scenario Outline: Input and output tabs say why there is no data
     # Value: people can tell data that has not arrived yet from data that was never saved.
     Given the loaded run is "<run state>"
@@ -405,7 +404,7 @@ Feature: Workflow editor run viewer
     # a wiped dataclip still has an id and shows a raw null: flow-zero-persistence-runs 6.1
     # no test renders InputTabPanel or OutputTabPanel
 
-  @S07 @pending
+  @S07
   Scenario Outline: The log says what a run is waiting for before it logs anything
     # Value: a builder can tell a run waiting for a worker from one installing adaptors, and knows nothing is stuck.
     Given the loaded run is in state "<state>" and has no log lines
@@ -422,7 +421,7 @@ Feature: Workflow editor run viewer
     # LogTabPanel.test.tsx:534-573, :595-630 (fake timers; channel and log store mocked, so it proves the overlay logic only)
     # a finished run with no lines: shared-log-viewer S06
 
-  @S08 @pending
+  @S08
   Scenario: A job that did not run in the loaded run is flagged
     # Value: people don't read another job's logs and data as if they belonged to the job they are editing.
     Given run "R" has finished and did not run job "Notify"
@@ -433,7 +432,7 @@ Feature: Workflow editor run viewer
     # RunViewerPanel.tsx:39-41, :95; FullScreenIDE.tsx:306-309, :1178-1182, :1239-1252; useHistory.ts:254-272
     # RunViewerPanel.test.tsx:325-385 (opacity class; useJobMatchesRun mocked, so the match rule itself is untested)
 
-  @S09 @pending
+  @S09
   Scenario: The run links to its work order and to the full run page
     # Value: people can go from the editor to the run's history and its complete record without searching for it.
     Given run "R" of work order "W" is loaded with step "S" selected
@@ -442,7 +441,7 @@ Feature: Workflow editor run viewer
     # RunTabPanel.tsx:62-86; handoff only: history-work-orders reads filters[workorder_id], run-show reads step
     # no test renders RunTabPanel
 
-  @S10 @pending
+  @S10
   Scenario: The canvas shows the path a run took
     # Value: people see at a glance which steps a run reached and where it failed, without opening anything.
     Given run "R" of "Intake" started at job "Fetch" by "amara@example.org", "Fetch" succeeded in 2 seconds and "Transform" failed
@@ -457,7 +456,7 @@ Feature: Workflow editor run viewer
     # workflow_channel_test.exs:5172-5225 (request_run_steps payload); createHistoryStore.test.ts:669-759 (subscribe fetches unless cached)
     # see 6.1 for "Started by unknown" on a URL-loaded run
 
-  @S11 @pending
+  @S11
   Scenario: A run that cannot be loaded says why
     # Value: people learn a link is wrong or they lack access, instead of watching a skeleton forever.
     Given run id "X" does not exist
@@ -467,7 +466,7 @@ Feature: Workflow editor run viewer
     # run_channel.ex:67-95; createHistoryStore.ts:996-1005; RunViewerPanel.tsx:63-80
     # run_channel_test.exs:3058-3095 (join refusals); RunViewerPanel.test.tsx:177-212 (error text and Dismiss; store mocked)
 
-  @S12 @pending
+  @S12
   Scenario: A run from another project is not painted onto this workflow
     # Value: a run belongs to its own project, and opening it from another project's editor shows nothing.
     Given run "R" belongs to a project other than the editor's
@@ -478,7 +477,7 @@ Feature: Workflow editor run viewer
     # collaborate_test.exs:221-245 (preload nil); workflow_channel_test.exs:5236-5255 ("unauthorized")
     # the IDE run panel still loads it through the run channel when the user can access that project: flow-open-run-in-editor 6.1
 
-  @S13 @pending
+  @S13
   Scenario: A run started or opened elsewhere lands in the run viewer
     # Value: whichever way people reach a run, they arrive at the same view of it.
     When the flow "flow-manual-run-live-follow" starts run "R" from the IDE's run panel

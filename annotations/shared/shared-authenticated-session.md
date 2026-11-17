@@ -2,7 +2,6 @@
 id: shared-authenticated-session
 type: shared
 title: Authenticated session gate and app chrome
-status: not-started
 owner:
 
 trigger:
@@ -199,7 +198,7 @@ Feature: Authenticated session gate and app chrome
   As anyone using Lightning
   I want every signed-in page to check my session and give me the same chrome
 
-  @S01 @pending
+  @S01
   Scenario: Signed-out visitor to a non-project page is sent to log in
     # Value: account-level data (credentials, tokens, profile) is never rendered to an anonymous browser.
     Given I am not logged in
@@ -209,7 +208,7 @@ Feature: Authenticated session gate and app chrome
     # user_auth.ex:290-300, :490-492; init_assigns.ex:22-24 on a websocket-only mount
     # Project pages: shared-project-scope S01
 
-  @S02 @pending
+  @S02
   Scenario: A disabled account's existing session no longer opens pages
     # Value: disabling an account takes effect on sessions that are already logged in.
     Given I am logged in
@@ -218,7 +217,7 @@ Feature: Authenticated session gate and app chrome
     Then I am on "/users/log_in"
     # accounts.ex:994-1006, :329-332; test/lightning_web/live/account_revocation_teardown_test.exs:70-90
 
-  @S03 @pending
+  @S03
   Scenario: A session waiting on its second factor is sent to finish it
     # Value: a stolen password alone never reaches app pages for an account with MFA.
     Given I have entered my password for an account with MFA enabled
@@ -227,7 +226,7 @@ Feature: Authenticated session gate and app chrome
     Then I am on "/users/two-factor"
     # user_auth.ex:302-303, :313-323
 
-  @S04 @pending @variant:require-email-verification
+  @S04 @variant:require-email-verification
   Scenario: An unconfirmed account past the deadline is sent to confirm
     # Value: instances that require verified emails don't serve data to unverified accounts after the grace period.
     Given my account was created 50 hours ago and my email is unconfirmed
@@ -237,7 +236,7 @@ Feature: Authenticated session gate and app chrome
     # user_auth.ex:305-306, :327-351; init_assigns.ex:26-30; confirmation_lockout.ex:8-9, :43
     # test/lightning_web/live/confirmation_lockout_live_test.exs:43-97
 
-  @S05 @pending @variant:require-email-verification
+  @S05 @variant:require-email-verification
   Scenario: A locked-out account can still reach its confirmation page
     # Value: a locked-out user always has a way back in instead of a redirect loop.
     Given my account was created 50 hours ago and my email is unconfirmed
@@ -245,7 +244,7 @@ Feature: Authenticated session gate and app chrome
     Then I see "blocked pending email confirmation"
     # router.ex:246-250, confirmation_lockout.ex:25-27; confirmation_lockout_live_test.exs:99-112
 
-  @S06 @pending @variant:require-email-verification
+  @S06 @variant:require-email-verification
   Scenario: An unconfirmed account inside the deadline is warned
     # Value: users learn the confirmation deadline before they are locked out.
     Given my account was created 2 hours ago and my email is unconfirmed
@@ -255,7 +254,7 @@ Feature: Authenticated session gate and app chrome
     And the "Resend confirmation email" link points to "/users/send-confirmation-email"
     # lib/lightning_web/components/layout_components.ex:259-275; init_assigns_test.exs:76-84
 
-  @S07 @pending
+  @S07
   Scenario: Collapsing the sidebar is remembered
     # Value: someone who wants more room for their work sets it once, not on every page.
     Given I am logged in with the sidebar expanded
@@ -265,7 +264,7 @@ Feature: Authenticated session gate and app chrome
     Then the sidebar is still collapsed
     # init_assigns.ex:38-45, :84-95; layout_components.ex:652-657; init_assigns_test.exs:91-137
 
-  @S08 @pending @variant:book-demo-banner
+  @S08 @variant:book-demo-banner
   Scenario: Book-a-demo banner shows until dismissed
     # Value: instances can offer new users a call, without nagging anyone who has said no.
     Given I am logged in and have never dismissed the book-a-demo banner
@@ -276,7 +275,7 @@ Feature: Authenticated session gate and app chrome
     Then I do not see the banner
     # init_assigns.ex:46-54; book_demo_banner.ex:29-44; test/lightning_web/live/book_demo_banner_test.exs:19-77
 
-  @S09 @pending @variant:book-demo-banner
+  @S09 @variant:book-demo-banner
   Scenario: Scheduling a call hands off to the booking page
     # Value: a prospect reaches the booking page with their details already filled in, and the team hears about it.
     Given the book-a-demo banner is showing
@@ -289,7 +288,7 @@ Feature: Authenticated session gate and app chrome
     And the banner is dismissed for me
     # book_demo_banner.ex:46-77; book_demo_banner_test.exs:79-141
 
-  @S10 @pending @variant:gdpr-banner
+  @S10 @variant:gdpr-banner
   Scenario: The configured GDPR banner shows on app pages
     # Value: instances that must collect consent can show their consent banner wherever users work.
     Given the instance configures a GDPR banner component
@@ -297,7 +296,7 @@ Feature: Authenticated session gate and app chrome
     Then I see the configured banner
     # init_assigns.ex:55; layouts/live.html.heex:101-106; test/lightning_web/live/profile_live_test.exs:817-821
 
-  @S11 @pending @variant:first-setup-open
+  @S11 @variant:first-setup-open
   Scenario: An instance with no superuser sends pages to first setup
     # Value: a fresh install can't be used until someone has created the administrator account.
     Given first setup is allowed

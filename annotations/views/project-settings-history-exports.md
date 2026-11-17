@@ -2,7 +2,6 @@
 id: project-settings-history-exports
 type: view
 title: Project settings › History exports
-status: not-started
 owner:
 
 trigger:
@@ -163,7 +162,7 @@ Feature: Project history exports panel
   As a member of a project
   I want to see the project's exports, their status, and download the ones that are ready
 
-  @S01 @pending
+  @S01
   Scenario: Members see every export requested on the project
     # Value: the team can find an export someone else asked for, and see who asked, without chasing them.
     Given I am a viewer on project "Malawi HIV"
@@ -176,7 +175,7 @@ Feature: Project history exports panel
     # settings.ex:115, :208; projects.ex:2133-2142; settings.html.heex:1067-1070
     # data_tables.ex:291-332 (columns, Path.basename(file.path), "Pending", first and last name), :334-339 (status label)
 
-  @S02 @pending
+  @S02
   Scenario Outline: Any member can start the download of a completed export
     # Value: whoever needs the record can take it, not only the person who requested it.
     Given I am a <role> on project "Malawi HIV"
@@ -194,7 +193,7 @@ Feature: Project history exports panel
       | admin  |
       | owner  |
 
-  @S03 @pending
+  @S03
   Scenario: A project with no exports says so
     # Value: a member looking for an export knows there isn't one, rather than suspecting the page failed to load.
     Given I am an editor on project "Malawi HIV"
@@ -204,7 +203,7 @@ Feature: Project history exports panel
     And I see no exports table
     # data_tables.ex:294-295; settings.html.heex:1092-1098
 
-  @S04 @pending
+  @S04
   Scenario: Only this project's exports are listed
     # Value: export archives of one project's health data are never offered to members of another project.
     Given I am an owner of projects "Malawi HIV" and "Kenya TB"
@@ -213,7 +212,7 @@ Feature: Project history exports panel
     Then I see "No history exports found for this project."
     # projects.ex:2136-2137 (where project_id), settings.ex:115
 
-  @S05 @pending @variant:sandbox
+  @S05 @variant:sandbox
   Scenario: A sandbox lists its own exports, not its parent's
     # Value: someone in a sandbox does not mistake the live project's exports for the sandbox's, or the reverse.
     Given I am an owner of sandbox "dev" of project "Malawi HIV"

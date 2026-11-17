@@ -2,7 +2,6 @@
 id: workflow-editor-new
 type: view
 title: New workflow (landing screen, templates, YAML import)
-status: not-started
 owner:
 
 trigger:
@@ -274,7 +273,7 @@ Feature: Start a new workflow
   As a project editor
   I want to start from a blank workflow, a template, a YAML file or a description
 
-  @S01 @pending
+  @S01
   Scenario: Editor sees the ways to start a workflow
     # Value: people starting a workflow see every starting point in one place instead of an empty canvas.
     # LandingScreen.tsx:59-166; createUIStore.ts:107; useUI.ts:126-137; CollaborativeEditor.tsx:361-407
@@ -285,7 +284,7 @@ Feature: Start a new workflow
     And I see a link "import a YAML file manually"
     And the workflow header and canvas are not shown
 
-  @S02 @pending
+  @S02
   Scenario: A viewer who opens the new workflow URL is sent back to the list
     # Value: someone who cannot create a workflow never sees a landing screen where every option silently does nothing.
     # collaborate.ex:35-59; collaborate_new_test.exs:165-193
@@ -294,7 +293,7 @@ Feature: Start a new workflow
     Then I am on "/projects/<Malawi HIV id>/w"
     And I see "You are not authorized to perform this action."
 
-  @S03 @pending
+  @S03
   Scenario: A new workflow cannot claim an id owned by another project
     # Value: an id from another project cannot overwrite or read that project's workflow.
     # workflow_channel.ex:2224-2233; workflow_resolver.ex:82-107; workflow_channel_test.exs:1521-1541
@@ -303,7 +302,7 @@ Feature: Start a new workflow
     When my editor joins the new workflow room for id "<lab id>" in project "Malawi HIV"
     Then the join is refused with "workflow not found"
 
-  @S04 @pending
+  @S04
   Scenario: Editor builds a blank workflow from scratch
     # Value: the most common starting shape is one click away and is saved before the user starts editing.
     # CollaborativeEditor.tsx:375-384; baseTemplates.ts:12-29; useWorkflow.tsx:790-829, :440-460; CollaborativeEditor.build-from-scratch.test.tsx:372-396
@@ -314,7 +313,7 @@ Feature: Start a new workflow
     And the address becomes "/projects/<Malawi HIV id>/w/<new id>"
     And the landing screen is gone and the workflow editor (workflow-editor-canvas) shows the new workflow
 
-  @S05 @pending
+  @S05
   Scenario: Clicking build from scratch twice creates one workflow
     # Value: an impatient double click doesn't leave a duplicate workflow behind.
     # LandingScreen.tsx:141-146, :185; useActionLock.ts; CollaborativeEditor.build-from-scratch.test.tsx:447-470
@@ -323,7 +322,7 @@ Feature: Start a new workflow
     Then the "Build from scratch" card is disabled until the save finishes
     And exactly one workflow is created
 
-  @S06 @pending
+  @S06
   Scenario Outline: Creating while not connected tells me why nothing happened
     # Value: a user never ends up with an unsaved workflow that exists only in their browser.
     # useWorkflow.tsx:748-762, :790-798; CollaborativeEditor.build-from-scratch.test.tsx:398-412; YAMLImportModal.test.tsx:272-296; TemplateBrowserModalWrapper.test.tsx:189
@@ -338,7 +337,7 @@ Feature: Start a new workflow
       | disconnected from    | Not connected    |
       | still connecting     | Still connecting |
 
-  @S07 @pending
+  @S07
   Scenario: A new workflow that fails to save can be retried
     # Value: a temporary server failure does not lose the starting point the user chose.
     # useWorkflow.tsx:490-570, :500-502, :572-586; CollaborativeEditor.build-from-scratch.test.tsx:414-429
@@ -350,7 +349,7 @@ Feature: Start a new workflow
     When the server recovers and I click "Retry"
     Then the workflow is saved and the editor shows it at "/projects/<Malawi HIV id>/w/<new id>"
 
-  @S08 @pending
+  @S08
   Scenario: A created workflow gets a name unique in the project
     # Value: creating a workflow never fails, or produces two indistinguishable workflows, because the name is taken.
     # createWorkflowStore.ts:1892-1911, :1802-1831; workflow_channel.ex:568-575, :2123-2131; workflows.ex:287-320; workflow_channel_test.exs:4409-4530
@@ -360,7 +359,7 @@ Feature: Start a new workflow
     When I go back to the landing screen and click "Build from scratch"
     Then the new workflow is named "Untitled workflow 1"
 
-  @S09 @pending
+  @S09
   Scenario: Editor browses templates
     # Value: people start from a known-good shape instead of rebuilding common patterns.
     # TemplateBrowserModalWrapper.tsx:39-84; TemplateBrowserModal.tsx:41-78, :183-207; baseTemplates.ts:31-80; workflow_templates.ex:146-150; workflow_channel.ex:761-766; TemplateBrowserModal.test.tsx:198-213
@@ -371,7 +370,7 @@ Feature: Start a new workflow
     And then "Appointment reminders" and "Kobo to DHIS2"
     And "Event-based workflow" is previewed as a diagram with its name and description
 
-  @S10 @pending
+  @S10
   Scenario: Clicking a template previews it without creating anything
     # Value: people can compare templates before committing to one.
     # TemplateBrowserModal.tsx:189-197, :243-296; TemplateBrowserModal.test.tsx:215-247
@@ -380,7 +379,7 @@ Feature: Start a new workflow
     Then the preview shows "Scheduled workflow" and its description
     And no workflow has been created
 
-  @S11 @pending
+  @S11
   Scenario: Searching narrows the published templates but keeps the shipped ones
     # Value: people find a relevant template in a long list without losing the basic starting points.
     # TemplateBrowserModal.tsx:41-62, :168-179, :198-205; filterTemplates.ts:7-30; TemplateBrowserModal.test.tsx:141-195, :249-273; filterTemplates.test.ts
@@ -392,7 +391,7 @@ Feature: Start a new workflow
     When I search for "zzz"
     Then I see "No saved templates match your search."
 
-  @S12 @pending
+  @S12
   Scenario: Editor creates a workflow from a template
     # Value: a chosen template becomes a saved workflow the user can start editing immediately.
     # TemplateBrowserModalWrapper.tsx:86-96; TemplateBrowserModal.tsx:279-294; templateWorkflowState.ts:46-48; TemplateBrowserModalWrapper.test.tsx:151-187
@@ -403,7 +402,7 @@ Feature: Start a new workflow
     And the dialog and the landing screen close and the editor shows the new workflow
     But if the save fails the dialog stays open and "Create" is enabled again
 
-  @S13 @pending
+  @S13
   Scenario: An unreadable template cannot be used
     # Value: a broken published template can't produce a broken workflow, and the user is told why.
     # TemplateBrowserModal.tsx:85-88, :245-259, :279-294; templateWorkflowState.ts:62-74; TemplateBrowserModal.test.tsx:297-331
@@ -413,7 +412,7 @@ Feature: Start a new workflow
     Then the preview says "This template can't be previewed." with the parse error
     And "Create" is disabled with the tooltip "This template can't be read."
 
-  @S14 @pending
+  @S14
   Scenario: The shipped templates are still offered when published templates fail to load
     # Value: a server hiccup doesn't stop someone starting a workflow.
     # TemplateBrowserModalWrapper.tsx:46-70; TemplateBrowserModalWrapper.templateFetch.test.tsx:152-173
@@ -422,7 +421,7 @@ Feature: Start a new workflow
     Then I see an alert "Failed to load templates" with "Please check your connection and try again."
     And "Event-based workflow" and "Scheduled workflow" are listed and can be created
 
-  @S15 @pending
+  @S15
   Scenario: Editor imports a workflow from a YAML file
     # Value: a workflow exported from another project, instance or the CLI moves in without being rebuilt by hand.
     # YAMLImportModal.tsx:110-132, :154-179; YAMLFileDropzone.tsx:21-94; YAMLFileDropzone.test.tsx:33-63, :153-171; YAMLImportModal.test.tsx:225-248
@@ -436,7 +435,7 @@ Feature: Start a new workflow
     Then a workflow "Kobo sync" is saved with the file's steps, triggers and edges
     And the dialog and the landing screen close and the editor shows the new workflow
 
-  @S16 @pending
+  @S16
   Scenario Outline: Only YAML files up to 8MB are accepted
     # Value: users get an immediate, specific reason instead of a confusing parse failure or a stalled browser.
     # YAMLFileDropzone.tsx:34-55, :138; YAMLFileDropzone.test.tsx:65-126
@@ -450,7 +449,7 @@ Feature: Start a new workflow
       | "workflow.json"          | File must be .yml or .yaml format          |
       | a 9MB file "big.yaml"    | File size 9.0MB exceeds maximum of 8MB     |
 
-  @S17 @pending
+  @S17
   Scenario: Invalid YAML is explained before anything is created
     # Value: users fix their file against a specific message instead of creating a broken workflow.
     # YAMLImportModal.tsx:72-99, :134-152, :181-185; ValidationErrorDisplay.tsx:32-61; workflow-errors.ts:219-247; YAMLImportModal.test.tsx:194-222
@@ -461,7 +460,7 @@ Feature: Start a new workflow
     Then I see "Validation Error" with the code "JOB_NOT_FOUND" and "Job reference error: The job 'load-data' referenced in edge"
     And "Create" is disabled with the tooltip "Fix validation errors to continue"
 
-  @S18 @pending
+  @S18
   Scenario Outline: Both workflow YAML formats import
     # Value: files written by older Lightning exports and by the current CLI and canvas export both work.
     # yaml/util.ts:41-58; YAMLCodeEditor.tsx:16-39; YAMLImportModal.test.tsx:334-390
@@ -475,7 +474,7 @@ Feature: Start a new workflow
       | v1 (jobs, triggers, edges maps)          |
       | v2 (steps list)                          |
 
-  @S19 @pending
+  @S19
   Scenario: A failed import save keeps the dialog usable
     # Value: a user's pasted YAML is not thrown away when the save fails.
     # YAMLImportModal.tsx:116-127; YAMLImportModal.test.tsx:250-270, :298-332
@@ -486,7 +485,7 @@ Feature: Start a new workflow
     And afterwards the dialog is still open with my YAML and "Create" is enabled
     And the landing screen is still shown
 
-  @S20 @pending @variant:ai-enabled
+  @S20 @variant:ai-enabled
   Scenario: Editor hands a description to the AI assistant
     # Value: people who don't know the workflow shape yet can start from a plain-language goal.
     # LandingScreen.tsx:41-49, :66-136; CollaborativeEditor.tsx:394-397; createUIStore.ts:173-178; AIAssistantPanelWrapper.tsx:363-375; LandingScreen.test.tsx:71-104
@@ -497,7 +496,7 @@ Feature: Start a new workflow
     Then the landing screen closes
     And the AI assistant panel opens and sends "Sync new KoboToolbox submissions into Postgres" (handoff to workflow-editor-ai-assistant)
 
-  @S21 @pending @variant:ai-enabled
+  @S21 @variant:ai-enabled
   Scenario: Build with AI needs a description
     # Value: an empty request never reaches the assistant or uses quota.
     # LandingScreen.tsx:44-49, :106-111, :126; LandingScreen.test.tsx:44-69, :106-124
@@ -507,7 +506,7 @@ Feature: Start a new workflow
     When I type a first line and press Shift+Enter or Alt+Enter
     Then a new line is added and nothing is sent
 
-  @S22 @pending
+  @S22
   Scenario: Without the AI assistant, the other options still show
     # Value: instances without AI see no option they cannot use.
     # LandingScreen.tsx:66; collaborate.ex:84, :277; ai_assistant.ex:80-84; LandingScreen.test.tsx:147-177
@@ -516,7 +515,7 @@ Feature: Start a new workflow
     Then I do not see "Build with AI", "Recommended" or the AI disclaimer
     And I see "Build from scratch", "Browse templates" and "import a YAML file manually"
 
-  @S23 @pending @variant:ai-limit-reached
+  @S23 @variant:ai-limit-reached
   Scenario: When the AI quota is spent the prompt is disabled with the reason
     # Value: users understand why AI is unavailable and still have the other ways to start.
     # CollaborativeEditor.tsx:367-368, :391-393; LandingScreen.tsx:41-44, :90-115; workflow_channel.ex:2429-2431, :2442-2449; LandingScreen.test.tsx:218-250
@@ -526,7 +525,7 @@ Feature: Start a new workflow
     And hovering the prompt shows "AI usage limit reached for this month"
     And "Build from scratch" is enabled
 
-  @S24 @pending
+  @S24
   Scenario: Links into the editor still open on the landing screen
     # Value: nobody lands in a half-built editor with panels open on a workflow that has no saved record.
     # createUIStore.ts:78-86; WorkflowEditor.tsx:116-119, :274, :285-292; collaborate.ex:100-104, :456-470; collaborate_new_test.exs:195-209; collaborate_test.exs:2747-2768
@@ -535,7 +534,7 @@ Feature: Start a new workflow
     Then I see the landing screen for a brand new workflow
     And "Lab results" is not shown, and no settings, code, run or AI panel is open
 
-  @S25 @pending
+  @S25
   Scenario: Only one creation dialog is open at a time
     # Value: two half-finished creation paths can't compete to create the workflow.
     # createUIStore.ts:211-243; createUIStore.modals.test.ts:34-55
@@ -543,7 +542,7 @@ Feature: Start a new workflow
     When the YAML import dialog is opened
     Then the template browser is closed
 
-  @S26 @pending
+  @S26
   Scenario: Closing a creation dialog returns to the landing screen
     # Value: users can back out of a starting point and choose another.
     # TemplateBrowserModal.tsx:103-108, :126-133; YAMLImportModal.tsx:22-30, :189-195; YAMLImportModal.test.tsx:162-170
@@ -552,7 +551,7 @@ Feature: Start a new workflow
     Then the dialog closes and the landing screen is shown
     And the same happens when I press Escape or click "Close" on the template browser
 
-  @S27 @pending @variant:activation-limited
+  @S27 @variant:activation-limited
   Scenario: At the activation limit a new workflow is created with its triggers off
     # Value: users at their plan's activation limit can still create and build workflows without exceeding the limit.
     # session.ex:934-963; workflow.ex:150-160; session_test.exs:1422-1480

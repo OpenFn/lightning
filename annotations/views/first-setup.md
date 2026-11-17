@@ -2,7 +2,6 @@
 id: first-setup
 type: view
 title: First setup
-status: not-started
 owner:
 
 trigger:
@@ -182,7 +181,7 @@ Feature: First setup
   As the person who installed it
   I want to create the first superuser account from the browser
 
-  @S01 @pending
+  @S01
   Scenario: Operator creates the first superuser and is handed off to sign in
     # Value: a fresh install gets an administrator without anyone touching the database.
     Given first setup is allowed
@@ -197,7 +196,7 @@ Feature: First setup
     # superuser.ex:44-62; accounts.ex:543-547, :1051-1055; extensions/account_hook.ex:20-26; user.ex:230-239
     # first_setup_live_test.exs:31-52 (asserts the end of the flow: /projects with the flash)
 
-  @S02 @pending
+  @S02
   Scenario: A mismatched password confirmation is flagged while typing
     # Value: the operator doesn't lock themselves out of the only administrator account with a typo.
     Given first setup is allowed
@@ -208,7 +207,7 @@ Feature: First setup
     And "Save" is disabled
     # superuser.ex:35-41; superuser.html.heex:59-65; first_setup_live_test.exs:16-20
 
-  @S03 @pending
+  @S03
   Scenario: A password shorter than 12 characters is refused
     # Value: the most privileged account on the instance has a minimum password strength.
     Given first setup is allowed
@@ -220,7 +219,7 @@ Feature: First setup
     # user.ex:258-261; priv/gettext/en/LC_MESSAGES/errors.po:27-30
     # first_setup_live_test.exs:22-29 asserts only the 8-character copy; see 6.1
 
-  @S04 @pending
+  @S04
   Scenario: A superuser without first and last name is refused
     # Value: the administrator is identifiable wherever their name appears, in audit trails and user lists.
     Given first setup is allowed
@@ -235,7 +234,7 @@ Feature: First setup
     And there is still no superuser
     # user.ex:102-110; utils/validators.ex:81-90; superuser.ex:64-65; first_setup_live_test.exs:55-79
 
-  @S05 @pending
+  @S05
   Scenario: A name with a control character is refused
     # Value: names shown to other users, in emails and in exported files can't carry hidden characters.
     Given first setup is allowed
@@ -247,7 +246,7 @@ Feature: First setup
     And there is still no superuser
     # utils/validators.ex:46, :81-86; user.ex:102-106; first_setup_live_test.exs:81-104
 
-  @S06 @pending
+  @S06
   Scenario: An invalid or already registered email is refused
     # Value: the administrator account has an address that reaches them, and can't collide with an existing account.
     Given first setup is allowed
@@ -261,7 +260,7 @@ Feature: First setup
     And "Save" is disabled
     # utils/validators.ex:20-27; user.ex:241-256; not covered by first_setup_live_test.exs
 
-  @S07 @pending
+  @S07
   Scenario: Visiting the page after a superuser exists sends me to projects
     # Value: once the instance has an administrator, the page can't be used to create another one.
     Given first setup is allowed
@@ -270,7 +269,7 @@ Feature: First setup
     Then I am redirected to "/projects"
     # plugs/first_setup.ex:19-21; first_setup_live_test.exs:106-111 (flash is empty)
 
-  @S08 @pending
+  @S08
   Scenario: Navigating to the page from inside the app after a superuser exists sends me to projects
     # Value: the page stays shut even when reached without a full page load, where the plugs don't run.
     Given first setup is allowed
@@ -281,7 +280,7 @@ Feature: First setup
     And no registration form is shown
     # superuser.ex:69-73; router.ex:69 and :288; not covered by a test
 
-  @S09 @pending @variant:first-setup-closed
+  @S09 @variant:first-setup-closed
   Scenario: Instances administered by a service account refuse the page
     # Value: an instance provisioned by automation is not set up from the browser.
     Given first setup is not allowed
@@ -290,7 +289,7 @@ Feature: First setup
     Then I get a 404 with "First setup is disabled for this instance."
     # router.ex:37-41; plugs/block_routes.ex:12-19, :26-33; first_setup_live_test.exs:129-133, :144-147
 
-  @S10 @pending @variant:first-setup-closed
+  @S10 @variant:first-setup-closed
   Scenario: Instances administered by a service account refuse live navigation to the page
     # Value: the page stays shut on such instances even when no plug runs.
     Given first setup is not allowed
@@ -299,7 +298,7 @@ Feature: First setup
     Then I am redirected to "/projects"
     # superuser.ex:15-21; first_setup_live_test.exs:135-142
 
-  @S11 @pending @variant:first-setup-closed
+  @S11 @variant:first-setup-closed
   Scenario: Instances administered by a service account are not forced into first setup
     # Value: such instances are usable without anyone creating a superuser in the browser.
     Given first setup is not allowed

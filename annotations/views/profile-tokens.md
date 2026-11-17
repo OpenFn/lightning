@@ -2,7 +2,6 @@
 id: profile-tokens
 type: view
 title: User profile › API tokens (personal access tokens)
-status: not-started
 owner:
 
 trigger:
@@ -199,7 +198,7 @@ Feature: Personal access tokens
   As a signed-in user
   I want to generate, see and delete my own API tokens
 
-  @S01 @passing-old
+  @S01
   Scenario: A user with no tokens is pointed to generate one
     # Value: someone setting up the CLI or an integration for the first time can see they have no token yet and how to get one.
     Given I am signed in and have no API tokens
@@ -211,7 +210,7 @@ Feature: Personal access tokens
     # index.ex:25-29, :17; index.html.heex:114-140; menu.ex:105-108
     # tokens_live_test.exs:15-28 (the button assertion at :26-27 is vacuous, see 6.5)
 
-  @S02 @passing-old
+  @S02
   Scenario: A user generates a token and sees it in full once
     # Value: a user gets a working credential for their scripts on their own, without asking an administrator.
     Given I am signed in and on "/profile/tokens"
@@ -223,7 +222,7 @@ Feature: Personal access tokens
     # index.ex:49-59, :65-67; index.html.heex:29-46, :77-82; accounts.ex:1094-1098
     # tokens_live_test.exs:30-53 (full value 539 characters), :55-70 (masked list)
 
-  @S03 @passing-old
+  @S03
   Scenario: A token can't be read back after leaving the page
     # Value: someone who later sits at the user's browser, or replays its history, can't see the token again.
     Given I have just generated a token on "/profile/tokens"
@@ -232,7 +231,7 @@ Feature: Personal access tokens
     And the token's row shows only "..." followed by its last 10 characters
     # index.ex:25-29 (new_token reset on every index load), :65-67; index.html.heex:29, :80-84
 
-  @S04 @passing-old
+  @S04
   Scenario: Copying the new token puts the whole token on the clipboard
     # Value: a 500-character token is pasted into the script exactly, without a hand-selection that drops characters.
     Given I have just generated a token on "/profile/tokens"
@@ -242,7 +241,7 @@ Feature: Personal access tokens
     # index.html.heex:40-63; assets/js/hooks/index.ts:738-817 (Copy, data-to reads the input value), :595-607 (Tooltip "Copied!")
     # tokens_live_test.exs:42-44 asserts only that the hooked button renders
 
-  @S05 @passing-old
+  @S05
   Scenario: Each token shows when it was created and whether it has been used
     # Value: a user can spot tokens that are stale or were never used and revoke them.
     Given I have a token created on 1 March that was last used on 10 March
@@ -253,7 +252,7 @@ Feature: Personal access tokens
     # index.html.heex:71-73, :86-98; user_token.ex:42; dates rendered by shared-local-datetime S01
     # how last_used_at gets set belongs to flow-personal-access-token-use (see 6.1 row 1)
 
-  @S06 @passing-old
+  @S06
   Scenario: A user only sees their own tokens
     # Value: one user's token fragments and usage are private to them.
     Given "amara@example.org" has an API token
@@ -263,7 +262,7 @@ Feature: Personal access tokens
     # index.ex:14-17, :61-63; accounts.ex:1128-1131; user_token.ex:246-251
     # not asserted by any test; read from code
 
-  @S07 @passing-old
+  @S07
   Scenario: A user deletes a token after confirming
     # Value: a retired token can be cut off immediately by its owner.
     Given I have an API token listed on "/profile/tokens"
@@ -279,7 +278,7 @@ Feature: Personal access tokens
     # index.html.heex:101-107; index.ex:31-42; token_deletion_modal.ex:12-15, :29-37, :45-84; accounts.ex:1121-1123
     # tokens_live_test.exs:76-111 (the final refute at :109-110 is vacuous, see 6.5)
 
-  @S08 @passing-old
+  @S08
   Scenario: Backing out of a deletion keeps the token
     # Value: a misclick on the trash icon doesn't break integrations that depend on the token.
     Given I have opened the delete modal for one of my tokens
@@ -289,7 +288,7 @@ Feature: Personal access tokens
     # token_deletion_modal.ex:24-27, :86-93 (Cancel and the close button both send close_modal)
     # not asserted by any test; read from code
 
-  @S09 @passing-old
+  @S09
   Scenario: A user can't open the deletion of someone else's token
     # Value: a token id in the URL can't be used to delete another user's token.
     Given "amara@example.org" has an API token
@@ -300,7 +299,7 @@ Feature: Personal access tokens
     And I do not see "Delete API Access Token"
     # index.ex:31-46; policies/users.ex:32-38; tokens_live_test.exs:113-125
 
-  @S10 @passing-old
+  @S10
   Scenario: A delete naming someone else's token deletes nothing
     # Value: the confirmation can't be pointed at another user's token.
     Given I have opened the delete modal for my own token
@@ -311,7 +310,7 @@ Feature: Personal access tokens
     And both tokens still exist
     # tokens_live/index.ex handle_event("delete_token"); tokens_live_test.exs "tampered event id"
 
-  @S11 @passing-old
+  @S11
   Scenario: Tokens revoked by a password change are gone from the list
     # Value: after a user changes a password, this page shows that their old tokens no longer exist.
     Given I have an API token listed on "/profile/tokens"

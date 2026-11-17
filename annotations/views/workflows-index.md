@@ -2,7 +2,6 @@
 id: workflows-index
 type: view
 title: Workflows (project dashboard)
-status: not-started
 owner:
 
 trigger:
@@ -235,7 +234,7 @@ Feature: Project workflows dashboard
   Background:
     Given project "Malawi HIV" has workflows "Intake", "Sync DHIS2" and "Weekly report"
 
-  @S01 @passing-old
+  @S01
   Scenario: Member sees the project's workflows with recent activity
     # Value: anyone on the project can tell at a glance which workflows are busy and which are failing.
     Given I am a viewer on project "Malawi HIV"
@@ -248,7 +247,7 @@ Feature: Project workflows dashboard
     # index.ex:151-170, dashboard_components.ex:93-102, :180-263, dashboard_stats.ex:52-110
     # index_test.exs:113-271
 
-  @S02 @passing-old
+  @S02
   Scenario: Workflow with no recent activity says so
     # Value: an idle workflow is visibly idle instead of looking like missing data.
     Given "Weekly report" has had no work orders in the last 30 days
@@ -257,7 +256,7 @@ Feature: Project workflows dashboard
     And its work order and failed counts show 0 and "N/A"
     # dashboard_components.ex:224-231, :254-261, :418-421; index_test.exs:266-270
 
-  @S03 @passing-old
+  @S03
   Scenario: Member sees project totals
     # Value: the project's overall health over the last month is visible without opening any workflow.
     Given the project had 10 work orders in the last 30 days, 6 pending and 2 failed
@@ -269,7 +268,7 @@ Feature: Project workflows dashboard
     And the "Work Orders in failed state" card shows 2 and "20.0%"
     # dashboard_components.ex:489-547, dashboard_stats.ex:159-218; index_test.exs:134-171
 
-  @S04 @passing-old
+  @S04
   Scenario: Search narrows the list by name
     # Value: people find one workflow quickly in a project with many.
     When I type "sync" in the search box
@@ -278,7 +277,7 @@ Feature: Project workflows dashboard
     And the URL query has "q=sync"
     # index.ex:115-129, :175-185, workflows.ex:836-841; index_test.exs:763-774, :789-797
 
-  @S05 @passing-old
+  @S05
   Scenario: A search with no matches offers to create a workflow
     # Value: a dead-end search still leads somewhere useful.
     When I search for "nonexistent"
@@ -286,7 +285,7 @@ Feature: Project workflows dashboard
     And "create a new one" links to "/projects/<project_id>/w/new"
     # dashboard_components.ex:39-45; index_test.exs:799-811
 
-  @S06 @passing-old
+  @S06
   Scenario: Clearing the search restores the full list
     # Value: getting back to every workflow is one click.
     Given I am on the workflows page with "q=api"
@@ -295,7 +294,7 @@ Feature: Project workflows dashboard
     And the URL is "/projects/<project_id>/w?sort=name&dir=asc"
     # index.ex:187-200, dashboard_components.ex:397-406; index_test.exs:776-787
 
-  @S07 @passing-old
+  @S07
   Scenario: A project with no workflows invites the first one
     # Value: a new project points its members to the next step.
     Given project "Empty" has no workflows
@@ -304,7 +303,7 @@ Feature: Project workflows dashboard
     And "Create one" links to the new workflow page
     # dashboard_components.ex:46-51; index_test.exs:948-956
 
-  @S08 @passing-old
+  @S08
   Scenario Outline: Sorting by a column
     # Value: people can bring the busiest, most failing, most recent or switched-off workflows to the top.
     When I click the "<column>" header
@@ -322,21 +321,21 @@ Feature: Project workflows dashboard
       | Work Orders in a failed state | failed_workorders_count   |
       | Enabled                       | enabled                   |
 
-  @S09 @passing-old
+  @S09
   Scenario: Search and sort combine and survive in the URL
     # Value: a filtered, sorted view can be bookmarked or shared.
     When I open "/projects/<project_id>/w?q=api&sort=name&dir=desc"
     Then I see only workflows matching "api", in reverse name order
     # index.ex:115-129, :335-346; index_test.exs:931-941
 
-  @S10 @passing-old
+  @S10
   Scenario: Unknown sort parameters fall back to the default
     # Value: an unrecognised sort value is ignored instead of breaking the page.
     When I open "/projects/<project_id>/w?sort=bogus&dir=bogus"
     Then the page loads sorted by name ascending
     # index.ex:21-24, :139-140, table_helpers.ex:84-94; index_test.exs:27-46
 
-  @S11 @passing-old
+  @S11
   Scenario: Editor switches a workflow on
     # Value: a workflow can be put back into service from the list without opening the editor.
     Given I am an editor on project "Malawi HIV"
@@ -349,7 +348,7 @@ Feature: Project workflows dashboard
     And the flow "flow-toggle-workflow-open-editor" has started for "Intake"
     # index.ex:220-248, :317-329, workflows.ex:1437-1443, :741-761; index_test.exs:273-343, :371-400
 
-  @S12 @passing-old
+  @S12
   Scenario: Editor switches a workflow off
     # Value: a misbehaving workflow can be stopped from the list in one click.
     Given I am an editor on project "Malawi HIV"
@@ -361,7 +360,7 @@ Feature: Project workflows dashboard
     And an audit event "disabled" is recorded
     # index.ex:331-333, workflows.ex:1480-1486, helpers.ex:113-123; index_test.exs:402-413
 
-  @S13 @passing-old @variant:activation-limited
+  @S13 @variant:activation-limited
   Scenario: The usage limit can refuse switching a workflow on
     # Value: a project at its usage limit learns why instead of silently exceeding it.
     Given I am an editor on project "Malawi HIV"
@@ -372,7 +371,7 @@ Feature: Project workflows dashboard
     And "Intake" still has its trigger disabled
     # index.ex:250-254, :322-327, workflow_usage_limiter.ex:42-43; index_test.exs:455-505
 
-  @S14 @passing-old @variant:activation-limited
+  @S14 @variant:activation-limited
   Scenario: Re-confirming an already enabled workflow is not counted against the limit
     # Value: a project at its limit can still touch workflows that are already on.
     Given the usage limiter refuses workflow activation
@@ -382,7 +381,7 @@ Feature: Project workflows dashboard
     And the usage limiter was not consulted
     # index.ex:319-320, workflow_usage_limiter.ex:40; index_test.exs:507-513
 
-  @S15 @passing-old
+  @S15
   Scenario: Viewer cannot switch a workflow
     # Value: read-only members can't stop or start workflows.
     Given I am a viewer on project "Malawi HIV"
@@ -392,7 +391,7 @@ Feature: Project workflows dashboard
     And "Intake" still has its trigger disabled
     # index.ex:236, :263-267; index_test.exs:516-540 (asserts only that nothing changed)
 
-  @S16 @passing-old
+  @S16
   Scenario Outline: Actions on a workflow outside the project are refused
     # Value: an id from another project can't switch off or delete another project's workflow.
     Given I am an editor on project "Malawi HIV"
@@ -407,7 +406,7 @@ Feature: Project workflows dashboard
       | toggle_workflow_state |
       | delete_workflow       |
 
-  @S17 @passing-old
+  @S17
   Scenario: Editor deletes a workflow
     # Value: retired workflows can be removed, and their triggers stop answering at once.
     Given I am an editor on project "Malawi HIV"
@@ -421,14 +420,14 @@ Feature: Project workflows dashboard
     # dashboard_components.ex:290-299, index.ex:277-301, workflows.ex:902-929
     # index_test.exs:699-735
 
-  @S18 @passing-old
+  @S18
   Scenario: A deleted workflow's name can be reused
     # Value: deleting and recreating a workflow under the same name works.
     Given I deleted "Weekly report"
     Then no active workflow in the project holds the name "Weekly report"
     # workflows.ex:931-950 (renamed to "Weekly report_del")
 
-  @S19 @passing-old
+  @S19
   Scenario: Viewer cannot delete a workflow
     # Value: read-only members can't remove workflows, even by sending the event directly.
     Given I am a viewer on project "Malawi HIV"
@@ -438,7 +437,7 @@ Feature: Project workflows dashboard
     Then I see "You are not authorized to perform this action."
     # dashboard_components.ex:291, index.ex:93-99, :289, :307-310; index_test.exs:685-697
 
-  @S20 @passing-old
+  @S20
   Scenario: Viewer sees the create button disabled with a reason
     # Value: read-only members understand why they can't start a workflow.
     Given I am a viewer on project "Malawi HIV"
@@ -447,7 +446,7 @@ Feature: Project workflows dashboard
     And it has the tooltip "You are not authorized to perform this action."
     # index.ex:85-91, dashboard_components.ex:350-376, new_inputs.ex:290-300; index_test.exs:622-636
 
-  @S21 @passing-old
+  @S21
   Scenario: Editor starts a new workflow
     # Value: creating a workflow starts from the project's home page.
     Given I am an editor on project "Malawi HIV"
@@ -455,20 +454,20 @@ Feature: Project workflows dashboard
     Then I am on "/projects/<project_id>/w/new"
     # dashboard_components.ex:364-368; index_test.exs:638-653 (asserts the button is enabled; navigation not clicked)
 
-  @S22 @passing-old
+  @S22
   Scenario: Clicking a workflow name opens it in the editor
     # Value: the list is the way into each workflow.
     When I click "Intake"
     Then I am on "/projects/<project_id>/w/<intake_id>"
     # dashboard_components.ex:187-198
 
-  @S23 @passing-old
+  @S23
   Scenario: Each row links to the workflow's health page
     # Value: someone looking at a failing count can go straight to the workflow's health detail.
     Then the "Intake" row has a "Health" link to "/projects/<project_id>/w/<intake_id>/health"
     # dashboard_components.ex:282-289; index_test.exs:542-554
 
-  @S24 @passing-old
+  @S24
   Scenario: Counts link to the work orders behind them
     # Value: a number on the dashboard can be inspected without rebuilding the filter by hand.
     Given "Intake" had 4 work orders in the last 30 days, 1 of them failed
@@ -479,14 +478,14 @@ Feature: Project workflows dashboard
     And the flow "flow-dashboard-history-drilldown" starts from each link
     # dashboard_components.ex:84-91, :115-126, :209-219, :236-247, :489-543; index_test.exs:144-259
 
-  @S25 @passing-old
+  @S25
   Scenario: A workflow with no count has no history link
     # Value: people aren't sent to an empty history page.
     Given "Weekly report" has had no work orders in the last 30 days
     Then the "Weekly report" row has no history link
     # dashboard_components.ex:209, :236; index_test.exs:213-217
 
-  @S26 @passing-old
+  @S26
   Scenario: A workflow with every trigger off is shown as disabled
     # Value: switched-off workflows stand out so nobody assumes they are running.
     Given "Intake" has all its triggers disabled
@@ -495,7 +494,7 @@ Feature: Project workflows dashboard
     And the "Intake" switch is off with tooltip "This workflow is inactive (manual runs only)"
     # dashboard_components.ex:196, :315-345, helpers.ex:102-123; index_test.exs:329-332
 
-  @S27 @passing-old @variant:experimental-features
+  @S27 @variant:experimental-features
   Scenario: Lifecycle mode shows state instead of a switch
     # Value: with the publish lifecycle, people see at a glance which workflows are live and which are drafts.
     Given I have experimental features enabled
@@ -506,7 +505,7 @@ Feature: Project workflows dashboard
     And no row has an on/off switch
     # index.ex:104-105, dashboard_components.ex:265-267, :571-575, :590-602; index_test.exs:569-586
 
-  @S28 @passing-old @variant:experimental-features
+  @S28 @variant:experimental-features
   Scenario: Lifecycle mode keeps the switch inside a sandbox
     # Value: sandbox workflows can still be turned on and off for testing.
     Given I have experimental features enabled
@@ -516,7 +515,7 @@ Feature: Project workflows dashboard
     And each row has an on/off switch
     # dashboard_components.ex:265-277, :573-574; index_test.exs:588-603
 
-  @S29 @passing-old
+  @S29
   Scenario: Without experimental features the column is "Enabled" with a switch
     # Value: the established on/off control stays as it was for everyone not opted in.
     Given I do not have experimental features enabled

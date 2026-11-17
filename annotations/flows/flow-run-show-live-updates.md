@@ -2,7 +2,6 @@
 id: flow-run-show-live-updates
 type: flow
 title: A running run updating on its page
-status: not-started
 owner:
 
 trigger:
@@ -225,7 +224,7 @@ Feature: The run page follows a run as it executes
   As anyone on the project watching a run
   I want the run page to update as the worker reports progress
 
-  @S01 @pending
+  @S01
   Scenario: A claimed run shows it is starting and is no longer cancellable
     # Value: people know a worker has picked the run up, and are not offered a cancel that can no longer succeed.
     Given I am an editor with run "R" of workflow "Intake" open
@@ -237,7 +236,7 @@ Feature: The run page follows a run as it executes
     # shared-run-components S01 owns the labels, S10 owns clicking cancel after the claim
     # show_test.exs:103-110 claims with Repo.update!, which broadcasts nothing (6.5)
 
-  @S02 @pending
+  @S02
   Scenario: A started run shows when it started and counts its duration
     # Value: people can see the run is executing and for how long, without refreshing.
     Given I have run "R" open while it is "Starting"
@@ -249,7 +248,7 @@ Feature: The run page follows a run as it executes
     # show.ex:150-157, :181-186; components.ex:24-33; ElapsedIndicator.ts:22-41
     # show_test.exs:112-117 asserts "Running"
 
-  @S03 @pending
+  @S03
   Scenario: A step appears in the list when it starts
     # Value: people see which job is executing right now.
     Given I have run "R" open while it is "Running" with no steps
@@ -259,7 +258,7 @@ Feature: The run page follows a run as it executes
     # run_channel.ex:193-216; handlers.ex:238-246, :270-277; streaming.ex:30-46, :89-94, :129-138; show.ex:206-225
     # show_test.exs:119-135, :182-199 assert the job name and data-start-time
 
-  @S04 @pending
+  @S04
   Scenario: A completed step shows its outcome
     # Value: people spot the failing step the moment it fails.
     Given I have run "R" open with step "Fetch" running
@@ -270,7 +269,7 @@ Feature: The run page follows a run as it executes
     # shared-run-components S02 owns the icons
     # show_test.exs:189-192 asserts "text-green-500" after a successful completion
 
-  @S05 @pending
+  @S05
   Scenario: The selected step's output appears when it completes
     # Value: people watching a step see the data it produced as soon as it exists, without reselecting it.
     Given I have run "R" open with step "Fetch" running and selected
@@ -280,7 +279,7 @@ Feature: The run page follows a run as it executes
     # handlers.ex:464-473, :541-556; streaming.ex:67-77, :129-138; show.ex:349-360; viewers.ex:271-288
     # show_test.exs:158-180, :201-222
 
-  @S06 @pending
+  @S06
   Scenario: Log lines appear as the worker sends them
     # Value: people read what the job is printing while it runs, which is where a failure first shows.
     Given I have run "R" open while it is "Running" and nothing has been logged
@@ -290,7 +289,7 @@ Feature: The run page follows a run as it executes
     # run_channel.ex:236-258; runs.ex:292-341; streaming.ex:140-150; log-viewer/index.ts:35-44; store.ts:158-173
     # show_test.exs:137-144 asserts one push event per line (single lines only)
 
-  @S07 @pending
+  @S07
   Scenario: Lines logged while the existing log is loading appear once, in order
     # Value: people never read a duplicated or out-of-order log while a long run is still writing to it.
     Given run "R" has already logged 500 lines and is still running
@@ -299,7 +298,7 @@ Feature: The run page follows a run as it executes
     # streaming.ex:165-196 (subscribe before streaming the stored lines), :140-150; store.ts:158-173 (dedupe by id, sort by timestamp)
     # assets/test/log-viewer/store.test.ts:40 deduplicates by id
 
-  @S08 @pending
+  @S08
   Scenario: A completed run shows its outcome, finish time and final output
     # Value: people watching a run learn how it ended and can open what it produced, without reloading.
     Given I have run "R" open while it is "Running"
@@ -313,7 +312,7 @@ Feature: The run page follows a run as it executes
     # show.ex:158-190; ElapsedIndicator.ts:28-34
     # show_test.exs:236-245 asserts "Failed" with no final output link; :248-327 covers the link on load
 
-  @S09 @pending
+  @S09
   Scenario: A run that finishes without logging says so
     # Value: people can tell a run that logged nothing from a log that is still loading.
     Given I have run "R" open while it is "Starting" and nothing has been logged
@@ -321,7 +320,7 @@ Feature: The run page follows a run as it executes
     Then eventually the "Log" tab says "No logs were received for this run."
     # streaming.ex:120-127; viewers.ex:70-77; runs/run.ex:46-54
 
-  @S10 @pending
+  @S10
   Scenario: Another run's progress never reaches this page
     # Value: one run's logs and data, possibly from another project, never appear on a page about a different run.
     Given I have run "R" open

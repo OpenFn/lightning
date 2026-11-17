@@ -2,7 +2,6 @@
 id: credentials-index
 type: view
 title: Credentials (user)
-status: not-started
 owner:
 
 trigger:
@@ -307,7 +306,7 @@ Feature: My credentials
   As a signed-in user
   I want to create, share, rotate, hand over and retire my own credentials and OAuth clients
 
-  @S01 @pending
+  @S01
   Scenario: The page lists only credentials I own
     # Value: a user's credentials page is an inventory of their own secrets, not of everything they can reach.
     Given I own credential "DHIS2 prod"
@@ -317,7 +316,7 @@ Feature: My credentials
     And I do not see "Shared Postgres"
     # credentials.ex:125-136, credential_index_component.ex:65; credential_live_test.exs:119-154 (support user variant)
 
-  @S02 @pending
+  @S02
   Scenario: Owner creates a raw JSON credential and shares it with two projects
     # Value: a secret is stored once and handed to exactly the projects that need it, without a project admin.
     Given I am a member of projects "Malawi HIV" and "Kenya TB"
@@ -331,7 +330,7 @@ Feature: My credentials
     And an audit event "created" and two "added_to_project" events are recorded
     # credential_form_component.ex:525-566, :1291-1318, helpers.ex:160-168, credentials.ex:703-788; credential_live_test.exs:635-715
 
-  @S03 @pending
+  @S03
   Scenario: Adaptor credentials ask for that adaptor's fields
     # Value: jobs receive credentials in the shape their adaptor expects, so runs don't fail on a missing field.
     Given the adaptor catalogue includes "dhis2" with a configuration schema
@@ -341,7 +340,7 @@ Feature: My credentials
     And "Save credential" stays disabled until the required fields are valid
     # credential_form_component.ex:660-690, :1072-1075, json_schema_body_component.ex:96-149; credential_live_test.exs:832-896
 
-  @S04 @pending
+  @S04
   Scenario: A raw body must be valid JSON
     # Value: a malformed secret is caught when it is entered rather than when a run fails.
     Given I am creating a raw JSON credential named "Mailchimp"
@@ -350,7 +349,7 @@ Feature: My credentials
     And "Save credential" is disabled
     # raw_body_component.ex:112-142, credential_form_component.ex:653-658, :1072-1075; credential_live_test.exs:717-753
 
-  @S05 @pending
+  @S05
   Scenario: Two of my credentials cannot share a name
     # Value: owners can tell their credentials apart when choosing one for a job.
     Given I own credential "DHIS2 prod"
@@ -359,7 +358,7 @@ Feature: My credentials
     And no second credential is created
     # credential.ex:77-79, credential_form_component.ex:1315-1316
 
-  @S06 @pending
+  @S06
   Scenario: Owner updates a credential's values
     # Value: a rotated secret is changed in one place and every project using it picks it up.
     Given I own credential "DHIS2 prod" shared with "Malawi HIV"
@@ -369,7 +368,7 @@ Feature: My credentials
     And an audit event "updated" is recorded
     # credential_form_component.ex:1255-1289, credentials.ex:256-300, :344-368; credential_live_test.exs:1153-1179
 
-  @S07 @pending
+  @S07
   Scenario: A credential keeps separate values per environment
     # Value: sandbox runs pick up the environment whose name matches theirs, so staging never uses production secrets (copy at credential_form_component.ex:1211).
     Given I am creating a raw JSON credential named "Mailchimp"
@@ -379,7 +378,7 @@ Feature: My credentials
     Then the credential has bodies named "main" and "staging" with the values I entered
     # credential_form_component.ex:195-229, :231-277, :621-626, credentials.ex:221-240; credential_live_test.exs:3839-3911
 
-  @S08 @pending
+  @S08
   Scenario: Two environments cannot share a name
     # Value: one environment's secrets can't silently replace another's.
     Given I am editing a credential with environments "main" and "staging"
@@ -388,7 +387,7 @@ Feature: My credentials
     And the environments are still "main" and "staging"
     # credential_form_component.ex:249-256
 
-  @S09 @pending
+  @S09
   Scenario: The sixth environment cannot be added
     # Value: keeps a credential's environment list to a size people can review (product limit).
     Given I am editing a credential with 5 environments
@@ -396,7 +395,7 @@ Feature: My credentials
     And its tooltip reads "Maximum of 5 environments reached"
     # credential_form_component.ex:892-915, :203-209
 
-  @S10 @pending
+  @S10
   Scenario: Removing an environment deletes its stored values
     # Value: secrets for a retired environment don't linger after the owner removes it.
     Given I own a credential with environments "main" and "staging"
@@ -404,7 +403,7 @@ Feature: My credentials
     Then the credential has no "staging" body
     # credential_form_component.ex:280-310, :549, :628-631, credentials.ex:302-324
 
-  @S11 @pending
+  @S11
   Scenario: Removing project access warns when workflows use the credential
     # Value: an owner doesn't break a running integration by accident.
     Given I own credential "DHIS2 prod" used by workflow "Daily sync" in project "Malawi HIV"
@@ -412,7 +411,7 @@ Feature: My credentials
     Then I am asked to confirm a warning naming "Daily sync"
     # components/credentials.ex:194, credential_form_component.ex:1451-1455; credential_live_test.exs:1338-1408
 
-  @S12 @pending
+  @S12
   Scenario: Removing project access is recorded
     # Value: project admins can later see when and how a credential left their project.
     Given I own credential "DHIS2 prod" shared with "Malawi HIV"
@@ -421,7 +420,7 @@ Feature: My credentials
     And an audit event "removed_from_project" is recorded
     # helpers.ex:32-57, credentials.ex:738-761; credential_live_test.exs:1286-1336
 
-  @S13 @pending
+  @S13
   Scenario: Sharing with a project also shares with its sandboxes
     # Value: sandboxes keep working with the parent's credentials without re-sharing each one.
     Given project "Malawi HIV" has sandbox "Malawi HIV staging"
@@ -429,7 +428,7 @@ Feature: My credentials
     Then "DHIS2 prod" is available in "Malawi HIV staging"
     # credentials.ex:763-822; credential_live_test.exs:3368-3448
 
-  @S14 @pending
+  @S14
   Scenario: I can only share with projects I belong to
     # Value: people can't push their secrets into projects they have no part in.
     Given I am a member of "Malawi HIV" and not of "Kenya TB"
@@ -438,7 +437,7 @@ Feature: My credentials
     And "Kenya TB" is not offered
     # hooks.ex:194-201, projects.ex:1138-1147, helpers.ex:94-121
 
-  @S15 @pending @variant:support-user
+  @S15 @variant:support-user
   Scenario: Support users can also share into projects that allow support access
     # Value: support staff can set up credentials for a project they are helping without being added as members.
     Given I am a support user
@@ -447,7 +446,7 @@ Feature: My credentials
     Then the credential is shared with "Kenya TB"
     # projects.ex:1160-1170; credential_live_test.exs:755-830
 
-  @S16 @pending
+  @S16
   Scenario: Owner schedules a credential for deletion
     # Value: a credential stops being usable at once but can still be recovered during the grace period.
     Given I own credential "DHIS2 prod" shared with "Malawi HIV" and used by a job there
@@ -459,7 +458,7 @@ Feature: My credentials
     And the flow "flow-credential-scheduled-deletion" has started for "DHIS2 prod"
     # credential_deletion_modal.ex:40-51, credentials.ex:883-920, :1036-1052; credential_live_test.exs:156-230
 
-  @S17 @pending
+  @S17
   Scenario: Owner deletes a scheduled credential for good
     # Value: an owner who is sure can remove a never-used secret immediately rather than waiting for the purge.
     Given I own credential "Old token" scheduled for deletion and never used in a run
@@ -469,7 +468,7 @@ Feature: My credentials
     And an audit event "deleted" is recorded
     # credential_deletion_modal.ex:69-98, credentials.ex:836-849; credential_live_test.exs:339-376
 
-  @S18 @pending
+  @S18
   Scenario: A credential used in runs cannot be deleted now
     # Value: run history in the audit trail keeps pointing at a real credential record.
     Given I own credential "DHIS2 prod" scheduled for deletion and used in a run step
@@ -479,7 +478,7 @@ Feature: My credentials
     And "DHIS2 prod" still exists
     # credential_deletion_modal.ex:60-67, :107-135; credential_live_test.exs:378-413
 
-  @S19 @pending
+  @S19
   Scenario: A delete confirmation cannot be pointed at another credential
     # Value: someone else's secret can't be deleted by editing the request from my own modal.
     Given I own "DHIS2 prod" and "Other" is owned by someone else
@@ -488,7 +487,7 @@ Feature: My credentials
     And neither credential is scheduled for deletion
     # credential_deletion_modal.ex:27-37; credential_live_test.exs:232-259
 
-  @S20 @pending
+  @S20
   Scenario: Owner starts a credential transfer
     # Value: a credential can change hands when its owner leaves a team, without recreating the secret.
     Given I own credential "DHIS2 prod" shared with "Malawi HIV"
@@ -499,7 +498,7 @@ Feature: My credentials
     And the flow "flow-credential-transfer" has started for "DHIS2 prod"
     # transfer_credential_modal.ex:68-112, credentials.ex:1572-1609; credential_live_test.exs:2524-2548
 
-  @S21 @pending
+  @S21
   Scenario: A transfer to someone outside the credential's projects is refused
     # Value: a credential never ends up owned by someone who can't see the projects that depend on it.
     Given I own credential "DHIS2 prod" shared with "Malawi HIV"
@@ -509,7 +508,7 @@ Feature: My credentials
     And "Transfer" is disabled
     # credentials.ex:1810-1847, transfer_credential_modal.ex:31-39, :225-233
 
-  @S22 @pending
+  @S22
   Scenario: Owner revokes a pending transfer
     # Value: an owner can stop a transfer started by mistake before it is confirmed.
     Given I own credential "DHIS2 prod" with a pending transfer
@@ -518,7 +517,7 @@ Feature: My credentials
     And "DHIS2 prod" shows "Transfer"
     # transfer_credential_modal.ex:41-66, credentials.ex:1740-1758; credential_live_test.exs:2703-2722
 
-  @S23 @pending
+  @S23
   Scenario: User adds an OAuth client
     # Value: users can connect credentials to their own OAuth apps without an instance administrator.
     Given I am a member of "Malawi HIV"
@@ -531,7 +530,7 @@ Feature: My credentials
     And an audit event "created" is recorded for the client
     # oauth_client_form_component.ex:199-212, :246-305, :320-339, oauth_clients.ex:134-151; oauth_clients_live_test.exs:232-284
 
-  @S24 @pending
+  @S24
   Scenario: OAuth client endpoints must be URLs
     # Value: a mistyped endpoint is caught before anyone tries to authorize against it.
     When I enter "oauth2/v2/auth" as the authorization endpoint of a new OAuth client
@@ -539,7 +538,7 @@ Feature: My credentials
     And "Add OAuth client" is disabled
     # oauth_client.ex:90-95, oauth_client_form_component.ex:114-138, :529; oauth_clients_live_test.exs:244-251
 
-  @S25 @pending
+  @S25
   Scenario: A non-superuser cannot publish a global OAuth client
     # Value: only instance administrators can offer an OAuth app to every project.
     Given I am not a superuser
@@ -548,7 +547,7 @@ Feature: My credentials
     And I do not see the "Make client global" checkbox
     # oauth_client.ex:116-119, oauth_client_form_component.ex:513; oauth_clients_live_test.exs:286-303
 
-  @S26 @pending @variant:superuser
+  @S26 @variant:superuser
   Scenario: Superuser makes an OAuth client global
     # Value: an administrator can offer one approved OAuth app to every project in the instance.
     Given I am a superuser
@@ -557,7 +556,7 @@ Feature: My credentials
     And other users see the client in their list as "GLOBAL" and can pick it for a new credential
     # oauth_client_form_component.ex:513-523, :549-559, oauth_clients.ex:82-88, credential_form_component.ex:1359-1392
 
-  @S27 @pending
+  @S27
   Scenario: Creating an OAuth credential hands off to the provider sign-in
     # Value: people authorize with their own provider account instead of pasting tokens.
     Given OAuth client "Google Sheets app" is mine or global
@@ -566,7 +565,7 @@ Feature: My credentials
     Then the flow "flow-oauth-credential-authorize" has started for environment "main"
     # credential_form_component.ex:150-174, :947-966, generic_oauth_component.ex:95-121, :302-308
 
-  @S28 @pending
+  @S28
   Scenario: Changing scopes after authorizing requires signing in again
     # Value: the token saved always carries the scopes the form shows.
     Given I have authorized an OAuth credential with scopes "read"
@@ -575,7 +574,7 @@ Feature: My credentials
     And "Save credential" is disabled until I do
     # generic_oauth_component.ex:310-372, components/oauth.ex:177-178, credential_form_component.ex:1072-1075; credential_live_test.exs:3109-3151
 
-  @S29 @pending
+  @S29
   Scenario: Opening an OAuth credential with an expired token refreshes it
     # Value: the owner sees whether the stored authorization still works before relying on it.
     Given I own an OAuth credential whose access token has expired and whose refresh token is valid
@@ -583,7 +582,7 @@ Feature: My credentials
     Then the token is refreshed and the account details are shown
     # generic_oauth_component.ex:49-93, :391-417; credential_live_test.exs:3195-3242
 
-  @S30 @pending
+  @S30
   Scenario: A revoked refresh token asks the owner to reauthorize
     # Value: the owner learns the credential has stopped working and how to fix it.
     Given I own an OAuth credential whose refresh token the provider rejects with "invalid_grant"
@@ -591,7 +590,7 @@ Feature: My credentials
     Then I see a prompt to reauthorize with the provider
     # generic_oauth_component.ex:220-236, :387-389; credential_live_test.exs:1555-1620
 
-  @S31 @pending
+  @S31
   Scenario: An OAuth credential whose client was deleted shows a warning
     # Value: the owner learns why the credential can no longer be reauthorized.
     Given I own an OAuth credential whose OAuth client has been deleted
@@ -599,7 +598,7 @@ Feature: My credentials
     Then I see "OAuth client not found"
     # credential_form_component.ex:818-820, components/oauth.ex:108-118; credential_live_test.exs:3244-3287
 
-  @S32 @pending
+  @S32
   Scenario: The type picker recovers when the adaptor catalogue is unavailable
     # Value: a temporary catalogue outage doesn't stop people creating credentials once it recovers.
     Given the adaptor catalogue cannot answer

@@ -2,7 +2,6 @@
 id: profile-github
 type: view
 title: User profile › GitHub access
-status: not-started
 owner:
 
 trigger:
@@ -202,7 +201,7 @@ Feature: GitHub access on the user profile
   As any signed-in user
   I want to see, link and unlink my GitHub account from my profile
 
-  @S01 @pending
+  @S01
   Scenario: A user with no GitHub link is offered the connection
     # Value: a user who needs version control knows where to link GitHub and can start without an admin.
     Given I am signed in with no GitHub account connected
@@ -215,7 +214,7 @@ Feature: GitHub access on the user profile
     # github_component.ex:35-48, :63-67; github_components.ex:21-28
     # profile_live_test.exs:424-436 (the completed connection is flow-github-connect S01)
 
-  @S02 @pending
+  @S02
   Scenario: A linked user sees they are connected
     # Value: a user can tell at a glance that OpenFn holds a working link to their GitHub account.
     Given I am signed in with a valid GitHub token
@@ -225,7 +224,7 @@ Feature: GitHub access on the user profile
     # github_component.ex:50-58; version_control.ex:419-432
     # profile_live_test.exs:495-496, :541-542
 
-  @S03 @pending
+  @S03
   Scenario: A user whose GitHub link lapsed is told and can reconnect
     # Value: a user whose access expired learns why version control stopped working for them and how to restore it.
     Given I am signed in with a GitHub token whose refresh token has expired
@@ -237,7 +236,7 @@ Feature: GitHub access on the user profile
     # github_component.ex:50, :63-67; github_components.ex:26-28; version_control.ex:421-424
     # profile_live_test.exs:478-516 (the completed reconnect is flow-github-connect S04)
 
-  @S04 @pending
+  @S04
   Scenario: A user disconnects GitHub after confirming
     # Value: a user can withdraw OpenFn's access to their GitHub account themselves, both on GitHub and in OpenFn.
     Given I am signed in with a valid, non-expiring GitHub token
@@ -252,7 +251,7 @@ Feature: GitHub access on the user profile
     # github_component.ex:14-20, :51-62, :94-134; version_control.ex:490-507, :515-517; github_client.ex:94-100
     # profile_live_test.exs:518-557
 
-  @S05 @pending
+  @S05
   Scenario: Disconnecting with an expired access token still revokes the grant on GitHub
     # Value: unlinking really removes OpenFn's access on GitHub, not only OpenFn's copy, even when the short-lived access token has lapsed.
     Given I am signed in with a GitHub token whose access token has expired but whose refresh token has not
@@ -264,7 +263,7 @@ Feature: GitHub access on the user profile
     # version_control.ex:441-456, :470-484, :495-507
     # profile_live_test.exs:560-611
 
-  @S06 @pending
+  @S06
   Scenario: Disconnecting succeeds locally even when GitHub refuses
     # Value: a user who wants out is never stuck linked because GitHub is down or rejects the request.
     Given I am signed in with a valid GitHub token
@@ -276,7 +275,7 @@ Feature: GitHub access on the user profile
     # version_control.ex:508-512; github_client.ex:212-220
     # profile_live_test.exs:614-653 (see 6.1 for what the user is not told)
 
-  @S07 @pending
+  @S07
   Scenario: Backing out of the disconnect dialog keeps the link
     # Value: one misclick doesn't cut a user off from setting up version control.
     Given I am signed in with a valid GitHub token

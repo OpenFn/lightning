@@ -2,7 +2,6 @@
 id: flow-manual-run-live-follow
 type: flow
 title: Following a manual run as it executes
-status: not-started
 owner:
 
 trigger:
@@ -278,7 +277,7 @@ Feature: Following a manual run as it executes
   As a workflow builder
   I want the editor to follow the run I start until it finishes
 
-  @S01 @pending
+  @S01
   Scenario: A run started from the panel is followed on the canvas
     # Value: the builder sees whether the run they just started is working, without leaving the editor or reloading.
     Given I am an editor on project "Malawi HIV" with workflow "Intake" open
@@ -294,7 +293,7 @@ Feature: Following a manual run as it executes
     # createHistoryStore.ts:277-301, :897-1006, :436-521; run_channel.ex:67-95, :303-313; workflow_channel.ex:980-1000
     # handoff only tested: workflow-editor-manual-run S01; createHistoryStore.test.ts:469-488 (created event), :1206-1275 (step event fills the cache)
 
-  @S02 @pending
+  @S02
   Scenario: A run started in the code editor opens its logs there
     # Value: the builder reads what the job prints while it runs, next to the code that printed it.
     Given I have the IDE open on job "Fetch" with the embedded run panel
@@ -307,7 +306,7 @@ Feature: Following a manual run as it executes
     # LogTabPanel.tsx:247-301; run_channel.ex:277-293, :315-318; runs.ex:308-311
     # run_channel_test.exs:3365-3377 (LogAppended is forwarded as "logs")
 
-  @S03 @pending
+  @S03
   Scenario: A custom input becomes the input to retry with
     # Value: after fixing the code, the builder retries with exactly the payload they typed, without retyping it.
     Given I have the IDE open on job "Fetch" with the embedded run panel on the "Custom" tab
@@ -317,7 +316,7 @@ Feature: Following a manual run as it executes
     And once the run's "Fetch" step has that input, the run button offers "Retry"
     # workflow_controller.ex:53-63; FullScreenIDE.tsx:213-218; useRunRetry.ts:158-171, :204-213; shared-run-retry-controls S04
 
-  @S04 @pending
+  @S04
   Scenario: Progress made before the editor connects is not lost
     # Value: a run a worker picked up instantly never shows as still queued or missing its first step.
     Given a worker claims and starts run "R" before my editor has joined "run:<R id>"
@@ -327,7 +326,7 @@ Feature: Following a manual run as it executes
     # createHistoryStore.ts:948-976 (fetch:run after join); run_channel.ex:78, :261-275 (subscribe before the read, in one process)
     # workflow_channel.ex:267-286 (request_run_steps after run=<id> is set)
 
-  @S05 @pending
+  @S05
   Scenario: The followed run finishing shows its outcome and frees the controls
     # Value: the builder learns how the run ended and can run again straight away.
     Given the editor is following run "R" while it is running
@@ -340,7 +339,7 @@ Feature: Following a manual run as it executes
     # useRunRetry.ts:173-174; shared-run-retry-controls S13
     # createHistoryStore.test.ts:873-942 (final run_updated refetches subscribed steps)
 
-  @S06 @pending
+  @S06
   Scenario: A collaborator sees the new run without being moved to it
     # Value: one builder's test run never pulls a colleague's canvas onto a run they didn't choose.
     Given "amara@example.org" has "Intake" open, following run "Q"
@@ -349,7 +348,7 @@ Feature: Following a manual run as it executes
     And her editor still follows "Q" and her URL is unchanged
     # workflow_channel.ex:79, :980-1000; createHistoryStore.ts:277-301; CollaborativeWorkflowDiagram.tsx:77-78 (followed run comes from her own URL)
 
-  @S07 @pending
+  @S07
   Scenario: Another run's progress never shows on the followed run
     # Value: the steps and logs the builder reads are always from the run they started, never mixed with another.
     Given the editor is following run "R"
@@ -358,7 +357,7 @@ Feature: Following a manual run as it executes
     And "S" appears only as its own entry in the run history list
     # runs/events.ex:64-68 (topic per run); run_channel.ex:78; createHistoryStore.ts:398 (run:updated checked by id), :460-463
 
-  @S08 @pending
+  @S08
   Scenario: Losing access stops the run's data reaching the editor
     # Value: someone removed from a project stops receiving its run data at once, even mid-run.
     Given I am an editor following run "R" of "Malawi HIV"
@@ -450,7 +449,7 @@ shared-run-retry-controls, shared-log-viewer)
 
 ## Summary
 
-- Scenarios: 8 (S01 to S08), all `@pending`, default variant.
+- Scenarios: 8 (S01 to S08), default variant.
 - Section 6: 6.1 has 3, 6.2 has 6, 6.3 has 1, 6.4 has 4, 6.5 has 4.
 - Flows: none proposed; references flow-run-show-live-updates,
   flow-history-live-updates, flow-failure-alert-email, flow-open-run-in-editor.

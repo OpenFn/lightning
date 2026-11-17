@@ -2,7 +2,6 @@
 id: shared-dataclip-body-viewer
 type: shared
 title: Dataclip body viewer
-status: not-started
 owner:
 
 trigger:
@@ -204,7 +203,7 @@ Feature: Dataclip body viewer
   As anyone who can open a run, a dataclip or the workflow editor
   I want to read and copy a dataclip's body without exposing secrets
 
-  @S01 @pending
+  @S01
   Scenario: The body is shown formatted and read-only
     # Value: people read the payload in a form they can scan, without any risk of changing stored data.
     Given a global dataclip whose body is {"patients":[{"id":1}]}
@@ -214,7 +213,7 @@ Feature: Dataclip body viewer
     # DataclipViewer.tsx:32-46, :58; CodeViewer.tsx:79-100 (readOnly :85, tabSize :87, wordWrap :98)
     # DataclipViewer.test.tsx:67-77; hosts: dataclip_live/show.ex:139-144, viewers.ex:284-288, InputTabPanel.tsx:42, OutputTabPanel.tsx:42, SelectedDataclipView.tsx:169
 
-  @S02 @pending
+  @S02
   Scenario: The body can be copied
     # Value: people lift the payload into a manual run, a test or a bug report without retyping it.
     Given the dataclip body viewer has loaded a body
@@ -224,7 +223,7 @@ Feature: Dataclip body viewer
     # CodeViewer.tsx:11-37, :41-46
     # CodeViewer.test.tsx:79-85, :109-125, :152-180
 
-  @S03 @pending
+  @S03
   Scenario: A webhook request shows its data and request together, with the webhook secret masked
     # Value: people see what a source system actually sent without exposing the secret it authenticates with.
     Given workflow "Intake" has a webhook trigger protected by basic auth "webhook_user" with password "webhook_secret_pass"
@@ -237,7 +236,7 @@ Feature: Dataclip body viewer
     # query.ex:346-363; dataclip_controller.ex:57-70; dataclip_scrubber.ex:40-41, :111-135; scrubber.ex:129-133, :144-167
     # dataclip_controller_test.exs:111-162
 
-  @S04 @pending
+  @S04
   Scenario: A step's output masks credential values used earlier in the same run
     # Value: a job that echoes its own or an earlier step's configuration does not show credential secrets to everyone who can read the project.
     Given a run where step "Login" used a credential with value "55"
@@ -251,7 +250,7 @@ Feature: Dataclip body viewer
     # dataclip_controller_test.exs:5-100 (setup), :164-178
     # the webhook auth methods of the run's trigger are also masked in step outputs (dataclip_scrubber.ex:37, :237-248); no test covers that
 
-  @S05 @pending
+  @S05
   Scenario Outline: The body is refused to anyone without access to the dataclip's project
     # Value: a dataclip id seen in a link or a shared screen does not expose another project's data, or data on a project the user may no longer read.
     Given dataclip "D" on project "Kenya TB" with body {"patient":"record"}
@@ -268,7 +267,7 @@ Feature: Dataclip body viewer
       | I am a viewer and "Kenya TB" is scheduled for deletion              |
       | "Kenya TB" requires MFA and I am a member who has not enrolled      |
 
-  @S06 @pending
+  @S06
   Scenario Outline: A body that cannot be loaded says so
     # Value: people don't read an empty viewer as an empty payload.
     Given the body request for the dataclip <outcome>

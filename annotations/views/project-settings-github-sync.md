@@ -2,7 +2,6 @@
 id: project-settings-github-sync
 type: view
 title: Project settings › Sync to GitHub
-status: not-started
 owner:
 
 trigger:
@@ -259,7 +258,7 @@ Feature: Sync a project to GitHub
   As a project admin or editor
   I want to link the project to a GitHub branch and sync it on demand
 
-  @S01 @pending
+  @S01
   Scenario: Admin connects a branch and exports the project to GitHub
     # Value: a team gets an off-platform, reviewable copy of the project without leaving OpenFn.
     Given I am an admin on project "Malawi HIV" with a connected GitHub account
@@ -275,7 +274,7 @@ Feature: Sync a project to GitHub
     # github_sync_component.ex:39-41, :193-202; version_control.ex:45-63, :821-842
     # github_sync_component.html.heex:3-188, :206-247; project_live_test.exs:5265-5442
 
-  @S02 @pending
+  @S02
   Scenario: Admin connects a branch to import an existing project from GitHub
     # Value: a team whose project already lives in a repo can make that repo the source without exporting over it first.
     Given I am an admin on project "Malawi HIV" with a connected GitHub account
@@ -288,7 +287,7 @@ Feature: Sync a project to GitHub
     And no sync to GitHub is started
     # github_sync_component.html.heex:150-158; version_control.ex:836-840; project_live_test.exs:5444-5561
 
-  @S03 @pending
+  @S03
   Scenario: Importing from GitHub needs a config path
     # Value: an import can't be set up against a file that doesn't exist, which would leave the project overwritten by nothing.
     Given I am an admin filling in the connect form on project "Malawi HIV"
@@ -298,7 +297,7 @@ Feature: Sync a project to GitHub
     And the "Advanced: use new YAML config format" option is not shown
     # project_repo_connection.ex:203-213; github_sync_component.html.heex:150-163, :182
 
-  @S04 @pending
+  @S04
   Scenario Outline: The connect confirmation spells out what will be overwritten
     # Value: nobody overwrites workflow files in a repo, or their OpenFn project, without being told first.
     Given I am an admin filling in the connect form on project "Malawi HIV"
@@ -314,7 +313,7 @@ Feature: Sync a project to GitHub
       | OpenFn --> GitHub: Export to GitHub (default, non-destructive)       | do not see |
       | GitHub --> OpenFn: Import from GitHub (overwrite this project)       | see        |
 
-  @S05 @pending
+  @S05
   Scenario: Connect stays disabled until installation, repository and branch are chosen
     # Value: an incomplete connection never reaches GitHub.
     Given I am an admin filling in the connect form on project "Malawi HIV"
@@ -323,7 +322,7 @@ Feature: Sync a project to GitHub
     And if the form is submitted anyway I see "This field can't be blank"
     # project_repo_connection.ex:67-73; github_sync_component.html.heex:182; project_live_test.exs:5376-5386
 
-  @S06 @pending
+  @S06
   Scenario: Repository and branch lists follow the choice above them
     # Value: an admin can only pick a repository and branch that the chosen installation actually exposes.
     Given I am an admin with access to installation "User: amara" holding repository "amara/hiv-sync"
@@ -336,7 +335,7 @@ Feature: Sync a project to GitHub
     # github_sync_component.ex:29-37, :150-175, :324-354, :417-428; github_sync_component.html.heex:104-127
     # project_live_test.exs:5004-5115
 
-  @S07 @pending
+  @S07
   Scenario: Refreshing installations picks up a newly installed GitHub App
     # Value: an admin who installs the app in GitHub mid-setup can continue without reloading and losing the form.
     Given I am an admin on the connect form and my installations failed to load
@@ -345,7 +344,7 @@ Feature: Sync a project to GitHub
     Then "GitHub Installation" lists the new installation
     # github_sync_component.ex:94-105; github_sync_component.html.heex:74-90; project_live_test.exs:4848-4906
 
-  @S08 @pending
+  @S08
   Scenario: Refreshing branches picks up a branch created after the page loaded
     # Value: an admin who just created a branch for OpenFn can select it without starting over.
     Given I am an admin with repository "amara/hiv-sync" selected, listing branch "main"
@@ -355,7 +354,7 @@ Feature: Sync a project to GitHub
     And no branch is selected
     # github_sync_component.ex:107-115; github_sync_component.html.heex:131-144; project_live_test.exs:5148-5174
 
-  @S09 @pending
+  @S09
   Scenario: Branches are never listed for an installation the user can't access
     # Value: an admin only sees branches of installations their own GitHub account can access.
     Given I am an admin whose GitHub account can access installation "1234" only
@@ -364,7 +363,7 @@ Feature: Sync a project to GitHub
     And clicking the refresh button next to "Branch" still lists no branches
     # version_control.ex:310-351; project_live_test.exs:5176-5263
 
-  @S10 @pending @variant:sandbox
+  @S10 @variant:sandbox
   Scenario: A sandbox can't claim a branch already linked in its project family
     # Value: two projects in one family never sync to the same branch and overwrite each other's files.
     Given project "Malawi HIV" is connected to "amara/hiv-sync" branch "main"
@@ -377,7 +376,7 @@ Feature: Sync a project to GitHub
     # project_repo_connection.ex:13, :136-153; github_sync_component.ex:177-191
     # test/lightning_web/live/project_live/github_sync_component_test.exs:20-179
 
-  @S11 @pending
+  @S11
   Scenario: Admin without installations is told to install the GitHub App
     # Value: an admin facing an empty list learns the fix instead of assuming GitHub is broken.
     Given I am an admin with a connected GitHub account and no GitHub App installations
@@ -387,7 +386,7 @@ Feature: Sync a project to GitHub
     And "Install or manage GitHub app installations" opens the app's GitHub page in a new tab
     # github_sync_component.ex:466-468; github_sync_component.html.heex:32-49; project_live_test.exs:4939-4958
 
-  @S12 @pending
+  @S12
   Scenario: A GitHub outage while loading installations is reported
     # Value: admins know the problem is on GitHub's side and that refreshing may fix it.
     Given I am an admin with a connected GitHub account
@@ -398,7 +397,7 @@ Feature: Sync a project to GitHub
     And "GitHub Installation" is disabled
     # github_sync_component.ex:470-477; github_sync_component.html.heex:51-58, :67-70; project_live_test.exs:4983-5002
 
-  @S13 @pending
+  @S13
   Scenario: Admin without a GitHub account is asked to connect one
     # Value: the admin learns the one prerequisite they are missing, and can fix it from here.
     Given I am an admin on project "Malawi HIV" with no GitHub account connected
@@ -409,7 +408,7 @@ Feature: Sync a project to GitHub
     And the flow "flow-github-connect" can start from this link
     # settings.html.heex:819-836; github_components.ex:16-31; project_live_test.exs:4697-4732
 
-  @S14 @pending
+  @S14
   Scenario: Admin with an expired GitHub token is asked to reconnect it
     # Value: an admin whose access lapsed isn't shown a form that would fail on every call.
     Given I am an admin whose GitHub refresh token has expired
@@ -420,7 +419,7 @@ Feature: Sync a project to GitHub
     # settings.html.heex:800, :819-836; version_control.ex:418-432; github_components.ex:26-28
     # project_live_test.exs:4960-4981
 
-  @S15 @pending
+  @S15
   Scenario Outline: Only admins see how to connect a project
     # Value: only people trusted with access decisions can link a project's data to an outside repository.
     Given I am a <role> on project "Malawi HIV", which has no GitHub connection
@@ -435,7 +434,7 @@ Feature: Sync a project to GitHub
       | viewer |
       | editor |
 
-  @S16 @pending @variant:github-disabled
+  @S16 @variant:github-disabled
   Scenario: An instance without a GitHub app says so
     # Value: members know sync is unavailable on this instance rather than hidden from them, and who to ask.
     Given the instance has no GitHub app configured
@@ -444,7 +443,7 @@ Feature: Sync a project to GitHub
     Then I see "Version Control is not configured for this Lightning instance. Contact the superuser for more information."
     # settings.html.heex:779, :838-848; version_control.ex:562-568; project_live_test.exs:4670-4695
 
-  @S17 @pending
+  @S17
   Scenario: Everyone on the project sees the saved connection
     # Value: any member can find which repository and branch hold the project's history.
     Given project "Malawi HIV" is connected to "amara/hiv-sync" branch "main" through installation "1234"
@@ -455,7 +454,7 @@ Feature: Sync a project to GitHub
     And I do not see the connect form
     # github_sync_component.html.heex:206-247; settings.html.heex:780-796; project_live_test.exs:5924-5958
 
-  @S18 @pending
+  @S18
   Scenario: A healthy connection is confirmed
     # Value: members can trust a sync will work before they start one.
     Given project "Malawi HIV" is connected and the repo has its workflow files, config and API secret
@@ -464,7 +463,7 @@ Feature: Sync a project to GitHub
     And I do not see "Click here to reconnect"
     # version_control.ex:97-133; github_sync_component.ex:145-147, :594-617; project_live_test.exs:6368-6502
 
-  @S19 @pending
+  @S19
   Scenario: A broken connection is flagged and admins can reconnect
     # Value: when someone deletes the workflow files or secret in GitHub, the team finds out here and can repair it in place.
     Given project "Malawi HIV" is connected but the deploy workflow file is missing on the branch
@@ -477,7 +476,7 @@ Feature: Sync a project to GitHub
     # version_control.ex:844-860; github_sync_component.ex:549-593; github_sync_component.html.heex:191-205, :252-255
     # project_live_test.exs:6078-6201
 
-  @S20 @pending
+  @S20
   Scenario Outline: Reconnect is offered only to admins who can reach the installation
     # Value: a repair is attempted only by someone with both the authority and the GitHub access to complete it.
     Given project "Malawi HIV" has a broken GitHub connection
@@ -494,7 +493,7 @@ Feature: Sync a project to GitHub
       | admin  | cannot access       |
       | owner  | cannot access       |
 
-  @S21 @pending
+  @S21
   Scenario: Admin reconnects a broken connection
     # Value: a damaged repo setup is restored without removing and recreating the connection.
     Given project "Malawi HIV" has a broken GitHub connection
@@ -505,7 +504,7 @@ Feature: Sync a project to GitHub
     And the flow "flow-github-sync-actions" has started for project "Malawi HIV"
     # github_sync_component.ex:70-72, :249-262, :673-728; version_control.ex:83-95; project_live_test.exs:6078-6201
 
-  @S22 @pending
+  @S22
   Scenario: Editor starts a sync
     # Value: the people who change workflows can push them to GitHub without waiting on an admin.
     Given project "Malawi HIV" is connected and verified
@@ -515,7 +514,7 @@ Feature: Sync a project to GitHub
     And the flow "flow-github-sync-actions" has started for project "Malawi HIV"
     # github_sync_component.ex:81-83, :296-306; version_control.ex:174-218; project_live_test.exs:6798-6920
 
-  @S23 @pending
+  @S23
   Scenario: Viewers can't start a sync and are told who can
     # Value: read-only members can't push changes out, and know whom to ask.
     Given project "Malawi HIV" is connected
@@ -525,7 +524,7 @@ Feature: Sync a project to GitHub
     And I do not see "Remove Integration."
     # github_sync_component.html.heex:250-268, :272; project_live_test.exs:6707-6748
 
-  @S24 @pending
+  @S24
   Scenario Outline: The server checks the role for each action, not just the control
     # Value: the role is checked on the server for each action, so read-only members cannot change the project's GitHub link.
     Given project "Malawi HIV" is connected
@@ -544,7 +543,7 @@ Feature: Sync a project to GitHub
       | editor | delete-connection |
       | editor | save              |
 
-  @S25 @pending
+  @S25
   Scenario: Admin removes the integration after confirming
     # Value: a project can be unlinked from a repository it should no longer write to, with a record of who did it.
     Given project "Malawi HIV" is connected to "amara/hiv-sync"
@@ -558,7 +557,7 @@ Feature: Sync a project to GitHub
     # github_sync_component.html.heex:272-286; github_sync_component.ex:50-61, :623-665; version_control.ex:138-156
     # project_live_test.exs:6567-6621
 
-  @S26 @pending
+  @S26
   Scenario: Removal succeeds even when GitHub cleanup can't
     # Value: an admin can always cut a project's link to a repo, even if they never connected GitHub themselves or GitHub refuses the cleanup.
     Given project "Malawi HIV" is connected
@@ -568,7 +567,7 @@ Feature: Sync a project to GitHub
     And the project has no GitHub connection
     # version_control.ex:146-155, :757-778; project_live_test.exs:6567-6621, :6623-6705
 
-  @S27 @pending @variant:github-sync-limited
+  @S27 @variant:github-sync-limited
   Scenario: A GitHub sync usage limit blocks connecting and syncing and says why
     # Value: a project over its limit learns why sync is unavailable instead of hitting a failure after filling in the form.
     Given the usage limiter refuses GitHub sync for project "Malawi HIV" with a banner message
@@ -579,7 +578,7 @@ Feature: Sync a project to GitHub
     # hooks.ex:204-212; settings.html.heex:770-778, :790, :812; github_sync_component.html.heex:182
     # project_live_test.exs:5854-5922, :7057-7091 (banner for viewer, editor, admin, owner)
 
-  @S28 @pending @variant:github-sync-limited
+  @S28 @variant:github-sync-limited
   Scenario: The limit is checked again when the action runs
     # Value: a limit that starts applying after the page loaded still stops the connection, sync or reconnect.
     Given I am an admin on the connect form of project "Malawi HIV"
@@ -590,7 +589,7 @@ Feature: Sync a project to GitHub
     # version_control.ex:55-58, :87-90, :179-182; github_sync_component.ex:207-212, :216-219
     # project_live_test.exs:5563-5660 (connect), :6276-6366 (reconnect)
 
-  @S29 @pending
+  @S29
   Scenario: Colliding names stop a sync before anything reaches GitHub
     # Value: a sync never silently drops one of two workflows whose names map to the same key, and the user knows which to rename.
     Given project "Malawi HIV" is connected
@@ -602,7 +601,7 @@ Feature: Sync a project to GitHub
     # version_control.ex:183-191; export_utils/duplicate_key_error.ex:22-26; github_sync_component.ex:241-242
     # project_live_test.exs:6750-6796 (sync), :6203-6274 (reconnect, nothing written to the repo)
 
-  @S30 @pending
+  @S30
   Scenario: GitHub's own error message is shown when a connect fails
     # Value: an admin can act on what GitHub said (permissions, protected branch) instead of a generic failure.
     Given I am an admin submitting the connect form on project "Malawi HIV"

@@ -2,7 +2,6 @@
 id: shared-user-deletion-modal
 type: shared
 title: User deletion modal
-status: not-started
 owner:
 
 trigger:
@@ -202,7 +201,7 @@ Feature: User deletion modal
   As a user deleting my own account, or a superuser
   I want to confirm deletion by typing the account's email address
 
-  @S01 @pending
+  @S01
   Scenario Outline: The modal says what is deleted and asks for the email
     # Value: the person deleting sees that credentials go with the account, and can check none are in production use, before committing.
     Given the modal is open on "<host>" for user "amara@example.org"
@@ -215,7 +214,7 @@ Feature: User deletion modal
       | /profile/<own id>/delete      | Your         |
       | /settings/users/<id>/delete   | This user's  |
 
-  @S02 @pending
+  @S02
   Scenario: A mismatched email does not schedule the account
     # Value: a slip of the mouse or the wrong row can't disable an account its owner still needs.
     Given the modal is open for unscheduled user "amara@example.org"
@@ -227,7 +226,7 @@ Feature: User deletion modal
     # user_deletion_modal.ex:24-35, :41-44, :51-52; user.ex:338-343, :430-440
     # user_live_test.exs:322-327, profile_live_test.exs:218-223 (live validation only); user_test.exs:528-539 (changeset)
 
-  @S03 @pending
+  @S03
   Scenario: A superuser account can't be scheduled for deletion
     # Value: an instance can't lose its administrators through either deletion modal.
     Given the modal is open for superuser "root@example.org"
@@ -237,7 +236,7 @@ Feature: User deletion modal
     Then "root@example.org" is not disabled or scheduled for deletion
     # user.ex:338-343, :418-428; user_deletion_modal.ex:51-52; user_test.exs:557-570 (changeset only); no LiveView test
 
-  @S04 @pending
+  @S04
   Scenario Outline: A matching email schedules the account and hands off
     # Value: a confirmed deletion takes effect in one step, and the person lands somewhere that makes sense for who they are.
     Given the modal is open on "<host>" for unscheduled non-superuser "amara@example.org"
@@ -253,7 +252,7 @@ Feature: User deletion modal
       | /profile/<own id>/delete      | /users/log_out   |
       | /settings/users/<id>/delete   | /settings/users  |
 
-  @S05 @pending
+  @S05
   Scenario: An account that has created runs is warned it may stay
     # Value: nobody is told an account is gone when its audit history keeps it from being removed.
     Given user "amara@example.org" has started a run
@@ -265,7 +264,7 @@ Feature: User deletion modal
     Then I do not see that note
     # user_deletion_modal.ex:16, :173-177; accounts.ex:31-40; accounts_test.exs:217-241 (function only); no LiveView test
 
-  @S06 @pending
+  @S06
   Scenario: A superuser purges an already scheduled account
     # Value: a superuser can remove an account and its credentials at once instead of waiting out the grace period.
     Given I am a superuser on "/settings/users"
@@ -277,7 +276,7 @@ Feature: User deletion modal
     And "amara@example.org", their project memberships and their credentials no longer exist
     # user_deletion_modal.ex:15, :64-70; accounts.ex:43-79; user_live_test.exs:431-458; accounts_test.exs:825-910
 
-  @S07 @pending
+  @S07
   Scenario: An account with runs can't be purged now
     # Value: a person whose runs are part of a project's audit trail is not hard-deleted out from under it.
     Given I am a superuser on "/settings/users"
@@ -287,7 +286,7 @@ Feature: User deletion modal
     And I see only a "Cancel" button
     # user_deletion_modal.ex:96-137; user_live_test.exs:538-574
 
-  @S08 @pending
+  @S08
   Scenario: A purge blocked by remaining activity changes nothing
     # Value: a failed purge leaves the account, its memberships and credentials intact and says so, instead of claiming success.
     Given I am a superuser with the delete now modal open for scheduled user "amara@example.org"
@@ -300,7 +299,7 @@ Feature: User deletion modal
     # user_deletion_modal.ex:65, :72-79; accounts.ex:50-79, :872-888
     # user_live_test.exs:460-508 (run created after the modal opened); accounts_test.exs:913-965
 
-  @S09 @pending
+  @S09
   Scenario Outline: Backing out returns to the host and changes nothing
     # Value: abandoning a deletion is one click and leaves the account untouched.
     Given the modal is open on "<host>" for user "amara@example.org"
@@ -401,7 +400,7 @@ none
 
 ## Summary
 
-- Scenarios: 9 (S01 to S09), all `@pending`.
+- Scenarios: 9 (S01 to S09).
 - Section 6: 6.1 has 5, 6.2 has 11, 6.3 has 2, 6.4 has 2, 6.5 has 2.
 - Flows: references flow-account-revocation-teardown (S04); none proposed.
 - Shared: none referenced or proposed.

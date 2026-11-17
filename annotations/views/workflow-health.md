@@ -2,7 +2,6 @@
 id: workflow-health
 type: view
 title: Workflow health
-status: not-started
 owner:
 
 trigger:
@@ -280,7 +279,7 @@ Feature: Workflow health
     Given I am a viewer on project "Malawi HIV"
     And workflow "Daily sync" has jobs "Fetch" and "Load"
 
-  @S01 @passing-old
+  @S01
   Scenario: A member opens a workflow's health page from the workflow list
     # Value: someone looking after a workflow gets its state in one place, without building History filters.
     Given I am on the workflows page of "Malawi HIV"
@@ -295,7 +294,7 @@ Feature: Workflow health
     # health.ex:14-22, :28-60; WorkflowHealth.tsx:42, :58-189; RangePicker.tsx:13
     # health_test.exs:12-19; WorkflowHealth.test.tsx:292-299, :337-359; index_test.exs:542-554
 
-  @S02 @passing-old
+  @S02
   Scenario: The workflow crumb leads back to its editor
     # Value: someone who has found the failing step can go straight to fixing it.
     Given I am on the health page of "Daily sync"
@@ -303,7 +302,7 @@ Feature: Workflow health
     Then I am in the editor for "Daily sync"
     # health.ex:37-40; health_test.exs:21-33
 
-  @S03 @passing-old
+  @S03
   Scenario Outline: A workflow that is not in this project, or is deleted, is not shown
     # Value: a mistyped or stale URL can't show a workflow from another project or one that was deleted.
     Given <workflow>
@@ -317,7 +316,7 @@ Feature: Workflow health
     # hooks.ex:138-158; workflows.ex:1330-1336; query.ex:35-40
     # health_test.exs:35-46 (other project only; the deleted row is read from query.ex:37, not tested on the page)
 
-  @S04 @passing-old
+  @S04
   Scenario: Outcomes count each finished work order once, with the success rate in the middle
     # Value: the share of work that actually got through is visible at a glance and isn't skewed by work still running or stopped on purpose.
     Given in the last 7 days "Daily sync" had 9 successful, 1 failed, 1 crashed and 2 cancelled work orders
@@ -329,7 +328,7 @@ Feature: Workflow health
     # stats.ex:53-67 (final states only); OutcomesDonut.tsx:50-91; types.ts:14-21, :35-36; WorkflowHealth.tsx:97-99, :250-253
     # stats_test.exs:94-133; OutcomesDonut.test.tsx:41-53, :73-98, :126-136; workflow_health_controller_test.exs:233-276
 
-  @S05 @passing-old
+  @S05
   Scenario: A work order retried to success counts as a success
     # Value: retrying failures makes this page's failure numbers fall, so a team can see a fix working.
     Given a "Daily sync" work order whose first run failed and whose retry succeeded in the last 7 days
@@ -339,7 +338,7 @@ Feature: Workflow health
     # stats.ex:53-61 (work order state, not run state); WorkflowHealth.tsx:20-23
     # stats_test.exs:135-152
 
-  @S06 @passing-old
+  @S06
   Scenario: A single failure is never rounded away
     # Value: a workflow with any failure never reads as 100% successful.
     Given in the last 7 days "Daily sync" had 2,500 successful and 1 failed work order
@@ -347,7 +346,7 @@ Feature: Workflow health
     Then the middle of the ring reads "<100%"
     # Donut.tsx:40-48; OutcomesDonut.tsx:83-89; OutcomesDonut.test.tsx:56-69
 
-  @S07 @passing-old
+  @S07
   Scenario: Failures are broken down by the state they ended in
     # Value: people can tell faults in job code from crashes, lost runs and payloads refused over the run limit, which have different fixes.
     Given in the last 7 days "Daily sync" had 3 failed, 1 lost and 2 rejected work orders and 4 cancelled ones
@@ -358,7 +357,7 @@ Feature: Workflow health
     # FailureBreakdownDonut.tsx:51-74; types.ts:14-21; stats.ex:39-40 (rejected is a final state); workorder.ex:48, :50
     # FailureBreakdownDonut.test.tsx:15-131; WorkflowHealth.test.tsx:361-383
 
-  @S08 @passing-old
+  @S08
   Scenario: Steps with failures shows where failures land, heaviest first
     # Value: the step to look at first is obvious, even when it fails in several different ways.
     Given in the last 7 days 5 work orders failed at "Load", 3 with "RuntimeError" and 2 with "AdaptorError"
@@ -370,7 +369,7 @@ Feature: Workflow health
     # StepFailureBars.tsx:46-108, :119-142; adaptorLabel.ts:10-11
     # StepFailureBars.test.tsx:34-48, :56-80
 
-  @S09 @passing-old
+  @S09
   Scenario: Triage groups failures by error, heaviest first, with a suggestion
     # Value: a team sees the few distinct faults behind many failures and a plain-language hint for each.
     Given in the last 7 days 4 work orders failed with "RuntimeError" at "Load" and 1 with "CompileError" before any step ran
@@ -380,7 +379,7 @@ Feature: Workflow health
     # stats.ex:431-466, :513-556; TriageTable.tsx:20-64, :75-145, :213-250
     # stats_test.exs:306-328, :406-426, :480-503; TriageTable.test.tsx:28-62, :83-122
 
-  @S10 @passing-old
+  @S10
   Scenario: Work orders refused over the run limit get their own triage row
     # Value: payloads that never ran are not mistaken for job failures, and the reason is named.
     Given in the last 7 days 2 webhook requests to "Daily sync" were rejected over the run limit
@@ -388,7 +387,7 @@ Feature: Workflow health
     Then a triage row reads "2", "rejected:RunLimitExceeded" and "The project was over its run limit, so no run was created for this request."
     # stats.ex:490-503; TriageTable.tsx:61-62; stats_test.exs:427-446; TriageTable.test.tsx:64-81
 
-  @S11 @passing-old
+  @S11
   Scenario: A retried work order is triaged by its latest attempt only
     # Value: a failure that was retried into a different failure is reported once, as what is wrong now.
     Given a "Daily sync" work order failed with "FirstAttempt" at "Fetch", then its retry failed with "Retry" at "Load"
@@ -396,7 +395,7 @@ Feature: Workflow health
     Then the triage table has one row, "fail:Retry @ Load", with count 1
     # stats.ex:401-423; stats_test.exs:505-534
 
-  @S12 @passing-old
+  @S12
   Scenario: A work order that broke in two branches is triaged under both
     # Value: a second broken branch is shown as its own fault rather than hidden behind the first.
     Given a "Daily sync" work order whose latest run failed at both "Fetch" and "Load"
@@ -405,7 +404,7 @@ Feature: Workflow health
     And "Outcomes" counts the work order once
     # stats.ex:8-11, :360-399; StepFailureBars.tsx:16-20; stats_test.exs:536-582
 
-  @S13 @passing-old
+  @S13
   Scenario: A step is named as it was when it failed
     # Value: a triage row stays recognisable after the job is renamed or deleted.
     Given job "Load" failed in the last 7 days and was then renamed to "Load to DHIS2"
@@ -434,7 +433,7 @@ Feature: Workflow health
     # Donut.tsx:87-91, :128-152; OutcomesDonut.tsx:57-76; FailureBreakdownDonut.tsx:66; historyUrl.ts:47-56
     # OutcomesDonut.test.tsx:154-195; FailureBreakdownDonut.test.tsx:133-150
 
-  @S16 @passing-old
+  @S16
   Scenario: Runs over time are drawn on my own clock and say so
     # Value: a bar labelled "Mar 3" or "14:00" means the reader's own day and hour, so failures line up with what they know happened locally.
     Given my browser's timezone is "Africa/Nairobi"
@@ -446,7 +445,7 @@ Feature: Workflow health
     # useHealthQuery.ts:55-65; workflow_health_controller.ex:43-53, :85-101; stats.ex:108, :154-249; VolumeBars.tsx:229-238, :269-328
     # workflow_health_controller_test.exs:410-430; stats_test.exs:722-757, :844-862; VolumeBars.test.tsx:103-110, :148-157
 
-  @S17 @passing-old
+  @S17
   Scenario: A browser that can't name its timezone gets UTC, and is told
     # Value: the chart never silently uses a clock the reader didn't choose without naming it.
     Given my browser reports its timezone as "Etc/Unknown"
@@ -454,7 +453,7 @@ Feature: Workflow health
     Then the meta ends "Etc/UTC"
     # workflow_health_controller.ex:58-63, :86-91; workflow_health_controller_test.exs:431-462
 
-  @S18 @passing-old
+  @S18
   Scenario: Changing the range redraws every panel for the new window together
     # Value: numbers from two different windows are never on screen side by side.
     Given I am on the health page of "Daily sync" showing "Last 7 days"
@@ -464,7 +463,7 @@ Feature: Workflow health
     # useHealthQuery.ts:35-46; WorkflowHealth.tsx:50-56, :214-238
     # WorkflowHealth.test.tsx:301-320, :472-541
 
-  @S19 @passing-old @variant:history-retention-14
+  @S19 @variant:history-retention-14
   Scenario: A range longer than the project keeps history is not offered
     # Value: nobody reads a 30-day window whose older half has been purged as a quiet month.
     Given project "Malawi HIV" keeps history for 14 days
@@ -475,7 +474,7 @@ Feature: Workflow health
     # health.ex:59; RangePicker.tsx:22-60; health_test.exs:48-70
     # WorkflowHealth.test.tsx:543-582
 
-  @S20 @passing-old
+  @S20
   Scenario: An empty window says so
     # Value: a quiet workflow reads as quiet, not as a broken chart.
     Given "Daily sync" had no finished work orders in the last 24 hours
@@ -485,7 +484,7 @@ Feature: Workflow health
     # Donut.tsx:53-57; StepFailureBars.tsx:52-54; TriageTable.tsx:82-84; VolumeBars.tsx:107-111; WorkflowHealth.tsx:255-270
     # WorkflowHealth.test.tsx:322-335; OutcomesDonut.test.tsx:138-152
 
-  @S21 @passing-old
+  @S21
   Scenario: An open page updates on its own
     # Value: someone watching after a fix sees failures fall without reloading.
     Given I have the health page of "Daily sync" open and visible
@@ -495,7 +494,7 @@ Feature: Workflow health
     # useHealthQuery.ts:103-136 (30 s, visible only, and on visibilitychange); stats.ex:317-358 (marker moves when a work order settles)
     # WorkflowHealth.test.tsx:153-257; stats_test.exs:196-228
 
-  @S22 @passing-old
+  @S22
   Scenario: One failing chart does not take the page with it
     # Value: when one query is slow or broken, people still get the charts that answered.
     Given the failures data cannot be loaded
@@ -506,7 +505,7 @@ Feature: Workflow health
     # WorkflowHealth.tsx:214-238; useHealthQuery.ts:8, :27-28, :66-93; stats.ex:323-338
     # WorkflowHealth.test.tsx:401-454
 
-  @S23 @passing-old
+  @S23
   Scenario: A failed refresh keeps the numbers on screen
     # Value: a momentary error doesn't blank the page someone is reading, and it recovers on the next refresh.
     Given I have the health page of "Daily sync" open with its numbers loaded
@@ -515,7 +514,7 @@ Feature: Workflow health
     And the next successful refresh replaces them
     # useHealthQuery.ts:87-93; WorkflowHealth.test.tsx:259-290
 
-  @S24 @passing-old
+  @S24
   Scenario Outline: The page's data is served only to people who can open it
     # Value: the data endpoints behind the page never show a workflow's failure counts to someone the page itself would turn away, or confirm the workflow exists.
     Given <who>
@@ -535,7 +534,7 @@ Feature: Workflow health
     # workflow_health_controller.ex:1-22, :110-133; router.ex:137-153; project_users.ex:134, :136, :193-194
     # workflow_health_controller_test.exs:53-230; flow-workflow-health-drilldown S09 covers the cross-project case for the drill-down slices
 
-  @S25 @passing-old
+  @S25
   Scenario: A failure alert's health link lands on this page
     # Value: the person alerted can see at once whether the failure is a one-off or part of a pattern.
     Given I received a failure alert for "Daily sync"
@@ -545,7 +544,7 @@ Feature: Workflow health
     And if I was signed out, the flow "flow-login-return-to" starts for that URL
     # failure_alerter.ex:81-85; failure_alert.html.heex:19-22; failure_alert_test.exs:152; router.ex:189-190, :304
 
-  @S26 @passing-old
+  @S26
   Scenario: A digest's health link lands on this page
     # Value: a member who sees failures in a digest can go straight to triage by cause.
     Given my digest lists failures for "Daily sync"
@@ -554,7 +553,7 @@ Feature: Workflow health
     And the flow "flow-digest-email" ends on this page (its S06)
     # user_notifier.ex:365-382; user_notifier_test.exs:272
 
-  @S27 @passing-old
+  @S27
   Scenario: Deleting the workflow sends this page to the workflow list
     # Value: nobody keeps reading the health of a workflow that no longer exists.
     Given I have the health page of "Daily sync" open

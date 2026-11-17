@@ -2,7 +2,6 @@
 id: admin-audit
 type: view
 title: Admin settings › Audit
-status: not-started
 owner:
 
 trigger:
@@ -223,7 +222,7 @@ Feature: Instance audit trail
   As a superuser
   I want to read every audit event with its actor, subject and changes
 
-  @S01 @passing-old
+  @S01
   Scenario: Audit events are listed newest first with actor and subject
     # Value: an operator investigating an incident can see the most recent changes first and who made each one.
     Given I am a superuser
@@ -237,7 +236,7 @@ Feature: Instance audit trail
     # auditing.ex:14-29 (order_by desc inserted_at), :77-81; index.html.heex:8-46
     # audit_live_test.exs:28-57 (asserts first name, email, short credential id, "created"; not the order)
 
-  @S02 @passing-old
+  @S02
   Scenario: An event by a deleted user still identifies the actor
     # Value: the audit trail survives offboarding; changes made by someone who has since left can still be traced to their account id.
     Given "temp@example.org" deleted a credential
@@ -248,7 +247,7 @@ Feature: Instance audit trail
     # auditing.ex:71-75; index.html.heex:28-35 (falls back to display_short_uuid(actor_id))
     # audit_live_test.exs:34-46, :59-62
 
-  @S03 @passing-old
+  @S03
   Scenario: Changes are shown field by field with old and new values
     # Value: a reviewer sees exactly what an event changed, not just that something changed.
     Given a project's "history_retention_period" was changed from 30 to 7 days
@@ -257,7 +256,7 @@ Feature: Instance audit trail
     # index.ex:60-78, :101-134 (old value line-through, hero-arrow-right, new value)
     # audit_live_test.exs:67-127 (diff/1 with before and after, string and atom keys)
 
-  @S04 @passing-old
+  @S04
   Scenario: Fields only on one side of a change are still listed, in name order
     # Value: a field that was set for the first time or cleared is not silently missing from the record.
     Given an event whose changes have before "bar" and "foo", and after "bar", "baz" and "foo"
@@ -268,7 +267,7 @@ Feature: Instance audit trail
     # index.ex:64-72 (union of keys, sorted, uniq), :109-116 (arrow only when old != nil), :136-137
     # audit_live_test.exs:129-171 (before nil), :173-215 (before empty), :217-303 (after nil or empty), :305-451 (extra keys, arrow count 2), :453-493 (alphabetical)
 
-  @S05 @passing-old
+  @S05
   Scenario: A created event shows only the new values
     # Value: a creation reads as a creation, not as a change from blank values.
     Given user "amara@example.org" was created by a superuser
@@ -276,7 +275,7 @@ Feature: Instance audit trail
     Then under the user "created" row each recorded field shows its value with no arrow and nothing struck through
     # accounts/audit.ex:17-19 (after only); auditing/audit.ex:252-256 (before nil for "created" changesets); index.ex:109-116
 
-  @S06 @passing-old
+  @S06
   Scenario: Credential environment bodies are shown as encrypted values only
     # Value: a superuser can see which environments a credential change touched without the credential's secrets being shown on screen.
     Given credential "DHIS2" was updated with environments "production" and "staging" and a body containing "s3cret-token"
@@ -286,7 +285,7 @@ Feature: Instance audit trail
     # credentials/audit.ex:30-57 (Encrypted.Map.dump then Base64); index.ex:80-99 (strip "body:", sort by name), :122-131
     # not covered by audit_live_test.exs (every diff/1 test passes metadata %{})
 
-  @S07 @passing-old
+  @S07
   Scenario: Webhook auth method secrets are shown encrypted
     # Value: reading the audit trail does not reveal webhook passwords or API keys.
     Given a webhook auth method with password "hunter22" and API key "k-123" was created
@@ -295,7 +294,7 @@ Feature: Instance audit trail
     And I do not see "hunter22" or "k-123"
     # workflows/webhook_auth_method_audit.ex:16-26 (Encrypted.Binary.dump then Base64 for username, password, api_key)
 
-  @S08 @passing-old
+  @S08
   Scenario Outline: Automated actors are labelled as the system that acted
     # Value: changes made by GitHub sync, a trigger or a service account are not mistaken for a person's, and stay attributable after the actor is removed.
     Given an audit event whose actor is <actor>
@@ -313,7 +312,7 @@ Feature: Instance audit trail
     # auditing.ex:31-39 (service account label, identifier from metadata["service_account_id"]), :45-69; trigger types trigger.ex:27, :66
     # auditing/audit.ex:308-318 (service account keeps its key id in metadata because no table holds it)
 
-  @S09 @passing-old
+  @S09
   Scenario: The history is paged ten events at a time
     # Value: the full instance history stays browsable on a busy instance without loading every event at once.
     Given there are 25 audit events

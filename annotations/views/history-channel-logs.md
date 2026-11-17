@@ -2,7 +2,6 @@
 id: history-channel-logs
 type: view
 title: History › Channel logs
-status: not-started
 owner:
 
 trigger:
@@ -203,7 +202,7 @@ Feature: Channel logs
   As a project member
   I want a filterable, paged list of channel requests with their outcome
 
-  @S01 @pending @variant:experimental-features
+  @S01 @variant:experimental-features
   Scenario: Members see the project's channel requests, newest first
     # Value: the most recent traffic, which is what someone debugging a live integration needs, is at the top.
     Given I have experimental features enabled
@@ -215,7 +214,7 @@ Feature: Channel logs
     # channel_logs_component.ex:20-40, :151-184; channels.ex:110-118
     # test/lightning_web/live/run_live/index_test.exs:628-653; test/lightning/channels/channel_requests_test.exs:130-146
 
-  @S02 @pending @variant:experimental-features
+  @S02 @variant:experimental-features
   Scenario: A project with no channel requests says so
     # Value: an empty list reads as "nothing has arrived", not as a page that failed to load.
     Given I have experimental features enabled
@@ -225,7 +224,7 @@ Feature: Channel logs
     # channel_logs_component.ex:140-149
     # test/lightning_web/live/run_live/index_test.exs:613-626
 
-  @S03 @pending @variant:experimental-features
+  @S03 @variant:experimental-features
   Scenario: Requests from other projects are never listed
     # Value: one project's members never see another project's API traffic, which can name patients or systems.
     Given I have experimental features enabled
@@ -238,7 +237,7 @@ Feature: Channel logs
     # channels.ex:110-116, :120-124
     # test/lightning/channels/channel_requests_test.exs:31-50 covers the unfiltered case; the foreign channel id case is untested
 
-  @S04 @pending @variant:experimental-features
+  @S04 @variant:experimental-features
   Scenario: Each row shows the request's path, status and error message
     # Value: people can tell which endpoint failed and why without opening every request.
     Given I have experimental features enabled
@@ -250,7 +249,7 @@ Feature: Channel logs
     # channel_logs_component.ex:162-164, :181-183, :200-213; channels.ex:104-108
     # test/lightning_web/live/run_live/index_test.exs:723-763 asserts the path cell; channel_requests_test.exs:99-128 asserts both event types are preloaded
 
-  @S05 @pending @variant:experimental-features
+  @S05 @variant:experimental-features
   Scenario Outline: Request states show as labelled pills
     # Value: people can tell a destination that refused a request from one that never answered or a proxy fault.
     Given I have experimental features enabled
@@ -266,7 +265,7 @@ Feature: Channel logs
       | error   | Error       |
     # components.ex:145-159; states from handler.ex:175-183 (4xx and 5xx are "failed", a timeout is "timeout", other proxy errors are "error")
 
-  @S06 @pending @variant:experimental-features
+  @S06 @variant:experimental-features
   Scenario: Filter by channel from the dropdown
     # Value: on a project with several channels, people isolate the one a client is complaining about.
     Given I have experimental features enabled
@@ -279,7 +278,7 @@ Feature: Channel logs
     # channel_logs_component.ex:54-71, :100-121, :193-198; index.ex:350-357
     # test/lightning_web/live/run_live/index_test.exs:655-697 covers only loading the filtered URL
 
-  @S07 @pending @variant:experimental-features
+  @S07 @variant:experimental-features
   Scenario: Clearing the channel filter lists every channel again
     # Value: people get back to the whole picture in one click.
     Given I have experimental features enabled
@@ -290,7 +289,7 @@ Feature: Channel logs
     And choosing "All channels" from the dropdown does the same
     # pills.ex:119-176 (clear button pushes channel_id ""), channel_logs_component.ex:80-99, :193-198
 
-  @S08 @pending @variant:experimental-features
+  @S08 @variant:experimental-features
   Scenario: The dropdown lists the project's channels by name
     # Value: people find a channel by name among many without scrolling an arbitrary order.
     Given I have experimental features enabled
@@ -301,7 +300,7 @@ Feature: Channel logs
     # channel_logs_component.ex:32-34, :79-121; channels.ex:28-34
     # test/lightning/channels_test.exs:12-27
 
-  @S09 @pending @variant:experimental-features
+  @S09 @variant:experimental-features
   Scenario: Clicking a row's channel name filters to that channel
     # Value: from one suspicious request, people see the rest of that channel's traffic in one click.
     Given I have experimental features enabled
@@ -310,7 +309,7 @@ Feature: Channel logs
     Then I see only "channel-one"'s requests
     # channel_logs_component.ex:165-173
 
-  @S10 @pending @variant:experimental-features
+  @S10 @variant:experimental-features
   Scenario: Arriving from the channels page shows that channel's requests
     # Value: the request count on the channels page leads straight to the requests it counted.
     Given I have experimental features enabled
@@ -319,7 +318,7 @@ Feature: Channel logs
     # channel_live/index.ex:367, :377; channel_logs_component.ex:20-40
     # test/lightning_web/live/run_live/index_test.exs:655-697
 
-  @S11 @pending @variant:experimental-features
+  @S11 @variant:experimental-features
   Scenario: Paging keeps the channel filter
     # Value: people reading through a busy channel's history don't silently drift into other channels' requests.
     Given I have experimental features enabled
@@ -330,7 +329,7 @@ Feature: Channel logs
     Then I see the remaining 5 "channel-one" requests and no "channel-two" request
     # channel_logs_component.ex:25-28, :39, :215-226; pagination.ex:120-131, :159-213; repo.ex:6
 
-  @S12 @pending @variant:experimental-features
+  @S12 @variant:experimental-features
   Scenario: Changing the channel filter returns to page 1
     # Value: a new filter never lands on an empty page past the end of a shorter list.
     Given I have experimental features enabled
@@ -339,7 +338,7 @@ Feature: Channel logs
     Then I am on page 1 of that channel's requests
     # index.ex:350-357 (the patch carries only filters)
 
-  @S13 @pending @variant:experimental-features
+  @S13 @variant:experimental-features
   Scenario: A request's ID opens its detail page
     # Value: people go from the list to the full request and response for the one that failed.
     Given I have experimental features enabled
@@ -348,7 +347,7 @@ Feature: Channel logs
     And it links to "/projects/<project_id>/history/channels/<A's id>"
     # channel_logs_component.ex:153-161; live_helpers.ex:169-171; detail page owned by channel-request-show
 
-  @S14 @pending @variant:experimental-features
+  @S14 @variant:experimental-features
   Scenario: A request whose path was not kept shows a placeholder
     # Value: people can tell "this project does not keep request data" apart from a broken row.
     Given I have experimental features enabled
@@ -360,7 +359,7 @@ Feature: Channel logs
     # channel_logs_component.ex:163; persistence_policy.ex:12-16, :35-37
     # test/lightning_web/live/run_live/index_test.exs:765-810
 
-  @S15 @pending @variant:experimental-features
+  @S15 @variant:experimental-features
   Scenario: Members move between work orders and channel logs
     # Value: people investigating an incident switch between workflow runs and proxied requests without leaving History.
     Given I have experimental features enabled

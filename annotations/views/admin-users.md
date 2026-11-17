@@ -2,7 +2,6 @@
 id: admin-users
 type: view
 title: Admin settings › Users
-status: not-started
 owner:
 
 trigger:
@@ -233,7 +232,7 @@ Feature: Admin users list
   As a superuser
   I want a list of every account with its status and the actions that change it
 
-  @S01 @pending
+  @S01
   Scenario: A superuser sees every account on the instance
     # Value: instance administrators can see who holds an account, who is a superuser, who is disabled and who is about to be removed, in one place.
     Given I am a superuser
@@ -249,7 +248,7 @@ Feature: Admin users list
     # user_live_test.exs:36-41 (heading and own email only); confirmation_lockout_live_test.exs:70-71 (another user's email)
     # The superuser gate itself: proposed shared-admin-space
 
-  @S02 @pending
+  @S02
   Scenario: Filtering narrows the list by name, email or role
     # Value: on an instance with many accounts, an administrator finds the one they need without scrolling.
     Given I am a superuser
@@ -269,7 +268,7 @@ Feature: Admin users list
     # table_component.ex:64-84, :86-97, :114-116; table_helpers.ex:26-58, :130-141
     # user_live_test.exs:662-707, :709-723
 
-  @S03 @pending
+  @S03
   Scenario: The list is sorted by email and any column can be sorted
     # Value: an administrator can bring disabled accounts, superusers or pending deletions together to review them.
     Given I am a superuser
@@ -287,7 +286,7 @@ Feature: Admin users list
     # user_live_test.exs:576-603 (email both ways), :605-621 (first name), :623-638 (role), :640-660 (enabled)
     # Ordering details (case, blanks, unscheduled rows) are 6.2
 
-  @S04 @pending
+  @S04
   Scenario Outline: Superuser accounts are never offered an active delete action
     # Value: an instance can't lose an administrator, including the one using the page, through a click on the users list.
     Given I am a superuser
@@ -303,7 +302,7 @@ Feature: Admin users list
       | not scheduled for deletion    | "Delete"     |
       | scheduled for deletion        | "Delete now" |
 
-  @S05 @pending
+  @S05
   Scenario: Delete on a user account opens the deletion dialog over the list
     # Value: an administrator can begin removing a departed user's access from the row where they found them.
     Given I am a superuser
@@ -316,7 +315,7 @@ Feature: Admin users list
     # user_live/components.ex:17-27, :148-151, :189-203; user_live/index.ex:28-32; index.html.heex:16-22; router.ex:271
     # user_live_test.exs:315-319; scheduling, cancel and close are shared-user-deletion-modal S02, S04, S09; the revocation is flow-account-revocation-teardown S01, S07
 
-  @S06 @pending
+  @S06
   Scenario: A scheduled account shows when it will go and offers to cancel or delete now
     # Value: an administrator can see who is about to lose their account, and when, before it happens.
     Given I am a superuser
@@ -330,7 +329,7 @@ Feature: Admin users list
     # user_live/components.ex:131-134, :189-196, :206-217
     # user_live_test.exs:301-347 (date shown after scheduling, "%d %b" only), :431-458, :538-574; delete now itself is shared-user-deletion-modal S06 to S08
 
-  @S07 @pending
+  @S07
   Scenario: Cancelling a scheduled deletion restores the account
     # Value: a deletion made by mistake, or one the user regrets, can be reversed before the purge removes the account and its credentials.
     Given I am a superuser
@@ -345,7 +344,7 @@ Feature: Admin users list
     # user_live_test.exs:396-411 asserts only the flash and the redirect; the database state and sign-in are untested
     # Her API tokens and sessions stay revoked (flow-account-revocation-teardown 6.2); see 6.1 and 6.2 here
 
-  @S08 @pending
+  @S08
   Scenario Outline: The list leads to the user form
     # Value: an administrator can add an account on an instance without self sign-up, or change a user's details, role or access, starting from the list.
     Given I am a superuser
@@ -489,7 +488,7 @@ none. Referenced:
 
 ## Summary
 
-- Scenarios: 8 (S01 to S08), all `@pending`.
+- Scenarios: 8 (S01 to S08).
 - Section 6: 6.1 has 3, 6.2 has 18, 6.3 has 3, 6.4 has 3, 6.5 has 3.
 - Flows: none proposed; references flow-account-revocation-teardown and
   flow-change-email-confirm (cross-reference).

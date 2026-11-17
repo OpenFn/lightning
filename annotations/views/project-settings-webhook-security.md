@@ -2,7 +2,6 @@
 id: project-settings-webhook-security
 type: view
 title: Project settings › Webhook security
-status: not-started
 owner:
 
 trigger:
@@ -257,7 +256,7 @@ Feature: Project webhook security
   As a project admin
   I want to create, inspect and remove the credentials callers must present
 
-  @S01 @pending
+  @S01
   Scenario: Every member sees the project's auth methods
     # Value: anyone wiring up or debugging an integration can see which credentials the project's endpoints accept, without asking an admin.
     Given project "Malawi HIV" has auth methods "Kobo basic" (basic) and "DHIS2 key" (API)
@@ -268,7 +267,7 @@ Feature: Project webhook security
     # settings.html.heex:467-472; components.ex:7-13, :78-83; webhook_auth_methods.ex:465-472
     # project_live_test.exs:2366-2379 (all four roles)
 
-  @S02 @pending
+  @S02
   Scenario: Members can see what an auth method protects
     # Value: before changing an integration, a member knows which workflows and channels rely on a credential.
     Given auth method "Kobo basic" is attached to the trigger of workflow "Intake" and to channel "Lab results"
@@ -283,7 +282,7 @@ Feature: Project webhook security
     # settings.html.heex:487-512; settings.ex:584-611; components.ex:106-128, :136-217
     # project_live_test.exs:2381-2427
 
-  @S03 @pending
+  @S03
   Scenario: An unused auth method says so
     # Value: admins can spot credentials nothing uses and clean them up.
     Given auth method "Old key" is attached to nothing
@@ -292,7 +291,7 @@ Feature: Project webhook security
     And there is no usage link for "Old key"
     # settings.html.heex:505-510; project_live_test.exs:2429-2440
 
-  @S04 @pending
+  @S04
   Scenario: A project with no auth methods offers to create one
     # Value: an admin setting up the first protected webhook finds the starting point.
     Given project "Malawi HIV" has no auth methods
@@ -302,7 +301,7 @@ Feature: Project webhook security
     And I see an enabled "Create a new auth method" button
     # settings.html.heex:473-486; components.ex:43-44
 
-  @S05 @pending
+  @S05
   Scenario: Admin creates a basic auth method
     # Value: an admin can require a username and password on the project's webhooks without a deploy or a superuser.
     Given I am an admin on project "Malawi HIV"
@@ -319,7 +318,7 @@ Feature: Project webhook security
     # settings.ex:526-547; form_component.ex:71-86, :171-190, :223-231, :324-395, :443-494
     # webhook_auth_methods.ex:171-187; project_live_test.exs:2442-2501
 
-  @S06 @pending
+  @S06
   Scenario: Admin creates an API key method and can copy the key before saving
     # Value: the admin gets a strong key the server generated and can hand it to the calling system straight away.
     Given I am an admin on project "Malawi HIV"
@@ -332,7 +331,7 @@ Feature: Project webhook security
     And its stored key equals the key that was shown
     # webhook_auth_methods.ex:806-819; webhook_auth_method.ex:98-108; form_component.ex:200-206, :498-520, :569-602
 
-  @S07 @pending
+  @S07
   Scenario: A basic auth password must be 8 to 72 characters
     # Value: webhooks can't be protected by a trivially guessable password.
     Given I am creating a basic auth method on project "Malawi HIV"
@@ -341,7 +340,7 @@ Feature: Project webhook security
     And "Create auth method" is disabled
     # webhook_auth_method.ex:80-85; form_component.ex:88-115, :421-425
 
-  @S08 @pending
+  @S08
   Scenario: Two auth methods in a project cannot share a name
     # Value: members can tell methods apart in the list, the workflow editor and the delete warning.
     Given project "Malawi HIV" has an auth method "Kobo basic"
@@ -351,7 +350,7 @@ Feature: Project webhook security
     And the project still has one method named "Kobo basic"
     # webhook_auth_method.ex:67-71; migration 20230926155218_create_webhook_auth_methods_table.exs:17; form_component.ex:187-188
 
-  @S09 @pending
+  @S09
   Scenario: Admin renames an auth method without changing its secret
     # Value: an admin can correct a name without breaking callers that already use the credential.
     Given basic auth method "Kobo basic" with username "kobo"
@@ -367,7 +366,7 @@ Feature: Project webhook security
     # settings.html.heex:514-529, :440-450; form_component.ex:125-144, :445-479; webhook_auth_method.ex:74-78
     # webhook_auth_methods.ex:258-288; project_live_test.exs:2564-2621
 
-  @S10 @pending
+  @S10
   Scenario Outline: A stored secret is hidden until the admin re-enters their password
     # Value: someone at an unattended, signed-in admin session can't read off a webhook credential.
     Given <type> auth method "<name>" exists on project "Malawi HIV"
@@ -389,7 +388,7 @@ Feature: Project webhook security
       | API   | DHIS2 key  | API key  | API Key  |
       | basic | Kobo basic | password | Password |
 
-  @S11 @pending
+  @S11
   Scenario: A 2FA code also unlocks a stored secret
     # Value: an admin who signs in with an authenticator can reveal a secret without their password.
     Given I am an admin on project "Malawi HIV" with an authenticator app enrolled
@@ -398,7 +397,7 @@ Feature: Project webhook security
     Then the API key is displayed with a "Copy" button
     # form_component.ex:208-211, :305; accounts.ex:463-467; user_totp.ex:45-65
 
-  @S12 @pending
+  @S12
   Scenario: Admin deletes an auth method after confirming
     # Value: an admin can retire a leaked or unused credential, and a slip of the mouse can't do it.
     Given auth method "Old key" exists on project "Malawi HIV"
@@ -416,7 +415,7 @@ Feature: Project webhook security
     # settings.html.heex:540-557, :452-460; settings.ex:549-582; delete_modal.ex:44-73, :182-201, :215-227
     # webhook_auth_methods.ex:672-733; project_live_test.exs:2951-3021
 
-  @S13 @pending
+  @S13
   Scenario: The delete modal warns which triggers and channels lose the method
     # Value: an admin sees which endpoints become unprotected before they delete, and can add another method first.
     Given auth method "Kobo basic" is attached to the trigger of workflow "My Workflow" and to channel "My Channel"
@@ -428,7 +427,7 @@ Feature: Project webhook security
     And I see "These channels stay enabled and keep forwarding requests to their destination with the project credential attached."
     # delete_modal.ex:113-180, :208-213; project_live_test.exs:2886-2930
 
-  @S14 @pending
+  @S14
   Scenario: The delete modal says when nothing depends on the method
     # Value: an admin can delete an unused credential knowing nothing breaks.
     Given auth method "Old key" is attached to nothing
@@ -437,7 +436,7 @@ Feature: Project webhook security
     And I do not see "will accept unauthenticated requests"
     # delete_modal.ex:105-112; project_live_test.exs:2932-2949
 
-  @S15 @pending
+  @S15
   Scenario Outline: Members who aren't admins can't change auth methods
     # Value: only people trusted with access decisions can open or close the project's endpoints.
     Given auth method "Kobo basic" exists on project "Malawi HIV"
@@ -460,7 +459,7 @@ Feature: Project webhook security
       | editor | delete_webhook_auth_method |
       | viewer | delete_webhook_auth_method |
 
-  @S16 @pending
+  @S16
   Scenario: An admin can't reach another project's auth method by id
     # Value: admin rights in one project never expose or alter another project's webhook credentials.
     Given auth method "someone-elses-auth" belongs to a different project
@@ -470,7 +469,7 @@ Feature: Project webhook security
     And I do not see "someone-elses-auth"
     # settings.ex:559-569, :592-601; webhook_auth_methods.ex:604-618; project_live_test.exs:2645-2686
 
-  @S17 @pending @variant:sandbox
+  @S17 @variant:sandbox
   Scenario: A sandbox points to the parent for webhook security
     # Value: someone working in a sandbox learns its webhooks use the parent's credentials and where to change them.
     Given sandbox "dev" of project "Malawi HIV"
@@ -481,7 +480,7 @@ Feature: Project webhook security
     And I do not see "New auth method" or an auth method table
     # settings.html.heex:379-403; sandbox_settings_test.exs:258-263; parent shows the table instead, :91-97
 
-  @S18 @pending
+  @S18
   Scenario: Creating, renaming or deleting a method hands off to webhook enforcement
     # Value: the credential managed here is the one inbound requests are checked against.
     Given I am an admin on project "Malawi HIV"

@@ -2,7 +2,6 @@
 id: workflow-editor-ai-assistant
 type: view
 title: Workflow editor › AI assistant panel
-status: not-started
 owner:
 
 trigger:
@@ -327,7 +326,7 @@ Feature: AI assistant in the workflow editor
   As a member of a project
   I want to ask an assistant about the workflow and have its changes land where I can review and save them
 
-  @S01 @pending
+  @S01
   Scenario: Without the assistant configured, the AI button says why it is off
     # Value: people on instances without AI aren't offered something that can't work, and know who to ask.
     Given the instance has no Apollo endpoint or key
@@ -338,7 +337,7 @@ Feature: AI assistant in the workflow editor
     # Header.tsx:365-369, :904-908; AIAssistantPanelWrapper.tsx:149-156; ai_assistant.ex:80-84; collaborate.ex:84, :277
     # Header.test.tsx:1426-1452
 
-  @S02 @pending
+  @S02
   Scenario: Members open and close the assistant without leaving the workflow
     # Value: help is at hand next to the workflow, and a link can bring a colleague straight to it.
     Given I have workflow "Intake" open
@@ -352,7 +351,7 @@ Feature: AI assistant in the workflow editor
     # AIButton.tsx:15-64; AIAssistantPanelWrapper.tsx:149-156; useAIPanelURLSync.ts:50-78; createUIStore.ts:79-96, :173-195
     # useAIPanelURLSync.test.ts:51-88; Header.test.tsx:1399-1425
 
-  @S03 @pending
+  @S03
   Scenario: The assistant is not available on an older version
     # Value: the assistant never reads or writes a version that is no longer the one being edited.
     Given I have workflow "Intake" open with the assistant panel open
@@ -362,7 +361,7 @@ Feature: AI assistant in the workflow editor
     # useAIPanelDiffManager.ts:77-98; Header.tsx:367-368, :906; AIAssistantPanelWrapper.tsx:155
     # Header.test.tsx:1453-1482
 
-  @S04 @pending
+  @S04
   Scenario: A first message starts a conversation
     # Value: questions and answers are kept, titled, and reachable by link, so work with the assistant isn't lost.
     Given I am an editor with "Intake" open and the panel showing "No conversations yet"
@@ -374,7 +373,7 @@ Feature: AI assistant in the workflow editor
     # ai_assistant_channel.ex:34-73, :600-660; ai_assistant.ex:233-282, :1115-1136; MessageList.tsx:1483-1500
     # ai_assistant_channel_test.exs:617-646, :4359-4387
 
-  @S05 @pending
+  @S05
   Scenario: Every message carries the workflow as it is now
     # Value: answers are about the workflow on screen, including edits nobody has saved yet, not a stale copy.
     Given I have "Intake" open with an unsaved new step "Clean data"
@@ -384,7 +383,7 @@ Feature: AI assistant in the workflow editor
     # AIAssistantPanelWrapper.tsx:413-440, :473-507; useAIMode.ts:42-75; message_processor.ex:156-171; apollo_client.ex:157-186
     # ai_assistant_channel_test.exs:4506-4553, :4586-4631
 
-  @S06 @pending
+  @S06
   Scenario: A reply streams in and sending waits until it is done
     # Value: long answers show progress, and nobody fires a second request that would race the first.
     Given I have sent a message in a conversation
@@ -395,7 +394,7 @@ Feature: AI assistant in the workflow editor
     # createAIAssistantStore.ts:412-494; ChatInput.tsx:205-208, :294; MessageList.tsx:1236-1250
     # ai_assistant_channel_test.exs:4188-4291; AIChannelRegistry.test.ts:201-305
 
-  @S07 @pending
+  @S07
   Scenario: The assistant's workflow changes land on the canvas for the person who asked, unsaved
     # Value: the asker sees the proposed workflow at once, and nothing reaches production until someone saves it.
     Given I am an editor with "Intake" open
@@ -408,7 +407,7 @@ Feature: AI assistant in the workflow editor
     # MessageList.tsx:1187-1230, :1252-1268; useAIWorkflowApplications.autoApply.test.ts:141-222; useAIWorkflowApplications.workflowAutoSave.test.ts:108-144
     # handoff: shared-workflow-yaml-format, shared-editor-session
 
-  @S08 @pending
+  @S08
   Scenario: Applied changes keep each step's credential
     # Value: accepting an AI change does not silently disconnect a step from the system it talks to.
     Given step "Send to DHIS2" uses credential "DHIS2 prod"
@@ -416,7 +415,7 @@ Feature: AI assistant in the workflow editor
     Then "Send to DHIS2" still uses "DHIS2 prod"
     # useAIWorkflowApplications.ts:300-305; useAIWorkflowUndo.ts:86-88; useAIWorkflowApplications.workflow.test.ts:182-224
 
-  @S09 @pending
+  @S09
   Scenario: On a new workflow, the assistant's workflow is created for the person who asked
     # Value: starting from a description ends with a real workflow, not a canvas that vanishes on reload.
     Given I started a new workflow with "Build with AI" (workflow-editor-new S20)
@@ -427,7 +426,7 @@ Feature: AI assistant in the workflow editor
     # useAIWorkflowApplications.workflowAutoSave.test.ts:68-107, :145-178
     # handoff: workflow-editor-new (creation), shared-editor-session S06/S09 (save and retry toast)
 
-  @S10 @pending
+  @S10
   Scenario: On a new workflow, changes wait for a connection
     # Value: a new workflow is never left on screen with nothing behind it.
     Given I am creating a new workflow and my editor connection has dropped
@@ -438,7 +437,7 @@ Feature: AI assistant in the workflow editor
     # useAIWorkflowApplications.ts:257-262, :445-458, :751-760; useWorkflow.tsx:748-762
     # useAIWorkflowApplications.workflowOfflineGate.test.ts:55-200
 
-  @S11 @pending
+  @S11
   Scenario: A change that did not reach the canvas says so and can be retried
     # Value: a reply is never mistaken for changes that actually landed, even after a reload.
     Given the assistant replies with a workflow that cannot be applied
@@ -453,7 +452,7 @@ Feature: AI assistant in the workflow editor
     # ai_assistant_channel.ex:184-215, :1064-1072; ai_assistant.ex:813-835
     # ai_assistant_channel_test.exs:214-321; MessageList.test.tsx:1787; useAIWorkflowApplications.workflow.test.ts:143-181, :258-292
 
-  @S12 @pending
+  @S12
   Scenario: The last reply's changes can be reverted and restored
     # Value: people can back out an AI change without hand-editing, and are warned before losing their own edits.
     Given the assistant's last reply changed "Intake" and I have edited nothing since
@@ -466,7 +465,7 @@ Feature: AI assistant in the workflow editor
     # MessageList.tsx:478-498, :1029-1047, :1460-1478; useAIWorkflowUndo.ts:55-139; useAppliedCanvas.ts:27-50
     # AIAssistantPanelWrapper.tsx:876-897; MessageList.undoChanges.test.tsx:68-154
 
-  @S13 @pending
+  @S13
   Scenario: Viewers can ask but cannot change the workflow through the assistant
     # Value: viewers keep read-only rights when they use the assistant.
     Given I am a viewer on the project with "Intake" open
@@ -479,7 +478,7 @@ Feature: AI assistant in the workflow editor
     # useAIWorkflowApplications.ts:662; MessageList.tsx:648-655
     # ai_assistant_channel_test.exs:1411-1452, :1496-1534; useAIWorkflowApplications.autoApply.test.ts:330-393
 
-  @S14 @pending @variant:experimental-features
+  @S14 @variant:experimental-features
   Scenario: On a live workflow the assistant offers to switch to draft
     # Value: the assistant never edits a workflow that is processing data in production.
     Given "Intake" is live outside a sandbox and I have experimental features on
@@ -491,7 +490,7 @@ Feature: AI assistant in the workflow editor
     # AIAssistantPanel.tsx:434-459, :670-680; useWorkflow.tsx:1096-1101; AIAssistantPanelWrapper.tsx:189-191
     # handoff: workflow-editor-canvas owns switch to draft
 
-  @S15 @pending
+  @S15
   Scenario: A failed reply says why and can be tried again
     # Value: a transient AI failure costs a click, not the question.
     Given the assistant fails to answer "What does this do?" with "The connection to the assistant was lost. Please try again."
@@ -503,7 +502,7 @@ Feature: AI assistant in the workflow editor
     # MessageList.tsx:781-829, :1147-1166, :1501-1507; AIChannelRegistry.ts:582-616
     # MessageList.test.tsx:207-293, :413, :542; ai_assistant_channel_test.exs:2342-2437, :510-556
 
-  @S16 @pending
+  @S16
   Scenario: Text that streamed before a failure is kept
     # Value: an answer the person watched appear does not vanish because the connection dropped at the end.
     Given the assistant's reply stops partway through
@@ -512,7 +511,7 @@ Feature: AI assistant in the workflow editor
     # ai_assistant.ex:1167-1170, :1204-1257; ai_assistant_channel.ex:369-373, :1112-1128; AIChannelRegistry.ts:780-799
     # ai_assistant_channel_test.exs:442-509; stream_failure_test.exs; AIChannelRegistry.test.ts:170-200
 
-  @S17 @pending
+  @S17
   Scenario: A reply whose code edit failed says so
     # Value: nobody believes a code change was made when the assistant could not make it.
     Given the assistant answers but could not apply its edit to a step's code
@@ -521,7 +520,7 @@ Feature: AI assistant in the workflow editor
     # ai_assistant.ex:1701-1746; ai_assistant_channel.ex:1101; MessageList.tsx:1166-1180, :1382-1391
     # MessageList.test.tsx:584-660; ai_assistant_channel_test.exs:407-441
 
-  @S18 @pending
+  @S18
   Scenario: A message stuck by a crash or deploy is released
     # Value: a dead job does not leave the conversation locked for everyone.
     Given a message has been "processing" longer than the reply time limit plus two minutes and its job is gone
@@ -531,7 +530,7 @@ Feature: AI assistant in the workflow editor
     # stuck_message_reaper.ex:34-109; message_processor.ex:424-435, :632-689; bootstrap.ex:292
     # stuck_message_reaper_test.exs:46-164
 
-  @S19 @pending @variant:ai-limit-reached
+  @S19 @variant:ai-limit-reached
   Scenario: When the AI quota is spent the panel says so
     # Value: people know why the assistant is unavailable instead of sending into nothing.
     Given project "Malawi HIV" has used its AI quota with the message "AI usage limit reached for this month"
@@ -540,7 +539,7 @@ Feature: AI assistant in the workflow editor
     And the message box is disabled and hovering it shows the same text
     # AIAssistantPanel.tsx:147-154, :405-420, :464-469; AIAssistantPanelWrapper.tsx:803; workflow_channel.ex:2429-2452
 
-  @S20 @pending @variant:ai-limit-reached
+  @S20 @variant:ai-limit-reached
   Scenario: A message sent after the quota runs out is kept but not answered
     # Value: the question isn't lost, nothing is spent, and the person knows why there is no answer.
     Given the quota runs out while I have the panel open
@@ -551,7 +550,7 @@ Feature: AI assistant in the workflow editor
     # ai_assistant_channel.ex:111-130, :142-148, :1467-1474, :1489-1498; ai_assistant.ex:745-754; AIChannelRegistry.ts:485-499
     # ai_assistant_channel_test.exs:939-978
 
-  @S21 @pending
+  @S21
   Scenario: Members browse and reopen this workflow's conversations
     # Value: past advice on a workflow is findable later instead of being asked for again.
     Given "Intake" has 25 conversations
@@ -567,7 +566,7 @@ Feature: AI assistant in the workflow editor
     # ai_assistant_controller.ex:30-66; ai_assistant.ex:498-531, :1028-1070
     # SessionList.test.tsx:130-461; ai_assistant_controller_test.exs:513-557; ai_assistant_channel_test.exs:720-891
 
-  @S22 @pending
+  @S22
   Scenario: Conversations are shared with everyone on the project
     # Value: the team can see what the assistant was asked and what it changed.
     Given editor "Amara" had a conversation on "Intake"
@@ -576,7 +575,7 @@ Feature: AI assistant in the workflow editor
     # AIAssistantPanel.tsx:624-628; ai_assistant_channel.ex:874-892; MessageList.tsx:1490-1497
     # ai_assistant_channel_test.exs:3985-4093
 
-  @S23 @pending
+  @S23
   Scenario Outline: People outside the project cannot read or join its conversations
     # Value: questions often quote job code and run errors; they stay inside the project.
     Given a conversation on workflow "Intake" in project "Malawi HIV"
@@ -590,7 +589,7 @@ Feature: AI assistant in the workflow editor
     # ai_assistant_channel.ex:44-45, :874-945; ai_assistant_controller.ex:122-164; project_users.ex:134
     # ai_assistant_channel_test.exs:1536-1726, :2814-2915, :4326-4357; ai_assistant_controller_test.exs:225-245, :591-611
 
-  @S24 @pending
+  @S24
   Scenario: With a run open, members attach its logs and the shape of its data
     # Value: the assistant can debug a real run without anyone pasting data, and field values never leave.
     Given I have run "R" of "Intake" open
@@ -602,7 +601,7 @@ Feature: AI assistant in the workflow editor
     # ChatInput.tsx:36-52, :80-186, :205-219, :253-285; message_processor.ex:176-261; scrubber.ex:195-198
     # ChatInput.test.tsx:65-85; AIChannelRegistry.test.ts:365-400; ai_assistant_channel_test.exs:4388-4439
 
-  @S25 @pending
+  @S25
   Scenario: A run from another project is never attached
     # Value: one project's run logs and data cannot be sent to the assistant from another project.
     Given I am on "Malawi HIV" and run "X" belongs to a project I am not on
@@ -611,7 +610,7 @@ Feature: AI assistant in the workflow editor
     # ai_assistant_channel.ex:737-775, :1001-1020; message_processor.ex:189-232
     # ai_assistant_channel_test.exs:1888-1933, :2074-2150, :4473-4505
 
-  @S26 @pending
+  @S26
   Scenario: Messages over 10,000 characters cannot be sent
     # Value: people find out before sending that a message is too long, instead of losing it to a refusal.
     Given I have typed 9,500 characters
@@ -621,7 +620,7 @@ Feature: AI assistant in the workflow editor
     # ChatInput.tsx:56-63, :77-78, :205-208, :315-327, :334-336; chat_message.ex:137, :243
     # ChatInput.test.tsx:284-318
 
-  @S27 @pending
+  @S27
   Scenario: A conversation started on an unsaved workflow stays with it once saved
     # Value: the conversation that produced a workflow is still there after the workflow is created.
     Given I started a conversation while creating a new workflow
@@ -630,7 +629,7 @@ Feature: AI assistant in the workflow editor
     # session.ex:528-533; ai_assistant.ex:297-415; ai_assistant_channel.ex:631-648
     # unsaved_workflow_test.exs:89-246; unsaved_job_test.exs; ai_assistant_channel_test.exs:647-719
 
-  @S28 @pending
+  @S28
   Scenario Outline: Losing access to the project closes the assistant
     # Value: a person whose access was taken away stops receiving the project's AI conversation straight away.
     Given <who> has a conversation open on "Intake"
@@ -643,7 +642,7 @@ Feature: AI assistant in the workflow editor
     # ai_assistant_channel.ex:468-485, :507-516, :534-539, :1539-1569
     # ai_assistant_channel_test.exs:1176-1210, :1236-1312; LiveView side: shared-project-scope S07, S09
 
-  @S29 @pending
+  @S29
   Scenario: Becoming a viewer keeps the conversation open
     # Value: a demotion takes away writing, not reading, so nobody loses a conversation they may still see.
     Given I am an editor with a conversation open
@@ -652,7 +651,7 @@ Feature: AI assistant in the workflow editor
     And a job context update I send is refused
     # ai_assistant_channel.ex:468-485, :534-539; ai_assistant_channel_test.exs:1212-1234, :1411-1452
 
-  @S30 @pending
+  @S30
   Scenario: Deleting the workflow or scheduling the project for deletion closes the assistant
     # Value: nobody keeps chatting with the assistant about, or spending quota on, something being removed.
     Given I have a conversation open on "Intake"
@@ -662,7 +661,7 @@ Feature: AI assistant in the workflow editor
     Then the flow "flow-schedule-project-deletion" ends here: my assistant channel closes (its S04)
     # ai_assistant_channel.ex:487-506; ai_assistant_channel_test.exs:1314-1362
 
-  @S31 @pending
+  @S31
   Scenario: Members can read what the assistant sends and keeps before they use it
     # Value: people decide what to share knowing it is stored, sent to a third party and visible to the project.
     Given I have the assistant open
@@ -673,7 +672,7 @@ Feature: AI assistant in the workflow editor
     # AIDisclaimerFooter.tsx:7-37; AIAssistantPanel.tsx:343-372, :483-657
     # AIAssistantPanel.test.tsx:277-290, :313-394; ChatInput.test.tsx:53-64
 
-  @S32 @pending
+  @S32
   Scenario: A step the assistant changed opens in the code editor
     # Value: people can read the code the assistant wrote before saving it.
     Given a reply lists changes to step "Send to DHIS2"
@@ -819,9 +818,9 @@ Feature: AI assistant in the workflow editor
 
 ## Summary
 
-- Scenarios: 32 (S01 to S32), all `@pending`; S14 tagged
-  `@variant:experimental-features`, S19 and S20 `@variant:ai-limit-reached`, S01
-  read under `default`, the rest under `ai-enabled`.
+- Scenarios: 32 (S01 to S32); S14 tagged `@variant:experimental-features`, S19
+  and S20 `@variant:ai-limit-reached`, S01 read under `default`, the rest under
+  `ai-enabled`.
 - Section 6: 6.1 has 6, 6.2 has 17, 6.3 has 8, 6.4 has 9, 6.5 has 6.
 - Flows: proposed flow-ai-session-collaborators; referenced
   flow-workflow-api-edit-conflict, flow-delete-open-workflow (S02),

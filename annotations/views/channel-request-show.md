@@ -2,7 +2,6 @@
 id: channel-request-show
 type: view
 title: History › Channel logs › Channel request
-status: not-started
 owner:
 
 trigger:
@@ -197,7 +196,7 @@ Feature: Channel request detail
   As anyone working in a project
   I want to see what was sent, what came back, how long it took and with which credentials
 
-  @S01 @pending @variant:experimental-features
+  @S01 @variant:experimental-features
   Scenario: A successful request shows its summary
     # Value: people confirm at a glance what was called and how the destination answered.
     Given a channel "orders-proxy" in my project
@@ -209,7 +208,7 @@ Feature: Channel request detail
     # show.ex:85-90, :122-254; components.ex:98-158, :182-195; helpers.ex:91-95, :153-161
     # test/lightning_web/live/channel_request_live/show_test.exs:67-98
 
-  @S02 @pending @variant:experimental-features
+  @S02 @variant:experimental-features
   Scenario: Secret headers are shown redacted
     # Value: anyone on the project can debug headers without seeing the values of the headers the proxy redacts.
     Given a request whose "authorization" header was stored as "[REDACTED]"
@@ -219,7 +218,7 @@ Feature: Channel request detail
     # components.ex:225-246; redaction happens at the proxy (handler.ex:50, :189-197)
     # test/lightning_web/live/channel_request_live/show_test.exs:100-103
 
-  @S03 @pending @variant:experimental-features
+  @S03 @variant:experimental-features
   Scenario: Text bodies are shown with their type, size and hash
     # Value: people see exactly what payload went out and came back, and can prove it with the hash.
     Given a request with a JSON request body and a JSON response body
@@ -228,7 +227,7 @@ Feature: Channel request detail
     # components.ex:248-336 (true branch :289-333); show.ex:258-311, :315-380; helpers.ex:165-194
     # test/lightning_web/live/channel_request_live/show_test.exs:105-109
 
-  @S04 @pending @variant:experimental-features
+  @S04 @variant:experimental-features
   Scenario: A truncated body says it is a preview
     # Value: people don't mistake a cut-off preview for the whole payload.
     Given a response body of 10 KB of which a 2 KB preview was stored
@@ -236,7 +235,7 @@ Feature: Channel request detail
     Then below the body I see "Preview: 2.0 KB of 10.0 KB"
     # components.ex:323-332; helpers.ex:142-151
 
-  @S05 @pending @variant:experimental-features
+  @S05 @variant:experimental-features
   Scenario: Binary bodies show metadata only
     # Value: people can confirm a file or image passed through without the page dumping unreadable bytes.
     Given a response with content type "application/octet-stream", size 4096 bytes and hash "binaryhash123"
@@ -246,7 +245,7 @@ Feature: Channel request detail
     # components.ex:249-250, :270-281; helpers.ex:176-182
     # test/lightning_web/live/channel_request_live/show_test.exs:431-453
 
-  @S06 @pending @variant:experimental-features
+  @S06 @variant:experimental-features
   Scenario: A body that was sized but not stored says so
     # Value: people know a body existed even though its content wasn't kept, rather than thinking it was empty.
     Given a request body of 2048 bytes with no preview stored
@@ -256,7 +255,7 @@ Feature: Channel request detail
     # components.ex:252-269, :282-288; show.ex:261-264
     # test/lightning_web/live/channel_request_live/show_test.exs:392-409 (Body not captured), :411-429 (section hidden when preview and size are both missing)
 
-  @S07 @pending @variant:experimental-features
+  @S07 @variant:experimental-features
   Scenario: A transport error explains why there was no response
     # Value: people can tell a destination that is down or unreachable from one that answered with an error.
     Given a request in state "error" whose error is "econnrefused"
@@ -267,7 +266,7 @@ Feature: Channel request detail
     # show.ex:82-83, :343-348; components.ex:197-221; helpers.ex:12-29, :47-63, :69-83
     # test/lightning_web/live/channel_request_live/show_test.exs:117-135, :320-334
 
-  @S08 @pending @variant:experimental-features
+  @S08 @variant:experimental-features
   Scenario: A credential error says the request was never sent
     # Value: people fix the destination credential instead of chasing the destination server.
     Given a request in state "error" whose error is "credential_missing_auth_fields"
@@ -278,7 +277,7 @@ Feature: Channel request detail
     # show.ex:92, :343-348; components.ex:203-204; helpers.ex:31-40, :52-56, :74-79
     # test/lightning_web/live/channel_request_live/show_test.exs:137-154, :336-347
 
-  @S09 @pending @variant:experimental-features
+  @S09 @variant:experimental-features
   Scenario: A timed-out request explains the timeout on its state pill
     # Value: people can tell a slow destination from one that never accepted the connection.
     Given a request in state "timeout" whose error is "response_timeout"
@@ -286,7 +285,7 @@ Feature: Channel request detail
     Then the tooltip says the destination "accepted the connection but did not send a response in time"
     # components.ex:182-195; helpers.ex:26-27, :47-63
 
-  @S10 @pending @variant:experimental-features
+  @S10 @variant:experimental-features
   Scenario: Timing is broken into phases when the proxy recorded them
     # Value: people can see whether time went to queueing, connecting, the destination's processing or the download.
     Given a request with queue 2 ms, connect 15 ms, send 5 ms, time to first byte 180 ms, receive 65 ms and total 260 ms
@@ -297,7 +296,7 @@ Feature: Channel request detail
     # timing.ex:18-40, :53-164, :179-220, :224-302
     # test/lightning_web/live/channel_request_live/show_test.exs:161-194, :216-233; marker position :275-318
 
-  @S11 @pending @variant:experimental-features
+  @S11 @variant:experimental-features
   Scenario: A reused connection is marked instead of showing a connect time
     # Value: people don't read a zero connect time as a missing measurement.
     Given a request that reused an open connection to the destination
@@ -306,7 +305,7 @@ Feature: Channel request detail
     # timing.ex:260-262, :272, :368-379
     # test/lightning_web/live/channel_request_live/show_test.exs:196-214
 
-  @S12 @pending @variant:experimental-features
+  @S12 @variant:experimental-features
   Scenario: Timing degrades when fewer measurements exist
     # Value: older or partial records still show how long the request took, without inventing phases.
     Given a request with only time to first byte 280 ms and total 350 ms
@@ -316,7 +315,7 @@ Feature: Channel request detail
     # timing.ex:224-238, :304-350
     # test/lightning_web/live/channel_request_live/show_test.exs:236-273
 
-  @S13 @pending @variant:experimental-features
+  @S13 @variant:experimental-features
   Scenario: The request shows which client key and destination credential it used
     # Value: when a key is rotated or a credential breaks, people can tell which requests it affected.
     Given client auth method "Prod API key" of type API key matched the request
@@ -329,7 +328,7 @@ Feature: Channel request detail
     # show.ex:176-186, :203-214; helpers.ex:99-140
     # test/lightning_web/live/channel_request_live/show_test.exs:591-661
 
-  @S14 @pending @variant:experimental-features
+  @S14 @variant:experimental-features
   Scenario: A deleted auth method or credential is labelled deleted
     # Value: request history stays readable after keys are rotated, and a deleted key isn't mistaken for no auth.
     Given a request whose client auth method has since been deleted
@@ -340,7 +339,7 @@ Feature: Channel request detail
     # helpers.ex:112-124, :133-140
     # test/lightning_web/live/channel_request_live/show_test.exs:706-724 (helper only); :663-704 shows the database nilifies the id, so the page reads "None" (see 6.1)
 
-  @S15 @pending @variant:experimental-features
+  @S15 @variant:experimental-features
   Scenario: Context shows the config the request ran on and flags later changes
     # Value: people know whether the channel has been changed since the request, so they don't debug the wrong config.
     Given a request made on channel config version 1
@@ -351,7 +350,7 @@ Feature: Channel request detail
     # show.ex:109-113, :384-424; Context is collapsed by default (show.ex:391)
     # test/lightning_web/live/channel_request_live/show_test.exs:355-385 (its last assertion also passes without the badge, see 6.5)
 
-  @S16 @pending @variant:experimental-features
+  @S16 @variant:experimental-features
   Scenario: Admin sees that request data was not kept and where to change that
     # Value: admins learn why data is missing and can change the policy for future requests.
     Given I am an admin and the project keeps no request or response data
@@ -364,7 +363,7 @@ Feature: Channel request detail
     # show.ex:94-101; viewers.ex:309-339, :385-389
     # test/lightning_web/live/channel_request_live/show_test.exs:461-499
 
-  @S17 @pending @variant:experimental-features
+  @S17 @variant:experimental-features
   Scenario: Non-admin on a wiped request is told whom to ask
     # Value: people who can't change retention know who can.
     Given I am an editor and "admin@example.com" is an admin on the project
@@ -376,7 +375,7 @@ Feature: Channel request detail
     # show.ex:35-42, :99-100; viewers.ex:350-361; projects.ex:541-548
     # test/lightning_web/live/channel_request_live/show_test.exs:501-542
 
-  @S18 @pending @variant:experimental-features
+  @S18 @variant:experimental-features
   Scenario: A request from another project cannot be opened
     # Value: one project's members never see another project's traffic, headers or payloads.
     Given a channel request belonging to another project
@@ -386,7 +385,7 @@ Feature: Channel request detail
     # show.ex:24-26; channels.ex:561-581
     # test/lightning_web/live/channel_request_live/show_test.exs:568-584
 
-  @S19 @pending @variant:default
+  @S19 @variant:default
   Scenario: Without experimental features the page is not available
     # Value: an unfinished feature stays hidden from users who haven't opted in.
     Given I have not enabled experimental features
@@ -395,7 +394,7 @@ Feature: Channel request detail
     # show.ex:23, :45-46
     # test/lightning_web/live/channel_request_live/show_test.exs:52-60
 
-  @S20 @pending @variant:experimental-features
+  @S20 @variant:experimental-features
   Scenario: Breadcrumbs lead back to the channel logs and the channel name to its settings
     # Value: people move from one request back to the list, or on to fix the channel, without hunting.
     Given a request on channel "orders-proxy"
@@ -406,7 +405,7 @@ Feature: Channel request detail
     # show.ex:57-74, :137-144
     # test/lightning_web/live/channel_request_live/show_test.exs:731-741 (breadcrumb text only); arrival from the list :743-767
 
-  @S21 @pending @variant:experimental-features
+  @S21 @variant:experimental-features
   Scenario: The request id, bodies and hashes can be copied
     # Value: people can paste the exact payload or id into a ticket or a replay without retyping.
     Given a request with a JSON response body

@@ -2,7 +2,6 @@
 id: auth-login
 type: view
 title: Log in
-status: not-started
 owner:
 
 trigger:
@@ -226,7 +225,7 @@ Feature: Log in
   As someone with a Lightning account
   I want to prove who I am and be let in, and nobody else to be
 
-  @S01 @passing-old
+  @S01
   Scenario: Log in with email and password
     # Value: a registered user reaches their projects with the credentials they chose.
     Given "amara@example.org" is a registered user with password "a long password"
@@ -240,7 +239,7 @@ Feature: Log in
     # user_session_controller.ex:15-20, :47-50; user_auth.ex:28-31, :54-58, :63-70, :514
     # user_session_controller_test.exs:151-164 (session token set, redirect to /projects, "User Profile" on the next page)
 
-  @S02 @passing-old
+  @S02
   Scenario Outline: Wrong credentials are refused with one message
     # Value: the response doesn't reveal which addresses have accounts.
     Given "amara@example.org" is a registered user with password "a long password"
@@ -258,7 +257,7 @@ Feature: Log in
     # user.ex:388-405: an unknown email or empty password still runs Bcrypt.no_user_verify/0, so response time does not separate the cases either
     # user_session_controller_test.exs:264-275 covers the wrong-password row only; accounts_test.exs:318-328 covers the unknown email at the context
 
-  @S03 @passing-old
+  @S03
   Scenario: Email capitalisation does not matter
     # Value: someone who types their address with different capitals is not locked out.
     Given "amara@example.org" is a registered user with password "a long password"
@@ -267,7 +266,7 @@ Feature: Log in
     # priv/repo/migrations/20220405135153_create_users.exs:5-12 (email is citext); accounts.ex:361
     # no test covers it
 
-  @S04 @passing-old
+  @S04
   Scenario Outline: Blocked accounts can't log in even with the right password
     # Value: disabling an account or scheduling it for deletion stops new logins straight away.
     Given "<email>" is a registered user whose account is <state>
@@ -283,7 +282,7 @@ Feature: Log in
     # user_session_controller.ex:31-38; user_auth.ex:41-45; accounts.ex:329-345
     # user_session_controller_test.exs:184-214
 
-  @S05 @passing-old
+  @S05
   Scenario: An account with MFA is sent to its second factor
     # Value: a password alone is never enough to get into an account protected by two-factor.
     Given "amara@example.org" has MFA enabled
@@ -293,7 +292,7 @@ Feature: Log in
     # user_session_controller.ex:40-46; user_auth.ex:302-303, :478-480
     # user_session_controller_test.exs:166-182; the second factor itself is auth-two-factor; the gate is shared-authenticated-session S03
 
-  @S06 @passing-old
+  @S06
   Scenario: Keep me logged in for 60 days
     # Value: people on their own device are not asked to log in every time they open the browser.
     Given "amara@example.org" is a registered user without MFA
@@ -304,7 +303,7 @@ Feature: Log in
     # user_auth.ex:16-21, :72-75, :194-206; new.html.heex:47-52
     # user_session_controller_test.exs:216-228 (cookie set, redirect to /projects)
 
-  @S07 @passing-old
+  @S07
   Scenario: Without "Keep me logged in", closing the browser ends the session
     # Value: on a shared computer, the next person to open the browser is not logged in as me.
     Given "amara@example.org" is a registered user without MFA
@@ -313,7 +312,7 @@ Feature: Log in
     # user_auth.ex:77-79; endpoint.ex:12-16 (session cookie has no max_age)
     # no test asserts the absence on this path
 
-  @S08 @passing-old
+  @S08
   Scenario: "Keep me logged in" waits for the second factor
     # Value: a remember-me cookie is never issued for a session that has only passed the password step.
     Given "amara@example.org" has MFA enabled
@@ -322,7 +321,7 @@ Feature: Log in
     And I am on "/users/two-factor" with my choice carried along
     # user_session_controller.ex:41-46; user_session_controller_test.exs:230-248
 
-  @S09 @passing-old
+  @S09
   Scenario: Logging in starts a fresh session
     # Value: a session id planted in my browser before login can't be used to ride my logged-in session.
     Given my browser holds a session with other values in it
@@ -331,7 +330,7 @@ Feature: Log in
     And nothing from the old session remains except the page I was going to
     # user_auth.ex:54-58, :96-103; user_auth_test.exs:163-189
 
-  @S10 @passing-old
+  @S10
   Scenario: A signed-in visitor is sent to their projects
     # Value: someone already logged in isn't asked for their password again or shown a second login.
     Given I am logged in
@@ -340,7 +339,7 @@ Feature: Log in
     # router.ex:176, :181-182; user_auth.ex:271-279, :514
     # user_session_controller_test.exs:70-75; user_auth_test.exs:461-475
 
-  @S11 @passing-old
+  @S11
   Scenario: Forgot your password?
     # Value: a user who has forgotten their password can recover the account without an administrator.
     Given I am not logged in
@@ -348,7 +347,7 @@ Feature: Log in
     Then I see a "Forgot your password?" link to "/users/reset_password"
     # new.html.heex:92-96; user_session_controller_test.exs:41-68 (copy only); the reset itself is auth-reset-password
 
-  @S12 @passing-old
+  @S12
   Scenario: A deep link opened while signed out continues after login
     # Value: a link from an alert or a colleague still reaches the page it named.
     Given the flow "flow-login-return-to" brought me here from a page that needs login
@@ -357,7 +356,7 @@ Feature: Log in
     # user_auth.ex:63-70, :96-103; user_session_controller_test.exs:250-262 (redirect to the stored "/foo/bar")
     # flow-login-return-to S01 to S07 own the end-to-end journey
 
-  @S13 @passing-old @variant:signup-allowed
+  @S13 @variant:signup-allowed
   Scenario Outline: Register link only where self-signup is allowed
     # Value: instances that create accounts centrally don't advertise a signup that would be refused.
     Given self-signup is <setting>
@@ -371,7 +370,7 @@ Feature: Log in
     # new.html.heex:83-88; router.ex:31-36 (the route itself is blocked when disabled)
     # user_session_controller_test.exs:41-68 (stubs every flag true or false, so both rows are covered)
 
-  @S14 @passing-old
+  @S14
   Scenario: An invited collaborator who has set a password logs in here
     # Value: someone invited to a project gets in with the password they chose, without an admin.
     Given the flow "flow-invite-new-collaborator" has reset my password
@@ -381,7 +380,7 @@ Feature: Log in
     # new.html.heex:23-27 renders the info flash; user_reset_password_controller.ex:38-41 sets it and redirects here
     # flow-invite-new-collaborator owns the journey
 
-  @S15 @passing-old
+  @S15
   Scenario: A revoked browser lands here and can sign in again
     # Value: after a password change or account disable elsewhere, other devices stop at the login page and only the current credentials work.
     Given the flow "flow-account-revocation-teardown" has revoked my sessions on this browser
@@ -391,7 +390,7 @@ Feature: Log in
     # user_auth.ex:131; user_session_controller.ex:22-25; flow-account-revocation-teardown owns the revocation
     # a disabled account then hits S04
 
-  @S16 @passing-old
+  @S16
   Scenario: Logging out lands here with a confirmation
     # Value: on a shared computer, the person leaving can see that the logout took effect.
     Given I am logged in
@@ -401,7 +400,7 @@ Feature: Log in
     # user_session_controller.ex:69-73; user_auth.ex:114-132; new.html.heex:23-27
     # user_session_controller_test.exs:278-297
 
-  @S17 @passing-old @variant:sso-provider
+  @S17 @variant:sso-provider
   Scenario Outline: External provider button only when one is configured
     # Value: organisations with single sign-on send their staff through it, and other instances show no dead button.
     Given an external authentication provider is <configured>
@@ -415,7 +414,7 @@ Feature: Log in
     # user_session_controller.ex:8-13, :75-86; new.html.heex:56-73
     # user_session_controller_test.exs:41-53 (not configured), :77-83 (configured)
 
-  @S18 @passing-old @variant:sso-provider
+  @S18 @variant:sso-provider
   Scenario: The external provider button starts single sign-on
     # Value: SSO users never type a Lightning password.
     Given an external authentication provider "acme" is configured
@@ -424,7 +423,7 @@ Feature: Log in
     And the flow "flow-sso-login" has started
     # user_session_controller.ex:80-85 (routes through OidcController.show so it mints state and nonce); new.html.heex:61
 
-  @S19 @passing-old @variant:first-setup-open
+  @S19 @variant:first-setup-open
   Scenario: A fresh install sends visitors to first setup
     # Value: nobody is shown a login that no account can pass before the administrator exists.
     Given first setup is allowed
@@ -434,7 +433,7 @@ Feature: Log in
     # router.ex:29; plugs/first_setup.ex:11-33; first_setup_test.exs:5-10 (asserts on "/", not on this route)
     # shared-authenticated-session S11 owns the gate
 
-  @S20 @passing-old @variant:require-email-verification
+  @S20 @variant:require-email-verification
   Scenario: An account past its confirmation deadline logs in and is sent to confirm
     # Value: a locked-out user is shown how to get unblocked instead of a login that seems to fail.
     Given my account was created 50 hours ago and my email is unconfirmed
@@ -444,7 +443,7 @@ Feature: Log in
     # user_session_controller.ex:31-53 does not check confirmation; user_auth.ex:305-306, :327-343
     # no test covers login under this variant
 
-  @S21 @passing-old
+  @S21
   Scenario: Reveal the password I typed
     # Value: someone typing a long password on a phone can check for typos before submitting, so they are not refused for a slip.
     Given I am not logged in

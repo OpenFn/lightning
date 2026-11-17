@@ -2,7 +2,6 @@
 id: flow-ai-session-collaborators
 type: flow
 title: An AI assistant session seen by collaborators
-status: not-started
 owner:
 
 trigger:
@@ -252,7 +251,7 @@ Feature: An AI assistant session seen by collaborators
   As a member with the workflow open alongside a colleague
   I want to see the conversation and its changes, and have each change land once
 
-  @S01 @pending
+  @S01
   Scenario: A colleague's new conversation appears in my list
     # Value: people working on the same workflow can find and join a conversation about it as soon as it starts.
     Given "Amara" and I both have workflow "Intake" open
@@ -263,7 +262,7 @@ Feature: An AI assistant session seen by collaborators
     # ai_assistant_channel.ex:57-61, :1590-1615; createAIAssistantStore.ts:577-597, :784-818; StoreProvider.tsx:232-246
     # no test covers ai_session_created (6.5)
 
-  @S02 @pending
+  @S02
   Scenario: Everyone in the conversation sees the question, who asked it, and the reply as it streams
     # Value: two people on one workflow work from the same advice and know who asked for each change.
     Given "Amara" and I are both in the same conversation on "Intake"
@@ -275,7 +274,7 @@ Feature: An AI assistant session seen by collaborators
     # createAIAssistantStore.ts:432-494; MessageList.tsx:1490-1497
     # ai_assistant_channel_test.exs:3797-3824, :3858-3895, :4045-4092 (one subscriber each; 6.5)
 
-  @S03 @pending
+  @S03
   Scenario: Nobody can send while a colleague's question is being answered
     # Value: a second question cannot race the first and produce competing changes to a shared workflow.
     Given "Amara" and I are in the same conversation on "Intake"
@@ -285,7 +284,7 @@ Feature: An AI assistant session seen by collaborators
     # ai_assistant_channel.ex:350-354; AIChannelRegistry.ts:775-777; createAIAssistantStore.ts:412-427, :629-637
     # ChatInput.tsx:205-208, :294; ai_assistant_channel_test.exs:3826-3856
 
-  @S04 @pending
+  @S04
   Scenario: Only the asker's browser applies the reply, and colleagues see it on their canvas
     # Value: an AI change lands on the shared workflow once, not once per person watching the conversation.
     Given "Amara", an editor, and I, an editor, are in the same conversation on "Intake"
@@ -296,7 +295,7 @@ Feature: An AI assistant session seen by collaborators
     # AIAssistantPanelWrapper.tsx:711-737; useAIWorkflowApplications.ts:646-731; YAMLStateToYDoc.ts:127-203
     # useAIWorkflowApplications.autoApply.test.ts:274-328 does not prove the authorship check (6.5)
 
-  @S05 @pending
+  @S05
   Scenario: While anyone applies AI changes, collaborators cannot save or revert
     # Value: nobody commits, or writes over, a workflow halfway through an AI change.
     Given "Amara" and I have "Intake" open, and I am an editor
@@ -309,7 +308,7 @@ Feature: An AI assistant session seen by collaborators
     # AIAssistantPanelWrapper.tsx:806-822, :868; MessageList.tsx:1029-1043, :1366-1374
     # workflow_channel_test.exs:6987-7044; createWorkflowStore.test.ts:1250-1330
 
-  @S06 @pending
+  @S06
   Scenario: A failed reply, and its retry, are seen by everyone in the conversation
     # Value: nobody waits on a reply that has failed, or retries a question a colleague already retried and spends the quota twice.
     Given "Amara" and I are in the same conversation and her question fails
@@ -398,7 +397,7 @@ none
 
 ## Summary
 
-- Scenarios: 6 (S01 to S06), all `@pending`, read under `ai-enabled`.
+- Scenarios: 6 (S01 to S06), read under `ai-enabled`.
 - Section 6: 6.1 has 7, 6.2 has 6, 6.3 has 2, 6.4 has 0, 6.5 has 4.
 - Flows: none proposed; this is the flow workflow-editor-ai-assistant proposed.
 - Shared: inherits shared-editor-session, shared-workflow-yaml-format,

@@ -2,7 +2,6 @@
 id: flow-open-run-in-editor
 type: flow
 title: Open a run in the workflow editor
-status: not-started
 owner:
 
 trigger:
@@ -224,7 +223,7 @@ Feature: Open a run in the workflow editor
   As anyone on the project
   I want a run's links to open the editor at that run's version with the run loaded
 
-  @S01 @pending
+  @S01
   Scenario: The run page's workflow link opens the version that ran, with the run loaded
     # Value: people read the run's results against the code that produced them, not code changed since.
     Given run "R" executed on version 1 of "Intake" and "Intake" is now on version 2
@@ -237,7 +236,7 @@ Feature: Open a run in the workflow editor
     # pinnedView.ts:56-67; workflow_channel.ex:43-71, :2152-2184, :2255-2273; useWorkflow.tsx:1089-1094
     # show_test.exs:329-392 (link only); workflow_channel_test.exs:97 (v join)
 
-  @S02 @pending
+  @S02
   Scenario: A step's inspect link opens that step's job in the IDE with the run loaded
     # Value: from a failing step, people land on the code and logs of the job that failed in one click.
     Given run "R" has a failed step for job "Send to DHIS2"
@@ -247,7 +246,7 @@ Feature: Open a run in the workflow editor
     # components.ex:256-270, :477-488; WorkflowEditor.tsx:274; FullScreenIDE.tsx:128-131, :205, :564-578
     # components_test.exs:122-155, :330-345 (link only)
 
-  @S03 @pending
+  @S03
   Scenario: A run on the current version opens the editable workflow
     # Value: people can fix and retry straight from a recent run without first leaving a read-only view.
     Given run "R" executed on the current version of "Intake"
@@ -258,7 +257,7 @@ Feature: Open a run in the workflow editor
     # components.ex:301-302; workorder_component.ex:190-209; workflow_channel.ex:2196-2207
     # show_test.exs:329-345 asserts no v= on the link
 
-  @S04 @pending @variant:experimental-features
+  @S04 @variant:experimental-features
   Scenario: With experimental features the link opens the run as it executed
     # Value: runs on content that was never released can still be read at the code that ran.
     Given I have experimental features enabled
@@ -271,7 +270,7 @@ Feature: Open a run in the workflow editor
     # useVersionMismatch.ts:43-44; useWorkflow.tsx:1082-1087
     # workflow_channel_test.exs:2791-2820 (join loads the run's snapshot, including drafts)
 
-  @S05 @pending
+  @S05
   Scenario: A run from another project is not loaded into the editor
     # Value: the page's first load does not include a run from another project.
     Given I am an owner on project "Malawi HIV" and not a member of "Kenya TB"
@@ -281,7 +280,7 @@ Feature: Open a run in the workflow editor
     # collaborate.ex:106-114; runs.ex:73-84; run_channel.ex:67-77
     # collaborate_test.exs:222-245 asserts initial_run_data is nil
 
-  @S06 @pending @variant:experimental-features
+  @S06 @variant:experimental-features
   Scenario: An as-executed view only accepts a run of the same workflow
     # Value: one workflow's URL cannot be made to display another workflow's code.
     Given run "R" executed workflow "Referrals" in the same project
@@ -290,7 +289,7 @@ Feature: Open a run in the workflow editor
     # workflow_channel.ex:2289-2320
     # workflow_channel_test.exs:2822-2845, :2847-2860 (malformed id too)
 
-  @S07 @pending
+  @S07
   Scenario: An old editor bookmark still follows its run
     # Value: run links saved before the editor was replaced keep opening the run.
     Given a bookmark "/projects/<project_id>/w/<Intake id>/legacy?a=<R id>&s=<job id>"

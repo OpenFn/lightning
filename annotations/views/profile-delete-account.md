@@ -2,7 +2,6 @@
 id: profile-delete-account
 type: view
 title: User profile › Delete account
-status: not-started
 owner:
 
 trigger:
@@ -175,7 +174,7 @@ Feature: Deleting my own account from the profile
   As any signed-in user
   I want to confirm and schedule the deletion of my own account
 
-  @S01 @pending
+  @S01
   Scenario: The delete page asks me to confirm over my profile
     # Value: a user sees that their credentials go with the account before anything happens, and can check none are used in production.
     Given I am signed in as "amara@example.org"
@@ -187,7 +186,7 @@ Feature: Deleting my own account from the profile
     # edit.ex:61-81; components.ex:41-48; user_deletion_modal.ex:139-205
     # profile_live_test.exs:198-216
 
-  @S02 @pending
+  @S02
   Scenario: A user schedules their own account for deletion
     # Value: a user can close their own account, and it stops working everywhere at once.
     Given I am signed in as "amara@example.org", who is not a superuser
@@ -200,7 +199,7 @@ Feature: Deleting my own account from the profile
     # user_deletion_modal.ex:38-49, :89-90; accounts.ex:948-977
     # profile_live_test.exs:225-236 (asserts the redirect and the email; the email belongs to the flow, S07 there)
 
-  @S03 @pending
+  @S03
   Scenario: The wrong email address does not delete the account
     # Value: a slip of the mouse or a half-read dialog can't disable an account its owner still needs.
     Given I am on "/profile/<my user id>/delete"
@@ -213,7 +212,7 @@ Feature: Deleting my own account from the profile
     # user.ex:338-343, :430-440; user_deletion_modal.ex:24-35, :51-52
     # profile_live_test.exs:218-223 (live validation only; the refused submit is read from code)
 
-  @S04 @pending
+  @S04
   Scenario: I can't open the deletion of someone else's account
     # Value: no one can disable another person's account by editing the URL.
     Given I am signed in
@@ -225,7 +224,7 @@ Feature: Deleting my own account from the profile
     # edit.ex:61-70, :82-84; policies/users.ex:23-30
     # profile_live_test.exs:239-249
 
-  @S05 @pending
+  @S05
   Scenario: A superuser can't delete their own account here
     # Value: an instance can't lose its administrators through the self-service page.
     Given I am signed in as a superuser
@@ -236,7 +235,7 @@ Feature: Deleting my own account from the profile
     Then my account is not disabled
     # user.ex:338-343, :418-428; user_deletion_modal.ex:51-52; no test covers this
 
-  @S06 @pending
+  @S06
   Scenario: A user who has created runs is warned the account may stay
     # Value: someone whose work is part of a project's audit history isn't told their account is gone when it can't be removed yet.
     Given I have started a run in a project
@@ -247,7 +246,7 @@ Feature: Deleting my own account from the profile
     Then I do not see that note
     # user_deletion_modal.ex:16, :173-177; accounts.ex:31-40, :104-111; no LiveView test covers the note
 
-  @S07 @pending
+  @S07
   Scenario: Cancelling leaves the account alone
     # Value: a user can back out of deletion safely at the last moment.
     Given I am on "/profile/<my user id>/delete"

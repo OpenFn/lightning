@@ -2,7 +2,6 @@
 id: project-settings-data-storage
 type: view
 title: Project settings › Data storage
-status: not-started
 owner:
 
 trigger:
@@ -226,7 +225,7 @@ Feature: Project data storage
   As a project admin
   I want to set retention periods and choose whether I/O data is stored at all
 
-  @S01 @pending
+  @S01
   Scenario: A new project keeps everything until an admin decides otherwise
     # Value: no run history or I/O data is deleted before someone has chosen a policy.
     Given project "Malawi HIV" has never had its data storage settings changed
@@ -239,7 +238,7 @@ Feature: Project data storage
     # project.ex:28-33; settings.html.heex:902-916, :956-976, :981-983, :1018-1022
     # project_live_test.exs:3064-3104 (retain_all checked, no heads-up), :3399-3416 (I/O select disabled)
 
-  @S02 @pending
+  @S02
   Scenario: Admin sets the history retention period
     # Value: an admin can make sure run history, which may hold PII, is deleted after an agreed time.
     Given I am an admin on project "Malawi HIV"
@@ -254,7 +253,7 @@ Feature: Project data storage
     # settings.html.heex:902-916, :1038-1049; settings.ex:366-374, :770-779; projects.ex:589-605; audit.ex:20-39
     # project_live_test.exs:3545-3563 (audit actor), :3495-3543 (flash); projects_test.exs:3338-3380 (email to admins and owners)
 
-  @S03 @pending
+  @S03
   Scenario: Admin sets the I/O retention period once a history period is chosen
     # Value: an admin can keep I/O data for retries for a shorter time than the run record itself.
     Given I am an admin on project "Malawi HIV" with no history retention period
@@ -270,7 +269,7 @@ Feature: Project data storage
     # settings.html.heex:999-1026; settings.ex:299-323; project.ex:231-270
     # project_live_test.exs:3399-3436, :3495-3543; projects_test.exs:3517-3530
 
-  @S04 @pending
+  @S04
   Scenario: I/O data can't be kept longer than run history
     # Value: sensitive I/O data never outlives the run history it belongs to.
     Given I am an admin on project "Malawi HIV"
@@ -282,7 +281,7 @@ Feature: Project data storage
     # settings.ex:299-323; project.ex:260-266; settings.html.heex:1042-1045
     # project_live_test.exs:3505-3528
 
-  @S05 @pending
+  @S05
   Scenario: Shortening history below the current I/O period is refused
     # Value: an admin can't accidentally leave I/O data configured to outlive the history that references it.
     Given project "Malawi HIV" keeps history for 30 days and I/O data for 30 days
@@ -295,7 +294,7 @@ Feature: Project data storage
     # project.ex:231-238, :260-266; settings.html.heex:1042-1045
     # projects_test.exs:3431-3444 (context only; the UI path is inferred from code)
 
-  @S06 @pending
+  @S06
   Scenario: Admin switches the project to never storing I/O data
     # Value: projects bound by a zero-persistence agreement can stop storing PII payloads, knowing what they give up.
     Given project "Malawi HIV" keeps history for 14 days and I/O data for 7 days
@@ -312,7 +311,7 @@ Feature: Project data storage
     # settings.html.heex:956-993, :1018-1022; settings.ex:299-323, :366-374
     # project_live_test.exs:3150-3180 (heads-up copy), :3265-3332 (saved and reloaded), :3438-3493 (I/O select disabled and cleared)
 
-  @S07 @pending
+  @S07
   Scenario: Admin switches back to retaining all I/O data
     # Value: a project that needs to debug or retry runs again can turn storage back on without a superuser.
     Given project "Malawi HIV" never retains I/O data
@@ -325,7 +324,7 @@ Feature: Project data storage
     And when I reload the "Data Storage" tab "Retain all input/output data" is selected
     # settings.html.heex:956-983; project_live_test.exs:3265-3332 (second iteration of the loop)
 
-  @S08 @pending
+  @S08
   Scenario: Cancel discards unsaved changes
     # Value: an admin who starts changing a sensitive policy can back out without saving anything.
     Given project "Malawi HIV" retains all I/O data
@@ -337,7 +336,7 @@ Feature: Project data storage
     And project "Malawi HIV" still retains all I/O data
     # settings.html.heex:1029-1037; settings.ex:330-338; project_live_test.exs:3182-3214
 
-  @S09 @pending
+  @S09
   Scenario Outline: Non-admins see the policy but can't change it
     # Value: everyone on the project can check how their data is handled, while only admins decide it.
     Given project "Malawi HIV" keeps history for 30 days
@@ -357,7 +356,7 @@ Feature: Project data storage
       | editor  |
       | support user with no membership row |
 
-  @S10 @pending
+  @S10
   Scenario Outline: A save from a non-admin is refused on the server
     # Value: retention decisions stay with admins even when the controls are disabled.
     Given I am a <role> on project "Malawi HIV"
@@ -372,7 +371,7 @@ Feature: Project data storage
       | editor |
       | viewer |
 
-  @S11 @pending
+  @S11
   Scenario: An admin demoted while the page is open can't save
     # Value: losing admin rights takes effect immediately, not when the page is reloaded.
     Given I am an admin on project "Malawi HIV" with the "Data Storage" tab open
@@ -382,7 +381,7 @@ Feature: Project data storage
     And project "Malawi HIV" still retains all I/O data
     # settings.ex:371, :744-749; membership_revocation_test.exs:262-274, :300-308
 
-  @S12 @pending
+  @S12
   Scenario: The data storage form can't change other project settings
     # Value: the retention form can't be used to rename the project or flip MFA or support access past their own gates.
     Given I am an admin on project "Malawi HIV"
@@ -392,7 +391,7 @@ Feature: Project data storage
     And its name and MFA requirement are unchanged
     # settings.ex:341-349, :373 (Map.take of retention fields only); inferred from code, no test asserts this
 
-  @S13 @pending @variant:retention-limited
+  @S13 @variant:retention-limited
   Scenario: A plan that limits retention offers only its periods and says why
     # Value: admins on a plan with limited retention see exactly what they can choose and why the rest are missing.
     Given project "Malawi HIV" is on a plan that allows history periods of 7 and 14 days
@@ -405,7 +404,7 @@ Feature: Project data storage
     # hooks.ex:229-239; settings.html.heex:905-909, :917-930, :1013-1017
     # project_live_test.exs:3334-3370 (options only; the message has no test)
 
-  @S14 @pending @variant:retention-single-option
+  @S14 @variant:retention-single-option
   Scenario: A plan with a single period can't change history retention
     # Value: admins aren't offered a choice their plan doesn't give them.
     Given project "Malawi HIV" is on a plan that allows only a 7 day history period
@@ -414,7 +413,7 @@ Feature: Project data storage
     Then the "History Retention Period" select is disabled
     # settings.html.heex:910-913; project_live_test.exs:3372-3397
 
-  @S15 @pending
+  @S15
   Scenario: A failed save is reported
     # Value: an admin is never left believing a retention change took effect when it didn't.
     Given I am an admin on project "Malawi HIV"

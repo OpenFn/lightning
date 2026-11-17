@@ -2,7 +2,6 @@
 id: shared-hash-tabs
 type: shared
 title: Hash-addressed tabs
-status: not-started
 owner:
 
 trigger:
@@ -163,7 +162,7 @@ Feature: Hash-addressed tabs
   As anyone using a tabbed page
   I want the URL fragment to choose the open tab
 
-  @S01 @pending
+  @S01
   Scenario: A page with no fragment opens on its default tab
     # Value: someone arriving from navigation sees a panel with content, not an empty page.
     Given a host page whose tab container has default tab "log"
@@ -172,7 +171,7 @@ Feature: Hash-addressed tabs
     And only the "Log" panel is visible
     # tabbed.ex:36, :71, :145-159; TabbedContainer.ts:14, :27, :32-62; run_live/show.ex:231; settings.html.heex:28
 
-  @S02 @pending
+  @S02
   Scenario: A fragment in the link opens that tab
     # Value: emails, flashes and other pages that point at a specific panel put the user on it.
     Given a host page with an enabled tab "data-storage" that is not the default
@@ -181,7 +180,7 @@ Feature: Hash-addressed tabs
     And the default tab's panel is not visible
     # TabbedContainer.ts:27, :32-62
 
-  @S03 @pending
+  @S03
   Scenario: Choosing a tab names it in the address bar
     # Value: a user can bookmark or send the exact tab, and a reload keeps them on it.
     Given I am on a host page on its default tab
@@ -192,7 +191,7 @@ Feature: Hash-addressed tabs
     Then the "Output" tab is still selected
     # tabbed.ex:125-136 (href "#<hash>"); TabbedContainer.ts:21-25, :27
 
-  @S04 @pending
+  @S04
   Scenario: Back returns to the previous tab
     # Value: the browser's Back button undoes a tab change instead of leaving the page.
     Given I opened a host page with fragment "#credentials"
@@ -202,7 +201,7 @@ Feature: Hash-addressed tabs
     And the "Credentials" tab is selected
     # tabbed.ex:132; TabbedContainer.ts:21-25
 
-  @S05 @pending
+  @S05
   Scenario: The open tab survives a server re-render
     # Value: validating or saving a form inside a tab, or a live update, doesn't throw the user back to the default tab.
     Given I am on a host page on a non-default tab
@@ -211,7 +210,7 @@ Feature: Hash-addressed tabs
     And the default tab's panel is still hidden
     # tabbed.ex:120, :133 (lv-keep-aria), :156 (lv-keep-class); app.js:80-85, :101-107; TabbedContainer.ts:29-31
 
-  @S06 @pending
+  @S06
   Scenario: Clicking a disabled tab does nothing
     # Value: a user can't open a panel whose content the host page says isn't available yet.
     Given a host page whose "Input" tab is disabled

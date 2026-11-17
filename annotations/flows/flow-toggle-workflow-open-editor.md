@@ -2,7 +2,6 @@
 id: flow-toggle-workflow-open-editor
 type: flow
 title: Switching a workflow on or off while it is open in the editor
-status: not-started
 owner:
 
 trigger:
@@ -176,7 +175,7 @@ Feature: Switching a workflow on or off while it is open in the editor
   As an editor switching a workflow from the list
   I want any open editor on that workflow to show the new state
 
-  @S01 @pending
+  @S01
   Scenario Outline: A switch on the list shows in an open editor
     # Value: someone in the editor sees at once that the workflow was stopped or started, instead of a switch that says otherwise.
     Given "Intake" has its webhook trigger <before>
@@ -193,7 +192,7 @@ Feature: Switching a workflow on or off while it is open in the editor
       | enabled  | off   |
       | disabled | on    |
 
-  @S02 @pending
+  @S02
   Scenario: Saving from the open editor does not undo a switch made on the list
     # Value: unrelated edits saved in an open editor never silently re-enable a workflow someone just switched off.
     Given "Intake" is live with its webhook trigger enabled
@@ -203,7 +202,7 @@ Feature: Switching a workflow on or off while it is open in the editor
     Then "Intake" still has its trigger disabled
     # workflow_reconciler.ex:303-316; session.ex:507-523; workflow_serializer.ex:260-268
 
-  @S03 @pending
+  @S03
   Scenario: A version view is not changed by a switch on the list
     # Value: someone reviewing an earlier version keeps seeing what that version was.
     Given "amara@example.org" is viewing version 3 of "Intake" in the editor
@@ -211,7 +210,7 @@ Feature: Switching a workflow on or off while it is open in the editor
     Then the version 3 view still shows its trigger as it was in version 3
     # workflow_reconciler.ex:31-35, :42
 
-  @S04 @pending @variant:activation-limited
+  @S04 @variant:activation-limited
   Scenario: A switch refused by the usage limit does not reach the open editor
     # Value: an open editor never shows a workflow as on when the limit kept it off.
     Given the usage limiter refuses workflow activation with "No more workflows"

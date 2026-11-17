@@ -2,7 +2,6 @@
 id: shared-project-scope
 type: shared
 title: Project scope gate (login, MFA, membership, live revocation)
-status: not-started
 owner:
 
 trigger:
@@ -141,7 +140,7 @@ Feature: Project scope gate
   As any user
   I want project pages to admit me only while I have access
 
-  @S01 @pending
+  @S01
   Scenario: Signed-out visitor is sent to log in
     # Value: project data is never rendered to an anonymous browser.
     Given I am not logged in
@@ -149,7 +148,7 @@ Feature: Project scope gate
     Then I am on "/users/log_in"
     # lib/lightning_web/init_assigns.ex:22-23, lib/lightning_web/hooks.ex:64-72
 
-  @S02 @pending
+  @S02
   Scenario: Member opens a project page
     # Value: people on a project can get to their work.
     Given I am an editor on project "Malawi HIV"
@@ -157,7 +156,7 @@ Feature: Project scope gate
     Then I see the page for project "Malawi HIV"
     # hooks.ex:102-118
 
-  @S03 @pending
+  @S03
   Scenario: Non-member is told the project was not found
     # Value: outsiders can't see a project's data, or confirm it exists.
     Given I am a registered user not on project "Malawi HIV"
@@ -166,7 +165,7 @@ Feature: Project scope gate
     And I see "Not Found"
     # hooks.ex:122-124, lib/lightning_web/live/live_helpers.ex:81-86
 
-  @S04 @pending
+  @S04
   Scenario: A project scheduled for deletion is not found
     # Value: a project being wound down can't be worked on.
     Given project "Malawi HIV" is scheduled for deletion
@@ -176,7 +175,7 @@ Feature: Project scope gate
     And I see "Not Found"
     # hooks.ex:127-130, scope.ex:114
 
-  @S05 @pending
+  @S05
   Scenario: Member without MFA on an MFA-required project is sent to enrol
     # Value: sensitive projects are only reachable from MFA-protected accounts, and the member learns why.
     Given project "Malawi HIV" requires MFA
@@ -185,7 +184,7 @@ Feature: Project scope gate
     Then I am on "/mfa_required"
     # hooks.ex:100-101, project_users.ex:186-188
 
-  @S06 @pending
+  @S06
   Scenario: Support user reaches a project with support access on
     # Value: support staff can help a project's members without being added as a collaborator.
     Given I am a support user with no role on project "Malawi HIV"
@@ -194,7 +193,7 @@ Feature: Project scope gate
     Then I see the page for project "Malawi HIV"
     # project_users.ex:167-169, :193-194
 
-  @S07 @pending
+  @S07
   Scenario: Removing a member ends their open session on the project
     # Value: revoking access takes effect immediately, not when the person next reloads.
     Given I have project "Malawi HIV" open as an editor
@@ -204,7 +203,7 @@ Feature: Project scope gate
     # hooks.ex:361-368 re-mounts via remount_path (hooks.ex:417-421), which re-runs this gate
     # test/lightning_web/live/project_live/membership_revocation_test.exs
 
-  @S08 @pending
+  @S08
   Scenario: A role change takes effect on an open page
     # Value: a demoted user loses edit rights straight away.
     Given I have project "Malawi HIV" open as an admin
@@ -212,7 +211,7 @@ Feature: Project scope gate
     Then my page eventually reloads with viewer permissions, keeping its query string
     # hooks.ex:361-368, :417-418
 
-  @S09 @pending
+  @S09
   Scenario: Turning off support access ends a support session
     # Value: a project admin can withdraw support access and know it has taken effect.
     Given I am a support user with project "Malawi HIV" open through support access only
@@ -220,7 +219,7 @@ Feature: Project scope gate
     Then my page eventually leaves the project
     # hooks.ex:349-359, test/lightning_web/live/project_live/support_access_teardown_test.exs
 
-  @S10 @pending
+  @S10
   Scenario: Open pages leave a project scheduled for deletion
     # Value: nobody keeps editing a project that is being deleted.
     Given I have project "Malawi HIV" open
@@ -229,7 +228,7 @@ Feature: Project scope gate
     And I see "Project deleted."
     # hooks.ex:294-318
 
-  @S11 @pending @variant:experimental-features
+  @S11 @variant:experimental-features
   Scenario: Archiving a sandbox moves its open editor to the parent workflow
     # Value: someone editing in a sandbox that gets merged and archived lands on the live workflow instead of a dead end.
     Given I have experimental features enabled
@@ -239,7 +238,7 @@ Feature: Project scope gate
     Then I am eventually on the editor for "Intake" in "Malawi HIV" with "archived=1"
     # hooks.ex:296-317, :378-411
 
-  @S12 @pending
+  @S12
   Scenario: Deleting the open workflow returns the viewer to the workflow list
     # Value: nobody edits a workflow that no longer exists.
     Given I have workflow "Intake" open

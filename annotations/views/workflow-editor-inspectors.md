@@ -4,7 +4,6 @@ type: view
 title:
   Workflow editor › Inspector panels (step, trigger, path, workflow settings,
   code, publish template)
-status: not-started
 owner:
 
 trigger:
@@ -418,7 +417,7 @@ Feature: Workflow editor inspector panels
 
   # ---------- Steps ----------
 
-  @S01 @pending
+  @S01
   Scenario: Selecting a step opens its inspector
     # Value: a builder sees and changes what a step does without leaving the canvas.
     Given I am an editor on "Malawi HIV"
@@ -429,7 +428,7 @@ Feature: Workflow editor inspector panels
     # useWorkflow.tsx:271-299; inspector/index.tsx:44-54, :119-129; JobForm.tsx:327-359
     # Inspector.keyboard.test.tsx:375-430
 
-  @S02 @pending
+  @S02
   Scenario: Step edits reach collaborators and theirs reach me
     # Value: two people editing one step never work from different copies of it.
     Given "amara@example.org" and I are editors with "Fetch" open
@@ -437,7 +436,7 @@ Feature: Workflow editor inspector panels
     Then "amara@example.org" sees "Fetch patients" in the "Job Name" field without reloading
     # JobForm.tsx:95-110; form/index.tsx:72-103; createWorkflowStore.ts:906-940
 
-  @S03 @pending
+  @S03
   Scenario: A step's validation errors show on its own fields
     # Value: a problem is visible at the field before saving, and only on the step it belongs to.
     Given the workflow error map holds a "name" error for "Fetch"
@@ -446,7 +445,7 @@ Feature: Workflow editor inspector panels
     And opening "Load" shows no error
     # JobForm.tsx:105-109; form/index.tsx:105; JobForm.test.tsx:834-1086
 
-  @S04 @pending
+  @S04
   Scenario Outline: A step without a credential is flagged when its adaptor needs one
     # Value: a step that would fail for want of a credential is spotted before it runs.
     Given "Fetch" uses <adaptor> and has no credential
@@ -459,7 +458,7 @@ Feature: Workflow editor inspector panels
       | @openfn/language-dhis2@latest | Connect |
       | @openfn/language-http@latest  | Edit    |
 
-  @S05 @pending
+  @S05
   Scenario: Picking a credential attaches it to the step
     # Value: the step runs with the secret the builder chose.
     Given "Fetch" uses the DHIS2 adaptor
@@ -471,7 +470,7 @@ Feature: Workflow editor inspector panels
     Then "Fetch" has no credential
     # ConfigureAdaptorModal.tsx:631-647, :144-160; JobForm.tsx:254-298; ConfigureAdaptorModal.test.tsx:1002-1060, :1124-1140
 
-  @S06 @pending
+  @S06
   Scenario: Credentials that match the adaptor are offered first
     # Value: it is harder to send one system's secret to another.
     Given "Fetch" uses the Salesforce adaptor
@@ -482,7 +481,7 @@ Feature: Workflow editor inspector panels
     Then I see the raw one under "Generic Credentials" and the keychain under "Keychain Credentials"
     # ConfigureAdaptorModal.tsx:286-345, :350-388, :652-731; ConfigureAdaptorModal.test.tsx:443-500, :765-905
 
-  @S07 @pending
+  @S07
   Scenario: Changing adaptor on a step with a credential asks first and clears it
     # Value: a credential meant for one system is never sent to another by accident.
     Given "Fetch" uses DHIS2 with credential "DHIS2 prod"
@@ -493,7 +492,7 @@ Feature: Workflow editor inspector panels
     And "Configure connection" opens
     # useAdaptorChangeConfirmation.ts:63-117, :119-153; AdaptorSelector.tsx:499-508
 
-  @S08 @pending
+  @S08
   Scenario: Cancelling an adaptor change keeps everything as it was
     # Value: a mis-click in the picker costs nothing.
     Given "Fetch" uses DHIS2 with credential "DHIS2 prod"
@@ -502,7 +501,7 @@ Feature: Workflow editor inspector panels
     And the adaptor picker is open again
     # useAdaptorChangeConfirmation.ts:158-167; AdaptorSelector.tsx:473-477
 
-  @S09 @pending
+  @S09
   Scenario: A step can be pinned to an adaptor version
     # Value: a step keeps behaving the same when a new adaptor release ships.
     Given the DHIS2 adaptor has versions "4.2.0", "4.10.0" and "4.9.1"
@@ -512,14 +511,14 @@ Feature: Workflow editor inspector panels
     Then "Fetch" shows "v4.9.1"
     # ConfigureAdaptorModal.tsx:32-47, :416-427, :563-573; JobForm.tsx:234-251; ConfigureAdaptorModal.test.tsx:405-440
 
-  @S10 @pending
+  @S10
   Scenario: Searching for an adaptor that does not exist suggests HTTP
     # Value: a builder can still connect to a system that has no dedicated adaptor.
     When I search the adaptor picker for "zzz-unknown"
     Then I see "No adaptor found" and the HTTP adaptor
     # AdaptorSelectionModal.tsx:95-146, :264-275
 
-  @S11 @pending
+  @S11
   Scenario: A failed adaptor catalogue load can be retried
     # Value: a transient failure does not look like "there are no adaptors".
     Given the adaptor catalogue request fails
@@ -529,7 +528,7 @@ Feature: Workflow editor inspector panels
     Then the adaptor list appears
     # AdaptorSelectionModal.tsx:35-40, :229-255; adaptor_controller.ex:21-45; AdaptorSelectionModal.test.tsx:149-190
 
-  @S12 @pending
+  @S12
   Scenario: A credential created from a step is attached to it and offered to collaborators
     # Value: a builder connects a step to a new system without leaving the editor, and colleagues can use the credential at once.
     Given I am an editor with "Fetch" (DHIS2) open and "amara@example.org" has "Intake" open
@@ -542,7 +541,7 @@ Feature: Workflow editor inspector panels
     # JobForm.tsx:121-165; collaborate_test.exs:267-335
     # For an OAuth client this hands off to flow-oauth-credential-authorize; only the start and the saved result are asserted here
 
-  @S13 @pending
+  @S13
   Scenario: Only a credential's owner can edit it from a step
     # Value: a credential's secrets are only changed by the person responsible for them.
     Given "DHIS2 prod" is owned by "amara@example.org" and shared with the project
@@ -553,7 +552,7 @@ Feature: Workflow editor inspector panels
     # ConfigureAdaptorModal.tsx:108-143, :458-470; collaborate.ex:151-177; users.ex:40-44
     # collaborate_test.exs:998-1057; ConfigureAdaptorModal.test.tsx:1319-1440
 
-  @S14 @pending
+  @S14
   Scenario: An admin creates a keychain credential from a step
     # Value: an admin can set up a credential that is chosen per run without leaving the workflow.
     Given I am an admin on "Malawi HIV"
@@ -563,7 +562,7 @@ Feature: Workflow editor inspector panels
     # credential_form_component.ex:312-366, :460-470, :1087-1170, :1181-1204; collaborate.ex:393-430, :486-517
     # collaborate_test.exs:1756-1828
 
-  @S15 @pending
+  @S15
   Scenario: People below admin cannot create a keychain credential from a step
     # Value: per-run credential selection stays with admins.
     Given I am an editor on "Malawi HIV"
@@ -571,7 +570,7 @@ Feature: Workflow editor inspector panels
     Then no keychain credential "Planted" exists
     # credentials.ex:1956-1971; policies/credentials.ex:87-98; collaborate_test.exs:1829-1873 (viewer)
 
-  @S16 @pending
+  @S16
   Scenario: Deleting a step removes it with its incoming paths and any cron input pointing at it
     # Value: no path or schedule is left referring to a step that is gone.
     Given "Load" is a leaf step and the cron input source of a schedule trigger is "Load"
@@ -580,7 +579,7 @@ Feature: Workflow editor inspector panels
     And the schedule's input source reads "Final run state (default)"
     # JobInspector.tsx:362-373, :421-436, :461-473; createWorkflowStore.ts:1017-1046; CronShowPanel.tsx:325-331
 
-  @S17 @pending
+  @S17
   Scenario Outline: Some steps cannot be deleted
     # Value: deleting a step can never orphan the steps after it or leave the trigger with nothing to start.
     When I open <step>
@@ -591,7 +590,7 @@ Feature: Workflow editor inspector panels
       | step  | reason                                          |
       | Fetch | Cannot delete: other jobs depend on this step   |
 
-  @S18 @pending
+  @S18
   Scenario: The first step cannot be deleted
     # Value: the trigger always has a step to start.
     Given "Solo" is the only step, reached from the trigger
@@ -599,7 +598,7 @@ Feature: Workflow editor inspector panels
     Then the delete button is disabled with "You can't delete the first step in a workflow."
     # useJobDeleteValidation.ts:219, :236-239
 
-  @S19 @pending
+  @S19
   Scenario: A step hands off to its code editor and to a manual run
     # Value: a builder goes from configuring a step to writing or testing it in one move.
     When I open "Fetch" and click the code button
@@ -610,7 +609,7 @@ Feature: Workflow editor inspector panels
 
   # ---------- Triggers ----------
 
-  @S20 @pending
+  @S20
   Scenario: A webhook trigger shows the URLs it answers on
     # Value: a partner integration is given the exact address that will reach the workflow.
     Given the webhook trigger has custom path "kobo-intake"
@@ -619,7 +618,7 @@ Feature: Workflow editor inspector panels
     And each can be copied
     # WebhookShowPanel.tsx:94-107; useWebhookTrigger.ts:299-339; WebhookUrlList.tsx:85-170; useWebhookTrigger.test.tsx:57-150
 
-  @S21 @pending
+  @S21
   Scenario: The webhook panel says how the trigger is protected
     # Value: a builder can tell at a glance whether anyone holding the URL can start the workflow.
     Given "Kobo basic" is attached to the trigger
@@ -629,7 +628,7 @@ Feature: Workflow editor inspector panels
     Then I see "No authentication configured." with "Add authentication", which opens the wizard on Configure with Authentication expanded
     # WebhookShowPanel.tsx:68-73, :119-185; TriggerInspector.tsx:62-69; TriggerEditWizard.tsx:188-190; WebhookShowPanel.test.tsx:143-195
 
-  @S22 @pending
+  @S22
   Scenario: Trigger edits are a draft until Finish
     # Value: half-finished trigger changes never reach a live endpoint, and a colleague's change to another field is not reverted.
     Given I opened the trigger wizard and "amara@example.org" then disabled the trigger on the canvas
@@ -641,7 +640,7 @@ Feature: Workflow editor inspector panels
     # useTriggerDraft.ts:71-82, :96-113, :196-231; TriggerEditWizard.tsx:192-198
     # useTriggerDraft.test.tsx:369-412; TriggerEditWizard.test.tsx:214-240
 
-  @S23 @pending
+  @S23
   Scenario Outline: A custom webhook path is checked before Finish
     # Value: two workflows cannot claim the same address, and the builder finds out while still on the panel.
     Given another workflow in "Malawi HIV" uses path "kobo"
@@ -658,7 +657,7 @@ Feature: Workflow editor inspector panels
       | 0b3c5e1a-3f1d-4c4e-9d55-4c0a7f2e9a11 | A UUID cannot be used as a path.                               | disabled |
       | kobo-intake                          | (nothing)                                                      | enabled  |
 
-  @S24 @pending
+  @S24
   Scenario: A path the server refused is reported on the trigger
     # Value: if a save loses the uniqueness race, the builder sees which URL did not take and is not handed it to share.
     Given the last save returned a "custom_path" error for the trigger
@@ -667,7 +666,7 @@ Feature: Workflow editor inspector panels
     And the custom URL cannot be copied
     # WebhookShowPanel.tsx:75, :109-117; useWebhookTrigger.ts:427-432; WebhookShowPanel.test.tsx:236-290
 
-  @S25 @pending
+  @S25
   Scenario: Deleting a custom URL asks first
     # Value: a URL partners post to is not dropped by a stray click.
     Given the trigger has custom path "kobo-intake"
@@ -677,7 +676,7 @@ Feature: Workflow editor inspector panels
     Then the trigger has no custom path
     # WebhookConfigureStep.tsx:300-322; WebhookConfigureStep.test.tsx:837-870
 
-  @S26 @pending
+  @S26
   Scenario: Response timing and default status codes
     # Value: a partner gets the response timing and status it was integrated against.
     When I set "Response Type" to "On Complete" and set success code 200 and error code 422 and click "Finish"
@@ -686,7 +685,7 @@ Feature: Workflow editor inspector panels
     Then the response configuration is cleared
     # WebhookConfigureStep.tsx:263, :324-343, :382-460; WebhookShowPanel.tsx:187-280; TriggerEditWizard.test.tsx:241-269
 
-  @S27 @pending
+  @S27
   Scenario: Attaching auth methods on Finish starts enforcement
     # Value: an admin can protect a webhook from the place they configure it.
     Given I am an admin and "Kobo basic" exists in the project
@@ -699,7 +698,7 @@ Feature: Workflow editor inspector panels
     # TriggerEditWizard.test.tsx:306-345; workflow_channel_test.exs:5625-5690
     # Editors seeing a disabled picker and a refused request is flow-webhook-auth-method-enforcement S09; the live lock is its S10
 
-  @S28 @pending
+  @S28
   Scenario: A failed auth change keeps the wizard open and writes nothing
     # Value: a trigger is never left half-updated, with new settings but old protection.
     Given the auth method request will fail
@@ -708,7 +707,7 @@ Feature: Workflow editor inspector panels
     And the wizard is still open and no trigger field was written
     # useTriggerDraft.ts:203-214; useWebhookTrigger.ts:452-462; useTriggerDraft.test.tsx:281-306
 
-  @S29 @pending
+  @S29
   Scenario: Auth methods that load late are not wiped by Finish
     # Value: editing another field never silently removes a webhook's protection.
     Given "Kobo basic" is attached and the auth methods load after the wizard opens
@@ -716,7 +715,7 @@ Feature: Workflow editor inspector panels
     Then "Kobo basic" is still attached and no auth request was sent
     # useTriggerDraft.ts:115-136, :149-152, :208-214; WebhookAuthMethodSelect.tsx:524-537; useTriggerDraft.test.tsx:334-368
 
-  @S30 @pending
+  @S30
   Scenario: Creating an auth method from the trigger hands off to the shared form
     # Value: an admin who needs a new credential for a partner does not have to leave the workflow.
     Given I am an admin in the trigger wizard with Authentication expanded
@@ -727,7 +726,7 @@ Feature: Workflow editor inspector panels
     # WebhookConfigureStep.tsx:116-134, :370-377; WebhookAuthMethodSelect.tsx:567-583, :693-702
     # collaborate.ex:211-233, :326-352, :432-443; collaborate_test.exs:2418-2614; WebhookConfigureStep.test.tsx:266-300
 
-  @S31 @pending
+  @S31
   Scenario: Switching trigger type does not re-enable it or drop its path
     # Value: changing how a workflow starts never silently turns a disabled trigger back on or loses a live URL name.
     Given the webhook trigger is disabled and has custom path "kobo-intake"
@@ -737,7 +736,7 @@ Feature: Workflow editor inspector panels
     Then its configuration is unchanged
     # TriggerPicker.tsx:430-445; TriggerEditWizard.test.tsx:270-305, :505-540
 
-  @S32 @pending
+  @S32
   Scenario: Building a schedule
     # Value: a builder sets when a workflow runs without memorising cron syntax, and cannot save one that never parses.
     Given the trigger is a schedule
@@ -749,7 +748,7 @@ Feature: Workflow editor inspector panels
     # CronFieldBuilder.tsx:43-200, :221-261, :743-790; types/trigger.ts:42-59; useTriggerDraft.ts:173-201
     # CronFieldBuilder.test.tsx:51-60, :230-246, :456-506; TriggerEditWizard.test.tsx:439-504
 
-  @S33 @pending
+  @S33
   Scenario: A schedule can take its input from a step's last output
     # Value: a scheduled run can carry on from where the previous one left off.
     Given the trigger is a schedule
@@ -759,7 +758,7 @@ Feature: Workflow editor inspector panels
 
   # ---------- Paths ----------
 
-  @S34 @pending
+  @S34
   Scenario: A path's condition decides when the next step runs
     # Value: a builder can route failures, successes and specific data to different steps.
     When I open the path from "Fetch" to "Load"
@@ -773,7 +772,7 @@ Feature: Workflow editor inspector panels
     # EdgeForm.tsx:150-163, :174-208, :228-261; types/edge.ts:57-67; edge.ex:135-151
     # EdgeForm.test.tsx:203-250, :701-860
 
-  @S35 @pending
+  @S35
   Scenario: A job-to-job path can be disabled or deleted, a trigger path cannot
     # Value: a builder can switch off a branch without losing it, and cannot cut a trigger off from its first step here.
     When I open the path from "Fetch" to "Load" and turn off "Enabled"
@@ -786,7 +785,7 @@ Feature: Workflow editor inspector panels
 
   # ---------- Workflow settings, code, templates ----------
 
-  @S36 @pending
+  @S36
   Scenario: Workflow concurrency is bounded by the project
     # Value: a builder cannot set a limit that would silently have no effect.
     Given "Malawi HIV" allows 3 concurrent runs
@@ -796,14 +795,14 @@ Feature: Workflow editor inspector panels
     Then "Max Concurrency" is disabled and a note links to the project setup page
     # WorkflowSettings.tsx:33-36, :136-177; types/workflow.ts:111-133; WorkflowSettings.test.tsx:201-394
 
-  @S37 @pending
+  @S37
   Scenario: Workflow name and console logging are set from settings
     # Value: the team controls what the workflow is called and whether job code may print to run logs.
     When I rename "Intake" to "Intake v2" and turn off "Allow console.log() usage" in "Workflow settings"
     Then collaborators see the new name and setting without reloading
     # WorkflowSettings.tsx:62-79, :104-134; createWorkflowStore.ts:967-993
 
-  @S38 @pending
+  @S38
   Scenario: Resetting discards everyone's unsaved changes after confirmation
     # Value: a team can back out of a muddled editing session to the last version that was saved.
     Given "amara@example.org" and I have unsaved changes to "Intake"
@@ -815,7 +814,7 @@ Feature: Workflow editor inspector panels
     # WorkflowSettings.tsx:81-99, :179-218; createWorkflowStore.ts:1773-1790; workflow_channel.ex:549-566; session.ex:377-418
     # workflow_channel_test.exs:4049-4128
 
-  @S39 @pending
+  @S39
   Scenario: The workflow can be viewed, copied and downloaded as YAML
     # Value: a builder can move a workflow to the CLI or another instance, or share it for review.
     When I click "View your workflow as YAML code" in "Workflow settings"
@@ -826,7 +825,7 @@ Feature: Workflow editor inspector panels
     Then the download is named "workflow.yaml"
     # WorkflowSettings.tsx:38-40, :110-123; CodeViewPanel.tsx:24-68, :86-138; CodeViewPanel.test.tsx:180-300
 
-  @S40 @pending
+  @S40
   Scenario: A support user publishes the workflow as a template
     # Value: proven workflows become starting points for every user on the instance.
     Given I am a support user and an editor on "Malawi HIV" and "Intake" has no unsaved changes
@@ -838,7 +837,7 @@ Feature: Workflow editor inspector panels
     # CodeViewPanel.tsx:73-80, :139-155; useWorkflow.tsx:1153-1185; TemplatePublishPanel.tsx:62-171
     # workflow_channel.ex:747-759, :1543-1551; workflow_templates.ex:26-38; workflow_channel_test.exs:6101-6206
 
-  @S41 @pending
+  @S41
   Scenario: Templates are published only from saved work, and only by support users
     # Value: a template always matches a saved workflow, and the shared catalogue is curated.
     Given I am a support user and "Intake" has unsaved changes
@@ -850,7 +849,7 @@ Feature: Workflow editor inspector panels
 
   # ---------- Read-only, keyboard, deletions ----------
 
-  @S42 @pending
+  @S42
   Scenario: Viewers see the panels with editing disabled and a reason
     # Value: people without edit rights can still inspect the configuration, and know why they cannot change it.
     Given I am a viewer on "Malawi HIV"
@@ -860,7 +859,7 @@ Feature: Workflow editor inspector panels
     # useWorkflow.tsx:1036-1081; JobForm.tsx:332, :351-358; EditFooter.tsx:631-653; useCanEditWorkflow.ts; EdgeInspector.tsx:55-89
     # JobInspector.test.tsx:180-480; EdgeInspector.test.tsx:175-230; CronShowPanel.test.tsx:131-155
 
-  @S45 @pending @variant:experimental-features
+  @S45 @variant:experimental-features
   Scenario: A live workflow's panels are locked until it is back in draft
     # Value: a workflow in production only changes through a deliberate switch to draft or a sandbox.
     Given "Intake" is live and I am an editor with experimental features on
@@ -870,7 +869,7 @@ Feature: Workflow editor inspector panels
     # useWorkflow.tsx:78-79, :1096-1102; useJobDeleteValidation.ts:230-232; workflow_channel.ex:1507-1510, :1915-1937
     # JobInspector.test.tsx:180-230, :324-372; workflow_channel_test.exs:515-530
 
-  @S43 @pending
+  @S43
   Scenario: Escape backs out one layer at a time
     # Value: a user can dismiss a dialog without also losing the panel beneath it.
     Given "Configure connection" is open over "Fetch"
@@ -884,7 +883,7 @@ Feature: Workflow editor inspector panels
     # inspector/index.tsx:56-75; ConfigureAdaptorModal.tsx:230-237; AdaptorSelector.tsx:481-488
     # Inspector.keyboard.test.tsx:92-357; JobForm.test.tsx:247-290
 
-  @S44 @pending
+  @S44
   Scenario: A panel for a node a collaborator deleted closes
     # Value: nobody keeps editing something that no longer exists.
     Given I have "Load" open

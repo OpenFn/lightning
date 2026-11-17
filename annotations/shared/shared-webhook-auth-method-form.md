@@ -2,7 +2,6 @@
 id: shared-webhook-auth-method-form
 type: shared
 title: Webhook auth method form
-status: not-started
 owner:
 
 trigger:
@@ -214,7 +213,7 @@ Feature: Webhook auth method form
   As a project admin
   I want to create, inspect and remove the credentials callers must present
 
-  @S01 @pending
+  @S01
   Scenario: Admin creates a basic auth method
     # Value: an admin can require a username and password on the project's webhooks without a deploy or a superuser.
     Given I am an admin on project "Malawi HIV"
@@ -231,7 +230,7 @@ Feature: Webhook auth method form
     # form_component.ex:71-86, :171-190, :223-231, :324-395, :443-494
     # webhook_auth_methods.ex:171-187; project_live_test.exs:2442-2501
 
-  @S02 @pending
+  @S02
   Scenario: Admin creates an API key method and can copy the key before saving
     # Value: the admin gets a strong key the server generated and can hand it to the calling system straight away.
     Given I am an admin on project "Malawi HIV" with the auth method form open
@@ -244,7 +243,7 @@ Feature: Webhook auth method form
     # webhook_auth_methods.ex:806-819; webhook_auth_method.ex:98-108
     # form_component.ex:200-206, :498-520, :569-602
 
-  @S03 @pending
+  @S03
   Scenario: A basic auth password must be 8 to 72 characters
     # Value: webhooks are protected by a password of a reasonable length.
     Given I am creating a basic auth method on project "Malawi HIV"
@@ -253,7 +252,7 @@ Feature: Webhook auth method form
     And "Create auth method" is disabled
     # webhook_auth_method.ex:80-85; form_component.ex:88-115, :421-425
 
-  @S04 @pending
+  @S04
   Scenario: Two auth methods in a project cannot share a name
     # Value: members can tell methods apart in the settings list, the trigger's picker and the delete warning.
     Given project "Malawi HIV" has an auth method "Kobo basic"
@@ -263,7 +262,7 @@ Feature: Webhook auth method form
     And the project still has one method named "Kobo basic"
     # webhook_auth_method.ex:67-71; migration 20230926155218_create_webhook_auth_methods_table.exs:17; form_component.ex:187-188
 
-  @S05 @pending
+  @S05
   Scenario: Cancelling the form creates nothing
     # Value: an admin who opened the form by mistake can back out without leaving a stray credential behind.
     Given I am creating a basic auth method on project "Malawi HIV" with name "Draft"
@@ -272,7 +271,7 @@ Feature: Webhook auth method form
     And project "Malawi HIV" has no method named "Draft"
     # form_component.ex:432-434; settings host settings.ex:451-455; editor host collaborate.ex:225-233, WebhookConfigureStep.tsx:116-134
 
-  @S06 @pending
+  @S06
   Scenario: Admin renames an auth method without changing its secret
     # Value: an admin can correct a name without breaking callers that already use the credential.
     Given basic auth method "Kobo basic" with username "kobo"
@@ -286,7 +285,7 @@ Feature: Webhook auth method form
     # form_component.ex:125-144, :445-479; webhook_auth_method.ex:74-78
     # webhook_auth_methods.ex:258-288; project_live_test.exs:2564-2621
 
-  @S07 @pending
+  @S07
   Scenario Outline: A stored secret stays out of the page until the admin re-authenticates
     # Value: someone at an unattended, signed-in admin session can't read off a webhook credential.
     Given <type> auth method "<name>" exists on project "Malawi HIV"
@@ -308,7 +307,7 @@ Feature: Webhook auth method form
       | API   | DHIS2 key  | API key  | API Key  |
       | basic | Kobo basic | password | Password |
 
-  @S08 @pending
+  @S08
   Scenario: A 2FA code also unlocks a stored secret
     # Value: an admin who signs in with an authenticator can reveal a secret without typing their password.
     Given I am an admin on project "Malawi HIV" with an authenticator app enrolled
@@ -317,7 +316,7 @@ Feature: Webhook auth method form
     Then the API key button reads "Copy"
     # form_component.ex:208-211, :305; accounts.ex:463-467; user_totp.ex:45-65
 
-  @S09 @pending
+  @S09
   Scenario: Admin deletes an auth method after confirming
     # Value: an admin can retire a credential that is no longer needed or trusted, and a slip of the mouse can't do it.
     Given auth method "Old key" exists on project "Malawi HIV"
@@ -333,7 +332,7 @@ Feature: Webhook auth method form
     # delete_modal.ex:44-73, :182-201, :215-227; webhook_auth_methods.ex:672-769
     # project_live_test.exs:2951-3021
 
-  @S10 @pending
+  @S10
   Scenario: The delete modal names the triggers and channels that lose the method
     # Value: an admin sees which endpoints change before they delete, and can add another method first.
     Given auth method "Kobo basic" is attached to the trigger of workflow "My Workflow" and to channel "My Channel"
@@ -344,7 +343,7 @@ Feature: Webhook auth method form
     And "My Channel" links to "/projects/<project_id>/channels/<channel_id>/edit"
     # delete_modal.ex:113-180, :208-213; project_live_test.exs:2886-2930
 
-  @S11 @pending
+  @S11
   Scenario: The delete modal says when nothing depends on the method
     # Value: an admin can delete an unused credential knowing nothing breaks.
     Given auth method "Old key" is attached to nothing
@@ -353,7 +352,7 @@ Feature: Webhook auth method form
     And I do not see "will accept unauthenticated requests"
     # delete_modal.ex:105-112; project_live_test.exs:2932-2949
 
-  @S12 @pending
+  @S12
   Scenario: Creating a method from the workflow editor hands off to every open editor
     # Value: the method an admin just created is offered on the trigger without reloading, for them and for collaborators.
     Given I am an owner editing workflow "Intake" on project "Malawi HIV"

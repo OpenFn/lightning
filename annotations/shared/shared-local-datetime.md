@@ -2,7 +2,6 @@
 id: shared-local-datetime
 type: shared
 title: Local date and time display
-status: not-started
 owner:
 
 trigger:
@@ -149,7 +148,7 @@ Feature: Local date and time display
   As anyone reading a timestamp in Lightning
   I want timestamps in my local time, with the exact UTC value on hover and on click
 
-  @S01 @pending
+  @S01
   Scenario: A timestamp is shown in the viewer's time zone
     # Value: people place a run or export in their own working day without time zone arithmetic.
     Given my browser's time zone is "Africa/Blantyre" (UTC+2)
@@ -161,7 +160,7 @@ Feature: Local date and time display
     # index.ts:1007-1013, :1036-1039 formatRelative with relativeLocale; index.ts:1046-1050 replaces the text
     # index.ts:950-955 'today at' p
 
-  @S02 @pending
+  @S02
   Scenario: A timestamp from another year shows the year
     # Value: an old timestamp is not mistaken for one from this year.
     Given a host page renders a timestamp of "2024-03-05 08:30:00 UTC" with the default format
@@ -170,7 +169,7 @@ Feature: Local date and time display
     Then the timestamp starts with "2024-03-05,"
     # index.ts:956-960 other: 'yyyy-MM-dd, p' when the year differs, 'MMMM do, p' otherwise
 
-  @S03 @pending
+  @S03
   Scenario: Detailed relative time shows seconds
     # Value: on a run's timeline (created, claimed, started, finished) people can see how long it queued and ran, which minute resolution hides.
     Given a host page renders a timestamp of "2026-10-14 08:30:07 UTC" with the format "relative_detailed"
@@ -181,7 +180,7 @@ Feature: Local date and time display
     # index.ts:1026-1030, :975-980; used by workorder_component.ex:371-398
     # test/lightning_web/live/work_order_live_test.exs:599-600 asserts the data-iso-timestamp for claimed and started
 
-  @S04 @pending
+  @S04
   Scenario: Hovering a timestamp shows the exact UTC value
     # Value: people get an unambiguous time to quote to colleagues in other time zones or to match against server logs.
     Given a host page renders a timestamp of "2026-10-14 08:30:07 UTC"
@@ -191,7 +190,7 @@ Feature: Local date and time display
     # common.ex:447-452 wrapper_tooltip with the UTC string and subtitle; common.ex:377-397; index.ts:584-592
     # test/lightning_web/live/dashboard_live_test.exs:531-537 asserts data-iso-timestamp in "%Y-%m-%d %H:%M:%S UTC" form
 
-  @S05 @pending
+  @S05
   Scenario: Clicking a timestamp copies the UTC value
     # Value: people paste the exact time into a support ticket or log search instead of retyping a converted time.
     Given a host page renders a timestamp of "2026-10-14 08:30:07 UTC"
@@ -201,7 +200,7 @@ Feature: Local date and time display
     # common.ex:440, :466-467 Copy hook with data-content = UTC string
     # index.ts:742-777 copy; index.ts:808-816 show-copied; index.ts:595-606 "Copied!" for 1.5s
 
-  @S06 @pending
+  @S06
   Scenario: Sub-second timestamps keep milliseconds
     # Value: two events in the same second can still be told apart and ordered when matched against logs.
     Given a host page renders a DateTime of "2026-10-14 08:30:07.123456Z"
@@ -210,7 +209,7 @@ Feature: Local date and time display
     And clicking it copies "2026-10-14 08:30:07.123 UTC"
     # common.ex:425-429 microseconds truncated to milliseconds for %DateTime{} with microseconds > 0
 
-  @S07 @pending
+  @S07
   Scenario: A missing timestamp shows a placeholder
     # Value: something that hasn't happened yet reads as not happened, not as a blank cell or a bogus date.
     Given a host page renders the component with no timestamp

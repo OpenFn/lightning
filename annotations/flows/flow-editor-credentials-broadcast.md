@@ -2,7 +2,6 @@
 id: flow-editor-credentials-broadcast
 type: flow
 title: A credential created elsewhere appears in an open editor
-status: not-started
 owner:
 
 trigger:
@@ -196,7 +195,7 @@ Feature: A credential created elsewhere appears in an open editor
   As a member with a workflow open in the editor
   I want my credential list to update without reloading
 
-  @S01 @pending
+  @S01
   Scenario Outline: A credential saved in one editor appears in a colleague's open editor
     # Value: colleagues can attach a credential the moment it exists, without reloading and losing their place.
     Given "amara@example.org" and I both have workflow "Intake" open in the editor
@@ -211,7 +210,7 @@ Feature: A credential created elsewhere appears in an open editor
       | save a new keychain credential "Per country"    | "Per country"  | "Keychain Credentials"  |
       | rename my credential "DHIS2 prod" to "DHIS2 live" | "DHIS2 live" | the matching credentials |
 
-  @S02 @pending
+  @S02
   Scenario: A viewer's open editor receives the list too
     # Value: a read-only colleague reviewing the workflow sees the credential a step now uses by its name, not as unknown.
     Given "amara@example.org" is a viewer with "Intake" open
@@ -219,7 +218,7 @@ Feature: A credential created elsewhere appears in an open editor
     Then "amara@example.org" eventually sees "Fetch" show "DHIS2 test"
     # workflow_channel.ex:950-954 (no role check); createCredentialStore.ts:155-176 (lookup by id); no test
 
-  @S03 @pending
+  @S03
   Scenario: An editor that reconnects picks up credentials added on the credentials page
     # Value: a stale credential list is corrected when the connection comes back, without a page reload.
     Given I have "Intake" open in the editor
@@ -299,7 +298,7 @@ none. References shared-editor-session and shared-adaptor-credential-config.
 
 ## Summary
 
-- Scenarios: 3 (S01 to S03, S01 an outline of three), all `@pending`.
+- Scenarios: 3 (S01 to S03, S01 an outline of three).
 - Section 6: 6.1 has 2, 6.2 has 6, 6.3 has 1, 6.4 has 1, 6.5 has 2.
 - Flows: none proposed; references flow-oauth-credential-authorize and
   flow-credential-scheduled-deletion.

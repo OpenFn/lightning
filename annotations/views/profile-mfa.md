@@ -2,7 +2,6 @@
 id: profile-mfa
 type: view
 title: User profile › Multi-factor authentication
-status: not-started
 owner:
 
 trigger:
@@ -203,7 +202,7 @@ Feature: Multi-factor authentication on the user profile
   As any signed-in user
   I want to turn on, move and turn off an authenticator app second factor myself
 
-  @S01 @pending
+  @S01
   Scenario: A user without MFA sees that it is off
     # Value: a user can tell at a glance that their account is protected by a password alone.
     Given I am signed in and have not enrolled in MFA
@@ -216,7 +215,7 @@ Feature: Multi-factor authentication on the user profile
     # mfa_component.ex:15; mfa_component.html.heex:9, :15-31, :39, :123, :256-273
     # profile_live_test.exs:288-296
 
-  @S02 @pending
+  @S02
   Scenario: Starting setup shows a QR code and a key to type in by hand
     # Value: a user can enrol whether or not their authenticator app can scan a code.
     Given I am signed in and have not enrolled in MFA
@@ -229,7 +228,7 @@ Feature: Multi-factor authentication on the user profile
     # mfa_component.ex:24-47, :102-108; mfa_component.html.heex:133-149, :188-253
     # profile_live_test.exs:298-303 (QR heading only; the secret modal is untested)
 
-  @S03 @pending
+  @S03
   Scenario: Confirming setup with a code from the app turns MFA on
     # Value: a user turns on a second factor in one sitting, without an administrator, and is shown their recovery codes before they could need them.
     Given I am signed in and have not enrolled in MFA
@@ -246,7 +245,7 @@ Feature: Multi-factor authentication on the user profile
     # accounts_test.exs:410-422 (ten backup codes created)
     # landing behaviour is owned by profile-backup-codes
 
-  @S04 @pending
+  @S04
   Scenario: A code that doesn't match the app is refused
     # Value: MFA is only switched on once the user has proved their app produces working codes, so they can't lock themselves out with a bad setup.
     Given I have started setup on "/profile"
@@ -257,7 +256,7 @@ Feature: Multi-factor authentication on the user profile
     # user_totp.ex:35-43, :58-65; mfa_component.ex:63-64; accounts.ex:433-436
     # accounts_test.exs:388-408; user_totp_test.exs:73-90
 
-  @S05 @pending
+  @S05
   Scenario: Abandoning setup changes nothing
     # Value: a user who starts setup without their phone to hand can back out without half-enabling MFA.
     Given I am signed in and have not enrolled in MFA
@@ -269,7 +268,7 @@ Feature: Multi-factor authentication on the user profile
     # mfa_component.ex:49-51; mfa_component.html.heex:171-177
     # profile_live_test.exs:305-308 (closes via the switch, not "Cancel"; both send hide-mfa-options)
 
-  @S06 @pending
+  @S06
   Scenario: A user with MFA sees it is on and where their recovery codes are
     # Value: an enrolled user can confirm their account is protected and knows where to get back in if they lose their phone.
     Given I am signed in and have enrolled in MFA
@@ -282,7 +281,7 @@ Feature: Multi-factor authentication on the user profile
     # mfa_component.ex:15-16; mfa_component.html.heex:39-52, :256-273
     # profile_live_test.exs:365-374
 
-  @S07 @pending
+  @S07
   Scenario: Moving MFA to another device replaces the old one
     # Value: someone who replaces or loses their phone can move their second factor themselves, and the old device's codes stop working.
     Given I am signed in and have enrolled in MFA with my old phone
@@ -298,7 +297,7 @@ Feature: Multi-factor authentication on the user profile
     # mfa_component.ex:33-36 (same row, new secret), :89-91; accounts.ex:415-431
     # profile_live_test.exs:376-380, :394-418; accounts_test.exs:425-446 (backup codes kept)
 
-  @S08 @pending
+  @S08
   Scenario: Turning MFA off asks first, then removes it
     # Value: a user can drop a second factor they no longer want, and a stray click on the switch can't silently weaken the account.
     Given I am signed in and have enrolled in MFA
@@ -316,7 +315,7 @@ Feature: Multi-factor authentication on the user profile
     # profile_live_test.exs:382-391 (clicks the hidden modal's button directly; the modal opening is a JS command and untested)
     # projects that require MFA refuse me again afterwards: flow-require-project-mfa 6.2 row 5
 
-  @S09 @pending
+  @S09
   Scenario: Backing out of turning MFA off keeps it on
     # Value: a user who opened the confirmation by mistake leaves with their protection intact.
     Given I am signed in and have enrolled in MFA
@@ -326,7 +325,7 @@ Feature: Multi-factor authentication on the user profile
     And my account still has MFA enabled
     # mfa_component.html.heex:110-116, :66-71 (escape and click-away also close it)
 
-  @S10 @pending
+  @S10
   Scenario: Viewing recovery codes hands off to re-authentication
     # Value: recovery codes, which can stand in for the second factor, are only shown to someone who has just proved who they are.
     Given I am signed in and have enrolled in MFA

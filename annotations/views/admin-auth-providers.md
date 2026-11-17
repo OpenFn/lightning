@@ -2,7 +2,6 @@
 id: admin-auth-providers
 type: view
 title: Admin › Authentication (SSO provider)
-status: not-started
 owner:
 
 trigger:
@@ -208,7 +207,7 @@ Feature: SSO provider configuration
   As a superuser
   I want to create, test, edit and remove the external OpenID Connect provider
 
-  @S01 @pending
+  @S01
   Scenario: With no provider, the page opens an empty provider form
     # Value: an admin following any link to the authentication settings lands on a form they can fill, not an error.
     Given I am a superuser
@@ -220,7 +219,7 @@ Feature: SSO provider configuration
     # index.ex:24-40 (push_navigate replace to :new), :42-48; form_component.ex:272
     # auth_providers_live_test.exs:12-21 (asserts the redirect and the admin menu)
 
-  @S02 @pending
+  @S02
   Scenario: A superuser creates a provider
     # Value: an instance can offer SSO without a deploy or a config change.
     Given I am a superuser on "/settings/authentication/new"
@@ -233,7 +232,7 @@ Feature: SSO provider configuration
     # form_component.ex:65-86; auth_providers.ex:27-31; index.ex:24-33
     # auth_providers_live_test.exs:83-92, :108-117
 
-  @S03 @pending
+  @S03
   Scenario: The redirect URI to register is shown as the form is filled
     # Value: the admin registers exactly the callback URL Lightning will use, so the provider doesn't reject the first sign-in.
     Given I am a superuser on "/settings/authentication/new"
@@ -244,7 +243,7 @@ Feature: SSO provider configuration
     # form_component.ex:240-270, :28-30; auth_config_form.ex:47-66; router.ex:77
     # auth_providers_live_test.exs:185-193 (asserts the preview after an edit)
 
-  @S04 @pending
+  @S04
   Scenario Outline: An incomplete or malformed provider can't be saved
     # Value: a provider that could never sign anyone in, or whose callback path can't be routed, is not stored.
     Given I am a superuser on "/settings/authentication/new"
@@ -260,7 +259,7 @@ Feature: SSO provider configuration
     # auth_config_form.ex:21, :29-45; form_component.ex:47-62, :198
     # auth_providers_live_test.exs:76-81 (blank name only)
 
-  @S05 @pending
+  @S05
   Scenario: Testing a working discovery URL passes
     # Value: the admin knows the provider's discovery document is reachable and usable before users depend on it.
     Given I am a superuser with a valid provider form
@@ -272,7 +271,7 @@ Feature: SSO provider configuration
     # form_component.ex:104-112, :47-62, :301-333; auth_config_form.ex:68-114; handler.ex:343-358
     # auth_providers_live_test.exs:97-106, :169-170 (run under insecure-loopback)
 
-  @S06 @pending
+  @S06
   Scenario Outline: Testing a broken discovery URL says why it failed
     # Value: the admin can fix the configuration instead of learning from users that SSO is broken.
     Given I am a superuser with a valid provider form
@@ -289,7 +288,7 @@ Feature: SSO provider configuration
     # form_component.ex:113-120; auth_config_form.ex:68-97; handler.ex:343-358
     # auth_providers_live_test.exs:47-53, :94-95 (first row only, run under insecure-loopback)
 
-  @S07 @pending
+  @S07
   Scenario: A plaintext discovery URL never passes the test
     # Value: the discovery document is only fetched over https.
     Given I am a superuser with a valid provider form
@@ -300,7 +299,7 @@ Feature: SSO provider configuration
     # well_known.ex:31-37, :52-56; tls.ex:29-41; auth_config_form.ex:86-88
     # under insecure-loopback an http URL on localhost passes (tls.ex:35-36)
 
-  @S08 @pending
+  @S08
   Scenario: Editing the provider takes effect for sign-ins
     # Value: admins can rotate the client credentials or move the host without removing SSO and setting it up again.
     Given provider "acme-idp" is configured with client ID "id"
@@ -314,7 +313,7 @@ Feature: SSO provider configuration
     # index.ex:24-33; form_component.ex:88-95; auth_providers.ex:33-41, :61-65
     # auth_providers_live_test.exs:149-198
 
-  @S09 @pending
+  @S09
   Scenario: Unverified provider emails are not trusted unless an admin turns it on
     # Value: an email the provider has not verified is only accepted for sign-in when an admin has marked this provider as trusted.
     Given I am a superuser on "/settings/authentication/new"
@@ -326,7 +325,7 @@ Feature: SSO provider configuration
     # form_component.ex:179-188; auth_config.ex:25-29, :42; auth_config_form.ex:16, :20-21; handler.ex:76-82
     # no live test covers the checkbox
 
-  @S10 @pending
+  @S10
   Scenario: Removing the provider turns off SSO
     # Value: an admin can switch off sign-in through a provider that is retired or compromised.
     Given provider "acme-idp" is configured

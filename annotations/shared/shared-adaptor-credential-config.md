@@ -2,7 +2,6 @@
 id: shared-adaptor-credential-config
 type: shared
 title: Adaptor and credential configuration
-status: not-started
 owner:
 
 trigger:
@@ -266,7 +265,7 @@ Feature: Adaptor and credential configuration
     Given project "Malawi HIV" has workflow "Intake" with a step "Fetch"
     And I have "Fetch" open in the step inspector or the IDE
 
-  @S01 @pending
+  @S01
   Scenario Outline: A step without a credential is flagged when its adaptor needs one
     # Value: a step that would fail for want of a credential is spotted before it runs.
     Given "Fetch" uses <adaptor> and has no credential
@@ -278,14 +277,14 @@ Feature: Adaptor and credential configuration
       | @openfn/language-dhis2@latest | Connect |
       | @openfn/language-http@latest  | Edit    |
 
-  @S02 @pending
+  @S02
   Scenario: A step whose credential has gone says so
     # Value: a step pointing at a deleted or inaccessible credential is noticed before it runs.
     Given "Fetch" references a project credential that is not in the project's credential list
     Then the adaptor box shows "Not found" with "Credential not found. It may have been deleted or you no longer have access."
     # AdaptorDisplay.tsx:85-90, :242-261; createCredentialStore.ts:157-177
 
-  @S03 @pending
+  @S03
   Scenario: Picking a credential attaches it to the step, and only one kind at a time
     # Value: the step runs with the secret the builder chose, and never with two.
     Given "Fetch" uses the DHIS2 adaptor
@@ -300,7 +299,7 @@ Feature: Adaptor and credential configuration
     # ConfigureAdaptorModal.tsx:631-711; JobForm.tsx:254-298; FullScreenIDE.tsx:646-680; job.ex:117-120
     # ConfigureAdaptorModal.test.tsx:1002-1060, :1124-1140, :1544-1569
 
-  @S04 @pending
+  @S04
   Scenario: Credentials that match the adaptor are offered first
     # Value: it is harder to send one system's secret to another.
     Given "Fetch" uses the Salesforce adaptor
@@ -311,7 +310,7 @@ Feature: Adaptor and credential configuration
     Then I see the raw one under "Generic Credentials" and the keychain under "Keychain Credentials"
     # ConfigureAdaptorModal.tsx:286-345, :350-388, :652-731; ConfigureAdaptorModal.test.tsx:443-500, :765-905
 
-  @S05 @pending
+  @S05
   Scenario: Changing adaptor on a step with a credential asks first and clears it
     # Value: a credential meant for one system is never sent to another by accident.
     Given "Fetch" uses DHIS2 with credential "DHIS2 prod"
@@ -324,7 +323,7 @@ Feature: Adaptor and credential configuration
     And "Configure connection" opens
     # useAdaptorChangeConfirmation.ts:63-117, :119-153; AdaptorSelector.tsx:89-105
 
-  @S06 @pending
+  @S06
   Scenario: Backing out of an adaptor change keeps everything as it was
     # Value: a mis-click in the picker costs nothing.
     Given "Fetch" uses DHIS2 with credential "DHIS2 prod"
@@ -333,7 +332,7 @@ Feature: Adaptor and credential configuration
     And the adaptor picker is open again
     # useAdaptorChangeConfirmation.ts:158-167; AdaptorSelector.tsx:69-85
 
-  @S07 @pending
+  @S07
   Scenario: A step can be pinned to an adaptor version
     # Value: a step keeps behaving the same when a new adaptor release ships.
     Given the DHIS2 adaptor has versions "4.2.0", "4.10.0" and "4.9.1"
@@ -344,7 +343,7 @@ Feature: Adaptor and credential configuration
     # ConfigureAdaptorModal.tsx:32-47, :416-427, :563-573; VersionPicker.tsx:30-36, :67-71; JobForm.tsx:234-251; FullScreenIDE.tsx:627-643
     # ConfigureAdaptorModal.test.tsx:405-440
 
-  @S08 @pending
+  @S08
   Scenario: Searching for an adaptor that does not exist suggests HTTP
     # Value: a builder can still connect to a system that has no dedicated adaptor.
     When I search the adaptor picker for "zzz-unknown"
@@ -353,7 +352,7 @@ Feature: Adaptor and credential configuration
     Then the HTTP adaptor is chosen
     # AdaptorSelectionModal.tsx:95-146, :163-183, :264-275; AdaptorSelectionModal.test.tsx:299-318
 
-  @S09 @pending
+  @S09
   Scenario: A catalogue that has not loaded can be retried
     # Value: a transient failure does not look like "there are no adaptors".
     Given the adaptor catalogue answers 503 "adaptor catalogue unavailable"
@@ -364,7 +363,7 @@ Feature: Adaptor and credential configuration
     # AdaptorSelectionModal.tsx:35-40, :229-255; createAdaptorStore.ts:308-321; adaptor_controller.ex:38-48
     # AdaptorSelectionModal.test.tsx:149-190
 
-  @S10 @pending
+  @S10
   Scenario: Retired adaptors and versions are not offered
     # Value: builders are not steered onto a release the maintainers have withdrawn.
     Given the DHIS2 adaptor's version "4.1.0" is deprecated and adaptor "@openfn/language-old" is deprecated
@@ -372,7 +371,7 @@ Feature: Adaptor and credential configuration
     Then "@openfn/language-old" is not listed and "4.1.0" is not in the version list
     # catalogue.ex:262-300, :332-337; ConfigureAdaptorModal.tsx:416-427
 
-  @S11 @pending
+  @S11
   Scenario: A credential created from a step is attached to it
     # Value: a builder connects a step to a new system without leaving the editor.
     Given I am an editor and "Fetch" uses DHIS2
@@ -387,7 +386,7 @@ Feature: Adaptor and credential configuration
     # JobForm.tsx:121-165; FullScreenIDE.tsx:682-708; collaborate_test.exs:267-335
     # Collaborators receiving the list is flow-editor-credentials-broadcast (proposed); an OAuth client hands off to flow-oauth-credential-authorize
 
-  @S12 @pending
+  @S12
   Scenario: A viewer cannot save a credential from the editor
     # Value: read-only members cannot add secrets to a project.
     Given I am a viewer on "Malawi HIV"
@@ -395,7 +394,7 @@ Feature: Adaptor and credential configuration
     Then no credential is created
     # collaborate.ex:180-187, :316-323; credential_form_component.ex:525-542; collaborate_test.exs:772-818
 
-  @S13 @pending
+  @S13
   Scenario: Only a credential's owner can edit it from a step
     # Value: a credential's secrets are only changed by the person responsible for them.
     Given "DHIS2 prod" is owned by "amara@example.org" and shared with "Malawi HIV"
@@ -407,7 +406,7 @@ Feature: Adaptor and credential configuration
     # ConfigureAdaptorModal.tsx:108-143, :449-465; collaborate.ex:145-178; users.ex:40-44; CredentialModalContext.tsx:207-228
     # collaborate_test.exs:998-1057; ConfigureAdaptorModal.test.tsx:1319-1440
 
-  @S14 @pending
+  @S14
   Scenario: An admin creates a keychain credential from a step
     # Value: an admin can set up a credential that is chosen per run without leaving the workflow.
     Given I am an admin on "Malawi HIV"
@@ -417,7 +416,7 @@ Feature: Adaptor and credential configuration
     # credential_form_component.ex:312-366, :461-472, :1038-1046, :1181-1204, :1366-1377; collaborate.ex:393-430, :486-517
     # collaborate_test.exs:1756-1828
 
-  @S15 @pending
+  @S15
   Scenario: People below admin cannot create a keychain credential from a step
     # Value: per-run credential selection stays with admins.
     Given I am a viewer on "Malawi HIV"
@@ -426,7 +425,7 @@ Feature: Adaptor and credential configuration
     # credentials.ex:1956-1971; policies/credentials.ex:32-38, :87-98; collaborate_test.exs:1829-1873
     # Only the viewer case is tested; an editor is refused by the same policy clause (policies/credentials.ex:91-93)
 
-  @S16 @pending
+  @S16
   Scenario: A step cannot be saved with another project's credential
     # Value: one project's secrets never run in another project's workflow.
     Given the shared document points "Fetch" at a project credential belonging to project "Kenya TB"
@@ -434,7 +433,7 @@ Feature: Adaptor and credential configuration
     Then the save is refused with "credential doesn't exist or isn't available in this project" on "Fetch"
     # workflows.ex:416-428, :434-455; scoping.ex:116-117; job.ex:121-127, :175-200
 
-  @S17 @pending
+  @S17
   Scenario: Escape and Back close one dialog at a time
     # Value: dismissing a dialog never also throws away the step panel or the code editor behind it.
     Given "Configure connection" is open over "Fetch"
@@ -449,7 +448,7 @@ Feature: Adaptor and credential configuration
     # JobForm.tsx:121-127, :384-394; FullScreenIDE.tsx:682-687, :710-727, :1373-1382
     # The step panel's own Escape is workflow-editor-inspectors; the IDE's is workflow-editor-ide
 
-  @S18 @pending
+  @S18
   Scenario: Read-only viewers see the configuration but cannot change it
     # Value: nobody starts a change they are not allowed to save.
     Given I am a viewer on "Malawi HIV" and "Fetch" uses DHIS2 with "DHIS2 prod"

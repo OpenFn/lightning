@@ -2,7 +2,6 @@
 id: project-settings-collections
 type: view
 title: Project settings › Collections
-status: not-started
 owner:
 
 trigger:
@@ -236,7 +235,7 @@ Feature: Project collections
   As a member of a project
   I want to see, preview and download its collections, and, as an admin, create, rename and delete them
 
-  @S01 @pending
+  @S01
   Scenario: Every member sees the project's collections and their storage
     # Value: anyone on the project can tell which collections exist and which ones are using up storage.
     Given I am a viewer on project "Malawi HIV"
@@ -246,7 +245,7 @@ Feature: Project collections
     # collections_component.ex:40-51, :324-331; data_tables.ex:353-399; helpers.ex:76-95
     # project_live_test.exs:7726-7751 asserts the sizes and the default order (as owner)
 
-  @S02 @pending
+  @S02
   Scenario: A project with no collections offers to create one
     # Value: an admin setting up a new project sees straight away where to create the collection its jobs need.
     Given I am an admin on project "Malawi HIV"
@@ -258,7 +257,7 @@ Feature: Project collections
     Then I see the "Create Collection" form
     # data_tables.ex:356-357; collections_component.ex:377-388, :76-87; table.ex:304-324
 
-  @S03 @pending
+  @S03
   Scenario: Admin creates a collection
     # Value: a project can get the collection its jobs write to without a superuser or an API call.
     Given I am an admin on project "Malawi HIV"
@@ -272,7 +271,7 @@ Feature: Project collections
     # collections_component.ex:76-87, :181-189, :191-205, :429-435; collection.ex:60-75; helpers.ex:223-228
     # project_live_test.exs:7164-7220 (owner and admin; lowercase input "test collection 0")
 
-  @S04 @pending
+  @S04
   Scenario: A name that isn't URL safe can't be saved
     # Value: every collection name works unchanged in job code and API URLs.
     Given I am an admin on project "Malawi HIV"
@@ -282,7 +281,7 @@ Feature: Project collections
     And the "Save" button is disabled
     # collection.ex:49-53, :60-75; helpers.ex:223-228 (keeps "é"); collections_component.ex:181-189 (error copied to raw_name, :185), :444
 
-  @S05 @pending
+  @S05
   Scenario: Two collections in a project can't share a name
     # Value: a job addressing a collection by name always gets the one it means.
     Given I am an owner on project "Malawi HIV"
@@ -293,7 +292,7 @@ Feature: Project collections
     # collection.ex:54-57; collections_component.ex:212-217; migration 20260410000000_scope_collection_name_uniqueness_to_project.exs:6
     # project_live_test.exs:7222-7256
 
-  @S06 @pending
+  @S06
   Scenario: The same name can be used in another project
     # Value: teams in different projects don't have to coordinate collection names.
     Given I am an admin on project "Malawi HIV"
@@ -303,7 +302,7 @@ Feature: Project collections
     And "patients" is in the list
     # migration 20260410000000_scope_collection_name_uniqueness_to_project.exs:4-8; collection.ex:54-57
 
-  @S07 @pending @variant:collection-limited
+  @S07 @variant:collection-limited
   Scenario: Creating a collection past the plan's limit is refused
     # Value: a project on a limited plan learns why it can't add a collection instead of getting a silent failure.
     Given project "Malawi HIV" is at its plan's collection limit, with the message "Some error message"
@@ -313,7 +312,7 @@ Feature: Project collections
     And no collection "some-name" exists
     # collections.ex:115-120, :125; collections_component.ex:207-210; project_live_test.exs:7258-7303
 
-  @S08 @pending
+  @S08
   Scenario Outline: Members who can't manage collections see the controls disabled
     # Value: read-only members can't start a change they aren't allowed to make.
     Given I am a <role> on project "Malawi HIV"
@@ -330,7 +329,7 @@ Feature: Project collections
       | viewer  |
       | editor  |
 
-  @S09 @pending
+  @S09
   Scenario Outline: A non-admin's create, edit or delete request is refused
     # Value: a stale page or a request sent outside it can't change a project's collections without the right role.
     Given I am an editor on project "Malawi HIV"
@@ -347,7 +346,7 @@ Feature: Project collections
       | edit   |
       | delete |
 
-  @S10 @pending
+  @S10
   Scenario: Admin renames a collection
     # Value: an admin can fix a badly named collection without recreating it and losing its records.
     Given I am an admin on project "Malawi HIV"
@@ -361,7 +360,7 @@ Feature: Project collections
     And "patients" is not in the list
     # collections_component.ex:89-107, :221-235; collections.ex:153-157; project_live_test.exs:7348-7407 (name change only)
 
-  @S11 @pending
+  @S11
   Scenario: Admin deletes a collection after confirming
     # Value: an admin can clear out data the project no longer needs, and can't do it with a single misclick.
     Given I am an owner on project "Malawi HIV"
@@ -375,7 +374,7 @@ Feature: Project collections
     # collections_component.ex:109-119, :157-170, :527-578; collections.ex:163-179; create_collections migration :19-21 (cascade)
     # project_live_test.exs:7452-7494 (asserts the collection row is gone; item cascade read from the migration)
 
-  @S12 @pending
+  @S12
   Scenario Outline: Cancelling a form or confirmation changes nothing
     # Value: an admin who opened the wrong dialog can back out safely.
     Given I am an admin on project "Malawi HIV"
@@ -392,7 +391,7 @@ Feature: Project collections
       | Edit on "patients"      |
       | Delete on "patients"    |
 
-  @S13 @pending
+  @S13
   Scenario Outline: Any member previews the first record of a collection
     # Value: anyone on the project can check what a job has stored without writing code or using the CLI.
     Given I am a <role> on project "Malawi HIV"
@@ -411,7 +410,7 @@ Feature: Project collections
       | admin  |
       | owner  |
 
-  @S14 @pending
+  @S14
   Scenario: Previewing an empty collection says it is empty
     # Value: a member can tell an empty collection from a broken preview.
     Given I am an owner on project "Malawi HIV"
@@ -420,7 +419,7 @@ Feature: Project collections
     Then I see "This collection is empty."
     # collections_component.ex:129-131, :508-517; project_live_test.exs:7573-7594
 
-  @S15 @pending
+  @S15
   Scenario: The preview stays readable and copies the full record
     # Value: a large record can be scanned on screen, and what is copied is the real data, not the shortened view.
     Given I am an owner on project "Malawi HIV"
@@ -432,7 +431,7 @@ Feature: Project collections
     Then the clipboard holds the full record, including all 300 characters
     # CollectionPreviewViewer.tsx:3-21, :23-47, :49-61; CodeViewer.tsx:11-34; collections_component.ex:134-141
 
-  @S16 @pending
+  @S16
   Scenario Outline: A collection in another project can't be reached from this tab
     # Value: knowing another project's collection name doesn't let a member read, rename or delete it.
     Given I am an owner on project "Malawi HIV"
@@ -449,7 +448,7 @@ Feature: Project collections
       | toggle_action with "edit"   |
       | toggle_action with "delete" |
 
-  @S17 @pending
+  @S17
   Scenario: A collection removed since the page loaded is reported as not found
     # Value: an admin acting on a stale list gets a clear answer instead of an error page.
     Given I am an admin on project "Malawi HIV" with the "Collections" tab open
@@ -459,7 +458,7 @@ Feature: Project collections
     And "patients" is no longer in the list
     # collections_component.ex:94-95, :237-251 (push_navigate remounts and re-lists)
 
-  @S18 @pending
+  @S18
   Scenario: Members sort the list by name or used storage
     # Value: an admin chasing a storage limit can put the biggest collections at the top.
     Given I am an owner on project "Malawi HIV"
@@ -473,7 +472,7 @@ Feature: Project collections
     # collections_component.ex:55-74, :271-272; data_tables.ex:362-379; table.ex:234-243
     # project_live_test.exs:7726-7764
 
-  @S19 @pending
+  @S19
   Scenario: Every member can start a download of a collection
     # Value: anyone on the project can take a full copy of a collection for analysis or backup.
     Given I am a viewer on project "Malawi HIV"

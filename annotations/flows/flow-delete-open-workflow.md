@@ -2,7 +2,6 @@
 id: flow-delete-open-workflow
 type: flow
 title: Deleting a workflow that someone has open
-status: not-started
 owner:
 
 trigger:
@@ -187,7 +186,7 @@ Feature: Deleting a workflow that someone has open
   As an editor on a project
   I want other open sessions on that workflow to be told and moved to the workflow list
 
-  @S01 @pending
+  @S01
   Scenario Outline: A colleague with the workflow open is sent back to the list
     # Value: nobody keeps editing or reading a workflow that has been deleted, and they learn why it went.
     Given project "Malawi HIV" has workflow "Intake"
@@ -202,7 +201,7 @@ Feature: Deleting a workflow that someone has open
       | the editor          |
       | the health page     |
 
-  @S02 @pending
+  @S02
   Scenario: The open editor's collaboration and AI assistant sessions end
     # Value: a lingering tab can't keep writing to the deleted workflow's shared document and AI session.
     Given another member has the collaborative editor and the AI assistant open on "Intake"
@@ -212,7 +211,7 @@ Feature: Deleting a workflow that someone has open
     # workflow_channel.ex:1085-1091, ai_assistant_channel.ex:494-506
     # workflow_channel_test.exs:2258-2271, ai_assistant_channel_test.exs:1328-1340
 
-  @S03 @pending
+  @S03
   Scenario: People on other workflows and other project pages are not interrupted
     # Value: deleting one workflow doesn't throw colleagues out of unrelated work in the same project.
     Given another member has workflow "Sync DHIS2" open in the editor, with its editor and AI assistant channels joined
@@ -223,7 +222,7 @@ Feature: Deleting a workflow that someone has open
     # hooks.ex:336-341, workflow_channel.ex:1139-1149, ai_assistant_channel.ex:516-527
     # deletion_teardown_test.exs:269-312, workflow_channel_test.exs:2273-2295, ai_assistant_channel_test.exs:1342-1356
 
-  @S04 @pending
+  @S04
   Scenario: Nobody is sent away when the delete fails
     # Value: colleagues are never thrown out of a workflow that was not actually deleted.
     Given another member has "Intake" open in the editor
@@ -298,7 +297,7 @@ none
 
 ## Summary
 
-- Scenarios: 4 (S01 to S04), all `@pending`.
+- Scenarios: 4 (S01 to S04).
 - Section 6: 6.1 has 0 (the delete-failure crash is cross-referenced to
   workflows-index 6.1), 6.2 has 5, 6.3 has 0, 6.4 has 2, 6.5 has 2.
 - Flows: none proposed; references workflows-index S17 and shared-project-scope
