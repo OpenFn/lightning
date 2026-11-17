@@ -27,11 +27,17 @@ const record = (annotation, id, entry) => {
 // The "// Fails on Lightning: ..." comment above a test, if any: the known
 // Lightning behaviour that makes it fail.
 const sources = {};
-const knownBug = (file, line) => {
+const knownBug = (file, title, line) => {
   const lines = (sources[file] ??= existsSync(join(here, file))
     ? readFileSync(join(here, file), 'utf8').split('\n')
     : []);
-  for (let i = line - 2; i >= 0 && lines[i]?.trim().startsWith('//'); i--) {
+  // Playwright's line numbers can drift from the source, so find the test by
+  // its title; fall back to the reported line for titles built at run time.
+  const quoted = [`'${title}'`, `"${title}"`, `\`${title}`];
+  let at = lines.findIndex((l) => quoted.some((q) => l.includes(q)));
+  if (at < 0) at = line - 1;
+  while (at > 0 && !/^\s*test(\.\w+)?\(/.test(lines[at])) at--;
+  for (let i = at - 1; i >= 0 && lines[i]?.trim().startsWith('//'); i--) {
     const m = lines[i].match(/\/\/ Fails on Lightning: (.*)/);
     if (m) return m[1].trim();
   }
@@ -53,7 +59,7 @@ const walk = (suite, file) => {
       .split('\n')
       .find((l) => l.trim());
     const page = basename(spec.file ?? file, '.spec.ts');
-    const known = status === 'failed' ? knownBug(spec.file ?? file, spec.line) : undefined;
+    const known = status === 'failed' ? knownBug(spec.file ?? file, spec.title, spec.line) : undefined;
     const shared = spec.title.match(/(shared-[a-z-]+)@(S\d+)/);
     const own = spec.title.match(/^@(S\d+)/);
     if (shared) record(shared[1], shared[2], { status, where: page, error, known });
